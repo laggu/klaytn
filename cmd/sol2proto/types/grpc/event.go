@@ -1,8 +1,8 @@
 package grpc
 
 import (
-	"github.com/getamis/sirius/util"
 	"ground-x/go-gxplatform/accounts/abi"
+	"ground-x/go-gxplatform/cmd/utils"
 )
 
 // Parse gRPC methods and required message types from events in an Ethereum contract ABI.
@@ -21,7 +21,7 @@ func ParseEvent(ev abi.Event) (Method, []Message) {
 	method := Method{}
 
 	if ev.Anonymous {
-		method.Name = "onEvent" + util.ToCamelCase(ev.Id().Hex())
+		method.Name = "onEvent" + utils.ToCamelCase(ev.Id().Hex())
 	} else {
 		method.Name = "on" + ev.Name
 	}
