@@ -273,12 +273,21 @@ gxp --datadir $DATAPATH --port 30303 --rpc --rpcaddr 0.0.0.0 --rpcport "8123" --
 ### sol2proto
 Solidity ABI to gRPC protobuf IDL transpiler
 
-## Usage
+The `context` is in the standard library Go 1.7 already. Make sure the latest version of grpc and protoc plugin are installed.
+```
+go get -u google.golang.org/grpc
+go get -u github.com/golang/protobuf/protoc-gen-go
+```
 
 ```bash
 sol2proto --pkg awesome --abi MyAwesomeContract.abi > my_awesome_contract.proto
 ```
+### grpc-contract
+A tool to generate the grpc server code for a contract
 
+```bash
+grpc-contract --types $(filename) --path ./protobuf --pb-path ./protobuf
+```
 
 ## License
 
