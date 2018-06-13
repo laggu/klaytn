@@ -164,12 +164,12 @@ func TestProtocolHandshake(t *testing.T) {
 
 		phs, err := rlpx.doProtoHandshake(hs0)
 		if err != nil {
-			t.Errorf("dial side proto handshake error: %v", err)
+			t.Errorf("dial side protobuf handshake error: %v", err)
 			return
 		}
 		phs.Rest = nil
 		if !reflect.DeepEqual(phs, hs1) {
-			t.Errorf("dial side proto handshake mismatch:\ngot: %s\nwant: %s\n", spew.Sdump(phs), spew.Sdump(hs1))
+			t.Errorf("dial side protobuf handshake mismatch:\ngot: %s\nwant: %s\n", spew.Sdump(phs), spew.Sdump(hs1))
 			return
 		}
 		rlpx.close(DiscQuitting)
@@ -190,12 +190,12 @@ func TestProtocolHandshake(t *testing.T) {
 
 		phs, err := rlpx.doProtoHandshake(hs1)
 		if err != nil {
-			t.Errorf("listen side proto handshake error: %v", err)
+			t.Errorf("listen side protobuf handshake error: %v", err)
 			return
 		}
 		phs.Rest = nil
 		if !reflect.DeepEqual(phs, hs0) {
-			t.Errorf("listen side proto handshake mismatch:\ngot: %s\nwant: %s\n", spew.Sdump(phs), spew.Sdump(hs0))
+			t.Errorf("listen side protobuf handshake mismatch:\ngot: %s\nwant: %s\n", spew.Sdump(phs), spew.Sdump(hs0))
 			return
 		}
 

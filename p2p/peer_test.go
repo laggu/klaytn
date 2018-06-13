@@ -271,23 +271,23 @@ func TestMatchProtocols(t *testing.T) {
 		for name, proto := range result {
 			match, ok := tt.Match[name]
 			if !ok {
-				t.Errorf("test %d, proto '%s': negotiated but shouldn't have", i, name)
+				t.Errorf("test %d, protobuf '%s': negotiated but shouldn't have", i, name)
 				continue
 			}
 			if proto.Name != match.Name {
-				t.Errorf("test %d, proto '%s': name mismatch: have %v, want %v", i, name, proto.Name, match.Name)
+				t.Errorf("test %d, protobuf '%s': name mismatch: have %v, want %v", i, name, proto.Name, match.Name)
 			}
 			if proto.Version != match.Version {
-				t.Errorf("test %d, proto '%s': version mismatch: have %v, want %v", i, name, proto.Version, match.Version)
+				t.Errorf("test %d, protobuf '%s': version mismatch: have %v, want %v", i, name, proto.Version, match.Version)
 			}
 			if proto.offset-baseProtocolLength != match.offset {
-				t.Errorf("test %d, proto '%s': offset mismatch: have %v, want %v", i, name, proto.offset-baseProtocolLength, match.offset)
+				t.Errorf("test %d, protobuf '%s': offset mismatch: have %v, want %v", i, name, proto.offset-baseProtocolLength, match.offset)
 			}
 		}
 		// Make sure no protocols missed negotiation
 		for name := range tt.Match {
 			if _, ok := result[name]; !ok {
-				t.Errorf("test %d, proto '%s': not negotiated, should have", i, name)
+				t.Errorf("test %d, protobuf '%s': not negotiated, should have", i, name)
 				continue
 			}
 		}

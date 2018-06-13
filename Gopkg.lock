@@ -35,10 +35,22 @@
   revision = "f6d5545993d68e9e42df43eb57958f898dea3623"
 
 [[projects]]
+  branch = "develop"
+  name = "github.com/getamis/sirius"
+  packages = ["util"]
+  revision = "bf4fba386c10858c255fe513a0bdf8ed29164270"
+
+[[projects]]
   name = "github.com/go-stack/stack"
   packages = ["."]
   revision = "259ab82a6cad3992b4e21ff5cac294ccb06474bc"
   version = "v1.7.0"
+
+[[projects]]
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -181,6 +193,12 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  version = "v1.0.1"
+
+[[projects]]
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
@@ -213,6 +231,12 @@
   packages = ["."]
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
   version = "v1.20.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/zpatrick/go-parser"
+  packages = ["."]
+  revision = "524d1e8c73c1e408fbf2dd5506bd1aa62a473acd"
 
 [[projects]]
   branch = "master"
@@ -312,6 +336,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "37959b45cc63999c3877b3c816551f63877559cb1d187d3a1946ac06fc43148d"
+  inputs-digest = "c31ebbb0ae2266f1ecd9e3f54801032cde8357485c13e98ef0cca15b175dda8e"
   solver-name = "gps-cdcl"
   solver-version = 1

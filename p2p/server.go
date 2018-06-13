@@ -835,7 +835,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *discover.Node) e
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
-		clog.Trace("Failed proto handshake", "err", err)
+		clog.Trace("Failed protobuf handshake", "err", err)
 		return err
 	}
 	if phs.ID != c.id {

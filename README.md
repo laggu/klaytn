@@ -170,6 +170,7 @@ $ gxp init path/to/genesis.json
 ```
 
 ### Configuration (istanbul-BFT)
+
 When --nodes --verbose flags are given, a static-nodes.json template as well as the validators' node keys, public keys, and addresses are generated.
 When --save flag is given, all generated configs will be saved. Use BFT when --bft flag is given.
 
@@ -268,6 +269,15 @@ gxp --datadir $DATAPATH --port 30303 --rpc --rpcaddr 0.0.0.0 --rpcport "8123" --
 
 ```
 동일 머신에서 수행시에는 --port , --rpcport --wsport 옵션을 다르게 설정하고 --networkid는 동일하게 설정함
+
+### sol2proto
+Solidity ABI to gRPC protobuf IDL transpiler
+
+## Usage
+
+```bash
+sol2proto --pkg awesome --abi MyAwesomeContract.abi > my_awesome_contract.proto
+```
 
 
 ## License
