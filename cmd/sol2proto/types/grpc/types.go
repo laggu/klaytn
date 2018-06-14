@@ -101,7 +101,7 @@ func (m Methods) Less(i, j int) bool {
 }
 
 var TransactionReq = Message{
-	Name: "TransactionReq",
+	Name: "protobuf.TransactionReq",
 	Args: []Argument{
 		{
 			Name:    "opts",
@@ -112,7 +112,7 @@ var TransactionReq = Message{
 }
 
 var TransactionResp = Message{
-	Name: "TransactionResp",
+	Name: "protobuf.TransactionResp",
 	Args: []Argument{
 		{
 			Name:    "hash",
@@ -123,11 +123,11 @@ var TransactionResp = Message{
 }
 
 var Empty = Message{
-	Name: "Empty",
+	Name: "protobuf.Empty",
 }
 
 var TransactOptsReq = Message{
-	Name: "TransactOpts",
+	Name: "protobuf.TransactOpts",
 	Args: []Argument{
 		{
 			Name:    "private_key",

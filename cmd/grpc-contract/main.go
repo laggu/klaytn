@@ -89,7 +89,7 @@ func main() {
 		// find the corresponding server interface
 		f, ok := pbFilesMap[contract.Sources[1]]
 		if !ok {
-			fmt.Printf("Failed to load corresponding source file for service %v\n", goType)
+			fmt.Printf("Failed to load corresponding source file(%s) for service %v\n", contract.Sources[1], goType)
 			os.Exit(-1)
 		}
 		var serverInterface *parser.GoInterface
@@ -107,7 +107,7 @@ func main() {
 		// find the corresponding server interface
 		f, ok = pbFilesMap[contract.Sources[2]]
 		if !ok {
-			fmt.Printf("Failed to find corresponding server interface %v\n", goType)
+			fmt.Printf("Failed to find corresponding server interface(%s) for service %v\n", contract.Sources[2], goType)
 			os.Exit(-1)
 		}
 
