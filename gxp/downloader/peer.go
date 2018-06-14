@@ -3,9 +3,9 @@ package downloader
 import (
 	"errors"
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/log"
 	"math"
 	"math/big"
 	"sort"

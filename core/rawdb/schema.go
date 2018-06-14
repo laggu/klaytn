@@ -19,8 +19,8 @@ package rawdb
 
 import (
 	"encoding/binary"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/metrics"
 )
 
 // The fields below define the low level database schema prefixing.

@@ -1,7 +1,7 @@
 package accounts
 
 import (
-	"ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/event"
 	"reflect"
 	"sort"
 	"sync"

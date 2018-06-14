@@ -19,11 +19,11 @@ package trie
 import (
 	"bytes"
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/rlp"
 )
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes

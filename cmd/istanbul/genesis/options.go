@@ -2,11 +2,11 @@ package genesis
 
 import (
 	"math/big"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/cmd/istanbul/extra"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/cmd/istanbul/extra"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
 type Option func(*core.Genesis)

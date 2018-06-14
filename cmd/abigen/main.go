@@ -4,11 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"ground-x/go-gxplatform/accounts/abi/bind"
+	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
 	"strings"
 	"encoding/json"
 	"io/ioutil"
-	"ground-x/go-gxplatform/common/compiler"
+	"github.com/ground-x/go-gxplatform/common/compiler"
 )
 
 var (

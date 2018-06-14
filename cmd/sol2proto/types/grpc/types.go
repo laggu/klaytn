@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"bytes"
 	"html/template"
-	"ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
 )
 
 type Argument struct {

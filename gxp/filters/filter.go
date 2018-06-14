@@ -2,13 +2,13 @@ package filters
 
 import (
 	"context"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/core/bloombits"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/core/bloombits"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"math/big"
 )
 

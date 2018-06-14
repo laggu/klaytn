@@ -3,10 +3,10 @@ package core
 import (
 	"errors"
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/vm"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/params"
 	"math"
 	"math/big"
 )

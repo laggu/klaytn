@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"gopkg.in/urfave/cli.v1"
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/accounts/keystore"
-	"ground-x/go-gxplatform/cmd/utils"
-	"ground-x/go-gxplatform/console"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/accounts/keystore"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/console"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/log"
 	"io/ioutil"
 )
 

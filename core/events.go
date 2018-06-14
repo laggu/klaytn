@@ -17,8 +17,8 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.

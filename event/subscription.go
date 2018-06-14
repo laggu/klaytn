@@ -18,7 +18,7 @@ package event
 
 import (
 	"context"
-	"ground-x/go-gxplatform/common/mclock"
+	"github.com/ground-x/go-gxplatform/common/mclock"
 	"sync"
 	"time"
 )

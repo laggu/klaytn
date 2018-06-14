@@ -1,20 +1,20 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/consensus/gxhash"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/gxp/downloader"
-	"ground-x/go-gxplatform/gxp/gasprice"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/gxp/downloader"
+	"github.com/ground-x/go-gxplatform/gxp/gasprice"
+	"github.com/ground-x/go-gxplatform/params"
 	"math/big"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"time"
-	"ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 )
 
 // DefaultConfig contains default settings for use on the GxPlatform main net.

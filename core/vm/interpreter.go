@@ -18,8 +18,8 @@ package vm
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/common/math"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/params"
 	"sync/atomic"
 )
 

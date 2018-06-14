@@ -5,13 +5,13 @@ import (
 	"time"
 	"path/filepath"
 	"encoding/json"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/consensus/istanbul"
-	"ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/core/types"
 	"io/ioutil"
-	"ground-x/go-gxplatform/cmd/istanbul/common"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/cmd/istanbul/common"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
 const (

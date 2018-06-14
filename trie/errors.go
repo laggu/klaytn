@@ -18,7 +18,7 @@ package trie
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 // MissingNodeError is returned by the trie functions (TryGet, TryUpdate, TryDelete)

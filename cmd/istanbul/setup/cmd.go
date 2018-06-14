@@ -4,16 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/urfave/cli"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/p2p/discover"
-	istcommon "ground-x/go-gxplatform/cmd/istanbul/common"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/p2p/discover"
+	istcommon "github.com/ground-x/go-gxplatform/cmd/istanbul/common"
 	"io/ioutil"
 	"math/big"
 	"net"
 	"os"
 	"path"
 	"strconv"
-	"ground-x/go-gxplatform/cmd/istanbul/genesis"
+	"github.com/ground-x/go-gxplatform/cmd/istanbul/genesis"
 )
 
 type validatorInfo struct {

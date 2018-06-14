@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"math/big"
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"errors"
 )
 

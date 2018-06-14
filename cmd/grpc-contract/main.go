@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 	"path"
-	"ground-x/go-gxplatform/cmd/grpc-contract/internal/impl"
+	"github.com/ground-x/go-gxplatform/cmd/grpc-contract/internal/impl"
 	"github.com/getamis/sirius/util"
 
 	flag "github.com/spf13/pflag"

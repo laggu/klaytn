@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"github.com/urfave/cli"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/naoina/toml"
 )
 

@@ -19,10 +19,10 @@ package trie
 import (
 	"errors"
 	"fmt"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common"
 
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/gxdb"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a

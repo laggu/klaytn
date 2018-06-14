@@ -1,7 +1,7 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
 )
 

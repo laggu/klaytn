@@ -1,11 +1,11 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/gxp/downloader"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/p2p/discover"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/gxp/downloader"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/p2p/discover"
 	"math/rand"
 	"sync/atomic"
 	"time"

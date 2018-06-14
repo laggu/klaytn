@@ -3,8 +3,8 @@ package grpc
 import (
 	"fmt"
 	"sort"
-	"ground-x/go-gxplatform/cmd/utils"
-	"ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"io"
 	"html/template"
 )

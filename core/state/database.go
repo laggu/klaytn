@@ -19,9 +19,9 @@ package state
 import (
 	"sync"
 
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/trie"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/trie"
 
 	"fmt"
 	lru "github.com/hashicorp/golang-lru"

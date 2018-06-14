@@ -17,8 +17,8 @@
 package extra
 
 import (
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
 )
 
 func Decode(extraData string) ([]byte, *types.IstanbulExtra, error) {

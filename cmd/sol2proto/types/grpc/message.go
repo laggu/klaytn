@@ -63,7 +63,7 @@ syntax = "proto3";
 
 package {{ .Package }};
 
-import public "ground-x/go-gxplatform/cmd/sol2proto/protobuf/messages.proto";
+import public "github.com/ground-x/go-gxplatform/cmd/sol2proto/protobuf/messages.proto";
 
 {{ range .Messages }}
 {{ . }}

@@ -1,11 +1,11 @@
 package node
 
 import (
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"reflect"
 	"crypto/ecdsa"
 )

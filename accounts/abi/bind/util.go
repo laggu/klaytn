@@ -4,9 +4,9 @@ import (
 	"time"
 	"fmt"
 	"context"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 // WaitMined waits for tx to be mined on the blockchain.

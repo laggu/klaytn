@@ -2,11 +2,11 @@ package genesis
 
 import (
 	"math/big"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/common/math"
-	"ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
 )
 
 //go:generate gencodec -type BFTGenesis -field-override genesisSpecMarshaling -out gen_bft_genesis.go

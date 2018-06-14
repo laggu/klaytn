@@ -2,17 +2,17 @@ package gxapi
 
 import (
 	"context"
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/core/vm"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/gxp/downloader"
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/core/state"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/gxp/downloader"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"math/big"
 )
 

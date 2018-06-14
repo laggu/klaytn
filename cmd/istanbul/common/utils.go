@@ -9,10 +9,10 @@ import (
 	"os"
 	"fmt"
 	uuid "github.com/satori/go.uuid"
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/p2p/discover"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/p2p/discover"
 	"crypto/rand"
 )
 

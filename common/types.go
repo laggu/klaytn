@@ -19,8 +19,8 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/crypto/sha3"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"math/big"
 	"math/rand"
 	"reflect"

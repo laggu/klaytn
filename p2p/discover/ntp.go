@@ -25,7 +25,7 @@ import (
 	"sort"
 	"time"
 
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
 const (

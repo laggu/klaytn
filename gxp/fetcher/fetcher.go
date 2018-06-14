@@ -3,10 +3,10 @@ package fetcher
 import (
 	"errors"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/log"
 	"math/rand"
 	"time"
 )

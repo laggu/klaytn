@@ -25,9 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/p2p/discover"
-	"ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/p2p/discover"
+	"github.com/ground-x/go-gxplatform/rlp"
 )
 
 // Msg defines the structure of a p2p message.

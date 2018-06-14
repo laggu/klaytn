@@ -10,11 +10,11 @@ fi
 # Create fake Go workspace if it doesn't exist yet.
 workspace="$PWD/build/_workspace"
 root="$PWD"
-gxpdir="$workspace/src/ground-x"
+gxpdir="$workspace/src/github.com/ground-x"
 if [ ! -L "$gxpdir/go-gxplatform" ]; then
     mkdir -p "$gxpdir"
     cd "$gxpdir"
-    ln -s ../../../../. go-gxplatform
+    ln -s ../../../../../. go-gxplatform
     cd "$root"
 fi
 

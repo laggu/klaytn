@@ -3,9 +3,9 @@ package client
 import (
 	"math/big"
 	"context"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform"
 )
 
 // Blockchain Access

@@ -2,7 +2,7 @@ package downloader
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/core/types"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

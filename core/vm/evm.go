@@ -17,9 +17,9 @@
 package vm
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/params"
 	"math/big"
 	"sync/atomic"
 	"time"

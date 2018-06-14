@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"gopkg.in/urfave/cli.v1"
-	"ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/common/math"
 	"math/big"
 	"os"
 	"os/user"

@@ -3,13 +3,13 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/consensus/gxhash"
-	"ground-x/go-gxplatform/consensus/istanbul"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/gxp/downloader"
-	"ground-x/go-gxplatform/gxp/gasprice"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/gxp/downloader"
+	"github.com/ground-x/go-gxplatform/gxp/gasprice"
 	"math/big"
 	"time"
 )

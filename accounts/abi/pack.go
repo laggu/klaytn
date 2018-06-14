@@ -3,8 +3,8 @@ package abi
 import (
 	"reflect"
 	"math/big"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/math"
 )
 
 // packBytesSlice packs the given bytes as [L, V] as the canonical representation

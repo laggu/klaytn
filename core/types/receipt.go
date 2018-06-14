@@ -19,9 +19,9 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/rlp"
 	"io"
 	"unsafe"
 )

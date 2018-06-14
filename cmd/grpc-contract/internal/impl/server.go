@@ -5,7 +5,7 @@ import (
 	"os"
 	"bytes"
 	"text/template"
-	"ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
 )
 
 type Server struct {
@@ -22,10 +22,10 @@ import "math/big"
 import "net"
 import "os"
 
-import "ground-x/go-gxplatform/accounts/abi/bind"
-import "ground-x/go-gxplatform/go-ethereum/common"
-import "ground-x/go-gxplatform/go-ethereum/crypto"
-import "ground-x/go-gxplatform/go-ethereum/gxpclient"
+import "github.com/ground-x/go-gxplatform/accounts/abi/bind"
+import "github.com/ground-x/go-gxplatform/common"
+import "github.com/ground-x/go-gxplatform/crypto"
+import "github.com/ground-x/go-gxplatform/gxpclient"
 import {{ .ContractName }} "{{ .ProjectPackage }}"
 import flag "github.com/spf13/pflag"
 import "github.com/spf13/viper"

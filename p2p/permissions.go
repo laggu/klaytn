@@ -1,12 +1,12 @@
 package p2p
 
 import (
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/log"
 	"path/filepath"
 	"os"
 	"io/ioutil"
 	"encoding/json"
-	"ground-x/go-gxplatform/p2p/discover"
+	"github.com/ground-x/go-gxplatform/p2p/discover"
 )
 
 const (

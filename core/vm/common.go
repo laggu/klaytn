@@ -1,8 +1,8 @@
 package vm
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/math"
 	"math/big"
 )
 

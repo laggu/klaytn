@@ -2,11 +2,11 @@ package gxhash
 
 import (
 	"encoding/binary"
-	"ground-x/go-gxplatform/common"
-	bitutil "ground-x/go-gxplatform/common/bitutil"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/crypto/sha3"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/common"
+	bitutil "github.com/ground-x/go-gxplatform/common/bitutil"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/crypto/sha3"
+	"github.com/ground-x/go-gxplatform/log"
 	"hash"
 	"math/big"
 	"reflect"

@@ -1,8 +1,8 @@
 package node
 
 import (
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/p2p/nat"
+	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/p2p/nat"
 	"os"
 	"os/user"
 	"path/filepath"

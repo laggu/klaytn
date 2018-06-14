@@ -18,8 +18,8 @@ package trie
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

@@ -3,8 +3,8 @@ package p2p
 import (
 	"encoding/binary"
 	"github.com/davecgh/go-spew/spew"
-	"ground-x/go-gxplatform/p2p/discover"
-	"ground-x/go-gxplatform/p2p/netutil"
+	"github.com/ground-x/go-gxplatform/p2p/discover"
+	"github.com/ground-x/go-gxplatform/p2p/netutil"
 	"net"
 	"reflect"
 	"testing"

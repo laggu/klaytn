@@ -1,9 +1,9 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus/istanbul"
-	"ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/rlp"
 	"io"
 	"math/big"
 	"sync"

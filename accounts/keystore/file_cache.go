@@ -2,7 +2,7 @@ package keystore
 
 import (
 	"gopkg.in/fatih/set.v0"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/log"
 	"io/ioutil"
 	"os"
 	"path/filepath"

@@ -22,7 +22,7 @@ import (
 
 	"fmt"
 	"gopkg.in/fatih/set.v0"
-	"ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"math"
 	"strings"
 )

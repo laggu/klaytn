@@ -2,13 +2,13 @@ package core
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/core/vm"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/core/state"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/params"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning

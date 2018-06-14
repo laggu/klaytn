@@ -3,8 +3,8 @@ package console
 import (
 	"encoding/json"
 	"fmt"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"io"
 	"strings"
 	"time"

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
 )
 
 var _ = (*txdataMarshaling)(nil)

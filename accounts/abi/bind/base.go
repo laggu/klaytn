@@ -3,14 +3,14 @@ package bind
 import (
 	"math/big"
 	"fmt"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"context"
-	"ground-x/go-gxplatform/accounts/abi"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform"
 	"errors"
-	"ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/event"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

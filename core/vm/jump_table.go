@@ -18,7 +18,7 @@ package vm
 
 import (
 	"errors"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/params"
 	"math/big"
 )
 

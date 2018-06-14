@@ -7,10 +7,10 @@ import (
 	"errors"
 	"math/big"
 
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/common/math"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/params"
 )
 
 var _ = (*genesisSpecMarshaling)(nil)

@@ -2,17 +2,17 @@ package miner
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/gxp/downloader"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/core/state"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/gxp/downloader"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/params"
 	"sync/atomic"
 )
 

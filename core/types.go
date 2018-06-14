@@ -17,9 +17,9 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/core/state"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/core/vm"
 )
 
 // Validator is an interface which defines the standard for block validation. It

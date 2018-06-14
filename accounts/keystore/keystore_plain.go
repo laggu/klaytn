@@ -3,7 +3,7 @@ package keystore
 import (
 	"encoding/json"
 	"fmt"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common"
 	"os"
 	"path/filepath"
 )

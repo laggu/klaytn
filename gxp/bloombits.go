@@ -1,14 +1,14 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/bitutil"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/core/bloombits"
-	"ground-x/go-gxplatform/core/rawdb"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/bitutil"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/core/bloombits"
+	"github.com/ground-x/go-gxplatform/core/rawdb"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/params"
 	"time"
 )
 

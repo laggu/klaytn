@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/crypto"
 )
 
 // creates a Key and stores that in the given KeyStore by decrypting a presale key JSON

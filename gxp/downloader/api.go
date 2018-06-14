@@ -2,9 +2,9 @@ package downloader
 
 import (
 	"context"
-	"ground-x/go-gxplatform"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"sync"
 )
 

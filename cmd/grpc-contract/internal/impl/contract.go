@@ -9,7 +9,7 @@ import (
 	"golang.org/x/tools/imports"
 
 	"text/template"
-	"ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
 )
 
 type Contract struct {

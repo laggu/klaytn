@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/fatih/set.v0"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/log"
 	"net"
 	"net/http"
 	"net/url"

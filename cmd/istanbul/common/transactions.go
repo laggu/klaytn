@@ -3,9 +3,9 @@ package common
 import (
 	"crypto/ecdsa"
 	"math/big"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/cmd/istanbul/client"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/cmd/istanbul/client"
 	"context"
 )
 

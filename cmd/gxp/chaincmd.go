@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"gopkg.in/urfave/cli.v1"
-	"ground-x/go-gxplatform/cmd/utils"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/log"
 	"os"
 )
 

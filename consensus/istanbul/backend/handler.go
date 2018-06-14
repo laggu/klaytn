@@ -3,10 +3,10 @@ package backend
 import (
 	"errors"
 	"github.com/hashicorp/golang-lru"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/consensus/istanbul"
-	"ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/p2p"
 )
 
 const (

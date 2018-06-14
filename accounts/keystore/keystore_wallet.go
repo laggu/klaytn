@@ -1,9 +1,9 @@
 package keystore
 
 import (
-	"ground-x/go-gxplatform"
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/core/types"
 	"math/big"
 )
 

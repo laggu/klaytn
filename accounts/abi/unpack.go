@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"math/big"
 	"fmt"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 // reads the integer based on its kind

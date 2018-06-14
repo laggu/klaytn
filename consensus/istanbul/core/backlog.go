@@ -2,7 +2,7 @@ package core
 
 import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 )
 
 var (

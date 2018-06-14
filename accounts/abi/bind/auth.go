@@ -4,10 +4,10 @@ import (
 	"io/ioutil"
 	"crypto/ecdsa"
 	"io"
-	"ground-x/go-gxplatform/accounts/keystore"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/accounts/keystore"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"errors"
 )
 

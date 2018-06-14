@@ -1,8 +1,8 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/metrics"
-	"ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/p2p"
 )
 
 var (

@@ -31,9 +31,9 @@ import (
 	"strings"
 	"time"
 
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/crypto/secp256k1"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/crypto/secp256k1"
 )
 
 const NodeIDBits = 512

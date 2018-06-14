@@ -18,9 +18,9 @@ package types
 
 import (
 	"bytes"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/trie"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/trie"
 )
 
 type DerivableList interface {

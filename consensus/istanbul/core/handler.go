@@ -1,8 +1,8 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 )
 
 // Start implements core.Engine.Start

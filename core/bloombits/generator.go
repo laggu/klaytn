@@ -2,7 +2,7 @@ package bloombits
 
 import (
 	"errors"
-	"ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/core/types"
 )
 
 // errSectionOutOfBounds is returned if the user tried to add more bloom filters

@@ -16,7 +16,7 @@
 
 package core
 
-import "ground-x/go-gxplatform/common"
+import "github.com/ground-x/go-gxplatform/common"
 
 // BadHashes represent a set of manually tracked bad hashes (usually hard forks)
 var BadHashes = map[common.Hash]bool{

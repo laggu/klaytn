@@ -1,10 +1,10 @@
 package backend
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/rpc"
 )
 
 // API is a user facing RPC API to dump Istanbul state

@@ -2,9 +2,9 @@ package state
 
 import (
 	"bytes"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/trie"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/trie"
 )
 
 // NewStateSync create a new state trie download scheduler.

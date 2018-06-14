@@ -17,9 +17,9 @@
 package trie
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/log"
 	"sync"
 	"time"
 )

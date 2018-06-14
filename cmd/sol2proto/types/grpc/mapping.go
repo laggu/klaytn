@@ -1,6 +1,6 @@
 package grpc
 
-import "ground-x/go-gxplatform/accounts/abi"
+import "github.com/ground-x/go-gxplatform/accounts/abi"
 
 func ToGrpcArgument(in abi.Argument) Argument {
 	arg := Argument{

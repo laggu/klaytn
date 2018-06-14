@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/log"
 	"net"
 	"net/url"
 	"os"

@@ -6,7 +6,7 @@ import (
 	"os"
 	"runtime/trace"
 	"errors"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/log"
 )
 // StartGoTrace turns on tracing, writing to the given file.
 func (h *HandlerT) StartGoTrace(file string) error {

@@ -1,8 +1,8 @@
 package miner
 
 import (
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/log"
 	"sync"
 	"sync/atomic"
 )

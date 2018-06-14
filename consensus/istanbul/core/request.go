@@ -1,6 +1,6 @@
 package core
 
-import "ground-x/go-gxplatform/consensus/istanbul"
+import "github.com/ground-x/go-gxplatform/consensus/istanbul"
 
 func (c *core) handleRequest(request *istanbul.Request) error {
 	logger := c.logger.New("state", c.state, "seq", c.current.sequence)

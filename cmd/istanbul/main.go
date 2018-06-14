@@ -19,10 +19,10 @@ package main
 import (
 	"os"
 	"fmt"
-	"ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/urfave/cli"
-	"ground-x/go-gxplatform/cmd/istanbul/extra"
-	"ground-x/go-gxplatform/cmd/istanbul/setup"
+	"github.com/ground-x/go-gxplatform/cmd/istanbul/extra"
+	"github.com/ground-x/go-gxplatform/cmd/istanbul/setup"
 )
 
 func main() {

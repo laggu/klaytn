@@ -18,8 +18,8 @@ package types
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/crypto"
 	"math/big"
 )
 

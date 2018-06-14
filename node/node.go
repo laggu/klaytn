@@ -17,23 +17,23 @@
 package node
 
 import (
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"net"
 	"sync"
 
 	"errors"
 	"fmt"
 	"github.com/prometheus/prometheus/util/flock"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
-	"ground-x/go-gxplatform/internal/debug"
+	"github.com/ground-x/go-gxplatform/internal/debug"
 )
 
 // Node is a container on which services can be registered.

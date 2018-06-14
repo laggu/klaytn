@@ -2,9 +2,9 @@ package miner
 
 import (
 	"container/ring"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/log"
 	"sync"
 )
 

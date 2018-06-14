@@ -2,7 +2,7 @@ package console
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,8 +16,8 @@ import (
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
-	"ground-x/go-gxplatform/internal/jsre"
-	"ground-x/go-gxplatform/internal/web3ext"
+	"github.com/ground-x/go-gxplatform/internal/jsre"
+	"github.com/ground-x/go-gxplatform/internal/web3ext"
 )
 
 var (

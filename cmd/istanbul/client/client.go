@@ -5,12 +5,12 @@ import (
 	"strings"
 	"sort"
 	"context"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform"
-	"ground-x/go-gxplatform/rpc"
-	"ground-x/go-gxplatform/gxpclient"
-	"ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/gxpclient"
+	"github.com/ground-x/go-gxplatform/p2p"
 )
 
 type client struct {

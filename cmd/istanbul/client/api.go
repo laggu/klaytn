@@ -3,10 +3,10 @@ package client
 import (
 	"math/big"
 	"context"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform"
 )
 
 type Client interface {

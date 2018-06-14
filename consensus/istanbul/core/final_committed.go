@@ -1,7 +1,7 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 func (c *core) handleFinalCommitted() error {

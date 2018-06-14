@@ -2,8 +2,8 @@ package core
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"math/big"
 	"strings"
 	"sync"

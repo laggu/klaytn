@@ -18,10 +18,10 @@ package rawdb
 
 import (
 	"encoding/binary"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/rlp"
 )
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction

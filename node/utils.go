@@ -3,12 +3,12 @@ package node
 import (
 	"context"
 	"fmt"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/metrics"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/p2p/discover"
-	"ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/p2p/discover"
+	"github.com/ground-x/go-gxplatform/rpc"
 	"strings"
 	"time"
 )

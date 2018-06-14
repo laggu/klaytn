@@ -7,7 +7,7 @@ import (
 	"unicode"
 	"golang.org/x/tools/imports"
 	"regexp"
-	"ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"text/template"
 )
 

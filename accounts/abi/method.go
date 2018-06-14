@@ -3,7 +3,7 @@ package abi
 import (
 	"fmt"
 	"strings"
-	"ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/crypto"
 )
 
 // Method represents a callable given a `Name` and whether the method is a constant.

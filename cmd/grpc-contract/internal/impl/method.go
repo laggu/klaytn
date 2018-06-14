@@ -4,7 +4,7 @@ import (
 	"strings"
 	"fmt"
 	"bytes"
-	"ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
 
 	parser "github.com/zpatrick/go-parser"
 	"text/template"

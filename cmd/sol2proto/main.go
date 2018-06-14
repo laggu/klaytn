@@ -24,8 +24,8 @@ import (
 	"io/ioutil"
 	"bytes"
 	"path/filepath"
-	"ground-x/go-gxplatform/cmd/sol2proto/types/grpc"
-	"ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/cmd/sol2proto/types/grpc"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"io"
 
 	flag "github.com/spf13/pflag"

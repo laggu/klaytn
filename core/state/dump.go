@@ -3,9 +3,9 @@ package state
 import (
 	"fmt"
 	"encoding/json"
-	"ground-x/go-gxplatform/trie"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/trie"
+	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 type DumpAccount struct {

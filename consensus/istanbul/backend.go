@@ -1,8 +1,8 @@
 package istanbul
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/event"
 	"math/big"
 	"time"
 )
