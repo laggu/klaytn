@@ -48,7 +48,6 @@ func NewTypeMap(in, inType, outType string) *TypeMap {
 			Template: "{{ .Input }}",
 		}
 	}
-
 	temp, ok := typeMaps[inType][outType]
 	if !ok {
 		return nil

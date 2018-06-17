@@ -9,7 +9,7 @@ import (
 	"html/template"
 )
 
-// Generate a renderable object and required message types from an Ethereum contract ABI
+// Generate a renderable object and required message types from an GXP contract ABI
 func GenerateServiceProtoFile(srvName, pkgName string, contractABI abi.ABI, version string) (protoFile ProtoFile, msgs []Message) {
 	protoFile = ProtoFile{
 		GeneratorVersion: version,

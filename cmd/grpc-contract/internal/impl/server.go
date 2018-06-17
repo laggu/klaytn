@@ -52,13 +52,13 @@ func main() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	gxp := viper.GetString(gxpName)
-	if ethereum == "" {
+	if gxp == "" {
 		fmt.Printf("No gxp client specified\n")
 		os.Exit(-1)
 	}
 
 	port := viper.GetString(portName)
-	if ethereum == "" {
+	if port == "" {
 		fmt.Printf("No listen port specified\n")
 		os.Exit(-1)
 	}
@@ -82,7 +82,7 @@ func main() {
 			os.Exit(-1)
 		}
 		auth := bind.NewKeyedTransactor(key)
-		auth.GasLimit = big.NewInt(int64(4712388))
+		auth.GasLimit = uint64(9000000000000)
 		// get nonce
 		nonce, err := conn.NonceAt(context.Background(), auth.From, nil)
 		if err != nil {
@@ -108,7 +108,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	{{ .ContractName }}.Register{{ .ContractName }}Server(s, {{ .ContractName }}.NewServer(addr, conn))
+	{{ .ContractName }}.Register{{ .ContractName }}Server(s, {{ .ContractName }}.New{{ .ContractName }}Server(addr, conn, nil))
 
 	lis, err := net.Listen("tcp", port)
 	if err != nil {

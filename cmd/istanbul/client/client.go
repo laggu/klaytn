@@ -106,7 +106,7 @@ func (ic *client) SendTransaction(ctx context.Context, from, to common.Address, 
 		"to":    to,
 		"value": (*hexutil.Big)(value),
 	}
-	if err = ic.c.CallContext(ctx, &hex, "eth_sendTransaction", arg); err == nil {
+	if err = ic.c.CallContext(ctx, &hex, "gxp_sendTransaction", arg); err == nil {
 		txHash = hex.String()
 	}
 	return
@@ -119,7 +119,7 @@ func (ic *client) CreateContract(ctx context.Context, from common.Address, bytec
 		"gas":  (*hexutil.Big)(gas),
 		"data": bytecode,
 	}
-	if err = ic.c.CallContext(ctx, &hex, "eth_sendTransaction", arg); err == nil {
+	if err = ic.c.CallContext(ctx, &hex, "gxp_sendTransaction", arg); err == nil {
 		txHash = hex.String()
 	}
 	return
@@ -133,7 +133,7 @@ func (ic *client) CreatePrivateContract(ctx context.Context, from common.Address
 		"data":       bytecode,
 		"privateFor": privateFor,
 	}
-	if err = ic.c.CallContext(ctx, &hex, "eth_sendTransaction", arg); err == nil {
+	if err = ic.c.CallContext(ctx, &hex, "gxp_sendTransaction", arg); err == nil {
 		txHash = hex.String()
 	}
 	return

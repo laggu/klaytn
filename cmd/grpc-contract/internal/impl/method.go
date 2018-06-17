@@ -99,6 +99,16 @@ func (m Method) isConstant() bool {
 	return true
 }
 
+func (m Method) isOptField(field string) bool {
+	if strings.HasSuffix(field , "TransactOpts") {
+		return true
+	} else if strings.HasSuffix(field , "CallOpts") {
+        return true
+	} else {
+		return false
+	}
+}
+
 func (m Method) String() string {
 	tmpl, err := template.New("method").Funcs(template.FuncMap(
 		map[string]interface{}{
@@ -126,6 +136,7 @@ func (m Method) printBody() string {
 
 	tmpl := template.New("body")
 	if m.isConstant() {
+		// @toDo request.fields doesn't match contractMethod.params. it's length is not same with contract's param.
 		tmpl, _ = tmpl.Funcs(template.FuncMap(
 			map[string]interface{}{
 				"PrintArgs": func() (result string) {
@@ -169,11 +180,12 @@ func (m Method) printBody() string {
 			map[string]interface{}{
 				"PrintArgs": func() (result string) {
 					args := ""
-					for i := 1; i < len(m.Request.Fields); i++ {
-						if strings.HasPrefix(m.Request.Fields[i].Name, unknownFieldPrefix) {
+					for i := 0; i < len(m.Request.Fields); i++ {
+						if strings.HasPrefix(m.Request.Fields[i].Name, unknownFieldPrefix) || m.isOptField(m.Request.Fields[i].Type) {
 							continue
 						}
-						args += "\n\t\t" + toRequestParam(m.Request.Fields[i], m.ContractMethod.Params[i]) + ","
+						// m.request.fileds is [argument, opts, XXX_fields...] , m.contractMethod.params is [opts, argument]
+						args += "\n\t\t" + toRequestParam(m.Request.Fields[i], m.ContractMethod.Params[i+1]) + ","
 					}
 					return args
 				},

@@ -130,8 +130,9 @@ func main() {
 			}
 
 			contract.Methods = append(contract.Methods, impl.NewMethod(pbPackage, m, request, response, goBindingFile, contract.StructName))
+
 		}
-		contract.Write(filepath, goType+"_server.go")
+		contract.Write(filepath, goType+"_server")
 	}
 }
 

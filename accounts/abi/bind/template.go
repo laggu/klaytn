@@ -48,6 +48,16 @@ const tmplSourceGo = `
 
 package {{.Package}}
 
+import (
+
+	gxplatform "github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/event"
+)
+
 {{range $contract := .Contracts}}
 	// {{.Type}}ABI is the input ABI used to generate the binding from.
 	const {{.Type}}ABI = "{{.InputABI}}"
