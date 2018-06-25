@@ -180,7 +180,7 @@ func (b *GxpAPIBackend) Downloader() *downloader.Downloader {
 }
 
 func (b *GxpAPIBackend) ProtocolVersion() int {
-	return b.gxp.EthVersion()
+	return b.gxp.GxpVersion()
 }
 
 func (b *GxpAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {

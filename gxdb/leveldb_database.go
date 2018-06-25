@@ -85,6 +85,10 @@ func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
 
 }
 
+func (db *LDBDatabase) Type() string {
+	return LEVELDB
+}
+
 // Path returns the path to the database directory.
 func (db *LDBDatabase) Path() string {
 	return db.fn
@@ -331,13 +335,8 @@ type table struct {
 	prefix string
 }
 
-// NewTable returns a Database object that prefixes all keys with a given
-// string.
-func NewTable(db Database, prefix string) Database {
-	return &table{
-		db:     db,
-		prefix: prefix,
-	}
+func (dt *table) Type() string {
+	return dt.db.Type()
 }
 
 func (dt *table) Put(key []byte, value []byte) error {
@@ -363,11 +362,6 @@ func (dt *table) Close() {
 type tableBatch struct {
 	batch  Batch
 	prefix string
-}
-
-// NewTableBatch returns a Batch object which prefixes all keys with a given string.
-func NewTableBatch(db Database, prefix string) Batch {
-	return &tableBatch{db.NewBatch(), prefix}
 }
 
 func (dt *table) NewBatch() Batch {

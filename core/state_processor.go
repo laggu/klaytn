@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/core/state"
@@ -67,8 +66,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
-	fmt.Printf("#### state_processor ApplyTransaction\n")
-	fmt.Printf("### config.IsBFT %t , tx.GasPrice() %d", config.IsBFT, tx.GasPrice())
 	// istanbul BFT
 	if config.IsBFT && tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
 		return nil, uint64(0), ErrInvalidGasPrice

@@ -122,7 +122,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		gxp.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 
-	log.Info("Initialising GXP protocol", "versions", ProtocolVersions, "network", config.NetworkId)
+	log.Info("Initialising GXP protocol", "versions", gxp.engine.Protocol().Versions , "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
@@ -371,7 +371,7 @@ func (s *GXP) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *GXP) Engine() consensus.Engine           { return s.engine }
 func (s *GXP) ChainDb() gxdb.Database             { return s.chainDb }
 func (s *GXP) IsListening() bool                  { return true } // Always listening
-func (s *GXP) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *GXP) GxpVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *GXP) NetVersion() uint64                 { return s.networkId }
 func (s *GXP) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 

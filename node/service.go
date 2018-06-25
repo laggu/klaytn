@@ -8,6 +8,7 @@ import (
 	"github.com/ground-x/go-gxplatform/rpc"
 	"reflect"
 	"crypto/ecdsa"
+	"github.com/pkg/errors"
 )
 
 type ServiceContext struct {
@@ -24,11 +25,23 @@ func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (gx
 	if ctx.config.DataDir == "" {
 		return gxdb.NewMemDatabase(), nil
 	}
-	db, err := gxdb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
-	if err != nil {
-		return nil, err
+
+	switch ctx.config.DBType {
+	case gxdb.LEVELDB:
+		db, err := gxdb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
+		if err != nil {
+			return nil, err
+		}
+		return db, nil
+	case gxdb.BADGER:
+		db, err := gxdb.NewBGDatabase(ctx.config.resolvePath(name))
+		if err != nil {
+			return nil, err
+		}
+		return db, nil
+	default :
+		return nil, errors.New("fail to open database because wrong type")
 	}
-	return db, nil
 }
 
 // ResolvePath resolves a user path into the data directory if that was relative

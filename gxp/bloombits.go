@@ -91,6 +91,7 @@ func NewBloomIndexer(db gxdb.Database, size uint64) *core.ChainIndexer {
 		db:   db,
 		size: size,
 	}
+
 	table := gxdb.NewTable(db, string(rawdb.BloomBitsIndexPrefix))
 
 	return core.NewChainIndexer(db, table, backend, size, bloomConfirms, bloomThrottling, "bloombits")

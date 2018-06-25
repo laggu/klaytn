@@ -99,7 +99,7 @@ func New(conf *Config) (*Node, error) {
 	}
 
 	// Ensure that the AccountManager method works before the node has started.
-	// We rely on this in cmd/geth.
+	// We rely on this in cmd/gxp.
 	am, ephemeralKeystore, err := makeAccountManager(conf)
 	if err != nil {
 		return nil, err
@@ -571,7 +571,14 @@ func (n *Node) OpenDatabase(name string, cache, handles int) (gxdb.Database, err
 	if n.config.DataDir == "" {
 		return gxdb.NewMemDatabase(), nil
 	}
-	return gxdb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	switch n.config.DBType {
+	case gxdb.LEVELDB:
+		return gxdb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	case gxdb.BADGER :
+		return gxdb.NewBGDatabase(n.config.resolvePath(name))
+	default :
+		return nil, errors.New("fail to open database because wrong type")
+	}
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.

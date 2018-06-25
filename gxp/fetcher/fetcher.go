@@ -192,6 +192,7 @@ func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
 		origin: peer,
 		block:  block,
 	}
+
 	select {
 	case f.inject <- op:
 		return nil

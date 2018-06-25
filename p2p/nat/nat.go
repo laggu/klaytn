@@ -20,7 +20,7 @@ type Interface interface {
 	// protocol is "UDP" or "TCP". Some implementations allow setting
 	// a display name for the mapping. The mapping may be removed by
 	// the gateway when its lifetime ends.
-	AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) error
+	AddMapping(protocol string, extport, inport int, name string, lifetime time.Duration) error
 	DeleteMapping(protocol string, extport, inport int) error
 
 	// This method should return the external (Internet-facing)

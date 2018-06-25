@@ -3,6 +3,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/AndreasBriese/bbloom"
+  packages = ["."]
+  revision = "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e"
+
+[[projects]]
+  branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
   revision = "70dca2f27708bcf7323c078bad4af7e71eb0fc24"
@@ -12,6 +18,25 @@
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/dgraph-io/badger"
+  packages = [
+    ".",
+    "options",
+    "protos",
+    "skl",
+    "table",
+    "y"
+  ]
+  revision = "a6f0866f06a0ef6ac612e427ffe5d081db4e6fab"
+  version = "v1.5.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dgryski/go-farm"
+  packages = ["."]
+  revision = "2de33835d10275975374b37b2dcfd22c9020a1f5"
 
 [[projects]]
   branch = "master"
@@ -149,6 +174,12 @@
   revision = "80ce870644db1b043e8dc2cf836bde5c347e2701"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
@@ -259,9 +290,12 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = [
+    "context",
     "html",
     "html/atom",
     "html/charset",
+    "internal/timeseries",
+    "trace",
     "websocket"
   ]
   revision = "f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd"
@@ -336,6 +370,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c31ebbb0ae2266f1ecd9e3f54801032cde8357485c13e98ef0cca15b175dda8e"
+  inputs-digest = "5bb590165bf5d83dea040d7e7a59fd0d00d2e5448a30bbafd39b85a02501fe12"
   solver-name = "gps-cdcl"
   solver-version = 1

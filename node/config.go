@@ -41,6 +41,9 @@ type Config struct {
 	// in the devp2p node identifier.
 	Version string `toml:"-"`
 
+	// key-value storage type [leveldb, badgerdb]
+	DBType string
+
 	// DataDir is the file system folder the node should use for any data storage
 	// requirements. The configured data directory will not be directly shared with
 	// registered services, instead those can use utility methods to create/access

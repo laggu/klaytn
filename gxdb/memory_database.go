@@ -42,6 +42,10 @@ func NewMemDatabaseWithCap(size int) *MemDatabase {
 	}
 }
 
+func (db *MemDatabase) Type() string {
+	return MEMDB
+}
+
 func (db *MemDatabase) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()

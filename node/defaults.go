@@ -18,6 +18,7 @@ const (
 
 // DefaultConfig contains reasonable default settings.
 var DefaultConfig = Config{
+	DBType:           DefaultDBType(),
 	DataDir:          DefaultDataDir(),
 	HTTPPort:         DefaultHTTPPort,
 	HTTPModules:      []string{"net", "web3"},
@@ -29,6 +30,10 @@ var DefaultConfig = Config{
 		MaxPeers:   25,
 		NAT:        nat.Any(),
 	},
+}
+
+func DefaultDBType() string {
+	return "leveldb"
 }
 
 // DefaultDataDir is the default data directory to use for the databases and other

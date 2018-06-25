@@ -31,7 +31,7 @@ See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.`,
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",
-		Flags:     append(consoleFlags, utils.DataDirFlag),
+		Flags:     append(consoleFlags, utils.DbTypeFlag, utils.DataDirFlag),
 		Category:  "CONSOLE COMMANDS",
 		Description: `
 The Gxp console is an interactive shell for the JavaScript runtime environment

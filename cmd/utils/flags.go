@@ -50,6 +50,11 @@ func NewApp(gitCommit, usage string) *cli.App {
 
 var (
 	// General settings
+	DbTypeFlag = cli.StringFlag{
+		Name:  "dbtype",
+		Usage: `Blockchain storage database type ("leveldb", "badger")`,
+		Value: "leveldb",
+	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases and keystore",
@@ -734,6 +739,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setWS(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
+	if ctx.GlobalIsSet(DbTypeFlag.Name) {
+		cfg.DBType =ctx.GlobalString(DbTypeFlag.Name)
+	}
+
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
@@ -944,6 +953,7 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 
 // RegisterGxpService adds an GXP client to the stack.
 func RegisterGxpService(stack *node.Node, cfg *gxp.Config) {
+	// @toDo add syncMode.LightSync func and add LesServer
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		fullNode, err := gxp.New(ctx, cfg)
 		return fullNode, err
