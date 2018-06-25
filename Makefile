@@ -30,6 +30,7 @@ all:
 	build/env.sh go run build/ci.go install
 
 clean:
+	./build/clean_go_build_cache.sh
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*
 
 # Cross Compilation Targets (xgo)
