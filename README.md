@@ -72,8 +72,6 @@ over between the main network and test network, you should make sure to always u
 for play-money and real-money. Unless you manually move accounts, GXP will by default correctly
 separate the two networks and will not make any accounts available between them.*
 
-```
-
 ### Configuration (PoW)
 
 As an alternative to passing the numerous flags to the `gxp` binary, you can also pass a configuration file via:
