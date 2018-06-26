@@ -131,6 +131,8 @@ func init() {
 		// See consolecmd.go:
 		consoleCommand,
 		attachCommand,
+
+		dumpConfigCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 

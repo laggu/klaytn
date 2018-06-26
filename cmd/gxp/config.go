@@ -14,9 +14,20 @@ import (
 	"unicode"
 
 	"github.com/naoina/toml"
+	"io"
 )
 
 var (
+	dumpConfigCommand = cli.Command{
+		Action:      utils.MigrateFlags(dumpConfig),
+		Name:        "dumpconfig",
+		Usage:       "Show configuration values",
+		ArgsUsage:   "",
+		Flags:       append(append(nodeFlags, rpcFlags...)),
+		Category:    "MISCELLANEOUS COMMANDS",
+		Description: `The dumpconfig command shows configuration values.`,
+	}
+
 	configFileFlag = cli.StringFlag{
 		Name:  "config",
 		Usage: "TOML configuration file",
@@ -100,4 +111,22 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	utils.RegisterGxpService(stack, &cfg.Gxp)
 
 	return stack
+}
+
+func dumpConfig(ctx *cli.Context) error {
+	_, cfg := makeConfigNode(ctx)
+	comment := ""
+
+	if cfg.Gxp.Genesis != nil {
+		cfg.Gxp.Genesis = nil
+		comment += "# Note: this config doesn't contain the genesis block.\n\n"
+	}
+
+	out, err := tomlSettings.Marshal(&cfg)
+	if err != nil {
+		return err
+	}
+	io.WriteString(os.Stdout, comment)
+	os.Stdout.Write(out)
+	return nil
 }
