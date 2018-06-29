@@ -269,7 +269,10 @@ gxp --datadir $DATAPATH --port 30303 --rpc --rpcaddr 0.0.0.0 --rpcport "8123" --
 --rpcapi "db,txpool,gxp,net,web3,miner,personal,admin,rpc" --mine --gasprice 0 console
 
 ```
-동일 머신에서 수행시에는 --port , --rpcport --wsport 옵션을 다르게 설정하고 --networkid는 동일하게 설정함
+동일 머신에서 수행시에는 `--port`, `--rpcport`, `--wsport` 옵션을 다르게 설정하고 `--networkid`는 동일하게 설정함.
+In this case, please make sure the IP and port number for each validator in
+`static-nodes.json` are the same as your local IP (e.g., 127.0.0.1) and the
+value used with`--port` when running `gxp`.
 
 ### sol2proto
 Solidity ABI to gRPC protobuf IDL transpiler
