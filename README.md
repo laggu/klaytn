@@ -1,3 +1,22 @@
+# Table of Contents
+<!-- vim-markdown-toc GFM -->
+
+* [Go GXPlatform](#go-gxplatform)
+* [Building the source](#building-the-source)
+* [Executables](#executables)
+* [Running gxp](#running-gxp)
+  * [Full node on the main GXPlatform network](#full-node-on-the-main-gxplatform-network)
+  * [Full node on the GXPlatform test network](#full-node-on-the-gxplatform-test-network)
+  * [Configuration (PoW)](#configuration-pow)
+  * [Programatically interfacing GXP nodes](#programatically-interfacing-gxp-nodes)
+  * [Operating a private network](#operating-a-private-network)
+    * [Defining the private genesis state](#defining-the-private-genesis-state)
+  * [Configuration (istanbul-BFT)](#configuration-istanbul-bft)
+  * [sol2proto](#sol2proto)
+  * [grpc-contract](#grpc-contract)
+* [License](#license)
+
+<!-- vim-markdown-toc -->
 
 ## Go GXPlatform
 
