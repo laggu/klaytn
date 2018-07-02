@@ -4,6 +4,8 @@
 
 * [How to run test network in a single node](#how-to-run-test-network-in-a-single-node)
   * [Getting Started](#getting-started)
+    * [Launching GXP nodes](#launching-gxp-nodes)
+    * [Attaching to a GXP node](#attaching-to-a-gxp-node)
   * [Log files](#log-files)
   * [Killing GXP processes](#killing-gxp-processes)
   * [Change Options](#change-options)
@@ -16,14 +18,18 @@
 # How to run test network in a single node
 
 ## Getting Started
+
+### Launching GXP nodes
 You can run GXP with the default setting by executing the following commands:
 ```
 $ cd scripts
 $ export GXP_DATAPATH=~/.gxp/data
-$ ./1.istanbul_setup.sh
-$ ./2.gen_genesis_block.sh
-$ ./3.run_nodes.sh
-$ ./4.attach.sh
+$ ./run_gxp.sh
+```
+
+### Attaching to a GXP node
+```
+$ ./attach.sh
 
 > gxp.blockNumber
 ```
