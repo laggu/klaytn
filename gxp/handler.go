@@ -81,6 +81,16 @@ type ProtocolManager struct {
 	engine consensus.Engine
 }
 
+// Ranger
+func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *core.BlockChain, chaindb gxdb.Database) (*ProtocolManager, error) {
+	txpool := &EmptyTxPool{}
+	return NewProtocolManager(config, mode, networkId, mux, txpool ,engine,blockchain,chaindb)
+}
+
+func (pm *ProtocolManager) GetTxPool() txPool {
+	return pm.txpool
+}
+
 // NewProtocolManager returns a new GXP sub protocol manager. The GXP sub protocol manages peers capable
 // with the GXPlatform network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb gxdb.Database) (*ProtocolManager, error) {
@@ -149,6 +159,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 			},
 		})
 	}
+
 	if len(manager.SubProtocols) == 0 {
 		return nil, errIncompatibleConfig
 	}
@@ -748,4 +759,22 @@ func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common
 		  }
 	}
 	return m
+}
+
+func (pm *ProtocolManager) GetPeers() []common.Address {
+	addrs := make([]common.Address,0)
+	for _, p := range pm.peers.Peers() {
+		pubKey, err := p.ID().Pubkey()
+		if err != nil {
+			continue
+		}
+		addr := crypto.PubkeyToAddress(*pubKey)
+		addrs = append(addrs,addr)
+	}
+	return addrs
+}
+
+// Ranger
+func (pm *ProtocolManager) Downloader() *downloader.Downloader {
+	return pm.downloader
 }

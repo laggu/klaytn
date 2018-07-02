@@ -55,6 +55,9 @@ const (
 	msgCommit
 	msgRoundChange
 	msgAll
+
+	// ranger node
+	msgStartProofRound
 )
 
 type message struct {

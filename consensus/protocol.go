@@ -9,6 +9,9 @@ import (
 const (
 	Gxp62 = 62
 	Gxp63 = 63
+
+	// istanbul msg-code
+	PoRMsg = 0x12
 )
 
 var (
@@ -36,6 +39,8 @@ type Broadcaster interface {
 	Enqueue(id string, block *types.Block)
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
+
+    GetPeers() []common.Address
 }
 
 // Peer defines the interface to communicate with peer

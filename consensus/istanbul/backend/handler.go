@@ -23,7 +23,8 @@ func (sb *backend) Protocol() consensus.Protocol {
 	return consensus.Protocol{
 		Name:     "istanbul",
 		Versions: []uint{64},
-		Lengths:  []uint64{18},
+		//Lengths:  []uint64{18},
+		Lengths:  []uint64{19},
 	}
 }
 

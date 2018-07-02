@@ -31,6 +31,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"github.com/ground-x/go-gxplatform/ranger"
 )
 
 // NewApp creates an app with sane defaults.
@@ -956,6 +957,16 @@ func RegisterGxpService(stack *node.Node, cfg *gxp.Config) {
 	// @toDo add syncMode.LightSync func and add LesServer
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		fullNode, err := gxp.New(ctx, cfg)
+		return fullNode, err
+	})
+	if err != nil {
+		Fatalf("Failed to register the GXP service: %v", err)
+	}
+}
+
+func RegisterRanagerService(stack *node.Node, cfg *ranger.Config) {
+	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		fullNode, err := ranger.New(ctx, cfg)
 		return fullNode, err
 	})
 	if err != nil {
