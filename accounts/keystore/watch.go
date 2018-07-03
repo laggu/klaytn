@@ -1,9 +1,10 @@
 package keystore
 
 import (
-	"github.com/rjeczalik/notify"
-	"github.com/ground-x/go-gxplatform/log"
 	"time"
+
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/rjeczalik/notify"
 )
 
 type watcher struct {
