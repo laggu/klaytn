@@ -39,13 +39,9 @@ workflows:
   build_and_dockernize:
     jobs:
       - build:
-          filters:
-            branches:
-              only:
-                - master
       - dockernize:
           filters:
             branches:
               only:
                 - master
-   
+
