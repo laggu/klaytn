@@ -57,7 +57,7 @@ const (
 	msgAll
 
 	// ranger node
-	msgStartProofRound
+	msgProofPreprepare
 )
 
 type message struct {

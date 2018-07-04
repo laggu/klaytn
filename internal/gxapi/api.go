@@ -1078,9 +1078,9 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	}
 	// Request the wallet to sign the transaction
 	var chainID *big.Int
-	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-	//	chainID = config.ChainId
-	//}
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
 	return wallet.SignTx(account, tx, chainID)
 }
 

@@ -116,7 +116,7 @@ func(re *RangerEngine) Protocol() consensus.Protocol {
 	return consensus.Protocol{
 		Name:     "istanbul",
 		Versions: []uint{64},
-		Lengths:  []uint64{19},
+		Lengths:  []uint64{20},
 	}
 }
 
@@ -154,7 +154,7 @@ func(re *RangerEngine) HandleMsg(address common.Address, msg p2p.Msg) (bool, err
 			return false, nil
 		}
 
-        re.proofFeed.Send(NewProofEvent{proof})
+        re.proofFeed.Send(NewProofEvent{address, proof})
 
 		return true, nil
 	}

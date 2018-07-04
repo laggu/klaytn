@@ -634,6 +634,25 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
+	// ranger node
+	case msg.Code == consensus.PoRSendMsg:
+		// Look up the wallet containing the requested signer
+		tx := new(types.Transaction)
+		if err := msg.Decode(tx); err != nil {
+			log.Error("ErrDecode","msg",msg,"err",err)
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		signer := types.MakeSigner(pm.chainconfig, pm.blockchain.CurrentBlock().Number())
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			log.Error("ErrDecode","msg",msg,"err",err)
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		log.Error("received tx","addr",from,"nonce",tx.Nonce(),"to",tx.To(),"value",tx.Value(),"string",tx.String())
+
+
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}

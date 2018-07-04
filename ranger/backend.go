@@ -25,12 +25,13 @@ import (
 	"github.com/ground-x/go-gxplatform/gxpclient"
 	"github.com/ground-x/go-gxplatform/p2p"
 	"github.com/ground-x/go-gxplatform/common/bitutil"
-	"context"
 	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/hashicorp/golang-lru"
 )
 
 const (
 	bloomServiceThreads = 16
+	peerCacheLimit      = 5
 )
 
 // GXP implements the Ranger service.
@@ -76,11 +77,16 @@ type Ranger struct {
 	proofFeed event.Feed
 	proofCh chan NewProofEvent
 	proofSub event.Subscription
+
+	peerCache  *lru.Cache
 }
 
 // New creates a new GXP object (including the
 // initialisation of the common GXP object)
 func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
+
+
+	peerCache, _ := lru.New(peerCacheLimit)
 
 	chainDb, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
@@ -106,6 +112,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 		bloomIndexer:   gxp.NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 		consUrl:        config.ConsensusURL,
 		proofCh:        make(chan NewProofEvent),
+		peerCache:      peerCache,
 	}
 
 	ranger.engine = &RangerEngine{proofFeed:&ranger.proofFeed}
@@ -142,7 +149,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 
 	ranger.cnClient, err = gxpclient.Dial(ranger.consUrl)
 	if err != nil {
-		return nil, err
+		log.Error("Fail to connect consensus node","err",err)
 	}
 
 	ranger.txPool = core.NewTxPool(core.DefaultTxPoolConfig , ranger.chainConfig, ranger.blockchain)
@@ -164,6 +171,10 @@ func (rn *Ranger) proofReplication() error {
 	//ticker := time.NewTicker(10 * time.Second)
 	//defer ticker.Stop()
 
+	if rn.cnClient == nil {
+		return nil
+	}
+
 	coinbase, err := rn.Coinbase()
 	if err != nil {
 		log.Error("Cannot start proofReplication without coinbase", "err", err)
@@ -179,8 +190,8 @@ func (rn *Ranger) proofReplication() error {
 		return err
 	}
 
-	to := common.HexToAddress("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da706")
-	amount := big.NewInt(100)
+	to := common.Address{}    // common.HexToAddress("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da706")
+	amount := big.NewInt(0)
 	gaslimit := uint64(117600)
 	gasprice := big.NewInt(0)
 	data := []byte{}
@@ -201,11 +212,31 @@ func (rn *Ranger) proofReplication() error {
 				tx, err := wallet.SignTx(account, types.NewTransaction(nonce, to, amount, gaslimit, gasprice, data), chainID)
 				if err != nil {
 					log.Error("fail to make signed transaction", "err", err)
-				} else {
-					err := rn.cnClient.SendTransaction(context.Background(), tx)
+					continue
+				}
+
+				// send tx directly
+				//err := rn.cnClient.SendTransaction(context.Background(), tx)
+				//if err != nil {
+				//	log.Error("fail to send transaction", "err", err)
+				//}
+
+				if cached, ok := rn.peerCache.Get(msg.addr);ok {
+					cpeer := *cached.(*consensus.Peer)
+					err := cpeer.Send(consensus.PoRSendMsg,tx)
 					if err != nil {
 						log.Error("fail to send transaction", "err", err)
 					}
+				} else {
+					m := make(map[common.Address]bool)
+					m[msg.addr] = true
+					peermap := rn.protocolManager.FindPeers(m)
+					p := peermap[msg.addr]
+					err = p.Send(consensus.PoRSendMsg,tx)
+					if err != nil {
+						log.Error("fail to send transaction", "err", err)
+					}
+					rn.peerCache.Add(msg.addr, &p)
 				}
 			}
 		default:
@@ -317,6 +348,7 @@ func (s *Ranger) Stop() error {
 	close(s.shutdownChan)
 
 	s.proofSub.Unsubscribe()
+	s.peerCache.Purge()
 
 	return nil
 }

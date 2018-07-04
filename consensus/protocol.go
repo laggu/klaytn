@@ -10,14 +10,15 @@ const (
 	Gxp62 = 62
 	Gxp63 = 63
 
-	// istanbul msg-code
-	PoRMsg = 0x12
+	// istanbul msg-code for ranger node
+	PoRMsg     = 0x12
+	PoRSendMsg = 0x13
 )
 
 var (
 	GxpProtocol = Protocol{
 		Name:     "gxp",
-		Versions: []uint{Gxp62, Gxp63},
+		Versions: []uint{Gxp63, Gxp62},
 		Lengths:  []uint64{17, 8},
 	}
 )
