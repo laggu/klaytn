@@ -26,6 +26,11 @@ abigen:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
 
+evm:
+	build/env.sh go run build/ci.go install ./cmd/evm
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/evm\" to launch evm."
+
 all:
 	build/env.sh go run build/ci.go install
 
