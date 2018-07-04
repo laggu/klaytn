@@ -31,8 +31,9 @@ jobs:
       - run:
           name: "Build & Push Docker Image"
           command: |
-            docker build -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest .
+            docker build -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1 .
             docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest
+            docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1
 workflows:
   version: 2
   build_and_dockernize:
