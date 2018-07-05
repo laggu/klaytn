@@ -9,7 +9,7 @@ jobs:
     working_directory: /go/src/github.com/ground-x/go-gxplatform
     steps:
       - checkout
-      - run: make
+      - run: make all
 
   dockernize:
     docker:
