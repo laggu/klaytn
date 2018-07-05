@@ -139,7 +139,7 @@ func init() {
 	}
 	app.Commands = []cli.Command{
 		compileCommand,
-		//TODO: disasmCommand,
+		disasmCommand,
 		//TODO: runCommand,
 		//TODO: stateTestCommand,
 	}
