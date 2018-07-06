@@ -155,6 +155,9 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb); err != nil {
 		return nil, err
 	}
+	gxp.protocolManager.setGXP(*gxp)
+
+
 	gxp.miner = miner.New(gxp, gxp.chainConfig, gxp.EventMux(), gxp.engine)
 	// istanbul BFT
 	gxp.miner.SetExtra(makeExtraData(config.ExtraData, gxp.chainConfig.IsBFT))

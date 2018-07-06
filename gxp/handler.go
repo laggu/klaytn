@@ -23,6 +23,13 @@ import (
 	"sync/atomic"
 	"time"
 	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/gxpclient"
+	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
+	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
+	"io/ioutil"
+	"github.com/ground-x/go-gxplatform/accounts/keystore"
+	"context"
+	"crypto/ecdsa"
 )
 
 const (
@@ -79,6 +86,8 @@ type ProtocolManager struct {
 	wg sync.WaitGroup
 	// istanbul BFT
 	engine consensus.Engine
+
+	gxp GXP
 }
 
 // Ranger
@@ -184,6 +193,11 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
 	return manager, nil
+}
+
+
+func (pm *ProtocolManager) setGXP(gxp GXP) {
+	pm.gxp = gxp
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
@@ -650,7 +664,74 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
-		log.Error("received tx","addr",from,"nonce",tx.Nonce(),"to",tx.To(),"value",tx.Value(),"string",tx.String())
+
+		cnClient, err := gxpclient.Dial("ws://localhost:8546")
+		if err != nil {
+			log.Error("Fail to connect consensus node","err",err)
+		}
+
+		address := common.HexToAddress("0xfc7e764a355a6d9fd2432c35e4c1e68cd8c4a12a")
+		instance, err := contract.NewGXPReward(address, cnClient)
+		if err != nil {
+			return err
+		}
+
+		file := "/Users/jun/data/istanbul/node6/keystore/UTC--2018-05-30T08-36-11.646393438Z--605c0b13afc58eb93088fda85cc6b9b94ce9c0d0"
+		password := "cm0502"
+
+		keyjson, err := ioutil.ReadFile(file)
+		key, err := keystore.DecryptKey(keyjson, password)
+		if err != nil {
+			fmt.Println("json key failed to decrypt: %v", err)
+		}
+
+		publicKey := key.PrivateKey.Public()
+		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+		if !ok {
+			log.Error("error casting public key to ECDSA")
+		}
+
+		fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+		log.Error("public key","fromAddress",fromAddress)
+
+
+		nonce, err := cnClient.PendingNonceAt(context.Background(), common.HexToAddress("0x605c0b13afc58eb93088fda85cc6b9b94ce9c0d0"))
+		if err != nil {
+			log.Error("fail to call pendingnonce", "err", err)
+		}else{
+			log.Error("nonce","nonce",nonce)
+		}
+
+	    transcOpt := bind.NewKeyedTransactor(key.PrivateKey)
+	    //transcOpt.From = common.HexToAddress("0x605c0b13afc58eb93088fda85cc6b9b94ce9c0d0")
+	    transcOpt.Nonce = big.NewInt(int64(nonce))
+	    transcOpt.Value = big.NewInt(10)
+	    transcOpt.GasLimit = uint64(117600)
+	    transcOpt.GasPrice = big.NewInt(0)
+
+		_, rerr := instance.Reward(transcOpt,common.HexToAddress("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da706"))
+		if rerr != nil {
+			log.Error("fail to call reward", "err", rerr)
+		}
+		//}else {
+		//	cnClient.SendTransaction(context.Background(), rtx)
+		//}
+
+
+
+		//session := &contract.GXPRewardSession{
+	    	//Contract: instance ,
+	    	//CallOpts: bind.CallOpts{
+	    	//	Pending: true,
+		//	},
+		//	TransactOpts: *transcOpt,
+		//}
+		//session.Reward(common.Address{})
+
+		//amount, err := session.TotalAmount()
+
+
+		log.Error("received tx","addr",from,"nonce",tx.Nonce(),"to",tx.To(),"value",tx.Value())
 
 
 	default:

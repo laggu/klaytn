@@ -39,6 +39,22 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 				Msg:  proofpreprepare,
 			})
 
+			// ranger node
+			targets := make(map[common.Address]bool)
+			// exclude validator nodes, only send ranger nodes
+			for _, addr := range c.backend.GetPeers() {
+				var notval = true
+				for _, val := range c.valSet.List() {
+					if addr == val.Address() {
+						notval = false
+					}
+				}
+				if notval {
+					targets[addr] = true
+				}
+			}
+			go c.backend.GossipProof(targets, *proof)
+
 		} else {
 
 			preprepare, err := Encode(&istanbul.Preprepare{
