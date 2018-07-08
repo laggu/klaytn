@@ -76,6 +76,8 @@ var (
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
 		utils.CoinbaseFlag,
+		utils.RewardbaseFlag,
+		utils.RewardContractFlag,
 		utils.GasPriceFlag,
 		utils.MinerThreadsFlag,
 		utils.MiningEnabledFlag,

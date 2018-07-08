@@ -133,20 +133,6 @@ func(re *RangerEngine) HandleMsg(address common.Address, msg p2p.Msg) (bool, err
 
 	if msg.Code == consensus.PoRMsg {
 
-		////var proof types.Proof
-		//dataOut := make([]byte, msg.Size)
-		//if err := msg.Decode(&dataOut); err != nil {
-		//	log.Error("Invalid []byte RLP", "err", err)
-		//	return false, nil
-		//}
-		//
-		////var proof types.Proof
-		//proof := new(types.Proof)
-		//if err := rlp.DecodeBytes(dataOut, &proof); err != nil {
-		//	log.Error("Invalid proof RLP", "err", err)
-		//	return false, nil
-		//}
-
 		//var proof types.Proof
 		proof := new(types.Proof)
 		if err := msg.Decode(&proof); err != nil {

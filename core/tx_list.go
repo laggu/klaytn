@@ -240,6 +240,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 		// price as well as checking the percentage threshold to ensure that
 		// this is accurate for low (Wei-level) gas price replacements
 		if old.GasPrice().Cmp(tx.GasPrice()) >= 0 || threshold.Cmp(tx.GasPrice()) > 0 {
+			log.Error("already nonce exist","nonce",tx.Nonce(),"with gasprice", old.GasPrice(),"priceBump",priceBump,"new tx.gasprice",tx.GasPrice())
 			return false, nil
 		}
 	}

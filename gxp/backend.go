@@ -72,6 +72,9 @@ type GXP struct {
 	gasPrice *big.Int
 	coinbase common.Address
 
+	rewardbase common.Address
+	rewardcontract common.Address
+
 	networkId     uint64
 	netRPCService *gxapi.PublicNetAPI
 
@@ -113,6 +116,8 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Gxbase,
+		rewardbase:     config.Rewardbase,
+		rewardcontract: config.RewardContract,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
@@ -155,8 +160,14 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	gxp.protocolManager.setGXP(*gxp)
-
+	wallet, err := gxp.RewardbaseWallet()
+	if err != nil {
+		log.Error("find err","err",err)
+	}else {
+		gxp.protocolManager.SetRewardbaseWallet(wallet)
+	}
+	gxp.protocolManager.SetRewardbase(gxp.rewardbase)
+	gxp.protocolManager.SetRewardContract(gxp.rewardcontract)
 
 	gxp.miner = miner.New(gxp, gxp.chainConfig, gxp.EventMux(), gxp.engine)
 	// istanbul BFT
@@ -324,7 +335,57 @@ func (s *GXP) Coinbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
 }
 
-// SetCoinbase sets the mining reward address.
+func (s *GXP) Rewardbase() (eb common.Address, err error) {
+	s.lock.RLock()
+	rewardbase := s.rewardbase
+	s.lock.RUnlock()
+
+	if rewardbase != (common.Address{}) {
+		return rewardbase, nil
+	}
+	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
+		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
+			rewardbase := accounts[0].Address
+
+			s.lock.Lock()
+			s.rewardbase = rewardbase
+			s.lock.Unlock()
+
+			log.Info("Rewardbase automatically configured", "address", rewardbase)
+			return rewardbase, nil
+		}
+	}
+
+	return common.Address{}, fmt.Errorf("rewardbase must be explicitly specified")
+}
+
+func (s *GXP) RewardContract() (addr common.Address, err error) {
+	s.lock.RLock()
+	rewardcontract := s.rewardcontract
+	s.lock.RUnlock()
+
+	if rewardcontract != (common.Address{}) {
+		return rewardcontract, nil
+	}
+	return common.Address{}, nil
+}
+
+func (s *GXP) RewardbaseWallet() (accounts.Wallet, error) {
+	coinbase, err := s.Rewardbase()
+	if err != nil {
+		return nil, err
+	}
+
+	account := accounts.Account{Address: coinbase}
+	wallet , err := s.AccountManager().Find(account)
+	if err != nil {
+		log.Error("find err","err",err)
+		return nil, err
+	}
+	return wallet, nil
+}
+
+// SetRewardbase sets the mining reward address.
 func (s *GXP) SetCoinbase(coinbase common.Address) {
 	s.lock.Lock()
 	// istanbul BFT
@@ -338,6 +399,28 @@ func (s *GXP) SetCoinbase(coinbase common.Address) {
 	s.miner.SetCoinbase(coinbase)
 }
 
+func (s *GXP) SetRewardbase(rewardbase common.Address) {
+	s.lock.Lock()
+	s.rewardbase = rewardbase
+	s.lock.Unlock()
+	wallet, err := s.RewardbaseWallet()
+	if err != nil {
+		log.Error("find err","err",err)
+	}
+	s.protocolManager.SetRewardbase(rewardbase)
+	s.protocolManager.SetRewardbaseWallet(wallet)
+}
+
+func (s *GXP) SetRewardContract(addr common.Address) {
+	s.lock.Lock()
+	s.rewardcontract = addr
+	s.lock.Unlock()
+
+	s.protocolManager.SetRewardContract(s.rewardcontract)
+	//TODO-GX broadcast another CN with authentication rule
+	//TODO-GX add governance feature
+}
+
 func (s *GXP) StartMining(local bool) error {
 	eb, err := s.Coinbase()
 	if err != nil {
@@ -345,12 +428,12 @@ func (s *GXP) StartMining(local bool) error {
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 	//if clique, ok := s.engine.(*clique.Clique); ok {
-	//	wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-	//	if wallet == nil || err != nil {
+	//	rewardwallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+	//	if rewardwallet == nil || err != nil {
 	//		log.Error("Coinbase account unavailable locally", "err", err)
 	//		return fmt.Errorf("signer missing: %v", err)
 	//	}
-	//	clique.Authorize(eb, wallet.SignHash)
+	//	clique.Authorize(eb, rewardwallet.SignHash)
 	//}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection

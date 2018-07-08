@@ -3,6 +3,9 @@
 package gxp
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
@@ -10,8 +13,6 @@ import (
 	"github.com/ground-x/go-gxplatform/core"
 	"github.com/ground-x/go-gxplatform/gxp/downloader"
 	"github.com/ground-x/go-gxplatform/gxp/gasprice"
-	"math/big"
-	"time"
 )
 
 var _ = (*configMarshaling)(nil)
@@ -34,6 +35,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		MinerThreads            int            `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
+		RewardContract          common.Address `toml:",omitempty"`
+		Rewardbase              common.Address `toml:",omitempty"`
 		Gxhash                  gxhash.Config
 		TxPool                  core.TxPoolConfig
 		GPO                     gasprice.Config
@@ -57,6 +60,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.MinerThreads = c.MinerThreads
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
+	enc.RewardContract = c.RewardContract
+	enc.Rewardbase = c.Rewardbase
 	enc.Gxhash = c.Gxhash
 	enc.TxPool = c.TxPool
 	enc.GPO = c.GPO
@@ -84,6 +89,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		MinerThreads            *int            `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
+		RewardContract          *common.Address `toml:",omitempty"`
+		Rewardbase              *common.Address `toml:",omitempty"`
 		Gxhash                  *gxhash.Config
 		TxPool                  *core.TxPoolConfig
 		GPO                     *gasprice.Config
@@ -139,6 +146,12 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.GasPrice != nil {
 		c.GasPrice = dec.GasPrice
+	}
+	if dec.RewardContract != nil {
+		c.RewardContract = *dec.RewardContract
+	}
+	if dec.Rewardbase != nil {
+		c.Rewardbase = *dec.Rewardbase
 	}
 	if dec.Gxhash != nil {
 		c.Gxhash = *dec.Gxhash

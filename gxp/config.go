@@ -86,6 +86,10 @@ type Config struct {
 	ExtraData    []byte         `toml:",omitempty"`
 	GasPrice     *big.Int
 
+	// Reward
+	RewardContract common.Address `toml:",omitempty"`
+	Rewardbase   common.Address `toml:",omitempty"`
+
 	// Gxhash options
 	Gxhash gxhash.Config
 

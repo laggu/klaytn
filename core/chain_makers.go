@@ -37,7 +37,7 @@ type BlockGen struct {
 	engine consensus.Engine
 }
 
-// SetCoinbase sets the coinbase of the generated block.
+// SetRewardbase sets the coinbase of the generated block.
 // It can be called at most once.
 func (b *BlockGen) SetCoinbase(addr common.Address) {
 	if b.gasPool != nil {

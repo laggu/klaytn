@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/accounts"
 )
 
 const (
@@ -80,7 +81,10 @@ type ProtocolManager struct {
 	// istanbul BFT
 	engine consensus.Engine
 
-	gxp GXP
+	rewardcontract common.Address
+	rewardbase   common.Address
+	rewardwallet accounts.Wallet
+
 }
 
 // Ranger
@@ -188,9 +192,16 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	return manager, nil
 }
 
+func (pm *ProtocolManager) SetRewardContract(addr common.Address) {
+	pm.rewardcontract = addr
+}
 
-func (pm *ProtocolManager) setGXP(gxp GXP) {
-	pm.gxp = gxp
+func (pm *ProtocolManager) SetRewardbase(addr common.Address) {
+	pm.rewardbase = addr
+}
+
+func (pm *ProtocolManager) SetRewardbaseWallet(wallet accounts.Wallet) {
+	pm.rewardwallet = wallet
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
@@ -643,7 +654,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	// ranger node
 	case msg.Code == consensus.PoRSendMsg:
-		// Look up the wallet containing the requested signer
+		// Look up the rewardwallet containing the requested signer
 		tx := new(types.Transaction)
 		if err := msg.Decode(tx); err != nil {
 			log.Error("ErrDecode","msg",msg,"err",err)

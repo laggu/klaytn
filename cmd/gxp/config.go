@@ -101,6 +101,13 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
+	utils.SetGxConfig(ctx, stack, &cfg.Gxp)
+	//if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
+	//	cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
+	//}
+	//
+	//utils.SetShhConfig(ctx, stack, &cfg.Shh)
+	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
 }

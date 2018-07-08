@@ -39,6 +39,15 @@ func (api *PublicGXPAPI) Coinbase() (common.Address, error) {
 	return api.gxp.Coinbase()
 }
 
+// Rewardbase is the address that consensus rewards will be send to
+func (api *PublicGXPAPI) Rewardbase() (common.Address, error) {
+	return api.gxp.Rewardbase()
+}
+
+func (api *PublicGXPAPI) RewardContract() (common.Address, error) {
+	return api.gxp.RewardContract()
+}
+
 // Hashrate returns the POW hashrate
 func (api *PublicGXPAPI) Hashrate() hexutil.Uint64 {
 	return hexutil.Uint64(api.gxp.Miner().HashRate())
@@ -170,6 +179,17 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 // SetCoinbase sets the coinbase of the miner
 func (api *PrivateMinerAPI) SetCoinbase(coinbase common.Address) bool {
 	api.e.SetCoinbase(coinbase)
+	return true
+}
+
+// SetRewardbase sets the rewardbase of the CN
+func (api *PrivateMinerAPI) SetRewardbase(rewardbase common.Address) bool {
+	api.e.SetRewardbase(rewardbase)
+	return true
+}
+
+func (api *PrivateMinerAPI) SetRewardContract(addr common.Address) bool {
+	api.e.SetRewardContract(addr)
 	return true
 }
 
