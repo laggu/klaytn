@@ -140,8 +140,8 @@ func init() {
 	app.Commands = []cli.Command{
 		compileCommand,
 		disasmCommand,
-		//TODO: runCommand,
-		//TODO: stateTestCommand,
+		runCommand,
+		stateTestCommand,
 	}
 }
 
