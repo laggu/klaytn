@@ -1,25 +1,22 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"gopkg.in/urfave/cli.v1"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/accounts/keystore"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
-	"github.com/ground-x/go-gxplatform/console"
-	gxp2 "github.com/ground-x/go-gxplatform/gxp"
+	"sort"
+	"github.com/ground-x/go-gxplatform/internal/debug"
+	"runtime"
+	"time"
+	"os"
+	"fmt"
+	"strings"
+	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/go-gxplatform/accounts/keystore"
+	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/gxpclient"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
-	"github.com/ground-x/go-gxplatform/node"
-	"runtime"
-	"sort"
-	"strings"
-	"time"
-	"math/big"
-	"github.com/ground-x/go-gxplatform/internal/debug"
+	"github.com/ground-x/go-gxplatform/console"
 )
 
 const (
@@ -30,75 +27,48 @@ var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
 	// The app that holds all commands and flags.
-	app = utils.NewApp(gitCommit, "the go-gxplatform command line interface")
+	app = utils.NewApp(gitCommit, "the GXP Ranger command line interface")
 
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
 		utils.IdentityFlag,
 		utils.UnlockedAccountFlag,
 		utils.PasswordFileFlag,
-		utils.BootnodesFlag,
-		utils.BootnodesV4Flag,
-		utils.BootnodesV5Flag,
 		utils.DbTypeFlag,
 		utils.DataDirFlag,
 		utils.KeyStoreDirFlag,
-		utils.NoUSBFlag,
-		utils.DashboardEnabledFlag,
 		utils.EthashCacheDirFlag,
 		utils.EthashCachesInMemoryFlag,
 		utils.EthashCachesOnDiskFlag,
 		utils.EthashDatasetDirFlag,
 		utils.EthashDatasetsInMemoryFlag,
 		utils.EthashDatasetsOnDiskFlag,
-		utils.TxPoolNoLocalsFlag,
-		utils.TxPoolJournalFlag,
-		utils.TxPoolRejournalFlag,
-		utils.TxPoolPriceLimitFlag,
-		utils.TxPoolPriceBumpFlag,
-		utils.TxPoolAccountSlotsFlag,
-		utils.TxPoolGlobalSlotsFlag,
-		utils.TxPoolAccountQueueFlag,
-		utils.TxPoolGlobalQueueFlag,
-		utils.TxPoolLifetimeFlag,
 		utils.FastSyncFlag,
 		utils.LightModeFlag,
 		utils.SyncModeFlag,
 		utils.GCModeFlag,
-		utils.LightServFlag,
-		utils.LightPeersFlag,
-		utils.LightKDFFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
 		utils.CacheGCFlag,
 		utils.TrieCacheGenFlag,
 		utils.ListenPortFlag,
-		utils.MaxPeersFlag,
-		utils.MaxPendingPeersFlag,
 		utils.CoinbaseFlag,
-		utils.RewardbaseFlag,
-		utils.RewardContractFlag,
 		utils.GasPriceFlag,
 		utils.MinerThreadsFlag,
 		utils.MiningEnabledFlag,
 		utils.TargetGasLimitFlag,
 		utils.NATFlag,
-		utils.NoDiscoverFlag,
-		utils.DiscoveryV5Flag,
-		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
-		utils.TestnetFlag,
-		utils.RinkebyFlag,
 		utils.VMEnableDebugFlag,
+		utils.NoDiscoverFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
 		utils.RPCVirtualHostsFlag,
 		utils.EthStatsURLFlag,
 		utils.MetricsEnabledFlag,
-		utils.FakePoWFlag,
 		utils.NoCompactionFlag,
 		utils.GpoBlocksFlag,
 		utils.GpoPercentileFlag,
@@ -122,26 +92,20 @@ var (
 )
 
 func init() {
-	// Initialize the CLI app and start Geth
-	app.Action = gxp
+	// Initialize the CLI app and start Ranger
+	app.Action = ranger
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2018 The go-gxplatform Authors"
+	app.Copyright = "Copyright 2013-2018 The GXPlatform Authors"
 	app.Commands = []cli.Command{
-		// See chaincmd.go:
-		initCommand,
-		accountCommand,
-		walletCommand,
 		// See consolecmd.go:
 		consoleCommand,
 		attachCommand,
-
 		dumpConfigCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
 	app.Flags = append(app.Flags, nodeFlags...)
 	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 
 	app.Before = func(ctx *cli.Context) error {
@@ -170,21 +134,15 @@ func main() {
 	}
 }
 
-// gxp is the main entry point into the system if no special subcommand is ran.
-// It creates a default node based on the command line arguments and runs it in
-// blocking mode, waiting for it to be shut down.
-func gxp(ctx *cli.Context) error {
-	node := makeFullNode(ctx)
-	startNode(ctx, node)
+func ranger(ctx *cli.Context) error {
+	node := makeRanger(ctx)
+	startRanger(ctx, node)
 	node.Wait()
 	return nil
 }
 
-// startNode boots up the system node and all registered protocols, after which
-// it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
-// miner.
-func startNode(ctx *cli.Context, stack *node.Node) {
-	debug.Memsize.Add("node", stack)
+func startRanger(ctx *cli.Context, stack *node.Node) {
+	debug.Memsize.Add("ranger", stack)
 
 	// Start up the node itself
 	utils.StartNode(stack)
@@ -241,33 +199,4 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 
-	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
-
-		var gxp *gxp2.GXP
-		if err := stack.Service(&gxp); err != nil {
-			utils.Fatalf("GXPlatform service not running: %v", err)
-		}
-		// Use a reduced number of threads if requested
-		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
-			type threaded interface {
-				SetThreads(threads int)
-			}
-			if th, ok := gxp.Engine().(threaded); ok {
-				th.SetThreads(threads)
-			}
-		}
-		// Set the gas price to the limits from the CLI and start mining
-		gxp.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
-		if err := gxp.StartMining(true); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
-		}
-	}else {
-		// istanbul BFT
-		var gxp *gxp2.GXP
-		if err := stack.Service(&gxp); err != nil {
-			utils.Fatalf("GXPlatform service not running: %v", err)
-		}
-		gxp.TxPool().SetGasPrice(big.NewInt(0))
-	}
 }

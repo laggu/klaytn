@@ -9,6 +9,8 @@ import (
 	"github.com/ground-x/go-gxplatform/core/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"errors"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"math/big"
 )
 
 // NewTransactor is a utility method to easily create a transaction signer from
@@ -35,11 +37,26 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 			if address != keyAddr {
 				return nil, errors.New("not authorized to sign this account")
 			}
-			signature, err := crypto.Sign(signer.Hash(tx).Bytes(), key)
+			h := signer.Hash(tx)
+			signature, err := crypto.Sign(h[:], key)
 			if err != nil {
 				return nil, err
 			}
 			return tx.WithSignature(signer, signature)
+		},
+	}
+}
+
+func NewKeyedTransactorWithWallet(address common.Address, wallet accounts.Wallet, chainID *big.Int) *TransactOpts {
+	keyAddr := address
+	return &TransactOpts{
+		From: keyAddr,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			if address != keyAddr {
+				return nil, errors.New("not authorized to sign this account")
+			}
+			account := accounts.Account{Address: address}
+			return wallet.SignTx(account, tx, chainID)
 		},
 	}
 }

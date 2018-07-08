@@ -1,20 +1,19 @@
 package main
 
 import (
-	"bufio"
-	"errors"
-	"fmt"
-	"gopkg.in/urfave/cli.v1"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
-	gxplatform "github.com/ground-x/go-gxplatform/gxp"
-	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/params"
-	"os"
+	"github.com/naoina/toml"
 	"reflect"
 	"unicode"
-
-	"github.com/naoina/toml"
+	"fmt"
+	"os"
+	"bufio"
 	"io"
+	"gopkg.in/urfave/cli.v1"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/go-gxplatform/node"
+	rnpkg "github.com/ground-x/go-gxplatform/ranger"
+	"errors"
+	"github.com/ground-x/go-gxplatform/params"
 )
 
 var (
@@ -51,12 +50,12 @@ var tomlSettings = toml.Config{
 	},
 }
 
-type gxpConfig struct {
-	Gxp  gxplatform.Config
+type rangerConfig struct {
+	Gxp  rnpkg.Config
 	Node node.Config
 }
 
-func loadConfig(file string, cfg *gxpConfig) error {
+func loadConfig(file string, cfg *rangerConfig) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -71,21 +70,21 @@ func loadConfig(file string, cfg *gxpConfig) error {
 	return err
 }
 
-func defaultNodeConfig() node.Config {
+func defaultRangerConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "gxp", "shh")
-	cfg.WSModules = append(cfg.WSModules, "gxp", "shh")
+	cfg.HTTPModules = append(cfg.HTTPModules, "gxp")
+	cfg.WSModules = append(cfg.WSModules, "gxp")
 	cfg.IPCPath = "gxp.ipc"
 	return cfg
 }
 
-func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
+func makeConfigRanger(ctx *cli.Context) (*node.Node, rangerConfig) {
 	// Load defaults.
-	cfg := gxpConfig{
-		Gxp:  gxplatform.DefaultConfig,
-		Node: defaultNodeConfig(),
+	cfg := rangerConfig{
+		Gxp:  rnpkg.DefaultConfig ,
+		Node: defaultRangerConfig(),
 	}
 
 	// Load config file.
@@ -101,7 +100,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetGxConfig(ctx, stack, &cfg.Gxp)
+	utils.SetRnConfig(ctx, stack, &cfg.Gxp)
 	//if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
 	//	cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	//}
@@ -112,16 +111,16 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 	return stack, cfg
 }
 
-func makeFullNode(ctx *cli.Context) *node.Node {
-	stack, cfg := makeConfigNode(ctx)
+func makeRanger(ctx *cli.Context) *node.Node {
+	stack, cfg := makeConfigRanger(ctx)
 
-	utils.RegisterGxpService(stack, &cfg.Gxp)
+	utils.RegisterRanagerService(stack, &cfg.Gxp)
 
 	return stack
 }
 
 func dumpConfig(ctx *cli.Context) error {
-	_, cfg := makeConfigNode(ctx)
+	_, cfg := makeConfigRanger(ctx)
 	comment := ""
 
 	if cfg.Gxp.Genesis != nil {

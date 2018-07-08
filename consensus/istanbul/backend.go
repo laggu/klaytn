@@ -5,12 +5,15 @@ import (
 	"github.com/ground-x/go-gxplatform/event"
 	"math/big"
 	"time"
+	"github.com/ground-x/go-gxplatform/core/types"
 )
 
 // Backend provides application specific functions for Istanbul core
 type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
+
+	GetPeers() []common.Address
 
 	// Validators returns the validator set
 	Validators(proposal Proposal) ValidatorSet
@@ -23,6 +26,13 @@ type Backend interface {
 
 	// Gossip sends a message to all validators (exclude self)
 	Gossip(valSet ValidatorSet, payload []byte) error
+
+	// ranger node
+    GossipPoRMsg(targets map[common.Address]bool, payload []byte) error
+
+	GossipProof(targets map[common.Address]bool, payload types.Proof) error
+
+	CurrentBlock() *types.Block
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.

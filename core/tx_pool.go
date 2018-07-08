@@ -509,6 +509,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	if pool.currentMaxGas < tx.Gas() {
+		log.Error("tx_pool validateTx","currentMaxGa",pool.currentMaxGas,"tx.Gas",tx.Gas())
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
@@ -528,6 +529,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+		log.Error("[tx_pool] insufficient funds for cost(gas * price + value)","from",from, "balance",pool.currentState.GetBalance(from), "cost", tx.Cost())
 		return ErrInsufficientFunds
 	}
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)

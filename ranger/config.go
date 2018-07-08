@@ -1,19 +1,18 @@
-package gxp
+package ranger
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/gxp/downloader"
-	"github.com/ground-x/go-gxplatform/gxp/gasprice"
-	"github.com/ground-x/go-gxplatform/params"
+	"time"
 	"math/big"
 	"os"
 	"os/user"
-	"path/filepath"
 	"runtime"
-	"time"
+	"path/filepath"
+	"github.com/ground-x/go-gxplatform/gxp/downloader"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 )
 
@@ -28,19 +27,12 @@ var DefaultConfig = Config{
 		DatasetsOnDisk: 2,
 	},
 	NetworkId:     1,
-	LightPeers:    100,
 	DatabaseCache: 768,
 	TrieCache:     256,
 	TrieTimeout:   5 * time.Minute,
 	GasPrice:      big.NewInt(18 * params.Shannon),
-
-	TxPool: core.DefaultTxPoolConfig,
-	GPO: gasprice.Config{
-		Blocks:     20,
-		Percentile: 60,
-	},
-
 	Istanbul: *istanbul.DefaultConfig,
+	ConsensusURL:  "ws://localhost:8546",
 }
 
 func init() {
@@ -69,10 +61,6 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
-	// Light client options
-	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
-	LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
-
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
@@ -86,26 +74,19 @@ type Config struct {
 	ExtraData    []byte         `toml:",omitempty"`
 	GasPrice     *big.Int
 
-	// Reward
-	RewardContract common.Address `toml:",omitempty"`
-	Rewardbase   common.Address `toml:",omitempty"`
-
 	// Gxhash options
 	Gxhash gxhash.Config
 
-	// Transaction pool options
-	TxPool core.TxPoolConfig
-
-	// Gas Price Oracle options
-	GPO gasprice.Config
+	// Miscellaneous options
+	DocRoot string `toml:"-"`
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
+
+	ConsensusURL string
+
 	// Istanbul options
 	Istanbul istanbul.Config
-
-	// Miscellaneous options
-	DocRoot string `toml:"-"`
 }
 
 type configMarshaling struct {

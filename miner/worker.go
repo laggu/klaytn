@@ -446,6 +446,7 @@ func (self *worker) commitNewWork() {
 	// Create the current work task and check any fork transitions needed
 	work := self.current
 	pending, err := self.gxp.TxPool().Pending()
+
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
@@ -543,9 +544,9 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		if tx.Protected() {
+		if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
 			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash())
-
+			//log.Error("#### worker.commitTransaction","tx.protected",tx.Protected(),"tx.hash",tx.Hash(),"nonce",tx.Nonce(),"to",tx.To())
 			txs.Pop()
 			continue
 		}

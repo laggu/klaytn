@@ -218,7 +218,9 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		return nil, errors.New("no signer to authorize the transaction with")
 	}
 	// modify signer (from homestead to eip155
-	signedTx, err := opts.Signer(types.NewEIP155Signer(big.NewInt(0)), opts.From, rawTx)
+	signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
+
+	//signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
 	if err != nil {
 		return nil, err
 	}

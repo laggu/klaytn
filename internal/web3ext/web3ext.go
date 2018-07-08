@@ -365,6 +365,16 @@ web3._extend({
 				return formatted;
 			}
 		}),
+        new web3._extend.Property({
+            name : 'rewardbase',
+            getter: 'gxp_rewardbase',
+           
+        }),
+        new web3._extend.Property({
+            name : 'rewardcontract',
+            getter: 'gxp_rewardContract',
+           
+        }),
 	]
 });
 `
@@ -386,6 +396,18 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'setCoinbase',
 			call: 'miner_setCoinbase',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'setRewardbase',
+			call: 'miner_setRewardbase',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'setRewardContract',
+			call: 'miner_setRewardContract',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
 		}),

@@ -201,7 +201,6 @@ func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
 
 // ListAccounts will return a list of addresses for accounts this node manages.
 func (s *PrivateAccountAPI) ListAccounts() []common.Address {
-	fmt.Printf("### gxapi.api.ListAccounts \n")
 	addresses := make([]common.Address, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -222,7 +221,6 @@ type rawWallet struct {
 
 // ListWallets will return a list of wallets this node manages.
 func (s *PrivateAccountAPI) ListWallets() []rawWallet {
-	fmt.Printf("### gxapi.api.ListWallets \n")
 	wallets := make([]rawWallet, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		status, failure := wallet.Status()
@@ -245,7 +243,6 @@ func (s *PrivateAccountAPI) ListWallets() []rawWallet {
 // the method may return an extra challenge requiring a second open (e.g. the
 // Trezor PIN matrix challenge).
 func (s *PrivateAccountAPI) OpenWallet(url string, passphrase *string) error {
-	fmt.Printf("### gxapi.api.OpenWallet \n")
 	wallet, err := s.am.Wallet(url)
 	if err != nil {
 		return err
@@ -260,7 +257,6 @@ func (s *PrivateAccountAPI) OpenWallet(url string, passphrase *string) error {
 // DeriveAccount requests a HD wallet to derive a new account, optionally pinning
 // it for later reuse.
 func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (accounts.Account, error) {
-	fmt.Printf("### gxapi.api.DeriveAccount \n")
 	wallet, err := s.am.Wallet(url)
 	if err != nil {
 		return accounts.Account{}, err
@@ -304,7 +300,6 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (commo
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.
 func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, duration *uint64) (bool, error) {
-	fmt.Printf("### gxapi.api.UnlockAccount \n")
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
 	var d time.Duration
 	if duration == nil {
@@ -320,7 +315,6 @@ func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, 
 
 // LockAccount will lock the account associated with the given address when it's unlocked.
 func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
-	fmt.Printf("### gxapi.api.LockAccount \n")
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
@@ -328,7 +322,6 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
 func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
-	fmt.Printf("### gxapi.api.signTransaction \n")
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 	wallet, err := s.am.Find(account)
@@ -353,7 +346,6 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
-	fmt.Printf("### gxapi.api.SendTransaction \n")
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -372,7 +364,6 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
 // to other nodes
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
-	fmt.Printf("### gxapi.api.SignTransaction \n")
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
 	if args.Gas == nil {
@@ -403,7 +394,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 //
 // This gives context to the signed message and prevents signing of transactions.
 func signHash(data []byte) []byte {
-	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	msg := fmt.Sprintf("\x19GXP Signed Message:\n%d%s", len(data), data)
 	return crypto.Keccak256([]byte(msg))
 }
 
@@ -1087,9 +1078,9 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	}
 	// Request the wallet to sign the transaction
 	var chainID *big.Int
-	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-	//	chainID = config.ChainId
-	//}
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
 	return wallet.SignTx(account, tx, chainID)
 }
 
@@ -1207,9 +1198,9 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	tx := args.toTransaction()
 
 	var chainID *big.Int
-	//if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-	//	chainID = config.ChainId
-	//}
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
 	signed, err := wallet.SignTx(account, tx, chainID)
 	if err != nil {
 		return common.Hash{}, err

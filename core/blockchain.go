@@ -895,6 +895,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
 		return NonStatTy, err
 	}
+
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
@@ -903,6 +904,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	if err != nil {
 		return NonStatTy, err
 	}
+
 	triedb := bc.stateCache.TrieDB()
 
 	// If we're running an archive node, always flush
@@ -944,6 +946,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 					bc.gcproc = 0
 				}
 			}
+
 			// Garbage collect anything below our required write retention
 			for !bc.triegc.Empty() {
 				root, number := bc.triegc.Pop()
@@ -1044,6 +1047,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		headers[i] = block.Header()
 		seals[i] = true
 	}
+
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 
@@ -1066,6 +1070,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err == nil {
 			err = bc.Validator().ValidateBody(block)
 		}
+
 		switch {
 		case err == ErrKnownBlock:
 			// Block and state both already known. However if the current block is below
@@ -1140,18 +1145,22 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
+
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
 		if err != nil {
+
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+
 		proctime := time.Since(bstart)
 
 		// Write the block to the chain and get the status.

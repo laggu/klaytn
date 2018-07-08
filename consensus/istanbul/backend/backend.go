@@ -87,6 +87,11 @@ func (sb *backend) Address() common.Address {
 	return sb.address
 }
 
+// ranger node
+func (sb *backend) GetPeers() []common.Address {
+	return sb.broadcaster.GetPeers()
+}
+
 // Validators implements istanbul.Backend.Validators
 func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
 	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
@@ -138,6 +143,38 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 		}
 	}
 	return nil
+}
+
+// ranger node
+func (sb *backend) GossipPoRMsg(targets map[common.Address]bool, payload []byte) error {
+
+	if sb.broadcaster != nil && len(targets)> 0 {
+		ps := sb.broadcaster.FindPeers(targets)
+		for _, p := range ps {
+			go p.Send(consensus.PoRMsg, payload)
+		}
+	}
+	return nil
+}
+
+func (sb *backend) GossipProof(targets map[common.Address]bool, proof types.Proof) error {
+
+	if sb.broadcaster != nil && len(targets)> 0 {
+		ps := sb.broadcaster.FindPeers(targets)
+		for _, p := range ps {
+			go p.Send(consensus.PoRMsg, &proof)
+			//go p.Send(consensus.PoRMsg, &types.Proof{
+			//	Solver:       common.Address{},
+			//	BlockNumber:  sb.CurrentBlock().Number(),
+			//	Nonce: 	      0,
+			//})
+		}
+	}
+	return nil
+}
+
+func (sb *backend) CurrentBlock() *types.Block {
+	return sb.currentBlock()
 }
 
 // Commit implements istanbul.Backend.Commit
