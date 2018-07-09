@@ -29,7 +29,7 @@ import (
 var gitCommit = "" // Git SHA1 commit hash of the release (set via linker flags)
 
 var (
-	app = utils.NewApp(gitCommit, "the evm command line interface")
+	app = utils.NewApp(gitCommit, "the EVM command line interface")
 
 	DebugFlag = cli.BoolFlag{
 		Name:  "debug",
@@ -37,15 +37,15 @@ var (
 	}
 	MemProfileFlag = cli.StringFlag{
 		Name:  "memprofile",
-		Usage: "creates a memory profile at the given path",
+		Usage: "create a memory profile at the given path",
 	}
 	CPUProfileFlag = cli.StringFlag{
 		Name:  "cpuprofile",
-		Usage: "creates a CPU profile at the given path",
+		Usage: "create a CPU profile at the given path",
 	}
 	StatDumpFlag = cli.BoolFlag{
 		Name:  "statdump",
-		Usage: "displays stack and heap memory information",
+		Usage: "display stack and heap memory information",
 	}
 	CodeFlag = cli.StringFlag{
 		Name:  "code",
@@ -53,26 +53,26 @@ var (
 	}
 	CodeFileFlag = cli.StringFlag{
 		Name:  "codefile",
-		Usage: "File containing EVM code. If '-' is specified, code is read from stdin ",
+		Usage: "File containing EVM code. If '-' is specified, code is read from stdin",
 	}
 	GasFlag = cli.Uint64Flag{
 		Name:  "gas",
-		Usage: "gas limit for the evm",
+		Usage: "gas limit for the EVM",
 		Value: 10000000000,
 	}
 	PriceFlag = utils.BigFlag{
 		Name:  "price",
-		Usage: "price set for the evm",
+		Usage: "price set for the EVM",
 		Value: new(big.Int),
 	}
 	ValueFlag = utils.BigFlag{
 		Name:  "value",
-		Usage: "value set for the evm",
+		Usage: "value set for the EVM",
 		Value: new(big.Int),
 	}
 	DumpFlag = cli.BoolFlag{
 		Name:  "dump",
-		Usage: "dumps the state after the run",
+		Usage: "dump the state after the run",
 	}
 	InputFlag = cli.StringFlag{
 		Name:  "input",
@@ -80,11 +80,11 @@ var (
 	}
 	VerbosityFlag = cli.IntFlag{
 		Name:  "verbosity",
-		Usage: "sets the verbosity level",
+		Usage: "set the verbosity level",
 	}
 	CreateFlag = cli.BoolFlag{
 		Name:  "create",
-		Usage: "indicates the action should be create rather than call",
+		Usage: "indicate the action should be create rather than call",
 	}
 	GenesisFlag = cli.StringFlag{
 		Name:  "prestate",
@@ -92,15 +92,15 @@ var (
 	}
 	MachineFlag = cli.BoolFlag{
 		Name:  "json",
-		Usage: "output trace logs in machine readable format (json)",
+		Usage: "output trace logs in machine readable format (JSON)",
 	}
 	SenderFlag = cli.StringFlag{
 		Name:  "sender",
-		Usage: "The transaction origin",
+		Usage: "the transaction origin",
 	}
 	ReceiverFlag = cli.StringFlag{
 		Name:  "receiver",
-		Usage: "The transaction receiver (execution context)",
+		Usage: "the transaction receiver (execution context)",
 	}
 	DisableMemoryFlag = cli.BoolFlag{
 		Name:  "nomemory",

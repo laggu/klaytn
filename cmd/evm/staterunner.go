@@ -34,7 +34,7 @@ import (
 var stateTestCommand = cli.Command{
 	Action:    stateTestCmd,
 	Name:      "statetest",
-	Usage:     "executes the given state tests",
+	Usage:     "Executes the given state tests",
 	ArgsUsage: "<file>",
 }
 

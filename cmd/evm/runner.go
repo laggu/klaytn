@@ -43,7 +43,7 @@ import (
 var runCommand = cli.Command{
 	Action:      runCmd,
 	Name:        "run",
-	Usage:       "run arbitrary evm binary",
+	Usage:       "Runs arbitrary EVM binary",
 	ArgsUsage:   "<code>",
 	Description: `The run command runs arbitrary EVM code.`,
 }
