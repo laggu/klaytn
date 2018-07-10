@@ -75,10 +75,10 @@ type stPostState struct {
 
 type stEnv struct {
 	Coinbase   common.Address `json:"currentCoinbase"   gencodec:"required"`
-	Difficulty *big.Int       `json:"currentDifficulty" gencodec:"required"`
-	GasLimit   uint64         `json:"currentGasLimit"   gencodec:"required"`
-	Number     uint64         `json:"currentNumber"     gencodec:"required"`
-	Timestamp  uint64         `json:"currentTimestamp"  gencodec:"required"`
+	Difficulty interface{}    `json:"currentDifficulty" gencodec:"required"`
+	GasLimit   interface{}    `json:"currentGasLimit"   gencodec:"required"`
+	Number     interface{}    `json:"currentNumber"     gencodec:"required"`
+	Timestamp  interface{}    `json:"currentTimestamp"  gencodec:"required"`
 }
 
 type stEnvMarshaling struct {
@@ -92,13 +92,13 @@ type stEnvMarshaling struct {
 //go:generate gencodec -type stTransaction -field-override stTransactionMarshaling -out gen_sttransaction.go
 
 type stTransaction struct {
-	GasPrice   *big.Int `json:"gasPrice"`
-	Nonce      uint64   `json:"nonce"`
-	To         string   `json:"to"`
-	Data       []string `json:"data"`
-	GasLimit   []uint64 `json:"gasLimit"`
-	Value      []string `json:"value"`
-	PrivateKey []byte   `json:"secretKey"`
+	GasPrice   interface{}   `json:"gasPrice"`
+	Nonce      interface{}   `json:"nonce"`
+	To         string        `json:"to"`
+	Data       []string      `json:"data"`
+	GasLimit   []interface{} `json:"gasLimit"`
+	Value      []string      `json:"value"`
+	PrivateKey string        `json:"secretKey"`
 }
 
 type stTransactionMarshaling struct {
@@ -157,7 +157,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 }
 
 func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
-	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
+	return toUint64(t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas])
 }
 
 func MakePreState(db gxdb.Database, accounts core.GenesisAlloc) *state.StateDB {
@@ -177,14 +177,44 @@ func MakePreState(db gxdb.Database, accounts core.GenesisAlloc) *state.StateDB {
 	return statedb
 }
 
+// toBigInt converts the interface val to big.Int value.
+// On error whiling parsing the interface val, zero is returned.
+func toBigInt(val interface{}) *big.Int {
+	number := new(big.Int)
+
+	switch val.(type) {
+	case string:
+		number, _ = math.ParseBig256(val.(string))
+	case uint64:
+		number = number.SetUint64(val.(uint64))
+	}
+
+	return number
+}
+
+// toUint64 converts the interface val to uint64 value.
+// On error whiling parsing the interface val, zero is returned.
+func toUint64(val interface{}) uint64 {
+	var number uint64
+
+	switch val.(type) {
+	case string:
+		number, _ = math.ParseUint64(val.(string))
+	case uint64:
+		number = val.(uint64)
+	}
+
+	return number
+}
+
 func (t *StateTest) genesis(config *params.ChainConfig) *core.Genesis {
 	return &core.Genesis{
 		Config:     config,
 		Coinbase:   t.json.Env.Coinbase,
-		Difficulty: t.json.Env.Difficulty,
-		GasLimit:   t.json.Env.GasLimit,
-		Number:     t.json.Env.Number,
-		Timestamp:  t.json.Env.Timestamp,
+		Difficulty: toBigInt(t.json.Env.Difficulty),
+		GasLimit:   toUint64(t.json.Env.GasLimit),
+		Number:     toUint64(t.json.Env.Number),
+		Timestamp:  toUint64(t.json.Env.Timestamp),
 		Alloc:      t.json.Pre,
 	}
 }
@@ -193,7 +223,11 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	// Derive sender from private key if present.
 	var from common.Address
 	if len(tx.PrivateKey) > 0 {
-		key, err := crypto.ToECDSA(tx.PrivateKey)
+		privateKey, ok := math.ParseBig256(tx.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("invalid private key: %v", privateKey)
+		}
+		key, err := crypto.ToECDSA([]byte(privateKey.Bytes()))
 		if err != nil {
 			return nil, fmt.Errorf("invalid private key: %v", err)
 		}
@@ -220,7 +254,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	}
 	dataHex := tx.Data[ps.Indexes.Data]
 	valueHex := tx.Value[ps.Indexes.Value]
-	gasLimit := tx.GasLimit[ps.Indexes.Gas]
+	gasLimit := toUint64(tx.GasLimit[ps.Indexes.Gas])
 	// Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
 	value := new(big.Int)
 	if valueHex != "0x" {
@@ -235,7 +269,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true)
+	msg := types.NewMessage(from, to, toUint64(tx.Nonce), value, gasLimit, toBigInt(tx.GasPrice), data, true)
 	return msg, nil
 }
 
