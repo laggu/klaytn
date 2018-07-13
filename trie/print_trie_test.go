@@ -101,13 +101,13 @@ type VisNode struct {
 }
 
 func (v *VisNode) String() string {
-	return fmt.Sprintf("{id:%d, label:'%s', typename:'%s'}", v.id, v.label, v.typename)
+	return fmt.Sprintf("{id:%d, label:'%s', level:%d, addr:'%p', typename:'%s', x:%d, y:%d}",
+		v.id, v.label, v.level, v.addr, v.typename, v.id, v.id)
 }
 
 func SerializeNodes(nodes []VisNode) (ret string) {
 	for _, n := range nodes {
-		ret += fmt.Sprintf("{id:%d, addr:'%p', level:%d, label:'%s', typename:'%s' },\n",
-			n.id, n.addr, n.level, n.label, n.typename)
+		ret += fmt.Sprintf("%s, \n", n.String())
 	}
 
 	return
@@ -124,13 +124,13 @@ type VisEdge struct {
 	label string
 }
 
-func (v *VisEdge) String() string {
-	return fmt.Sprintf("{from:%d, to:%d}", v.from, v.to)
+func (e *VisEdge) String() string {
+	return fmt.Sprintf("{from:%d, to:%d, label:'%s'}", e.from, e.to, e.label)
 }
 
 func SerializeEdges(edges []VisEdge) (ret string) {
 	for _, e := range edges {
-		ret += fmt.Sprintf("{from:%d, to:%d, label:'%s'},\n", e.from, e.to, e.label)
+		ret += fmt.Sprintf("%s, \n", e.String())
 	}
 
 	return
