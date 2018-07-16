@@ -160,6 +160,8 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb); err != nil {
 		return nil, err
 	}
+	gxp.protocolManager.wsendpoint = config.WsEndpoint
+
 	wallet, err := gxp.RewardbaseWallet()
 	if err != nil {
 		log.Error("find err","err",err)
@@ -224,7 +226,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 			config.Istanbul.Epoch = chainConfig.Istanbul.Epoch
 		}
 		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
-		return istanbulBackend.New(&config.Istanbul, ctx.NodeKey(), db)
+		return istanbulBackend.New(config.Rewardbase, config.RewardContract, &config.Istanbul, ctx.NodeKey(), db)
 	}
 	// Otherwise assume proof-of-work
 	switch {

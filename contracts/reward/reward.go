@@ -1,5 +1,10 @@
 
 //go:generate abigen --sol contract/GXPReward.sol --pkg contract --out contract/GXPReward.go
+//go:generate abigen --sol contract/CommitteeReward.sol --pkg contract --out contract/CommitteeReward.go
+//go:generate abigen --sol contract/RNReward.sol --pkg contract --out contract/RNReward.go
+//go:generate abigen --sol contract/ProposerReward.sol --pkg contract --out contract/ProposerReward.go
+//go:generate abigen --sol contract/PIRerve.sol --pkg contract --out contract/PIRerve.go
+
 
 package reward
 

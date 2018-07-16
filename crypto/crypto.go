@@ -36,6 +36,8 @@ import (
 var (
 	secp256k1_N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
 	secp256k1_halfN = new(big.Int).Div(secp256k1_N, big.NewInt(2))
+
+    errInvalidPubkey = errors.New("invalid secp256k1 public key")
 )
 
 // Keccak256 calculates and returns the Keccak256 hash of the input data.
@@ -127,6 +129,15 @@ func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
 	}
 	x, y := elliptic.Unmarshal(S256(), pub)
 	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}
+}
+
+// UnmarshalPubkey converts bytes to a secp256k1 public key.
+func UnmarshalPubkey(pub []byte) (*ecdsa.PublicKey, error) {
+	x, y := elliptic.Unmarshal(S256(), pub)
+	if x == nil {
+		return nil, errInvalidPubkey
+	}
+	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}, nil
 }
 
 func FromECDSAPub(pub *ecdsa.PublicKey) []byte {

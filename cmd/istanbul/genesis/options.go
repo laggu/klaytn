@@ -7,6 +7,7 @@ import (
 	"github.com/ground-x/go-gxplatform/cmd/istanbul/extra"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
 )
 
 type Option func(*core.Genesis)
@@ -34,6 +35,18 @@ func Alloc(addrs []common.Address, balance *big.Int) Option {
 		for _, addr := range addrs {
 			alloc[addr] = core.GenesisAccount{Balance: balance}
 		}
+		genesis.Alloc = alloc
+	}
+}
+
+func AllocSmartContract() Option {
+	return func(genesis *core.Genesis) {
+		alloc := make(map[common.Address]core.GenesisAccount)
+
+		alloc[common.HexToAddress(contract.PIReserveAddr)]       = core.GenesisAccount{Code: common.FromHex(contract.PIRRewardBinRuntime) , Balance:big.NewInt(0)}
+		alloc[common.HexToAddress(contract.CommitteeRewardAddr)] = core.GenesisAccount{Code: common.FromHex(contract.CommitteeRewardBinRuntime) , Balance:big.NewInt(0)}
+		alloc[common.HexToAddress(contract.RNRewardAddr)]        = core.GenesisAccount{Code: common.FromHex(contract.RNRewardBinRuntime) , Balance:big.NewInt(0)}
+
 		genesis.Alloc = alloc
 	}
 }

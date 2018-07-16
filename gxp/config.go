@@ -39,6 +39,7 @@ var DefaultConfig = Config{
 		Blocks:     20,
 		Percentile: 60,
 	},
+	WsEndpoint: "localhost:8546",
 
 	Istanbul: *istanbul.DefaultConfig,
 }
@@ -106,6 +107,8 @@ type Config struct {
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
+
+	WsEndpoint string `toml:",omitempty"`
 }
 
 type configMarshaling struct {

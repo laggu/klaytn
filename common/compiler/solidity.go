@@ -15,8 +15,9 @@ import (
 var versionRegexp = regexp.MustCompile(`([0-9]+)\.([0-9]+)\.([0-9]+)`)
 
 type Contract struct {
-	Code string       `json:"code"`
-	Info ContractInfo `json:"info"`
+	Code        string       `json:"code"`
+	RCode       string       `json:"runtime-code"`
+	Info  ContractInfo       `json:"info"`
 }
 
 type ContractInfo struct {
@@ -41,13 +42,14 @@ type Solidity struct {
 type solcOutput struct {
 	Contracts map[string]struct {
 		Bin, Abi, Devdoc, Userdoc, Metadata string
+		BinRuntime string `json:"bin-runtime"`
 	}
 	Version string
 }
 
 func (s *Solidity) makeArgs() []string {
 	p := []string{
-		"--combined-json", "bin,abi,userdoc,devdoc",
+		"--combined-json", "bin,bin-runtime,abi,userdoc,devdoc",
 		"--optimize", // code optimizer switched on
 	}
 	if s.Major > 0 || s.Minor > 4 || s.Patch > 6 {
@@ -148,6 +150,7 @@ func (s *Solidity) run(cmd *exec.Cmd, source string) (map[string]*Contract, erro
 		}
 		contracts[name] = &Contract{
 			Code: "0x" + info.Bin,
+			RCode: "0x" + info.BinRuntime,
 			Info: ContractInfo{
 				Source:          source,
 				Language:        "Solidity",

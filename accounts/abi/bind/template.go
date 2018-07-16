@@ -10,13 +10,14 @@ type tmplData struct {
 
 // tmplContract contains the data needed to generate an individual contract binding.
 type tmplContract struct {
-	Type        string                 // Type name of the main contract binding
-	InputABI    string                 // JSON ABI used as the input to generate the binding from
-	InputBin    string                 // Optional EVM bytecode used to denetare deploy code from
-	Constructor abi.Method             // Contract constructor for deploy parametrization
-	Calls       map[string]*tmplMethod // Contract calls that only read state data
-	Transacts   map[string]*tmplMethod // Contract calls that write state data
-	Events      map[string]*tmplEvent  // Contract events accessors
+	Type            string                 // Type name of the main contract binding
+	InputABI        string                 // JSON ABI used as the input to generate the binding from
+	InputBin        string                 // Optional EVM bytecode used to denetare deploy code from
+	InputBinRuntime string				   // Optional EVM-Runtime bytecode used to add genesis block
+	Constructor     abi.Method             // Contract constructor for deploy parametrization
+	Calls           map[string]*tmplMethod // Contract calls that only read state data
+	Transacts       map[string]*tmplMethod // Contract calls that write state data
+	Events          map[string]*tmplEvent  // Contract events accessors
 }
 
 // tmplMethod is a wrapper around an abi.Method that contains a few preprocessed
@@ -61,6 +62,9 @@ import (
 {{range $contract := .Contracts}}
 	// {{.Type}}ABI is the input ABI used to generate the binding from.
 	const {{.Type}}ABI = "{{.InputABI}}"
+
+    // {{.Type}}BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+    const {{.Type}}BinRuntime = ` + "`" + `{{.InputBinRuntime}}` + "`" + `
 
 	{{if .InputBin}}
 		// {{.Type}}Bin is the compiled bytecode used for deploying new contracts.

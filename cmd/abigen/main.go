@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	abiFlag = flag.String("abi","","Path to the GXP contract ABI json to bind")
-	binFlag = flag.String("bin","","Path to the GXP contract bytecode (generate deploy method")
-	typFlag = flag.String("type","","Struct name for the binding (default = package name)")
+	abiFlag         = flag.String("abi","","Path to the GXP contract ABI json to bind")
+	binFlag         = flag.String("bin","","Path to the GXP contract bytecode (generate deploy method")
+	binruntimesFlag = flag.String("bin-runtime","","Path to the GXP contract runtime-bytecode")
+	typFlag         = flag.String("type","","Struct name for the binding (default = package name)")
 
 	solFlag = flag.String("sol","","Path to the GXP contract Solidity source to build and bind")
 	solcFlag = flag.String("solc","","Solidity compiler to use if source builds are requested")
@@ -33,7 +34,7 @@ func main() {
 		fmt.Printf("No contract ABI (--abi) or Solidity source (--sol) specified\n")
 		os.Exit(-1)
 	} else if (*abiFlag != "" || *binFlag != "" || *typFlag != "") && *solFlag != "" {
-		fmt.Printf("Contract ABI (--abi), bytecode (--bin) and type (--type) flags are mutually exclusive with the Solidity source (--sol) flag\n")
+		fmt.Printf("Contract ABI (--abi), bytecode (--bin), runtime-bytecode (--bin-runtime) and type (--type) flags are mutually exclusive with the Solidity source (--sol) flag\n")
 		os.Exit(-1)
 	}
 	if *pkgFlag == "" {
@@ -54,9 +55,10 @@ func main() {
 	}
 	// If the entire solidity code was specified, build and bind based on that
 	var (
-		abis  []string
-		bins  []string
-		types []string
+		abis        []string
+		bins        []string
+		binruntimes []string
+		types       []string
 	)
 	if *solFlag != "" {
 		// Generate the list of types to exclude from binding
@@ -77,6 +79,7 @@ func main() {
 			abi, _ := json.Marshal(contract.Info.AbiDefinition) // Flatten the compiler parse
 			abis = append(abis, string(abi))
 			bins = append(bins, contract.Code)
+			binruntimes = append(binruntimes, contract.RCode)
 
 			nameParts := strings.Split(name, ":")
 			types = append(types, nameParts[len(nameParts)-1])
@@ -99,6 +102,15 @@ func main() {
 		}
 		bins = append(bins, string(bin))
 
+		binruntime := []byte{}
+		if *binruntimesFlag != "" {
+			if binruntime, err = ioutil.ReadFile(*binruntimesFlag); err != nil {
+				fmt.Printf("Failed to read input runtime-bytecode: %v\n", err)
+				os.Exit(-1)
+			}
+		}
+		binruntimes = append(binruntimes, string(binruntime))
+
 		kind := *typFlag
 		if kind == "" {
 			kind = *pkgFlag
@@ -106,7 +118,7 @@ func main() {
 		types = append(types, kind)
 	}
 	// Generate the contract binding
-	code, err := bind.Bind(types, abis, bins, *pkgFlag, lang)
+	code, err := bind.Bind(types, abis, bins, binruntimes, *pkgFlag, lang)
 	if err != nil {
 		fmt.Printf("Failed to generate ABI binding: %v\n", err)
 		os.Exit(-1)

@@ -99,6 +99,7 @@ func gen(ctx *cli.Context) error {
 	g := genesis.New(
 		genesis.Validators(addrs...),
 		genesis.Alloc(addrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
+		genesis.AllocSmartContract(),
 	)
 
 	if isBFT {

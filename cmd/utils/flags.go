@@ -1076,6 +1076,7 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 func RegisterGxpService(stack *node.Node, cfg *gxp.Config) {
 	// @toDo add syncMode.LightSync func and add LesServer
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		cfg.WsEndpoint = stack.WSEndpoint()
 		fullNode, err := gxp.New(ctx, cfg)
 		return fullNode, err
 	})

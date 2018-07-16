@@ -1,11 +1,11 @@
 pragma solidity ^0.4.24;
 
-contract GXPReward {
+contract CommitteeReward {
 
     uint public totalAmount;
     mapping(address => uint256) public balanceOf;
 
-    function GXPReward() public {
+    function CommitteeReward() public {
     }
 
     function () payable public {

@@ -43,6 +43,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		EnablePreimageRecording bool
 		Istanbul                istanbul.Config
 		DocRoot                 string `toml:"-"`
+		WsEndpoint              string `tom:",omitempty"`
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -68,6 +69,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.Istanbul = c.Istanbul
 	enc.DocRoot = c.DocRoot
+	enc.WsEndpoint = c.WsEndpoint
 	return &enc, nil
 }
 
@@ -97,6 +99,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		EnablePreimageRecording *bool
 		Istanbul                *istanbul.Config
 		DocRoot                 *string `toml:"-"`
+		WsEndpoint              *string `tom:",omitempty"`
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -170,6 +173,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.DocRoot != nil {
 		c.DocRoot = *dec.DocRoot
+	}
+	if dec.WsEndpoint != nil {
+		c.WsEndpoint = *dec.WsEndpoint
 	}
 	return nil
 }

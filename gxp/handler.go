@@ -85,6 +85,8 @@ type ProtocolManager struct {
 	rewardbase   common.Address
 	rewardwallet accounts.Wallet
 
+	wsendpoint   string
+
 }
 
 // Ranger
@@ -190,6 +192,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
 	return manager, nil
+}
+
+func (pm *ProtocolManager) getWSEndPoint() string {
+	return pm.wsendpoint
 }
 
 func (pm *ProtocolManager) SetRewardContract(addr common.Address) {

@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"github.com/ground-x/go-gxplatform/p2p"
 	"sync"
+	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
 )
 
 type RangerEngine struct {
@@ -27,6 +28,7 @@ type RangerEngine struct {
 var (
 	inmemoryAddresses  = 20 // Number of recent addresses from ecrecover
 	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
+	nilUncleHash      = types.CalcUncleHash(nil)
 )
 
 func(re *RangerEngine) Author(header *types.Header) (common.Address, error) {
@@ -95,7 +97,22 @@ func(re *RangerEngine) Prepare(chain consensus.ChainReader, header *types.Header
 func(re *RangerEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	log.Debug("RangeEngine.Finalize") //,"num",header.Number,"hash",header.Hash())
-	return &types.Block{}, nil
+
+	// TODO-GX developing gxp reward mechanism
+	var reward = big.NewInt(1000000000000000000)        // 1 eth
+	var rewardcontract = big.NewInt(100000000000000000) // 0.1 eth
+	state.AddBalance(header.Coinbase , reward)
+
+	state.AddBalance(common.HexToAddress(contract.RNRewardAddr), rewardcontract)
+	state.AddBalance(common.HexToAddress(contract.CommitteeRewardAddr), rewardcontract)
+	state.AddBalance(common.HexToAddress(contract.PIReserveAddr), rewardcontract)
+
+	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
+	header.Root = state.IntermediateRoot(false) // ##### chain.Config().IsEIP158(header.Number))
+	header.UncleHash = nilUncleHash
+
+	// Assemble and return the final block for sealing
+	return types.NewBlock(header, txs, nil, receipts), nil
 }
 
 func(re *RangerEngine) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {

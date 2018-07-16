@@ -24,7 +24,7 @@ const (
 	fetcherID = "istanbul"
 )
 
-func New(config *istanbul.Config, privateKey *ecdsa.PrivateKey, db gxdb.Database) consensus.Istanbul {
+func New(rewardbase common.Address, rewardcontract common.Address , config *istanbul.Config, privateKey *ecdsa.PrivateKey, db gxdb.Database) consensus.Istanbul {
 
 	recents, _ 		  := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -42,6 +42,8 @@ func New(config *istanbul.Config, privateKey *ecdsa.PrivateKey, db gxdb.Database
 		coreStarted:      false,
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
+		rewardbase:       rewardbase,
+		rewardcontract:   rewardcontract,
 	}
 	backend.core = istanbulCore.New(backend, backend.config)
 	return backend
@@ -80,6 +82,17 @@ type backend struct {
 
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
+
+	rewardbase common.Address
+	rewardcontract common.Address
+}
+
+func (sb *backend) GetRewardBase() common.Address {
+	return sb.rewardbase
+}
+
+func (sb *backend) GetRewardContract() common.Address {
+	return sb.rewardcontract
 }
 
 // Address implements istanbul.Backend.Address

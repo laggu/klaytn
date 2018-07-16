@@ -19,33 +19,16 @@ func (pm *ProtocolManager) PoRValidate(from common.Address, tx *types.Transactio
 	}
 
 	//TODO-GX manage target node to call smart-contract
-	cnClient, err := gxpclient.Dial("ws://localhost:8546")
+	cnClient, err := gxpclient.Dial("ws://" + pm.getWSEndPoint())
 	if err != nil {
-		log.Error("Fail to connect consensus node","err",err)
+		log.Error("Fail to connect consensus node","ws",pm.getWSEndPoint(),"err",err)
 	}
 
-	instance, err := contract.NewGXPReward(pm.rewardcontract , cnClient)
+	instance, err := contract.NewRNReward(common.HexToAddress(contract.RNRewardAddr) , cnClient)
 	if err != nil {
 		return err
 	}
 
-	//file := "/Users/jun/data/istanbul/node6/keystore/UTC--2018-05-30T08-36-11.646393438Z--605c0b13afc58eb93088fda85cc6b9b94ce9c0d0"
-	//password := "<password>"
-	//
-	//keyjson, err := ioutil.ReadFile(file)
-	//key, err := keystore.DecryptKey(keyjson, password)
-	//if err != nil {
-	//	fmt.Println("json key failed to decrypt: %v", err)
-	//}
-	//
-	//publicKey := key.PrivateKey.Public()
-	//publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	//if !ok {
-	//	log.Error("error casting public key to ECDSA")
-	//}
-	//
-	//fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	//log.Error("public key","fromAddress",fromAddress)
 
 	nonce, err := cnClient.PendingNonceAt(context.Background(), pm.rewardbase)
 	if err != nil {
@@ -67,7 +50,7 @@ func (pm *ProtocolManager) PoRValidate(from common.Address, tx *types.Transactio
 		log.Error("fail to call reward", "err", rerr)
 	}
 
-	log.Error("received tx","addr",from,"nonce",tx.Nonce(),"to",tx.To(),"value",tx.Value())
+	log.Error("received tx","addr",from,"nonce",tx.Nonce(),"to",pm.rewardcontract,"value",tx.Value())
 
 	return nil
 }
