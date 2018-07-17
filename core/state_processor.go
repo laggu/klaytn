@@ -86,7 +86,17 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 		return nil, 0, err
 	}
 	// Update the state with pending changes
-	root := statedb.IntermediateRoot(false).Bytes()
+	root := statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+	// TODO-GX We have to decide whether to re-enable Byzantium feature here as below.
+	/*
+	var root []byte
+	if config.IsByzantium(header.Number) {
+		statedb.Finalise(true)
+	} else {
+		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+	}
+	*/
+
 	*usedGas += gas
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx

@@ -623,6 +623,10 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 		gas          = contract.Gas
 	)
 
+	if evm.ChainConfig().IsEIP150(evm.BlockNumber) {
+		gas -= gas / 64
+	}
+
 	contract.UseGas(gas)
 	res, addr, returnGas, suberr := evm.Create(contract, input, gas, value)
 	// Push item on the stack based on the returned error. If the ruleset is

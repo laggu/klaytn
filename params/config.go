@@ -138,18 +138,29 @@ func (c *ChainConfig) IsHomestead(num *big.Int) bool {
 	return isForked(c.HomesteadBlock, num)
 }
 
+func (c *ChainConfig) IsEIP150(num *big.Int) bool {
+	return true
+}
 func (c *ChainConfig) IsEIP155(num *big.Int) bool {
 	return isForked(c.EIP155Block, num)
 }
 
+// TODO-GX EIP158 is enabled by default now.
+// Let's decide this later with inspecting EIP158
+func (c *ChainConfig) IsEIP158(num *big.Int) bool {
+	return true
+}
 // GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
 //
 // The returned GasTable's fields shouldn't, under any circumstances, be changed.
 func (c *ChainConfig) GasTable(num *big.Int) GasTable {
+	// TODO-GX GXP follows latest version of Ethereum
 	if num == nil {
 		return GasTableEIP150
 	}
 	switch {
+	case c.IsEIP158(num):
+		return GasTableEIP158
 	case c.IsEIP155(num):
 		return GasTableEIP150
 	case c.IsHomestead(num):
