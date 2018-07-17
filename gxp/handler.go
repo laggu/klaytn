@@ -732,8 +732,6 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	for _, tx := range txs {
 		peers := pm.peers.PeersWithoutTx(tx.Hash())
 
-		// TODO-GX Code Check
-		peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
 		}
