@@ -140,7 +140,6 @@
   revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
   version = "v1.1"
 
-[[projects]]
   name = "github.com/kr/pretty"
   packages = ["."]
   revision = "73f6ac0b30a98e433b289500d779f50c1a6f0712"
@@ -326,6 +325,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["syncmap"]
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "6f686a352de66814cdd080d970febae7767857a3"
@@ -400,6 +405,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2820dba4e31a9afdf48cdd3554e9a79dbe5efeda12d3bd30380d4ca71a79e9e3"
+  inputs-digest = "deafc0d02f8e4143ead906ca00aeed04a9eed05fc8f82923a7f8ca298a93ad36"
   solver-name = "gps-cdcl"
   solver-version = 1

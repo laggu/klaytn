@@ -21,6 +21,7 @@ import (
 	"container/heap"
 	"errors"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/rlp"
 )
 
 // Iterator is a key-value trie iterator that traverses a Trie.
@@ -77,8 +78,21 @@ type NodeIterator interface {
 	// method panic if the iterator is not positioned at a leaf.
 	// Callers must not retain references to their return value after calling Next
 	Leaf() bool
-	LeafBlob() []byte
+
+	// LeafKey returns the key of the leaf. The method panics if the iterator is not
+	// positioned at a leaf. Callers must not retain references to the value after
+	// calling Next.
 	LeafKey() []byte
+
+	// LeafBlob returns the content of the leaf. The method panics if the iterator
+	// is not positioned at a leaf. Callers must not retain references to the value
+	// after calling Next.
+	LeafBlob() []byte
+
+	// LeafProof returns the Merkle proof of the leaf. The method panics if the
+	// iterator is not positioned at a leaf. Callers must not retain references
+	// to the value after calling Next.
+	LeafProof() [][]byte
 }
 
 // nodeIteratorState represents the iteration state at one particular node of the
@@ -151,6 +165,27 @@ func (it *nodeIterator) LeafKey() []byte {
 	if len(it.stack) > 0 {
 		if _, ok := it.stack[len(it.stack)-1].node.(valueNode); ok {
 			return hexToKeybytes(it.path)
+		}
+	}
+	panic("not at leaf")
+}
+
+func (it *nodeIterator) LeafProof() [][]byte {
+	if len(it.stack) > 0 {
+		if _, ok := it.stack[len(it.stack)-1].node.(valueNode); ok {
+			hasher := newHasher(0, 0, nil)
+			proofs := make([][]byte, 0, len(it.stack))
+
+			for i, item := range it.stack[:len(it.stack)-1] {
+				// Gather nodes that end up as hash nodes (or the root)
+				node, _, _ := hasher.hashChildren(item.node, nil)
+				hashed, _ := hasher.store(node, nil, false)
+				if _, ok := hashed.(hashNode); ok || i == 0 {
+					enc, _ := rlp.EncodeToBytes(node)
+					proofs = append(proofs, enc)
+				}
+			}
+			return proofs
 		}
 	}
 	panic("not at leaf")
@@ -368,6 +403,10 @@ func (it *differenceIterator) LeafKey() []byte {
 	return it.b.LeafKey()
 }
 
+func (it *differenceIterator) LeafProof() [][]byte {
+	return it.b.LeafProof()
+}
+
 func (it *differenceIterator) Path() []byte {
 	return it.b.Path()
 }
@@ -465,6 +504,10 @@ func (it *unionIterator) Leaf() bool {
 
 func (it *unionIterator) LeafBlob() []byte {
 	return (*it.items)[0].LeafBlob()
+}
+
+func (it *unionIterator) LeafProof() [][]byte {
+	return (*it.items)[0].LeafProof()
 }
 
 func (it *unionIterator) LeafKey() []byte {

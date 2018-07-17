@@ -209,6 +209,10 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	// update block's header
 	block = block.WithSeal(h)
 
+//	if block.Transactions().Len() > 0 {
+		log.Error("commit","num",block.Number(),"txs",block.Transactions().Len())
+//	}
+
 	sb.logger.Info("Committed", "address", sb.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
