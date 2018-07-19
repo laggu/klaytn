@@ -315,12 +315,10 @@ func makeChainForBench(db gxdb.Database, full bool, count uint64) {
 
 		rawdb.WriteHeader(db, header)
 		rawdb.WriteCanonicalHash(db, hash, n)
-		if (n == 0) {
-			rawdb.WriteHeadBlockHash(db, hash)
-		}
 		rawdb.WriteTd(db, hash, n, big.NewInt(int64(n+1)))
 
 		if full || n == 0 {
+			rawdb.WriteHeadBlockHash(db, hash)
 			block := types.NewBlockWithHeader(header)
 			rawdb.WriteBody(db, hash, n, block.Body())
 			rawdb.WriteReceipts(db, hash, n, nil)
