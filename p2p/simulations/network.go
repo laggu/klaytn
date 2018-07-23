@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/go-gxplatform/p2p"
 	"github.com/ground-x/go-gxplatform/p2p/discover"
 	"github.com/ground-x/go-gxplatform/p2p/simulations/adapters"
+	"strings"
 )
 
 var DialBanTimeout = 200 * time.Millisecond
@@ -108,12 +109,12 @@ func (net *Network) NewNodeWithConfig(conf *adapters.NodeConfig) (*Node, error) 
 	}
 
 	// use the NodeAdapter to create the node
-	adapterNode, err := net.nodeAdapter.NewNode(conf)
+	cnNode, err := net.nodeAdapter.NewNode(conf)
 	if err != nil {
 		return nil, err
 	}
 	node := &Node{
-		Node:   adapterNode,
+		Node:   cnNode,
 		Config: conf,
 	}
 	log.Trace(fmt.Sprintf("node %v created", conf.ID))
@@ -268,11 +269,13 @@ func (net *Network) Stop(id discover.NodeID) error {
 	return nil
 }
 
+// TODO
 // Connect connects two nodes together by calling the "admin_addPeer" RPC
 // method on the "one" node so that it connects to the "other" node
 func (net *Network) Connect(oneID, otherID discover.NodeID) error {
 	log.Debug(fmt.Sprintf("connecting %s to %s", oneID, otherID))
-	conn, err := net.InitConn(oneID, otherID)
+	conn, err := net.InitConnEx(oneID, otherID)
+	// TODO: temporary remove
 	if err != nil {
 		return err
 	}
@@ -283,6 +286,72 @@ func (net *Network) Connect(oneID, otherID discover.NodeID) error {
 	net.events.Send(ControlEvent(conn))
 	return client.Call(nil, "admin_addPeer", string(conn.other.Addr()))
 }
+
+//
+// method on the "one" node that it connect to all "other" nodes
+func(net *Network) ConnectAll() error {
+	log.Debug(fmt.Sprintf("connecting all nodes to all other nodes"))
+
+	for _, oneNode := range net.Nodes {
+		oneID := oneNode.ID()
+
+		// Move to the goroutine
+		for _, otherNode := range net.Nodes {
+			otherID := otherNode.ID()
+			if strings.Compare(oneID.String(), otherID.String()) == 0 {
+				continue
+			}
+
+			err := net.Connect(oneID, otherID)
+			if err != nil {
+				log.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
+				continue;
+			}
+		}
+	}
+	return nil
+}
+
+func(net *Network) DisconnectAll() error {
+	log.Debug(fmt.Sprintf("Disconnecting all nodes to all other nodes"))
+
+	for _, oneNode := range net.Nodes {
+		oneID := oneNode.ID()
+
+		// Move to the goroutine
+		for _, otherNode := range net.Nodes {
+			otherID := otherNode.ID()
+			if strings.Compare(oneID.String(), otherID.String()) == 0 {
+				continue
+			}
+
+			err := net.Disconnect(oneID, otherID)
+			if err != nil {
+				log.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
+				continue;
+			}
+		}
+	}
+	return nil
+}
+
+
+// temporary function
+func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
+	node := net.getNode(oneID)
+	if node == nil {
+		log.Debug(fmt.Sprintf("### CheckComplation - cannot find nodeID %v", oneID))
+		return;
+	}
+	peerCnt := node.Node.GetPeerCount()
+	targetCnt := len(net.Nodes) - 1
+	log.Debug(fmt.Sprintf("### PeerCount: %d, targetCnt: %d", peerCnt, targetCnt))
+
+	if peerCnt == targetCnt {
+		log.Debug(fmt.Sprintf("#### PEER Connection done: Peer Count = %d, %v", peerCnt, node.Node.NodeInfo()))
+	}
+}
+
 
 // Disconnect disconnects two nodes by calling the "admin_removePeer" RPC
 // method on the "one" node so that it disconnects from the "other" node
@@ -315,6 +384,9 @@ func (net *Network) DidConnect(one, other discover.NodeID) error {
 	}
 	conn.Up = true
 	net.events.Send(NewEvent(conn))
+
+	// TODO : CHECK ALLCONNECTION DONE
+	net.CheckAllConnectDone(one)
 	return nil
 }
 
@@ -478,6 +550,36 @@ func (net *Network) InitConn(oneID, otherID discover.NodeID) (*Conn, error) {
 	if time.Since(conn.initiated) < DialBanTimeout {
 		return nil, fmt.Errorf("connection between %v and %v recently attempted", oneID, otherID)
 	}
+
+	err = conn.nodesUp()
+	if err != nil {
+		log.Trace(fmt.Sprintf("nodes not up: %v", err))
+		return nil, fmt.Errorf("nodes not up: %v", err)
+	}
+	log.Debug("InitConn - connection initiated")
+	conn.initiated = time.Now()
+	return conn, nil
+}
+
+
+// TODO
+// this function made for the testing
+func (net *Network) InitConnEx(oneID, otherID discover.NodeID) (*Conn, error) {
+	net.lock.Lock()
+	defer net.lock.Unlock()
+	if oneID == otherID {
+		return nil, fmt.Errorf("refusing to connect to self %v", oneID)
+	}
+	conn, err := net.getOrCreateConn(oneID, otherID)
+	if conn == nil {
+		return nil, err
+	}
+	//if conn.Up {
+	//	return conn, fmt.Errorf("%v and %v already connected", oneID, otherID)
+	//}
+	//if time.Since(conn.initiated) < DialBanTimeout {
+	//	return conn, fmt.Errorf("connection between %v and %v recently attempted", oneID, otherID)
+	//}
 
 	err = conn.nodesUp()
 	if err != nil {

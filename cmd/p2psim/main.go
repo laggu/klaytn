@@ -136,6 +136,16 @@ func main() {
 					},
 				},
 				{
+					Name:      "connectall",
+					Usage:     "connect between all nodes",
+					Action:    connectAll,
+				},
+				{
+					Name:      "disconnectall",
+					Usage:     "disconnect between all nodes",
+					Action:    disconnectAll,
+				},
+				{
 					Name:      "show",
 					ArgsUsage: "<node>",
 					Usage:     "show node information",
@@ -279,6 +289,9 @@ func createNode(ctx *cli.Context) error {
 		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 	}
 	config := adapters.RandomNodeConfig()
+
+	fmt.Fprintln(ctx.App.Writer, "port", config.Port) //
+
 	config.Name = ctx.String("name")
 	if key := ctx.String("key"); key != "" {
 		privKey, err := crypto.HexToECDSA(key)
@@ -296,6 +309,32 @@ func createNode(ctx *cli.Context) error {
 		return err
 	}
 	fmt.Fprintln(ctx.App.Writer, "Created", node.Name)
+	return nil
+}
+
+func connectAll(ctx *cli.Context) error {
+	if len(ctx.Args()) != 0 {
+		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
+	}
+
+	err := client.ConnectAll()
+	if (err != nil) {
+		return err
+	}
+	fmt.Fprintln(ctx.App.Writer, "ConnectAll")
+	return nil
+}
+
+func disconnectAll(ctx *cli.Context) error {
+	if len(ctx.Args()) != 0 {
+		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
+	}
+
+	err := client.DisconnectAll()
+	if (err != nil) {
+		return err
+	}
+	fmt.Fprintln(ctx.App.Writer, "DisconnectAll")
 	return nil
 }
 

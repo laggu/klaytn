@@ -60,8 +60,14 @@ type Node interface {
 	// NodeInfo returns information about the node
 	NodeInfo() *p2p.NodeInfo
 
+	// PeersInfo returns informations about the peers
+	PeersInfo() []*p2p.PeerInfo
+
 	// Snapshots creates snapshots of the running services
 	Snapshots() (map[string][]byte, error)
+
+	// GetPeerCount returns peer count of server in the node
+	GetPeerCount() int
 }
 
 // NodeAdapter is used to create Nodes in a simulation network

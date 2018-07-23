@@ -317,6 +317,18 @@ func (n *ExecNode) Snapshots() (map[string][]byte, error) {
 	return snapshots, n.client.Call(&snapshots, "simulation_snapshot")
 }
 
+
+// TODO
+func (sn *ExecNode) PeersInfo() []*p2p.PeerInfo {
+	return nil
+}
+
+// TODO
+func (n *ExecNode) GetPeerCount() int {
+	return 0
+}
+
+
 func init() {
 	// register a reexec function to start a devp2p node when the current
 	// binary is executed as "p2p-node"

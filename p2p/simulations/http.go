@@ -185,6 +185,15 @@ func (c *Client) GetNode(nodeID string) (*p2p.NodeInfo, error) {
 	return node, c.Get(fmt.Sprintf("/nodes/%s", nodeID), node)
 }
 
+func (c *Client) ConnectAll() error {
+	return c.Post(fmt.Sprintf("/connectall"), nil, nil)
+}
+
+func (c *Client) DisconnectAll() error {
+	return c.Post(fmt.Sprintf("/disconnectall"), nil, nil)
+}
+
+
 // StartNode starts a node
 func (c *Client) StartNode(nodeID string) error {
 	return c.Post(fmt.Sprintf("/nodes/%s/start", nodeID), nil, nil)
@@ -296,6 +305,8 @@ func NewServer(network *Network) *Server {
 	s.POST("/nodes/:nodeid/conn/:peerid", s.ConnectNode)
 	s.DELETE("/nodes/:nodeid/conn/:peerid", s.DisconnectNode)
 	s.GET("/nodes/:nodeid/rpc", s.NodeRPC)
+	s.POST("/connectall", s.ConnectAll)
+	s.POST("/disconnectall", s.DisconnectAll)
 
 	return s
 }
@@ -619,6 +630,27 @@ func (s *Server) StopNode(w http.ResponseWriter, req *http.Request) {
 	}
 
 	s.JSON(w, http.StatusOK, node.NodeInfo())
+}
+
+
+func (s *Server) ConnectAll(w http.ResponseWriter, req *http.Request) {
+	if err := s.network.ConnectAll(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: check whether all connections are successful or not
+	s.JSON(w, http.StatusOK, "connected all nodes")
+}
+
+func (s *Server) DisconnectAll(w http.ResponseWriter, req *http.Request) {
+	if err := s.network.DisconnectAll(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: check whether all connections are successful or not
+	s.JSON(w, http.StatusOK, "disconnected all nodes")
 }
 
 // ConnectNode connects a node to a peer node
