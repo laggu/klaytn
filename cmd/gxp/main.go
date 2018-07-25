@@ -29,6 +29,8 @@ const (
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
+	// Git tag (set via linker flags if exists)
+	gitTag = ""
 	// The app that holds all commands and flags.
 	app = utils.NewApp(gitCommit, "the go-gxplatform command line interface")
 
@@ -134,6 +136,8 @@ func init() {
 		// See consolecmd.go:
 		consoleCommand,
 		attachCommand,
+		// See versioncmd.go
+		versionCommand,
 
 		dumpConfigCommand,
 	}
