@@ -295,19 +295,21 @@ func(net *Network) ConnectAll() error {
 	for _, oneNode := range net.Nodes {
 		oneID := oneNode.ID()
 
-		// Move to the goroutine
-		for _, otherNode := range net.Nodes {
-			otherID := otherNode.ID()
-			if strings.Compare(oneID.String(), otherID.String()) == 0 {
-				continue
-			}
+		go func() {
+			for _, otherNode := range net.Nodes {
+				otherID := otherNode.ID()
+				if strings.Compare(oneID.String(), otherID.String()) == 0 {
+					continue
+				}
 
-			err := net.Connect(oneID, otherID)
-			if err != nil {
-				log.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
-				continue;
+				err := net.Connect(oneID, otherID)
+				if err != nil {
+					log.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
+					continue;
+				}
 			}
-		}
+		}()
+
 	}
 	return nil
 }
@@ -336,6 +338,15 @@ func(net *Network) DisconnectAll() error {
 }
 
 
+
+type ConnResult struct {
+	succMap map[discover.NodeID]bool
+}
+
+var tcResult = &ConnResult{
+	succMap: make(map[discover.NodeID]bool),
+}
+
 // temporary function
 func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
 	node := net.getNode(oneID)
@@ -348,7 +359,17 @@ func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
 	log.Debug(fmt.Sprintf("### PeerCount: %d, targetCnt: %d", peerCnt, targetCnt))
 
 	if peerCnt == targetCnt {
-		log.Debug(fmt.Sprintf("#### PEER Connection done: Peer Count = %d, %v", peerCnt, node.Node.NodeInfo()))
+		if _, ok := tcResult.succMap[oneID]; !ok {
+			tcResult.succMap[oneID] = true
+			log.Debug(fmt.Sprintf("#### PEER Connection done: Peer Count = %d, %v", peerCnt, node.Node.NodeInfo()))
+		}
+		if len(net.Nodes) == len(tcResult.succMap) {
+			log.Debug(fmt.Sprintf("###### Peer connection test succeed #####"))
+
+			for k, v := range tcResult.succMap {
+				log.Debug(fmt.Sprintf("## key = %v, value = %v", k, v))
+			}
+		}
 	}
 }
 
@@ -379,9 +400,9 @@ func (net *Network) DidConnect(one, other discover.NodeID) error {
 	if err != nil {
 		return fmt.Errorf("connection between %v and %v does not exist", one, other)
 	}
-	if conn.Up {
-		return fmt.Errorf("%v and %v already connected", one, other)
-	}
+	//if conn.Up {
+	// return fmt.Errorf("%v and %v already connected", one, other)
+	//}
 	conn.Up = true
 	net.events.Send(NewEvent(conn))
 
@@ -575,10 +596,10 @@ func (net *Network) InitConnEx(oneID, otherID discover.NodeID) (*Conn, error) {
 		return nil, err
 	}
 	//if conn.Up {
-	//	return conn, fmt.Errorf("%v and %v already connected", oneID, otherID)
+	// return conn, fmt.Errorf("%v and %v already connected", oneID, otherID)
 	//}
 	//if time.Since(conn.initiated) < DialBanTimeout {
-	//	return conn, fmt.Errorf("connection between %v and %v recently attempted", oneID, otherID)
+	// return conn, fmt.Errorf("connection between %v and %v recently attempted", oneID, otherID)
 	//}
 
 	err = conn.nodesUp()
