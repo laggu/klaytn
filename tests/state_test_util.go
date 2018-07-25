@@ -245,8 +245,3 @@ func rlpHash(x interface{}) (h common.Hash) {
 	hw.Sum(h[:0])
 	return h
 }
-
-// NOTE-GX: vmTestBlockHash is originally located in vm_test_util.go in go-ethereum.
-func vmTestBlockHash(n uint64) common.Hash {
-	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
-}
