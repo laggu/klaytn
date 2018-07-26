@@ -29,9 +29,9 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		pendingRequests:    prque.New(),
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
-		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
-		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
-		consensusTimer:     metrics.NewRegisteredTimer("consensus/istanbul/core/timer", nil),
+		roundMeter:         metrics.NewRegisteredMeter("consensus-istanbul-core-round", nil),
+		sequenceMeter:      metrics.NewRegisteredMeter("consensus-istanbul-core-sequence", nil),
+		consensusTimer:     metrics.NewRegisteredTimer("consensus-istanbul-core-timer", nil),
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c

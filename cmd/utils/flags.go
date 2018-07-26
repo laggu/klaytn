@@ -302,6 +302,10 @@ var (
 		Name:  metrics.MetricsEnabledFlag,
 		Usage: "Enable metrics collection and reporting",
 	}
+	PrometheusExporterFlag = cli.BoolFlag{
+		Name: metrics.PrometheusExporterFlag,
+		Usage: "Enable prometheus exporter",
+	}
 	FakePoWFlag = cli.BoolFlag{
 		Name:  "fakepow",
 		Usage: "Disables proof-of-work verification",

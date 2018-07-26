@@ -19,11 +19,13 @@ import (
 //
 // This global kill-switch helps quantify the observer effect and makes
 // for less cluttered pprof profiles.
-var Enabled bool = false
+var Enabled = false
+var EnabledPrometheusExport = false
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
 const MetricsEnabledFlag = "metrics"
 const DashboardEnabledFlag = "dashboard"
+const PrometheusExporterFlag = "prometheus"
 
 // Init enables or disables the metrics system. Since we need this to run before
 // any other code gets to create meters and timers, we'll actually do an ugly hack
@@ -34,11 +36,14 @@ func init() {
 			log.Info("Enabling metrics collection")
 			Enabled = true
 		}
+		if flag := strings.TrimLeft(arg, "-"); flag == PrometheusExporterFlag {
+			log.Info("Enabling Prometheus Exporter")
+			EnabledPrometheusExport = true
+		}
 	}
 }
 
-// CollectProcessMetrics periodically collects various metrics about the running
-// process.
+// CollectProcessMetrics periodically collects various metrics about the running process.
 func CollectProcessMetrics(refresh time.Duration) {
 	// Short circuit if the metrics system is disabled
 	if !Enabled {
@@ -52,17 +57,17 @@ func CollectProcessMetrics(refresh time.Duration) {
 		diskstats[i] = new(DiskStats)
 	}
 	// Define the various metrics to collect
-	memAllocs := GetOrRegisterMeter("system/memory/allocs", DefaultRegistry)
-	memFrees := GetOrRegisterMeter("system/memory/frees", DefaultRegistry)
-	memInuse := GetOrRegisterMeter("system/memory/inuse", DefaultRegistry)
-	memPauses := GetOrRegisterMeter("system/memory/pauses", DefaultRegistry)
+	memAllocs := GetOrRegisterMeter("system-memory-allocs", DefaultRegistry)
+	memFrees := GetOrRegisterMeter("system-memory-frees", DefaultRegistry)
+	memInuse := GetOrRegisterMeter("system-memory-inuse", DefaultRegistry)
+	memPauses := GetOrRegisterMeter("system-memory-pauses", DefaultRegistry)
 
 	var diskReads, diskReadBytes, diskWrites, diskWriteBytes Meter
 	if err := ReadDiskStats(diskstats[0]); err == nil {
-		diskReads = GetOrRegisterMeter("system/disk/readcount", DefaultRegistry)
-		diskReadBytes = GetOrRegisterMeter("system/disk/readdata", DefaultRegistry)
-		diskWrites = GetOrRegisterMeter("system/disk/writecount", DefaultRegistry)
-		diskWriteBytes = GetOrRegisterMeter("system/disk/writedata", DefaultRegistry)
+		diskReads = GetOrRegisterMeter("system-disk-readcount", DefaultRegistry)
+		diskReadBytes = GetOrRegisterMeter("system-disk-readdata", DefaultRegistry)
+		diskWrites = GetOrRegisterMeter("system-disk-writecount", DefaultRegistry)
+		diskWriteBytes = GetOrRegisterMeter("system-disk-writedata", DefaultRegistry)
 	} else {
 		log.Debug("Failed to read disk metrics", "err", err)
 	}

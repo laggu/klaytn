@@ -35,8 +35,8 @@ var (
 )
 
 var (
-	cacheMissCounter   = metrics.NewRegisteredCounter("trie/cachemiss", nil)
-	cacheUnloadCounter = metrics.NewRegisteredCounter("trie/cacheunload", nil)
+	cacheMissCounter   = metrics.NewRegisteredCounter("trie-cachemiss", nil)
+	cacheUnloadCounter = metrics.NewRegisteredCounter("trie-cacheunload", nil)
 )
 
 // CacheMisses retrieves a global counter measuring the number of cache misses

@@ -13,5 +13,5 @@ FROM alpine:latest
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /go-gxplatform/build/bin/gxp /usr/local/bin/
 
-EXPOSE 8545 8546 30303 30303/udp
+EXPOSE 8545 8546 30303 61001 30303/udp
 ENTRYPOINT ["gxp"]

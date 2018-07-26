@@ -20,6 +20,10 @@ import (
 	"time"
 	"math/big"
 	"github.com/ground-x/go-gxplatform/internal/debug"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
+	"github.com/ground-x/go-gxplatform/metrics/prometheus"
 )
 
 const (
@@ -100,6 +104,7 @@ var (
 		utils.RPCVirtualHostsFlag,
 		utils.EthStatsURLFlag,
 		utils.MetricsEnabledFlag,
+		utils.PrometheusExporterFlag,
 		utils.FakePoWFlag,
 		utils.NoCompactionFlag,
 		utils.GpoBlocksFlag,
@@ -153,6 +158,16 @@ func init() {
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
+
+		// Start prometheus exporter
+		if metrics.Enabled && metrics.EnabledPrometheusExport {
+			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
+				"", prometheus.DefaultRegisterer, 3*time.Second)
+			go pClient.UpdatePrometheusMetrics()
+			http.Handle("/metrics", promhttp.Handler())
+			go http.ListenAndServe(":61001", nil)
+		}
+
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(3 * time.Second)
 
@@ -266,7 +281,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := gxp.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
-	}else {
+	} else {
 		// istanbul BFT
 		var gxp *gxp2.GXP
 		if err := stack.Service(&gxp); err != nil {
