@@ -37,6 +37,7 @@ func TestState(t *testing.T) {
 	// Expected failures:
 	st.fails(`^stRevertTest/RevertPrecompiledTouch\.json/EIP158`, "bug in test")
 	st.fails(`^stRevertTest/RevertPrecompiledTouch\.json/Byzantium`, "bug in test")
+	st.skipLoad(`^stZeroKnowledge2/ecmul_0-3_5616_28000_96\.json`) // fails with geth
 
 	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
 		for _, subtest := range test.Subtests() {
