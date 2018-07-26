@@ -24,6 +24,7 @@ type Memory struct {
 	lastGasCost uint64
 }
 
+// NewMemory returns a new memory memory model.
 func NewMemory() *Memory {
 	return &Memory{}
 }
@@ -89,6 +90,7 @@ func (m *Memory) Data() []byte {
 	return m.store
 }
 
+// Print dumps the content of the memory.
 func (m *Memory) Print() {
 	fmt.Printf("### mem %d bytes ###\n", len(m.store))
 	if len(m.store) > 0 {

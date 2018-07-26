@@ -33,7 +33,7 @@ func TestTransaction(t *testing.T) {
 	txt.config(`^EIP155/`, params.ChainConfig{
 		HomesteadBlock: big.NewInt(0),
 		EIP155Block:    big.NewInt(0),
-		ChainId:        big.NewInt(1),
+		ChainID:        big.NewInt(1),
 	})
 	txt.config(`^Byzantium/`, params.ChainConfig{
 		HomesteadBlock: big.NewInt(0),

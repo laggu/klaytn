@@ -22,6 +22,7 @@ import (
 	"math/big"
 )
 
+// Genesis hashes to enforce below configs on.
 var (
 	MainnetGenesisHash = common.HexToHash("// todo generate new hash for mainnet") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("// todo generate new hash for testnet") // Testnet genesis hash to enforce below configs on
@@ -30,14 +31,14 @@ var (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(1),
+		ChainID:        big.NewInt(1),
 		HomesteadBlock: big.NewInt(0),
 		Gxhash:         new(GxhashConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(2),
+		ChainID:        big.NewInt(2),
 		HomesteadBlock: big.NewInt(0),
 		Gxhash:         new(GxhashConfig),
 	}
@@ -69,7 +70,7 @@ var (
 // that any network, identified by its genesis block, can have its own
 // set of configuration options.
 type ChainConfig struct {
-	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
+	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
 	HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
 
@@ -129,14 +130,14 @@ func (c *ChainConfig) String() string {
 	}
 	if c.Istanbul != nil {
 		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v SubGroupSize: %d}",
-			c.ChainId,
+			c.ChainID,
 			c.IsBFT,
 			engine,
 			c.Istanbul.SubGroupSize,
 		)
 	}else {
 		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v}",
-			c.ChainId,
+			c.ChainID,
 			c.IsBFT,
 			engine,
 		)
@@ -148,15 +149,19 @@ func (c *ChainConfig) IsHomestead(num *big.Int) bool {
 	return isForked(c.HomesteadBlock, num)
 }
 
+// IsEIP150 returns whether num is either equal to the EIP150 fork block or greater.
 func (c *ChainConfig) IsEIP150(num *big.Int) bool {
 	return true
 }
+
+// IsEIP155 returns whether num is either equal to the EIP155 fork block or greater.
 func (c *ChainConfig) IsEIP155(num *big.Int) bool {
 	return isForked(c.EIP155Block, num)
 }
 
 // TODO-GX EIP158 is enabled by default now.
 // Let's decide this later with inspecting EIP158
+// IsEIP158 returns whether num is either equal to the EIP158 fork block or greater.
 func (c *ChainConfig) IsEIP158(num *big.Int) bool {
 	return true
 }
@@ -266,14 +271,15 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainId     *big.Int
+	ChainID     *big.Int
 	IsHomestead bool
 }
 
+// Rules ensures c's ChainID is not nil.
 func (c *ChainConfig) Rules(num *big.Int) Rules {
-	chainId := c.ChainId
-	if chainId == nil {
-		chainId = new(big.Int)
+	chainID := c.ChainID
+	if chainID == nil {
+		chainID = new(big.Int)
 	}
-	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num)}
+	return Rules{ChainID: new(big.Int).Set(chainID), IsHomestead: c.IsHomestead(num)}
 }
