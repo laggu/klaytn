@@ -408,9 +408,9 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			continue
 		}
 
-		// for ethereum compatiblity. convert ethereum namespace to gxp namespace.
-		if r.service == "eth" {
-			r.service = "gxp"
+		// for ethereum compatiblity. convert ethereum namespace to klay namespace.
+		if r.service == "eth" || r.service == "gxp" {
+			r.service = "klay"
 		}
 
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available

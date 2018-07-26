@@ -1213,7 +1213,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if block.Transactions().Len() > 0 {
 
 			elapsed := time.Since(start)
-			log.Error("#### core/blockchain processing block", "elapsed", elapsed, "txs", block.Transactions().Len())
+			log.Debug("core.blockchain processing block", "elapsed", elapsed, "txs", block.Transactions().Len())
 		}
 
 		// Validate the state using the default validator

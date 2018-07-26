@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	clientIdentifier = "gxp" // Client identifier to advertise over the network
+	clientIdentifier = "klay" // Client identifier to advertise over the network
 )
 
 var (

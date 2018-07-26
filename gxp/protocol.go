@@ -18,9 +18,9 @@ const (
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
-var ProtocolName = "gxp"
+var ProtocolName = "klay"
 
-// ProtocolVersions are the upported versions of the gxp protocol (first is primary).
+// ProtocolVersions are the upported versions of the klay protocol (first is primary).
 var ProtocolVersions = []uint{gxp63, gxp62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
@@ -28,9 +28,9 @@ var ProtocolLengths = []uint64{17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
-// gxp protocol message codes
+// klay protocol message codes
 const (
-	// Protocol messages belonging to gxp/62
+	// Protocol messages belonging to klay/62
 	StatusMsg          = 0x00
 	NewBlockHashesMsg  = 0x01
 	TxMsg              = 0x02
@@ -40,7 +40,7 @@ const (
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
 
-	// Protocol messages belonging to gxp/63
+	// Protocol messages belonging to klay/63
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f

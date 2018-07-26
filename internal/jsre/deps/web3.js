@@ -2508,7 +2508,7 @@ module.exports={
 
 var RequestManager = require('./web3/requestmanager');
 var Iban = require('./web3/iban');
-var Gxp = require('./web3/methods/gxp');
+var Klay = require('./web3/methods/klay');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
 var Net = require('./web3/methods/net');
@@ -2530,7 +2530,7 @@ var BigNumber = require('bignumber.js');
 function Web3 (provider) {
     this._requestManager = new RequestManager(provider);
     this.currentProvider = provider;
-    this.gxp = new Gxp(this);
+    this.klay = new Klay(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
     this.net = new Net(this);
@@ -2609,8 +2609,8 @@ var properties = function () {
             inputFormatter: utils.toDecimal
         }),
         new Property({
-            name: 'version.gxplatform',
-            getter: 'gxp_protocolVersion',
+            name: 'version.klaytn',
+            getter: 'klay_protocolVersion',
             inputFormatter: utils.toDecimal
         }),
         new Property({
@@ -2632,7 +2632,7 @@ Web3.prototype.createBatch = function () {
 module.exports = Web3;
 
 
-},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/gxp":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/klay":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
 /*
     This file is part of web3.js.
 
@@ -2711,7 +2711,7 @@ AllSolidityEvents.prototype.execute = function (options, callback) {
 
     var o = this.encode(options);
     var formatter = this.decode.bind(this);
-    return new Filter(o, 'gxp', this._requestManager, watches.gxp(), formatter, callback);
+    return new Filter(o, 'klay', this._requestManager, watches.klay(), formatter, callback);
 };
 
 AllSolidityEvents.prototype.attachToContract = function (contract) {
@@ -2849,7 +2849,7 @@ var addFunctionsToContract = function (contract) {
     contract.abi.filter(function (json) {
         return json.type === 'function';
     }).map(function (json) {
-        return new SolidityFunction(contract._gxp, json, contract.address);
+        return new SolidityFunction(contract._klay, json, contract.address);
     }).forEach(function (f) {
         f.attachToContract(contract);
     });
@@ -2867,11 +2867,11 @@ var addEventsToContract = function (contract) {
         return json.type === 'event';
     });
 
-    var All = new AllEvents(contract._gxp._requestManager, events, contract.address);
+    var All = new AllEvents(contract._klay._requestManager, events, contract.address);
     All.attachToContract(contract);
 
     events.map(function (json) {
-        return new SolidityEvent(contract._gxp._requestManager, json, contract.address);
+        return new SolidityEvent(contract._klay._requestManager, json, contract.address);
     }).forEach(function (e) {
         e.attachToContract(contract);
     });
@@ -2891,7 +2891,7 @@ var checkForContractAddress = function(contract, callback){
         callbackFired = false;
 
     // wait for receipt
-    var filter = contract._gxp.filter('latest', function(e){
+    var filter = contract._klay.filter('latest', function(e){
         if (!e && !callbackFired) {
             count++;
 
@@ -2909,10 +2909,10 @@ var checkForContractAddress = function(contract, callback){
 
             } else {
 
-                contract._gxp.getTransactionReceipt(contract.transactionHash, function(e, receipt){
+                contract._klay.getTransactionReceipt(contract.transactionHash, function(e, receipt){
                     if(receipt && !callbackFired) {
 
-                        contract._gxp.getCode(receipt.contractAddress, function(e, code){
+                        contract._klay.getCode(receipt.contractAddress, function(e, code){
                             /*jshint maxcomplexity: 6 */
 
                             if(callbackFired || !code)
@@ -2955,8 +2955,8 @@ var checkForContractAddress = function(contract, callback){
  * @method ContractFactory
  * @param {Array} abi
  */
-var ContractFactory = function (gxp, abi) {
-    this.gxp = gxp;
+var ContractFactory = function (klay, abi) {
+    this.klay = klay;
     this.abi = abi;
 
     /**
@@ -2972,7 +2972,7 @@ var ContractFactory = function (gxp, abi) {
     this.new = function () {
         /*jshint maxcomplexity: 7 */
         
-        var contract = new Contract(this.gxp, this.abi);
+        var contract = new Contract(this.klay, this.abi);
 
         // parse arguments
         var options = {}; // required!
@@ -3004,7 +3004,7 @@ var ContractFactory = function (gxp, abi) {
         if (callback) {
 
             // wait for the contract address adn check if the code was deployed
-            this.gxp.sendTransaction(options, function (err, hash) {
+            this.klay.sendTransaction(options, function (err, hash) {
                 if (err) {
                     callback(err);
                 } else {
@@ -3018,7 +3018,7 @@ var ContractFactory = function (gxp, abi) {
                 }
             });
         } else {
-            var hash = this.gxp.sendTransaction(options);
+            var hash = this.klay.sendTransaction(options);
             // add the transaction hash
             contract.transactionHash = hash;
             checkForContractAddress(contract);
@@ -3053,7 +3053,7 @@ var ContractFactory = function (gxp, abi) {
  * otherwise calls callback function (err, contract)
  */
 ContractFactory.prototype.at = function (address, callback) {
-    var contract = new Contract(this.gxp, this.abi, address);
+    var contract = new Contract(this.klay, this.abi, address);
 
     // this functions are not part of prototype,
     // because we dont want to spoil the interface
@@ -3093,8 +3093,8 @@ ContractFactory.prototype.getData = function () {
  * @param {Array} abi
  * @param {Address} contract address
  */
-var Contract = function (gxp, abi, address) {
-    this._gxp = gxp;
+var Contract = function (klay, abi, address) {
+    this._klay = klay;
     this.transactionHash = null;
     this.address = address;
     this.abi = abi;
@@ -3336,7 +3336,7 @@ SolidityEvent.prototype.execute = function (indexed, options, callback) {
 
     var o = this.encode(indexed, options);
     var formatter = this.decode.bind(this);
-    return new Filter(o, 'gxp', this._requestManager, watches.gxp(), formatter, callback);
+    return new Filter(o, 'klay', this._requestManager, watches.klay(), formatter, callback);
 };
 
 /**
@@ -3470,7 +3470,7 @@ var getOptions = function (options, type) {
 
 
     switch(type) {
-        case 'gxp':
+        case 'klay':
 
             // make sure topics, get converted to hex
             options.topics = options.topics || [];
@@ -3996,8 +3996,8 @@ var sha3 = require('../utils/sha3');
 /**
  * This prototype should be used to call/sendTransaction to solidity functions
  */
-var SolidityFunction = function (gxp, json, address) {
-    this._gxp = gxp;
+var SolidityFunction = function (klay, json, address) {
+    this._klay = klay;
     this._inputTypes = json.inputs.map(function (i) {
         return i.type;
     });
@@ -4099,12 +4099,12 @@ SolidityFunction.prototype.call = function () {
 
 
     if (!callback) {
-        var output = this._gxp.call(payload, defaultBlock);
+        var output = this._klay.call(payload, defaultBlock);
         return this.unpackOutput(output);
     }
 
     var self = this;
-    this._gxp.call(payload, defaultBlock, function (error, output) {
+    this._klay.call(payload, defaultBlock, function (error, output) {
         if (error) return callback(error, null);
 
         var unpacked = null;
@@ -4134,10 +4134,10 @@ SolidityFunction.prototype.sendTransaction = function () {
     }
 
     if (!callback) {
-        return this._gxp.sendTransaction(payload);
+        return this._klay.sendTransaction(payload);
     }
 
-    this._gxp.sendTransaction(payload, callback);
+    this._klay.sendTransaction(payload, callback);
 };
 
 /**
@@ -4151,10 +4151,10 @@ SolidityFunction.prototype.estimateGas = function () {
     var payload = this.toPayload(args);
 
     if (!callback) {
-        return this._gxp.estimateGas(payload);
+        return this._klay.estimateGas(payload);
     }
 
-    this._gxp.estimateGas(payload, callback);
+    this._klay.estimateGas(payload, callback);
 };
 
 /**
@@ -4203,7 +4203,7 @@ SolidityFunction.prototype.request = function () {
     var format = this.unpackOutput.bind(this);
 
     return {
-        method: this._constant ? 'gxp_call' : 'gxp_sendTransaction',
+        method: this._constant ? 'klay_call' : 'klay_sendTransaction',
         callback: callback,
         params: [payload],
         format: format
@@ -5207,26 +5207,26 @@ var Iban = require('../iban');
 var transfer = require('../transfer');
 
 var blockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "gxp_getBlockByHash" : "gxp_getBlockByNumber";
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "klay_getBlockByHash" : "klay_getBlockByNumber";
 };
 
 var transactionFromBlockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'gxp_getTransactionByBlockHashAndIndex' : 'gxp_getTransactionByBlockNumberAndIndex';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getTransactionByBlockHashAndIndex' : 'klay_getTransactionByBlockNumberAndIndex';
 };
 
 var uncleCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'gxp_getUncleByBlockHashAndIndex' : 'gxp_getUncleByBlockNumberAndIndex';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getUncleByBlockHashAndIndex' : 'klay_getUncleByBlockNumberAndIndex';
 };
 
 var getBlockTransactionCountCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'gxp_getBlockTransactionCountByHash' : 'gxp_getBlockTransactionCountByNumber';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getBlockTransactionCountByHash' : 'klay_getBlockTransactionCountByNumber';
 };
 
 var uncleCountCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'gxp_getUncleCountByBlockHash' : 'gxp_getUncleCountByBlockNumber';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getUncleCountByBlockHash' : 'klay_getUncleCountByBlockNumber';
 };
 
-function Gxp(web3) {
+function Klay(web3) {
     this._requestManager = web3._requestManager;
 
     var self = this;
@@ -5246,7 +5246,7 @@ function Gxp(web3) {
     this.sendIBANTransaction = transfer.bind(null, this);
 }
 
-Object.defineProperty(Gxp.prototype, 'defaultBlock', {
+Object.defineProperty(Klay.prototype, 'defaultBlock', {
     get: function () {
         return c.defaultBlock;
     },
@@ -5256,7 +5256,7 @@ Object.defineProperty(Gxp.prototype, 'defaultBlock', {
     }
 });
 
-Object.defineProperty(Gxp.prototype, 'defaultAccount', {
+Object.defineProperty(Klay.prototype, 'defaultAccount', {
     get: function () {
         return c.defaultAccount;
     },
@@ -5269,7 +5269,7 @@ Object.defineProperty(Gxp.prototype, 'defaultAccount', {
 var methods = function () {
     var getBalance = new Method({
         name: 'getBalance',
-        call: 'gxp_getBalance',
+        call: 'klay_getBalance',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
         outputFormatter: formatters.outputBigNumberFormatter
@@ -5277,14 +5277,14 @@ var methods = function () {
 
     var getStorageAt = new Method({
         name: 'getStorageAt',
-        call: 'gxp_getStorageAt',
+        call: 'klay_getStorageAt',
         params: 3,
         inputFormatter: [null, utils.toHex, formatters.inputDefaultBlockNumberFormatter]
     });
 
     var getCode = new Method({
         name: 'getCode',
-        call: 'gxp_getCode',
+        call: 'klay_getCode',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter]
     });
@@ -5308,7 +5308,7 @@ var methods = function () {
 
     var getCompilers = new Method({
         name: 'getCompilers',
-        call: 'gxp_getCompilers',
+        call: 'klay_getCompilers',
         params: 0
     });
 
@@ -5330,7 +5330,7 @@ var methods = function () {
 
     var getTransaction = new Method({
         name: 'getTransaction',
-        call: 'gxp_getTransactionByHash',
+        call: 'klay_getTransactionByHash',
         params: 1,
         outputFormatter: formatters.outputTransactionFormatter
     });
@@ -5345,14 +5345,14 @@ var methods = function () {
 
     var getTransactionReceipt = new Method({
         name: 'getTransactionReceipt',
-        call: 'gxp_getTransactionReceipt',
+        call: 'klay_getTransactionReceipt',
         params: 1,
         outputFormatter: formatters.outputTransactionReceiptFormatter
     });
 
     var getTransactionCount = new Method({
         name: 'getTransactionCount',
-        call: 'gxp_getTransactionCount',
+        call: 'klay_getTransactionCount',
         params: 2,
         inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
         outputFormatter: utils.toDecimal
@@ -5360,42 +5360,42 @@ var methods = function () {
 
     var sendRawTransaction = new Method({
         name: 'sendRawTransaction',
-        call: 'gxp_sendRawTransaction',
+        call: 'klay_sendRawTransaction',
         params: 1,
         inputFormatter: [null]
     });
 
     var sendTransaction = new Method({
         name: 'sendTransaction',
-        call: 'gxp_sendTransaction',
+        call: 'klay_sendTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
     var signTransaction = new Method({
         name: 'signTransaction',
-        call: 'gxp_signTransaction',
+        call: 'klay_signTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
     var sign = new Method({
         name: 'sign',
-        call: 'gxp_sign',
+        call: 'klay_sign',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
     var call = new Method({
         name: 'call',
-        call: 'gxp_call',
+        call: 'klay_call',
         params: 2,
         inputFormatter: [formatters.inputCallFormatter, formatters.inputDefaultBlockNumberFormatter]
     });
 
     var estimateGas = new Method({
         name: 'estimateGas',
-        call: 'gxp_estimateGas',
+        call: 'klay_estimateGas',
         params: 1,
         inputFormatter: [formatters.inputCallFormatter],
         outputFormatter: utils.toDecimal
@@ -5403,31 +5403,31 @@ var methods = function () {
 
     var compileSolidity = new Method({
         name: 'compile.solidity',
-        call: 'gxp_compileSolidity',
+        call: 'klay_compileSolidity',
         params: 1
     });
 
     var compileLLL = new Method({
         name: 'compile.lll',
-        call: 'gxp_compileLLL',
+        call: 'klay_compileLLL',
         params: 1
     });
 
     var compileSerpent = new Method({
         name: 'compile.serpent',
-        call: 'gxp_compileSerpent',
+        call: 'klay_compileSerpent',
         params: 1
     });
 
     var submitWork = new Method({
         name: 'submitWork',
-        call: 'gxp_submitWork',
+        call: 'klay_submitWork',
         params: 3
     });
 
     var getWork = new Method({
         name: 'getWork',
-        call: 'gxp_getWork',
+        call: 'klay_getWork',
         params: 0
     });
 
@@ -5463,65 +5463,65 @@ var properties = function () {
     return [
         new Property({
             name: 'coinbase',
-            getter: 'gxp_coinbase'
+            getter: 'klay_coinbase'
         }),
         new Property({
             name: 'mining',
-            getter: 'gxp_mining'
+            getter: 'klay_mining'
         }),
         new Property({
             name: 'hashrate',
-            getter: 'gxp_hashrate',
+            getter: 'klay_hashrate',
             outputFormatter: utils.toDecimal
         }),
         new Property({
             name: 'syncing',
-            getter: 'gxp_syncing',
+            getter: 'klay_syncing',
             outputFormatter: formatters.outputSyncingFormatter
         }),
         new Property({
             name: 'gasPrice',
-            getter: 'gxp_gasPrice',
+            getter: 'klay_gasPrice',
             outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
             name: 'accounts',
-            getter: 'gxp_accounts'
+            getter: 'klay_accounts'
         }),
         new Property({
             name: 'blockNumber',
-            getter: 'gxp_blockNumber',
+            getter: 'klay_blockNumber',
             outputFormatter: utils.toDecimal
         }),
         new Property({
             name: 'protocolVersion',
-            getter: 'gxp_protocolVersion'
+            getter: 'klay_protocolVersion'
         })
     ];
 };
 
-Gxp.prototype.contract = function (abi) {
+Klay.prototype.contract = function (abi) {
     var factory = new Contract(this, abi);
     return factory;
 };
 
-Gxp.prototype.filter = function (options, callback, filterCreationErrorCallback) {
-    return new Filter(options, 'gxp', this._requestManager, watches.gxp(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
+Klay.prototype.filter = function (options, callback, filterCreationErrorCallback) {
+    return new Filter(options, 'klay', this._requestManager, watches.klay(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
 };
 
-Gxp.prototype.namereg = function () {
+Klay.prototype.namereg = function () {
     return this.contract(namereg.global.abi).at(namereg.global.address);
 };
 
-Gxp.prototype.icapNamereg = function () {
+Klay.prototype.icapNamereg = function () {
     return this.contract(namereg.icap.abi).at(namereg.icap.address);
 };
 
-Gxp.prototype.isSyncing = function (callback) {
+Klay.prototype.isSyncing = function (callback) {
     return new IsSyncing(this._requestManager, callback);
 };
 
-module.exports = Gxp;
+module.exports = Klay;
 
 },{"../../utils/config":18,"../../utils/utils":20,"../contract":25,"../filter":29,"../formatters":30,"../iban":33,"../method":36,"../namereg":44,"../property":45,"../syncing":48,"../transfer":49,"./watches":43}],39:[function(require,module,exports){
 /*
@@ -6013,7 +6013,7 @@ module.exports = Swarm;
 var Method = require('../method');
 
 /// @returns an array of objects describing web3.eth.filter api methods
-var gxp = function () {
+var klay = function () {
     var newFilterCall = function (args) {
         var type = args[0];
 
@@ -6021,13 +6021,13 @@ var gxp = function () {
             case 'latest':
                 args.shift();
                 this.params = 0;
-                return 'gxp_newBlockFilter';
+                return 'klay_newBlockFilter';
             case 'pending':
                 args.shift();
                 this.params = 0;
-                return 'gxp_newPendingTransactionFilter';
+                return 'klay_newPendingTransactionFilter';
             default:
-                return 'gxp_newFilter';
+                return 'klay_newFilter';
         }
     };
 
@@ -6039,19 +6039,19 @@ var gxp = function () {
 
     var uninstallFilter = new Method({
         name: 'uninstallFilter',
-        call: 'gxp_uninstallFilter',
+        call: 'klay_uninstallFilter',
         params: 1
     });
 
     var getLogs = new Method({
         name: 'getLogs',
-        call: 'gxp_getFilterLogs',
+        call: 'klay_getFilterLogs',
         params: 1
     });
 
     var poll = new Method({
         name: 'poll',
-        call: 'gxp_getFilterChanges',
+        call: 'klay_getFilterChanges',
         params: 1
     });
 
@@ -6091,7 +6091,7 @@ var shh = function () {
 };
 
 module.exports = {
-    gxp: gxp,
+    klay: klay,
     shh: shh
 };
 
@@ -6625,7 +6625,7 @@ var pollSyncing = function(self) {
     };
 
     self.requestManager.startPolling({
-        method: 'gxp_syncing',
+        method: 'klay_syncing',
         params: [],
     }, self.pollId, onMessage, self.stopWatching.bind(self));
 
@@ -6691,23 +6691,23 @@ var exchangeAbi = require('../contracts/SmartExchange.json');
  * @param {Value} value to be tranfered
  * @param {Function} callback, callback
  */
-var transfer = function (gxp, from, to, value, callback) {
+var transfer = function (klay, from, to, value, callback) {
     var iban = new Iban(to); 
     if (!iban.isValid()) {
         throw new Error('invalid iban address');
     }
 
     if (iban.isDirect()) {
-        return transferToAddress(gxp, from, iban.address(), value, callback);
+        return transferToAddress(klay, from, iban.address(), value, callback);
     }
     
     if (!callback) {
-        var address = gxp.icapNamereg().addr(iban.institution());
-        return deposit(gxp, from, address, value, iban.client());
+        var address = klay.icapNamereg().addr(iban.institution());
+        return deposit(klay, from, address, value, iban.client());
     }
 
-    gxp.icapNamereg().addr(iban.institution(), function (err, address) {
-        return deposit(gxp, from, address, value, iban.client(), callback);
+    klay.icapNamereg().addr(iban.institution(), function (err, address) {
+        return deposit(klay, from, address, value, iban.client(), callback);
     });
     
 };
@@ -6721,8 +6721,8 @@ var transfer = function (gxp, from, to, value, callback) {
  * @param {Value} value to be tranfered
  * @param {Function} callback, callback
  */
-var transferToAddress = function (gxp, from, to, value, callback) {
-    return gxp.sendTransaction({
+var transferToAddress = function (klay, from, to, value, callback) {
+    return klay.sendTransaction({
         address: to,
         from: from,
         value: value
@@ -6739,9 +6739,9 @@ var transferToAddress = function (gxp, from, to, value, callback) {
  * @param {String} client unique identifier
  * @param {Function} callback, callback
  */
-var deposit = function (gxp, from, to, value, client, callback) {
+var deposit = function (v, from, to, value, client, callback) {
     var abi = exchangeAbi;
-    return gxp.contract(abi).at(to).deposit(client, {
+    return klay.contract(abi).at(to).deposit(client, {
         from: from,
         value: value
     }, callback);

@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	gxplatformFlag      = flag.String(gxpName, "ws://127.0.0.1:8546", "the gxp client address")
+	gxplatformFlag      = flag.String(gxpName, "ws://127.0.0.1:8546", "the klay client address")
 	portFlag            = flag.String(portName, "127.0.0.1:5555", "server port")
 	privateKeyFlag      = flag.String(privateKeyName, "", "deployer's private key")
 	contractAddressFlag = flag.String(contractAddressName, "", "contract address")
@@ -51,9 +51,9 @@ func main() {
 	viper.BindPFlags(flag.CommandLine)
 	viper.AutomaticEnv() // read in environment variables that match
 
-	gxp := viper.GetString(gxpName)
-	if gxp == "" {
-		fmt.Printf("No gxp client specified\n")
+	klay := viper.GetString(gxpName)
+	if klay == "" {
+		fmt.Printf("No klay client specified\n")
 		os.Exit(-1)
 	}
 
@@ -63,10 +63,10 @@ func main() {
 		os.Exit(-1)
 	}
 
-	// connect to gxp client
-	conn, err := gxpclient.Dial(gxp)
+	// connect to klay client
+	conn, err := gxpclient.Dial(klay)
 	if err != nil {
-		fmt.Printf("Failed to connect gxp: %v\n", err)
+		fmt.Printf("Failed to connect klay: %v\n", err)
 		os.Exit(-1)
 	}
 

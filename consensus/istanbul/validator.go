@@ -38,6 +38,8 @@ type ValidatorSet interface {
 	Size() int
 	// Return the sub validator group size
 	SubGroupSize() int
+	// Set the sub validator group size
+	SetSubGroupSize(size int)
 	// Return the validator array
 	List() []Validator
 	// Return the sub validator array

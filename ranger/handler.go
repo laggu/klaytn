@@ -98,7 +98,7 @@ func(re *RangerEngine) Finalize(chain consensus.ChainReader, header *types.Heade
 		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	log.Debug("RangeEngine.Finalize") //,"num",header.Number,"hash",header.Hash())
 
-	// TODO-GX developing gxp reward mechanism
+	// TODO-GX developing klay reward mechanism
 	var reward = big.NewInt(1000000000000000000)        // 1 eth
 	var rewardcontract = big.NewInt(100000000000000000) // 0.1 eth
 	state.AddBalance(header.Coinbase , reward)

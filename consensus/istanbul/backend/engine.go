@@ -373,7 +373,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	// TODO-GX developing gxp reward mechanism
+	// TODO-GX developing klay reward mechanism
 	var reward = big.NewInt(1000000000000000000)        // 1 eth
 	var rewardcontract = big.NewInt(100000000000000000) // 0.1 eth
 	state.AddBalance(header.Rewardbase , reward)
@@ -538,7 +538,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
+			if s, err := loadSnapshot(sb.config.Epoch, sb.config.SubGroupSize, sb.db, hash); err == nil {
 				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
 				break

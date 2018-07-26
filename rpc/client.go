@@ -373,9 +373,9 @@ func (c *Client) BatchCallContext(ctx context.Context, b []BatchElem) error {
 	return err
 }
 
-// GxpSubscribe registers a subscripion under the "gxp" namespace.
+// GxpSubscribe registers a subscripion under the "klay" namespace.
 func (c *Client) GxpSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
-	return c.Subscribe(ctx, "gxp", channel, args...)
+	return c.Subscribe(ctx, "klay", channel, args...)
 }
 
 // ShhSubscribe registers a subscripion under the "shh" namespace.

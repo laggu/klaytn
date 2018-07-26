@@ -119,7 +119,7 @@ func (c *Console) init(preload []string) error {
 	if err != nil {
 		return fmt.Errorf("api modules: %v", err)
 	}
-	flatten := "var gxp = web3.gxp; var personal = web3.personal; "
+	flatten := "var klay = web3.klay; var personal = web3.personal; "
 	for api := range apis {
 		if api == "web3" {
 			continue // manually mapped or ignore
@@ -257,11 +257,11 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 // console's available modules.
 func (c *Console) Welcome() {
 	// Print some generic Geth metadata
-	fmt.Fprintf(c.printer, "Welcome to the GXP JavaScript console!\n\n")
+	fmt.Fprintf(c.printer, "Welcome to the Klaytn JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
-		console.log("coinbase: " + gxp.coinbase);
-		console.log("at block: " + gxp.blockNumber + " (" + new Date(1000 * gxp.getBlock(gxp.blockNumber).timestamp) + ")");
+		console.log("coinbase: " + klay.coinbase);
+		console.log("at block: " + klay.blockNumber + " (" + new Date(1000 * klay.getBlock(klay.blockNumber).timestamp) + ")");
 		console.log(" datadir: " + admin.datadir);
 	`)
 	// List all the supported modules for the user to call

@@ -64,20 +64,20 @@ var (
 	// Files that end up in the geth*.zip archive.
 	gethArchiveFiles = []string{
 		"COPYING",
-		executablePath("gxp"),
+		executablePath("klay"),
 	}
 
 	// Files that end up in the geth-alltools*.zip archive.
 	allToolsArchiveFiles = []string{
 		"COPYING",
-		executablePath("gxp"),
+		executablePath("klay"),
 	}
 
 	// A debian package is created for all executables listed here.
 	debExecutables = []debExecutable{
 		{
-			Name:        "gxp",
-			Description: "GXPlatform CLI client.",
+			Name:        "klay",
+			Description: "Klaytn CLI client.",
 		},
 	}
 
@@ -336,8 +336,8 @@ func doArchive(cmdline []string) {
 	var (
 		env      = build.Env()
 		base     = archiveBasename(*arch, env)
-		gxp     = "gxp-" + base + ext
-		alltools = "gxp-alltools-" + base + ext
+		gxp     = "klay-" + base + ext
+		alltools = "klay-alltools-" + base + ext
 	)
 	maybeSkipArchive(env)
 	if err := build.WriteArchive(gxp, gethArchiveFiles); err != nil {
@@ -457,7 +457,7 @@ func makeWorkdir(wdflag string) string {
 	if wdflag != "" {
 		err = os.MkdirAll(wdflag, 0744)
 	} else {
-		wdflag, err = ioutil.TempDir("", "geth-build-")
+		wdflag, err = ioutil.TempDir("", "klay-build-")
 	}
 	if err != nil {
 		log.Fatal(err)
@@ -492,7 +492,7 @@ type debExecutable struct {
 func newDebMetadata(distro, author string, env build.Environment, t time.Time) debMetadata {
 	if author == "" {
 		// No signing key, use default author.
-		author = "GXPlatform Builds <infra@groundx.xyz>"
+		author = "Klaytn Builds <infra@groundx.xyz>"
 	}
 	return debMetadata{
 		Env:         env,
@@ -508,9 +508,9 @@ func newDebMetadata(distro, author string, env build.Environment, t time.Time) d
 // on all executable packages.
 func (meta debMetadata) Name() string {
 	if isUnstableBuild(meta.Env) {
-		return "gxplatform-unstable"
+		return "klaytn-unstable"
 	}
-	return "gxplatform"
+	return "klaytn"
 }
 
 // VersionString returns the debian version of the packages.
@@ -554,7 +554,7 @@ func (meta debMetadata) ExeConflicts(exe debExecutable) string {
 		// be preferred and the conflicting files should be handled via
 		// alternates. We might do this eventually but using a conflict is
 		// easier now.
-		return "gxplatform, " + exe.Name
+		return "klaytn, " + exe.Name
 	}
 	return ""
 }
@@ -624,10 +624,10 @@ func doWindowsInstaller(cmdline []string) {
 	// first section contains the geth binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"Gxp":      gxpTool,
+		"Klay":      gxpTool,
 		"DevTools": devTools,
 	}
-	build.Render("build/nsis.gxp.nsi", filepath.Join(*workdir, "gxp.nsi"), 0644, nil)
+	build.Render("build/nsis.klay.nsi", filepath.Join(*workdir, "klay.nsi"), 0644, nil)
 	build.Render("build/nsis.install.nsh", filepath.Join(*workdir, "install.nsh"), 0644, templateData)
 	build.Render("build/nsis.uninstall.nsh", filepath.Join(*workdir, "uninstall.nsh"), 0644, allTools)
 	build.Render("build/nsis.pathupdate.nsh", filepath.Join(*workdir, "PathUpdate.nsh"), 0644, nil)
@@ -642,14 +642,14 @@ func doWindowsInstaller(cmdline []string) {
 	if env.Commit != "" {
 		version[2] += "-" + env.Commit[:8]
 	}
-	installer, _ := filepath.Abs("gxp-" + archiveBasename(*arch, env) + ".exe")
+	installer, _ := filepath.Abs("klay-" + archiveBasename(*arch, env) + ".exe")
 	build.MustRunCommand("makensis.exe",
 		"/DOUTPUTFILE="+installer,
 		"/DMAJORVERSION="+version[0],
 		"/DMINORVERSION="+version[1],
 		"/DBUILDVERSION="+version[2],
 		"/DARCH="+*arch,
-		filepath.Join(*workdir, "gxp.nsi"),
+		filepath.Join(*workdir, "klay.nsi"),
 	)
 
 	// Sign and publish installer.
@@ -684,7 +684,7 @@ func doAndroidArchive(cmdline []string) {
 
 	if *local {
 		// If we're building locally, copy bundle to build dir and skip Maven
-		os.Rename("gxp.aar", filepath.Join(GOBIN, "gxp.aar"))
+		os.Rename("klay.aar", filepath.Join(GOBIN, "klay.aar"))
 		return
 	}
 	meta := newMavenMetadata(env)
@@ -694,8 +694,8 @@ func doAndroidArchive(cmdline []string) {
 	maybeSkipArchive(env)
 
 	// Sign and upload the archive to Azure
-	archive := "gxp-" + archiveBasename("android", env) + ".aar"
-	os.Rename("gxp.aar", archive)
+	archive := "klay-" + archiveBasename("android", env) + ".aar"
+	os.Rename("klay.aar", archive)
 
 	if err := archiveUpload(archive, *upload, *signer); err != nil {
 		log.Fatal(err)
@@ -785,7 +785,7 @@ func newMavenMetadata(env build.Environment) mavenMetadata {
 	}
 	return mavenMetadata{
 		Version:      version,
-		Package:      "gxp-" + version,
+		Package:      "klay-" + version,
 		Develop:      isUnstableBuild(env),
 		Contributors: contribs,
 	}
@@ -814,7 +814,7 @@ func doXCodeFramework(cmdline []string) {
 		build.MustRun(bind)
 		return
 	}
-	archive := "gxp-" + archiveBasename("ios", env)
+	archive := "klay-" + archiveBasename("ios", env)
 	if err := os.Mkdir(archive, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}

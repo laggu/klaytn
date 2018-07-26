@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	clientIdentifier = "gxp" // Client identifier to advertise over the network
+	clientIdentifier = "klay" // Client identifier to advertise over the network
 )
 
 var (
@@ -36,7 +36,7 @@ var (
 	// Git tag (set via linker flags if exists)
 	gitTag = ""
 	// The app that holds all commands and flags.
-	app = utils.NewApp(gitCommit, "the go-gxplatform command line interface")
+	app = utils.NewApp(gitCommit, "the go-klaytn command line interface")
 
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
@@ -130,10 +130,10 @@ var (
 )
 
 func init() {
-	// Initialize the CLI app and start Geth
-	app.Action = gxp
+	// Initialize the CLI app and start Klay
+	app.Action = klaytn
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2018 The go-gxplatform Authors"
+	app.Copyright = "Copyright 2013-2018 The go-klaytn Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
@@ -190,10 +190,10 @@ func main() {
 	}
 }
 
-// gxp is the main entry point into the system if no special subcommand is ran.
+// klay is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
-func gxp(ctx *cli.Context) error {
+func klaytn(ctx *cli.Context) error {
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
 	node.Wait()
@@ -266,7 +266,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 		var gxp *gxp2.GXP
 		if err := stack.Service(&gxp); err != nil {
-			utils.Fatalf("GXPlatform service not running: %v", err)
+			utils.Fatalf("Klaytn service not running: %v", err)
 		}
 		// Use a reduced number of threads if requested
 		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
@@ -286,7 +286,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		// istanbul BFT
 		var gxp *gxp2.GXP
 		if err := stack.Service(&gxp); err != nil {
-			utils.Fatalf("GXPlatform service not running: %v", err)
+			utils.Fatalf("Klaytn service not running: %v", err)
 		}
 		gxp.TxPool().SetGasPrice(big.NewInt(0))
 	}

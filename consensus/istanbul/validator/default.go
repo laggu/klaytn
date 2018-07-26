@@ -97,6 +97,10 @@ func (valSet *defaultSet) SubGroupSize() int {
 	return valSet.subSize
 }
 
+func (valSet *defaultSet) SetSubGroupSize(size int) {
+	valSet.subSize = size
+}
+
 func (valSet *defaultSet) List() []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()

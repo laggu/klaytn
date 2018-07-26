@@ -74,9 +74,9 @@ func defaultRangerConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "gxp")
-	cfg.WSModules = append(cfg.WSModules, "gxp")
-	cfg.IPCPath = "gxp.ipc"
+	cfg.HTTPModules = append(cfg.HTTPModules, "klay")
+	cfg.WSModules = append(cfg.WSModules, "klay")
+	cfg.IPCPath = "klay.ipc"
 	return cfg
 }
 

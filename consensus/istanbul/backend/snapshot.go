@@ -56,7 +56,7 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet istanbul.
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, db gxdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(epoch uint64, subSize int, db gxdb.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -66,6 +66,7 @@ func loadSnapshot(epoch uint64, db gxdb.Database, hash common.Hash) (*Snapshot, 
 		return nil, err
 	}
 	snap.Epoch = epoch
+	snap.ValSet.SetSubGroupSize(subSize)
 
 	return snap, nil
 }
@@ -289,7 +290,6 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
-
 	s.Epoch = j.Epoch
 	s.Number = j.Number
 	s.Hash = j.Hash

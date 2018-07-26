@@ -63,7 +63,7 @@ type Ranger struct {
 	networkId     uint64
 	netRPCService *gxapi.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (gxp.g. gas price and coinbase)
+	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
 
 	// consensus node url
 	consUrl string
@@ -125,7 +125,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run gxp upgradedb.\n", bcVersion, core.BlockChainVersion)
+			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run klay upgradedb.\n", bcVersion, core.BlockChainVersion)
 		}
 		rawdb.WriteDatabaseVersion(chainDb, core.BlockChainVersion)
 	}
@@ -200,7 +200,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (gxdb.Datab
 		return nil, err
 	}
 	if db, ok := db.(*gxdb.LDBDatabase); ok {
-		db.Meter("gxp/db/chaindata/")
+		db.Meter("klay/db/chaindata/")
 	}
 	return db, nil
 }
@@ -229,7 +229,7 @@ func (s *Ranger) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return append(apis,[]rpc.API{
 		{
-			Namespace: "gxp",
+			Namespace: "klay",
 			Version:   "1.0",
 			Service:   NewPublicRangerAPI(s),
 			Public:    true,

@@ -214,8 +214,8 @@ func DefaultWSEndpoint() string {
 func (c *Config) NodeName() string {
 	name := c.name()
 	// Backwards compatibility: previous versions used title-cased "GxP", keep that.
-	if name == "gxp" || name == "gxp-testnet" {
-		name = "GXP"
+	if name == "klay" || name == "klay-testnet" {
+		name = "Klaytn"
 	}
 	if c.UserIdent != "" {
 		name += "/" + c.UserIdent
@@ -258,9 +258,9 @@ func (c *Config) resolvePath(path string) string {
 	}
 	// Backwards-compatibility: ensure that data directory files created
 	// by geth 1.4 are used if they exist.
-	if c.name() == "gxp" && isOldGethResource[path] {
+	if c.name() == "klay" && isOldGethResource[path] {
 		oldpath := ""
-		if c.Name == "gxp" {
+		if c.Name == "klay" {
 			oldpath = filepath.Join(c.DataDir, path)
 		}
 		if oldpath != "" && common.FileExist(oldpath) {
@@ -402,7 +402,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 	var ephemeral string
 	if keydir == "" {
 		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "go-gxplatform-keystore")
+		keydir, err = ioutil.TempDir("", "go-klaytn-keystore")
 		ephemeral = keydir
 	}
 

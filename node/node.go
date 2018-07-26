@@ -99,7 +99,7 @@ func New(conf *Config) (*Node, error) {
 	}
 
 	// Ensure that the AccountManager method works before the node has started.
-	// We rely on this in cmd/gxp.
+	// We rely on this in cmd/klay.
 	am, ephemeralKeystore, err := makeAccountManager(conf)
 	if err != nil {
 		return nil, err

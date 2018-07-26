@@ -23,7 +23,7 @@ type Client interface {
 	ProposeValidator(ctx context.Context, address common.Address, auth bool) error
 	GetValidators(ctx context.Context, blockNumbers *big.Int) ([]common.Address, error)
 
-	// gxp client
+	// klay client
 	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
 	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)

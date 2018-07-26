@@ -18,7 +18,7 @@ import (
 
 const (
 	defaultLocalDir  = "/tmp/gdata"
-	clientIdentifier = "gxp"
+	clientIdentifier = "klay"
 	nodekeyFileName  = "nodekey"
 )
 

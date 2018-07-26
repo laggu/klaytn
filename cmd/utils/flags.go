@@ -757,7 +757,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		lightPeers = 0
 	}
 	ethPeers := cfg.MaxPeers - lightPeers
-	log.Info("Maximum peer count", "GXP", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+	log.Info("Maximum peer count", "KLAY", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
 
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
@@ -998,7 +998,7 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 	}
 }
 
-// SetGxConfig applies gxp-related command line flags to the config.
+// SetGxConfig applies klay-related command line flags to the config.
 func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)

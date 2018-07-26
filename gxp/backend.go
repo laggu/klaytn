@@ -78,7 +78,7 @@ type GXP struct {
 	networkId     uint64
 	netRPCService *gxapi.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (gxp.g. gas price and coinbase)
+	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
 }
 
 func (s *GXP) AddLesServer(ls LesServer) {
@@ -90,7 +90,7 @@ func (s *GXP) AddLesServer(ls LesServer) {
 // initialisation of the common GXP object)
 func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run gxp.GXP in light sync mode, use les.LightGXP")
+		return nil, errors.New("can't run klay.GXP in light sync mode, use les.LightGXP")
 	}
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
@@ -191,7 +191,7 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 		// create default extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
 			uint(params.VersionMajor<<16 | params.VersionMinor<<8 | params.VersionPatch),
-			"gxp",
+			"klay",
 			runtime.Version(),
 			runtime.GOOS,
 		})
@@ -210,7 +210,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (gxdb.Datab
 		return nil, err
 	}
 	if db, ok := db.(*gxdb.LDBDatabase); ok {
-		db.Meter("gxp-db-chaindata-")
+		db.Meter("klay-db-chaindata-")
 	}
 	return db, nil
 }
@@ -226,6 +226,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 			config.Istanbul.Epoch = chainConfig.Istanbul.Epoch
 		}
 		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
+		config.Istanbul.SubGroupSize = chainConfig.Istanbul.SubGroupSize
 		return istanbulBackend.New(config.Rewardbase, config.RewardContract, &config.Istanbul, ctx.NodeKey(), db)
 	}
 	// Otherwise assume proof-of-work
@@ -264,17 +265,17 @@ func (s *GXP) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
-			Namespace: "gxp",
+			Namespace: "klay",
 			Version:   "1.0",
 			Service:   NewPublicGXPAPI(s),
 			Public:    true,
 		}, {
-			Namespace: "gxp",
+			Namespace: "klay",
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
 			Public:    true,
 		}, {
-			Namespace: "gxp",
+			Namespace: "klay",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
@@ -284,7 +285,7 @@ func (s *GXP) APIs() []rpc.API {
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "gxp",
+			Namespace: "klay",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.APIBackend, false),
 			Public:    true,

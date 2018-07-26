@@ -43,7 +43,7 @@ func (b *RangerAPIBackend) CurrentBlock() *types.Block {
 }
 
 func (b *RangerAPIBackend) SetHead(number uint64) {
-	//b.gxp.protocolManager.downloader.Cancel()
+	//b.klay.protocolManager.downloader.Cancel()
 	b.ranger.blockchain.SetHead(number)
 }
 

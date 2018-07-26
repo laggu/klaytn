@@ -20,7 +20,7 @@ package web3ext
 var Modules = map[string]string{
 	"admin":    Admin_JS,
 	"debug":    Debug_JS,
-	"gxp":      Gxp_JS,
+	"klay":      Gxp_JS,
 	"miner":    Miner_JS,
 	"net":      Net_JS,
 	"personal": Personal_JS,
@@ -312,35 +312,35 @@ web3._extend({
 
 const Gxp_JS = `
 web3._extend({
-	property: 'gxp',
+	property: 'klay',
 	methods: [
 		new web3._extend.Method({
 			name: 'sign',
-			call: 'gxp_sign',
+			call: 'klay_sign',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'resend',
-			call: 'gxp_resend',
+			call: 'klay_resend',
 			params: 3,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, web3._extend.utils.fromDecimal, web3._extend.utils.fromDecimal]
 		}),
 		new web3._extend.Method({
 			name: 'signTransaction',
-			call: 'gxp_signTransaction',
+			call: 'klay_signTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'submitTransaction',
-			call: 'gxp_submitTransaction',
+			call: 'klay_submitTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getRawTransaction',
-			call: 'gxp_getRawTransactionByHash',
+			call: 'klay_getRawTransactionByHash',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -367,12 +367,12 @@ web3._extend({
 		}),
         new web3._extend.Property({
             name : 'rewardbase',
-            getter: 'gxp_rewardbase',
+            getter: 'klay_rewardbase',
            
         }),
         new web3._extend.Property({
             name : 'rewardcontract',
-            getter: 'gxp_rewardContract',
+            getter: 'klay_rewardContract',
            
         }),
 	]

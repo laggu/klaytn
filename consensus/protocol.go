@@ -17,7 +17,7 @@ const (
 
 var (
 	GxpProtocol = Protocol{
-		Name:     "gxp",
+		Name:     "klay",
 		Versions: []uint{Gxp63, Gxp62},
 		Lengths:  []uint64{17, 8},
 	}

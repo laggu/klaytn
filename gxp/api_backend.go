@@ -43,7 +43,7 @@ func (b *GxpAPIBackend) CurrentBlock() *types.Block {
 }
 
 func (b *GxpAPIBackend) SetHead(number uint64) {
-	//b.gxp.protocolManager.downloader.Cancel()
+	//b.klay.protocolManager.downloader.Cancel()
 	b.gxp.blockchain.SetHead(number)
 }
 
