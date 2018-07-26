@@ -102,6 +102,8 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 	return nil
 }
 
+var exeCount = 0
+
 // serveRequest will reads requests from the codec, calls the RPC callback and
 // writes the response to the given codec.
 //
@@ -170,6 +172,14 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 			}
 			return nil
 		}
+
+		if batch {
+			exeCount += len(reqs)
+		}else {
+			exeCount++
+		}
+		//log.Error("### rpc.server","singleshot",singleShot,"batch", batch, "#call", exeCount)
+
 		// If a single shot request is executing, run and return immediately
 		if singleShot {
 			if batch {
@@ -237,6 +247,9 @@ func (s *Server) createSubscription(ctx context.Context, c ServerCodec, req *ser
 	return reply[0].Interface().(*Subscription).ID, nil
 }
 
+var callCount = 0
+var callSendTx = 0
+
 // handle executes a request and returns the response from the callback.
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
 	if req.err != nil {
@@ -290,6 +303,14 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	if len(req.args) > 0 {
 		arguments = append(arguments, req.args...)
 	}
+
+	if req.callb.method.Name == "SendRawTransaction" {
+		callSendTx++
+	}
+	if req.callb.method.Name == "GetTransactionReceipt" {
+		callCount++
+	}
+	//log.Error("### rpc.server", "#tx", callSendTx, "#receipt", callCount)
 
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)

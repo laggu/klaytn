@@ -15,6 +15,10 @@ func NewSet(addrs []common.Address, policy istanbul.ProposerPolicy) istanbul.Val
 	return newDefaultSet(addrs, policy)
 }
 
+func NewSubSet(addrs []common.Address, policy istanbul.ProposerPolicy, subSize int) istanbul.ValidatorSet {
+	return newDefaultSubSet(addrs, policy, subSize)
+}
+
 func ExtractValidators(extraData []byte) []common.Address {
 	// get the validator addresses
 	addrs := make([]common.Address, (len(extraData) / common.AddressLength))

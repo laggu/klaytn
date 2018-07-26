@@ -4,8 +4,8 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"time"
-	"github.com/ground-x/go-gxplatform/core/types"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/core/types"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
@@ -15,7 +15,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()
 
-		if c.backend.CurrentBlock().NumberU64() % 10 == 0 {
+		if c.enabledRN && c.backend.CurrentBlock().NumberU64() % 10 == 0 {
 			// ranger node
 			proof := &types.Proof{
 				Solver:       c.backend.Address(),
@@ -67,6 +67,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			}
 
 			c.broadcast(&message{
+				Number: request.Proposal.Number(),
 				Code: msgPreprepare,
 				Msg:  preprepare,
 			})
@@ -93,6 +94,7 @@ func (c *core) handleProofPrepare(msg *message, src istanbul.Validator) error {
 	}
 
 	err = c.handlePreprepare(&message{
+		Number: msg.Number,
 		Code: msgPreprepare,
 		Msg:  preprepare,
 	},src)

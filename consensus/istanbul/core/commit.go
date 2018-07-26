@@ -4,9 +4,11 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
 func (c *core) sendCommit() {
+	//log.Error("call sendCommit","num", c.current.Subject().View.Sequence)
 	sub := c.current.Subject()
 	c.broadcastCommit(sub)
 }
@@ -28,6 +30,7 @@ func (c *core) broadcastCommit(sub *istanbul.Subject) {
 		return
 	}
 	c.broadcast(&message{
+		Number: sub.View.Sequence,
 		Code: msgCommit,
 		Msg:  encodedSubject,
 	})
@@ -41,7 +44,10 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return errFailedDecodeCommit
 	}
 
+	//log.Error("receive handle commit","num", commit.View.Sequence)
+
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
+		//log.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
 	}
 
@@ -55,6 +61,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	//
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
+	//log.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
 	if c.current.Commits.Size() > 2*c.valSet.F() && c.state.Cmp(StateCommitted) < 0 {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
@@ -70,6 +77,7 @@ func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) er
 
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(commit, sub) {
+		log.Error("#### Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
 		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
 		return errInconsistentSubject
 	}

@@ -18,11 +18,20 @@ import (
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/core/bloombits"
 	"time"
+	"github.com/pkg/errors"
 )
 
 // RangerAPIBackend implements gxpapi.Backend for ranger nodes
 type RangerAPIBackend struct {
 	ranger *Ranger
+}
+
+func (b *RangerAPIBackend) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	return nil, common.Hash{}, 0, 0
+}
+
+func (b *RangerAPIBackend) GetReceiptInCache(blockHash common.Hash) (types.Receipts, error) {
+	return nil, errors.New("doesn't support getreceiptIncache")
 }
 
 func (b *RangerAPIBackend) ChainConfig() *params.ChainConfig {

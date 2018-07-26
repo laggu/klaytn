@@ -16,6 +16,8 @@ import (
 
 	"errors"
 	"github.com/rs/cors"
+	"github.com/valyala/fasthttp"
+	"bufio"
 )
 
 const (
@@ -152,6 +154,15 @@ func NewHTTPServer(cors []string, vhosts []string, srv *Server) *http.Server {
 	return &http.Server{Handler: handler}
 }
 
+func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Server {
+	// TODO-GX add corshandler and vhosthandler for fasthttp
+	// Wrap the CORS-handler within a host-handler
+	//handler := newCorsHandler(srv, cors)
+	//handler = newVHostHandler(vhosts, handler)
+
+	return &fasthttp.Server{Handler:srv.HandleFastHTTP}
+}
+
 // ServeHTTP serves JSON-RPC requests over HTTP.
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Permit dumb empty requests for remote health-checks (AWS)
@@ -178,6 +189,38 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	srv.ServeSingleRequest(ctx, codec, OptionMethodInvocation)
 }
 
+func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
+
+	r := &requestCtx.Request
+	w := &requestCtx.Response
+
+	// Permit dumb empty requests for remote health-checks (AWS)
+	if requestCtx.IsGet() && requestCtx.Request.Header.ContentLength() == 0 && string(requestCtx.URI().QueryString()) == "" {
+		return
+	}
+	if code, err := validateFastRequest(requestCtx); err != nil {
+		w.Header.Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header.Set("X-Content-Type-Options", "nosniff")
+		w.Header.SetStatusCode(code)
+		fmt.Fprintf(requestCtx, err.Error())
+		return
+	}
+	// All checks passed, create a codec that reads direct from the request body
+	// untilEOF and writes the response to w and order the server to process a
+	// single request.
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "remote", requestCtx.RemoteAddr().String())
+	ctx = context.WithValue(ctx, "scheme", string(requestCtx.URI().Scheme()))
+	ctx = context.WithValue(ctx, "local", requestCtx.LocalAddr().String())
+
+	reader := bufio.NewReaderSize(bytes.NewReader(r.Body()),maxRequestContentLength)
+	codec := NewJSONCodec(&httpReadWriteNopCloser{reader, w.BodyWriter()})
+	defer codec.Close()
+
+	w.Header.SetContentType(contentType)
+	srv.ServeSingleRequest(ctx, codec, OptionMethodInvocation)
+}
+
 // validateRequest returns a non-zero response code and error message if the
 // request is invalid.
 func validateRequest(r *http.Request) (int, error) {
@@ -190,6 +233,24 @@ func validateRequest(r *http.Request) (int, error) {
 	}
 	mt, _, err := mime.ParseMediaType(r.Header.Get("content-type"))
 	if r.Method != http.MethodOptions && (err != nil || mt != contentType) {
+		err := fmt.Errorf("invalid content type, only %s is supported", contentType)
+		return http.StatusUnsupportedMediaType, err
+	}
+	return 0, nil
+}
+
+// validateRequest returns a non-zero response code and error message if the
+// request is invalid.
+func validateFastRequest(requestCtx *fasthttp.RequestCtx) (int, error) {
+	if requestCtx.IsPut() || requestCtx.IsDelete() {
+		return http.StatusMethodNotAllowed, errors.New("method not allowed")
+	}
+	if requestCtx.Request.Header.ContentLength() > maxRequestContentLength {
+		err := fmt.Errorf("content length too large (%d>%d)", requestCtx.Request.Header.ContentLength(), maxRequestContentLength)
+		return http.StatusRequestEntityTooLarge, err
+	}
+	mt, _, err := mime.ParseMediaType(string(requestCtx.Request.Header.ContentType()))
+	if string(requestCtx.Method()) != http.MethodOptions && (err != nil || mt != contentType) {
 		err := fmt.Errorf("invalid content type, only %s is supported", contentType)
 		return http.StatusUnsupportedMediaType, err
 	}

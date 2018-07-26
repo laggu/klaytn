@@ -26,6 +26,9 @@ import (
 	"testing"
 
 	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/common"
+	"math/big"
+	"strings"
 )
 
 func newTestLDB() (*gxdb.LDBDatabase, func()) {
@@ -168,6 +171,24 @@ func TestBadgerDB_ParallelPutGet(t *testing.T) {
 
 func TestMemoryDB_ParallelPutGet(t *testing.T) {
 	testParallelPutGet(gxdb.NewMemDatabase(), t)
+}
+
+func TestShardDB(t *testing.T) {
+
+	key := common.Hex2Bytes("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da306")
+
+	hashstring := strings.TrimPrefix("0x93d6f3d2537d8a0bd7d485dcc59151ebc00da306","0x")
+	if len(hashstring) > 15 {
+		hashstring = hashstring[:15]
+	}
+	seed, _ := strconv.ParseInt(hashstring, 16, 64)
+
+	partition := seed % int64(12)
+
+	idx := common.BytesToHash(key).Big().Mod(common.BytesToHash(key).Big(),big.NewInt(4))
+
+	fmt.Printf("idx %d   %d   %d", idx, partition, seed)
+
 }
 
 func testParallelPutGet(db gxdb.Database, t *testing.T) {

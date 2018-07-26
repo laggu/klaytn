@@ -7,6 +7,12 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"math/rand"
+	"github.com/ground-x/go-gxplatform/log"
+)
+
+const (
+	defaultSubSetLength = 21
 )
 
 type defaultValidator struct {
@@ -22,6 +28,9 @@ func (val *defaultValidator) String() string {
 }
 
 type defaultSet struct {
+
+	subSize    int
+
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
 
@@ -33,6 +42,31 @@ type defaultSet struct {
 func newDefaultSet(addrs []common.Address, policy istanbul.ProposerPolicy) *defaultSet {
 	valSet := &defaultSet{}
 
+	valSet.subSize = defaultSubSetLength
+	valSet.policy = policy
+	// init validators
+	valSet.validators = make([]istanbul.Validator, len(addrs))
+	for i, addr := range addrs {
+		valSet.validators[i] = New(addr)
+	}
+	// sort validator
+	sort.Sort(valSet.validators)
+	// init proposer
+	if valSet.Size() > 0 {
+		valSet.proposer = valSet.GetByIndex(0)
+	}
+	valSet.selector = roundRobinProposer
+	if policy == istanbul.Sticky {
+		valSet.selector = stickyProposer
+	}
+
+	return valSet
+}
+
+func newDefaultSubSet(addrs []common.Address, policy istanbul.ProposerPolicy, subSize int) *defaultSet {
+	valSet := &defaultSet{}
+
+	valSet.subSize = subSize
 	valSet.policy = policy
 	// init validators
 	valSet.validators = make([]istanbul.Validator, len(addrs))
@@ -59,10 +93,73 @@ func (valSet *defaultSet) Size() int {
 	return len(valSet.validators)
 }
 
+func (valSet *defaultSet) SubGroupSize() int {
+	return valSet.subSize
+}
+
 func (valSet *defaultSet) List() []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	return valSet.validators
+}
+
+func (valSet *defaultSet) SubList(sequence int64) []istanbul.Validator {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+
+	if len(valSet.validators) <= valSet.subSize {
+		return valSet.validators
+	}
+	//hashstring := strings.TrimPrefix(hash.Hex(),"0x")
+	//if len(hashstring) > 15 {
+	//	hashstring = hashstring[:15]
+	//}
+	//seed, err := strconv.ParseInt(hashstring, 16, 64)
+	//if err != nil {
+	//	log.Error("input" ,"hash", hash.Hex())
+	//	log.Error("fail to make sub-list of validators","seed", seed, "err",err)
+	//	return valSet.validators
+	//}
+	// shuffle
+	subset := make([]istanbul.Validator,valSet.subSize)
+	subset[0] = valSet.GetProposer()
+	// next proposer
+	// TODO how to sync next proposer (how to get exact next proposer ?)
+	subset[1] = valSet.selector(valSet, subset[0].Address() , uint64(0))
+
+	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
+	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
+
+	if proposerIdx == nextproposerIdx {
+		log.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
+	}
+
+	limit := len(valSet.validators)
+	picker := rand.New(rand.NewSource(sequence))
+
+	pickSize := limit - 2
+	indexs := make([]int, pickSize)
+	idx := 0
+	for i := 0; i < limit; i++ {
+		if i != proposerIdx && i != nextproposerIdx {
+			indexs[idx] = i
+			idx++
+		}
+	}
+	for i := 0; i < pickSize; i++ {
+		randIndex := picker.Intn(pickSize)
+		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
+	}
+
+	for i :=0; i < valSet.subSize-2; i++ {
+	   subset[i+2] = valSet.validators[indexs[i]]
+	}
+
+	return subset
+}
+
+func (valSet *defaultSet) IsSubSet() bool {
+    return valSet.Size() > valSet.subSize
 }
 
 func (valSet *defaultSet) GetByIndex(i uint64) istanbul.Validator {
@@ -174,9 +271,15 @@ func (valSet *defaultSet) Copy() istanbul.ValidatorSet {
 	for _, v := range valSet.validators {
 		addresses = append(addresses, v.Address())
 	}
-	return NewSet(addresses, valSet.policy)
+	return NewSubSet(addresses, valSet.policy, valSet.subSize)
 }
 
-func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
+func (valSet *defaultSet) F() int {
+	if valSet.Size() > valSet.subSize {
+		return int(math.Ceil(float64(valSet.subSize)/3)) - 1
+	} else {
+		return int(math.Ceil(float64(valSet.Size())/3)) - 1
+	}
+}
 
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }

@@ -33,6 +33,9 @@ const (
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
+
+	concurrentPerPeer = 3
+	channelSizePerPeer = 20
 )
 
 var (
@@ -87,6 +90,10 @@ type ProtocolManager struct {
 
 	wsendpoint   string
 
+	txMsgLock    sync.RWMutex
+	blockMsgLock   sync.RWMutex
+	msgCh        chan p2p.Msg
+
 }
 
 // Ranger
@@ -114,6 +121,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+		msgCh:       make(chan p2p.Msg, 50),
 		engine:      engine,
 	}
 
@@ -314,41 +322,81 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// after this will be sent via broadcasts.
 	pm.syncTransactions(p)
 
+
+	pubKey, err := p.ID().Pubkey()
+	if err != nil {
+		return err
+	}
+	addr := crypto.PubkeyToAddress(*pubKey)
+
+	// TODO-GX check global worker and peer worker
+    messageChannel := make(chan p2p.Msg, channelSizePerPeer)
+    for w := 1; w <= concurrentPerPeer; w++ {
+    	go pm.processMsg(messageChannel, p, addr)
+	}
+
 	// main loop. handle incoming messages.
 	for {
-		if err := pm.handleMsg(p); err != nil {
-			p.Log().Debug("GXPlatform message handling failed", "err", err)
+		msg, err := p.rw.ReadMsg()
+		if err != nil {
+			p.Log().Debug("ProtocolManager failed to read msg", "err", err)
 			return err
 		}
+		if msg.Size > ProtocolMaxMsgSize {
+			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+			p.Log().Debug("ProtocolManager over max msg size", "err", err)
+			return err
+		}
+
+		messageChannel <- msg
+
+		//go pm.handleMsg(p, addr, msg)
+
+		//if err := pm.handleMsg(p); err != nil {
+		//	p.Log().Debug("GXPlatform message handling failed", "err", err)
+		//	return err
+		//}
+	}
+}
+
+func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p *peer, addr common.Address) {
+	for msg := range msgCh {
+		if err := pm.handleMsg(p, addr, msg); err != nil {
+			p.Log().Debug("ProtocolManager failed to handle message", "msg", msg, "err", err)
+		}
+		msg.Discard()
 	}
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
-func (pm *ProtocolManager) handleMsg(p *peer) error {
+func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
-	msg, err := p.rw.ReadMsg()
-	if err != nil {
-		return err
-	}
-	if msg.Size > ProtocolMaxMsgSize {
-		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-	}
-	defer msg.Discard()
+	//msg, err := p.rw.ReadMsg()
+	//if err != nil {
+	//	return err
+	//}
+	//if msg.Size > ProtocolMaxMsgSize {
+	//	return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+	//}
+	//defer msg.Discard()
 
 	// istanbul BFT
 	if handler, ok := pm.engine.(consensus.Handler); ok {
-		pubKey, err := p.ID().Pubkey()
-		if err != nil {
-			return err
-		}
-		addr := crypto.PubkeyToAddress(*pubKey)
+		//pubKey, err := p.ID().Pubkey()
+		//if err != nil {
+		//	return err
+		//}
+		//addr := crypto.PubkeyToAddress(*pubKey)
 		handled, err := handler.HandleMsg(addr, msg)
 		// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
 		if handled {
 			return err
 		}
 	}
+
+	//pm.txMsgLock.Lock()
+	//defer pm.txMsgLock.Unlock()
 
 	// Handle the message depending on its contents
 	switch {
@@ -704,6 +752,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 			return
 		}
 
+		// TODO-GX only send all validators + sub(peer) except subset for this block
 		// Send the block to a subset of our peers
 		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range transfer {
@@ -738,6 +787,27 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
+	for peer, txs := range txset {
+		//peer.SendTransactions(txs)
+		peer.AsyncSendTransactions(txs)
+	}
+}
+
+func (pm *ProtocolManager) BroadcastCNTxs(txs types.Transactions) {
+	var txset = make(map[*peer]types.Transactions)
+
+	// Broadcast transactions to a batch of peers not knowing about it
+	for _, tx := range txs {
+		peers := pm.peers.PeersWithoutTx(tx.Hash())
+
+		// TODO-GX Code Check
+		peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		for _, peer := range peers {
+			txset[peer] = append(txset[peer], tx)
+		}
+		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+	}
+
 	for peer, txs := range txset {
 		//peer.SendTransactions(txs)
 		peer.AsyncSendTransactions(txs)

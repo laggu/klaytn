@@ -106,6 +106,7 @@ func (c *CliqueConfig) String() string {
 type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
+	SubGroupSize   int    `json:"sub"`
 }
 
 // String implements the stringer interface, returning the consensus engine details.
@@ -126,11 +127,20 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v}",
-		c.ChainId,
-		c.IsBFT,
-		engine,
-	)
+	if c.Istanbul != nil {
+		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v SubGroupSize: %d}",
+			c.ChainId,
+			c.IsBFT,
+			engine,
+			c.Istanbul.SubGroupSize,
+		)
+	}else {
+		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v}",
+			c.ChainId,
+			c.IsBFT,
+			engine,
+		)
+	}
 }
 
 // IsHomestead returns whether num is either equal to the homestead block or greater.

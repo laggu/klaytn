@@ -110,6 +110,7 @@ var (
 		utils.GpoBlocksFlag,
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
+		utils.SrvTypeFlag,
 		configFileFlag,
 	}
 

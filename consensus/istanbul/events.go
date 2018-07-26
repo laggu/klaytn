@@ -7,6 +7,11 @@ type RequestEvent struct {
 
 // MessageEvent is posted for Istanbul engine communication
 type MessageEvent struct {
+	Number  int64
+	Payload []byte
+}
+
+type CommitEvent struct {
 	Payload []byte
 }
 

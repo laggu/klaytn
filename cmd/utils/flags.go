@@ -56,6 +56,11 @@ var (
 		Usage: `Blockchain storage database type ("leveldb", "badger")`,
 		Value: "leveldb",
 	}
+	SrvTypeFlag = cli.StringFlag{
+		Name:  "srvtype",
+		Usage: `json rpc server type ("http", "fasthttp")`,
+		Value: "http",
+	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases and keystore",
@@ -782,10 +787,17 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
+
+	// httptype is http or fasthttp
+	if ctx.GlobalIsSet(SrvTypeFlag.Name) {
+		cfg.HTTPServerType =ctx.GlobalString(SrvTypeFlag.Name)
+	}
+
 	setHTTP(ctx, cfg)
 	setWS(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
+	// dbtype is leveldb or badger
 	if ctx.GlobalIsSet(DbTypeFlag.Name) {
 		cfg.DBType =ctx.GlobalString(DbTypeFlag.Name)
 	}

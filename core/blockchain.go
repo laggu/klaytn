@@ -127,6 +127,11 @@ type BlockChain struct {
 	vmConfig  vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
+
+	recentTransactions *lru.Cache // recent insertblock
+	recentReceipts     *lru.Cache // recent receipts
+
+
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -145,6 +150,9 @@ func NewBlockChain(db gxdb.Database, cacheConfig *CacheConfig, chainConfig *para
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(badBlockLimit)
 
+	recentTransactions, _ := lru.New(80960)
+	recentReceips, _ := lru.New(80960)
+
 	bc := &BlockChain{
 		chainConfig:  chainConfig,
 		cacheConfig:  cacheConfig,
@@ -159,6 +167,9 @@ func NewBlockChain(db gxdb.Database, cacheConfig *CacheConfig, chainConfig *para
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
+		// tx, receipt cache
+		recentTransactions: recentTransactions,
+		recentReceipts: recentReceips,
 	}
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
@@ -873,8 +884,16 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 	return nil
 }
 
+type TransactionLookup struct {
+	Tx          *types.Transaction
+	BlockHash   common.Hash
+	BlockIndex  uint64
+	Index       uint64
+}
+
 // WriteBlockWithState writes the block and all associated state to the database.
 func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+	start := time.Now()
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
@@ -975,6 +994,12 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		rawdb.WriteTxLookupEntries(batch, block)
 		rawdb.WritePreimages(batch, block.NumberU64(), state.Preimages())
 
+		// TODO-GX goroutine for performance
+		bc.recentReceipts.Add(block.Hash(), receipts)
+		for i, tx := range block.Transactions() {
+			bc.recentTransactions.Add(tx.Hash(),TransactionLookup{tx,block.Hash(),block.NumberU64(),uint64(i)})
+		}
+
 		status = CanonStatTy
 	} else {
 		status = SideStatTy
@@ -988,7 +1013,32 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		bc.insert(block)
 	}
 	bc.futureBlocks.Remove(block.Hash())
+
+    elapsed := time.Since(start)
+	log.Debug("blockchain.writeblockwithstate","num",block.Number(),"txs",len(block.Transactions()),"elapsed",elapsed)
 	return status, nil
+}
+
+func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	value, ok := bc.recentTransactions.Get(hash)
+	if !ok {
+		return nil, common.Hash{}, 0, 0
+	}
+	txlookup := value.(TransactionLookup)
+	return txlookup.Tx, txlookup.BlockHash, txlookup.BlockIndex, txlookup.Index
+}
+
+func (bc *BlockChain) GetReceiptInCache(blockHash common.Hash) (types.Receipts, error) {
+	value, ok := bc.recentReceipts.Get(blockHash)
+	if !ok {
+		return nil, nil
+	}
+	items := value.([]*types.Receipt)
+	receipts := make(types.Receipts, len(items))
+	for i, receipt := range items {
+		receipts[i] = receipt
+	}
+	return receipts, nil
 }
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical
@@ -1022,6 +1072,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
 		}
 	}
+
 	// Pre-checks passed, start the full block imports
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -1143,16 +1194,26 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		} else {
 			parent = chain[i-1]
 		}
+
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
+
+		// for debug
+		start := time.Now()
 
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
+		}
+
+		if block.Transactions().Len() > 0 {
+
+			elapsed := time.Since(start)
+			log.Error("#### core/blockchain processing block", "elapsed", elapsed, "txs", block.Transactions().Len())
 		}
 
 		// Validate the state using the default validator

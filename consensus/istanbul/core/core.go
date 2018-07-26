@@ -29,9 +29,11 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		pendingRequests:    prque.New(),
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
-		roundMeter:         metrics.NewRegisteredMeter("consensus-istanbul-core-round", nil),
-		sequenceMeter:      metrics.NewRegisteredMeter("consensus-istanbul-core-sequence", nil),
-		consensusTimer:     metrics.NewRegisteredTimer("consensus-istanbul-core-timer", nil),
+
+		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
+		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
+		consensusTimer:     metrics.NewRegisteredTimer("consensus/istanbul/core/timer", nil),
+		enabledRN:          false,
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -74,6 +76,8 @@ type core struct {
 	sequenceMeter  metrics.Meter
 	// the timer to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimer metrics.Timer
+
+	enabledRN      bool
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -121,7 +125,7 @@ func (c *core) broadcast(msg *message) {
 	}
 
 	// Broadcast payload
-	if err = c.backend.Broadcast(c.valSet, payload); err != nil {
+	if err = c.backend.Broadcast(msg.Number.Int64(), c.valSet, payload); err != nil {
 		logger.Error("Failed to broadcast message", "msg", msg, "err", err)
 		return
 	}
@@ -173,30 +177,34 @@ func (c *core) startNewRound(round *big.Int) {
 	roundChange := false
 	// Try to get last proposal
 	lastProposal, lastProposer := c.backend.LastProposal()
-	if c.current == nil {
-		logger.Trace("Start to the initial round")
-	} else if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
-		diff := new(big.Int).Sub(lastProposal.Number(), c.current.Sequence())
-		c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
+	//if c.valSet != nil && c.valSet.IsSubSet() {
+	//	c.current = nil
+	//} else {
+		if c.current == nil {
+			logger.Trace("Start to the initial round")
+		} else if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
+			diff := new(big.Int).Sub(lastProposal.Number(), c.current.Sequence())
+			c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
 
-		if !c.consensusTimestamp.IsZero() {
-			c.consensusTimer.UpdateSince(c.consensusTimestamp)
-			c.consensusTimestamp = time.Time{}
-		}
-		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
-	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Sequence().Int64()-1)) == 0 {
-		if round.Cmp(common.Big0) == 0 {
-			// same seq and round, don't need to start new round
+			if !c.consensusTimestamp.IsZero() {
+				c.consensusTimer.UpdateSince(c.consensusTimestamp)
+				c.consensusTimestamp = time.Time{}
+			}
+			logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
+		} else if lastProposal.Number().Cmp(big.NewInt(c.current.Sequence().Int64()-1)) == 0 {
+			if round.Cmp(common.Big0) == 0 {
+				// same seq and round, don't need to start new round
+				return
+			} else if round.Cmp(c.current.Round()) < 0 {
+				logger.Warn("New round should not be smaller than current round", "seq", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
+				return
+			}
+			roundChange = true
+		} else {
+			logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Number().Int64())
 			return
-		} else if round.Cmp(c.current.Round()) < 0 {
-			logger.Warn("New round should not be smaller than current round", "seq", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
-			return
 		}
-		roundChange = true
-	} else {
-		logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Number().Int64())
-		return
-	}
+	//}
 
 	var newView *istanbul.View
 	if roundChange {

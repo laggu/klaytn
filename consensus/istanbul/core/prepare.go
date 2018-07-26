@@ -14,7 +14,12 @@ func (c *core) sendPrepare() {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
+
+	//log.Error("call sendPrepare","num",sub.View.Sequence)
+
+
 	c.broadcast(&message{
+		Number: sub.View.Sequence,
 		Code: msgPrepare,
 		Msg:  encodedSubject,
 	})
@@ -27,6 +32,8 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 	if err != nil {
 		return errFailedDecodePrepare
 	}
+
+	//log.Error("call receive prepare","num",prepare.View.Sequence)
 
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
 		return err

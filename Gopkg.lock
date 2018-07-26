@@ -20,6 +20,12 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  name = "github.com/clevergo/websocket"
+  packages = ["."]
+  revision = "4af9ae8df4050b32afcbb202b4fb8bfed80b5ae2"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -147,6 +153,22 @@
   version = "v1.1"
 
 [[projects]]
+  name = "github.com/klauspost/compress"
+  packages = [
+    "flate",
+    "gzip",
+    "zlib"
+  ]
+  revision = "b939724e787a27c0005cabe3f78e7ed7987ac74f"
+  version = "v1.4.0"
+
+[[projects]]
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
+  version = "v1.1"
+
+[[projects]]
   name = "github.com/kr/pretty"
   packages = ["."]
   revision = "73f6ac0b30a98e433b289500d779f50c1a6f0712"
@@ -196,6 +218,12 @@
   ]
   revision = "e6f5723bf2a66af014955e0888881314cf294129"
   version = "v0.1.1"
+
+[[projects]]
+  name = "github.com/patrickmn/go-cache"
+  packages = ["."]
+  revision = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0"
+  version = "v2.1.0"
 
 [[projects]]
   name = "github.com/pborman/uuid"
@@ -337,6 +365,22 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/valyala/bytebufferpool"
+  packages = ["."]
+  revision = "e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7"
+
+[[projects]]
+  name = "github.com/valyala/fasthttp"
+  packages = [
+    ".",
+    "fasthttputil",
+    "stackless"
+  ]
+  revision = "e5f51c11919d4f66400334047b897ef0a94c6f3c"
+  version = "v20180529"
+
+[[projects]]
+  branch = "master"
   name = "github.com/zpatrick/go-parser"
   packages = ["."]
   revision = "524d1e8c73c1e408fbf2dd5506bd1aa62a473acd"
@@ -448,6 +492,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "72547f1bc38eee7882af3d846ecd332b3923af28401dea0ec28e25e72a16ba45"
+  inputs-digest = "3402a05fb12ad708132210946cab76cd7bf45d5ac1bef7851037228a1e9a8f74"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -33,6 +33,8 @@ func New(options ...Option) *core.Genesis {
 			Istanbul: &params.IstanbulConfig{
 				ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 				Epoch:          istanbul.DefaultConfig.Epoch,
+				SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
+
 			},
 		},
 		Mixhash: types.IstanbulDigest,

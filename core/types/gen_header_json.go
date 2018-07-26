@@ -19,6 +19,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 		UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
 		Coinbase    common.Address `json:"miner"            gencodec:"required"`
+		Rewardbase  common.Address `json:"reward"           gencodec:"required"`
 		Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 		TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 		ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -37,6 +38,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.ParentHash = h.ParentHash
 	enc.UncleHash = h.UncleHash
 	enc.Coinbase = h.Coinbase
+	enc.Rewardbase = h.Rewardbase
 	enc.Root = h.Root
 	enc.TxHash = h.TxHash
 	enc.ReceiptHash = h.ReceiptHash
@@ -59,6 +61,7 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		ParentHash  *common.Hash    `json:"parentHash"       gencodec:"required"`
 		UncleHash   *common.Hash    `json:"sha3Uncles"       gencodec:"required"`
 		Coinbase    *common.Address `json:"miner"            gencodec:"required"`
+		Rewardbase  *common.Address `json:"reward"           gencodec:"required"`
 		Root        *common.Hash    `json:"stateRoot"        gencodec:"required"`
 		TxHash      *common.Hash    `json:"transactionsRoot" gencodec:"required"`
 		ReceiptHash *common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -88,6 +91,10 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'miner' for Header")
 	}
 	h.Coinbase = *dec.Coinbase
+	if dec.Rewardbase == nil {
+		return errors.New("missing required field 'reward' for Header")
+	}
+	h.Rewardbase = *dec.Rewardbase
 	if dec.Root == nil {
 		return errors.New("missing required field 'stateRoot' for Header")
 	}

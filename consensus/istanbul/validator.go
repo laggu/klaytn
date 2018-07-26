@@ -36,8 +36,12 @@ type ValidatorSet interface {
 	CalcProposer(lastProposer common.Address, round uint64)
 	// Return the validator size
 	Size() int
+	// Return the sub validator group size
+	SubGroupSize() int
 	// Return the validator array
 	List() []Validator
+	// Return the sub validator array
+	SubList(sequence int64) []Validator
 	// Get validator by index
 	GetByIndex(i uint64) Validator
 	// Get validator by given address
@@ -56,6 +60,8 @@ type ValidatorSet interface {
 	F() int
 	// Get proposer policy
 	Policy() ProposerPolicy
+
+	IsSubSet() bool
 }
 
 // ----------------------------------------------------------------------------

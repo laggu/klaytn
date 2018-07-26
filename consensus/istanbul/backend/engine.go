@@ -23,10 +23,15 @@ import (
 )
 
 const (
+	//checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	//inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
+	//inmemoryPeers      = 40
+	//inmemoryMessages   = 1024
+
 	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
-	inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
-	inmemoryPeers      = 40
-	inmemoryMessages   = 1024
+	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
+	inmemoryPeers      = 200
+	inmemoryMessages   = 4096
 )
 
 var (
@@ -301,7 +306,8 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 // rules of a particular engine. The changes are executed inline.
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// unused fields, force to set to empty
-	header.Coinbase = sb.rewardbase // common.Address{}
+	header.Coinbase = common.Address{}
+	header.Rewardbase = sb.rewardbase
 	header.Nonce = emptyNonce
 	header.MixDigest = types.IstanbulDigest
 
@@ -370,7 +376,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// TODO-GX developing gxp reward mechanism
 	var reward = big.NewInt(1000000000000000000)        // 1 eth
 	var rewardcontract = big.NewInt(100000000000000000) // 0.1 eth
-	state.AddBalance(header.Coinbase , reward)
+	state.AddBalance(header.Rewardbase , reward)
 
 	state.AddBalance(common.HexToAddress(contract.RNRewardAddr), rewardcontract)
 	state.AddBalance(common.HexToAddress(contract.CommitteeRewardAddr), rewardcontract)
@@ -548,7 +554,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			if err != nil {
 				return nil, err
 			}
-			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, sb.config.ProposerPolicy))
+			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSubSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize))
 			if err := snap.store(sb.db); err != nil {
 				return nil, err
 			}

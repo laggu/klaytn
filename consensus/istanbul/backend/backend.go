@@ -95,6 +95,10 @@ func (sb *backend) GetRewardContract() common.Address {
 	return sb.rewardcontract
 }
 
+func (sb *backend) GetSubGroupSize() int {
+	return sb.config.SubGroupSize
+}
+
 // Address implements istanbul.Backend.Address
 func (sb *backend) Address() common.Address {
 	return sb.address
@@ -111,11 +115,13 @@ func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet 
 }
 
 // Broadcast implements istanbul.Backend.Broadcast
-func (sb *backend) Broadcast(valSet istanbul.ValidatorSet, payload []byte) error {
+func (sb *backend) Broadcast(sequence int64, valSet istanbul.ValidatorSet, payload []byte) error {
 	// send to others
-	sb.Gossip(valSet, payload)
+	// TODO Check gossip again in event handle
+	// sb.Gossip(valSet, payload)
 	// send to self
 	msg := istanbul.MessageEvent{
+		Number: sequence,
 		Payload: payload,
 	}
 	go sb.istanbulEventMux.Post(msg)
@@ -158,29 +164,49 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// ranger node
-func (sb *backend) GossipPoRMsg(targets map[common.Address]bool, payload []byte) error {
+// Broadcast implements istanbul.Backend.Gossip
+func (sb *backend) GossipSubPeer(sequence int64, valSet istanbul.ValidatorSet, payload []byte) error {
+	hash := istanbul.RLPHash(payload)
+	sb.knownMessages.Add(hash, true)
 
-	if sb.broadcaster != nil && len(targets)> 0 {
+	targets := make(map[common.Address]bool)
+	for _, val := range valSet.SubList(sequence) {
+		if val.Address() != sb.Address() {
+			targets[val.Address()] = true
+		}
+	}
+
+	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindPeers(targets)
-		for _, p := range ps {
-			go p.Send(consensus.PoRMsg, payload)
+		for addr, p := range ps {
+			ms, ok := sb.recentMessages.Get(addr)
+			var m *lru.ARCCache
+			if ok {
+				m, _ = ms.(*lru.ARCCache)
+				if _, k := m.Get(hash); k {
+					// This peer had this event, skip it
+					continue
+				}
+			} else {
+				m, _ = lru.NewARC(inmemoryMessages)
+			}
+
+			m.Add(hash, true)
+			sb.recentMessages.Add(addr, m)
+
+			go p.Send(istanbulMsg, payload)
 		}
 	}
 	return nil
 }
 
+// ranger node
 func (sb *backend) GossipProof(targets map[common.Address]bool, proof types.Proof) error {
 
 	if sb.broadcaster != nil && len(targets)> 0 {
 		ps := sb.broadcaster.FindPeers(targets)
 		for _, p := range ps {
 			go p.Send(consensus.PoRMsg, &proof)
-			//go p.Send(consensus.PoRMsg, &types.Proof{
-			//	Solver:       common.Address{},
-			//	BlockNumber:  sb.CurrentBlock().Number(),
-			//	Nonce: 	      0,
-			//})
 		}
 	}
 	return nil
@@ -307,13 +333,13 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 	if block, ok := proposal.(*types.Block); ok {
 		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
 	}
-	return validator.NewSet(nil, sb.config.ProposerPolicy)
+	return validator.NewSubSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize)
 }
 
 func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
 	snap, err := sb.snapshot(sb.chain, number, hash, nil)
 	if err != nil {
-		return validator.NewSet(nil, sb.config.ProposerPolicy)
+		return validator.NewSubSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize)
 	}
 	return snap.ValSet
 }

@@ -267,6 +267,7 @@ type snapshotJSON struct {
 	// for validator set
 	Validators []common.Address        `json:"validators"`
 	Policy     istanbul.ProposerPolicy `json:"policy"`
+	SubGroupSize int                   `json:"subgroupsize"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
@@ -278,6 +279,7 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 		Tally:      s.Tally,
 		Validators: s.validators(),
 		Policy:     s.ValSet.Policy(),
+		SubGroupSize:  s.ValSet.SubGroupSize(),
 	}
 }
 
@@ -293,7 +295,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Hash = j.Hash
 	s.Votes = j.Votes
 	s.Tally = j.Tally
-	s.ValSet = validator.NewSet(j.Validators, j.Policy)
+	s.ValSet = validator.NewSubSet(j.Validators, j.Policy, j.SubGroupSize)
 	return nil
 }
 

@@ -395,6 +395,10 @@ func (t *TransactionsByPriceAndNonce) Count() (int, int) {
 	return len(t.txs), count
 }
 
+func (t *TransactionsByPriceAndNonce) Txs() map[common.Address]Transactions {
+	return t.txs
+}
+
 // NewTransactionsByPriceAndNonce creates a transaction set that can retrieve
 // price sorted transactions in a nonce-honouring way.
 //

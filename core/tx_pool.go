@@ -233,6 +233,7 @@ func (pool *TxPool) loop() {
 				if pool.chainconfig.IsHomestead(ev.Block.Number()) {
 					pool.homestead = true
 				}
+				log.Info("head","num",head.Number())
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
 

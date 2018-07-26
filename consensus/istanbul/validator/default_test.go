@@ -7,11 +7,15 @@ import (
 	"github.com/ground-x/go-gxplatform/crypto"
 	"reflect"
 	"github.com/ground-x/go-gxplatform/common"
+	"fmt"
 )
 
 var (
 	testAddress = "70524d664ffe731100208a0154e556f9bb679ae6"
 	testAddress2 = "b37866a925bccd69cfa98d43b510f1d23d78a851"
+	testAddress3 = "b37866a925bccd69cfa98d43b510f1d23d78a852"
+	testAddress4 = "b37866a925bccd69cfa98d43b510f1d23d78a853"
+	testAddress5 = "b37866a925bccd69cfa98d43b510f1d23d78a854"
 )
 
 func TestNewValidatorSet(t *testing.T) {
@@ -215,5 +219,33 @@ func TestRoundRobinPolicy(t *testing.T) {
 		if idx == 15 {
 			t.Errorf("next validator should is not same to previous validator %d", i)
 		}
+	}
+}
+
+func TestSubSetList(t *testing.T) {
+	b1 := common.Hex2Bytes(testAddress)
+	b2 := common.Hex2Bytes(testAddress2)
+	b3 := common.Hex2Bytes(testAddress3)
+	b4 := common.Hex2Bytes(testAddress4)
+	b5 := common.Hex2Bytes(testAddress5)
+	addr1 := common.BytesToAddress(b1)
+	addr2 := common.BytesToAddress(b2)
+	addr3 := common.BytesToAddress(b3)
+	addr4 := common.BytesToAddress(b4)
+	addr5 := common.BytesToAddress(b5)
+
+	valSet := NewSet([]common.Address{addr1, addr2, addr3, addr4, addr5}, istanbul.RoundRobin)
+	if valSet == nil {
+		t.Errorf("the format of validator set is invalid")
+		t.FailNow()
+	}
+
+	fmt.Printf("%v\n",valSet.GetProposer())
+
+	hash := istanbul.RLPHash("sfsfdsfd")
+	vallist := valSet.SubList(hash)
+
+	for idx,val := range vallist {
+		fmt.Printf("validator %d, %v\n", idx, val)
 	}
 }

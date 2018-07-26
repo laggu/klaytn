@@ -74,6 +74,10 @@ type Config struct {
 	// relative), then that specific path is enforced. An empty path disables IPC.
 	IPCPath string `toml:",omitempty"`
 
+	// HTTP module type is http server module type (fasthttp and http)
+	HTTPServerType string `toml:",omitempty"`
+
+
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
 	HTTPHost string `toml:",omitempty"`
@@ -272,6 +276,17 @@ func (c *Config) instanceDir() string {
 		return ""
 	}
 	return filepath.Join(c.DataDir, c.name())
+}
+
+func (c *Config) HttpServerType() string {
+	if c.HTTPServerType == "" {
+		return "http"
+	}
+	return c.HTTPServerType
+}
+
+func (c *Config) IsFastHTTP() bool {
+	return c.HttpServerType() == "fasthttp"
 }
 
 // NodeKey retrieves the currently configured private key of the node, checking

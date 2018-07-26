@@ -22,14 +22,14 @@ type Backend interface {
 	EventMux() *event.TypeMux
 
 	// Broadcast sends a message to all validators (include self)
-	Broadcast(valSet ValidatorSet, payload []byte) error
+	Broadcast(sequence int64, valSet ValidatorSet, payload []byte) error
 
 	// Gossip sends a message to all validators (exclude self)
 	Gossip(valSet ValidatorSet, payload []byte) error
 
-	// ranger node
-    GossipPoRMsg(targets map[common.Address]bool, payload []byte) error
+	GossipSubPeer(sequence int64, valSet ValidatorSet, payload []byte) error
 
+	// ranger node
 	GossipProof(targets map[common.Address]bool, payload types.Proof) error
 
 	CurrentBlock() *types.Block
@@ -63,4 +63,11 @@ type Backend interface {
 
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
+
+	GetRewardBase() common.Address
+
+	GetRewardContract() common.Address
+
+	GetSubGroupSize() int
+
 }

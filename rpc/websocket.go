@@ -14,8 +14,11 @@ import (
 	"os"
 	"strings"
 	"time"
-
 	"golang.org/x/net/websocket"
+
+	fastws "github.com/clevergo/websocket"
+	"github.com/valyala/fasthttp"
+	"bufio"
 )
 
 // websocketJSONCodec is a custom JSON codec with payload size enforcement and
@@ -57,11 +60,75 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 	}
 }
 
+var upgrader = fastws.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
+	err := upgrader.Upgrade(ctx,func(conn *fastws.Conn) {
+		//Create a custom encode/decode pair to enforce payload size and number encoding
+		encoder := func(v interface{}) error {
+			return fastws.WriteJSON(conn, v)
+		}
+		decoder := func(v interface{}) error {
+			return fastws.ReadJSON(conn, v)
+		}
+
+		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()),maxRequestContentLength)
+		srv.ServeCodec(NewCodec(&httpReadWriteNopCloser{reader, ctx.Response.BodyWriter()}, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
+	})
+	if err != nil {
+		log.Error("fail to upgrade","err",err)
+		return
+	}
+}
+
 // NewWSServer creates a new websocket RPC server around an API provider.
 //
 // Deprecated: use Server.WebsocketHandler
 func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
 	return &http.Server{Handler: srv.WebsocketHandler(allowedOrigins)}
+}
+
+func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
+	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
+	return &fasthttp.Server{MaxRequestBodySize: maxRequestContentLength, Handler: srv.FastWebsocketHandler}
+}
+
+func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.RequestCtx) bool {
+	origins := set.New()
+	allowAllOrigins := false
+
+	for _, origin := range allowedOrigins {
+		if origin == "*" {
+			allowAllOrigins = true
+		}
+		if origin != "" {
+			origins.Add(strings.ToLower(origin))
+		}
+	}
+
+	// allow localhost if no allowedOrigins are specified.
+	if len(origins.List()) == 0 {
+		origins.Add("http://localhost")
+		if hostname, err := os.Hostname(); err == nil {
+			origins.Add("http://" + strings.ToLower(hostname))
+		}
+	}
+
+	log.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
+
+	f := func(ctx *fasthttp.RequestCtx) bool {
+		origin := strings.ToLower(string(ctx.Request.Header.Peek("Origin")))
+		if allowAllOrigins || origins.Has(origin) {
+			return true
+		}
+		log.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
+		return false
+	}
+
+	return f
 }
 
 // wsHandshakeValidator returns a handler that verifies the origin during the

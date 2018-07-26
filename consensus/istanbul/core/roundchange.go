@@ -43,6 +43,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	}
 
 	c.broadcast(&message{
+		Number: cv.Sequence,
 		Code: msgRoundChange,
 		Msg:  payload,
 	})

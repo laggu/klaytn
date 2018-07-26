@@ -21,7 +21,6 @@ import (
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/params"
 	"sync/atomic"
-	"github.com/ground-x/go-gxplatform/log"
 )
 
 // Config are the configuration options for the Interpreter
@@ -105,9 +104,6 @@ func (in *Interpreter) enforceRestrictions(op OpCode, operation operation, stack
 // errExecutionReverted which means revert-and-keep-gas-left.
 func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	// Increment the call depth which is restricted to 1024
-	log.Info("#### EVM.Interpreter.Run")
-
-
 	in.evm.depth++
 	defer func() { in.evm.depth-- }()
 

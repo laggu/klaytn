@@ -139,6 +139,7 @@ HTTP based JSON-RPC API options:
   * `--ipcdisable` Disable the IPC-RPC server
   * `--ipcapi` API's offered over the IPC-RPC interface (default: "admin,gxp,miner,net,personal,txpool,web3")
   * `--ipcpath` Filename for IPC socket/pipe within the datadir (explicit paths escape it)
+  * `--srvtype` HTTP-RPC/WebSocket-RPC server module [http, fasthttp] (default: "http")
 
 You'll need to use your own programming environments' capabilities (libraries, tools, etc) to connect
 via HTTP, WS or IPC to a GXP node configured with the above flags and you'll need to speak [JSON-RPC](http://www.jsonrpc.org/specification)
@@ -238,7 +239,8 @@ genesis.json
         "eip155Block": 3,
         "istanbul": {
             "epoch": 30000,
-            "policy": 0
+            "policy": 0,
+            "sub": 21
         },
         "isBFT": true
     },
@@ -285,7 +287,7 @@ Genesis 블락을 다음의 명령어로 생성한다.
 ```
 각 노드를 다음 명령어로 실행함. 실행시에 --mine 옵션으로 마이닝을 실행하고 --gasprice 0 옵션으로 gasprice를 0으로 세팅함.
 ```
-gxp --datadir $DATAPATH --port 30303 --rpc --rpcaddr 0.0.0.0 --rpcport "8123" --rpccorsdomain "*"
+gxp --srvtype fasthttp --datadir $DATAPATH --port 30303 --rpc --rpcaddr 0.0.0.0 --rpcport "8123" --rpccorsdomain "*"
 --nodiscover --networkid 3900 --nat "any" --wsport "8546" --ws --wsaddr 0.0.0.0 --wsorigins="*"
 --rpcapi "db,txpool,gxp,net,web3,miner,personal,admin,rpc" --mine --gasprice 0 console
 
