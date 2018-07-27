@@ -154,7 +154,6 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 
-	// TODO-GX Remove homestead field
 	homestead bool
 }
 
@@ -231,8 +230,10 @@ func (pool *TxPool) loop() {
 
 			if ev.Block != nil {
 				pool.mu.Lock()
+				if pool.chainconfig.IsHomestead(ev.Block.Number()) {
+					pool.homestead = true
+				}
 				log.Info("head","num",head.Number())
-				pool.homestead = true
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
 

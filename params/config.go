@@ -32,12 +32,14 @@ var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainID:        big.NewInt(1),
+		HomesteadBlock: big.NewInt(0),
 		Gxhash:         new(GxhashConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
 		ChainID:        big.NewInt(2),
+		HomesteadBlock: big.NewInt(0),
 		Gxhash:         new(GxhashConfig),
 	}
 
@@ -46,44 +48,20 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllGxhashProtocolChanges = &ChainConfig{
-		ChainID: big.NewInt(0),
-		Gxhash: new(GxhashConfig),
-		Clique: nil,
-		Istanbul: nil,
-		IsBFT: false,
-	}
+	AllGxhashProtocolChanges = &ChainConfig{big.NewInt(0), big.NewInt(0), big.NewInt(0), new(GxhashConfig), nil, nil, false}
 
 	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
 	// and accepted by the GX Platform core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{
-		ChainID: big.NewInt(0),
-		Gxhash: nil,
-		Clique: &CliqueConfig{Period: 0, Epoch: 30000},
-		Istanbul: nil,
-		IsBFT: false,
-	}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil, false}
 
-	TestChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		Gxhash: new(GxhashConfig),
-		Clique: nil,
-		Istanbul: nil,
-		IsBFT: false,
-	}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), new(GxhashConfig), nil, nil, false}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 
 	// istanbul BFT
-	BFTTestChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		Gxhash: new(GxhashConfig),
-		Clique: nil,
-		Istanbul: nil,
-		IsBFT: true,
-	}
+	BFTTestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), new(GxhashConfig), nil, nil, true}
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -93,6 +71,10 @@ var (
 // set of configuration options.
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
+
+	HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
+
+	EIP155Block *big.Int `json:"eip155Block,omitempty"` // EIP155 HF block
 
 	// Various consensus engines
 	Gxhash *GxhashConfig `json:"gxhash,omitempty"`
@@ -162,11 +144,45 @@ func (c *ChainConfig) String() string {
 	}
 }
 
+// IsHomestead returns whether num is either equal to the homestead block or greater.
+func (c *ChainConfig) IsHomestead(num *big.Int) bool {
+	return isForked(c.HomesteadBlock, num)
+}
+
+// IsEIP150 returns whether num is either equal to the EIP150 fork block or greater.
+func (c *ChainConfig) IsEIP150(num *big.Int) bool {
+	return true
+}
+
+// IsEIP155 returns whether num is either equal to the EIP155 fork block or greater.
+func (c *ChainConfig) IsEIP155(num *big.Int) bool {
+	return isForked(c.EIP155Block, num)
+}
+
+// TODO-GX EIP158 is enabled by default now.
+// Let's decide this later with inspecting EIP158
+// IsEIP158 returns whether num is either equal to the EIP158 fork block or greater.
+func (c *ChainConfig) IsEIP158(num *big.Int) bool {
+	return true
+}
 // GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
 //
 // The returned GasTable's fields shouldn't, under any circumstances, be changed.
 func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	return GasTableEIP158
+	// TODO-GX GXP follows latest version of Ethereum
+	if num == nil {
+		return GasTableEIP150
+	}
+	switch {
+	case c.IsEIP158(num):
+		return GasTableEIP158
+	case c.IsEIP155(num):
+		return GasTableEIP150
+	case c.IsHomestead(num):
+		return GasTableHomestead
+	default:
+		return GasTableEIP150
+	}
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -188,6 +204,9 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
+	if isForkIncompatible(c.HomesteadBlock, newcfg.HomesteadBlock, head) {
+		return newCompatError("Homestead fork block", c.HomesteadBlock, newcfg.HomesteadBlock)
+	}
 	return nil
 }
 
@@ -253,6 +272,7 @@ func (err *ConfigCompatError) Error() string {
 // phases.
 type Rules struct {
 	ChainID     *big.Int
+	IsHomestead bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -261,5 +281,5 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainID == nil {
 		chainID = new(big.Int)
 	}
-	return Rules{ChainID: new(big.Int).Set(chainID)}
+	return Rules{ChainID: new(big.Int).Set(chainID), IsHomestead: c.IsHomestead(num)}
 }
