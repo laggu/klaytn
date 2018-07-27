@@ -3,7 +3,8 @@ package core
 import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-)
+	"github.com/ground-x/go-gxplatform/common"
+	)
 
 var (
 	// msgPriority is defined for calculating processing priority to speedup consensus
@@ -113,6 +114,7 @@ func (c *core) processBacklog() {
 			m, prio := backlog.Pop()
 			msg := m.(*message)
 			var view *istanbul.View
+			var prevHash common.Hash
 			switch msg.Code {
 			case msgPreprepare:
 				var m *istanbul.Preprepare
@@ -120,6 +122,7 @@ func (c *core) processBacklog() {
 				if err == nil {
 					view = m.View
 				}
+				prevHash = m.Proposal.ParentHash()
 				// for msgRoundChange, msgPrepare and msgCommit cases
 			default:
 				var sub *istanbul.Subject
@@ -127,6 +130,7 @@ func (c *core) processBacklog() {
 				if err == nil {
 					view = sub.View
 				}
+				prevHash = sub.PrevHash
 			}
 			if view == nil {
 				logger.Debug("Nil view", "msg", msg)
@@ -149,6 +153,7 @@ func (c *core) processBacklog() {
 			go c.sendEvent(backlogEvent{
 				src: src,
 				msg: msg,
+				Hash: prevHash,
 			})
 		}
 	}

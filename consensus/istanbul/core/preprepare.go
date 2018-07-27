@@ -6,7 +6,7 @@ import (
 	"time"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/core/types"
-)
+	)
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
 	logger := c.logger.New("state", c.state)
@@ -67,7 +67,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			}
 
 			c.broadcast(&message{
-				Number: request.Proposal.Number(),
+				Hash: request.Proposal.ParentHash(),
 				Code: msgPreprepare,
 				Msg:  preprepare,
 			})
@@ -94,7 +94,7 @@ func (c *core) handleProofPrepare(msg *message, src istanbul.Validator) error {
 	}
 
 	err = c.handlePreprepare(&message{
-		Number: msg.Number,
+		Hash: msg.Hash,
 		Code: msgPreprepare,
 		Msg:  preprepare,
 	},src)
@@ -143,7 +143,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
 			// 2. The given block must exist
 			if valSet.IsProposer(src.Address()) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
-				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash())
+				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
 				return nil
 			}
 		}

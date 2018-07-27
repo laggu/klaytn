@@ -5,7 +5,7 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"math/big"
 	"sync"
-)
+	)
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
 func (c *core) sendNextRoundChange() {
@@ -29,11 +29,14 @@ func (c *core) sendRoundChange(round *big.Int) {
 		Sequence: new(big.Int).Set(cv.Sequence),
 	})
 
+	lastProposal, _ := c.backend.LastProposal()
+
 	// Now we have the new round number and sequence number
 	cv = c.currentView()
 	rc := &istanbul.Subject{
 		View:   cv,
 		Digest: common.Hash{},
+		PrevHash: lastProposal.ParentHash(),
 	}
 
 	payload, err := Encode(rc)
@@ -43,7 +46,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	}
 
 	c.broadcast(&message{
-		Number: cv.Sequence,
+		Hash: rc.PrevHash,
 		Code: msgRoundChange,
 		Msg:  payload,
 	})

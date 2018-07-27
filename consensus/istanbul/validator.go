@@ -43,7 +43,7 @@ type ValidatorSet interface {
 	// Return the validator array
 	List() []Validator
 	// Return the sub validator array
-	SubList(sequence int64) []Validator
+	SubList(prevHash common.Hash) []Validator
 	// Get validator by index
 	GetByIndex(i uint64) Validator
 	// Get validator by given address

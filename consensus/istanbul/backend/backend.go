@@ -115,13 +115,13 @@ func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet 
 }
 
 // Broadcast implements istanbul.Backend.Broadcast
-func (sb *backend) Broadcast(sequence int64, valSet istanbul.ValidatorSet, payload []byte) error {
+func (sb *backend) Broadcast(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) error {
 	// send to others
 	// TODO Check gossip again in event handle
 	// sb.Gossip(valSet, payload)
 	// send to self
 	msg := istanbul.MessageEvent{
-		Number: sequence,
+		Hash: prevHash,
 		Payload: payload,
 	}
 	go sb.istanbulEventMux.Post(msg)
@@ -158,19 +158,25 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 			m.Add(hash, true)
 			sb.recentMessages.Add(addr, m)
 
-			go p.Send(istanbulMsg, payload)
+			cmsg := &istanbul.ConsensusMsg{
+				PrevHash:common.Hash{},
+				Payload:payload,
+			}
+
+			//go p.Send(istanbulMsg, payload)
+			go p.Send(istanbulMsg, cmsg)
 		}
 	}
 	return nil
 }
 
 // Broadcast implements istanbul.Backend.Gossip
-func (sb *backend) GossipSubPeer(sequence int64, valSet istanbul.ValidatorSet, payload []byte) error {
+func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) error {
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
 	targets := make(map[common.Address]bool)
-	for _, val := range valSet.SubList(sequence) {
+	for _, val := range valSet.SubList(prevHash) {
 		if val.Address() != sb.Address() {
 			targets[val.Address()] = true
 		}
@@ -194,7 +200,12 @@ func (sb *backend) GossipSubPeer(sequence int64, valSet istanbul.ValidatorSet, p
 			m.Add(hash, true)
 			sb.recentMessages.Add(addr, m)
 
-			go p.Send(istanbulMsg, payload)
+			cmsg := &istanbul.ConsensusMsg{
+				PrevHash:prevHash,
+				Payload:payload,
+			}
+
+			go p.Send(istanbulMsg, cmsg)
 		}
 	}
 	return nil

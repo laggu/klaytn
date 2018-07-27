@@ -38,6 +38,8 @@ type Proposal interface {
 	DecodeRLP(s *rlp.Stream) error
 
 	String() string
+
+	ParentHash() common.Hash
 }
 
 type Request struct {
@@ -119,28 +121,30 @@ func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 type Subject struct {
 	View   *View
 	Digest common.Hash
+	PrevHash common.Hash
 }
 
 func (b *Subject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest})
+	return rlp.Encode(w, []interface{}{b.View, b.Digest, b.PrevHash})
 }
 
 func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
 		View *View
 		Digest common.Hash
+		PrevHash common.Hash
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
-	b.View, b.Digest = subject.View, subject.Digest
+	b.View, b.Digest, b.PrevHash = subject.View, subject.Digest, subject.PrevHash
 
 	return nil
 }
 
 func (b *Subject) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
+	return fmt.Sprintf("{View: %v, Digest: %v, ParentHash: %v}", b.View, b.Digest.String(), b.PrevHash.Hex())
 }
 
 type ProofPreprepare struct {
@@ -166,4 +170,9 @@ func (b *ProofPreprepare) DecodeRLP(s *rlp.Stream) error {
 	b.View, b.Proposal, b.Proof = proofpreprepare.View, proofpreprepare.Proposal, proofpreprepare.Proof
 
 	return nil
+}
+
+type ConsensusMsg struct {
+	PrevHash common.Hash
+	Payload  []byte
 }

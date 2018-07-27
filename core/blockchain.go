@@ -1015,7 +1015,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.futureBlocks.Remove(block.Hash())
 
     elapsed := time.Since(start)
-	log.Debug("blockchain.writeblockwithstate","num",block.Number(),"txs",len(block.Transactions()),"elapsed",elapsed)
+	log.Debug("blockchain.writeblockwithstate","num",block.Number(),"parenthash",block.Header().ParentHash ,"txs",len(block.Transactions()),"elapsed",elapsed)
 	return status, nil
 }
 

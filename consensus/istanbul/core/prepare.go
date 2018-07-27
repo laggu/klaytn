@@ -3,7 +3,7 @@ package core
 import (
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
-)
+	)
 
 func (c *core) sendPrepare() {
 	logger := c.logger.New("state", c.state)
@@ -15,11 +15,8 @@ func (c *core) sendPrepare() {
 		return
 	}
 
-	//log.Error("call sendPrepare","num",sub.View.Sequence)
-
-
 	c.broadcast(&message{
-		Number: sub.View.Sequence,
+		Hash: c.current.Proposal().ParentHash(),
 		Code: msgPrepare,
 		Msg:  encodedSubject,
 	})

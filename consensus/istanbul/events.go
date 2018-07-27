@@ -1,5 +1,7 @@
 package istanbul
 
+import "github.com/ground-x/go-gxplatform/common"
+
 // RequestEvent is posted to propose a proposal
 type RequestEvent struct {
 	Proposal Proposal
@@ -7,7 +9,7 @@ type RequestEvent struct {
 
 // MessageEvent is posted for Istanbul engine communication
 type MessageEvent struct {
-	Number  int64
+	Hash    common.Hash
 	Payload []byte
 }
 

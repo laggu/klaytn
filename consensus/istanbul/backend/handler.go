@@ -39,11 +39,13 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 			return true, istanbul.ErrStoppedEngine
 		}
 
-		var data []byte
-		if err := msg.Decode(&data); err != nil {
+		var cmsg istanbul.ConsensusMsg
+
+		//var data []byte
+		if err := msg.Decode(&cmsg); err != nil {
 			return true, errDecodeFailed
 		}
-
+        data := cmsg.Payload
 		hash := istanbul.RLPHash(data)
 
 		// Mark peer's message
@@ -65,6 +67,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 		go sb.istanbulEventMux.Post(istanbul.MessageEvent{
 			Payload: data,
+			Hash: cmsg.PrevHash,
 		})
 
 		return true, nil

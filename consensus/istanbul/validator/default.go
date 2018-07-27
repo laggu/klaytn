@@ -9,6 +9,8 @@ import (
 	"sync"
 	"math/rand"
 	"github.com/ground-x/go-gxplatform/log"
+	"strings"
+	"strconv"
 )
 
 const (
@@ -107,23 +109,24 @@ func (valSet *defaultSet) List() []istanbul.Validator {
 	return valSet.validators
 }
 
-func (valSet *defaultSet) SubList(sequence int64) []istanbul.Validator {
+func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
 	if len(valSet.validators) <= valSet.subSize {
 		return valSet.validators
 	}
-	//hashstring := strings.TrimPrefix(hash.Hex(),"0x")
-	//if len(hashstring) > 15 {
-	//	hashstring = hashstring[:15]
-	//}
-	//seed, err := strconv.ParseInt(hashstring, 16, 64)
-	//if err != nil {
-	//	log.Error("input" ,"hash", hash.Hex())
-	//	log.Error("fail to make sub-list of validators","seed", seed, "err",err)
-	//	return valSet.validators
-	//}
+	hashstring := strings.TrimPrefix(prevHash.Hex(),"0x")
+	if len(hashstring) > 15 {
+		hashstring = hashstring[:15]
+	}
+	seed, err := strconv.ParseInt(hashstring, 16, 64)
+	if err != nil {
+		log.Error("input" ,"hash", prevHash.Hex())
+		log.Error("fail to make sub-list of validators","seed", seed, "err",err)
+		return valSet.validators
+	}
+
 	// shuffle
 	subset := make([]istanbul.Validator,valSet.subSize)
 	subset[0] = valSet.GetProposer()
@@ -139,7 +142,7 @@ func (valSet *defaultSet) SubList(sequence int64) []istanbul.Validator {
 	}
 
 	limit := len(valSet.validators)
-	picker := rand.New(rand.NewSource(sequence))
+	picker := rand.New(rand.NewSource(seed))
 
 	pickSize := limit - 2
 	indexs := make([]int, pickSize)
@@ -157,6 +160,10 @@ func (valSet *defaultSet) SubList(sequence int64) []istanbul.Validator {
 
 	for i :=0; i < valSet.subSize-2; i++ {
 	   subset[i+2] = valSet.validators[indexs[i]]
+	}
+
+	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
+		log.Error("### subList","prevHash", prevHash.Hex())
 	}
 
 	return subset

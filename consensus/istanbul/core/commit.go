@@ -4,19 +4,24 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
-	"github.com/ground-x/go-gxplatform/log"
-)
+	)
 
 func (c *core) sendCommit() {
-	//log.Error("call sendCommit","num", c.current.Subject().View.Sequence)
+	logger := c.logger.New("state", c.state)
+	if c.current.Preprepare == nil {
+		logger.Error("Failed to get parentHash from roundState in sendCommit")
+		return
+	}
+
 	sub := c.current.Subject()
 	c.broadcastCommit(sub)
 }
 
-func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash) {
+func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash, prevHash common.Hash) {
 	sub := &istanbul.Subject{
 		View:   view,
 		Digest: digest,
+		PrevHash: prevHash,
 	}
 	c.broadcastCommit(sub)
 }
@@ -29,8 +34,9 @@ func (c *core) broadcastCommit(sub *istanbul.Subject) {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
+
 	c.broadcast(&message{
-		Number: sub.View.Sequence,
+		Hash: sub.PrevHash,
 		Code: msgCommit,
 		Msg:  encodedSubject,
 	})
@@ -77,7 +83,6 @@ func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) er
 
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(commit, sub) {
-		log.Error("#### Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
 		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
 		return errInconsistentSubject
 	}

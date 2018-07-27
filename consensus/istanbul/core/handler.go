@@ -3,7 +3,7 @@ package core
 import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-)
+	)
 
 // Start implements core.Engine.Start
 func (c *core) Start() error {
@@ -81,7 +81,7 @@ func (c *core) handleEvents() {
 				}
 			case istanbul.MessageEvent:
 				if err := c.handleMsg(ev.Payload); err == nil {
-					c.backend.GossipSubPeer(ev.Number , c.valSet, ev.Payload)
+					c.backend.GossipSubPeer(ev.Hash , c.valSet, ev.Payload)
 					//c.backend.Gossip(c.valSet, ev.Payload)
 				}
 			case backlogEvent:
@@ -92,7 +92,7 @@ func (c *core) handleEvents() {
 						c.logger.Warn("Get message payload failed", "err", err)
 						continue
 					}
-					c.backend.GossipSubPeer(ev.msg.Number.Int64() , c.valSet, p)
+					c.backend.GossipSubPeer(ev.Hash , c.valSet, p)
 					//c.backend.Gossip(c.valSet, p)
 				}
 			}

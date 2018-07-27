@@ -5,7 +5,6 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/rlp"
 	"io"
-	"math/big"
 )
 
 type Engine interface {
@@ -62,7 +61,7 @@ const (
 )
 
 type message struct {
-	Number        *big.Int
+	Hash          common.Hash
 	Code          uint64
 	Msg           []byte
 	Address       common.Address
@@ -76,13 +75,13 @@ type message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Number, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+	return rlp.Encode(w, []interface{}{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
-		Number        *big.Int
+		Hash          common.Hash
 		Code          uint64
 		Msg           []byte
 		Address       common.Address
@@ -93,7 +92,7 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Number, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Number, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Hash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
 	return nil
 }
 
@@ -128,6 +127,7 @@ func (m *message) Payload() ([]byte, error) {
 
 func (m *message) PayloadNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&message{
+		Hash:          m.Hash,
 		Code:          m.Code,
 		Msg:           m.Msg,
 		Address:       m.Address,
