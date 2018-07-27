@@ -51,6 +51,15 @@ type LDBDatabase struct {
 	log log.Logger // Contextual logger tracking the database path
 }
 
+func getLDBOptions(cache, handles int) *opt.Options {
+	return &opt.Options{
+		OpenFilesCacheCapacity: handles,
+		BlockCacheCapacity:     cache / 2 * opt.MiB,
+		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
+		Filter:                 filter.NewBloomFilter(10),
+	}
+}
+
 func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
 	logger := log.New("database", file)
 
@@ -64,12 +73,27 @@ func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
 	logger.Info("Allocated cache and file handles", "cache", cache, "handles", handles)
 
 	// Open the db and recover any potential corruptions
-	db, err := leveldb.OpenFile(file, &opt.Options{
-		OpenFilesCacheCapacity: handles,
-		BlockCacheCapacity:     cache / 2 * opt.MiB,
-		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
-		Filter:                 filter.NewBloomFilter(10),
-	})
+	db, err := leveldb.OpenFile(file, getLDBOptions(cache, handles))
+	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
+		db, err = leveldb.RecoverFile(file, nil)
+	}
+	// (Re)check for errors and abort if opening of the db failed
+	if err != nil {
+		return nil, err
+	}
+	return &LDBDatabase{
+		fn:  file,
+		db:  db,
+		log: logger,
+	}, nil
+
+}
+
+func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*LDBDatabase, error) {
+	logger := log.New("database", file)
+
+	// Open the db and recover any potential corruptions
+	db, err := leveldb.OpenFile(file, opt)
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
 		db, err = leveldb.RecoverFile(file, nil)
 	}
