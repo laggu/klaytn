@@ -37,18 +37,10 @@ type sigCache struct {
 	from   common.Address
 }
 
+// TODO-GX Remove the second parameter blockNumber
 // MakeSigner returns a Signer based on the given chain config and block number.
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
-	var signer Signer
-	switch {
-	case config.IsEIP155(blockNumber):
-		signer = NewEIP155Signer(config.ChainID)
-	case config.IsHomestead(blockNumber):
-		signer = HomesteadSigner{}
-	default:
-		signer = FrontierSigner{}
-	}
-	return signer
+	return NewEIP155Signer(config.ChainID)
 }
 
 // SignTx signs the transaction using the given signer and private key
@@ -163,6 +155,7 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	})
 }
 
+// TODO-GX Remove HomesteadSigner
 // HomesteadTransaction implements TransactionInterface using the
 // homestead rules.
 type HomesteadSigner struct{ FrontierSigner }
