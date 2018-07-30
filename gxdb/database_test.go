@@ -14,29 +14,27 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package gxdb_test
+package gxdb
 
 import (
+	"github.com/ground-x/go-gxplatform/common"
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
+	)
 
-	"github.com/ground-x/go-gxplatform/gxdb"
-	"github.com/ground-x/go-gxplatform/common"
-	"math/big"
-	"strings"
-)
-
-func newTestLDB() (*gxdb.LDBDatabase, func()) {
+func newTestLDB() (*LDBDatabase, func()) {
 	dirName, err := ioutil.TempDir(os.TempDir(), "gxdb_leveldb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
-	db, err := gxdb.NewLDBDatabase(dirName, 0, 0)
+	db, err := NewLDBDatabase(dirName, 0, 0)
 	if err != nil {
 		panic("failed to create test database: " + err.Error())
 	}
@@ -47,12 +45,12 @@ func newTestLDB() (*gxdb.LDBDatabase, func()) {
 	}
 }
 
-func newTestBadgerDB() (*gxdb.BGDatabase, func()) {
+func newTestBadgerDB() (*BGDatabase, func()) {
 	dirName, err := ioutil.TempDir(os.TempDir(), "gxdb_badgerdb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
-	db, err := gxdb.NewBGDatabase(dirName)
+	db, err := NewBGDatabase(dirName)
 	if err != nil {
 		panic("failed to create test database: " + err.Error())
 	}
@@ -80,10 +78,10 @@ func TestBadgerDB_PutGet(t *testing.T) {
 }
 
 func TestMemoryDB_PutGet(t *testing.T) {
-	testPutGet(gxdb.NewMemDatabase(), t)
+	testPutGet(NewMemDatabase(), t)
 }
 
-func testPutGet(db gxdb.Database, t *testing.T) {
+func testPutGet(db Database, t *testing.T) {
 	t.Parallel()
 
 	// put
@@ -170,7 +168,7 @@ func TestBadgerDB_ParallelPutGet(t *testing.T) {
 }
 
 func TestMemoryDB_ParallelPutGet(t *testing.T) {
-	testParallelPutGet(gxdb.NewMemDatabase(), t)
+	testParallelPutGet(NewMemDatabase(), t)
 }
 
 func TestShardDB(t *testing.T) {
@@ -191,7 +189,7 @@ func TestShardDB(t *testing.T) {
 
 }
 
-func testParallelPutGet(db gxdb.Database, t *testing.T) {
+func testParallelPutGet(db Database, t *testing.T) {
 	const n = 8
 	var pending sync.WaitGroup
 

@@ -24,10 +24,6 @@ func genTempDirForTestDB(b *testing.B) string {
 	return dir
 }
 
-func getDefaultLDBOptions() *opt.Options {
-	return &opt.Options{}
-}
-
 func getKlayLDBOptions() *opt.Options {
 	return getLDBOptions(128, 128)
 }
@@ -102,6 +98,8 @@ func sequentialRead(currIndex, numInsertions int) int {
 	return currIndex
 }
 
+
+var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 func zipfRead(currIndex, numInsertions int) int {
 	zipf := rand.NewZipf(r, 3.14, 2.72, uint64(numInsertions))
 	zipfNum := zipf.Uint64()
@@ -628,7 +626,7 @@ func benchmarkPartitionedPutGoRoutine(b *testing.B, opts *opt.Options, numPartit
 				if numPartitions == 1 {
 					databases[0].Put(keys[idx], values[idx])
 				} else {
-					partition := getPartition(keys, idx, numPartitions)
+					partition := getPartitionForTest(keys, idx, numPartitions)
 					databases[partition].Put(keys[idx], values[idx])
 				}
 			}(k)
@@ -655,7 +653,7 @@ func benchmarkPartitionedPutNoGoRoutine(b *testing.B, opts *opt.Options, numPart
 			if numPartitions == 1 {
 				databases[0].Put(keys[k], values[k])
 			} else {
-				partition := getPartition(keys, k, numPartitions)
+				partition := getPartitionForTest(keys, k, numPartitions)
 				databases[partition].Put(keys[k], values[k])
 			}
 		}
@@ -776,7 +774,7 @@ func benchmarkPartitionedGetNoGoRotine(b *testing.B, opts *opt.Options, numParti
 			if numPartitions == 1 {
 				databases[0].Put(keys[k], values[k])
 			} else {
-				partition := getPartition(keys, k, numPartitions)
+				partition := getPartitionForTest(keys, k, numPartitions)
 				databases[partition].Put(keys[k], values[k])
 			}
 		}
@@ -790,7 +788,7 @@ func benchmarkPartitionedGetNoGoRotine(b *testing.B, opts *opt.Options, numParti
 			if numPartitions == 1 {
 				databases[0].Get(keys[keyPos])
 			} else {
-				partition := getPartition(keys, keyPos, numPartitions)
+				partition := getPartitionForTest(keys, keyPos, numPartitions)
 				databases[partition].Get(keys[keyPos])
 			}
 		}
@@ -816,7 +814,7 @@ func benchmarkPartitionedGetGoRoutine(b *testing.B, opts *opt.Options, numPartit
 			if numPartitions == 1 {
 				databases[0].Put(keys[k], values[k])
 			} else {
-				partition := getPartition(keys, k, numPartitions)
+				partition := getPartitionForTest(keys, k, numPartitions)
 				databases[partition].Put(keys[k], values[k])
 			}
 		}
@@ -835,7 +833,7 @@ func benchmarkPartitionedGetGoRoutine(b *testing.B, opts *opt.Options, numPartit
 				if numPartitions == 1 {
 					databases[0].Get(keys[kPos])
 				} else {
-					partition := getPartition(keys, kPos, numPartitions)
+					partition := getPartitionForTest(keys, kPos, numPartitions)
 					databases[partition].Get(keys[kPos])
 				}
 			} (keyPos)
@@ -1082,7 +1080,7 @@ func benchmarkBatchPartitionGoRoutine(b *testing.B, opts *opt.Options, valueLeng
 		keys, values := genKeysAndValues(valueLength, numInsertions)
 		b.StartTimer()
 		for k:=0; k < numInsertions; k++ {
-			partition := getPartition(keys, k, numPartitions)
+			partition := getPartitionForTest(keys, k, numPartitions)
 			batches[partition].Put(keys[k], values[k])
 		}
 
@@ -1205,38 +1203,10 @@ func randStrBytes(n int) []byte {
 	return b
 }
 
-func randStr(n int) string {
-	var src = rand.NewSource(time.Now().UnixNano())
-	b := make([]byte, n)
-	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
-	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
-		if remain == 0 {
-			cache, remain = src.Int63(), letterIdxMax
-		}
-		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
-			i--
-		}
-		cache >>= letterIdxBits
-		remain--
-	}
-
-	return string(b)
-}
-
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-func getZipfDist(maxNumber int) int {
-	zipf := rand.NewZipf(r, 3.14, 2.72, uint64(maxNumber))
-	zipfNum := zipf.Uint64()
-	return maxNumber - int(zipfNum)
-}
-
-
-
-func getPartition(keys [][]byte, index, numPartitions int) int64 {
+func getPartitionForTest(keys [][]byte, index, numPartitions int) int64 {
 
 	return int64(index % numPartitions)
-	// TODO-KLAY: CHANGE BELOW LOGIC FROM ROUND-ROBIN TO USE getPartition
+	// TODO-KLAY: CHANGE BELOW LOGIC FROM ROUND-ROBIN TO USE getPartitionForTest
 	//key := keys[index]
 	//hashString := strings.TrimPrefix(common.Bytes2Hex(key),"0x")
 	//if len(hashString) > 15 {
