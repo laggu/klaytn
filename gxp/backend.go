@@ -210,7 +210,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (gxdb.Datab
 		return nil, err
 	}
 	if db, ok := db.(*gxdb.LDBDatabase); ok {
-		db.Meter("klay-db-chaindata-")
+		db.Meter("klay/db/chaindata/")
 	}
 	return db, nil
 }

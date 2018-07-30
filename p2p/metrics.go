@@ -25,10 +25,10 @@ import (
 )
 
 var (
-	ingressConnectMeter = metrics.NewRegisteredMeter("p2p-InboundConnects", nil)
-	ingressTrafficMeter = metrics.NewRegisteredMeter("p2p-InboundTraffic", nil)
-	egressConnectMeter  = metrics.NewRegisteredMeter("p2p-OutboundConnects", nil)
-	egressTrafficMeter  = metrics.NewRegisteredMeter("p2p-OutboundTraffic", nil)
+	ingressConnectMeter = metrics.NewRegisteredMeter("p2p/InboundConnects", nil)
+	ingressTrafficMeter = metrics.NewRegisteredMeter("p2p/InboundTraffic", nil)
+	egressConnectMeter  = metrics.NewRegisteredMeter("p2p/OutboundConnects", nil)
+	egressTrafficMeter  = metrics.NewRegisteredMeter("p2p/OutboundTraffic", nil)
 )
 
 // meteredConn is a wrapper around a network TCP connection that meters both the

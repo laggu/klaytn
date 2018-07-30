@@ -188,11 +188,11 @@ func (db *LDBDatabase) Meter(prefix string) {
 	}
 
 	// Initialize all the metrics collector at the requested prefix
-	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compact-time", nil)
-	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compact-input", nil)
-	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compact-output", nil)
-	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk-read", nil)
-	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk-write", nil)
+	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compact/time", nil)
+	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compact/input", nil)
+	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compact/output", nil)
+	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
+	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
 
 	// Create a quit channel for the periodic collector and run it
 	db.quitLock.Lock()
