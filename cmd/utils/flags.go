@@ -311,6 +311,11 @@ var (
 		Name: metrics.PrometheusExporterFlag,
 		Usage: "Enable prometheus exporter",
 	}
+	PrometheusExporterPortFlag = cli.IntFlag {
+		Name: metrics.PrometheusExporterPortFlag,
+		Usage: "Prometheus exporter listening port",
+		Value: 61001,
+	}
 	FakePoWFlag = cli.BoolFlag{
 		Name:  "fakepow",
 		Usage: "Disables proof-of-work verification",

@@ -105,6 +105,7 @@ var (
 		utils.EthStatsURLFlag,
 		utils.MetricsEnabledFlag,
 		utils.PrometheusExporterFlag,
+		utils.PrometheusExporterPortFlag,
 		utils.FakePoWFlag,
 		utils.NoCompactionFlag,
 		utils.GpoBlocksFlag,
@@ -166,7 +167,8 @@ func init() {
 				"", prometheus.DefaultRegisterer, 3*time.Second)
 			go pClient.UpdatePrometheusMetrics()
 			http.Handle("/metrics", promhttp.Handler())
-			go http.ListenAndServe(":61001", nil)
+			port := ctx.GlobalInt(metrics.PrometheusExporterPortFlag)
+			go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 		}
 
 		// Start system runtime metrics collection

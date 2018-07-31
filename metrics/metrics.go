@@ -26,6 +26,7 @@ var EnabledPrometheusExport = false
 const MetricsEnabledFlag = "metrics"
 const DashboardEnabledFlag = "dashboard"
 const PrometheusExporterFlag = "prometheus"
+const PrometheusExporterPortFlag = "prometheusport"
 
 // Init enables or disables the metrics system. Since we need this to run before
 // any other code gets to create meters and timers, we'll actually do an ugly hack
