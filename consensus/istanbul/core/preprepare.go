@@ -35,6 +35,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			}
 
 			c.broadcast(&message{
+				Hash: request.Proposal.ParentHash(),
 				Code: msgProofPreprepare,
 				Msg:  proofpreprepare,
 			})
@@ -166,6 +167,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				c.sendEvent(backlogEvent{
 					src: src,
 					msg: msg,
+					Hash: msg.Hash,
 				})
 			})
 		} else {
