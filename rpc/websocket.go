@@ -66,20 +66,44 @@ var upgrader = fastws.Upgrader{
 }
 
 func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
+
+	// TODO-GX handle websocket protocol
+	protocol := ctx.Request.Header.Peek("Sec-WebSocket-Protocol")
+	if protocol != nil {
+		ctx.Response.Header.Set("Sec-WebSocket-Protocol",string(protocol))
+	}
+
 	err := upgrader.Upgrade(ctx,func(conn *fastws.Conn) {
 		//Create a custom encode/decode pair to enforce payload size and number encoding
 		encoder := func(v interface{}) error {
-			return fastws.WriteJSON(conn, v)
+			msg, err := json.Marshal(v)
+			if err != nil {
+				return err
+			}
+			err = conn.WriteMessage(websocket.TextFrame, msg)
+			conn.Close()
+			if err != nil {
+				return err
+			}
+			//return fastws.WriteJSON(conn, v)
+			return err
 		}
 		decoder := func(v interface{}) error {
-			return fastws.ReadJSON(conn, v)
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return err
+			}
+			dec := json.NewDecoder(bytes.NewReader(data))
+			dec.UseNumber()
+			return dec.Decode(v)
+			//return fastws.ReadJSON(conn, v)
 		}
 
 		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()),maxRequestContentLength)
 		srv.ServeCodec(NewCodec(&httpReadWriteNopCloser{reader, ctx.Response.BodyWriter()}, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 	})
 	if err != nil {
-		log.Error("fail to upgrade","err",err)
+		log.Error("FastWebsocketHandler fail to upgrade message","err",err)
 		return
 	}
 }
