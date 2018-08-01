@@ -19,7 +19,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/golang-lru"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/mclock"
@@ -50,14 +49,31 @@ var (
 	ErrNoGenesis = errors.New("Genesis not found in chain")
 )
 
+// TODO-GX: Below should be handled by ini or other configurations.
 const (
-	bodyCacheLimit      = 256
-	blockCacheLimit     = 256
-	maxFutureBlocks     = 256
-	maxTimeFutureBlocks = 30
-	badBlockLimit       = 10
-	triesInMemory       = 128
+	bodyCacheType          = common.LRUCacheType
+	bodyRLPCacheType       = common.LRUCacheType
+	blockCacheType         = common.LRUCacheType
+	futureBlocksCacheType  = common.LRUCacheType
+	badBlocksCacheType     = common.LRUCacheType
+	recentTransactionsType = common.LRUCacheType
+	recentReceiptsType     = common.LRUCacheType
+)
 
+// Below is the list of the constants for cache size.
+// TODO-GX: Below should be handled by ini or other configurations.
+const (
+	maxBodyCache          = 256
+	maxBlockCache         = 256
+	maxFutureBlocks       = 256
+	maxTimeFutureBlocks   = 30
+	maxBadBlocks          = 10
+	maxRecentTransactions = 80960
+	maxRecentReceipts     = 80960
+)
+
+const (
+	triesInMemory       = 128
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
 )
@@ -110,10 +126,10 @@ type BlockChain struct {
 	currentFastBlock atomic.Value // Current head of the fast-sync chain (may be above the block chain!)
 
 	stateCache   state.Database // State database to reuse between imports (contains state cache)
-	bodyCache    *lru.Cache     // Cache for the most recent block bodies
-	bodyRLPCache *lru.Cache     // Cache for the most recent block bodies in RLP encoded format
-	blockCache   *lru.Cache     // Cache for the most recent entire blocks
-	futureBlocks *lru.Cache     // future blocks are blocks added for later processing
+	bodyCache    common.Cache     // Cache for the most recent block bodies
+	bodyRLPCache common.Cache     // Cache for the most recent block bodies in RLP encoded format
+	blockCache   common.Cache     // Cache for the most recent entire blocks
+	futureBlocks common.Cache     // future blocks are blocks added for later processing
 
 	quit    chan struct{} // blockchain quit channel
 	running int32         // running must be called atomically
@@ -126,10 +142,10 @@ type BlockChain struct {
 	validator Validator // block and state validator interface
 	vmConfig  vm.Config
 
-	badBlocks *lru.Cache // Bad block cache
+	badBlocks common.Cache // Bad block cache
 
-	recentTransactions *lru.Cache // recent insertblock
-	recentReceipts     *lru.Cache // recent receipts
+	recentTransactions common.Cache // recent insertblock
+	recentReceipts     common.Cache // recent receipts
 
 
 }
@@ -144,14 +160,14 @@ func NewBlockChain(db gxdb.Database, cacheConfig *CacheConfig, chainConfig *para
 			TrieTimeLimit: 5 * time.Minute,
 		}
 	}
-	bodyCache, _ := lru.New(bodyCacheLimit)
-	bodyRLPCache, _ := lru.New(bodyCacheLimit)
-	blockCache, _ := lru.New(blockCacheLimit)
-	futureBlocks, _ := lru.New(maxFutureBlocks)
-	badBlocks, _ := lru.New(badBlockLimit)
+	bodyCache, _ := common.NewCache(bodyCacheType, maxBodyCache)
+	bodyRLPCache, _ := common.NewCache(bodyRLPCacheType, maxBodyCache)
+	blockCache, _ := common.NewCache(blockCacheType, maxBlockCache)
+	futureBlocks, _ := common.NewCache(futureBlocksCacheType, maxFutureBlocks)
+	badBlocks, _ := common.NewCache(badBlocksCacheType, maxBadBlocks)
 
-	recentTransactions, _ := lru.New(80960)
-	recentReceips, _ := lru.New(80960)
+	recentTransactions, _ := common.NewCache(recentTransactionsType, maxRecentTransactions)
+	recentReceipts, _ := common.NewCache(recentReceiptsType, maxRecentReceipts)
 
 	bc := &BlockChain{
 		chainConfig:  chainConfig,
@@ -169,7 +185,7 @@ func NewBlockChain(db gxdb.Database, cacheConfig *CacheConfig, chainConfig *para
 		badBlocks:    badBlocks,
 		// tx, receipt cache
 		recentTransactions: recentTransactions,
-		recentReceipts: recentReceips,
+		recentReceipts: recentReceipts,
 	}
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
