@@ -217,12 +217,13 @@ func prepareHeader(bc *core.BlockChain, genesis_addr *common.Address, validators
 }
 
 func makeTransactions(from *accounts.Account, startNonce uint64, ks *keystore.KeyStore,
-	chainID *big.Int,
-	addressBalanceMap *AddressBalanceMap,
+	chainID *big.Int, bc *core.BlockChain, privKey *ecdsa.PrivateKey,
+	header *types.Header, addressBalanceMap *AddressBalanceMap,
 	tb testing.TB) (types.Transactions, error) {
 
 	txs := make(types.Transactions, 0, len(addressBalanceMap.balanceMap))
 	nonce := startNonce
+	signer := types.MakeSigner(bc.Config(), header.Number)
 	for a, _ := range addressBalanceMap.balanceMap {
 		amount := big.NewInt(rand.Int63n(10))
 		amount = amount.Add(amount, big.NewInt(1))
@@ -231,7 +232,7 @@ func makeTransactions(from *accounts.Account, startNonce uint64, ks *keystore.Ke
 		data := []byte{}
 
 		tx := types.NewTransaction(nonce, a, amount, gasLimit, gasPrice, data)
-		signedTx, err := ks.SignTxWithPassphrase(*from, "", tx, chainID)
+		signedTx, err := types.SignTx(tx, signer, privKey)
 		if err != nil {
 			return nil, err
 		}
@@ -508,7 +509,8 @@ func TestValueTransfer(t *testing.T) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// 12. Make a set of transactions
-	transactions, err := makeTransactions(&genesis_acc, 0, ks, chainID, addressBalanceMap, t)
+	transactions, err := makeTransactions(&genesis_acc, 0, ks, chainID,
+		bc, validatorPrivKeys[0], header, addressBalanceMap, t)
 	if err != nil {
 		t.Fatal(err)
 	}
