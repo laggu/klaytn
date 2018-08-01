@@ -557,16 +557,14 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		// We use the eip155 signer regardless of the current hf.
 		from, _ := types.Sender(env.signer, tx)
 
-		// NOTE-GX Since Klaytn is always in EIP155, the below replay protection code is not needed.
-		// TODO-GX Remove the code commented below.
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		//if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
-		//	log.Trace("Ignoring reply protected transaction", "hash", tx.Hash())
-		//	//log.Error("#### worker.commitTransaction","tx.protected",tx.Protected(),"tx.hash",tx.Hash(),"nonce",tx.Nonce(),"to",tx.To())
-		//	txs.Pop()
-		//	continue
-		//}
+		if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
+			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash())
+			//log.Error("#### worker.commitTransaction","tx.protected",tx.Protected(),"tx.hash",tx.Hash(),"nonce",tx.Nonce(),"to",tx.To())
+			txs.Pop()
+			continue
+		}
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 

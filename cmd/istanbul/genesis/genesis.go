@@ -28,6 +28,8 @@ func New(options ...Option) *core.Genesis {
 		Alloc:      make(core.GenesisAlloc),
 		Config: &params.ChainConfig{
 			ChainID:        big.NewInt(2017),
+			HomesteadBlock: big.NewInt(1),
+			EIP155Block:    big.NewInt(3),
 			Istanbul: &params.IstanbulConfig{
 				ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 				Epoch:          istanbul.DefaultConfig.Epoch,

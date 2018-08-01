@@ -86,13 +86,22 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 		return nil, 0, err
 	}
 	// Update the state with pending changes
-	statedb.Finalise(true)
+	root := statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+	// TODO-GX We have to decide whether to re-enable Byzantium feature here as below.
+	/*
+	var root []byte
+	if config.IsByzantium(header.Number) {
+		statedb.Finalise(true)
+	} else {
+		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+	}
+	*/
+
 	*usedGas += gas
 
-	// NOTE-GX The immediate root is not saved according to EIP-658.
-	// Create a new receipt for the transaction, storing the gas used by the tx
+	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(nil, failed, *usedGas)
+	receipt := types.NewReceipt(root, failed, *usedGas)
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
