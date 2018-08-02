@@ -111,7 +111,9 @@ func NewHeaderChain(chainDb gxdb.Database, config *params.ChainConfig, engine co
 // GetBlockNumber retrieves the block number belonging to the given hash
 // from the cache or database
 func (hc *HeaderChain) GetBlockNumber(hash common.Hash) *uint64 {
+	cacheGetBlockNumberTryMeter.Mark(1)
 	if cached, ok := hc.numberCache.Get(hash); ok {
+		cacheGetBlockNumberHitMeter.Mark(1)
 		number := cached.(uint64)
 		return &number
 	}
@@ -311,7 +313,9 @@ func (hc *HeaderChain) GetBlockHashesFromHash(hash common.Hash, max uint64) []co
 // database by hash and number, caching it if found.
 func (hc *HeaderChain) GetTd(hash common.Hash, number uint64) *big.Int {
 	// Short circuit if the td's already in the cache, retrieve otherwise
+	cacheGetTDTryMeter.Mark(1)
 	if cached, ok := hc.tdCache.Get(hash); ok {
+		cacheGetTDHitMeter.Mark(1)
 		return cached.(*big.Int)
 	}
 	td := rawdb.ReadTd(hc.chainDb, hash, number)
@@ -345,7 +349,9 @@ func (hc *HeaderChain) WriteTd(hash common.Hash, number uint64, td *big.Int) err
 // caching it if found.
 func (hc *HeaderChain) GetHeader(hash common.Hash, number uint64) *types.Header {
 	// Short circuit if the header's already in the cache, retrieve otherwise
+	cacheGetHeaderTryMeter.Mark(1)
 	if header, ok := hc.headerCache.Get(hash); ok {
+		cacheGetHeaderHitMeter.Mark(1)
 		return header.(*types.Header)
 	}
 	header := rawdb.ReadHeader(hc.chainDb, hash, number)
