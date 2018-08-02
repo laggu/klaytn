@@ -1059,12 +1059,11 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"logsBloom":         receipt.Bloom,
 	}
 
-	// Assign receipt status or post state.
+	// Assign post state if exists.
 	if len(receipt.PostState) > 0 {
 		fields["root"] = hexutil.Bytes(receipt.PostState)
-	} else {
-		fields["status"] = hexutil.Uint(receipt.Status)
 	}
+	fields["status"] = hexutil.Uint(receipt.Status)
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
 	}
@@ -1111,12 +1110,11 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 		"logsBloom":         receipt.Bloom,
 	}
 
-	// Assign receipt status or post state.
+	// Assign post state if exists.
 	if len(receipt.PostState) > 0 {
 		fields["root"] = hexutil.Bytes(receipt.PostState)
-	} else {
-		fields["status"] = hexutil.Uint(receipt.Status)
 	}
+	fields["status"] = hexutil.Uint(receipt.Status)
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
 	}
