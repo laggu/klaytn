@@ -125,6 +125,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		pcCopy  uint64 // needed for the deferred Tracer
 		gasCopy uint64 // for Tracer to log gas remaining before execution
 		logged  bool   // deferred Tracer should ignore already logged steps
+		allocatedMemorySize = uint64(mem.Len()) // Currently allocated memory size
 	)
 	contract.Input = input
 
@@ -168,6 +169,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		var memorySize uint64
+		var extraSize uint64
 		// calculate the new memory size and expand the memory to fit
 		// the operation
 		if operation.memorySize != nil {
@@ -180,6 +182,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
 				return nil, errGasUintOverflow
 			}
+			if allocatedMemorySize < memorySize {
+				extraSize = memorySize - allocatedMemorySize
+			}
 		}
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
@@ -187,8 +192,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if err != nil || !contract.UseGas(cost) {
 			return nil, ErrOutOfGas
 		}
-		if memorySize > 0 {
-			mem.Resize(memorySize)
+		if extraSize > 0 {
+			mem.Increase(extraSize)
+			allocatedMemorySize = uint64(mem.Len())
 		}
 
 		if in.cfg.Debug {

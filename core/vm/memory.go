@@ -62,6 +62,11 @@ func (m *Memory) Set32(offset uint64, val *big.Int) {
 	math.ReadBits(val, m.store[offset:offset+32])
 }
 
+// Increase increases the memory with size bytes
+func (m *Memory) Increase(size uint64) {
+	m.store = append(m.store, make([]byte, size)...)
+}
+
 // Resize resizes the memory to size
 func (m *Memory) Resize(size uint64) {
 	if uint64(m.Len()) < size {
