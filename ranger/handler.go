@@ -108,7 +108,7 @@ func(re *RangerEngine) Finalize(chain consensus.ChainReader, header *types.Heade
 	state.AddBalance(common.HexToAddress(contract.PIReserveAddr), rewardcontract)
 
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
-	header.Root = state.IntermediateRoot(false) // ##### chain.Config().IsEIP158(header.Number))
+	header.Root = state.IntermediateRoot(true) // ##### chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 
 	// Assemble and return the final block for sealing
