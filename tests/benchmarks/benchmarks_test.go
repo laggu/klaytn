@@ -39,3 +39,51 @@ func BenchmarkInterpreterMload100000(bench *testing.B) {
 		intrp.Run(contract, nil)
 	}
 }
+
+func BenchmarkInterpreterMstore100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize memory with memory write (PUSH PUSH MSTORE)
+	//       Loop 10000 times for below code
+	//              memory write 10 times //  (PUSH PUSH MSTORE) x 10
+	//
+	code := common.Hex2Bytes("60ca60205260005b612710811015630000004f5760fe60205260fe60205260fe60205260fe60205260fe60205260fe60205260fe60205260fe60205260fe60205260fe6020526001016300000007565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterSload100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize (PUSH SSTORE)
+	//       Loop 10000 times for below code
+	//              Read from storage 10 times //  (PUSH SLOAD POP) x 10
+	//
+	code := common.Hex2Bytes("60ca60205560005b612710811015630000004557602054506020545060205450602054506020545060205450602054506020545060205450602054506001016300000007565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterSstore100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize (PUSH)
+	//       Loop 10000 times for below code
+	//              Write to storage 10 times //  (PUSH PUSH SSTORE) x 10
+	//
+	code := common.Hex2Bytes("60005b612710811015630000004a5760fe60205560fe60205560fe60205560fe60205560fe60205560fe60205560fe60205560fe60205560fe60205560fe6020556001016300000002565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
