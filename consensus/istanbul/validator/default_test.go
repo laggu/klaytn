@@ -186,42 +186,6 @@ func TestStickyProposer(t *testing.T) {
 	}
 }
 
-func TestRoundRobinPolicy(t *testing.T) {
-	var validators []istanbul.Validator
-	const ValCnt = 20
-
-	// Create 100 validators with random addresses
-	b := []byte{}
-	addr15 := common.Address{}
-	for i := 0; i < ValCnt; i++ {
-		key, _ := crypto.GenerateKey()
-		addr := crypto.PubkeyToAddress(key.PublicKey)
-		if i == 15 {
-			addr15 = addr
-		}
-		val := New(addr)
-		validators = append(validators, val)
-		b = append(b, val.Address().Bytes()...)
-	}
-
-	// Create ValidatorSet
-	valSet := NewSet(ExtractValidators(b), istanbul.RoundRobin)
-	if valSet == nil {
-		t.Errorf("the validator byte array cannot be parsed")
-		t.FailNow()
-	}
-
-	// Check round-robin
-	for i := 0; i < ValCnt-1; i++ {
-		valSet.CalcProposer(addr15,uint64(i))
-		val := valSet.GetProposer()
-		idx, _ := valSet.GetByAddress(val.Address())
-		if idx == 15 {
-			t.Errorf("next validator should is not same to previous validator %d", i)
-		}
-	}
-}
-
 func TestSubSetList(t *testing.T) {
 	b1 := common.Hex2Bytes(testAddress)
 	b2 := common.Hex2Bytes(testAddress2)
