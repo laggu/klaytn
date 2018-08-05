@@ -205,6 +205,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 		env   = NewEVM(Context{}, nil, params.TestChainConfig, Config{})
 		stack = newstack()
 	)
+	env.interpreter.intPool = poolOfIntPools.get()
 	// convert args
 	byteArgs := make([][]byte, len(args))
 	for i, arg := range args {
@@ -220,6 +221,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 		op(&pc, env, nil, nil, stack)
 		stack.pop()
 	}
+	poolOfIntPools.put(env.interpreter.intPool)
 }
 
 func BenchmarkOpAdd64(b *testing.B) {
@@ -459,6 +461,7 @@ func BenchmarkOpMstore(bench *testing.B) {
 		stack = newstack()
 		mem   = NewMemory()
 	)
+	env.interpreter.intPool = poolOfIntPools.get()
 	mem.Resize(64)
 	pc := uint64(0)
 	memStart := big.NewInt(0)
@@ -469,4 +472,5 @@ func BenchmarkOpMstore(bench *testing.B) {
 		stack.pushN(value, memStart)
 		opMstore(&pc, env, nil, mem, stack)
 	}
+	poolOfIntPools.put(env.interpreter.intPool)
 }
