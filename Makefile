@@ -34,6 +34,9 @@ evm:
 all:
 	build/env.sh go run build/ci.go install
 
+test:
+	build/env.sh go run build/ci.go test
+
 clean:
 	./build/clean_go_build_cache.sh
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*
