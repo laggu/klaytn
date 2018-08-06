@@ -195,10 +195,9 @@ func TestPrintTrie(t *testing.T) {
 		if len(nodeIt.stack) > 1 {
 			parent := &nodeIt.stack[len(nodeIt.stack)-2].node
 			pId = nodeIntMap.Get(parent)
-			switch node := (*parent).(type) {
+			switch (*parent).(type) {
 			case *fullNode:
 				edgeLabel = key_nibbles[len(key_nibbles)-1:]
-				node = node
 			default:
 			}
 		}

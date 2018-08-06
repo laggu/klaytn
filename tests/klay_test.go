@@ -502,7 +502,7 @@ func TestValueTransfer(t *testing.T) {
 	////////////////////////////////////////////////////////////////////////////////
 	// 11. Prepare istanbul block header
 	if err := engine.Prepare(bc, header); err != nil {
-		fmt.Errorf("Failed to prepare header for mining.\n")
+		err = fmt.Errorf("Failed to prepare header for mining. %s\n", err)
 		t.Fatal(err)
 	}
 	profile.Prof.Profile("main_prepareHeader", time.Now().Sub(start))

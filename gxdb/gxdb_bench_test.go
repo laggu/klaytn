@@ -1094,9 +1094,10 @@ func benchmarkBatchPartitionGoRoutine(b *testing.B, opts *opt.Options, valueLeng
 		var wait sync.WaitGroup
 		wait.Add(numPartitions)
 		for _, batch := range batches {
+			curBatch := batch
 			go func() {
 				defer wait.Done()
-				batch.Write()
+				curBatch.Write()
 			}()
 		}
 		wait.Wait()

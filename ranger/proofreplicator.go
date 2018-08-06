@@ -35,7 +35,11 @@ func (rn *Ranger) proofReplication() error {
 	gasprice := big.NewInt(0)
 	data := []byte{}
 
-	currentProof := types.Proof{common.Address{},big.NewInt(0),0}
+	currentProof := types.Proof{
+		Solver: common.Address{},
+		BlockNumber: big.NewInt(0),
+		Nonce: 0,
+	}
 
 	for {
 		select {
