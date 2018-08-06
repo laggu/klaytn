@@ -25,7 +25,6 @@ import (
 	"testing"
 	"math/big"
 	"math/rand"
-	"io/ioutil"
 	"crypto/ecdsa"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
@@ -97,35 +96,6 @@ func NewDatabase(dbtype string) (db gxdb.Database, err error) {
 	return
 }
 
-// Copied from node/config.go
-func makeAccountManager(conf *node.Config) (*accounts.Manager, string, error) {
-	scryptN, scryptP, keydir, err := conf.AccountConfig()
-	var ephemeral string
-	if keydir == "" {
-		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "go-klaytn-keystore")
-		ephemeral = keydir
-	}
-
-	if err != nil {
-		return nil, "", err
-	}
-	if err := os.MkdirAll(keydir, 0700); err != nil {
-		return nil, "", err
-	}
-	// Assemble the account manager and supported backends
-	backends := []accounts.Backend{
-		keystore.NewKeyStore(keydir, scryptN, scryptP),
-	}
-	return accounts.NewManager(backends...), ephemeral, nil
-}
-
-// fetchKeystore retrieves the encrypted keystore from the account manager.
-// Copied from internal/gxapi/api.go
-func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
-	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-}
-
 // Copied from consensus/istanbul/backend/engine.go
 func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 	var buf bytes.Buffer
@@ -174,18 +144,22 @@ func initBlockchain(conf *node.Config, db gxdb.Database, coinbase *common.Addres
 	return chain, nil
 }
 
-func createAccounts(max_accounts int, ks *keystore.KeyStore, tb testing.TB) {
-	num_accounts := len(ks.Accounts())
-	for i := 0; i < max_accounts-num_accounts; i++ {
-		acc, err := ks.NewAccount("")
-		if err != nil {
-			tb.Fatal(err)
-		}
+func createAccounts(num_accounts int) ([]*common.Address, []*ecdsa.PrivateKey, error) {
+	accs := make([]*common.Address, num_accounts)
+	privKeys := make([]*ecdsa.PrivateKey, num_accounts)
 
-		tb.Logf("creating account %s, remaining %d accounts...\n",
-			acc.Address.Hex(), max_accounts-num_accounts-i)
+	for i := 0; i < num_accounts; i++ {
+		k, err := crypto.GenerateKey()
+		if err != nil {
+			return nil, nil, err
+		}
+		keyAddr := crypto.PubkeyToAddress(k.PublicKey)
+
+		accs[i] = &keyAddr
+		privKeys[i] = k
 	}
 
+	return accs, privKeys, nil
 }
 
 func getPrivateKey(ks *keystore.KeyStore, account accounts.Account) (*keystore.Key, error) {
@@ -216,10 +190,9 @@ func prepareHeader(bc *core.BlockChain, genesis_addr *common.Address, validators
 	}, nil
 }
 
-func makeTransactions(from *accounts.Account, startNonce uint64, ks *keystore.KeyStore,
+func makeTransactions(from *common.Address, startNonce uint64,
 	chainID *big.Int, bc *core.BlockChain, privKey *ecdsa.PrivateKey,
-	header *types.Header, addressBalanceMap *AddressBalanceMap,
-	tb testing.TB) (types.Transactions, error) {
+	header *types.Header, addressBalanceMap *AddressBalanceMap) (types.Transactions, error) {
 
 	txs := make(types.Transactions, 0, len(addressBalanceMap.balanceMap))
 	nonce := startNonce
@@ -236,8 +209,6 @@ func makeTransactions(from *accounts.Account, startNonce uint64, ks *keystore.Ke
 		if err != nil {
 			return nil, err
 		}
-
-		tb.Logf("transferring (%d) %s -> %s (%s)\n", nonce, from.Address.Hex(), a.Hex(), amount.String())
 
 		txs = append(txs, signedTx)
 
@@ -414,14 +385,7 @@ func TestValueTransfer(t *testing.T) {
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 1. Create the account manager
-	am, _, err := makeAccountManager(&conf)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	////////////////////////////////////////////////////////////////////////////////
-	// 2. Create a database
+	// 1. Create a database
 	chainDb, err := NewDatabase(gxdb.LEVELDB)
 	if err != nil {
 		t.Fatal(err)
@@ -431,42 +395,40 @@ func TestValueTransfer(t *testing.T) {
 	defer os.RemoveAll("chaindata")
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 3. Create accounts as many as max_accounts
-	max_accounts := 10
+	// 2. Create accounts as many as max_accounts
+	max_accounts := 1000
 	num_validators := 4
 
 	// TODO: make num_validator and max_accounts as arguments
 	if num_validators > max_accounts {
 		t.Fatalf("max_accounts should be bigger num_validators!!")
 	}
-	ks := fetchKeystore(am)
-	createAccounts(max_accounts, ks, t)
-
-	accounts := ks.Accounts()
-
-	////////////////////////////////////////////////////////////////////////////////
-	// 4. Set the genesis account
-	genesis_acc := accounts[0]
-	genesis_addr := genesis_acc.Address
-
-	////////////////////////////////////////////////////////////////////////////////
-	// 5. Use first 4 accounts as vaildators
-	validatorPrivKeys := make([]*ecdsa.PrivateKey, num_validators)
-	validatorAddresses := make([]common.Address, num_validators)
-	for i := 0; i < num_validators; i++ {
-		k, _ := getPrivateKey(ks, accounts[i])
-		validatorPrivKeys[i] = k.PrivateKey
-		validatorAddresses[i] = accounts[i].Address
+	addrs, privKeys, err := createAccounts(max_accounts)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 6. Setup istanbul consensus backend
+	// 3. Set the genesis address
+	genesis_addr := *addrs[0]
+
+	////////////////////////////////////////////////////////////////////////////////
+	// 4. Use first 4 accounts as vaildators
+	validatorPrivKeys := make([]*ecdsa.PrivateKey, num_validators)
+	validatorAddresses := make([]common.Address, num_validators)
+	for i := 0; i < num_validators; i++ {
+		validatorPrivKeys[i] = privKeys[i]
+		validatorAddresses[i] = *addrs[i]
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// 5. Setup istanbul consensus backend
 	start := time.Now()
 	engine := istanbulBackend.New(genesis_addr, genesis_addr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDb)
 	profile.Prof.Profile("main_istanbul_engine_creation", time.Now().Sub(start))
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 7. Make a blockchain
+	// 6. Make a blockchain
 	start = time.Now()
 	bc, err := initBlockchain(&conf, chainDb, &genesis_addr, validatorAddresses, engine)
 	if err != nil {
@@ -476,23 +438,23 @@ func TestValueTransfer(t *testing.T) {
 	profile.Prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 8. Get block state just after the genesis block
+	// 7. Get block state just after the genesis block
 	statedb, err := bc.State()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 9. Initialize address-balance map for verification
+	// 8. Initialize address-balance map for verification
 	addressBalanceMap := NewAddressBalanceMap()
 	for i := 0; i < max_accounts; i++ {
-		addressBalanceMap.Set(&accounts[i].Address, statedb.GetBalance(accounts[i].Address))
+		addressBalanceMap.Set(addrs[i], statedb.GetBalance(*addrs[i]))
 	}
 
 	chainID := bc.Config().ChainID
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 10. Set the block header
+	// 9. Set the block header
 	start = time.Now()
 	header, err := prepareHeader(bc, &genesis_addr, validatorAddresses)
 	if err != nil {
@@ -500,7 +462,7 @@ func TestValueTransfer(t *testing.T) {
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 11. Prepare istanbul block header
+	// 10. Prepare istanbul block header
 	if err := engine.Prepare(bc, header); err != nil {
 		err = fmt.Errorf("Failed to prepare header for mining. %s\n", err)
 		t.Fatal(err)
@@ -508,9 +470,9 @@ func TestValueTransfer(t *testing.T) {
 	profile.Prof.Profile("main_prepareHeader", time.Now().Sub(start))
 
 	////////////////////////////////////////////////////////////////////////////////
-	// 12. Make a set of transactions
-	transactions, err := makeTransactions(&genesis_acc, 0, ks, chainID,
-		bc, validatorPrivKeys[0], header, addressBalanceMap, t)
+	// 11. Make a set of transactions
+	transactions, err := makeTransactions(&genesis_addr, 0, chainID,
+		bc, validatorPrivKeys[0], header, addressBalanceMap)
 	if err != nil {
 		t.Fatal(err)
 	}
