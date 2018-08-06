@@ -9,20 +9,12 @@ jobs:
     working_directory: /go/src/github.com/ground-x/go-gxplatform
     steps:
       - checkout
-      - run: make all
-
-  test:
-    docker:
-    - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/ground-x/go-gxplatform
-    steps:
-    - checkout
-    - run:
-        name: "Run tests"
-        command: |
-          cd tests
-          git clone https://$TEST_TOKEN@github.com/ground-x/tests.git testdata
-          go test
+      - run:
+          name: "Build and run tests"
+          command: |
+            make all
+            git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/tests.git tests/testdata
+            make test
 
   dockernize:
     docker:
@@ -52,12 +44,9 @@ workflows:
   build_and_dockernize:
     jobs:
       - build
-      - test:
-          requires:
-            - build
       - dockernize:
           requires:
-            - test
+            - build
           filters:
             branches:
               only:
