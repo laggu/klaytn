@@ -1176,7 +1176,115 @@ func Benchmark_Batch_Partitioned_Len250_100kRows_Partition16_NoGoRoutine(b *test
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 
+///////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////// Ideal Batch Size Tests Begins //////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
 
+type idealBatchBM struct {
+	name      string
+	totalSize int
+	batchSize int
+	rowSize   int
+}
+
+func benchmarkIdealBatchSize(b *testing.B, bm idealBatchBM) {
+	b.StopTimer()
+
+	dir := genTempDirForTestDB(b)
+	defer os.RemoveAll(dir)
+
+	opts := getKlayLDBOptions()
+	db, err := NewLDBDatabaseWithOptions(dir, opts)
+	require.NoError(b, err)
+	defer db.Close()
+
+	b.StartTimer()
+
+	var wg sync.WaitGroup
+	numBatches := bm.totalSize / bm.batchSize
+	wg.Add(numBatches)
+	for i := 0; i < numBatches; i++ {
+		batch := db.NewBatch()
+		for k := 0; k < bm.batchSize; k++ {
+			batch.Put(randStrBytes(32), randStrBytes(bm.rowSize))
+		}
+
+		go func(currBatch Batch) {
+			defer wg.Done()
+			currBatch.Write()
+		}(batch)
+	}
+	wg.Wait()
+}
+
+func Benchmark_IdealBatchSize(b *testing.B) {
+	b.StopTimer()
+	// please change below rowSize to change the size of an input row
+	// key = 32 bytes, value = rowSize bytes
+	const rowSize = 250
+
+	benchmarks := [] idealBatchBM{
+		// to run test with total size smaller than 1,000 rows
+		// go test -bench=Benchmark_IdealBatchSize/SmallBatches
+		{"SmallBatches_100Rows_10Batch_250Bytes", 100, 10, rowSize},
+		{"SmallBatches_100Rows_20Batch_250Bytes", 100, 20, rowSize},
+		{"SmallBatches_100Rows_25Batch_250Bytes", 100, 25, rowSize},
+		{"SmallBatches_100Rows_50Batch_250Bytes", 100, 50, rowSize},
+		{"SmallBatches_100Rows_100Batch_250Bytes", 100, 100, rowSize},
+
+		{"SmallBatches_200Rows_10Batch_250Bytes", 200, 10, rowSize},
+		{"SmallBatches_200Rows_20Batch_250Bytes", 200, 20, rowSize},
+		{"SmallBatches_200Rows_25Batch_250Bytes", 200, 25, rowSize},
+		{"SmallBatches_200Rows_50Batch_250Bytes", 200, 50, rowSize},
+		{"SmallBatches_200Rows_100Batch_250Bytes", 200, 100, rowSize},
+
+		{"SmallBatches_400Rows_10Batch_250Bytes", 400, 10, rowSize},
+		{"SmallBatches_400Rows_20Batch_250Bytes", 400, 20, rowSize},
+		{"SmallBatches_400Rows_25Batch_250Bytes", 400, 25, rowSize},
+		{"SmallBatches_400Rows_50Batch_250Bytes", 400, 50, rowSize},
+		{"SmallBatches_400Rows_100Batch_250Bytes", 400, 100, rowSize},
+
+		{"SmallBatches_800Rows_10Batch_250Bytes", 800, 10, rowSize},
+		{"SmallBatches_800Rows_20Batch_250Bytes", 800, 20, rowSize},
+		{"SmallBatches_800Rows_25Batch_250Bytes", 800, 25, rowSize},
+		{"SmallBatches_800Rows_50Batch_250Bytes", 800, 50, rowSize},
+		{"SmallBatches_800Rows_100Batch_250Bytes", 800, 100, rowSize},
+
+		// to run test with total size between than 1k rows ~ 10k rows
+		// go test -bench=Benchmark_IdealBatchSize/LargeBatches
+		{"LargeBatches_1kRows_100Batch_250Bytes", 1000, 100, rowSize},
+		{"LargeBatches_1kRows_200Batch_250Bytes", 1000, 200, rowSize},
+		{"LargeBatches_1kRows_250Batch_250Bytes", 1000, 250, rowSize},
+		{"LargeBatches_1kRows_500Batch_250Bytes", 1000, 500, rowSize},
+		{"LargeBatches_1kRows_1000Batch_250Bytes", 1000, 1000, rowSize},
+
+		{"LargeBatches_2kRows_100Batch_250Bytes", 2000, 100, rowSize},
+		{"LargeBatches_2kRows_200Batch_250Bytes", 2000, 200, rowSize},
+		{"LargeBatches_2kRows_250Batch_250Bytes", 2000, 250, rowSize},
+		{"LargeBatches_2kRows_500Batch_250Bytes", 2000, 500, rowSize},
+		{"LargeBatches_2kRows_1000Batch_250Bytes", 2000, 1000, rowSize},
+
+		{"LargeBatches_4kRows_100Batch_250Bytes", 4000, 100, rowSize},
+		{"LargeBatches_4kRows_200Batch_250Bytes", 4000, 200, rowSize},
+		{"LargeBatches_4kRows_250Batch_250Bytes", 4000, 250, rowSize},
+		{"LargeBatches_4kRows_500Batch_250Bytes", 4000, 500, rowSize},
+		{"LargeBatches_4kRows_1000Batch_250Bytes", 4000, 1000, rowSize},
+
+		{"LargeBatches_8kRows_100Batch_250Bytes", 8000, 100, rowSize},
+		{"LargeBatches_8kRows_200Batch_250Bytes", 8000, 200, rowSize},
+		{"LargeBatches_8kRows_250Batch_250Bytes", 8000, 250, rowSize},
+		{"LargeBatches_8kRows_500Batch_250Bytes", 8000, 500, rowSize},
+		{"LargeBatches_8kRows_1000Batch_250Bytes", 8000, 1000, rowSize},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for m := 0; m < b.N; m++ {
+				benchmarkIdealBatchSize(b, bm)
+			}
+		})
+	}
+}
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789"
 const (
