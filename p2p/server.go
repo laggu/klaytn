@@ -645,9 +645,14 @@ running:
 				srv.log.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
 				go srv.runPeer(p)
 				peers[c.id] = p
+
 				if p.Inbound() {
 					inboundCount++
 				}
+
+				peerCountGauge.Update(int64(len(peers)))
+				peerInCountGauge.Update(int64(inboundCount))
+				peerOutCountGauge.Update(int64(len(peers) - inboundCount))
 			}
 			// The dialer logic relies on the assumption that
 			// dial tasks complete after the peer has been added or
@@ -662,9 +667,14 @@ running:
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
 			delete(peers, pd.ID())
+
 			if pd.Inbound() {
 				inboundCount--
 			}
+
+			peerCountGauge.Update(int64(len(peers)))
+			peerInCountGauge.Update(int64(inboundCount))
+			peerOutCountGauge.Update(int64(len(peers) - inboundCount))
 		}
 	}
 
