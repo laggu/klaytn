@@ -87,3 +87,115 @@ func BenchmarkInterpreterSstore100000(bench *testing.B) {
 		intrp.Run(contract, nil)
 	}
 }
+
+func BenchmarkInterpreterAdd100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize value (PUSH)
+	//       Loop 10000 times for below code
+	//              initialize value and increment 10 times //  (PUSH x 1) + ((PUSH ADD) x 10)
+	//
+	code := common.Hex2Bytes("60ca60205260005b612710811015630000003e576000600101600101600101600101600101600101600101600101600101600101506001016300000007565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterPush1Mul1byte100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize value (PUSH)
+	//       Loop 10000 times for below code
+	//              initialize value and increment 10 times //  (PUSH1 PUSH1 MUL POP) x 10
+	//
+	code := common.Hex2Bytes("60005b61271081101563000000545760ca60fe025060ca60fe025060ca60fe025060ca60fe025060ca60fe025060ca60fe025060ca60fe025060ca60fe025060ca60fe025060ca60fe02506001016300000002565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterPush5Mul1byte100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize value (PUSH)
+	//       Loop 10000 times for below code
+	//              initialize value and increment 10 times //  (PUSH5 PUSH5 MUL POP) x 10
+	//
+	code := common.Hex2Bytes("60005b61271081101563000000a4576400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506400000000ca6400000000fe02506001016300000002565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterPush5Mul5bytes100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize value (PUSH)
+	//       Loop 10000 times for below code
+	//              initialize value and increment 10 times //  (PUSH5 PUSH5 MUL POP) x 10
+	//
+	code := common.Hex2Bytes("60005b61271081101563000000a45764cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe00000025064cafebabe0064caffe0000002506001016300000002565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterPush1Div1byte100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize value (PUSH)
+	//       Loop 10000 times for below code
+	//              initialize value and increment 10 times //  (PUSH1 PUSH1 DIV POP) x 10
+	//
+	code := common.Hex2Bytes("60005b61271081101563000000545760ca60fe045060ca60fe045060ca60fe045060ca60fe045060ca60fe045060ca60fe045060ca60fe045060ca60fe045060ca60fe045060ca60fe04506001016300000002565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterPush5Div1byte100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize value (PUSH)
+	//       Loop 10000 times for below code
+	//              initialize value and increment 10 times //  (PUSH5 PUSH5 DIV POP) x 10
+	//
+	code := common.Hex2Bytes("60005b61271081101563000000a4576400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506400000000ca6400000000fe04506001016300000002565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterPush5Div5bytes100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize value (PUSH)
+	//       Loop 10000 times for below code
+	//              initialize value and increment 10 times //  (PUSH5 PUSH5 DIV POP) x 10
+	//
+	code := common.Hex2Bytes("60005b61271081101563000000a45764cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe00000045064cafebabe0064caffe0000004506001016300000002565b00")
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
