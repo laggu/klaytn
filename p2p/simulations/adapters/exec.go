@@ -328,6 +328,9 @@ func (n *ExecNode) GetPeerCount() int {
 	return 0
 }
 
+func (n *ExecNode) DisconnectPeer(destID discover.NodeID) {
+
+}
 
 func init() {
 	// register a reexec function to start a devp2p node when the current

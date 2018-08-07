@@ -228,6 +228,7 @@ loop:
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()
+	log.Debug(fmt.Sprintf("peer(%p) run stopped", p))
 	return remoteRequested, err
 }
 
@@ -240,13 +241,16 @@ func (p *Peer) pingLoop() {
 		case <-ping.C:
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
+				log.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
 				return
 			}
 			ping.Reset(pingInterval)
 		case <-p.closed:
+			log.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
 			return
 		}
 	}
+
 }
 
 func (p *Peer) readLoop(errc chan<- error) {
@@ -255,11 +259,13 @@ func (p *Peer) readLoop(errc chan<- error) {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
 			errc <- err
+			log.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
 			errc <- err
+			log.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
 			return
 		}
 	}
@@ -353,6 +359,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 				p.log.Trace(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
 			}
 			p.protoErr <- err
+			p.log.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))
 			p.wg.Done()
 		}()
 	}
@@ -459,3 +466,8 @@ func (p *Peer) Info() *PeerInfo {
 	}
 	return info
 }
+
+func (p *Peer) ConnType() ConnType {
+	return p.rw.conntype
+}
+

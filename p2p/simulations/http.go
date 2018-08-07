@@ -193,6 +193,9 @@ func (c *Client) DisconnectAll() error {
 	return c.Post(fmt.Sprintf("/disconnectall"), nil, nil)
 }
 
+func (c *Client) DisconnectOnly(nodeID, peerID string) error {
+	return c.Post(fmt.Sprintf("/nodes/%s/disconnectonly/%s", nodeID, peerID), nil, nil)
+}
 
 // StartNode starts a node
 func (c *Client) StartNode(nodeID string) error {
@@ -304,6 +307,7 @@ func NewServer(network *Network) *Server {
 	s.POST("/nodes/:nodeid/stop", s.StopNode)
 	s.POST("/nodes/:nodeid/conn/:peerid", s.ConnectNode)
 	s.DELETE("/nodes/:nodeid/conn/:peerid", s.DisconnectNode)
+	s.POST("/nodes/:nodeid/disconnectonly/:peerid", s.DisconnectOnly)
 	s.GET("/nodes/:nodeid/rpc", s.NodeRPC)
 	s.POST("/connectall", s.ConnectAll)
 	s.POST("/disconnectall", s.DisconnectAll)
@@ -651,6 +655,18 @@ func (s *Server) DisconnectAll(w http.ResponseWriter, req *http.Request) {
 
 	// TODO: check whether all connections are successful or not
 	s.JSON(w, http.StatusOK, "disconnected all nodes")
+}
+
+func (s *Server) DisconnectOnly(w http.ResponseWriter, req *http.Request) {
+	node := req.Context().Value("node").(*Node)
+	peer := req.Context().Value("peer").(*Node)
+
+	if err := s.network.DisconnectOnly(node.ID(), peer.ID()); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.JSON(w, http.StatusOK, node.NodeInfo())
 }
 
 // ConnectNode connects a node to a peer node

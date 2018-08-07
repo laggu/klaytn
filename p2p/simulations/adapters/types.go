@@ -68,6 +68,9 @@ type Node interface {
 
 	// GetPeerCount returns peer count of server in the node
 	GetPeerCount() int
+
+	// DisconnectPeer close connection to peer of destID
+	DisconnectPeer(destID discover.NodeID)
 }
 
 // NodeAdapter is used to create Nodes in a simulation network

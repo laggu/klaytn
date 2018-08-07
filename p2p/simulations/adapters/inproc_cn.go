@@ -79,8 +79,6 @@ func (s *CnAdapter) NewNode(config *NodeConfig) (Node, error) {
 		}
 	}
 
-
-	// TODO enable p2p listener
 	n, err := node.New(&node.Config{
 		P2P: p2p.Config{
 			PrivateKey:      config.PrivateKey, // from p2psim client
@@ -91,7 +89,9 @@ func (s *CnAdapter) NewNode(config *NodeConfig) (Node, error) {
 			EnableMsgEvents: config.EnableMsgEvents,
 		},
 		//Logger: log.New("node.id", id.String()),
-		Logger: log.New(),
+		Logger: log.New("node.name", config.Name),
+
+		//Logger: log.New(),
 	})
 	if err != nil {
 		return nil, err
@@ -345,6 +345,14 @@ func (sn *CnNode) GetPeerCount() int {
 		panic("node not running")
 	}
 	return srv.PeerCount()
+}
+
+func (sn *CnNode) DisconnectPeer(destID discover.NodeID) {
+	srv := sn.Server()
+	if srv == nil {
+		panic("node not running")
+	}
+	srv.Disconnect(destID)
 }
 
 /*

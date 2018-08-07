@@ -16,6 +16,7 @@ import (
 	"github.com/ground-x/go-gxplatform/p2p/simulations"
 	"github.com/ground-x/go-gxplatform/p2p/simulations/adapters"
 	"github.com/ground-x/go-gxplatform/rpc"
+	"time"
 )
 
 var adapterType = flag.String("adapter", "cnsim", `node adapter to use (one of "sim", "exec" or "docker")`)
@@ -134,8 +135,9 @@ const (
 func (p *cnSimService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 	// log := p.log.New("peer.id", peer.ID())
 
+
 	errC := make(chan error)
-	/*
+
 	go func() {
 		for range time.Tick(10 * time.Second) {
 			log.Info("sending ping")
@@ -165,6 +167,6 @@ func (p *cnSimService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 			}
 		}
 	}()
-	*/
+
 	return <-errC
 }

@@ -9,8 +9,10 @@ main() {
     fail "missing p2psim binary (you need to build cmd/p2psim and put it in \$PATH)"
   fi
 
-  info "creating 10 nodes"
-  for i in $(seq 1 10); do
+  NODECNT=$1
+
+  info "creating $NODECNT nodes"
+  for i in $(seq 1 $NODECNT); do
     p2psim node create --name "$(node_name $i)"
     p2psim node start "$(node_name $i)"
   done

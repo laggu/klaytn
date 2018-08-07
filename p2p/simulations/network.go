@@ -329,7 +329,7 @@ func(net *Network) DisconnectAll() error {
 
 			err := net.Disconnect(oneID, otherID)
 			if err != nil {
-				log.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
+				log.Error(fmt.Sprintf("Error in DisconnectAll() : %s", err))
 				continue;
 			}
 		}
@@ -338,9 +338,47 @@ func(net *Network) DisconnectAll() error {
 }
 
 
+// this function does not remove peer, just close the connection for target
+func (net *Network) DisconnectOnly(one, other discover.NodeID) error {
+	node := net.getNode(one)
+	if node == nil {
+		return fmt.Errorf("node %v does not exist", one)
+	}
+	node.Node.DisconnectPeer(other)
+	return nil
+}
+
 
 type ConnResult struct {
 	succMap map[discover.NodeID]bool
+	mux sync.Mutex
+}
+
+func (cr *ConnResult) reset() {
+	cr.mux.Lock()
+	defer cr.mux.Unlock()
+
+	for k := range cr.succMap {
+		delete(cr.succMap, k)
+	}
+}
+
+func (cr *ConnResult) disconnect(oneID discover.NodeID) {
+	cr.mux.Lock()
+	defer cr.mux.Unlock()
+
+	delete(cr.succMap, oneID)
+}
+
+func (cr *ConnResult) outCnt() {
+	log.Debug(fmt.Sprintf("ConnResult = %v", len(cr.succMap)))
+}
+
+func (cr *ConnResult) output() {
+	cr.outCnt()
+	for k, v := range cr.succMap {
+		log.Debug(fmt.Sprintf("## key = %v, value = %v", k, v))
+	}
 }
 
 var tcResult = &ConnResult{
@@ -349,6 +387,9 @@ var tcResult = &ConnResult{
 
 // temporary function
 func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
+	tcResult.mux.Lock()
+	defer tcResult.mux.Unlock()
+
 	node := net.getNode(oneID)
 	if node == nil {
 		log.Debug(fmt.Sprintf("### CheckComplation - cannot find nodeID %v", oneID))
@@ -364,11 +405,9 @@ func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
 			log.Debug(fmt.Sprintf("#### PEER Connection done: Peer Count = %d, %v", peerCnt, node.Node.NodeInfo()))
 		}
 		if len(net.Nodes) == len(tcResult.succMap) {
-			log.Debug(fmt.Sprintf("###### Peer connection test succeed #####"))
+			log.Debug(fmt.Sprintf("###### net(%p)Peer connection test succeed #####", net))
 
-			for k, v := range tcResult.succMap {
-				log.Debug(fmt.Sprintf("## key = %v, value = %v", k, v))
-			}
+			tcResult.output()
 		}
 	}
 }
@@ -420,12 +459,19 @@ func (net *Network) DidDisconnect(one, other discover.NodeID) error {
 	if conn == nil {
 		return fmt.Errorf("connection between %v and %v does not exist", one, other)
 	}
-	if !conn.Up {
-		return fmt.Errorf("%v and %v already disconnected", one, other)
-	}
+
+	//if !conn.Up {
+	//	return fmt.Errorf("%v and %v already disconnected", one, other)
+	//}
 	conn.Up = false
 	conn.initiated = time.Now().Add(-DialBanTimeout)
 	net.events.Send(NewEvent(conn))
+
+	//
+	tcResult.outCnt()
+	tcResult.disconnect(one)
+	tcResult.outCnt()
+
 	return nil
 }
 

@@ -33,6 +33,7 @@ import (
 	"github.com/ground-x/go-gxplatform/p2p/netutil"
 
 	"github.com/ground-x/go-gxplatform/common"
+	"bufio"
 )
 
 const (
@@ -61,6 +62,11 @@ type Config struct {
 	// MaxPeers is the maximum number of peers that can be
 	// connected. It must be greater than zero.
 	MaxPeers int
+
+	// ConnectionType is a type of connection like Consensus or Normal
+	// described at ConnType
+	// When the connection is established, each peer exchange each connection type
+	ConnectionType ConnType
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
@@ -172,6 +178,7 @@ type Server struct {
 	posthandshake chan *conn
 	addpeer       chan *conn
 	delpeer       chan peerDrop
+	discpeer       chan discover.NodeID
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
 	log           log.Logger
@@ -192,7 +199,16 @@ const (
 	staticDialedConn
 	inboundConn
 	trustedConn
+	skipConnType
 )
+
+type ConnType int
+
+
+const (
+	ConnTypeUndefined ConnType = 0
+)
+
 
 // conn wraps a network connection with information gathered
 // during the two handshakes.
@@ -200,6 +216,7 @@ type conn struct {
 	fd net.Conn
 	transport
 	flags connFlag
+	conntype ConnType	  // valid after the encryption handshake at the inbound connection case
 	cont  chan error      // The run loop uses cont to signal errors to SetupConn.
 	id    discover.NodeID // valid after the encryption handshake
 	caps  []Cap           // valid after the protocol handshake
@@ -222,11 +239,70 @@ type transport interface {
 
 func (c *conn) String() string {
 	s := c.flags.String()
+	s += " " + c.conntype.String()
 	if (c.id != discover.NodeID{}) {
 		s += " " + c.id.String()
 	}
 	s += " " + c.fd.RemoteAddr().String()
 	return s
+}
+
+func (ct ConnType) Valid() bool {
+	if int(ct) > 255 {
+		return false
+	}
+	return true
+}
+
+func (c *conn) Inbound() bool {
+	return c.flags&inboundConn != 0
+}
+
+func (c *conn) skipconntype() bool {
+	return c.flags&skipConnType != 0
+}
+
+func (c *conn) writeType(myConnType ConnType) error {
+	if !myConnType.Valid() {
+		return errors.New("Connection Type is too big")
+	}
+	byteW := byte(int(myConnType))
+	if _, err := c.fd.Write([]byte{byteW}); err != nil {
+		return err;
+	}
+	return nil
+}
+
+func (c *conn) readType() (error, byte) {
+	r := bufio.NewReader(c.fd)
+	byteVal, err := r.ReadByte()
+	//println(fmt.Sprintf("VAL: %d\n", byteVal))
+	if err != nil {
+		return err, 0
+	}
+	return nil, byteVal
+}
+
+func (c *conn) doHandshakeConnType(myConnType ConnType) error {
+	if c.skipconntype() {
+		return nil
+	}
+	var e error
+	var b byte
+	werr := make(chan error, 1)
+	go func() { werr <- c.writeType(myConnType) }()
+	if e, b = c.readType(); e != nil {
+		<-werr // make sure the write terminates too
+		return e
+	}
+	if err := <-werr; err != nil {
+		return err
+	}
+	c.conntype = ConnType(int(b))
+	if !c.conntype.Valid() {
+		return errors.New("Connection received invalid connection type from remote peer")
+	}
+	return nil
 }
 
 func (f connFlag) String() string {
@@ -246,6 +322,11 @@ func (f connFlag) String() string {
 	if s != "" {
 		s = s[1:]
 	}
+	return s
+}
+
+func (c ConnType) String() string {
+	s := fmt.Sprintf("-%d", int(c))
 	return s
 }
 
@@ -398,6 +479,11 @@ func (srv *Server) Start() (err error) {
 	if srv.PrivateKey == nil {
 		return fmt.Errorf("Server.PrivateKey must be set to a non-nil key")
 	}
+
+	if !srv.ConnectionType.Valid() {
+		return fmt.Errorf("Invalid connection type speficied")
+	}
+
 	if srv.newTransport == nil {
 		srv.newTransport = newRLPX
 	}
@@ -412,6 +498,7 @@ func (srv *Server) Start() (err error) {
 	srv.removestatic = make(chan *discover.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
+	srv.discpeer = make(chan discover.NodeID)
 
 	var (
 		conn *net.UDPConn
@@ -675,6 +762,11 @@ running:
 			peerCountGauge.Update(int64(len(peers)))
 			peerInCountGauge.Update(int64(inboundCount))
 			peerOutCountGauge.Update(int64(len(peers) - inboundCount))
+		case nid := <-srv.discpeer:
+			if p, ok := peers[nid]; ok {
+				p.Disconnect(DiscRequested)
+				p.log.Debug(fmt.Sprintf("disconnect peer"))
+			}
 		}
 	}
 
@@ -807,7 +899,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	if self == nil {
 		return errors.New("shutdown")
 	}
-	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, cont: make(chan error)}
+	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error)}
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
@@ -824,8 +916,18 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *discover.Node) e
 	if !running {
 		return errServerStopped
 	}
-	// Run the encryption handshake.
+
 	var err error
+
+	// Run the connection type handshake
+	if err = c.doHandshakeConnType(srv.ConnectionType); err != nil {
+		srv.log.Error("Failed ReadConnType", "addr", c.fd.RemoteAddr(), "conn", c.flags,
+			"conntype", c.conntype, "err",  err)
+		return err
+	}
+	srv.log.Trace("Connection Type Trace", "addr", c.fd.RemoteAddr(), "conn", c.flags, "ConnType", c.conntype.String())
+
+	// Run the encryption handshake.
 	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
 		srv.log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		return err
@@ -977,4 +1079,8 @@ func (srv *Server) PeersInfo() []*PeerInfo {
 		}
 	}
 	return infos
+}
+
+func (srv *Server) Disconnect(destID discover.NodeID) {
+	srv.discpeer <- destID
 }

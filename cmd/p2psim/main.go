@@ -146,6 +146,11 @@ func main() {
 					Action:    disconnectAll,
 				},
 				{
+					Name:      "disconnectonly",
+					Usage:     "close the connection of node to target node",
+					Action:    disconnectOnly,
+				},
+				{
 					Name:      "show",
 					ArgsUsage: "<node>",
 					Usage:     "show node information",
@@ -335,6 +340,23 @@ func disconnectAll(ctx *cli.Context) error {
 		return err
 	}
 	fmt.Fprintln(ctx.App.Writer, "DisconnectAll")
+	return nil
+}
+
+func disconnectOnly(ctx *cli.Context) error {
+	args := ctx.Args()
+	if len(args) != 2 {
+		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
+	}
+
+	nodeName := args[0]
+	peerName := args[1]
+
+	err := client.DisconnectOnly(nodeName, peerName)
+	if (err != nil) {
+		return err
+	}
+	fmt.Fprintln(ctx.App.Writer, "DisconnectOnly")
 	return nil
 }
 

@@ -59,12 +59,19 @@ func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer)) *Server {
 	server := &Server{
 		Config:       config,
 		newPeerHook:  pf,
-		newTransport: func(fd net.Conn) transport { return newTestTransport(id, fd) },
+		newTransport: func(fd net.Conn) transport {
+			return newTestTransport(id, fd)
+	},
 	}
 	if err := server.Start(); err != nil {
 		t.Fatalf("Could not start server: %v", err)
 	}
 	return server
+}
+
+func makeconn(fd net.Conn, id discover.NodeID) *conn {
+	tx := newTestTransport(id, fd)
+	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: ConnTypeUndefined, id: id, cont: make(chan error)}
 }
 
 func TestServerListen(t *testing.T) {
@@ -88,6 +95,9 @@ func TestServerListen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not dial: %v", err)
 	}
+	c := makeconn(conn, randomID())
+	c.doHandshakeConnType(c.conntype)
+
 	defer conn.Close()
 
 	select {
@@ -96,11 +106,12 @@ func TestServerListen(t *testing.T) {
 			t.Errorf("peer started with wrong conn: got %v, want %v",
 				peer.LocalAddr(), conn.RemoteAddr())
 		}
+
 		peers := srv.Peers()
 		if !reflect.DeepEqual(peers, []*Peer{peer}) {
 			t.Errorf("Peers mismatch: got %v, want %v", peers, []*Peer{peer})
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Error("server did not accept within one second")
 	}
 }
@@ -119,6 +130,9 @@ func TestServerDial(t *testing.T) {
 			t.Error("accept error:", err)
 			return
 		}
+
+		c := makeconn(conn, randomID())
+		c.doHandshakeConnType(c.conntype)
 		accepted <- conn
 	}()
 
@@ -323,7 +337,7 @@ func TestServerAtCap(t *testing.T) {
 	newconn := func(id discover.NodeID) *conn {
 		fd, _ := net.Pipe()
 		tx := newTestTransport(id, fd)
-		return &conn{fd: fd, transport: tx, flags: inboundConn, id: id, cont: make(chan error)}
+		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: ConnTypeUndefined, id: id, cont: make(chan error)}
 	}
 
 	// Inject a few connections to fill up the peer set.
@@ -370,40 +384,40 @@ func TestServerSetupConn(t *testing.T) {
 		},
 		{
 			tt:           &setupTransport{id: id, encHandshakeErr: errors.New("read error")},
-			flags:        inboundConn,
+			flags:        inboundConn|skipConnType,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: errors.New("read error"),
 		},
 		{
 			tt:           &setupTransport{id: id},
 			dialDest:     &discover.Node{ID: randomID()},
-			flags:        dynDialedConn,
+			flags:        dynDialedConn|skipConnType,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, phs: &protoHandshake{ID: randomID()}},
 			dialDest:     &discover.Node{ID: id},
-			flags:        dynDialedConn,
+			flags:        dynDialedConn|skipConnType,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, protoHandshakeErr: errors.New("foo")},
 			dialDest:     &discover.Node{ID: id},
-			flags:        dynDialedConn,
+			flags:        dynDialedConn|skipConnType,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: errors.New("foo"),
 		},
 		{
 			tt:           &setupTransport{id: srvid, phs: &protoHandshake{ID: srvid}},
-			flags:        inboundConn,
+			flags:        inboundConn|skipConnType,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: DiscSelf,
 		},
 		{
 			tt:           &setupTransport{id: id, phs: &protoHandshake{ID: id}},
-			flags:        inboundConn,
+			flags:        inboundConn|skipConnType,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: DiscUselessPeer,
 		},
