@@ -153,6 +153,9 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	}
 	rawdb.WriteHeader(hc.chainDb, header)
 
+	// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	//         Later we may be able to refine below code.
+
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf

@@ -736,6 +736,8 @@ func (bc *BlockChain) procFutureBlocks() {
 // WriteStatus status of write
 type WriteStatus byte
 
+// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+//                  Later we may be able to remove SideStatTy.
 const (
 	NonStatTy WriteStatus = iota
 	CanonStatTy
@@ -997,6 +999,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		}
 	}
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
+
+	// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	//         Later we may be able to refine below code.
 
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.

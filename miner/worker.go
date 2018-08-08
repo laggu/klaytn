@@ -256,6 +256,8 @@ func (self *worker) update() {
 			}
 			self.commitNewWork()
 
+			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			//         Later we may be able to refine below code.
 			// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
 			self.uncleMu.Lock()
@@ -333,6 +335,10 @@ func (self *worker) wait() {
 				continue
 			}
 			work.stateMu.Unlock()
+
+			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			//         Later we may be able to refine below code.
+
 			// check if canon block and write transactions
 			if stat == core.CanonStatTy {
 				// implicit by posting ChainHeadEvent
@@ -357,6 +363,8 @@ func (self *worker) wait() {
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
+			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			//         Later we may be able to refine below code.
 			if mustCommitNewWork {
 				self.commitNewWork()
 			}
