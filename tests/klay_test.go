@@ -45,12 +45,10 @@ import (
 	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
 	)
 
-const max_accounts = 2000
-const num_validators = 4
-const num_generated_blocks = 3
+const transactionsJournalFilename = "transactions.rlp"
 
-// If you don't want to remove 'chaindata', set remove_chain_data_on_exit = false
-const remove_chaindata_on_exit = true
+// If you don't want to remove 'chaindata', set removeChaindataOnExit = false
+const removeChaindataOnExit = true
 
 type BCData struct {
 	bc *core.BlockChain
@@ -219,11 +217,11 @@ func initBlockchain(conf *node.Config, db gxdb.Database, coinbaseAddrs []*common
 	return chain, nil
 }
 
-func createAccounts(num_accounts int) ([]*common.Address, []*ecdsa.PrivateKey, error) {
-	accs := make([]*common.Address, num_accounts)
-	privKeys := make([]*ecdsa.PrivateKey, num_accounts)
+func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, error) {
+	accs := make([]*common.Address, numAccounts)
+	privKeys := make([]*ecdsa.PrivateKey, numAccounts)
 
-	for i := 0; i < num_accounts; i++ {
+	for i := 0; i < numAccounts; i++ {
 		k, err := crypto.GenerateKey()
 		if err != nil {
 			return nil, nil, err
@@ -291,35 +289,6 @@ func makeTransactionsFrom(accountMap *AccountMap, from common.Address, privKey *
 		txs = append(txs, signedTx)
 
 		nonce++
-	}
-
-	return txs, nil
-}
-
-func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privKeys []*ecdsa.PrivateKey,
-	signer types.Signer, toAddrs []*common.Address, amount *big.Int) (types.Transactions, error) {
-
-	txs := make(types.Transactions, 0, len(toAddrs))
-	for i, from := range fromAddrs {
-		nonce := (*accountMap)[*from].nonce
-
-		txamount := amount
-		if txamount == nil {
-			txamount = big.NewInt(rand.Int63n(10))
-			txamount = txamount.Add(txamount, big.NewInt(1))
-		}
-
-		var gasLimit uint64 = 1000000
-		gasPrice := new(big.Int).SetInt64(0)
-		data := []byte{}
-
-		tx := types.NewTransaction(nonce, *toAddrs[i], txamount, gasLimit, gasPrice, data)
-		signedTx, err := types.SignTx(tx, signer, privKeys[i])
-		if err != nil {
-			return nil, err
-		}
-
-		txs = append(txs, signedTx)
 	}
 
 	return txs, nil
@@ -505,12 +474,17 @@ func sealBlock(b *types.Block, privKeys []*ecdsa.PrivateKey) (*types.Block, erro
 	return b.WithSeal(header), nil
 }
 
-func initializeBC() (*BCData, error) {
+func initializeBC(maxAccounts, numValidators int) (*BCData, error) {
 	conf := node.DefaultConfig
 
 	// Remove leveldb dir if exists
 	if _, err := os.Stat("chaindata"); err == nil {
 		os.RemoveAll("chaindata")
+	}
+
+	// Remove transactions.rlp if exists
+	if _, err := os.Stat(transactionsJournalFilename); err == nil {
+		os.RemoveAll(transactionsJournalFilename)
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -520,12 +494,11 @@ func initializeBC() (*BCData, error) {
 		return nil, err
 	}
 	////////////////////////////////////////////////////////////////////////////////
-	// Create accounts as many as max_accounts
-	// TODO: make num_validator and max_accounts as arguments
-	if num_validators > max_accounts {
-		return nil, errors.New("max_accounts should be bigger num_validators!!")
+	// Create accounts as many as maxAccounts
+	if numValidators > maxAccounts {
+		return nil, errors.New("maxAccounts should be bigger numValidators!!")
 	}
-	addrs, privKeys, err := createAccounts(max_accounts)
+	addrs, privKeys, err := createAccounts(maxAccounts)
 	if err != nil {
 		return nil, err
 	}
@@ -536,9 +509,9 @@ func initializeBC() (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Use first 4 accounts as vaildators
-	validatorPrivKeys := make([]*ecdsa.PrivateKey, num_validators)
-	validatorAddresses := make([]common.Address, num_validators)
-	for i := 0; i < num_validators; i++ {
+	validatorPrivKeys := make([]*ecdsa.PrivateKey, numValidators)
+	validatorAddresses := make([]common.Address, numValidators)
+	for i := 0; i < numValidators; i++ {
 		validatorPrivKeys[i] = privKeys[i]
 		validatorAddresses[i] = *addrs[i]
 	}
@@ -564,8 +537,9 @@ func shutdown(bcdata *BCData) {
 
 	bcdata.db.Close()
 	// Remove leveldb dir which was created for this test.
-	if remove_chaindata_on_exit {
+	if removeChaindataOnExit {
 		os.RemoveAll("chaindata")
+		os.RemoveAll(transactionsJournalFilename)
 	}
 }
 
@@ -573,9 +547,13 @@ func shutdown(bcdata *BCData) {
 // TestValueTransfer
 ////////////////////////////////////////////////////////////////////////////////
 func TestValueTransfer(t *testing.T) {
+	testValueTransfer(t, 1000, 4, 3)
+}
+
+func testValueTransfer(t *testing.T, numMaxAccounts, numValidators, numGeneratedBlocks int) {
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := initializeBC()
+	bcdata, err := initializeBC(numMaxAccounts, numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -590,7 +568,7 @@ func TestValueTransfer(t *testing.T) {
 	}
 	profile.Prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	for i := 0; i < num_generated_blocks; i++ {
+	for i := 0; i < numGeneratedBlocks; i++ {
 		//fmt.Printf("iteration %d\n", i)
 
 		// Make a set of transactions
