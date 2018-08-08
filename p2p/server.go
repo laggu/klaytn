@@ -199,7 +199,7 @@ const (
 	staticDialedConn
 	inboundConn
 	trustedConn
-	skipConnType
+	skipConnType 			// skip connection handshaking in testing
 )
 
 type ConnType int
@@ -258,6 +258,7 @@ func (c *conn) Inbound() bool {
 	return c.flags&inboundConn != 0
 }
 
+// skip connection handshaking in testing
 func (c *conn) skipconntype() bool {
 	return c.flags&skipConnType != 0
 }
@@ -284,6 +285,7 @@ func (c *conn) readType() (error, byte) {
 }
 
 func (c *conn) doHandshakeConnType(myConnType ConnType) error {
+	// skip connection handshaking in testing
 	if c.skipconntype() {
 		return nil
 	}
