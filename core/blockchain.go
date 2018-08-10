@@ -19,7 +19,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/mclock"
 	"github.com/ground-x/go-gxplatform/consensus"
@@ -35,6 +34,7 @@ import (
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/rlp"
 	"github.com/ground-x/go-gxplatform/trie"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -73,7 +73,7 @@ const (
 )
 
 const (
-	triesInMemory       = 128
+	triesInMemory = 128
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
 )
@@ -126,10 +126,10 @@ type BlockChain struct {
 	currentFastBlock atomic.Value // Current head of the fast-sync chain (may be above the block chain!)
 
 	stateCache   state.Database // State database to reuse between imports (contains state cache)
-	bodyCache    common.Cache     // Cache for the most recent block bodies
-	bodyRLPCache common.Cache     // Cache for the most recent block bodies in RLP encoded format
-	blockCache   common.Cache     // Cache for the most recent entire blocks
-	futureBlocks common.Cache     // future blocks are blocks added for later processing
+	bodyCache    common.Cache   // Cache for the most recent block bodies
+	bodyRLPCache common.Cache   // Cache for the most recent block bodies in RLP encoded format
+	blockCache   common.Cache   // Cache for the most recent entire blocks
+	futureBlocks common.Cache   // future blocks are blocks added for later processing
 
 	quit    chan struct{} // blockchain quit channel
 	running int32         // running must be called atomically
@@ -146,7 +146,6 @@ type BlockChain struct {
 
 	recentTransactions common.Cache // recent insertblock
 	recentReceipts     common.Cache // recent receipts
-
 
 }
 
@@ -185,7 +184,7 @@ func NewBlockChain(db gxdb.Database, cacheConfig *CacheConfig, chainConfig *para
 		badBlocks:    badBlocks,
 		// tx, receipt cache
 		recentTransactions: recentTransactions,
-		recentReceipts: recentReceipts,
+		recentReceipts:     recentReceipts,
 	}
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
@@ -911,10 +910,10 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 }
 
 type TransactionLookup struct {
-	Tx          *types.Transaction
-	BlockHash   common.Hash
-	BlockIndex  uint64
-	Index       uint64
+	Tx         *types.Transaction
+	BlockHash  common.Hash
+	BlockIndex uint64
+	Index      uint64
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
@@ -964,8 +963,8 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		if current := block.NumberU64(); current > triesInMemory {
 			// If we exceeded our memory allowance, flush matured singleton nodes to disk
 			var (
-				nodes, imgs  = triedb.Size()
-				limit = common.StorageSize(bc.cacheConfig.TrieNodeLimit) * 1024 * 1024
+				nodes, imgs = triedb.Size()
+				limit       = common.StorageSize(bc.cacheConfig.TrieNodeLimit) * 1024 * 1024
 			)
 			if nodes > limit || imgs > 4*1024*1024 {
 				triedb.Cap(limit - gxdb.IdealBatchSize)
@@ -1026,7 +1025,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		// TODO-GX goroutine for performance
 		bc.recentReceipts.Add(block.Hash(), receipts)
 		for i, tx := range block.Transactions() {
-			bc.recentTransactions.Add(tx.Hash(),TransactionLookup{tx,block.Hash(),block.NumberU64(),uint64(i)})
+			bc.recentTransactions.Add(tx.Hash(), TransactionLookup{tx, block.Hash(), block.NumberU64(), uint64(i)})
 		}
 
 		status = CanonStatTy
@@ -1040,11 +1039,15 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Set new head.
 	if status == CanonStatTy {
 		bc.insert(block)
+		headBlockNumberGauge.Update(block.Number().Int64())
+		blockTxCountsMeter.Mark(int64(block.Transactions().Len()))
+		blockTxCountsCounter.Inc(int64(block.Transactions().Len()))
 	}
 	bc.futureBlocks.Remove(block.Hash())
 
-    elapsed := time.Since(start)
-	log.Debug("blockchain.writeblockwithstate","num",block.Number(),"parenthash",block.Header().ParentHash ,"txs",len(block.Transactions()),"elapsed",elapsed)
+	elapsed := time.Since(start)
+	log.Debug("blockchain.writeblockwithstate", "num", block.Number(), "parenthash", block.Header().ParentHash, "txs", len(block.Transactions()), "elapsed", elapsed)
+
 	return status, nil
 }
 

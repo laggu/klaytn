@@ -231,7 +231,7 @@ func (pool *TxPool) loop() {
 
 			if ev.Block != nil {
 				pool.mu.Lock()
-				log.Info("head","num",head.Number())
+				log.Info("head", "num", head.Number())
 				pool.homestead = true
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
@@ -252,6 +252,8 @@ func (pool *TxPool) loop() {
 			if pending != prevPending || queued != prevQueued || stales != prevStales {
 				log.Debug("Transaction pool status report", "executable", pending, "queued", queued, "stales", stales)
 				prevPending, prevQueued, prevStales = pending, queued, stales
+				txPoolPendingGauge.Update(int64(pending))
+				txPoolQueueGauge.Update(int64(queued))
 			}
 
 			// Handle inactive account transaction eviction
@@ -511,7 +513,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	if pool.currentMaxGas < tx.Gas() {
-		log.Error("tx_pool validateTx","currentMaxGa",pool.currentMaxGas,"tx.Gas",tx.Gas())
+		log.Error("tx_pool validateTx", "currentMaxGa", pool.currentMaxGas, "tx.Gas", tx.Gas())
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
@@ -532,7 +534,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		log.Error("[tx_pool] insufficient funds for cost(gas * price + value)","from",from, "balance",pool.currentState.GetBalance(from), "cost", tx.Cost())
+		log.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", pool.currentState.GetBalance(from), "cost", tx.Cost())
 		return ErrInsufficientFunds
 	}
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
