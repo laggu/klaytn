@@ -49,10 +49,6 @@ func (cache *lruCache) Add(key, value interface{}) (evicted bool) {
 
 func (cache *lruCache) Get(key interface{}) (value interface{}, ok bool) {
 	value, ok = cache.lru.Get(key)
-	cacheGetLRUTryMeter.Mark(1)
-	if ok {
-		cacheGetLRUHitMeter.Mark(1)
-	}
 	return
 }
 

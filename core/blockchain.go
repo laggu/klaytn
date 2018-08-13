@@ -523,12 +523,12 @@ func (bc *BlockChain) Genesis() *types.Block {
 // hash, caching it if found.
 func (bc *BlockChain) GetBody(hash common.Hash) *types.Body {
 	// Short circuit if the body's already in the cache, retrieve otherwise
-	cacheGetBlockBodyTryMeter.Mark(1)
 	if cached, ok := bc.bodyCache.Get(hash); ok {
 		cacheGetBlockBodyHitMeter.Mark(1)
 		body := cached.(*types.Body)
 		return body
 	}
+	cacheGetBlockBodyMissMeter.Mark(1)
 	number := bc.hc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
@@ -546,11 +546,11 @@ func (bc *BlockChain) GetBody(hash common.Hash) *types.Body {
 // caching it if found.
 func (bc *BlockChain) GetBodyRLP(hash common.Hash) rlp.RawValue {
 	// Short circuit if the body's already in the cache, retrieve otherwise
-	cacheGetBlockBodyRLPTryMeter.Mark(1)
 	if cached, ok := bc.bodyRLPCache.Get(hash); ok {
 		cacheGetBlockBodyRLPHitMeter.Mark(1)
 		return cached.(rlp.RawValue)
 	}
+	cacheGetBlockBodyRLPMissMeter.Mark(1)
 	number := bc.hc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
@@ -594,11 +594,11 @@ func (bc *BlockChain) HasBlockAndState(hash common.Hash, number uint64) bool {
 // caching it if found.
 func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 	// Short circuit if the block's already in the cache, retrieve otherwise
-	cacheGetBlockTryMeter.Mark(1)
 	if block, ok := bc.blockCache.Get(hash); ok {
 		cacheGetBlockHitMeter.Mark(1)
 		return block.(*types.Block)
 	}
+	cacheGetBlockMissMeter.Mark(1)
 	block := rawdb.ReadBlock(bc.db, hash, number)
 	if block == nil {
 		return nil
@@ -716,10 +716,11 @@ func (bc *BlockChain) Stop() {
 func (bc *BlockChain) procFutureBlocks() {
 	blocks := make([]*types.Block, 0, bc.futureBlocks.Len())
 	for _, hash := range bc.futureBlocks.Keys() {
-		cacheGetFutureBlockTryMeter.Mark(1)
 		if block, exist := bc.futureBlocks.Peek(hash); exist {
 			cacheGetFutureBlockHitMeter.Mark(1)
 			blocks = append(blocks, block.(*types.Block))
+		} else {
+			cacheGetFutureBlockMissMeter.Mark(1)
 		}
 	}
 	if len(blocks) > 0 {
@@ -1052,9 +1053,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 }
 
 func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
-	cacheGetRecentTransactionsTryMeter.Mark(1)
 	value, ok := bc.recentTransactions.Get(hash)
 	if !ok {
+		cacheGetRecentTransactionsMissMeter.Mark(1)
 		return nil, common.Hash{}, 0, 0
 	}
 	cacheGetRecentTransactionsHitMeter.Mark(1)
@@ -1063,9 +1064,9 @@ func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transactio
 }
 
 func (bc *BlockChain) GetReceiptInCache(blockHash common.Hash) (types.Receipts, error) {
-	cacheGetRecentReceiptsTryMeter.Mark(1)
 	value, ok := bc.recentReceipts.Get(blockHash)
 	if !ok {
+		cacheGetRecentReceiptsMissMeter.Mark(1)
 		return nil, nil
 	}
 	cacheGetRecentReceiptsHitMeter.Mark(1)
@@ -1507,11 +1508,12 @@ type BadBlockArgs struct {
 func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
 	headers := make([]BadBlockArgs, 0, bc.badBlocks.Len())
 	for _, hash := range bc.badBlocks.Keys() {
-		cacheGetBadBlockTryMeter.Mark(1)
 		if hdr, exist := bc.badBlocks.Peek(hash); exist {
 			cacheGetBadBlockHitMeter.Mark(1)
 			header := hdr.(*types.Header)
 			headers = append(headers, BadBlockArgs{header.Hash(), header})
+		} else {
+			cacheGetBadBlockMissMeter.Mark(1)
 		}
 	}
 	return headers, nil

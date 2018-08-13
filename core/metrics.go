@@ -5,34 +5,34 @@ import (
 )
 
 var (
-	cacheGetBlockBodyTryMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbody/try", nil)
+	cacheGetBlockBodyMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbody/miss", nil)
 	cacheGetBlockBodyHitMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbody/hit", nil)
 
-	cacheGetBlockBodyRLPTryMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/try", nil)
+	cacheGetBlockBodyRLPMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/miss", nil)
 	cacheGetBlockBodyRLPHitMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/hit", nil)
 
-	cacheGetBlockTryMeter = metrics.NewRegisteredMeter("klay/cache/get/block/try", nil)
+	cacheGetBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/block/miss", nil)
 	cacheGetBlockHitMeter = metrics.NewRegisteredMeter("klay/cache/get/block/hit", nil)
 
-	cacheGetFutureBlockTryMeter = metrics.NewRegisteredMeter("klay/cache/get/futureblock/try", nil)
+	cacheGetFutureBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/futureblock/miss", nil)
 	cacheGetFutureBlockHitMeter = metrics.NewRegisteredMeter("klay/cache/get/futureblock/hit", nil)
 
-	cacheGetBadBlockTryMeter = metrics.NewRegisteredMeter("klay/cache/get/badblock/try", nil)
+	cacheGetBadBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/badblock/miss", nil)
 	cacheGetBadBlockHitMeter = metrics.NewRegisteredMeter("klay/cache/get/badblock/hit", nil)
 
-	cacheGetRecentTransactionsTryMeter = metrics.NewRegisteredMeter("klay/cache/get/transactions/try", nil)
+	cacheGetRecentTransactionsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/transactions/miss", nil)
 	cacheGetRecentTransactionsHitMeter = metrics.NewRegisteredMeter("klay/cache/get/transactions/hit", nil)
 
-	cacheGetRecentReceiptsTryMeter = metrics.NewRegisteredMeter("klay/cache/get/receipts/try", nil)
+	cacheGetRecentReceiptsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/receipts/miss", nil)
 	cacheGetRecentReceiptsHitMeter = metrics.NewRegisteredMeter("klay/cache/get/receipts/hit", nil)
 
-	cacheGetHeaderTryMeter = metrics.NewRegisteredMeter("klay/cache/get/header/try", nil)
+	cacheGetHeaderMissMeter = metrics.NewRegisteredMeter("klay/cache/get/header/miss", nil)
 	cacheGetHeaderHitMeter = metrics.NewRegisteredMeter("klay/cache/get/header/hit", nil)
 
-	cacheGetTDTryMeter = metrics.NewRegisteredMeter("klay/cache/get/td/try", nil)
+	cacheGetTDMissMeter = metrics.NewRegisteredMeter("klay/cache/get/td/miss", nil)
 	cacheGetTDHitMeter = metrics.NewRegisteredMeter("klay/cache/get/td/hit", nil)
 
-	cacheGetBlockNumberTryMeter = metrics.NewRegisteredMeter("klay/cache/get/blocknumber/try", nil)
+	cacheGetBlockNumberMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blocknumber/miss", nil)
 	cacheGetBlockNumberHitMeter = metrics.NewRegisteredMeter("klay/cache/get/blocknumber/hit", nil)
 
 	headBlockNumberGauge = metrics.NewRegisteredGauge("blockchain/head/blocknumber", nil)
