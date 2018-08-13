@@ -165,6 +165,7 @@ func doInstall(cmdline []string) {
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
 		goinstall.Args = append(goinstall.Args, "-v")
+		//goinstall.Args = append(goinstall.Args, "-race")
 		goinstall.Args = append(goinstall.Args, packages...)
 		build.MustRun(goinstall)
 		return

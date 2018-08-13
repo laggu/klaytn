@@ -337,6 +337,9 @@ func (c *jsonCodec) Write(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
 
+	//if result, ok := res.(*jsonSuccessResponse); ok {
+	//	log.Error("response write","result",result.Result)
+	//}
 	return c.encode(res)
 }
 

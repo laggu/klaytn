@@ -688,6 +688,8 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		}
 
 	case msg.Code == TxMsg:
+		pm.txMsgLock.Lock()
+
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
@@ -705,6 +707,8 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 			p.MarkTransaction(tx.Hash())
 		}
 		pm.txpool.AddRemotes(txs)
+
+		pm.txMsgLock.Unlock()
 
 	// ranger node
 	case msg.Code == consensus.PoRSendMsg:

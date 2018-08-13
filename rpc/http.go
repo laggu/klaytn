@@ -160,7 +160,8 @@ func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Se
 	//handler := newCorsHandler(srv, cors)
 	//handler = newVHostHandler(vhosts, handler)
 
-	return &fasthttp.Server{Handler:srv.HandleFastHTTP}
+	// TODO-GX concurreny default (256 * 1024), goroutine limit (8192)
+	return &fasthttp.Server{Concurrency: 3000 , Handler:srv.HandleFastHTTP}
 }
 
 // ServeHTTP serves JSON-RPC requests over HTTP.

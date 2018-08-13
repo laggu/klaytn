@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"sort"
-	"sync"
+		"sync"
 	"time"
 
 	"github.com/ground-x/go-gxplatform/common"
@@ -16,6 +15,7 @@ import (
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/params"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"sort"
 )
 
 const (
@@ -146,6 +146,9 @@ type TxPool struct {
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
+	//TODO-GX
+	txMu     sync.RWMutex
+
 	pending map[common.Address]*txList         // All currently processable transactions
 	queue   map[common.Address]*txList         // Queued but non-processable transactions
 	beats   map[common.Address]time.Time       // Last heartbeat from each known account
@@ -231,7 +234,6 @@ func (pool *TxPool) loop() {
 
 			if ev.Block != nil {
 				pool.mu.Lock()
-				log.Info("head", "num", head.Number())
 				pool.homestead = true
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
@@ -361,6 +363,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))
 	senderCacher.recover(pool.signer, reinject)
+
+	//pool.mu.Lock()
+	//defer pool.mu.Unlock()
+
 	pool.addTxsLocked(reinject, false)
 
 	// validate the pool of pending transactions, this will remove
@@ -369,11 +375,13 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// higher gas price)
 	pool.demoteUnexecutables()
 
+	pool.txMu.Lock()
 	// Update all accounts to the latest known pending nonce
 	for addr, list := range pool.pending {
 		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
 		pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
 	}
+	pool.txMu.Unlock()
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
@@ -473,8 +481,10 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
+	//pool.mu.Lock()
+	//defer pool.mu.Unlock()
+	pool.txMu.Lock()
+	defer pool.txMu.Unlock()
 
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
@@ -862,6 +872,8 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
+	pool.txMu.Lock()
+	defer pool.txMu.Unlock()
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 
@@ -1042,6 +1054,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 // executable/pending queue and any subsequent transactions that become unexecutable
 // are moved back into the future queue.
 func (pool *TxPool) demoteUnexecutables() {
+	pool.txMu.Lock()
+	defer pool.txMu.Unlock()
 	// Iterate over all accounts and demote any non-executable transactions
 	for addr, list := range pool.pending {
 		nonce := pool.currentState.GetNonce(addr)

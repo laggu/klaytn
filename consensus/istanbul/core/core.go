@@ -162,6 +162,12 @@ func (c *core) commit() {
 			c.sendNextRoundChange()
 			return
 		}
+	} else {
+		// TODO-GX never happen, but if proposal is nil, mining is not working.
+		log.Error("istanbul.core current.Proposal is NULL")
+		c.current.UnlockHash() //Unlock block when insertion fails
+		c.sendNextRoundChange()
+		return
 	}
 }
 

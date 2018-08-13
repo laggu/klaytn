@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-)
+	)
 
 const MetadataApi = "rpc"
 
@@ -102,7 +102,7 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 	return nil
 }
 
-var exeCount = 0
+var exeCount int64
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
 // writes the response to the given codec.
@@ -173,12 +173,10 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 			return nil
 		}
 
-		if batch {
-			exeCount += len(reqs)
-		}else {
-			exeCount++
-		}
-		//log.Error("### rpc.server","singleshot",singleShot,"batch", batch, "#call", exeCount)
+		//if reqs[0].callb.method.Name == "SendRawTransaction" {
+		//	atomic.AddInt64(&exeCount,1)
+		//	log.Error("## request", "method", reqs[0].callb.method.Name,"#call",atomic.LoadInt64(&exeCount))
+		//}
 
 		// If a single shot request is executing, run and return immediately
 		if singleShot {
@@ -284,7 +282,6 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			notifier, _ := NotifierFromContext(ctx)
 			notifier.activate(subid, req.svcname)
 		}
-
 		return codec.CreateResponse(req.id, subid), activateSub
 	}
 
@@ -304,12 +301,12 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		arguments = append(arguments, req.args...)
 	}
 
-	if req.callb.method.Name == "SendRawTransaction" {
-		callSendTx++
-	}
-	if req.callb.method.Name == "GetTransactionReceipt" {
-		callCount++
-	}
+	//if req.callb.method.Name == "SendRawTransaction" {
+	//	callSendTx++
+	//}
+	//if req.callb.method.Name == "GetTransactionReceipt" {
+	//	callCount++
+	//}
 	//log.Error("### rpc.server", "#tx", callSendTx, "#receipt", callCount)
 
 	// execute RPC method and return result
@@ -325,6 +322,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			return res, nil
 		}
 	}
+
 	return codec.CreateResponse(req.id, reply[0].Interface()), nil
 }
 

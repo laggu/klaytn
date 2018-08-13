@@ -125,12 +125,6 @@
   revision = "1395d1447324cbea88d249fbfcfd70ea878fdfca"
 
 [[projects]]
-  name = "github.com/inconshreveable/log15"
-  packages = ["."]
-  revision = "0decfc6c20d9ca0ad143b0e89dcaa20f810b4fb3"
-  version = "v2.13"
-
-[[projects]]
   name = "github.com/influxdata/influxdb"
   packages = [
     "client",
@@ -318,12 +312,6 @@
   version = "v1.4.0"
 
 [[projects]]
-  name = "github.com/satori/go.uuid"
-  packages = ["."]
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
-
-[[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
@@ -492,6 +480,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b996486ee17515304e39c6687bd3cd84f8d380ca6403a82a6d1b6c239bfab622"
+  inputs-digest = "b3c1515f483971de391f8b22ee18a8fd664a7af4f7372d4c79d1a30390852336"
   solver-name = "gps-cdcl"
   solver-version = 1
