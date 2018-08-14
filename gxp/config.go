@@ -32,7 +32,7 @@ var DefaultConfig = Config{
 	DatabaseCache: 768,
 	TrieCache:     256,
 	TrieTimeout:   5 * time.Minute,
-	GasPrice:      big.NewInt(18 * params.Shannon),
+	GasPrice:      big.NewInt(18 * params.Shannon), // TODO-GX-issue136 default gasPrice
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{

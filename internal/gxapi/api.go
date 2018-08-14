@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultGasPrice = 50 * params.Shannon
+	defaultGasPrice = 50 * params.Shannon // TODO-GX-issue136 default gasPrice
 )
 
 // PublicGXPAPI provides an API to access GXP related information.
@@ -45,7 +45,7 @@ func NewPublicGXPAPI(b Backend) *PublicGXPAPI {
 }
 
 // GasPrice returns a suggestion for a gas price.
-func (s *PublicGXPAPI) GasPrice(ctx context.Context) (*big.Int, error) {
+func (s *PublicGXPAPI) GasPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
 	return s.b.SuggestPrice(ctx)
 }
 
@@ -609,12 +609,12 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		}
 	}
 	// Set default gas & gas price if none were set
-	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt()
+	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt() // TODO-GX-issue136 gasPrice
 	if gas == 0 {
 		gas = math.MaxUint64 / 2
 	}
 	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
+		gasPrice = new(big.Int).SetUint64(defaultGasPrice) // TODO-GX-issue136 default gasPrice
 	}
 
 	// Create new call message
@@ -646,7 +646,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
-	gp := new(core.GasPool).AddGas(math.MaxUint64)
+	gp := new(core.GasPool).AddGas(math.MaxUint64) // TODO-GX-issue136
 	res, gas, failed, err := core.ApplyMessage(evm, msg, gp)
 	if err := vmError(); err != nil {
 		return nil, 0, false, err

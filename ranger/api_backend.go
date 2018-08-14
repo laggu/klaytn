@@ -176,7 +176,7 @@ func (b *RangerAPIBackend) ProtocolVersion() int {
 	return b.ranger.GxpVersion()
 }
 
-func (b *RangerAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
+func (b *RangerAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
 	return common.Big0, nil
 }
 

@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-var maxPrice = big.NewInt(500 * params.Shannon)
+var maxPrice = big.NewInt(500 * params.Shannon) // TODO-GX-issue136 default max gasPrice
 
 type Config struct {
 	Blocks     int
@@ -57,7 +57,7 @@ func NewOracle(backend gxapi.Backend, params Config) *Oracle {
 }
 
 // SuggestPrice returns the recommended gas price.
-func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
+func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice Oracle
 	gpo.cacheLock.RLock()
 	lastHead := gpo.lastHead
 	lastPrice := gpo.lastPrice

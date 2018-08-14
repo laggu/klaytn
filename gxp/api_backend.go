@@ -192,7 +192,7 @@ func (b *GxpAPIBackend) ProtocolVersion() int {
 	return b.gxp.GxpVersion()
 }
 
-func (b *GxpAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
+func (b *GxpAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
 	return b.gpo.SuggestPrice(ctx)
 }
 

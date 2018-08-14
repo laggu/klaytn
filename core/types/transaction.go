@@ -399,6 +399,7 @@ func (t *TransactionsByPriceAndNonce) Txs() map[common.Address]Transactions {
 	return t.txs
 }
 
+// TODO-GX-issue136 gasprice
 // NewTransactionsByPriceAndNonce creates a transaction set that can retrieve
 // price sorted transactions in a nonce-honouring way.
 //

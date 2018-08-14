@@ -273,6 +273,7 @@ var (
 		Usage: "Public address for rewards contract",
 		Value: "0",
 	}
+	// TODO-GX-issue136 default gasPrice
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
@@ -959,7 +960,7 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
+		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-GX-issue136 gasPrice
 	}
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
@@ -1049,7 +1050,7 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
+		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-GX-issue136 gasPrice
 	}
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode

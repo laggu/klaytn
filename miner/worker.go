@@ -53,7 +53,7 @@ type Task struct {
 	family    *set.Set       // family set (used for checking uncle invalidity)
 	uncles    *set.Set       // uncle set
 	tcount    int            // tx count in cycle
-	gasPool   *core.GasPool  // available gas used to pack transactions
+	gasPool   *core.GasPool  // available gas used to pack transactions // TODO-GX-issue136
 
 	Block *types.Block // the new block
 
@@ -282,7 +282,7 @@ func (self *worker) update() {
 					}
 					txs[acc] = append(txs[acc], tx)
 				}
-				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
+				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs) // TODO-GX-issue136 gasPrice
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.updateSnapshot()
 				self.current.stateMu.Unlock()
@@ -474,7 +474,7 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
-	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending) // TODO-GX-issue136 gasPrice
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
@@ -549,6 +549,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	var coalescedLogs []*types.Log
 
 	for {
+		// TODO-GX-issue136
 		// If we don't have enough gas for any further transactions then we're done
 		if env.gasPool.Gas() < params.TxGas {
 			log.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
@@ -580,6 +581,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool)
 		switch err {
+		// TODO-GX-issue136
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			log.Trace("Gas limit exceeded for current block", "sender", from)

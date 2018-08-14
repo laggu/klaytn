@@ -186,11 +186,13 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 				extraSize = memorySize - allocatedMemorySize
 			}
 		}
+		// TODO-GX-issue136
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
 		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
+		// TODO-GX-issue136
 		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas
+			return nil, ErrOutOfGas // TODO-GX-issue136
 		}
 		if extraSize > 0 {
 			mem.Increase(extraSize)

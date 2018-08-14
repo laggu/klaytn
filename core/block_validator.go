@@ -84,6 +84,7 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	return nil
 }
 
+// TODO-GX-issue136 block gasLimit
 // CalcGasLimit computes the gas limit of the next block after parent.
 // This is miner strategy, not consensus protocol.
 func CalcGasLimit(parent *types.Block) uint64 {
@@ -112,6 +113,7 @@ func CalcGasLimit(parent *types.Block) uint64 {
 			limit = params.TargetGasLimit
 		}
 	}
+	// TODO-GX-issue136 block gasLimit
 	// ####### toDo should modify calc gas limit ...
 	// ###### return limit
 	return limit

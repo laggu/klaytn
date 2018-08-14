@@ -82,6 +82,7 @@ func defaultNodeConfig() node.Config {
 }
 
 func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
+	// TODO-GX-issue136 gasPrice
 	// Load defaults.
 	cfg := gxpConfig{
 		Gxp:  gxplatform.DefaultConfig,
