@@ -4,26 +4,26 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/console"
 	gxp2 "github.com/ground-x/go-gxplatform/gxp"
 	"github.com/ground-x/go-gxplatform/gxpclient"
+	"github.com/ground-x/go-gxplatform/internal/debug"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/metrics/prometheus"
 	"github.com/ground-x/go-gxplatform/node"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gopkg.in/urfave/cli.v1"
+	"math/big"
+	"net/http"
 	"runtime"
 	"sort"
 	"strings"
 	"time"
-	"math/big"
-	"github.com/ground-x/go-gxplatform/internal/debug"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
-	"github.com/ground-x/go-gxplatform/metrics/prometheus"
 )
 
 const (
@@ -162,13 +162,17 @@ func init() {
 		}
 
 		// Start prometheus exporter
-		if metrics.Enabled && metrics.EnabledPrometheusExport {
-			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
-				"", prometheus.DefaultRegisterer, 3*time.Second)
-			go pClient.UpdatePrometheusMetrics()
-			http.Handle("/metrics", promhttp.Handler())
-			port := ctx.GlobalInt(metrics.PrometheusExporterPortFlag)
-			go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+		if metrics.Enabled {
+			log.Info("Enabling metrics collection")
+			if metrics.EnabledPrometheusExport {
+				log.Info("Enabling Prometheus Exporter")
+				pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
+					"", prometheus.DefaultRegisterer, 3*time.Second)
+				go pClient.UpdatePrometheusMetrics()
+				http.Handle("/metrics", promhttp.Handler())
+				port := ctx.GlobalInt(metrics.PrometheusExporterPortFlag)
+				go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+			}
 		}
 
 		// Start system runtime metrics collection

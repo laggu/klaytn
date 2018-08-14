@@ -34,11 +34,9 @@ const PrometheusExporterPortFlag = "prometheusport"
 func init() {
 	for _, arg := range os.Args {
 		if flag := strings.TrimLeft(arg, "-"); flag == MetricsEnabledFlag || flag == DashboardEnabledFlag {
-			log.Info("Enabling metrics collection")
 			Enabled = true
 		}
 		if flag := strings.TrimLeft(arg, "-"); flag == PrometheusExporterFlag {
-			log.Info("Enabling Prometheus Exporter")
 			EnabledPrometheusExport = true
 		}
 	}
