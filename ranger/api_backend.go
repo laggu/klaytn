@@ -8,7 +8,6 @@ import (
 	"github.com/ground-x/go-gxplatform/rpc"
 	"github.com/ground-x/go-gxplatform/core/state"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/rawdb"
 	"github.com/ground-x/go-gxplatform/core"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/core/vm"
@@ -78,26 +77,11 @@ func (b *RangerAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*typ
 }
 
 func (b *RangerAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	if number := rawdb.ReadHeaderNumber(b.ranger.chainDb, hash); number != nil {
-		return rawdb.ReadReceipts(b.ranger.chainDb, hash, *number), nil
-	}
-	return nil, nil
+	return b.ranger.blockchain.GetReceiptsByHash(hash), nil
 }
 
 func (b *RangerAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
-	number := rawdb.ReadHeaderNumber(b.ranger.chainDb, hash)
-	if number == nil {
-		return nil, nil
-	}
-	receipts := rawdb.ReadReceipts(b.ranger.chainDb, hash, *number)
-	if receipts == nil {
-		return nil, nil
-	}
-	logs := make([][]*types.Log, len(receipts))
-	for i, receipt := range receipts {
-		logs[i] = receipt.Logs
-	}
-	return logs, nil
+	return b.ranger.blockchain.GetLogsByHash(hash), nil
 }
 
 func (b *RangerAPIBackend) GetTd(blockHash common.Hash) *big.Int {

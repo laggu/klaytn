@@ -297,7 +297,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 		rawdb.DeleteBody(bc.db, hash, num)
 	}
 	bc.hc.SetHead(head, delFn)
-	currentHeader := bc.hc.CurrentHeader()
+	currentHeader := bc.CurrentHeader()
 
 	// Clear out any stale content from the caches
 	bc.bodyCache.Purge()
@@ -529,7 +529,7 @@ func (bc *BlockChain) GetBody(hash common.Hash) *types.Body {
 		return body
 	}
 	cacheGetBlockBodyMissMeter.Mark(1)
-	number := bc.hc.GetBlockNumber(hash)
+	number := bc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
 	}
@@ -551,7 +551,7 @@ func (bc *BlockChain) GetBodyRLP(hash common.Hash) rlp.RawValue {
 		return cached.(rlp.RawValue)
 	}
 	cacheGetBlockBodyRLPMissMeter.Mark(1)
-	number := bc.hc.GetBlockNumber(hash)
+	number := bc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
 	}
@@ -610,11 +610,16 @@ func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 
 // GetBlockByHash retrieves a block from the database by hash, caching it if found.
 func (bc *BlockChain) GetBlockByHash(hash common.Hash) *types.Block {
-	number := bc.hc.GetBlockNumber(hash)
+	number := bc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
 	}
 	return bc.GetBlock(hash, *number)
+}
+
+// GetBlockNumber retrieves a blockNumber from the database by hash, caching it if found.
+func (bc *BlockChain) GetBlockNumber(hash common.Hash) *uint64 {
+	return bc.hc.GetBlockNumber(hash)
 }
 
 // GetBlockByNumber retrieves a block from the database by number, caching it
@@ -629,17 +634,31 @@ func (bc *BlockChain) GetBlockByNumber(number uint64) *types.Block {
 
 // GetReceiptsByHash retrieves the receipts for all transactions in a given block.
 func (bc *BlockChain) GetReceiptsByHash(hash common.Hash) types.Receipts {
-	number := rawdb.ReadHeaderNumber(bc.db, hash)
+	number := bc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
 	}
 	return rawdb.ReadReceipts(bc.db, hash, *number)
 }
 
+// GetLogsByHash retrieves the logs for all receipts in a given block.
+func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
+	receipts := bc.GetReceiptsByHash(hash)
+	if receipts == nil {
+		return nil
+	}
+
+	logs := make([][]*types.Log, len(receipts))
+	for i, receipt := range receipts {
+		logs[i] = receipt.Logs
+	}
+	return logs
+}
+
 // GetBlocksFromHash returns the block corresponding to hash and up to n-1 ancestors.
 // [deprecated by eth/62]
 func (bc *BlockChain) GetBlocksFromHash(hash common.Hash, n int) (blocks []*types.Block) {
-	number := bc.hc.GetBlockNumber(hash)
+	number := bc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
 	}
@@ -753,7 +772,7 @@ func (bc *BlockChain) Rollback(chain []common.Hash) {
 	for i := len(chain) - 1; i >= 0; i-- {
 		hash := chain[i]
 
-		currentHeader := bc.hc.CurrentHeader()
+		currentHeader := bc.CurrentHeader()
 		if currentHeader.Hash() == hash {
 			bc.hc.SetCurrentHeader(bc.GetHeader(currentHeader.ParentHash, currentHeader.Number.Uint64()-1))
 		}
@@ -1366,7 +1385,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		// These logs are later announced as deleted.
 		collectLogs = func(hash common.Hash) {
 			// Coalesce logs and set 'Removed'.
-			number := bc.hc.GetBlockNumber(hash)
+			number := bc.GetBlockNumber(hash)
 			if number == nil {
 				return
 			}

@@ -7,7 +7,6 @@ import (
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/core"
 	"github.com/ground-x/go-gxplatform/core/bloombits"
-	"github.com/ground-x/go-gxplatform/core/rawdb"
 	"github.com/ground-x/go-gxplatform/core/state"
 	"github.com/ground-x/go-gxplatform/core/types"
 	"github.com/ground-x/go-gxplatform/core/vm"
@@ -93,27 +92,11 @@ func (b *GxpAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.
 }
 
 func (b *GxpAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	if number := rawdb.ReadHeaderNumber(b.gxp.chainDb, hash); number != nil {
-		return rawdb.ReadReceipts(b.gxp.chainDb, hash, *number), nil
-	}
-	return nil, nil
+	return b.gxp.blockchain.GetReceiptsByHash(hash), nil
 }
 
 func (b *GxpAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
-	number := rawdb.ReadHeaderNumber(b.gxp.chainDb, hash)
-
-	if number == nil {
-		return nil, nil
-	}
-	receipts := rawdb.ReadReceipts(b.gxp.chainDb, hash, *number)
-	if receipts == nil {
-		return nil, nil
-	}
-	logs := make([][]*types.Log, len(receipts))
-	for i, receipt := range receipts {
-		logs[i] = receipt.Logs
-	}
-	return logs, nil
+	return b.gxp.blockchain.GetLogsByHash(hash), nil
 }
 
 func (b *GxpAPIBackend) GetTd(blockHash common.Hash) *big.Int {
