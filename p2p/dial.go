@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/p2p/discover"
 	"github.com/ground-x/go-gxplatform/p2p/netutil"
+	"crypto/ecdsa"
 )
 
 const (
@@ -127,7 +128,7 @@ type waitExpireTask struct {
 	time.Duration
 }
 
-func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab discoverTable, maxdyn int, netrestrict *netutil.Netlist) *dialstate {
+func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab discoverTable, maxdyn int, netrestrict *netutil.Netlist, privateKey *ecdsa.PrivateKey) *dialstate {
 	s := &dialstate{
 		maxDynDials: maxdyn,
 		ntab:        ntab,
@@ -139,6 +140,20 @@ func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab disc
 		hist:        new(dialHistory),
 	}
 	copy(s.bootnodes, bootnodes)
+
+	if privateKey != nil {
+		selfNodeID := discover.PubkeyID(&privateKey.PublicKey)
+
+		for _, n := range static {
+			if selfNodeID != n.ID {
+				s.addStatic(n)
+			} else {
+				log.Debug("[Dial] Ignored static node which has same id with myself", "mySelfID", selfNodeID)
+			}
+		}
+		return s
+	}
+
 	for _, n := range static {
 		s.addStatic(n)
 	}
