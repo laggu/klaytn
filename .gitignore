@@ -48,3 +48,6 @@ tags
 
 # cscope
 cscope.*out
+
+# test data
+tests/testdata
