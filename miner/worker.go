@@ -391,16 +391,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := &Task{
-		config:    self.config,
-		signer:    types.NewEIP155Signer(self.config.ChainID),
-		state:     state,
-		ancestors: set.New(),
-		family:    set.New(),
-		uncles:    set.New(),
-		header:    header,
-		createdAt: time.Now(),
-	}
+	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), state, nil, header)
 
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -546,6 +537,30 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	if env.gasPool == nil {
 		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	}
+
+	coalescedLogs := env.ApplyTransactions(txs, bc, coinbase)
+
+	if len(coalescedLogs) > 0 || env.tcount > 0 {
+		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
+		// logs by filling in the block hash when the block was mined by the local miner. This can
+		// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
+		cpy := make([]*types.Log, len(coalescedLogs))
+		for i, l := range coalescedLogs {
+			cpy[i] = new(types.Log)
+			*cpy[i] = *l
+		}
+		go func(logs []*types.Log, tcount int) {
+			if len(logs) > 0 {
+				mux.Post(core.PendingLogsEvent{Logs: logs})
+			}
+			if tcount > 0 {
+				mux.Post(core.PendingStateEvent{})
+			}
+		}(cpy, env.tcount)
+	}
+}
+
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 
 	for {
@@ -611,24 +626,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 	}
 
-	if len(coalescedLogs) > 0 || env.tcount > 0 {
-		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
-		// logs by filling in the block hash when the block was mined by the local miner. This can
-		// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
-		cpy := make([]*types.Log, len(coalescedLogs))
-		for i, l := range coalescedLogs {
-			cpy[i] = new(types.Log)
-			*cpy[i] = *l
-		}
-		go func(logs []*types.Log, tcount int) {
-			if len(logs) > 0 {
-				mux.Post(core.PendingLogsEvent{Logs: logs})
-			}
-			if tcount > 0 {
-				mux.Post(core.PendingStateEvent{})
-			}
-		}(cpy, env.tcount)
-	}
+	return coalescedLogs
 }
 
 func (env *Task) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
@@ -644,3 +642,20 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 
 	return nil, receipt.Logs
 }
+
+func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, gasPool *core.GasPool, header *types.Header) *Task {
+	return &Task{
+		config:    config,
+		signer:    signer,
+		state:     statedb,
+		ancestors: set.New(),
+		family:    set.New(),
+		uncles:    set.New(),
+		gasPool:   gasPool,
+		header:    header,
+		createdAt: time.Now(),
+	}
+}
+
+func (env *Task) Transactions() []*types.Transaction { return env.txs }
+func (env *Task) Receipts() []*types.Receipt         { return env.receipts }

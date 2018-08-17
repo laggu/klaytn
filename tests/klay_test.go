@@ -36,6 +36,7 @@ import (
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/miner"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/rlp"
@@ -43,7 +44,7 @@ import (
 
 	istanbulBackend "github.com/ground-x/go-gxplatform/consensus/istanbul/backend"
 	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
-	)
+)
 
 const transactionsJournalFilename = "transactions.rlp"
 
@@ -294,7 +295,7 @@ func makeTransactionsFrom(accountMap *AccountMap, from common.Address, privKey *
 	return txs, nil
 }
 
-func mineABlock(bcdata *BCData, transactions types.Transactions) (*types.Block, error) {
+func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Signer) (*types.Block, error) {
 	// Set the block header
 	start := time.Now()
 	header, err := prepareHeader(bcdata)
@@ -308,17 +309,36 @@ func mineABlock(bcdata *BCData, transactions types.Transactions) (*types.Block, 
 		return nil, err
 	}
 
+	// Group transactions by the sender address
+	start = time.Now()
+	txs := make(map[common.Address]types.Transactions)
+	for _, tx := range transactions {
+		acc, err := types.Sender(signer, tx)
+		if err != nil {
+			return nil, err
+		}
+		txs[acc] = append(txs[acc], tx)
+	}
+	profile.Prof.Profile("mine_groupTransactions", time.Now().Sub(start))
+
+	// Create a transaction set where transactions are sorted by price and nonce
+	start = time.Now()
+	txset := types.NewTransactionsByPriceAndNonce(signer, txs) // TODO-GX-issue136 gasPrice
+	profile.Prof.Profile("mine_NewTransactionsByPriceAndNonce", time.Now().Sub(start))
+
 	// Apply the set of transactions
 	start = time.Now()
-	receipts, err := commitTransactions(bcdata.bc, transactions, bcdata.rewardBase, statedb, header)
-	if err != nil {
-		return nil, err
-	}
-	profile.Prof.Profile("mine_commitTransactions", time.Now().Sub(start))
+	gp := new(core.GasPool)
+	gp = gp.AddGas(1000000000000000000)
+	task := miner.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
+	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
+	newtxs := task.Transactions()
+	receipts := task.Receipts()
+	profile.Prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
 
 	// Finalize the block
 	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, transactions, []*types.Header{}, receipts)
+	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, []*types.Header{}, receipts)
 	if err != nil {
 		return nil, err
 	}
@@ -335,32 +355,6 @@ func mineABlock(bcdata *BCData, transactions types.Transactions) (*types.Block, 
 
 	return b, nil
 }
-
-// reference: miner/worker.go
-func commitTransactions(bc *core.BlockChain, txs types.Transactions, coinbase *common.Address,
-	statedb *state.StateDB, header *types.Header) (types.Receipts, error) {
-
-	gp := new(core.GasPool)
-	gp = gp.AddGas(1000000000000000000)
-
-	receipts := make(types.Receipts, len(txs))
-
-	for i, tx := range txs {
-		snap := statedb.Snapshot()
-
-		receipt, _, err := core.ApplyTransaction(bc.Config(), bc, coinbase, gp, statedb, header,
-			tx, &header.GasUsed, vm.Config{})
-		if err != nil {
-			statedb.RevertToSnapshot(snap)
-			return nil, err
-		}
-
-		receipts[i] = receipt
-	}
-
-	return receipts, nil
-}
-
 
 // Copied from consensus/istanbul/backend/engine.go
 func sigHash(header *types.Header) (hash common.Hash) {
@@ -591,7 +585,7 @@ func testValueTransfer(t *testing.T, numMaxAccounts, numValidators, numGenerated
 
 		// Mine a block!
 		start = time.Now()
-		b, err := mineABlock(bcdata, transactions)
+		b, err := mineABlock(bcdata, transactions, signer)
 		if err != nil {
 			t.Fatal(err)
 		}
