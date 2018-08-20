@@ -266,12 +266,17 @@ func prepareHeader(bcdata *BCData) (*types.Header, error) {
 	return header, nil
 }
 
-func makeTransactionsFrom(accountMap *AccountMap, from common.Address, privKey *ecdsa.PrivateKey,
-	signer types.Signer, toAddrs []*common.Address, amount *big.Int) (types.Transactions, error) {
+func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
+	amount *big.Int) (types.Transactions, error) {
+	from := *bcdata.addrs[0]
+	privKey := bcdata.privKeys[0]
+	toAddrs := bcdata.addrs
+	numAddrs := len(toAddrs)
 
-	txs := make(types.Transactions, 0, len(toAddrs))
+	txs := make(types.Transactions, 0, numTransactions)
 	nonce := (*accountMap)[from].nonce
-	for _, a := range toAddrs {
+	for i := 0; i < numTransactions; i++ {
+		a := toAddrs[i % numAddrs]
 		txamount := amount
 		if txamount == nil {
 			txamount = big.NewInt(rand.Int63n(10))
@@ -295,14 +300,53 @@ func makeTransactionsFrom(accountMap *AccountMap, from common.Address, privKey *
 	return txs, nil
 }
 
-func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Signer) (*types.Block, error) {
+func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
+	amount *big.Int) (types.Transactions, error) {
+	numAddrs := len(bcdata.addrs) / 2
+	fromAddrs := bcdata.addrs[:numAddrs]
+	toAddrs := bcdata.addrs[numAddrs:]
+
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range fromAddrs {
+		fromNonces[i] = (*accountMap)[*addr].nonce
+	}
+
+	txs := make(types.Transactions, 0, numTransactions)
+
+	for i := 0; i < numTransactions; i++ {
+		idx := i % numAddrs
+
+		txamount := amount
+		if txamount == nil {
+			txamount = big.NewInt(rand.Int63n(10))
+			txamount = txamount.Add(txamount, big.NewInt(1))
+		}
+		var gasLimit uint64 = 1000000
+		gasPrice := new(big.Int).SetInt64(0)
+		data := []byte{}
+
+		tx := types.NewTransaction(fromNonces[idx], *toAddrs[idx], txamount, gasLimit, gasPrice, data)
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, signedTx)
+
+		fromNonces[idx]++
+	}
+
+	return txs, nil
+}
+
+func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Signer, prof *profile.Profiler) (*types.Block, error) {
 	// Set the block header
 	start := time.Now()
 	header, err := prepareHeader(bcdata)
 	if err != nil {
 		return nil, err
 	}
-	profile.Prof.Profile("mine_prepareHeader", time.Now().Sub(start))
+	prof.Profile("mine_prepareHeader", time.Now().Sub(start))
 
 	statedb, err := bcdata.bc.State()
 	if err != nil {
@@ -319,12 +363,12 @@ func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Si
 		}
 		txs[acc] = append(txs[acc], tx)
 	}
-	profile.Prof.Profile("mine_groupTransactions", time.Now().Sub(start))
+	prof.Profile("mine_groupTransactions", time.Now().Sub(start))
 
 	// Create a transaction set where transactions are sorted by price and nonce
 	start = time.Now()
 	txset := types.NewTransactionsByPriceAndNonce(signer, txs) // TODO-GX-issue136 gasPrice
-	profile.Prof.Profile("mine_NewTransactionsByPriceAndNonce", time.Now().Sub(start))
+	prof.Profile("mine_NewTransactionsByPriceAndNonce", time.Now().Sub(start))
 
 	// Apply the set of transactions
 	start = time.Now()
@@ -334,7 +378,7 @@ func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Si
 	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
-	profile.Prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
+	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
 
 	// Finalize the block
 	start = time.Now()
@@ -342,7 +386,7 @@ func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Si
 	if err != nil {
 		return nil, err
 	}
-	profile.Prof.Profile("mine_finalize_block", time.Now().Sub(start))
+	prof.Profile("mine_finalize_block", time.Now().Sub(start))
 
 	////////////////////////////////////////////////////////////////////////////////
 
@@ -351,7 +395,7 @@ func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Si
 	if err != nil {
 		return nil, err
 	}
-	profile.Prof.Profile("mine_seal_block", time.Now().Sub(start))
+	prof.Profile("mine_seal_block", time.Now().Sub(start))
 
 	return b, nil
 }
@@ -540,18 +584,42 @@ func shutdown(bcdata *BCData) {
 ////////////////////////////////////////////////////////////////////////////////
 // TestValueTransfer
 ////////////////////////////////////////////////////////////////////////////////
-func TestValueTransfer(t *testing.T) {
-	testValueTransfer(t, 1000, 4, 3)
+type testOption struct {
+	numTransactions    int
+	numMaxAccounts     int
+	numValidators      int
+	numGeneratedBlocks int
+	makeTransactions   func(*BCData, *AccountMap, types.Signer, int, *big.Int) (types.Transactions, error)
 }
 
-func testValueTransfer(t *testing.T, numMaxAccounts, numValidators, numGeneratedBlocks int) {
+func TestValueTransfer(t *testing.T) {
+	var valueTransferTests = [...]struct {
+		name string
+		opt testOption
+	} {
+		{"SingleSenderMultipleRecipient",
+		 testOption{1000, 1000, 4, 3, makeTransactionsFrom}},
+		{"MultipleSenderMultipleRecipient",
+		 testOption{1000, 2000, 4, 3, makeIndependentTransactions}},
+	}
+
+	for _, test := range valueTransferTests {
+		t.Run(test.name, func(t *testing.T) {
+			testValueTransfer(t, &test.opt)
+		})
+	}
+}
+
+func testValueTransfer(t *testing.T, opt *testOption) {
+	prof := profile.NewProfiler()
+
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := initializeBC(numMaxAccounts, numValidators)
+	bcdata, err := initializeBC(opt.numMaxAccounts, opt.numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
-	profile.Prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 	defer shutdown(bcdata)
 
 	// Initialize address-balance map for verification
@@ -560,49 +628,47 @@ func testValueTransfer(t *testing.T, numMaxAccounts, numValidators, numGenerated
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
-	profile.Prof.Profile("main_init_accountMap", time.Now().Sub(start))
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	for i := 0; i < numGeneratedBlocks; i++ {
+	for i := 0; i < opt.numGeneratedBlocks; i++ {
 		//fmt.Printf("iteration %d\n", i)
 
 		// Make a set of transactions
 		start = time.Now()
 		signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-		from := bcdata.addrs[0]
-		privKey := bcdata.privKeys[0]
-		transactions, err := makeTransactionsFrom(&accountMap, *from, privKey, signer, bcdata.addrs, nil)
+		transactions, err := opt.makeTransactions(bcdata, &accountMap, signer, opt.numTransactions,nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		profile.Prof.Profile("main_makeTransactions", time.Now().Sub(start))
+		prof.Profile("main_makeTransactions", time.Now().Sub(start))
 
 		// Update accountMap
 		start = time.Now()
 		if err := accountMap.Update(transactions, signer); err != nil {
 			t.Fatal(err)
 		}
-		profile.Prof.Profile("main_update_accountMap", time.Now().Sub(start))
+		prof.Profile("main_update_accountMap", time.Now().Sub(start))
 
 		// Mine a block!
 		start = time.Now()
-		b, err := mineABlock(bcdata, transactions, signer)
+		b, err := mineABlock(bcdata, transactions, signer, prof)
 		if err != nil {
 			t.Fatal(err)
 		}
-		profile.Prof.Profile("main_mineABlock", time.Now().Sub(start))
+		prof.Profile("main_mineABlock", time.Now().Sub(start))
 
 		// Insert the block into the blockchain
 		start := time.Now()
 		if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil{
 			t.Fatal(fmt.Sprintf("err = %s, n = %d\n", err, n))
 		}
-		profile.Prof.Profile("main_insert_blockchain", time.Now().Sub(start))
+		prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 		// Apply reward
 		start = time.Now()
 		rewardAddr := *bcdata.rewardBase
 		accountMap.AddBalance(rewardAddr, big.NewInt(1000000000000000000))
-		profile.Prof.Profile("main_apply_reward", time.Now().Sub(start))
+		prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 		// Verification with accountMap
 		start = time.Now()
@@ -613,10 +679,10 @@ func testValueTransfer(t *testing.T, numMaxAccounts, numValidators, numGenerated
 		if err := accountMap.Verify(statedb); err != nil {
 			t.Fatal(err)
 		}
-		profile.Prof.Profile("main_verification", time.Now().Sub(start))
+		prof.Profile("main_verification", time.Now().Sub(start))
 	}
 
 	if testing.Verbose() {
-		profile.Prof.PrintProfileInfo()
+		prof.PrintProfileInfo()
 	}
 }
