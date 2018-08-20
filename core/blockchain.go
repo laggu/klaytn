@@ -68,8 +68,8 @@ const (
 	maxFutureBlocks       = 256
 	maxTimeFutureBlocks   = 30
 	maxBadBlocks          = 10
-	maxRecentTransactions = 80960
-	maxRecentReceipts     = 80960
+	maxRecentTransactions = 30000
+	maxRecentReceipts     = 30
 )
 
 const (
