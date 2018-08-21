@@ -51,6 +51,8 @@ const transactionsJournalFilename = "transactions.rlp"
 // If you don't want to remove 'chaindata', set removeChaindataOnExit = false
 const removeChaindataOnExit = true
 
+const GasLimit uint64 = 1000000000000000000
+
 type BCData struct {
 	bc *core.BlockChain
 	addrs []*common.Address
@@ -192,7 +194,7 @@ func initBlockchain(conf *node.Config, db gxdb.Database, coinbaseAddrs []*common
 	genesis := core.DefaultGenesisBlock()
 	genesis.Coinbase = *coinbaseAddrs[0]
 	genesis.Config = Forks["Byzantium"]
-	genesis.GasLimit = 100000000
+	genesis.GasLimit = GasLimit
 	genesis.ExtraData = extraData
 	genesis.Nonce = 0
 	genesis.Mixhash = types.IstanbulDigest
@@ -373,7 +375,7 @@ func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Si
 	// Apply the set of transactions
 	start = time.Now()
 	gp := new(core.GasPool)
-	gp = gp.AddGas(1000000000000000000)
+	gp = gp.AddGas(GasLimit)
 	task := miner.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
 	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
 	newtxs := task.Transactions()
