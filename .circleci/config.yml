@@ -39,12 +39,41 @@ jobs:
             docker build -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1 .
             docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest
             docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1
+
+  rpmpackage:
+    docker:
+      - image: bitaholic/circleci-rpmbuild:latest
+    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+      - run:
+          name: "Build & Deploy rpm package"
+          command: |
+            go run build/rpm/main.go $CIRCLE_BUILD_NUM > /rpmbuild/SPECS/go-klaytn-devel.spec
+            cd ..
+            mv go-gxplatform go-klaytn-devel
+            tar czf go-klaytn-devel.tar.gz go-klaytn-devel
+            mv go-klaytn-devel.tar.gz /rpmbuild/SOURCES/
+            rpmbuild -ba /rpmbuild/SPECS/go-klaytn-devel.spec
+            scp -o StrictHostKeyChecking=no /rpmbuild/RPMS/x86_64/*.rpm ec2-user@52.79.114.173:/srv/repo/
+            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
 workflows:
   version: 2
   build_and_dockernize:
     jobs:
       - build
       - dockernize:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
+      - rpmpackage:
           requires:
             - build
           filters:
