@@ -19,6 +19,7 @@ package tests
 import (
 	"os"
 	"fmt"
+	"flag"
 	"time"
 	"bytes"
 	"errors"
@@ -62,6 +63,12 @@ type BCData struct {
 	validatorAddresses []common.Address
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine consensus.Istanbul
+}
+
+var txPerBlock int
+func init() {
+	flag.IntVar(&txPerBlock, "txs-per-block", 1000,
+		"Specify the number of transactions per block")
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -402,6 +409,57 @@ func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Si
 	return b, nil
 }
 
+func genABlock(t testing.TB, bcdata *BCData, accountMap *AccountMap, opt *testOption,
+	numTransactions int, prof *profile.Profiler) {
+	// Make a set of transactions
+	start := time.Now()
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	transactions, err := opt.makeTransactions(bcdata, accountMap, signer, numTransactions, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_makeTransactions", time.Now().Sub(start))
+
+	// Update accountMap
+	start = time.Now()
+	if err := accountMap.Update(transactions, signer); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_update_accountMap", time.Now().Sub(start))
+
+	// Mine a block!
+	start = time.Now()
+	b, err := mineABlock(bcdata, transactions, signer, prof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_mineABlock", time.Now().Sub(start))
+
+	// Insert the block into the blockchain
+	start = time.Now()
+	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil{
+		t.Fatal(fmt.Sprintf("err = %s, n = %d\n", err, n))
+	}
+	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
+
+	// Apply reward
+	start = time.Now()
+	rewardAddr := *bcdata.rewardBase
+	accountMap.AddBalance(rewardAddr, big.NewInt(1000000000000000000))
+	prof.Profile("main_apply_reward", time.Now().Sub(start))
+
+	// Verification with accountMap
+	start = time.Now()
+	statedb, err := bcdata.bc.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := accountMap.Verify(statedb); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_verification", time.Now().Sub(start))
+}
+
 // Copied from consensus/istanbul/backend/engine.go
 func sigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
@@ -634,54 +692,53 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 
 	for i := 0; i < opt.numGeneratedBlocks; i++ {
 		//fmt.Printf("iteration %d\n", i)
+		genABlock(t, bcdata, &accountMap, opt, opt.numTransactions, prof)
+	}
 
-		// Make a set of transactions
-		start = time.Now()
-		signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-		transactions, err := opt.makeTransactions(bcdata, &accountMap, signer, opt.numTransactions,nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		prof.Profile("main_makeTransactions", time.Now().Sub(start))
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
 
-		// Update accountMap
-		start = time.Now()
-		if err := accountMap.Update(transactions, signer); err != nil {
-			t.Fatal(err)
-		}
-		prof.Profile("main_update_accountMap", time.Now().Sub(start))
+func BenchmarkValueTransfer(t *testing.B) {
+	prof := profile.NewProfiler()
+	opt := testOption{t.N, 2000, 4,
+		1, makeIndependentTransactions}
 
-		// Mine a block!
-		start = time.Now()
-		b, err := mineABlock(bcdata, transactions, signer, prof)
-		if err != nil {
-			t.Fatal(err)
-		}
-		prof.Profile("main_mineABlock", time.Now().Sub(start))
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := initializeBC(opt.numMaxAccounts, opt.numValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer shutdown(bcdata)
 
-		// Insert the block into the blockchain
-		start := time.Now()
-		if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil{
-			t.Fatal(fmt.Sprintf("err = %s, n = %d\n", err, n))
-		}
-		prof.Profile("main_insert_blockchain", time.Now().Sub(start))
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := make(AccountMap)
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-		// Apply reward
-		start = time.Now()
-		rewardAddr := *bcdata.rewardBase
-		accountMap.AddBalance(rewardAddr, big.NewInt(1000000000000000000))
-		prof.Profile("main_apply_reward", time.Now().Sub(start))
+	t.ResetTimer()
+	for i := 0; i < t.N/txPerBlock; i++ {
+		//fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
+		genABlock(t, bcdata, &accountMap, &opt, txPerBlock, prof)
+	}
 
-		// Verification with accountMap
-		start = time.Now()
-		statedb, err := bcdata.bc.State()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := accountMap.Verify(statedb); err != nil {
-			t.Fatal(err)
-		}
-		prof.Profile("main_verification", time.Now().Sub(start))
+	genBlocks := t.N / txPerBlock
+	remainTxs := t.N % txPerBlock
+	if remainTxs != 0 {
+		genABlock(t, bcdata, &accountMap, &opt, remainTxs, prof)
+		genBlocks++
+	}
+	t.StopTimer()
+
+	bcHeight := int(bcdata.bc.CurrentHeader().Number.Uint64())
+	if bcHeight != genBlocks {
+		t.Fatalf("generated blocks should be %d, but %d.\n", genBlocks, bcHeight)
 	}
 
 	if testing.Verbose() {
