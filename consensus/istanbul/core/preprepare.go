@@ -165,7 +165,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			c.stopFuturePreprepareTimer()
 			c.futurePreprepareTimer = time.AfterFunc(duration, func() {
 				c.sendEvent(backlogEvent{
-					src: src,
+					src: src.Address(),
 					msg: msg,
 					Hash: msg.Hash,
 				})

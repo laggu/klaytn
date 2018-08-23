@@ -73,7 +73,7 @@ func (c *core) storeBacklog(msg *message, src istanbul.Validator) {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
-	backlog := c.backlogs[src]
+	backlog := c.backlogs[src.Address()]
 	if backlog == nil {
 		backlog = prque.New()
 	}
@@ -92,7 +92,7 @@ func (c *core) storeBacklog(msg *message, src istanbul.Validator) {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
 	}
-	c.backlogs[src] = backlog
+	c.backlogs[src.Address()] = backlog
 }
 
 func (c *core) processBacklog() {

@@ -85,8 +85,13 @@ func (c *core) handleEvents() {
 					//c.backend.Gossip(c.valSet, ev.Payload)
 				}
 			case backlogEvent:
+				_, src := c.valSet.GetByAddress(ev.src)
+				if src == nil {
+					c.logger.Error("Invalid address in valSet","addr",ev.src)
+					continue
+				}
 				// No need to check signature for internal messages
-				if err := c.handleCheckedMsg(ev.msg, ev.src); err == nil {
+				if err := c.handleCheckedMsg(ev.msg, src); err == nil {
 					p, err := ev.msg.Payload()
 					if err != nil {
 						c.logger.Warn("Get message payload failed", "err", err)
