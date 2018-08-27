@@ -133,6 +133,11 @@ func (a AccountMap) Update(txs types.Transactions, signer types.Signer) (error) 
 			return err
 		}
 
+		if to == nil {
+			addr := crypto.CreateAddress(from, a.Get(from).nonce)
+			to = &addr
+		}
+
 		a.AddBalance(*to, v)
 		a.SubBalance(from, v)
 
@@ -276,7 +281,7 @@ func prepareHeader(bcdata *BCData) (*types.Header, error) {
 }
 
 func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int) (types.Transactions, error) {
+	amount *big.Int, data []byte) (types.Transactions, error) {
 	from := *bcdata.addrs[0]
 	privKey := bcdata.privKeys[0]
 	toAddrs := bcdata.addrs
@@ -293,7 +298,6 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 		}
 		var gasLimit uint64 = 1000000
 		gasPrice := new(big.Int).SetInt64(0)
-		data := []byte{}
 
 		tx := types.NewTransaction(nonce, *a, txamount, gasLimit, gasPrice, data)
 		signedTx, err := types.SignTx(tx, signer, privKey)
@@ -309,8 +313,43 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	return txs, nil
 }
 
+func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer,
+	numTransactions int, amount *big.Int, data []byte) (types.Transactions, error) {
+
+	numAddrs := len(bcdata.addrs)
+	fromAddrs := bcdata.addrs
+
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range fromAddrs {
+		fromNonces[i] = (*accountMap)[*addr].nonce
+	}
+
+	txs := make(types.Transactions, 0, numTransactions)
+
+	for i := 0; i < numTransactions; i++ {
+		idx := i % numAddrs
+
+		txamount := new(big.Int).SetInt64(0)
+
+		var gasLimit uint64 = 1000000
+		gasPrice := new(big.Int).SetInt64(0)
+
+		tx := types.NewContractCreation(fromNonces[idx], txamount, gasLimit, gasPrice, data)
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, signedTx)
+
+		fromNonces[idx]++
+	}
+
+	return txs, nil
+}
+
 func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int) (types.Transactions, error) {
+	amount *big.Int, data []byte) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs) / 2
 	fromAddrs := bcdata.addrs[:numAddrs]
 	toAddrs := bcdata.addrs[numAddrs:]
@@ -332,7 +371,6 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 		}
 		var gasLimit uint64 = 1000000
 		gasPrice := new(big.Int).SetInt64(0)
-		data := []byte{}
 
 		tx := types.NewTransaction(fromNonces[idx], *toAddrs[idx], txamount, gasLimit, gasPrice, data)
 		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
@@ -414,7 +452,7 @@ func genABlock(t testing.TB, bcdata *BCData, accountMap *AccountMap, opt *testOp
 	// Make a set of transactions
 	start := time.Now()
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-	transactions, err := opt.makeTransactions(bcdata, accountMap, signer, numTransactions, nil)
+	transactions, err := opt.makeTransactions(bcdata, accountMap, signer, numTransactions, nil, opt.txdata)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -649,7 +687,8 @@ type testOption struct {
 	numMaxAccounts     int
 	numValidators      int
 	numGeneratedBlocks int
-	makeTransactions   func(*BCData, *AccountMap, types.Signer, int, *big.Int) (types.Transactions, error)
+	txdata             []byte
+	makeTransactions   func(*BCData, *AccountMap, types.Signer, int, *big.Int, []byte) (types.Transactions, error)
 }
 
 func TestValueTransfer(t *testing.T) {
@@ -658,9 +697,9 @@ func TestValueTransfer(t *testing.T) {
 		opt testOption
 	} {
 		{"SingleSenderMultipleRecipient",
-		 testOption{1000, 1000, 4, 3, makeTransactionsFrom}},
+		 testOption{1000, 1000, 4, 3, []byte{}, makeTransactionsFrom}},
 		{"MultipleSenderMultipleRecipient",
-		 testOption{1000, 2000, 4, 3, makeIndependentTransactions}},
+		 testOption{1000, 2000, 4, 3, []byte{}, makeIndependentTransactions}},
 	}
 
 	for _, test := range valueTransferTests {
@@ -702,8 +741,7 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 
 func BenchmarkValueTransfer(t *testing.B) {
 	prof := profile.NewProfiler()
-	opt := testOption{t.N, 2000, 4,
-		1, makeIndependentTransactions}
+	opt := testOption{t.N, 2000, 4, 1, []byte{}, makeIndependentTransactions}
 
 	// Initialize blockchain
 	start := time.Now()
