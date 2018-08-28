@@ -13,7 +13,7 @@ type HashFunc func(list types.DerivableList) common.Hash
 
 func BenchmarkDeriveSha(b *testing.B) {
 	funcs := map[string]HashFunc{
-		"Orig":types.DeriveSha,
+		"Orig":types.DeriveShaOrig,
 		"Simple":types.DeriveShaSimple,
 		"Concat": types.DeriveShaConcat }
 

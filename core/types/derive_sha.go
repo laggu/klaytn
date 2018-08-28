@@ -22,6 +22,7 @@ import (
 	"github.com/ground-x/go-gxplatform/rlp"
 	"github.com/ground-x/go-gxplatform/trie"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
 type DerivableList interface {
@@ -29,7 +30,31 @@ type DerivableList interface {
 	GetRlp(i int) []byte
 }
 
+type DeriveShaImplType int
+const (
+	ImplDeriveShaOriginal DeriveShaImplType = iota
+	ImplDeriveShaSimple
+	ImplDeriveShaConcat
+)
+
+var implDeriveSha DeriveShaImplType = ImplDeriveShaOriginal
+
+// TODO-GX: Replace body with one implementation in the future
 func DeriveSha(list DerivableList) common.Hash {
+	switch implDeriveSha {
+	case ImplDeriveShaOriginal:
+		return DeriveShaOrig(list)
+	case ImplDeriveShaSimple:
+		return DeriveShaSimple(list)
+	case ImplDeriveShaConcat:
+		return DeriveShaConcat(list)
+	}
+
+	log.Warn("UndefinedDeriveSha! Use original!")
+	return DeriveShaOrig(list)
+}
+
+func DeriveShaOrig(list DerivableList) common.Hash {
 	keybuf := new(bytes.Buffer)
 	trie := new(trie.Trie)
 	for i := 0; i < list.Len(); i++ {
@@ -42,7 +67,6 @@ func DeriveSha(list DerivableList) common.Hash {
 
 // An alternative implementation of DeriveSha()
 // This function generates a hash of `DerivableList` by simulating merkle tree generation
-// TODO-GX: Replace calls of DeriveSha() with this function
 func DeriveShaSimple(list DerivableList) common.Hash {
 	hasher := sha3.NewKeccak256()
 
@@ -77,7 +101,6 @@ func DeriveShaSimple(list DerivableList) common.Hash {
 // This function generates a hash of `DerivableList` as below:
 // 1. make a byte slice by concatenating RLP-encoded items
 // 2. make a hash of the byte slice.
-// TODO-GX: Replace calls of DeriveSha() with this function
 func DeriveShaConcat(list DerivableList) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 	keybuf := new(bytes.Buffer)
