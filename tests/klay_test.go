@@ -17,53 +17,14 @@
 package tests
 
 import (
-	"os"
-	"fmt"
 	"flag"
 	"time"
-	"bytes"
-	"errors"
 	"testing"
 	"math/big"
 	"math/rand"
-	"crypto/ecdsa"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/state"
 	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/core/vm"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/gxdb"
-	"github.com/ground-x/go-gxplatform/miner"
-	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/rlp"
 	"github.com/ground-x/go-gxplatform/common/profile"
-
-	istanbulBackend "github.com/ground-x/go-gxplatform/consensus/istanbul/backend"
-	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
 )
-
-const transactionsJournalFilename = "transactions.rlp"
-
-// If you don't want to remove 'chaindata', set removeChaindataOnExit = false
-const removeChaindataOnExit = true
-
-const GasLimit uint64 = 1000000000000000000
-
-type BCData struct {
-	bc *core.BlockChain
-	addrs []*common.Address
-	privKeys []*ecdsa.PrivateKey
-	db gxdb.Database
-	rewardBase *common.Address
-	validatorAddresses []common.Address
-	validatorPrivKeys  []*ecdsa.PrivateKey
-	engine consensus.Istanbul
-}
 
 var txPerBlock int
 func init() {
@@ -72,212 +33,15 @@ func init() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// AddressBalanceMap
+// TestValueTransfer
 ////////////////////////////////////////////////////////////////////////////////
-type AccountInfo struct {
-	balance *big.Int
-	nonce uint64
-}
-
-type AccountMap map[common.Address]*AccountInfo
-
-func (a AccountMap) Get(addr common.Address) (*AccountInfo) {
-	if acc, ok := a[addr]; ok {
-		return &AccountInfo{new(big.Int).Set(acc.balance), acc.nonce }
-	}
-	return &AccountInfo{big.NewInt(0), 0}
-}
-
-func (a AccountMap) AddBalance(addr common.Address, v *big.Int) {
-	if acc, ok := a[addr]; ok {
-		acc.balance.Add(acc.balance, v)
-	}
-}
-
-func (a AccountMap) SubBalance(addr common.Address, v *big.Int) {
-	if acc, ok := a[addr]; ok {
-		acc.balance.Sub(acc.balance, v)
-	}
-}
-
-func (a AccountMap) IncNonce(addr common.Address) {
-	if acc, ok := a[addr]; ok {
-		acc.nonce++
-	}
-}
-
-func (a AccountMap) Set(addr common.Address, v *big.Int, nonce uint64) {
-	a[addr] = &AccountInfo{new(big.Int).Set(v), nonce}
-}
-
-func (a AccountMap) Initialize(bcdata *BCData) (error){
-	statedb, err := bcdata.bc.State()
-	if err != nil {
-		return err
-	}
-
-	for _, addr := range bcdata.addrs {
-		a.Set(*addr, statedb.GetBalance(*addr), statedb.GetNonce(*addr))
-	}
-
-	return nil
-}
-
-func (a AccountMap) Update(txs types.Transactions, signer types.Signer) (error) {
-	for _, tx := range txs {
-		to := tx.To()
-		v := tx.Value()
-
-		from, err := types.Sender(signer, tx)
-		if err != nil {
-			return err
-		}
-
-		if to == nil {
-			addr := crypto.CreateAddress(from, a.Get(from).nonce)
-			to = &addr
-		}
-
-		a.AddBalance(*to, v)
-		a.SubBalance(from, v)
-
-		a.IncNonce(from)
-	}
-
-	return nil
-}
-
-func (a AccountMap) Verify(statedb *state.StateDB) (error) {
-	for addr, acc := range a {
-		if acc.nonce != statedb.GetNonce(addr) {
-			return errors.New(fmt.Sprintf("[%s] nonce is different!! statedb(%d) != accountMap(%d).\n",
-				addr.Hex(), statedb.GetNonce(addr), acc.nonce))
-		}
-
-		if acc.balance.Cmp(statedb.GetBalance(addr)) != 0 {
-			return errors.New(fmt.Sprintf("[%s] balance is different!! statedb(%s) != accountMap(%s).\n",
-				addr.Hex(), statedb.GetBalance(addr).String(), acc.balance.String()))
-		}
-	}
-
-	return nil
-}
-
-////////////////////////////////////////////////////////////////////////////////
-func NewDatabase(dbtype string) (db gxdb.Database, err error) {
-	switch dbtype {
-	case gxdb.LEVELDB:
-		db, err = gxdb.NewLDBDatabase("chaindata", 16, 16)
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		db = gxdb.NewMemDatabase()
-	}
-
-	return
-}
-
-// Copied from consensus/istanbul/backend/engine.go
-func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
-	var buf bytes.Buffer
-
-	buf.Write(bytes.Repeat([]byte{0x0}, types.IstanbulExtraVanity))
-
-	ist := &types.IstanbulExtra{
-		Validators:    validators,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return nil, err
-	}
-	return append(buf.Bytes(), payload...), nil
-}
-
-func initBlockchain(conf *node.Config, db gxdb.Database, coinbaseAddrs []*common.Address, validators []common.Address,
-	engine consensus.Engine) (*core.BlockChain, error) {
-
-	extraData, err := prepareIstanbulExtra(validators)
-
-	genesis := core.DefaultGenesisBlock()
-	genesis.Coinbase = *coinbaseAddrs[0]
-	genesis.Config = Forks["Byzantium"]
-	genesis.GasLimit = GasLimit
-	genesis.ExtraData = extraData
-	genesis.Nonce = 0
-	genesis.Mixhash = types.IstanbulDigest
-	genesis.Difficulty = big.NewInt(1)
-
-	alloc := make(core.GenesisAlloc)
-	for _, a := range coinbaseAddrs {
-		alloc[*a] = core.GenesisAccount{Balance: big.NewInt(1000000000000000000)}
-	}
-
-	genesis.Alloc = alloc
-
-	chainConfig, _, err := core.SetupGenesisBlock(db, genesis)
-	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
-		return nil, err
-	}
-
-	chain, err := core.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
-	if err != nil {
-		return nil, err
-	}
-
-	return chain, nil
-}
-
-func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, error) {
-	accs := make([]*common.Address, numAccounts)
-	privKeys := make([]*ecdsa.PrivateKey, numAccounts)
-
-	for i := 0; i < numAccounts; i++ {
-		k, err := crypto.GenerateKey()
-		if err != nil {
-			return nil, nil, err
-		}
-		keyAddr := crypto.PubkeyToAddress(k.PublicKey)
-
-		accs[i] = &keyAddr
-		privKeys[i] = k
-	}
-
-	return accs, privKeys, nil
-}
-
-func prepareHeader(bcdata *BCData) (*types.Header, error) {
-	tstart := time.Now()
-	parent := bcdata.bc.CurrentBlock()
-
-	tstamp := tstart.Unix()
-	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-		tstamp = parent.Time().Int64() + 1
-	}
-	// this will ensure we're not going off too far in the future
-	if now := time.Now().Unix(); tstamp > now {
-		wait := time.Duration(tstamp-now) * time.Second
-		time.Sleep(wait)
-	}
-
-	num := parent.Number()
-	header := &types.Header{
-		ParentHash: parent.Hash(),
-		Coinbase:   common.Address{},
-		Number:     num.Add(num, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
-		Time:       big.NewInt(tstamp),
-	}
-
-	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
-		return nil, errors.New(fmt.Sprintf("Failed to prepare header for mining %s.\n", err))
-	}
-
-	return header, nil
+type testOption struct {
+	numTransactions    int
+	numMaxAccounts     int
+	numValidators      int
+	numGeneratedBlocks int
+	txdata             []byte
+	makeTransactions   func(*BCData, *AccountMap, types.Signer, int, *big.Int, []byte) (types.Transactions, error)
 }
 
 func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
@@ -288,7 +52,7 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	numAddrs := len(toAddrs)
 
 	txs := make(types.Transactions, 0, numTransactions)
-	nonce := (*accountMap)[from].nonce
+	nonce := accountMap.GetNonce(from)
 	for i := 0; i < numTransactions; i++ {
 		a := toAddrs[i % numAddrs]
 		txamount := amount
@@ -313,41 +77,6 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	return txs, nil
 }
 
-func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer,
-	numTransactions int, amount *big.Int, data []byte) (types.Transactions, error) {
-
-	numAddrs := len(bcdata.addrs)
-	fromAddrs := bcdata.addrs
-
-	fromNonces := make([]uint64, numAddrs)
-	for i, addr := range fromAddrs {
-		fromNonces[i] = (*accountMap)[*addr].nonce
-	}
-
-	txs := make(types.Transactions, 0, numTransactions)
-
-	for i := 0; i < numTransactions; i++ {
-		idx := i % numAddrs
-
-		txamount := new(big.Int).SetInt64(0)
-
-		var gasLimit uint64 = 1000000
-		gasPrice := new(big.Int).SetInt64(0)
-
-		tx := types.NewContractCreation(fromNonces[idx], txamount, gasLimit, gasPrice, data)
-		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
-		if err != nil {
-			return nil, err
-		}
-
-		txs = append(txs, signedTx)
-
-		fromNonces[idx]++
-	}
-
-	return txs, nil
-}
-
 func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
 	amount *big.Int, data []byte) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs) / 2
@@ -356,7 +85,7 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i] = (*accountMap)[*addr].nonce
+		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)
@@ -386,311 +115,6 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 	return txs, nil
 }
 
-func mineABlock(bcdata *BCData, transactions types.Transactions, signer types.Signer, prof *profile.Profiler) (*types.Block, error) {
-	// Set the block header
-	start := time.Now()
-	header, err := prepareHeader(bcdata)
-	if err != nil {
-		return nil, err
-	}
-	prof.Profile("mine_prepareHeader", time.Now().Sub(start))
-
-	statedb, err := bcdata.bc.State()
-	if err != nil {
-		return nil, err
-	}
-
-	// Group transactions by the sender address
-	start = time.Now()
-	txs := make(map[common.Address]types.Transactions)
-	for _, tx := range transactions {
-		acc, err := types.Sender(signer, tx)
-		if err != nil {
-			return nil, err
-		}
-		txs[acc] = append(txs[acc], tx)
-	}
-	prof.Profile("mine_groupTransactions", time.Now().Sub(start))
-
-	// Create a transaction set where transactions are sorted by price and nonce
-	start = time.Now()
-	txset := types.NewTransactionsByPriceAndNonce(signer, txs) // TODO-GX-issue136 gasPrice
-	prof.Profile("mine_NewTransactionsByPriceAndNonce", time.Now().Sub(start))
-
-	// Apply the set of transactions
-	start = time.Now()
-	gp := new(core.GasPool)
-	gp = gp.AddGas(GasLimit)
-	task := miner.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
-	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
-	newtxs := task.Transactions()
-	receipts := task.Receipts()
-	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
-
-	// Finalize the block
-	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, []*types.Header{}, receipts)
-	if err != nil {
-		return nil, err
-	}
-	prof.Profile("mine_finalize_block", time.Now().Sub(start))
-
-	////////////////////////////////////////////////////////////////////////////////
-
-	start = time.Now()
-	b, err = sealBlock(b, bcdata.validatorPrivKeys)
-	if err != nil {
-		return nil, err
-	}
-	prof.Profile("mine_seal_block", time.Now().Sub(start))
-
-	return b, nil
-}
-
-func genABlock(t testing.TB, bcdata *BCData, accountMap *AccountMap, opt *testOption,
-	numTransactions int, prof *profile.Profiler) {
-	// Make a set of transactions
-	start := time.Now()
-	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-	transactions, err := opt.makeTransactions(bcdata, accountMap, signer, numTransactions, nil, opt.txdata)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_makeTransactions", time.Now().Sub(start))
-
-	// Update accountMap
-	start = time.Now()
-	if err := accountMap.Update(transactions, signer); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_update_accountMap", time.Now().Sub(start))
-
-	// Mine a block!
-	start = time.Now()
-	b, err := mineABlock(bcdata, transactions, signer, prof)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_mineABlock", time.Now().Sub(start))
-
-	// Insert the block into the blockchain
-	start = time.Now()
-	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil{
-		t.Fatal(fmt.Sprintf("err = %s, n = %d\n", err, n))
-	}
-	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
-
-	// Apply reward
-	start = time.Now()
-	rewardAddr := *bcdata.rewardBase
-	accountMap.AddBalance(rewardAddr, big.NewInt(1000000000000000000))
-	prof.Profile("main_apply_reward", time.Now().Sub(start))
-
-	// Verification with accountMap
-	start = time.Now()
-	statedb, err := bcdata.bc.State()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := accountMap.Verify(statedb); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_verification", time.Now().Sub(start))
-}
-
-// Copied from consensus/istanbul/backend/engine.go
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return hash
-}
-
-// writeSeal writes the extra-data field of the given header with the given seals.
-// Copied from consensus/istanbul/backend/engine.go
-func writeSeal(h *types.Header, seal []byte) error {
-	if len(seal)%types.IstanbulExtraSeal != 0 {
-		return errors.New("invalid signature")
-	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
-	if err != nil {
-		return err
-	}
-
-	istanbulExtra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
-	return nil
-}
-
-// writeCommittedSeals writes the extra-data field of a block header with given committed seals.
-// Copied from consensus/istanbul/backend/engine.go
-func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
-	errInvalidCommittedSeals := errors.New("invalid committed seals")
-
-	if len(committedSeals) == 0 {
-		return errInvalidCommittedSeals
-	}
-
-	for _, seal := range committedSeals {
-		if len(seal) != types.IstanbulExtraSeal {
-			return errInvalidCommittedSeals
-		}
-	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
-	if err != nil {
-		return err
-	}
-
-	istanbulExtra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(istanbulExtra.CommittedSeal, committedSeals)
-
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
-	return nil
-}
-
-// sign implements istanbul.backend.Sign
-// Copied from consensus/istanbul/backend/backend.go
-func sign(data []byte, privkey *ecdsa.PrivateKey) ([]byte, error) {
-	hashData := crypto.Keccak256([]byte(data))
-	return crypto.Sign(hashData, privkey)
-}
-
-func makeCommittedSeal(h *types.Header, privKeys []*ecdsa.PrivateKey) ([][]byte, error) {
-	committedSeals := make([][]byte, 0, 3)
-
-	for i := 1; i < 4; i++ {
-		seal := istanbulCore.PrepareCommittedSeal(h.Hash())
-		committedSeal, err := sign(seal, privKeys[i])
-		if err != nil {
-			return nil, err
-		}
-		committedSeals = append(committedSeals, committedSeal)
-	}
-
-	return committedSeals, nil
-}
-
-func sealBlock(b *types.Block, privKeys []*ecdsa.PrivateKey) (*types.Block, error) {
-	header := b.Header()
-
-	seal, err := sign(sigHash(header).Bytes(), privKeys[0])
-	if err != nil {
-		return nil, err
-	}
-
-	err = writeSeal(header, seal)
-	if err != nil {
-		return nil, err
-	}
-
-	committedSeals, err := makeCommittedSeal(header, privKeys)
-	if err != nil {
-		return nil, err
-	}
-
-	err = writeCommittedSeals(header, committedSeals)
-	if err != nil {
-		return nil, err
-	}
-
-	return b.WithSeal(header), nil
-}
-
-func initializeBC(maxAccounts, numValidators int) (*BCData, error) {
-	conf := node.DefaultConfig
-
-	// Remove leveldb dir if exists
-	if _, err := os.Stat("chaindata"); err == nil {
-		os.RemoveAll("chaindata")
-	}
-
-	// Remove transactions.rlp if exists
-	if _, err := os.Stat(transactionsJournalFilename); err == nil {
-		os.RemoveAll(transactionsJournalFilename)
-	}
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Create a database
-	chainDb, err := NewDatabase(gxdb.LEVELDB)
-	if err != nil {
-		return nil, err
-	}
-	////////////////////////////////////////////////////////////////////////////////
-	// Create accounts as many as maxAccounts
-	if numValidators > maxAccounts {
-		return nil, errors.New("maxAccounts should be bigger numValidators!!")
-	}
-	addrs, privKeys, err := createAccounts(maxAccounts)
-	if err != nil {
-		return nil, err
-	}
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Set the genesis address
-	genesisAddr := *addrs[0]
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Use first 4 accounts as vaildators
-	validatorPrivKeys := make([]*ecdsa.PrivateKey, numValidators)
-	validatorAddresses := make([]common.Address, numValidators)
-	for i := 0; i < numValidators; i++ {
-		validatorPrivKeys[i] = privKeys[i]
-		validatorAddresses[i] = *addrs[i]
-	}
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(genesisAddr, genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDb)
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Make a blockchain
-	bc, err := initBlockchain(&conf, chainDb, addrs, validatorAddresses, engine)
-	if err != nil {
-		return nil, err
-	}
-
-	return &BCData{bc, addrs, privKeys, chainDb,
-	&genesisAddr, validatorAddresses,
-	validatorPrivKeys, engine }, nil
-}
-
-func shutdown(bcdata *BCData) {
-	bcdata.bc.Stop()
-
-	bcdata.db.Close()
-	// Remove leveldb dir which was created for this test.
-	if removeChaindataOnExit {
-		os.RemoveAll("chaindata")
-		os.RemoveAll(transactionsJournalFilename)
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// TestValueTransfer
-////////////////////////////////////////////////////////////////////////////////
-type testOption struct {
-	numTransactions    int
-	numMaxAccounts     int
-	numValidators      int
-	numGeneratedBlocks int
-	txdata             []byte
-	makeTransactions   func(*BCData, *AccountMap, types.Signer, int, *big.Int, []byte) (types.Transactions, error)
-}
-
 func TestValueTransfer(t *testing.T) {
 	var valueTransferTests = [...]struct {
 		name string
@@ -714,16 +138,16 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := initializeBC(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer shutdown(bcdata)
+	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
 	start = time.Now()
-	accountMap := make(AccountMap)
+	accountMap := NewAccountMap()
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
@@ -731,7 +155,10 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 
 	for i := 0; i < opt.numGeneratedBlocks; i++ {
 		//fmt.Printf("iteration %d\n", i)
-		genABlock(t, bcdata, &accountMap, opt, opt.numTransactions, prof)
+		err := bcdata.GenABlock(accountMap, opt, opt.numTransactions, prof)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	if testing.Verbose() {
@@ -745,16 +172,16 @@ func BenchmarkValueTransfer(t *testing.B) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := initializeBC(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer shutdown(bcdata)
+	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
 	start = time.Now()
-	accountMap := make(AccountMap)
+	accountMap := NewAccountMap()
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
@@ -763,13 +190,19 @@ func BenchmarkValueTransfer(t *testing.B) {
 	t.ResetTimer()
 	for i := 0; i < t.N/txPerBlock; i++ {
 		//fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
-		genABlock(t, bcdata, &accountMap, &opt, txPerBlock, prof)
+		err := bcdata.GenABlock(accountMap, &opt, txPerBlock, prof)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	genBlocks := t.N / txPerBlock
 	remainTxs := t.N % txPerBlock
 	if remainTxs != 0 {
-		genABlock(t, bcdata, &accountMap, &opt, remainTxs, prof)
+		err := bcdata.GenABlock(accountMap, &opt, remainTxs, prof)
+		if err != nil {
+			t.Fatal(err)
+		}
 		genBlocks++
 	}
 	t.StopTimer()

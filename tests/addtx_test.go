@@ -90,16 +90,16 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 	cacheSender bool) {
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := initializeBC(maxAccounts, numValidators)
+	bcdata, err := NewBCData(maxAccounts, numValidators)
 	if err != nil {
 		b.Fatal(err)
 	}
 	profile.Prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer shutdown(bcdata)
+	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
 	start = time.Now()
-	accountMap := make(AccountMap)
+	accountMap := NewAccountMap()
 	if err := accountMap.Initialize(bcdata); err != nil {
 		b.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 
 	txs := make([]types.Transactions, b.N)
 	for i := 0; i < b.N; i++ {
-		txs[i], err = makeTransactions(&accountMap,
+		txs[i], err = makeTransactions(accountMap,
 			bcdata.addrs[1000:maxAccounts], bcdata.privKeys[1000:maxAccounts],
 			signer, bcdata.addrs[0:maxAccounts-1000], nil, i, cacheSender)
 		if err != nil {
@@ -201,7 +201,7 @@ func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privK
 
 	txs := make(types.Transactions, 0, len(toAddrs))
 	for i, from := range fromAddrs {
-		nonce := (*accountMap)[*from].nonce + uint64(additionalNonce)
+		nonce := accountMap.GetNonce(*from) + uint64(additionalNonce)
 
 		txamount := amount
 		if txamount == nil {

@@ -5,11 +5,13 @@ import (
 	"io"
 	"time"
 	"testing"
+	"math/big"
 	"path/filepath"
 	"github.com/mattn/go-colorable"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/log/term"
+	"github.com/ground-x/go-gxplatform/core/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
 	"github.com/ground-x/go-gxplatform/common/compiler"
 )
@@ -35,6 +37,41 @@ func enableLog() {
 	log.Root().SetHandler(glogger)
 }
 
+func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer,
+	numTransactions int, amount *big.Int, data []byte) (types.Transactions, error) {
+
+	numAddrs := len(bcdata.addrs)
+	fromAddrs := bcdata.addrs
+
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range fromAddrs {
+		fromNonces[i] = accountMap.GetNonce(*addr)
+	}
+
+	txs := make(types.Transactions, 0, numTransactions)
+
+	for i := 0; i < numTransactions; i++ {
+		idx := i % numAddrs
+
+		txamount := new(big.Int).SetInt64(0)
+
+		var gasLimit uint64 = 1000000
+		gasPrice := new(big.Int).SetInt64(0)
+
+		tx := types.NewContractCreation(fromNonces[idx], txamount, gasLimit, gasPrice, data)
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, signedTx)
+
+		fromNonces[idx]++
+	}
+
+	return txs, nil
+}
+
 func genOptions(b *testing.B) ([]testData, error) {
 	solFiles := []string{"../contracts/reward/contract/GXPReward.sol"}
 
@@ -58,16 +95,16 @@ func genOptions(b *testing.B) ([]testData, error) {
 func deploySmartContract(b *testing.B, opt *testOption, prof *profile.Profiler) {
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := initializeBC(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
 	if err != nil {
 		b.Fatal(err)
 	}
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer shutdown(bcdata)
+	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
 	start = time.Now()
-	accountMap := make(AccountMap)
+	accountMap := NewAccountMap()
 	if err := accountMap.Initialize(bcdata); err != nil {
 		b.Fatal(err)
 	}
@@ -76,13 +113,19 @@ func deploySmartContract(b *testing.B, opt *testOption, prof *profile.Profiler) 
 	b.ResetTimer()
 	for i := 0; i < b.N/txPerBlock; i++ {
 		//fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
-		genABlock(b, bcdata, &accountMap, opt, txPerBlock, prof)
+		err := bcdata.GenABlock( accountMap, opt, txPerBlock, prof)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	genBlocks := b.N / txPerBlock
 	remainTxs := b.N % txPerBlock
 	if remainTxs != 0 {
-		genABlock(b, bcdata, &accountMap, opt, remainTxs, prof)
+		err := bcdata.GenABlock(accountMap, opt, remainTxs, prof)
+		if err != nil {
+			b.Fatal(err)
+		}
 		genBlocks++
 	}
 
