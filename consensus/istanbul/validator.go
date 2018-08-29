@@ -44,6 +44,8 @@ type ValidatorSet interface {
 	List() []Validator
 	// Return the sub validator array
 	SubList(prevHash common.Hash) []Validator
+	// Return the sub validator array with the specified proposer
+	SubListWithProposer(prevHash common.Hash, proposer common.Address) []Validator
 	// Get validator by index
 	GetByIndex(i uint64) Validator
 	// Get validator by given address

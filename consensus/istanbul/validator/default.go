@@ -11,6 +11,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"strings"
 	"strconv"
+	"fmt"
 )
 
 const (
@@ -159,7 +160,78 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	}
 
 	for i :=0; i < valSet.subSize-2; i++ {
-	   subset[i+2] = valSet.validators[indexs[i]]
+		subset[i+2] = valSet.validators[indexs[i]]
+	}
+
+	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
+		log.Error("### subList","prevHash", prevHash.Hex())
+	}
+
+	return subset
+}
+
+func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer common.Address) []istanbul.Validator {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+
+	if len(valSet.validators) <= valSet.subSize {
+		return valSet.validators
+	}
+	hashstring := strings.TrimPrefix(prevHash.Hex(),"0x")
+	if len(hashstring) > 15 {
+		hashstring = hashstring[:15]
+	}
+	seed, err := strconv.ParseInt(hashstring, 16, 64)
+	if err != nil {
+		log.Error("input" ,"hash", prevHash.Hex())
+		log.Error("fail to make sub-list of validators","seed", seed, "err",err)
+		return valSet.validators
+	}
+
+	// shuffle
+	subset := make([]istanbul.Validator,valSet.subSize)
+	subset[0] = New(proposer)
+	// next proposer
+	// TODO how to sync next proposer (how to get exact next proposer ?)
+	subset[1] = valSet.selector(valSet, subset[0].Address() , uint64(0))
+
+	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
+	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
+
+	// TODO-GX: remove this check code if the implementation is stable.
+	if proposerIdx < 0 || nextproposerIdx < 0 {
+		vals := "["
+		for _, v := range valSet.validators {
+			vals += fmt.Sprintf("%s,", v.Address().Hex())
+		}
+		vals += "]"
+		log.Error("idx should not be negative!", "proposerIdx", proposerIdx, "nextproposerIdx", nextproposerIdx, "proposer", subset[0].Address().Hex(),
+			"nextproposer", subset[1].Address().Hex(), "validators", vals)
+	}
+
+	if proposerIdx == nextproposerIdx {
+		log.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
+	}
+
+	limit := len(valSet.validators)
+	picker := rand.New(rand.NewSource(seed))
+
+	pickSize := limit - 2
+	indexs := make([]int, pickSize)
+	idx := 0
+	for i := 0; i < limit; i++ {
+		if i != proposerIdx && i != nextproposerIdx {
+			indexs[idx] = i
+			idx++
+		}
+	}
+	for i := 0; i < pickSize; i++ {
+		randIndex := picker.Intn(pickSize)
+		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
+	}
+
+	for i :=0; i < valSet.subSize-2; i++ {
+		subset[i+2] = valSet.validators[indexs[i]]
 	}
 
 	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {

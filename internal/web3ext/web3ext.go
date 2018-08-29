@@ -311,6 +311,10 @@ web3._extend({
 `
 
 const Gxp_JS = `
+var blockWithConsensusInfoCall = function (args) {
+    return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "klay_getBlockWithConsensusInfoByHash" : "klay_getBlockWithConsensusInfoByNumber";
+};
+
 web3._extend({
 	property: 'klay',
 	methods: [
@@ -331,6 +335,18 @@ web3._extend({
 			call: 'klay_signTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getValidators',
+			call: 'klay_getValidators',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getBlockWithConsensusInfo',
+			call: blockWithConsensusInfoCall,
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'submitTransaction',

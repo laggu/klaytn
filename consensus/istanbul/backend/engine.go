@@ -474,12 +474,19 @@ func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, pare
 
 // APIs returns the RPC APIs this consensus engine provides.
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
-	return []rpc.API{{
+	return []rpc.API{
+	{
 		Namespace: "istanbul",
 		Version:   "1.0",
 		Service:   &API{chain: chain, istanbul: sb},
 		Public:    true,
-	}}
+	}, {
+		Namespace: "klay",
+		Version:   "1.0",
+		Service:   &APIExtension{chain: chain, istanbul: sb},
+		Public:    true,
+	},
+    }
 }
 
 // Start implements consensus.Istanbul.Start
