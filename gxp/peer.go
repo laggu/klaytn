@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
 var (
@@ -101,23 +102,30 @@ func (p *peer) broadcast() {
 		select {
 		case txs := <-p.queuedTxs:
 			if err := p.SendTransactions(txs); err != nil {
-				return
+				log.Error("fail to SendTransactions","err",err)
+				continue
+				//return
 			}
 			p.Log().Trace("Broadcast transactions", "count", len(txs))
 
 		case prop := <-p.queuedProps:
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
-				return
+				log.Error("fail to SendNewBlock","err",err)
+				continue
+				//return
 			}
 			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
 		case block := <-p.queuedAnns:
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
-				return
+				log.Error("fail to SendNewBlockHashes","err",err)
+				continue
+				//return
 			}
 			p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
 
 		case <-p.term:
+			p.Log().Debug("Peer broadcast loop end")
 			return
 		}
 	}

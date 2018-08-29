@@ -331,8 +331,9 @@ func (pm *ProtocolManager) handle(p *peer) error {
 
 	// TODO-GX check global worker and peer worker
     messageChannel := make(chan p2p.Msg, channelSizePerPeer)
+    errChannel := make(chan error, channelSizePerPeer)
     for w := 1; w <= concurrentPerPeer; w++ {
-    	go pm.processMsg(messageChannel, p, addr)
+    	go pm.processMsg(messageChannel, p, addr, errChannel)
 	}
 
 	// main loop. handle incoming messages.
@@ -350,6 +351,12 @@ func (pm *ProtocolManager) handle(p *peer) error {
 
 		messageChannel <- msg
 
+		select {
+		case err :=<- errChannel:
+			close(messageChannel)
+			return err
+		default:
+		}
 		//go pm.handleMsg(p, addr, msg)
 
 		//if err := pm.handleMsg(p); err != nil {
@@ -359,10 +366,12 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
-func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p *peer, addr common.Address) {
+func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p *peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
 		if err := pm.handleMsg(p, addr, msg); err != nil {
 			p.Log().Debug("ProtocolManager failed to handle message", "msg", msg, "err", err)
+			errCh <- err
+			return
 		}
 		msg.Discard()
 	}
@@ -688,7 +697,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		}
 
 	case msg.Code == TxMsg:
-		pm.txMsgLock.Lock()
+		//pm.txMsgLock.Lock()
 
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
@@ -708,7 +717,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		}
 		pm.txpool.AddRemotes(txs)
 
-		pm.txMsgLock.Unlock()
+		//pm.txMsgLock.Unlock()
 
 	// ranger node
 	case msg.Code == consensus.PoRSendMsg:
@@ -786,7 +795,7 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 		peers := pm.peers.PeersWithoutTx(tx.Hash())
 
 		// TODO-GX Code Check
-		peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
 		}
