@@ -390,7 +390,7 @@ type protoRW struct {
 
 func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 	if msg.Code >= rw.Length {
-		return newPeerError(errInvalidMsgCode, "not handled","msg.Code",msg.Code,"rw.Length",rw.Length)
+		return newPeerError(errInvalidMsgCode, "not handled, (code %x) (size %d)", msg.Code, msg.Size)
 	}
 	msg.Code += rw.offset
 	select {
