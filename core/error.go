@@ -71,6 +71,6 @@ var (
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
 
-	// istanbul BFT
-	ErrInvalidGasPrice = errors.New("Gas price not 0")
+	// ErrInvlidUnitPrice is returned if gas price of transaction is not equal to UnitPrice
+	ErrInvalidUnitPrice = errors.New("invalid unit price")
 )

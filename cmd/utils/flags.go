@@ -1049,9 +1049,12 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
+	// TODO-GX Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
+	/*
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
 		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-GX-issue136 gasPrice
 	}
+	*/
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)

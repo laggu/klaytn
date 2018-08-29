@@ -69,10 +69,15 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
+
+	// TODO-GX We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
+	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
+	/*
 	// istanbul BFT
 	if config.IsBFT && tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
 		return nil, uint64(0), ErrInvalidGasPrice
 	}
+	*/
 
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {

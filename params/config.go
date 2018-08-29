@@ -73,6 +73,7 @@ var (
 		Clique: nil,
 		Istanbul: nil,
 		IsBFT: false,
+		UnitPrice: 1, // NOTE-GX Use UnitPrice 1 for tests
 	}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 
@@ -100,6 +101,7 @@ type ChainConfig struct {
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
 	IsBFT bool `json:"isBFT"`
+	UnitPrice uint64 `json:"unitPrice"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -147,17 +149,19 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v SubGroupSize: %d}",
+		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v SubGroupSize: %d UnitPrice: %d}",
 			c.ChainID,
 			c.IsBFT,
 			engine,
 			c.Istanbul.SubGroupSize,
+			c.UnitPrice,
 		)
 	}else {
-		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v UnitPrice: %d}",
 			c.ChainID,
 			c.IsBFT,
 			engine,
+			c.UnitPrice,
 		)
 	}
 }

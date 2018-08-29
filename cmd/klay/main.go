@@ -18,7 +18,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/urfave/cli.v1"
-	"math/big"
 	"net/http"
 	"runtime"
 	"sort"
@@ -283,9 +282,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				th.SetThreads(threads)
 			}
 		}
-		// TODO-GX-issue136 TxPool gasPrice
-		// Set the gas price to the limits from the CLI and start mining
-		gxp.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		if err := gxp.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
@@ -295,7 +291,5 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := stack.Service(&gxp); err != nil {
 			utils.Fatalf("Klaytn service not running: %v", err)
 		}
-		// TODO-GX-issue136 gasPrice
-		gxp.TxPool().SetGasPrice(big.NewInt(0))
 	}
 }

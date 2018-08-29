@@ -178,7 +178,9 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		beats:       make(map[common.Address]time.Time),
 		all:         make(map[common.Hash]*types.Transaction),
 		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
-		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
+		// TODO-GX We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
+		//         later we have to change this rule when governance of UnitPrice is determined.
+		gasPrice:    new(big.Int).SetUint64(chainconfig.UnitPrice),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -423,6 +425,7 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
+	log.Debug("TxPool.SetGasPrice", "before", pool.gasPrice, "after", price)
 	pool.gasPrice = price
 	for _, tx := range pool.priced.Cap(price, pool.locals) {
 		pool.removeTx(tx.Hash(), false)
@@ -513,6 +516,12 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+	// NOTE-GX Drop transactions with unexpected gasPrice
+	if pool.gasPrice.Cmp(tx.GasPrice()) !=0 {
+		log.Info("fail to validate unitprice", "klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
+		return ErrInvalidUnitPrice
+	}
+
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
