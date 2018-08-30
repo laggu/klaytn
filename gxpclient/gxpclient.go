@@ -9,6 +9,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/internal/gxapi"
 	"github.com/ground-x/go-gxplatform/rlp"
 	"github.com/ground-x/go-gxplatform/rpc"
 	"math/big"
@@ -459,11 +460,75 @@ func (ec *Client) EstimateGas(ctx context.Context, msg gxplatform.CallMsg) (uint
 // If the transaction was a contract creation use the TransactionReceipt method to get the
 // contract address after the transaction has been mined.
 func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	_, err := ec.SendRawTransaction(ctx, tx)
+	return err
+	//data, err := rlp.EncodeToBytes(tx)
+	//if err != nil {
+	//	return err
+	//}
+	//return ec.c.CallContext(ctx, nil, "klay_sendRawTransaction", common.ToHex(data))
+}
+
+// SendRawTransaction injects a signed transaction into the pending pool for execution.
+//
+// This function can return the transaction hash and error.
+func (ec *Client) SendRawTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error) {
+	var hex hexutil.Bytes
 	data, err := rlp.EncodeToBytes(tx)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return ec.c.CallContext(ctx, nil, "klay_sendRawTransaction", common.ToHex(data))
+	if err := ec.c.CallContext(ctx, &hex, "klay_sendRawTransaction", hexutil.Encode(data)); err != nil {
+		return common.Hash{}, err
+	}
+	hash := common.BytesToHash(hex)
+	return hash, nil
+}
+
+// SendUnsignedTransaction injects a unsigned transaction into the pending pool for execution.
+//
+// This function can return the transaction hash and error.
+func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Address, to common.Address, gas uint64, gasPrice uint64, value *big.Int, data []byte, input []byte) (common.Hash, error) {
+	var hex hexutil.Bytes
+
+	tGas := hexutil.Uint64(gas)
+	bigGasPrice := new(big.Int).SetUint64(gasPrice)
+	tGasPrice := (*hexutil.Big)(bigGasPrice)
+	hValue := (*hexutil.Big)(value)
+	tData := hexutil.Bytes(data)
+	tInput := hexutil.Bytes(input)
+
+	unsignedTx := gxapi.SendTxArgs{
+		From:     from,
+		To:       &to,
+		Gas:      &tGas,
+		GasPrice: tGasPrice,
+		Value:    hValue,
+		//Nonce : nonce,	Nonce will be determined by Klay node.
+		Data:  &tData,
+		Input: &tInput,
+	}
+
+	if err := ec.c.CallContext(ctx, &hex, "klay_sendTransaction", toSendTxArgs(unsignedTx)); err != nil {
+		return common.Hash{}, err
+	}
+	hash := common.BytesToHash(hex)
+	return hash, nil
+}
+
+// ImportRawKey can create key store from private key string on klay node.
+func (ec *Client) ImportRawKey(ctx context.Context, key string, password string) (common.Address, error) {
+	var result hexutil.Bytes
+	err := ec.c.CallContext(ctx, &result, "personal_importRawKey", key, password)
+	address := common.BytesToAddress(result)
+	return address, err
+}
+
+// UnlockAccount can unlock the account on klay node.
+func (ec *Client) UnlockAccount(ctx context.Context, address common.Address, password string, time uint) (bool, error) {
+	var result bool
+	err := ec.c.CallContext(ctx, &result, "personal_unlockAccount", address, password, time)
+	return result, err
 }
 
 func toCallArg(msg gxplatform.CallMsg) interface{} {
@@ -483,5 +548,29 @@ func toCallArg(msg gxplatform.CallMsg) interface{} {
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
+	return arg
+}
+
+func toSendTxArgs(msg gxapi.SendTxArgs) interface{} {
+	arg := map[string]interface{}{
+		"from": msg.From,
+		"to":   msg.To,
+	}
+	if *msg.Gas != 0 {
+		arg["gas"] = (*hexutil.Uint64)(msg.Gas)
+	}
+	if msg.GasPrice != nil {
+		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
+	}
+	if msg.Value != nil {
+		arg["value"] = (*hexutil.Big)(msg.Value)
+	}
+	if len(*msg.Data) > 0 {
+		arg["data"] = (*hexutil.Bytes)(msg.Data)
+	}
+	if len(*msg.Input) > 0 {
+		arg["input"] = (*hexutil.Bytes)(msg.Input)
+	}
+
 	return arg
 }
