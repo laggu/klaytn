@@ -30,7 +30,7 @@ type Backend interface {
 	GossipSubPeer(prevHash common.Hash, valSet ValidatorSet, payload []byte) error
 
 	// ranger node
-	GossipProof(targets map[common.Address]bool, payload types.Proof) error
+	GossipProof(payload types.Proof) error
 
 	CurrentBlock() *types.Block
 

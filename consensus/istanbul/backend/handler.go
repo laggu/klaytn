@@ -7,6 +7,7 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/node"
 )
 
 const (
@@ -75,9 +76,23 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	return false, nil
 }
 
+func (sb *backend) ValidatePeerType(addr common.Address) bool {
+	// istanbul.Start vs try to connect by peer
+	for sb.chain == nil {
+		return false
+	}
+	for _, val := range sb.getValidators(sb.chain.CurrentHeader().Number.Uint64(), sb.chain.CurrentHeader().Hash()).List() {
+		if addr == val.Address() {
+			return true
+		}
+	}
+	return false
+}
+
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
 func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
+	sb.broadcaster.RegisterValiator(node.CONSENSUSNODE, sb)
 }
 
 func (sb *backend) NewChainHead() error {

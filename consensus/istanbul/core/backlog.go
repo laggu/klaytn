@@ -4,7 +4,7 @@ import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/common"
-	)
+)
 
 var (
 	// msgPriority is defined for calculating processing priority to speedup consensus

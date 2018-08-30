@@ -3,6 +3,7 @@ package consensus
 import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/p2p"
 )
 
 // Constants to match up protocol versions and messages
@@ -41,7 +42,15 @@ type Broadcaster interface {
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
 
+	FindCNPeers(map[common.Address]bool) map[common.Address]Peer
+
+	GetCNPeers() map[common.Address]Peer
+
+	GetRNPeers() map[common.Address]Peer
+
     GetPeers() []common.Address
+
+	RegisterValiator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
 }
 
 // Peer defines the interface to communicate with peer

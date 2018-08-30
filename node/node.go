@@ -36,6 +36,13 @@ import (
 	"github.com/ground-x/go-gxplatform/internal/debug"
 )
 
+const (
+	CONSENSUSNODE = iota
+	RANGERNODE
+	DELIVERYNODE
+	GENERALNODE
+)
+
 // Node is a container on which services can be registered.
 type Node struct {
 	eventmux *event.TypeMux

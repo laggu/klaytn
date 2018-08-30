@@ -133,15 +133,8 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := make(map[common.Address]bool)
-	for _, val := range valSet.List() {
-		if val.Address() != sb.Address() {
-			targets[val.Address()] = true
-		}
-	}
-
-	if sb.broadcaster != nil && len(targets) > 0 {
-		ps := sb.broadcaster.FindPeers(targets)
+	if sb.broadcaster != nil {
+		ps := sb.broadcaster.GetCNPeers()
 		for addr, p := range ps {
 			ms, ok := sb.recentMessages.Get(addr)
 			var m *lru.ARCCache
@@ -183,7 +176,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	}
 
 	if sb.broadcaster != nil && len(targets) > 0 {
-		ps := sb.broadcaster.FindPeers(targets)
+		ps := sb.broadcaster.FindCNPeers(targets)
 		for addr, p := range ps {
 			ms, ok := sb.recentMessages.Get(addr)
 			var m *lru.ARCCache
@@ -212,10 +205,10 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 }
 
 // ranger node
-func (sb *backend) GossipProof(targets map[common.Address]bool, proof types.Proof) error {
+func (sb *backend) GossipProof(proof types.Proof) error {
 
-	if sb.broadcaster != nil && len(targets)> 0 {
-		ps := sb.broadcaster.FindPeers(targets)
+	if sb.broadcaster != nil {
+		ps := sb.broadcaster.GetRNPeers()
 		for _, p := range ps {
 			go p.Send(consensus.PoRMsg, &proof)
 		}

@@ -30,6 +30,14 @@ func (val *defaultValidator) String() string {
 	return val.Address().String()
 }
 
+func (val *defaultValidator) Equal(val2 *defaultValidator) bool {
+	return val.address == val.address
+}
+
+func (val *defaultValidator) Hash() int64 {
+	return val.address.Hash().Big().Int64()
+}
+
 type defaultSet struct {
 
 	subSize    int

@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/core"
 	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/gxdb"
 	"github.com/ground-x/go-gxplatform/gxp/downloader"
 	"github.com/ground-x/go-gxplatform/gxp/fetcher"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/p2p"
 	"github.com/ground-x/go-gxplatform/p2p/discover"
 	"github.com/ground-x/go-gxplatform/params"
@@ -22,8 +25,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/accounts"
 )
 
 const (
@@ -34,7 +35,7 @@ const (
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 
-	concurrentPerPeer = 3
+	concurrentPerPeer  = 3
 	channelSizePerPeer = 20
 )
 
@@ -85,21 +86,20 @@ type ProtocolManager struct {
 	engine consensus.Engine
 
 	rewardcontract common.Address
-	rewardbase   common.Address
-	rewardwallet accounts.Wallet
+	rewardbase     common.Address
+	rewardwallet   accounts.Wallet
 
-	wsendpoint   string
+	wsendpoint string
 
 	txMsgLock    sync.RWMutex
-	blockMsgLock   sync.RWMutex
+	blockMsgLock sync.RWMutex
 	msgCh        chan p2p.Msg
-
 }
 
 // Ranger
 func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *core.BlockChain, chaindb gxdb.Database) (*ProtocolManager, error) {
 	txpool := &EmptyTxPool{}
-	return NewProtocolManager(config, mode, networkId, mux, txpool ,engine,blockchain,chaindb)
+	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chaindb)
 }
 
 func (pm *ProtocolManager) GetTxPool() txPool {
@@ -139,7 +139,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(1)
 	}
 	// istanbul BFT
-    protocol := engine.Protocol()
+	protocol := engine.Protocol()
 	// Initiate a sub-protocol for every implemented version we can handle
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
 	for i, version := range protocol.Versions {
@@ -150,11 +150,21 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		// Compatible; initialise the sub-protocol
 		version := version
 		manager.SubProtocols = append(manager.SubProtocols, p2p.Protocol{
-			Name:    protocol.Name ,
+			Name:    protocol.Name,
 			Version: version,
 			Length:  protocol.Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 				peer := manager.newPeer(int(version), p, rw)
+				pubKey, err := p.ID().Pubkey()
+				if err != nil {
+					if p.ConnType() == node.CONSENSUSNODE {
+						return err
+					}
+					peer.addr = common.Address{}
+				} else {
+					addr := crypto.PubkeyToAddress(*pubKey)
+					peer.addr = addr
+				}
 				select {
 				case manager.newPeerCh <- peer:
 					manager.wg.Add(1)
@@ -200,6 +210,11 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
 	return manager, nil
+}
+
+// istanbul BFT
+func (pm *ProtocolManager) RegisterValiator(conType p2p.ConnType, validator p2p.PeerTypeValidator) {
+	pm.peers.validator[conType] = validator
 }
 
 func (pm *ProtocolManager) getWSEndPoint() string {
@@ -321,7 +336,6 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// Propagate existing transactions. new transactions appearing
 	// after this will be sent via broadcasts.
 	pm.syncTransactions(p)
-
 
 	pubKey, err := p.ID().Pubkey()
 	if err != nil {
@@ -724,23 +738,22 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		// Look up the rewardwallet containing the requested signer
 		tx := new(types.Transaction)
 		if err := msg.Decode(tx); err != nil {
-			log.Error("ErrDecode","msg",msg,"err",err)
+			log.Error("ErrDecode","msg",msg, "err",err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		signer := types.MakeSigner(pm.chainconfig, pm.blockchain.CurrentBlock().Number())
 		from, err := types.Sender(signer, tx)
 		if err != nil {
-			log.Error("ErrDecode","msg",msg,"err",err)
+			log.Error("ErrDecode","msg",msg, "err",err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		err = pm.PoRValidate(from, tx)
 		if err != nil {
-			log.Error("PoRValidate","msg",msg,"err",err)
+			log.Error("PoRValidate","msg",msg, "err",err)
 			return errors.New("fail to validate por")
 		}
-
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -884,28 +897,65 @@ func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
 
 func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
 	m := make(map[common.Address]consensus.Peer)
-    for _, p := range pm.peers.Peers() {
-          pubKey, err := p.ID().Pubkey()
-          if err != nil {
-          	  continue
-		  }
-		  addr := crypto.PubkeyToAddress(*pubKey)
-		  if targets[addr] {
-		  	 m[addr] = p
-		  }
+	for _, p := range pm.peers.Peers() {
+		addr := p.addr
+		if addr == (common.Address{}) {
+			pubKey, err := p.ID().Pubkey()
+			if err != nil {
+				continue
+			}
+			addr = crypto.PubkeyToAddress(*pubKey)
+		} else {
+			addr = p.addr
+		}
+
+		if targets[addr] {
+			m[addr] = p
+		}
+	}
+	return m
+}
+
+func (pm *ProtocolManager) GetCNPeers() map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+	for addr, p := range pm.peers.CNPeers() {
+		m[addr] = p
+	}
+	return m
+}
+
+func (pm *ProtocolManager) FindCNPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+	for addr, p := range pm.peers.CNPeers() {
+		if targets[addr] {
+			m[addr] = p
+		}
+	}
+	return m
+}
+
+func (pm *ProtocolManager) GetRNPeers() map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+	for addr, p := range pm.peers.RNPeers() {
+		m[addr] = p
 	}
 	return m
 }
 
 func (pm *ProtocolManager) GetPeers() []common.Address {
-	addrs := make([]common.Address,0)
+	addrs := make([]common.Address, 0)
 	for _, p := range pm.peers.Peers() {
-		pubKey, err := p.ID().Pubkey()
-		if err != nil {
-			continue
+		addr := p.addr
+		if addr == (common.Address{}) {
+			pubKey, err := p.ID().Pubkey()
+			if err != nil {
+				continue
+			}
+			addr = crypto.PubkeyToAddress(*pubKey)
+		} else {
+			addr = p.addr
 		}
-		addr := crypto.PubkeyToAddress(*pubKey)
-		addrs = append(addrs,addr)
+		addrs = append(addrs, addr)
 	}
 	return addrs
 }

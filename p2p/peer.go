@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/p2p/discover"
 	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 const (
@@ -471,5 +472,9 @@ func (p *Peer) Info() *PeerInfo {
 
 func (p *Peer) ConnType() ConnType {
 	return p.rw.conntype
+}
+
+type PeerTypeValidator interface {
+	ValidatePeerType(addr common.Address) bool
 }
 

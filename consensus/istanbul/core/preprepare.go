@@ -4,9 +4,8 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"time"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/core/types"
-	)
+)
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
 	logger := c.logger.New("state", c.state)
@@ -41,20 +40,20 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			})
 
 			// ranger node
-			targets := make(map[common.Address]bool)
-			// exclude validator nodes, only send ranger nodes
-			for _, addr := range c.backend.GetPeers() {
-				var notval = true
-				for _, val := range c.valSet.List() {
-					if addr == val.Address() {
-						notval = false
-					}
-				}
-				if notval {
-					targets[addr] = true
-				}
-			}
-			go c.backend.GossipProof(targets, *proof)
+			//targets := make(map[common.Address]bool)
+			//// exclude validator nodes, only send ranger nodes
+			//for _, addr := range c.backend.GetPeers() {
+			//	var notval = true
+			//	for _, val := range c.valSet.List() {
+			//		if addr == val.Address() {
+			//			notval = false
+			//		}
+			//	}
+			//	if notval {
+			//		targets[addr] = true
+			//	}
+			//}
+			go c.backend.GossipProof(*proof)
 
 		} else {
 
@@ -104,20 +103,20 @@ func (c *core) handleProofPrepare(msg *message, src istanbul.Validator) error {
 	}
 
 	// ranger node
-	targets := make(map[common.Address]bool)
-	// exclude validator nodes, only send ranger nodes
-	for _, addr := range c.backend.GetPeers() {
-		var notval = true
-		for _, val := range c.valSet.List() {
-			if addr == val.Address() {
-				notval = false
-			}
-		}
-		if notval {
-			targets[addr] = true
-		}
-	}
-	go c.backend.GossipProof(targets, *proofprepare.Proof)
+	//targets := make(map[common.Address]bool)
+	//// exclude validator nodes, only send ranger nodes
+	//for _, addr := range c.backend.GetPeers() {
+	//	var notval = true
+	//	for _, val := range c.valSet.List() {
+	//		if addr == val.Address() {
+	//			notval = false
+	//		}
+	//	}
+	//	if notval {
+	//		targets[addr] = true
+	//	}
+	//}
+	go c.backend.GossipProof(*proofprepare.Proof)
 
 	return nil
 }

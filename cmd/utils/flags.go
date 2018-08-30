@@ -397,6 +397,11 @@ var (
 	}
 
 	// Network Settings
+	NodeTypeFlag = cli.StringFlag{
+		Name:  "nodetype",
+		Usage: "klaytn node type (consensus node (cn), ranager node (rn), general node (gn), ...)",
+		Value: "cn",
+	}
 	MaxPeersFlag = cli.IntFlag{
 		Name:  "maxpeers",
 		Usage: "Maximum number of network peers (network disabled if set to 0)",
@@ -749,6 +754,11 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
 	lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
 
+	if ctx.GlobalIsSet(NodeTypeFlag.Name) {
+		cfg.ConnectionType = convertNodeType(ctx.GlobalString(NodeTypeFlag.Name))
+	} else {
+		cfg.ConnectionType = convertNodeType("cn")
+	}
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
 		if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
@@ -786,6 +796,19 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.ListenAddr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
+	}
+}
+
+func convertNodeType(nodetype string) p2p.ConnType {
+	switch(strings.ToLower(nodetype)) {
+	case "cn":
+		return node.CONSENSUSNODE
+	case "rn":
+		return node.RANGERNODE
+	case "dn":
+		return node.DELIVERYNODE
+	default:
+		return node.GENERALNODE
 	}
 }
 

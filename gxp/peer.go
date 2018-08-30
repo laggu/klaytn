@@ -11,7 +11,9 @@ import (
 	"math/big"
 	"sync"
 	"time"
+
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/node"
 )
 
 var (
@@ -58,6 +60,8 @@ type propEvent struct {
 
 type peer struct {
 	id string
+
+	addr common.Address
 
 	*p2p.Peer
 	rw p2p.MsgReadWriter
@@ -394,19 +398,38 @@ func (p *peer) String() string {
 	)
 }
 
+type ByPassValidator struct {}
+func (v ByPassValidator) ValidatePeerType(addr common.Address) bool {
+	return true
+}
+
 // peerSet represents the collection of active peers currently participating in
-// the Ethereum sub-protocol.
+// the Klaytn sub-protocol.
 type peerSet struct {
 	peers  map[string]*peer
+	cnpeers map[common.Address]*peer
+	rnpeers map[common.Address]*peer
 	lock   sync.RWMutex
 	closed bool
+
+	validator map[p2p.ConnType]p2p.PeerTypeValidator
 }
 
 // newPeerSet creates a new peer set to track the active participants.
 func newPeerSet() *peerSet {
-	return &peerSet{
+	peerSet := &peerSet{
 		peers: make(map[string]*peer),
+		cnpeers: make(map[common.Address]*peer),
+		rnpeers: make(map[common.Address]*peer),
+		validator: make(map[p2p.ConnType]p2p.PeerTypeValidator),
 	}
+
+	peerSet.validator[node.CONSENSUSNODE] = ByPassValidator{}
+	peerSet.validator[node.RANGERNODE] = ByPassValidator{}
+	peerSet.validator[node.GENERALNODE] = ByPassValidator{}
+	peerSet.validator[node.DELIVERYNODE] = ByPassValidator{}
+
+	return peerSet
 }
 
 // Register injects a new peer into the working set, or returns an error if the
@@ -420,6 +443,25 @@ func (ps *peerSet) Register(p *peer) error {
 	}
 	if _, ok := ps.peers[p.id]; ok {
 		return errAlreadyRegistered
+	}
+	if p.ConnType() == node.CONSENSUSNODE {
+		if _, ok := ps.cnpeers[p.addr]; ok {
+			return errAlreadyRegistered
+		}
+		if ps.validator[node.CONSENSUSNODE].ValidatePeerType(p.addr) {
+			ps.cnpeers[p.addr] = p
+		} else {
+			return errors.New("fail to validate cntype")
+		}
+	}else if p.ConnType() == node.RANGERNODE {
+		if _, ok := ps.rnpeers[p.addr]; ok {
+			return errAlreadyRegistered
+		}
+		if ps.validator[node.RANGERNODE].ValidatePeerType(p.addr) {
+			ps.rnpeers[p.addr] = p
+		} else {
+			return errors.New("fail to validate rntype")
+		}
 	}
 	ps.peers[p.id] = p
 	go p.broadcast()
@@ -437,6 +479,11 @@ func (ps *peerSet) Unregister(id string) error {
 	if !ok {
 		return errNotRegistered
 	}
+	if p.ConnType() == node.CONSENSUSNODE {
+		delete(ps.cnpeers, p.addr)
+	}else if p.ConnType() == node.RANGERNODE {
+		delete(ps.rnpeers, p.addr)
+	}
 	delete(ps.peers, id)
 	p.close()
 
@@ -451,6 +498,28 @@ func (ps *peerSet) Peers() map[string]*peer {
 	set := make(map[string]*peer)
 	for id, p := range ps.peers {
 		set[id] = p
+	}
+	return set
+}
+
+func (ps *peerSet) CNPeers() map[common.Address]*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	set := make(map[common.Address]*peer)
+	for addr, p := range ps.cnpeers {
+		set[addr] = p
+	}
+	return set
+}
+
+func (ps *peerSet) RNPeers() map[common.Address]*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	set := make(map[common.Address]*peer)
+	for addr, p := range ps.rnpeers {
+		set[addr] = p
 	}
 	return set
 }
