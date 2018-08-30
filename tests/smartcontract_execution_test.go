@@ -1,20 +1,20 @@
 package tests
 
 import (
-	"time"
+	"encoding/json"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/compiler"
+	"github.com/ground-x/go-gxplatform/common/profile"
+	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/crypto"
 	"math"
+	"math/big"
 	"strings"
 	"testing"
-	"math/big"
-	"encoding/json"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/core/vm"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"github.com/ground-x/go-gxplatform/common/profile"
-	"github.com/ground-x/go-gxplatform/common/compiler"
+	"time"
 )
 
 type deployedContract struct {
@@ -55,8 +55,8 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 		transactions = append(transactions, signedTx)
 
 		cont[name] = &deployedContract{
-			abi: string(abiStr),
-			name: name,
+			abi:     string(abiStr),
+			name:    name,
 			address: contractAddr,
 		}
 	}
@@ -92,7 +92,7 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 }
 
 func makeRewardTransactions(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
-	numTransactions int) (types.Transactions, error){
+	numTransactions int) (types.Transactions, error) {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	if err != nil {
 		return nil, err
@@ -129,14 +129,21 @@ func makeRewardTransactions(c *deployedContract, accountMap *AccountMap, bcdata 
 	return transactions, nil
 }
 
-func executeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
-	numTransactions int) (types.Transactions, error){
+func executeRewardTransactions(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData,
+	accountMap *AccountMap) error {
+	return bcdata.GenABlockWithTransactions(accountMap, transactions, prof)
+}
+
+func makeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
+	numTransactions int) (types.Transactions, error) {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	if err != nil {
 		return nil, err
 	}
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	transactions := make(types.Transactions, numTransactions)
 
 	numAddrs := len(bcdata.addrs)
 	fromNonces := make([]uint64, numAddrs)
@@ -158,19 +165,33 @@ func executeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCDat
 			return nil, err
 		}
 
-		ret, err := callContract(bcdata, signedTx)
-		if err != nil {
-			return nil, err
-		}
-		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
-		//fmt.Printf("balance = %d\n", balance.Uint64())
+		transactions[i] = signedTx
 
 		// This is not required because the transactions will not be inserted into the blockchain.
 		//fromNonces[idx]++
 	}
 
 	return nil, nil
+}
+
+func executeBalanceOf(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData,
+	accountMap *AccountMap) error {
+	abii, err := abi.JSON(strings.NewReader(c.abi))
+	if err != nil {
+		return err
+	}
+
+	for _, tx := range transactions {
+		ret, err := callContract(bcdata, tx)
+		if err != nil {
+			return err
+		}
+
+		balance := new(big.Int)
+		abii.Unpack(&balance, "balanceOf", ret)
+	}
+
+	return nil
 }
 
 func executeSmartContract(b *testing.B, opt *ContractExecutionOption, prof *profile.Profiler) {
@@ -191,36 +212,44 @@ func executeSmartContract(b *testing.B, opt *ContractExecutionOption, prof *prof
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
+	start = time.Now()
 	contracts, err := deployContract(opt.filepath, bcdata, accountMap, prof)
 	if err != nil {
 		b.Fatal(err)
 	}
+	prof.Profile("main_deployContract", time.Now().Sub(start))
 
+	b.StopTimer()
 	b.ResetTimer()
 	for _, c := range contracts {
-		transactions, err := opt.testFunc(c, accountMap, bcdata, b.N)
+		start = time.Now()
+		transactions, err := opt.makeTx(c, accountMap, bcdata, b.N)
 		if err != nil {
 			b.Fatal(err)
 		}
+		prof.Profile("main_makeTx", time.Now().Sub(start))
 
-		if transactions != nil {
-			bcdata.GenABlockWithTransactions(accountMap, transactions, prof)
-		}
+		start = time.Now()
+		b.StartTimer()
+		opt.executeTx(c, transactions, prof, bcdata, accountMap)
+		b.StopTimer()
+		prof.Profile("main_executeTx", time.Now().Sub(start))
 	}
 }
 
 type ContractExecutionOption struct {
-	name string
-	filepath string
-	testFunc  func(c *deployedContract, accountMap *AccountMap, bcdata *BCData, numTransactions int) (types.Transactions, error)
+	name      string
+	filepath  string
+	makeTx    func(c *deployedContract, accountMap *AccountMap, bcdata *BCData, numTransactions int) (types.Transactions, error)
+	executeTx func(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData, accountMap *AccountMap) error
 }
 
 func BenchmarkSmartContractExecute(b *testing.B) {
 	prof := profile.NewProfiler()
 
 	benches := []ContractExecutionOption{
-		{"GXPReward:reward", "../contracts/reward/contract/GXPReward.sol", makeRewardTransactions},
-		{"GXPReward:balanceOf", "../contracts/reward/contract/GXPReward.sol", executeBalanceOf},
+		{"GXPReward:reward", "../contracts/reward/contract/GXPReward.sol", makeRewardTransactions, executeRewardTransactions},
+		{"GXPReward:balanceOf", "../contracts/reward/contract/GXPReward.sol", makeBalanceOf, executeBalanceOf},
 	}
 
 	for _, bench := range benches {
