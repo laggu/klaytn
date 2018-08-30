@@ -41,6 +41,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"reflect"
 )
 
 var (
@@ -1047,7 +1048,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		// TODO-GX goroutine for performance
 		bc.recentReceipts.Add(block.Hash(), receipts)
 		for i, tx := range block.Transactions() {
-			bc.recentTransactions.Add(tx.Hash(), TransactionLookup{tx, block.Hash(), block.NumberU64(), uint64(i)})
+			bc.recentTransactions.Add(tx.Hash(), &TransactionLookup{tx, block.Hash(), block.NumberU64(), uint64(i)})
 		}
 
 		status = CanonStatTy
@@ -1080,8 +1081,12 @@ func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transactio
 		return nil, common.Hash{}, 0, 0
 	}
 	cacheGetRecentTransactionsHitMeter.Mark(1)
-	txlookup := value.(TransactionLookup)
-	return txlookup.Tx, txlookup.BlockHash, txlookup.BlockIndex, txlookup.Index
+	txLookup, ok := value.(*TransactionLookup)
+	if !ok {
+		log.Error("invalid type in recentTransactions. expected=*TransactionLookup", "actual=", reflect.TypeOf(value))
+		return nil, common.Hash{}, 0, 0
+	}
+	return txLookup.Tx, txLookup.BlockHash, txLookup.BlockIndex, txLookup.Index
 }
 
 func (bc *BlockChain) GetReceiptInCache(blockHash common.Hash) (types.Receipts, error) {
