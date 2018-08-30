@@ -42,7 +42,7 @@ func (d *dummyContractRef) Balance() *big.Int          { return new(big.Int) }
 
 func TestStoreCapture(t *testing.T) {
 	var (
-		env      = NewEVM(Context{}, nil, params.TestChainConfig, Config{})
+		env      = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()

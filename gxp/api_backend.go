@@ -108,7 +108,7 @@ func (b *GxpAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *sta
 	vmError := func() error { return nil }
 
 	context := core.NewEVMContext(msg, header, b.gxp.BlockChain(), nil)
-	return vm.NewEVM(context, state, b.gxp.chainConfig, vmCfg), vmError, nil
+	return vm.NewEVM(context, state, b.gxp.chainConfig, &vmCfg), vmError, nil
 }
 
 func (b *GxpAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {

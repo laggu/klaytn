@@ -93,7 +93,7 @@ func (b *RangerAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *
 	vmError := func() error { return nil }
 
 	context := core.NewEVMContext(msg, header, b.ranger.BlockChain(), nil)
-	return vm.NewEVM(context, state, b.ranger.chainConfig, vmCfg), vmError, nil
+	return vm.NewEVM(context, state, b.ranger.chainConfig, &vmCfg), vmError, nil
 }
 
 func (b *RangerAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {

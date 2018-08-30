@@ -53,7 +53,7 @@ var (
 	frontierInstructionSet       = newFrontierInstructionSet()
 	homesteadInstructionSet      = newHomesteadInstructionSet()
 	byzantiumInstructionSet      = newByzantiumInstructionSet()
-	constantinopleInstructionSet = newConstantinopleInstructionSet()
+	ConstantinopleInstructionSet = newConstantinopleInstructionSet()
 )
 
 // NewConstantinopleInstructionSet returns the frontier, homestead

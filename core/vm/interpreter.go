@@ -46,7 +46,7 @@ type Config struct {
 // configuration.
 type Interpreter struct {
 	evm      *EVM
-	cfg      Config
+	cfg      *Config
 	gasTable params.GasTable
 	intPool  *intPool
 
@@ -55,12 +55,12 @@ type Interpreter struct {
 }
 
 // NewInterpreter returns a new instance of the Interpreter.
-func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
+func NewInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
-		cfg.JumpTable = constantinopleInstructionSet
+		cfg.JumpTable = ConstantinopleInstructionSet
 	}
 
 	return &Interpreter{
@@ -143,6 +143,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			}
 		}()
 	}
+
 	// The Interpreter main run loop (contextual). This loop runs until either an
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the

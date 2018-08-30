@@ -88,7 +88,7 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 		GasPrice:    cfg.GasPrice,
 	}
 
-	evm := vm.NewEVM(context, cfg.State, cfg.ChainConfig, cfg.EVMConfig)
+	evm := vm.NewEVM(context, cfg.State, cfg.ChainConfig, &cfg.EVMConfig)
 
 	address := common.BytesToAddress([]byte("contract"))
 	sender  := vm.AccountRef(cfg.Origin)

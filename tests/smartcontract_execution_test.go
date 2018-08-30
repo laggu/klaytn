@@ -80,7 +80,7 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 	}
 
 	evmContext := core.NewEVMContext(msg, header, bcdata.bc, nil)
-	vmenv := vm.NewEVM(evmContext, statedb, bcdata.bc.Config(), vm.Config{})
+	vmenv := vm.NewEVM(evmContext, statedb, bcdata.bc.Config(), &vm.Config{})
 	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
 
 	ret, _, _, err := core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()

@@ -563,6 +563,10 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 
+	vmConfig := &vm.Config{
+		JumpTable: vm.ConstantinopleInstructionSet,
+	}
+
 	for {
 		// TODO-GX-issue136
 		// If we don't have enough gas for any further transactions then we're done
@@ -594,7 +598,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *c
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
-		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool)
+		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool, vmConfig)
 		switch err {
 		// TODO-GX-issue136
 		case core.ErrGasLimitReached:
@@ -621,7 +625,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *c
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
-			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			log.Error("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
 		}
 	}
@@ -629,10 +633,10 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *c
 	return coalescedLogs
 }
 
-func (env *Task) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
+func (env *Task) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
+	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return err, nil
