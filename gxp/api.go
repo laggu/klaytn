@@ -140,8 +140,12 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 		price := api.e.gasPrice
 		api.e.lock.RUnlock()
 
-		api.e.txPool.SetGasPrice(price)
-		return api.e.StartMining(true)
+		if price.Cmp(api.e.txPool.GasPrice()) == 0 {
+			return api.e.StartMining(true)
+		} else {
+			log.Error("PrivateMinerAPI Start: Invalid unit price from API", "TxPool UnitPrice", api.e.txPool.GasPrice(), "API UnitPrice", price)
+			return core.ErrInvalidUnitPrice
+		}
 	}
 	return nil
 }
@@ -168,9 +172,15 @@ func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 
 // SetGasPrice sets the minimum accepted gas price for the miner.
 func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
+	if api.e.txPool.GasPrice().Cmp((*big.Int)(&gasPrice)) !=0 {
+		log.Debug("PrivateMinerAPI.SetGasPrice", "TxPool UnitPrice", api.e.txPool.GasPrice(), "Given UnitPrice", gasPrice.ToInt())
+		return false
+	}
+
 	api.e.lock.Lock()
 	api.e.gasPrice = (*big.Int)(&gasPrice)
 	api.e.lock.Unlock()
+
 
 	api.e.txPool.SetGasPrice((*big.Int)(&gasPrice))
 	return true
