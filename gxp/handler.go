@@ -25,6 +25,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"math/rand"
 )
 
 const (
@@ -809,6 +810,8 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 
 		// TODO-GX Code Check
 		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		half := (len(peers) / 2) + 2
+		peers = pm.subPeers(peers, half)
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
 		}
@@ -819,6 +822,22 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 		//peer.SendTransactions(txs)
 		peer.AsyncSendTransactions(txs)
 	}
+}
+
+func (pm *ProtocolManager) subPeers(peers []*peer, pickSize int) []*peer {
+
+	if len(peers) < pickSize {
+		return peers
+	}
+
+	picker := rand.New(rand.NewSource(time.Now().Unix()))
+	peerCount := len(peers)
+	for i := 0; i < peerCount; i++ {
+		randIndex := picker.Intn(peerCount)
+		peers[i], peers[randIndex] = peers[randIndex], peers[i]
+	}
+
+	return peers[:pickSize]
 }
 
 func (pm *ProtocolManager) BroadcastCNTxs(txs types.Transactions) {
