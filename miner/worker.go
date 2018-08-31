@@ -12,6 +12,7 @@ import (
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/gxdb"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/params"
 	"math/big"
 	"sync"
@@ -30,6 +31,11 @@ const (
 	chainHeadChanSize = 10
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+)
+
+var (
+	// Metrics for miner
+	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
 )
 
 // Agent can register themself with the worker
@@ -563,11 +569,47 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 
+	// Limit the execution time of all transactions in a block
+	var abort int32 = 0       // To break the below commitTransaction for loop when timed out
+	chDone := make(chan bool) // To stop the goroutine below when processing txs is completed
+
+	// chEVM is used to notify the below goroutine of the running EVM so it can call evm.Cancel
+	// when timed out.  We use a buffered channel to prevent the main EVM execution routine
+	// from being blocked due to the channel communication.
+	chEVM := make(chan *vm.EVM, 1)
+
+	go func() {
+		blockTimer := time.NewTimer(params.TotalTimeLimit)
+		timeout := false
+		var evm *vm.EVM
+
+		for {
+			select {
+			case <-blockTimer.C:
+				timeout = true
+				atomic.StoreInt32(&abort, 1)
+
+			case <-chDone:
+				// Everything is done. Stop this goroutine.
+				return
+
+			case evm = <-chEVM:
+			}
+
+			if timeout && evm != nil {
+				// The total time limit reached, thus we stop the currently running EVM.
+				evm.Cancel(vm.CancelByTotalTimeLimit)
+				evm = nil
+			}
+		}
+	}()
+
 	vmConfig := &vm.Config{
 		JumpTable: vm.ConstantinopleInstructionSet,
+		RunningEVM: chEVM,
 	}
 
-	for {
+	for atomic.LoadInt32(&abort) == 0 {
 		// TODO-GX-issue136
 		// If we don't have enough gas for any further transactions then we're done
 		if env.gasPool.Gas() < params.TxGas {
@@ -616,6 +658,11 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *c
 			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
 
+		case vm.ErrTotalTimeLimitReached:
+			log.Warn("Transaction aborted due to time limit", "hash", tx.Hash())
+			timeLimitReachedCounter.Inc(1)
+			break
+
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
@@ -629,6 +676,9 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *c
 			txs.Shift()
 		}
 	}
+
+	// Stop the goroutine that has been handling the timer.
+	chDone <- true
 
 	return coalescedLogs
 }

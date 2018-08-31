@@ -203,7 +203,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
-		if vmerr == vm.ErrInsufficientBalance {
+		// Another possible vmerr could be a time-limit error that happens
+		// when the EVM is still running while the block proposer's total
+		// execution time of txs for a candidate block reached the predefined
+		// limit.
+		if vmerr == vm.ErrInsufficientBalance || vmerr == vm.ErrTotalTimeLimitReached {
 			return nil, 0, false, vmerr
 		}
 	}

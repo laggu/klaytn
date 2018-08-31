@@ -29,6 +29,11 @@ import (
 // deployed contract addresses (relevant after the account abstraction).
 var emptyCodeHash = crypto.Keccak256Hash(nil)
 
+const (
+	CancelByCtxDone = 1 << iota
+	CancelByTotalTimeLimit
+)
+
 type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
@@ -120,14 +125,24 @@ func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmCon
 		chainRules:  chainConfig.Rules(ctx.BlockNumber),
 	}
 
+	if vmConfig.RunningEVM != nil {
+		vmConfig.RunningEVM <- evm
+	}
+
 	evm.interpreter = NewInterpreter(evm, vmConfig)
 	return evm
 }
 
 // Cancel cancels any running EVM operation. This may be called concurrently and
 // it's safe to be called multiple times.
-func (evm *EVM) Cancel() {
-	atomic.StoreInt32(&evm.abort, 1)
+func (evm *EVM) Cancel(reason int32) {
+	for {
+		abort := atomic.LoadInt32(&evm.abort)
+		swapped := atomic.CompareAndSwapInt32(&evm.abort, abort, abort | reason)
+		if swapped {
+			break
+		}
+	}
 }
 
 // Call executes the contract associated with the addr with the given input as

@@ -38,6 +38,9 @@ type Config struct {
 	// may be left uninitialised and will be set to the default
 	// table.
 	JumpTable [256]operation
+
+	// RunningEVM is to indicate the running EVM and used to stop the EVM.
+	RunningEVM chan *EVM
 }
 
 // Interpreter is used to run Ethereum based contracts and will utilise the
@@ -228,6 +231,11 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		case !operation.jumps:
 			pc++
 		}
+	}
+
+	abort := atomic.LoadInt32(&in.evm.abort)
+	if (abort & CancelByTotalTimeLimit) != 0 {
+		return nil, ErrTotalTimeLimitReached
 	}
 	return nil, nil
 }

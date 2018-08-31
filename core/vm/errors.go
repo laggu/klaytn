@@ -10,4 +10,5 @@ var (
 	ErrTraceLimitReached        = errors.New("the number of logs reached the specified limit")
 	ErrInsufficientBalance      = errors.New("insufficient balance for transfer")
 	ErrContractAddressCollision = errors.New("contract address collision")
+	ErrTotalTimeLimitReached    = errors.New("reached the total execution time limit for txs in a block")
 )

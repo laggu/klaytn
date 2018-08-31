@@ -641,7 +641,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// EVM has finished, cancelling may be done (repeatedly)
 	go func() {
 		<-ctx.Done()
-		evm.Cancel()
+		evm.Cancel(vm.CancelByCtxDone)
 	}()
 
 	// Setup the gas pool (also for unmetered requests)
