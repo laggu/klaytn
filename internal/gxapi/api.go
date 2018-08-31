@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultGasPrice = 50 * params.Shannon // TODO-GX-issue136 default gasPrice
+	defaultGasPrice = 50 * params.Ston // TODO-GX-issue136 default gasPrice
 )
 
 // PublicGXPAPI provides an API to access GXP related information.

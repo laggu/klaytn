@@ -17,18 +17,20 @@
 package params
 
 // These are the multipliers for ether denominations.
-// Example: To get the wei value of an amount in 'douglas', use
+// Example: To get the peb value of an amount in 'ston', use
 //
-//    new(big.Int).Mul(value, big.NewInt(params.Douglas))
+//    new(big.Int).Mul(value, big.NewInt(params.Ston))
 //
 const (
-	Wei      = 1
-	Ada      = 1e3
-	Babbage  = 1e6
-	Shannon  = 1e9
-	Szabo    = 1e12
-	Finney   = 1e15
-	Ether    = 1e18
-	Einstein = 1e21
-	Douglas  = 1e42
+	Peb      = 1    // official notation 'peb'
+	Kpeb     = 1e3  // official notation 'kpeb'
+	Mpeb     = 1e6  // same
+	Gpeb     = 1e9  // same
+	Ston     = 1e9  // official notation 'ston'
+	UKLAY    = 1e12 // official notation 'uKLAY'
+	MiliKLAY = 1e15 // official notation 'mKLAY'
+	KLAY     = 1e18 // same
+	KKLAY    = 1e21 // official notation 'kKLAY'
+	MKLAY    = 1e24 // same
+	GKLAY    = 1e27 // same
 )

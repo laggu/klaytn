@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-var maxPrice = big.NewInt(500 * params.Shannon) // TODO-GX-issue136 default max gasPrice
+var maxPrice = big.NewInt(500 * params.Ston) // TODO-GX-issue136 default max gasPrice
 
 type Config struct {
 	Blocks     int
