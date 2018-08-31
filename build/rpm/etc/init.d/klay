@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# klay         Startup script for the go-klaytn
+#
+# chkconifg: - 85 15
+# description : klay is the Klaytn blockchain node.
+#
+# processname: klay
+# config:  /etc/klay/conf/klay.conf
+# pidfile: /etc/run/klay.pid
+# logfile: /etc/log/klay/klay.out
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+if [ -f /etc/klay/conf/klay.conf ]; then
+        . /etc/klay/conf/klay.conf
+fi
+
+klay=/usr/local/bin/klay
+prog=klay
+lockfile=${LOCKFILE-/var/lock/subsys/klay}
+pidfile=${PIDFILE-/var/run/klay.pid}
+RETVAL=0
+STOP_TIMEOUT=${STOP_TIMEOUT-10}
+OPTIONS="--srvtype fasthttp --metrics --prometheus --verbosity 3 --txpool.accountslots 20000 --txpool.accountqueue 20000 \
+--txpool.globalslots 40960 --txpool.globalqueue 40960 --networkid $NETWORK_ID --nodiscover --wsorigins * \
+--datadir $DATA_DIR --syncmode full --mine --rpc --rpcapi admin,db,klay,debug,miner,net,txpool,personal,web3,istanbul \
+--targetgaslimit 9990234376 --ws --wsaddr 0.0.0.0 --wsport $WS_PORT --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcvhosts * \
+--maxpeers 5000 --rpcport $RPC_PORT --port $PORT"
+
+start() {
+        echo -n "Starting $prog: "
+        if [ ! -d ${LOG_DIR} ]; then
+                mkdir -p ${LOG_DIR}
+        fi
+        if [ ! -d ${RUN_DIR} ]; then
+                mkdir -p ${RUN_DIR}
+        fi
+
+        __pids_var_run "$prog" "$pidfile"
+        [ -n "$pid" ] && echo && return
+
+        set -f
+        $klay $OPTIONS >> ${LOG_DIR}/klay.out 2>&1 &
+        RETVAL=$?
+        PIDNUM=$!
+        set +f
+        if [ $RETVAL = 0 ]; then
+                echo $PIDNUM > ${pidfile}
+                touch ${lockfile}
+                success "$prog startup"
+        else
+                failure "$prog startup"
+        fi
+        echo
+        return $RETVAL
+}
+
+stop() {
+        echo -n "Shutting down $prog: "
+        killproc -p ${pidfile} -d ${STOP_TIMEOUT} $klay
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status -p ${pidfile} -l ${lockfile} $klay
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit $?

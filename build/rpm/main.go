@@ -66,7 +66,7 @@ Source0:            %{name}-%{version}.tar.gz
 BuildRoot:          %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
- The klaytn blockchain platform (go version)
+ The Klaytn blockchain platform
 
 %prep
 %setup -q
@@ -76,8 +76,16 @@ make klay
 
 %install
 mkdir -p $RPM_BUILD_ROOT/usr/local/bin
+mkdir -p $RPM_BUILD_ROOT/etc/klay/conf
+mkdir -p $RPM_BUILD_ROOT/etc/init.d/
+mkdir -p $RPM_BUILD_ROOT/var/log/klay
+
 cp build/bin/klay $RPM_BUILD_ROOT/usr/local/bin/klay
+cp build/rpm/etc/init.d/klay $RPM_BUILD_ROOT/etc/init.d/klay
+cp build/rpm/etc/klay/conf/klay.conf $RPM_BUILD_ROOT/etc/klay/conf/klay.conf
 
 %files
-/usr/local/bin/klay
+%attr(754, -, -) /usr/local/bin/klay
+%attr(644, -, -) /etc/klay/conf/klay.conf
+%attr(754, -, -) /etc/init.d/klay
 `
