@@ -103,6 +103,11 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
+
+	// NOTE-GX Now we use ChainConfig.UnitPrice from genesis.json.
+	//         So let's update gxp.Config.GasPrice using ChainConfig.UnitPrice.
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
+
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	gxp := &GXP{
@@ -176,10 +181,13 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	gxp.miner.SetExtra(makeExtraData(config.ExtraData, gxp.chainConfig.IsBFT))
 
 	gxp.APIBackend = &GxpAPIBackend{gxp, nil}
+
 	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
-	}
+
+	// NOTE-GX Now we use ChainConfig.UnitPrice from genesis.json and updated config.GasPrice with same value.
+	//         So let's override gpoParams.Default with config.GasPrice
+	gpoParams.Default = config.GasPrice
+
 	gxp.APIBackend.gpo = gasprice.NewOracle(gxp.APIBackend, gpoParams)
 
 	return gxp, nil

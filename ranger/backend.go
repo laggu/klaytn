@@ -94,6 +94,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
+
+	// NOTE-GX Now we use ChainConfig.UnitPrice from genesis.json.
+	//         So let's update ranger.Config.GasPrice using ChainConfig.UnitPrice.
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
+
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	ranger := &Ranger{

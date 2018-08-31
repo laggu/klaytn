@@ -58,6 +58,13 @@ func NewOracle(backend gxapi.Backend, params Config) *Oracle {
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice Oracle
+
+	// NOTE-GX We use invariant ChainConfig.UnitPrice and this value
+	//         will not be changed until ChainConfig.UnitPrice is updated with governance.
+        // TODO-GX We have to update Oracle.lastPrice when UnitPrice is changed.
+	return gpo.lastPrice, nil
+/*
+	// TODO-GX Later remove below obsolete code if we don't need them anymore.
 	gpo.cacheLock.RLock()
 	lastHead := gpo.lastHead
 	lastPrice := gpo.lastPrice
@@ -128,6 +135,7 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO
 	gpo.lastPrice = price
 	gpo.cacheLock.Unlock()
 	return price, nil
+*/
 }
 
 type getBlockPricesResult struct {
