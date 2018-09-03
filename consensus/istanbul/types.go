@@ -19,10 +19,10 @@ package istanbul
 import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"io"
 	"math/big"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 // Proposal supports retrieving height and serialized block to be used during Istanbul consensus.

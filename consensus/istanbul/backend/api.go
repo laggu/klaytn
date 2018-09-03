@@ -3,10 +3,10 @@ package backend
 import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"errors"
-	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 )
 
@@ -199,9 +199,9 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 }
 
 func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumber) (map[string]interface{}, error) {
-	b, ok := api.chain.(*core.BlockChain)
+	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
-		return nil, errors.New("chain is not core.BlockChain")
+		return nil, errors.New("chain is not blockchain.BlockChain")
 	}
 	blockNumber := uint64(number.Int64())
 	block := b.GetBlockByNumber(blockNumber)
@@ -220,9 +220,9 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 }
 
 func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) (map[string]interface{}, error) {
-	b, ok := api.chain.(*core.BlockChain)
+	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
-		return nil, errors.New("chain is not core.BlockChain")
+		return nil, errors.New("chain is not blockchain.BlockChain")
 	}
 
 	block := b.GetBlockByHash(blockHash)

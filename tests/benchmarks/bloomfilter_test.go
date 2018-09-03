@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"testing"
 	"math/big"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )

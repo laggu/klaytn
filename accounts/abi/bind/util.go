@@ -4,7 +4,7 @@ import (
 	"time"
 	"fmt"
 	"context"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/common"
 )

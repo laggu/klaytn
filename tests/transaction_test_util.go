@@ -25,9 +25,9 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 )
 
 // TransactionTest checks RLP decoding and sender derivation of transactions.

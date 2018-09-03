@@ -3,7 +3,7 @@ package keystore
 import (
 	"github.com/ground-x/go-gxplatform"
 	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"math/big"
 )
 
@@ -59,7 +59,7 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 
 // SelfDerive implements accounts.Wallet, but is a noop for plain wallets since
 // there is no notion of hierarchical account derivation for plain keystore accounts.
-func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain gxplatform.ChainReader) {}
+func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain klaytn.ChainReader) {}
 
 // SignHash implements accounts.Wallet, attempting to sign the given hash with
 // the given account. If the wallet does not wrap this particular account, an

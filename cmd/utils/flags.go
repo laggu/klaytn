@@ -9,20 +9,20 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/fdlimit"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/gxdb"
-	"github.com/ground-x/go-gxplatform/gxp"
-	"github.com/ground-x/go-gxplatform/gxp/gasprice"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/node/cn"
+	"github.com/ground-x/go-gxplatform/node/cn/gasprice"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/p2p"
-	"github.com/ground-x/go-gxplatform/p2p/discover"
-	"github.com/ground-x/go-gxplatform/p2p/nat"
-	"github.com/ground-x/go-gxplatform/p2p/netutil"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
+	"github.com/ground-x/go-gxplatform/networks/p2p/nat"
+	"github.com/ground-x/go-gxplatform/networks/p2p/netutil"
 	"github.com/ground-x/go-gxplatform/params"
 	"io/ioutil"
 	"math/big"
@@ -31,7 +31,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"github.com/ground-x/go-gxplatform/ranger"
+	"github.com/ground-x/go-gxplatform/node/ranger"
 )
 
 // NewApp creates an app with sane defaults.
@@ -77,7 +77,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value: gxp.DefaultConfig.NetworkId,
+		Value: cn.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -112,7 +112,7 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode (replaced by --syncmode)",
 	}
-	defaultSyncMode = gxp.DefaultConfig.SyncMode
+	defaultSyncMode = cn.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
@@ -131,7 +131,7 @@ var (
 	LightPeersFlag = cli.IntFlag{
 		Name:  "lightpeers",
 		Usage: "Maximum number of LES client peers",
-		Value: gxp.DefaultConfig.LightPeers,
+		Value: cn.DefaultConfig.LightPeers,
 	}
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
@@ -150,27 +150,27 @@ var (
 	EthashCachesInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.cachesinmem",
 		Usage: "Number of recent ethash caches to keep in memory (16MB each)",
-		Value: gxp.DefaultConfig.Gxhash.CachesInMem,
+		Value: cn.DefaultConfig.Gxhash.CachesInMem,
 	}
 	EthashCachesOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.cachesondisk",
 		Usage: "Number of recent ethash caches to keep on disk (16MB each)",
-		Value: gxp.DefaultConfig.Gxhash.CachesOnDisk,
+		Value: cn.DefaultConfig.Gxhash.CachesOnDisk,
 	}
 	EthashDatasetDirFlag = DirectoryFlag{
 		Name:  "ethash.dagdir",
 		Usage: "Directory to store the ethash mining DAGs (default = inside home folder)",
-		Value: DirectoryString{gxp.DefaultConfig.Gxhash.DatasetDir},
+		Value: DirectoryString{cn.DefaultConfig.Gxhash.DatasetDir},
 	}
 	EthashDatasetsInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.dagsinmem",
 		Usage: "Number of recent ethash mining DAGs to keep in memory (1+GB each)",
-		Value: gxp.DefaultConfig.Gxhash.DatasetsInMem,
+		Value: cn.DefaultConfig.Gxhash.DatasetsInMem,
 	}
 	EthashDatasetsOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.dagsondisk",
 		Usage: "Number of recent ethash mining DAGs to keep on disk (1+GB each)",
-		Value: gxp.DefaultConfig.Gxhash.DatasetsOnDisk,
+		Value: cn.DefaultConfig.Gxhash.DatasetsOnDisk,
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -180,47 +180,47 @@ var (
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
 		Usage: "Disk journal for local transaction to survive node restarts",
-		Value: core.DefaultTxPoolConfig.Journal,
+		Value: blockchain.DefaultTxPoolConfig.Journal,
 	}
 	TxPoolRejournalFlag = cli.DurationFlag{
 		Name:  "txpool.rejournal",
 		Usage: "Time interval to regenerate the local transaction journal",
-		Value: core.DefaultTxPoolConfig.Rejournal,
+		Value: blockchain.DefaultTxPoolConfig.Rejournal,
 	}
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: gxp.DefaultConfig.TxPool.PriceLimit,
+		Value: cn.DefaultConfig.TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: gxp.DefaultConfig.TxPool.PriceBump,
+		Value: cn.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: gxp.DefaultConfig.TxPool.AccountSlots,
+		Value: cn.DefaultConfig.TxPool.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: gxp.DefaultConfig.TxPool.GlobalSlots,
+		Value: cn.DefaultConfig.TxPool.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: gxp.DefaultConfig.TxPool.AccountQueue,
+		Value: cn.DefaultConfig.TxPool.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: gxp.DefaultConfig.TxPool.GlobalQueue,
+		Value: cn.DefaultConfig.TxPool.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: gxp.DefaultConfig.TxPool.Lifetime,
+		Value: cn.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
@@ -277,11 +277,11 @@ var (
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: gxp.DefaultConfig.GasPrice,
+		Value: cn.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
-		Usage: "Block extra data set by the miner (default = client version)",
+		Usage: "Block extra data set by the work (default = client version)",
 	}
 	// Account settings
 	UnlockedAccountFlag = cli.StringFlag{
@@ -455,7 +455,7 @@ var (
 	}
 	NetrestrictFlag = cli.StringFlag{
 		Name:  "netrestrict",
-		Usage: "Restricts network communication to the given IP networks (CIDR masks)",
+		Usage: "Restricts network communication to the given IP network (CIDR masks)",
 	}
 
 	// ATM the url is left to the user and deployment to
@@ -469,12 +469,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: gxp.DefaultConfig.GPO.Blocks,
+		Value: cn.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: gxp.DefaultConfig.GPO.Percentile,
+		Value: cn.DefaultConfig.GPO.Percentile,
 	}
 )
 
@@ -685,7 +685,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 
 // setCoinbase retrieves the coinbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setGxbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *gxp.Config) {
+func setGxbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	if ctx.GlobalIsSet(CoinbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(CoinbaseFlag.Name))
 		if err != nil {
@@ -709,7 +709,7 @@ func setGxbaseRanger(ctx *cli.Context, ks *keystore.KeyStore, cfg *ranger.Config
 
 // setRewardbase retrieves the rewardbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *gxp.Config) {
+func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	if ctx.GlobalIsSet(RewardbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(RewardbaseFlag.Name))
 		if err != nil {
@@ -721,7 +721,7 @@ func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *gxp.Config) {
 
 // setRewardbase retrieves the rewardbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setRewardContract(ctx *cli.Context, cfg *gxp.Config) {
+func setRewardContract(ctx *cli.Context, cfg *cn.Config) {
 	if ctx.GlobalIsSet(RewardContractFlag.Name) {
 		cfg.RewardContract = common.HexToAddress(ctx.GlobalString(RewardContractFlag.Name))
 	}
@@ -859,7 +859,7 @@ func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
 	}
 }
 
-func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
+func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
 	}
@@ -892,7 +892,7 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
-func setGxhash(ctx *cli.Context, cfg *gxp.Config) {
+func setGxhash(ctx *cli.Context, cfg *cn.Config) {
 	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
 		cfg.Gxhash.CacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
 	}
@@ -990,13 +990,13 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 
-	// Override any default configs for hard coded networks.
+	// Override any default configs for hard coded network.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
-		cfg.Genesis = core.DefaultTestnetGenesisBlock()
+		cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		// Create new developer account or reuse existing one
 		var (
@@ -1016,7 +1016,7 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		}
 		log.Info("Using developer account", "address", developer.Address)
 
-		cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
+		cfg.Genesis = blockchain.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = big.NewInt(1)
 		}
@@ -1027,8 +1027,8 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 	}
 }
 
-// SetGxConfig applies klay-related command line flags to the config.
-func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
+// SetKlayConfig applies klay-related command line flags to the config.
+func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 
@@ -1083,13 +1083,13 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 
-	// Override any default configs for hard coded networks.
+	// Override any default configs for hard coded network.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
-		cfg.Genesis = core.DefaultTestnetGenesisBlock()
+		cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		// Create new developer account or reuse existing one
 		var (
@@ -1109,7 +1109,7 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 		}
 		log.Info("Using developer account", "address", developer.Address)
 
-		cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
+		cfg.Genesis = blockchain.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = big.NewInt(1)
 		}
@@ -1120,12 +1120,12 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 	}
 }
 
-// RegisterGxpService adds an GXP client to the stack.
-func RegisterGxpService(stack *node.Node, cfg *gxp.Config) {
+// RegisterKlaytnService adds an GXP client to the stack.
+func RegisterKlaytnService(stack *node.Node, cfg *cn.Config) {
 	// @toDo add syncMode.LightSync func and add LesServer
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
-		fullNode, err := gxp.New(ctx, cfg)
+		fullNode, err := cn.New(ctx, cfg)
 		return fullNode, err
 	})
 	if err != nil {
@@ -1150,7 +1150,7 @@ func SetupNetwork(ctx *cli.Context) {
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
-func MakeChainDatabase(ctx *cli.Context, stack *node.Node) gxdb.Database {
+func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.Database {
 	var (
 		cache   = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 		handles = makeDatabaseHandles()
@@ -1166,11 +1166,11 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) gxdb.Database {
 	return chainDb
 }
 
-func MakeGenesis(ctx *cli.Context) *core.Genesis {
-	var genesis *core.Genesis
+func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
+	var genesis *blockchain.Genesis
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
-		genesis = core.DefaultTestnetGenesisBlock()
+		genesis = blockchain.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}
@@ -1178,39 +1178,39 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 }
 
 // MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb gxdb.Database) {
+func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain, chainDb database.Database) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
+	config, _, err := blockchain.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
 	}
 	engine := gxhash.NewFaker()
 	if !ctx.GlobalBool(FakePoWFlag.Name) {
 		engine = gxhash.New(gxhash.Config{
-			CacheDir:       stack.ResolvePath(gxp.DefaultConfig.Gxhash.CacheDir),
-			CachesInMem:    gxp.DefaultConfig.Gxhash.CachesInMem,
-			CachesOnDisk:   gxp.DefaultConfig.Gxhash.CachesOnDisk,
-			DatasetDir:     stack.ResolvePath(gxp.DefaultConfig.Gxhash.DatasetDir),
-			DatasetsInMem:  gxp.DefaultConfig.Gxhash.DatasetsInMem,
-			DatasetsOnDisk: gxp.DefaultConfig.Gxhash.DatasetsOnDisk,
+			CacheDir:       stack.ResolvePath(cn.DefaultConfig.Gxhash.CacheDir),
+			CachesInMem:    cn.DefaultConfig.Gxhash.CachesInMem,
+			CachesOnDisk:   cn.DefaultConfig.Gxhash.CachesOnDisk,
+			DatasetDir:     stack.ResolvePath(cn.DefaultConfig.Gxhash.DatasetDir),
+			DatasetsInMem:  cn.DefaultConfig.Gxhash.DatasetsInMem,
+			DatasetsOnDisk: cn.DefaultConfig.Gxhash.DatasetsOnDisk,
 		})
 	}
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
-	cache := &core.CacheConfig{
+	cache := &blockchain.CacheConfig{
 		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
-		TrieNodeLimit: gxp.DefaultConfig.TrieCache,
-		TrieTimeLimit: gxp.DefaultConfig.TrieTimeout,
+		TrieNodeLimit: cn.DefaultConfig.TrieCache,
+		TrieTimeLimit: cn.DefaultConfig.TrieTimeout,
 	}
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
 		cache.TrieNodeLimit = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
 	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, cache, config, engine, vmcfg)
+	chain, err = blockchain.NewBlockChain(chainDb, cache, config, engine, vmcfg)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

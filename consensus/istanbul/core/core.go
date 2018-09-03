@@ -5,7 +5,7 @@ import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"

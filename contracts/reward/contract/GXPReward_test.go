@@ -8,7 +8,7 @@ import (
 	"testing"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind/backends"
-	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/blockchain"
 	"context"
 )
 
@@ -20,7 +20,7 @@ func TestSmartContract(t *testing.T) {
 	key2, _ := crypto.GenerateKey()
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	alloc := core.GenesisAlloc{auth.From: {Balance: big.NewInt(1000000000000000000)}, auth2.From:{Balance:big.NewInt(1000000000000000000)},}
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(1000000000000000000)}, auth2.From:{Balance: big.NewInt(1000000000000000000)},}
 	sim := backends.NewSimulatedBackend(alloc)
 
 	// Deploy a token contract on the simulated blockchain

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
-	gxplatform "github.com/ground-x/go-gxplatform/gxp"
+	gxplatform "github.com/ground-x/go-gxplatform/node/cn"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/params"
 	"os"
@@ -102,11 +102,8 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetGxConfig(ctx, stack, &cfg.Gxp)
-	//if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
-	//	cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
-	//}
-	//
+	utils.SetKlayConfig(ctx, stack, &cfg.Gxp)
+
 	//utils.SetShhConfig(ctx, stack, &cfg.Shh)
 	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
@@ -116,7 +113,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterGxpService(stack, &cfg.Gxp)
+	utils.RegisterKlaytnService(stack, &cfg.Gxp)
 
 	return stack
 }

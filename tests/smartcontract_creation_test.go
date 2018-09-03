@@ -11,7 +11,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/log/term"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
 	"github.com/ground-x/go-gxplatform/common/compiler"
 )

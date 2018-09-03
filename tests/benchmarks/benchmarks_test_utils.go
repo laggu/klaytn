@@ -23,11 +23,11 @@ import (
 	"time"
 
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
 )
 
@@ -63,7 +63,7 @@ func makeBenchConfig() *BenchConfig {
 	// Debug       bool
 	// EVMConfig   vm.Config
 
-	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(gxdb.NewMemDatabase()))
+	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemDatabase()))
 	cfg.GetHashFn = func(n uint64) common.Hash {
 		return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 	}
@@ -75,8 +75,8 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 	// runtime.go:Execute()
 	cfg := makeBenchConfig()
 	context := vm.Context{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
+		CanTransfer: blockchain.CanTransfer,
+		Transfer:    blockchain.Transfer,
 		GetHash:     func(uint64) common.Hash { return common.Hash{} },
 
 		Origin:      cfg.Origin,

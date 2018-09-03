@@ -7,22 +7,22 @@ import (
 	"time"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
 	"errors"
-	"github.com/ground-x/go-gxplatform/gxdb"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/gxp/filters"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/node/cn/filters"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/event"
 	"context"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/rawdb"
+	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform"
 	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/rpc"
-	"github.com/ground-x/go-gxplatform/core/bloombits"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -34,8 +34,8 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
-	database   gxdb.Database   // In memory database to store our testing data
-	blockchain *core.BlockChain // GXP blockchain to handle the consensus
+	database   database.Database      // In memory database to store our testing data
+	blockchain *blockchain.BlockChain // GXP blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request
@@ -48,11 +48,11 @@ type SimulatedBackend struct {
 
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
-func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
-	database := gxdb.NewMemDatabase()
-	genesis := core.Genesis{Config: params.AllGxhashProtocolChanges, Alloc: alloc}
+func NewSimulatedBackend(alloc blockchain.GenesisAlloc) *SimulatedBackend {
+	database := database.NewMemDatabase()
+	genesis := blockchain.Genesis{Config: params.AllGxhashProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
-	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
+	blockchain, _ := blockchain.NewBlockChain(database, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
 
 	backend := &SimulatedBackend{
 		database:   database,
@@ -85,7 +85,7 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(int, *core.BlockGen) {})
+	blocks, _ := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(int, *blockchain.BlockGen) {})
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
@@ -156,7 +156,7 @@ func (b *SimulatedBackend) PendingCodeAt(ctx context.Context, contract common.Ad
 }
 
 // CallContract executes a contract call.
-func (b *SimulatedBackend) CallContract(ctx context.Context, call gxplatform.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -172,7 +172,7 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call gxplatform.Cal
 }
 
 // PendingCallContract executes a contract call on the pending state.
-func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call gxplatform.CallMsg) ([]byte, error) {
+func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call klaytn.CallMsg) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
@@ -198,7 +198,7 @@ func (b *SimulatedBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error
 
 // EstimateGas executes the requested code against the currently pending block/state and
 // returns the used amount of gas.
-func (b *SimulatedBackend) EstimateGas(ctx context.Context, call gxplatform.CallMsg) (uint64, error) {
+func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (uint64, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -248,7 +248,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call gxplatform.Call
 
 // callContract implements common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
-func (b *SimulatedBackend) callContract(ctx context.Context, call gxplatform.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
+func (b *SimulatedBackend) callContract(ctx context.Context, call klaytn.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
 	// Ensure message is initialized properly.
 	if call.GasPrice == nil {
 		call.GasPrice = big.NewInt(1)
@@ -265,13 +265,13 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call gxplatform.Cal
 	// Execute the call.
 	msg := callmsg{call}
 
-	evmContext := core.NewEVMContext(msg, block.Header(), b.blockchain, nil)
+	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.blockchain, nil)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, &vm.Config{})
-	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
+	gaspool := new(blockchain.GasPool).AddGas(math.MaxUint64)
 
-	return core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	return blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
 }
 
 // SendTransaction updates the pending block to include the given transaction.
@@ -289,7 +289,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTxWithChain(b.blockchain, tx)
 		}
@@ -306,7 +306,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 // returning all the results in one batch.
 //
 // TODO(karalabe): Deprecate when the subscription one can return past data too.
-func (b *SimulatedBackend) FilterLogs(ctx context.Context, query gxplatform.FilterQuery) ([]types.Log, error) {
+func (b *SimulatedBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
 	// Initialize unset filter boundaried to run from genesis to chain head
 	from := int64(0)
 	if query.FromBlock != nil {
@@ -332,7 +332,7 @@ func (b *SimulatedBackend) FilterLogs(ctx context.Context, query gxplatform.Filt
 
 // SubscribeFilterLogs creates a background log filtering operation, returning a
 // subscription immediately, which can be used to stream the found events.
-func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query gxplatform.FilterQuery, ch chan<- types.Log) (gxplatform.Subscription, error) {
+func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
 	// Subscribe to contract events
 	sink := make(chan []*types.Log)
 
@@ -368,7 +368,7 @@ func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query gxplat
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
@@ -382,9 +382,9 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	return nil
 }
 
-// callmsg implements core.Message to allow passing it as a transaction simulator.
+// callmsg implements blockchain.Message to allow passing it as a transaction simulator.
 type callmsg struct {
-	gxplatform.CallMsg
+	klaytn.CallMsg
 }
 
 func (m callmsg) From() common.Address { return m.CallMsg.From }
@@ -399,12 +399,12 @@ func (m callmsg) Data() []byte         { return m.CallMsg.Data }
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
 type filterBackend struct {
-	db gxdb.Database
-	bc *core.BlockChain
+	db database.Database
+	bc *blockchain.BlockChain
 }
 
-func (fb *filterBackend) ChainDb() gxdb.Database  { return fb.db }
-func (fb *filterBackend) EventMux() *event.TypeMux { panic("not supported") }
+func (fb *filterBackend) ChainDb() database.Database { return fb.db }
+func (fb *filterBackend) EventMux() *event.TypeMux   { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if block == rpc.LatestBlockNumber {
@@ -421,16 +421,16 @@ func (fb *filterBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*ty
 	return fb.bc.GetLogsByHash(hash), nil
 }
 
-func (fb *filterBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+func (fb *filterBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) event.Subscription {
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		<-quit
 		return nil
 	})
 }
-func (fb *filterBackend) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
+func (fb *filterBackend) SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription {
 	return fb.bc.SubscribeChainEvent(ch)
 }
-func (fb *filterBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
+func (fb *filterBackend) SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription {
 	return fb.bc.SubscribeRemovedLogsEvent(ch)
 }
 func (fb *filterBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {

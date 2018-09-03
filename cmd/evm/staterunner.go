@@ -23,8 +23,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/tests"
 

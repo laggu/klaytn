@@ -6,9 +6,9 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/compiler"
 	"github.com/ground-x/go-gxplatform/common/profile"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"math"
 	"math/big"
@@ -79,11 +79,11 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	evmContext := core.NewEVMContext(msg, header, bcdata.bc, nil)
+	evmContext := blockchain.NewEVMContext(msg, header, bcdata.bc, nil)
 	vmenv := vm.NewEVM(evmContext, statedb, bcdata.bc.Config(), &vm.Config{})
-	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
+	gaspool := new(blockchain.GasPool).AddGas(math.MaxUint64)
 
-	ret, _, _, err := core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	ret, _, _, err := blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 )
 
 func RLPHash(v interface{}) (h common.Hash) {

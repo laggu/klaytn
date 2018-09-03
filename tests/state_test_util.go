@@ -26,15 +26,15 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 )
 
 // StateTest checks transaction processing without block context.
@@ -55,7 +55,7 @@ func (t *StateTest) UnmarshalJSON(in []byte) error {
 
 type stJSON struct {
 	Env  stEnv                    `json:"env"`
-	Pre  core.GenesisAlloc        `json:"pre"`
+	Pre  blockchain.GenesisAlloc  `json:"pre"`
 	Tx   stTransaction            `json:"transaction"`
 	Out  hexutil.Bytes            `json:"out"`
 	Post map[string][]stPostState `json:"post"`
@@ -126,21 +126,21 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 		return nil, UnsupportedForkError{subtest.Fork}
 	}
 	block := t.genesis(config).ToBlock(nil)
-	statedb := MakePreState(gxdb.NewMemDatabase(), t.json.Pre)
+	statedb := MakePreState(database.NewMemDatabase(), t.json.Pre)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
 	msg, err := t.json.Tx.toMessage(post)
 	if err != nil {
 		return nil, err
 	}
-	context := core.NewEVMContext(msg, block.Header(), nil, &t.json.Env.Coinbase)
+	context := blockchain.NewEVMContext(msg, block.Header(), nil, &t.json.Env.Coinbase)
 	context.GetHash = vmTestBlockHash
 	evm := vm.NewEVM(context, statedb, config, &vmconfig)
 
-	gaspool := new(core.GasPool)
+	gaspool := new(blockchain.GasPool)
 	gaspool.AddGas(block.GasLimit())
 	snapshot := statedb.Snapshot()
-	if _, _, _, err := core.ApplyMessage(evm, msg, gaspool); err != nil {
+	if _, _, _, err := blockchain.ApplyMessage(evm, msg, gaspool); err != nil {
 		statedb.RevertToSnapshot(snapshot)
 	}
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
@@ -157,7 +157,7 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
 
-func MakePreState(db gxdb.Database, accounts core.GenesisAlloc) *state.StateDB {
+func MakePreState(db database.Database, accounts blockchain.GenesisAlloc) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb)
 	for addr, a := range accounts {
@@ -174,8 +174,8 @@ func MakePreState(db gxdb.Database, accounts core.GenesisAlloc) *state.StateDB {
 	return statedb
 }
 
-func (t *StateTest) genesis(config *params.ChainConfig) *core.Genesis {
-	return &core.Genesis{
+func (t *StateTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
+	return &blockchain.Genesis{
 		Config:     config,
 		Coinbase:   t.json.Env.Coinbase,
 		Difficulty: t.json.Env.Difficulty,
@@ -186,7 +186,7 @@ func (t *StateTest) genesis(config *params.ChainConfig) *core.Genesis {
 	}
 }
 
-func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
+func (tx *stTransaction) toMessage(ps stPostState) (blockchain.Message, error) {
 	// Derive sender from private key if present.
 	var from common.Address
 	if len(tx.PrivateKey) > 0 {

@@ -5,7 +5,7 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	)
 
-// Start implements core.Engine.Start
+// Start implements blockchain.Engine.Start
 func (c *core) Start() error {
 	// Start a new round from last sequence + 1
 	c.startNewRound(common.Big0)
@@ -18,7 +18,7 @@ func (c *core) Start() error {
 	return nil
 }
 
-// Stop implements core.Engine.Stop
+// Stop implements blockchain.Engine.Stop
 func (c *core) Stop() error {
 	c.stopTimer()
 	c.unsubscribeEvents()

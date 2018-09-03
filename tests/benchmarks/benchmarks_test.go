@@ -86,7 +86,7 @@ func TestInterpreterSload100000(t *testing.T) {
 	// Test code
 	//       Initialize (PUSH SSTORE)
 	//       Loop 10000 times for below code
-	//              Read from storage 10 times //  (PUSH SLOAD POP) x 10
+	//              Read from database 10 times //  (PUSH SLOAD POP) x 10
 	//
 	code := common.Hex2Bytes(sload100000)
 	intrp, contract := prepareInterpreterAndContract(code)
@@ -99,7 +99,7 @@ func BenchmarkInterpreterSload100000(bench *testing.B) {
 	// Test code
 	//       Initialize (PUSH SSTORE)
 	//       Loop 10000 times for below code
-	//              Read from storage 10 times //  (PUSH SLOAD POP) x 10
+	//              Read from database 10 times //  (PUSH SLOAD POP) x 10
 	//
 	code := common.Hex2Bytes(sload100000)
 	intrp, contract := prepareInterpreterAndContract(code)
@@ -115,7 +115,7 @@ func TestInterpreterSstore100000(t *testing.T) {
 	// Test code
 	//       Initialize (PUSH)
 	//       Loop 10000 times for below code
-	//              Write to storage 10 times //  (PUSH PUSH SSTORE) x 10
+	//              Write to database 10 times //  (PUSH PUSH SSTORE) x 10
 	//
 	code := common.Hex2Bytes(sstore100000)
 	intrp, contract := prepareInterpreterAndContract(code)
@@ -128,7 +128,7 @@ func BenchmarkInterpreterSstore100000(bench *testing.B) {
 	// Test code
 	//       Initialize (PUSH)
 	//       Loop 10000 times for below code
-	//              Write to storage 10 times //  (PUSH PUSH SSTORE) x 10
+	//              Write to database 10 times //  (PUSH PUSH SSTORE) x 10
 	//
 	code := common.Hex2Bytes(sstore100000)
 	intrp, contract := prepareInterpreterAndContract(code)

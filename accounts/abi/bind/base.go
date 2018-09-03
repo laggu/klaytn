@@ -3,7 +3,7 @@ package bind
 import (
 	"math/big"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"context"
 	"github.com/ground-x/go-gxplatform/accounts/abi"
@@ -26,9 +26,9 @@ type CallOpts struct {
 }
 
 // TransactOpts is the collection of authorization data required to create a
-// valid GXP transaction.
+// valid klaytn transaction.
 type TransactOpts struct {
-	From   common.Address // GXP account to send the transaction from
+	From   common.Address // klaytn account to send the transaction from
 	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 	Signer SignerFn       // Method to use for signing the transaction (mandatory)
 
@@ -56,11 +56,11 @@ type WatchOpts struct {
 }
 
 // BoundContract is the base wrapper object that reflects a contract on the
-// gxplatform network. It contains a collection of methods that are used by the
+// klaytn network. It contains a collection of methods that are used by the
 // higher level contract bindings to operate.
 type BoundContract struct {
-	address    common.Address     // Deployment address of the contract on the GXP blockchain
-	abi        abi.ABI            // Reflect based ABI to access the correct GXP methods
+	address    common.Address     // Deployment address of the contract on the klaytn blockchain
+	abi        abi.ABI            // Reflect based ABI to access the correct klaytn methods
 	caller     ContractCaller     // Read interface to interact with the blockchain
 	transactor ContractTransactor // Write interface to interact with the blockchain
 	filterer   ContractFilterer   // Event filtering to interact with the blockchain
@@ -78,7 +78,7 @@ func NewBoundContract(address common.Address, abi abi.ABI, caller ContractCaller
 	}
 }
 
-// DeployContract deploys a contract onto the GXP blockchain and binds the
+// DeployContract deploys a contract onto the klaytn and binds the
 // deployment address with a Go wrapper.
 func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend ContractBackend, params ...interface{}) (common.Address, *types.Transaction, *BoundContract, error) {
 	// Otherwise try to deploy the contract
@@ -111,7 +111,7 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 		return err
 	}
 	var (
-		msg    = gxplatform.CallMsg{From: opts.From, To: &c.address, Data: input}
+		msg    = klaytn.CallMsg{From: opts.From, To: &c.address, Data: input}
 		ctx    = ensureContext(opts.Context)
 		code   []byte
 		output []byte
@@ -201,7 +201,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 			}
 		}
 		// If the contract surely has code (or code is not needed), estimate the transaction
-		msg := gxplatform.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
+		msg := klaytn.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
 		gasLimit, err = c.transactor.EstimateGas(ensureContext(opts.Context), msg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
@@ -247,7 +247,7 @@ func (c *BoundContract) FilterLogs(opts *FilterOpts, name string, query ...[]int
 	// Start the background filtering
 	logs := make(chan types.Log, 128)
 
-	config := gxplatform.FilterQuery{
+	config := klaytn.FilterQuery{
 		Addresses: []common.Address{c.address},
 		Topics:    topics,
 		FromBlock: new(big.Int).SetUint64(opts.Start),
@@ -296,7 +296,7 @@ func (c *BoundContract) WatchLogs(opts *WatchOpts, name string, query ...[]inter
 	// Start the background filtering
 	logs := make(chan types.Log, 128)
 
-	config := gxplatform.FilterQuery{
+	config := klaytn.FilterQuery{
 		Addresses: []common.Address{c.address},
 		Topics:    topics,
 	}

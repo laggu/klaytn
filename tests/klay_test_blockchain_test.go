@@ -24,17 +24,17 @@ import (
 	"errors"
 	"math/big"
 	"crypto/ecdsa"
-	"github.com/ground-x/go-gxplatform/rlp"
-	"github.com/ground-x/go-gxplatform/gxdb"
-	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/miner"
+	"github.com/ground-x/go-gxplatform/work"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"github.com/ground-x/go-gxplatform/common/profile"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
@@ -51,14 +51,14 @@ const removeChaindataOnExit = true
 const GasLimit uint64 = 1000000000000000000
 
 type BCData struct {
-	bc *core.BlockChain
-	addrs []*common.Address
-	privKeys []*ecdsa.PrivateKey
-	db gxdb.Database
-	rewardBase *common.Address
+	bc                 *blockchain.BlockChain
+	addrs              []*common.Address
+	privKeys           []*ecdsa.PrivateKey
+	db                 database.Database
+	rewardBase         *common.Address
 	validatorAddresses []common.Address
 	validatorPrivKeys  []*ecdsa.PrivateKey
-	engine consensus.Istanbul
+	engine             consensus.Istanbul
 }
 
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
@@ -76,7 +76,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
-	chainDb, err := NewDatabase(gxdb.LEVELDB)
+	chainDb, err := NewDatabase(database.LEVELDB)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		ParentHash: parent.Hash(),
 		Coinbase:   common.Address{},
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
+		GasLimit:   blockchain.CalcGasLimit(parent),
 		Time:       big.NewInt(tstamp),
 	}
 
@@ -193,9 +193,9 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Apply the set of transactions
 	start = time.Now()
-	gp := new(core.GasPool)
+	gp := new(blockchain.GasPool)
 	gp = gp.AddGas(GasLimit)
-	task := miner.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
+	task := work.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
 	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
@@ -283,16 +283,16 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-func NewDatabase(dbtype string) (db gxdb.Database, err error) {
+func NewDatabase(dbtype string) (db database.Database, err error) {
 	switch dbtype {
-	case gxdb.LEVELDB:
-		db, err = gxdb.NewLDBDatabase("chaindata", 16, 16)
+	case database.LEVELDB:
+		db, err = database.NewLDBDatabase("chaindata", 16, 16)
 		if err != nil {
 			return nil, err
 		}
 
 	default:
-		db = gxdb.NewMemDatabase()
+		db = database.NewMemDatabase()
 	}
 
 	return
@@ -317,12 +317,12 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 	return append(buf.Bytes(), payload...), nil
 }
 
-func initBlockchain(conf *node.Config, db gxdb.Database, coinbaseAddrs []*common.Address, validators []common.Address,
-	engine consensus.Engine) (*core.BlockChain, error) {
+func initBlockchain(conf *node.Config, db database.Database, coinbaseAddrs []*common.Address, validators []common.Address,
+	engine consensus.Engine) (*blockchain.BlockChain, error) {
 
 	extraData, err := prepareIstanbulExtra(validators)
 
-	genesis := core.DefaultGenesisBlock()
+	genesis := blockchain.DefaultGenesisBlock()
 	genesis.Coinbase = *coinbaseAddrs[0]
 	genesis.Config = Forks["Byzantium"]
 	genesis.GasLimit = GasLimit
@@ -331,19 +331,19 @@ func initBlockchain(conf *node.Config, db gxdb.Database, coinbaseAddrs []*common
 	genesis.Mixhash = types.IstanbulDigest
 	genesis.Difficulty = big.NewInt(1)
 
-	alloc := make(core.GenesisAlloc)
+	alloc := make(blockchain.GenesisAlloc)
 	for _, a := range coinbaseAddrs {
-		alloc[*a] = core.GenesisAccount{Balance: big.NewInt(1000000000000000000)}
+		alloc[*a] = blockchain.GenesisAccount{Balance: big.NewInt(1000000000000000000)}
 	}
 
 	genesis.Alloc = alloc
 
-	chainConfig, _, err := core.SetupGenesisBlock(db, genesis)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
 		return nil, err
 	}
 
-	chain, err := core.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
 	if err != nil {
 		return nil, err
 	}

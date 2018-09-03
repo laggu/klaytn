@@ -11,7 +11,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/node"
-	rnpkg "github.com/ground-x/go-gxplatform/ranger"
+	rnpkg "github.com/ground-x/go-gxplatform/node/ranger"
 	"errors"
 	"github.com/ground-x/go-gxplatform/params"
 )

@@ -6,9 +6,9 @@ import (
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/metrics"
-	"github.com/ground-x/go-gxplatform/p2p"
-	"github.com/ground-x/go-gxplatform/p2p/discover"
-	"github.com/ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"strings"
 	"time"
 )

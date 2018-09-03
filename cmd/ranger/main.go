@@ -4,7 +4,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"sort"
-	"github.com/ground-x/go-gxplatform/internal/debug"
+	"github.com/ground-x/go-gxplatform/api/debug"
 	"runtime"
 	"time"
 	"os"
@@ -13,7 +13,7 @@ import (
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
 	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/gxpclient"
+	"github.com/ground-x/go-gxplatform/client"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/console"
@@ -167,7 +167,7 @@ func startRanger(ctx *cli.Context, stack *node.Node) {
 		if err != nil {
 			utils.Fatalf("Failed to attach to self: %v", err)
 		}
-		stateReader := gxpclient.NewClient(rpcClient)
+		stateReader := client.NewClient(rpcClient)
 
 		// Open any wallets already attached
 		for _, wallet := range stack.AccountManager().Wallets() {

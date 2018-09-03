@@ -3,7 +3,7 @@ package core
 import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"io"
 	"math/big"
 	"sync"

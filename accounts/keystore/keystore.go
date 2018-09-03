@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/event"
 	"math/big"

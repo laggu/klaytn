@@ -27,13 +27,13 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/core/vm"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 )
 
@@ -48,12 +48,12 @@ func (t *BlockTest) UnmarshalJSON(in []byte) error {
 }
 
 type btJSON struct {
-	Blocks    []btBlock             `json:"blocks"`
-	Genesis   btHeader              `json:"genesisBlockHeader"`
-	Pre       core.GenesisAlloc     `json:"pre"`
-	Post      core.GenesisAlloc     `json:"postState"`
-	BestBlock common.UnprefixedHash `json:"lastblockhash"`
-	Network   string                `json:"network"`
+	Blocks    []btBlock               `json:"blocks"`
+	Genesis   btHeader                `json:"genesisBlockHeader"`
+	Pre       blockchain.GenesisAlloc `json:"pre"`
+	Post      blockchain.GenesisAlloc `json:"postState"`
+	BestBlock common.UnprefixedHash   `json:"lastblockhash"`
+	Network   string                  `json:"networks"`
 }
 
 type btBlock struct {
@@ -99,7 +99,7 @@ func (t *BlockTest) Run() error {
 	}
 
 	// import pre accounts & construct test genesis block & state root
-	db := gxdb.NewMemDatabase()
+	db := database.NewMemDatabase()
 	gblock, err := t.genesis(config).Commit(db)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (t *BlockTest) Run() error {
 	}
 
 	// TODO-GX: Replace gxhash with istanbul
-	chain, err := core.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{})
 	if err != nil {
 		return err
 	}
@@ -136,8 +136,8 @@ func (t *BlockTest) Run() error {
 	return t.validateImportedHeaders(chain, validBlocks)
 }
 
-func (t *BlockTest) genesis(config *params.ChainConfig) *core.Genesis {
-	return &core.Genesis{
+func (t *BlockTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
+	return &blockchain.Genesis{
 		Config:     config,
 		Nonce:      t.json.Genesis.Nonce.Uint64(),
 		Timestamp:  t.json.Genesis.Timestamp.Uint64(),
@@ -164,7 +164,7 @@ func (t *BlockTest) genesis(config *params.ChainConfig) *core.Genesis {
    expected we are expected to ignore it and continue processing and then validate the
    post state.
 */
-func (t *BlockTest) insertBlocks(blockchain *core.BlockChain) ([]btBlock, error) {
+func (t *BlockTest) insertBlocks(blockchain *blockchain.BlockChain) ([]btBlock, error) {
 	validBlocks := make([]btBlock, 0)
 	// insert the test blocks, which will execute all transactions
 	for _, b := range t.json.Blocks {
@@ -268,7 +268,7 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB) error {
 	return nil
 }
 
-func (t *BlockTest) validateImportedHeaders(cm *core.BlockChain, validBlocks []btBlock) error {
+func (t *BlockTest) validateImportedHeaders(cm *blockchain.BlockChain, validBlocks []btBlock) error {
 	// to get constant lookup when verifying block headers by hash (some tests have many blocks)
 	bmap := make(map[common.Hash]btBlock, len(t.json.Blocks))
 	for _, b := range validBlocks {

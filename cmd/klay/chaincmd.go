@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
-	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/log"
 	"os"
 )
@@ -44,7 +44,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	defer file.Close()
 
-	genesis := new(core.Genesis)
+	genesis := new(blockchain.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
@@ -55,7 +55,7 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
-		_, hash, err := core.SetupGenesisBlock(chaindb, genesis)
+		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis)
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}

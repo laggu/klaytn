@@ -8,8 +8,8 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/p2p"
-	"github.com/ground-x/go-gxplatform/p2p/discover"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -41,7 +41,7 @@ type Config struct {
 	// in the devp2p node identifier.
 	Version string `toml:"-"`
 
-	// key-value storage type [leveldb, badgerdb]
+	// key-value database type [leveldb, badgerdb]
 	DBType string
 
 	// DataDir is the file system folder the node should use for any data storage

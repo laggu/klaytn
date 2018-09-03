@@ -27,9 +27,9 @@ import (
 	"math/rand"
 	"crypto/ecdsa"
 	"runtime/pprof"
-	"github.com/ground-x/go-gxplatform/core"
+	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
 )
 
@@ -72,7 +72,7 @@ func BenchmarkAddTx(b *testing.B) {
 	}
 }
 
-func txDispatcher(ch <-chan *types.Transaction, txpool *core.TxPool, wait *sync.WaitGroup) {
+func txDispatcher(ch <-chan *types.Transaction, txpool *blockchain.TxPool, wait *sync.WaitGroup) {
 	for {
 		if t, ok := <-ch; ok {
 			err := txpool.AddLocal(t)
@@ -105,7 +105,7 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 	}
 	profile.Prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	poolConfig := core.TxPoolConfig{
+	poolConfig := blockchain.TxPoolConfig{
 		Journal:   transactionsJournalFilename,
 		Rejournal: time.Hour,
 
@@ -119,7 +119,7 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 
 		Lifetime: 3 * time.Hour,
 	}
-	txpool := core.NewTxPool(poolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(poolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentBlock().Number())
 
@@ -235,7 +235,7 @@ func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privK
 	return txs, nil
 }
 
-func txParallel(txs types.Transactions, txpool *core.TxPool) {
+func txParallel(txs types.Transactions, txpool *blockchain.TxPool) {
 	var wait sync.WaitGroup
 
 	wait.Add(len(txs))
@@ -253,7 +253,7 @@ func txParallel(txs types.Transactions, txpool *core.TxPool) {
 	wait.Wait()
 }
 
-func txSequential(txs types.Transactions, txpool *core.TxPool) {
+func txSequential(txs types.Transactions, txpool *blockchain.TxPool) {
 	for _, tx := range txs {
 		err := txpool.AddLocal(tx)
 		if err != nil {
@@ -262,7 +262,7 @@ func txSequential(txs types.Transactions, txpool *core.TxPool) {
 	}
 }
 
-func txQueue(txs types.Transactions, txpool *core.TxPool,
+func txQueue(txs types.Transactions, txpool *blockchain.TxPool,
 	txChs []chan *types.Transaction, numQueue int, wait *sync.WaitGroup) {
 	wait.Add(len(txs))
 

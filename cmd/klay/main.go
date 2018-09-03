@@ -8,9 +8,9 @@ import (
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/console"
-	gxp2 "github.com/ground-x/go-gxplatform/gxp"
-	"github.com/ground-x/go-gxplatform/gxpclient"
-	"github.com/ground-x/go-gxplatform/internal/debug"
+	gxp2 "github.com/ground-x/go-gxplatform/node/cn"
+	"github.com/ground-x/go-gxplatform/client"
+	"github.com/ground-x/go-gxplatform/api/debug"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/metrics/prometheus"
@@ -235,7 +235,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err != nil {
 			utils.Fatalf("Failed to attach to self: %v", err)
 		}
-		stateReader := gxpclient.NewClient(rpcClient)
+		stateReader := client.NewClient(rpcClient)
 
 		// Open any wallets already attached
 		for _, wallet := range stack.AccountManager().Wallets() {

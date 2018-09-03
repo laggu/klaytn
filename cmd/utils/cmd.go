@@ -4,14 +4,14 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/rawdb"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/storage/rawdb"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"io"
 	"os"
 	"os/signal"
@@ -64,7 +64,7 @@ func StartNode(stack *node.Node) {
 	}()
 }
 
-func ImportChain(chain *core.BlockChain, fn string) error {
+func ImportChain(chain *blockchain.BlockChain, fn string) error {
 	// Watch for Ctrl-C while the import is running.
 	// If a signal is received, the import will stop at the next batch.
 	interrupt := make(chan os.Signal, 1)
@@ -147,7 +147,7 @@ func ImportChain(chain *core.BlockChain, fn string) error {
 	return nil
 }
 
-func missingBlocks(chain *core.BlockChain, blocks []*types.Block) []*types.Block {
+func missingBlocks(chain *blockchain.BlockChain, blocks []*types.Block) []*types.Block {
 	head := chain.CurrentBlock()
 	for i, block := range blocks {
 		// If we're behind the chain head, only check block, state is available at head
@@ -167,7 +167,7 @@ func missingBlocks(chain *core.BlockChain, blocks []*types.Block) []*types.Block
 
 // ExportChain exports a blockchain into the specified file, truncating any data
 // already present in the file.
-func ExportChain(blockchain *core.BlockChain, fn string) error {
+func ExportChain(blockchain *blockchain.BlockChain, fn string) error {
 	log.Info("Exporting blockchain", "file", fn)
 
 	// Open the file handle and potentially wrap with a gzip stream
@@ -193,7 +193,7 @@ func ExportChain(blockchain *core.BlockChain, fn string) error {
 
 // ExportAppendChain exports a blockchain into the specified file, appending to
 // the file if data already exists in it.
-func ExportAppendChain(blockchain *core.BlockChain, fn string, first uint64, last uint64) error {
+func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint64, last uint64) error {
 	log.Info("Exporting blockchain", "file", fn)
 
 	// Open the file handle and potentially wrap with a gzip stream
@@ -217,7 +217,7 @@ func ExportAppendChain(blockchain *core.BlockChain, fn string, first uint64, las
 }
 
 // ImportPreimages imports a batch of exported hash preimages into the database.
-func ImportPreimages(db *gxdb.LDBDatabase, fn string) error {
+func ImportPreimages(db *database.LDBDatabase, fn string) error {
 	log.Info("Importing preimages", "file", fn)
 
 	// Open the file handle and potentially unwrap the gzip stream
@@ -264,7 +264,7 @@ func ImportPreimages(db *gxdb.LDBDatabase, fn string) error {
 
 // ExportPreimages exports all known hash preimages into the specified file,
 // truncating any data already present in the file.
-func ExportPreimages(db *gxdb.LDBDatabase, fn string) error {
+func ExportPreimages(db *database.LDBDatabase, fn string) error {
 	log.Info("Exporting preimages", "file", fn)
 
 	// Open the file handle and potentially wrap with a gzip stream

@@ -22,7 +22,7 @@ import (
 	"testing"
 	"math/big"
 	"math/rand"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
 )
 

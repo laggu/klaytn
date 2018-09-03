@@ -5,7 +5,7 @@ import (
 	"github.com/ground-x/go-gxplatform/event"
 	"math/big"
 	"time"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 // Backend provides application specific functions for Istanbul core

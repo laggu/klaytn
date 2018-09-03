@@ -2,11 +2,11 @@ package consensus
 
 import (
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"math/big"
 )
 

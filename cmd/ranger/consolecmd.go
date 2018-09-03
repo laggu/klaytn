@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/node"
 	"strings"
-	"github.com/ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 )
 
 var (

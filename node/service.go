@@ -3,9 +3,9 @@ package node
 import (
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/gxdb"
-	"github.com/ground-x/go-gxplatform/p2p"
-	"github.com/ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"reflect"
 	"crypto/ecdsa"
 	"github.com/pkg/errors"
@@ -21,20 +21,20 @@ type ServiceContext struct {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (gxdb.Database, error) {
+func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (database.Database, error) {
 	if ctx.config.DataDir == "" {
-		return gxdb.NewMemDatabase(), nil
+		return database.NewMemDatabase(), nil
 	}
 
 	switch ctx.config.DBType {
-	case gxdb.LEVELDB:
-		db, err := gxdb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
+	case database.LEVELDB:
+		db, err := database.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
 		if err != nil {
 			return nil, err
 		}
 		return db, nil
-	case gxdb.BADGER:
-		db, err := gxdb.NewBGDatabase(ctx.config.resolvePath(name))
+	case database.BADGER:
+		db, err := database.NewBGDatabase(ctx.config.resolvePath(name))
 		if err != nil {
 			return nil, err
 		}

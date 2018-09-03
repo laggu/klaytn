@@ -42,7 +42,7 @@ var (
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the GX Platform core developers into the Gxhash consensus.
+	// and accepted by the klaytn developers into the klaytn consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
@@ -55,7 +55,7 @@ var (
 	}
 
 	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the GX Platform core developers into the Clique consensus.
+	// and accepted by the GX Platform blockchain developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
@@ -87,7 +87,7 @@ var (
 	}
 )
 
-// ChainConfig is the core config which determines the blockchain settings.
+// ChainConfig is the blockchain config which determines the blockchain settings.
 //
 // ChainConfig is stored in the database on a per block basis. This means
 // that any network, identified by its genesis block, can have its own

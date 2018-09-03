@@ -8,11 +8,11 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul/validator"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"math/big"
 	"sync"
@@ -24,7 +24,7 @@ const (
 	fetcherID = "istanbul"
 )
 
-func New(rewardbase common.Address, rewardcontract common.Address , config *istanbul.Config, privateKey *ecdsa.PrivateKey, db gxdb.Database) consensus.Istanbul {
+func New(rewardbase common.Address, rewardcontract common.Address , config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.Database) consensus.Istanbul {
 
 	recents, _ 		  := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -58,7 +58,7 @@ type backend struct {
 	address          common.Address
 	core             istanbulCore.Engine
 	logger           log.Logger
-	db               gxdb.Database
+	db               database.Database
 	chain            consensus.ChainReader
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
@@ -274,7 +274,7 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 
 	// check bad block
 	if sb.HasBadProposal(block.Hash()) {
-		return 0, core.ErrBlacklistedHash
+		return 0, blockchain.ErrBlacklistedHash
 	}
 
 	// check block body

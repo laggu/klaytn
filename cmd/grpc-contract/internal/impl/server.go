@@ -25,7 +25,7 @@ import "os"
 import "github.com/ground-x/go-gxplatform/accounts/abi/bind"
 import "github.com/ground-x/go-gxplatform/common"
 import "github.com/ground-x/go-gxplatform/crypto"
-import "github.com/ground-x/go-gxplatform/gxpclient"
+import "github.com/ground-x/go-gxplatform/client"
 import {{ .ContractName }} "{{ .ProjectPackage }}"
 import flag "github.com/spf13/pflag"
 import "github.com/spf13/viper"
@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// connect to klay client
-	conn, err := gxpclient.Dial(klay)
+	conn, err := client.Dial(klay)
 	if err != nil {
 		fmt.Printf("Failed to connect klay: %v\n", err)
 		os.Exit(-1)

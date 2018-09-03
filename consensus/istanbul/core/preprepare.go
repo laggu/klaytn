@@ -4,7 +4,7 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"time"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {

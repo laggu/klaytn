@@ -19,7 +19,7 @@ package accounts
 import (
 	"github.com/ground-x/go-gxplatform"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/event"
 	"math/big"
 )
@@ -83,7 +83,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain gxplatform.ChainReader)
+	SelfDerive(base DerivationPath, chain klaytn.ChainReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//

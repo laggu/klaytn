@@ -6,8 +6,8 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul/validator"
-	"github.com/ground-x/go-gxplatform/core/types"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 const (
@@ -56,7 +56,7 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet istanbul.
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, subSize int, db gxdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(epoch uint64, subSize int, db database.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func loadSnapshot(epoch uint64, subSize int, db gxdb.Database, hash common.Hash)
 }
 
 // store inserts the snapshot into the database.
-func (s *Snapshot) store(db gxdb.Database) error {
+func (s *Snapshot) store(db database.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err

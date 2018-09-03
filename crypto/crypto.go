@@ -26,7 +26,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/rlp"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"io"
 	"io/ioutil"
 	"math/big"

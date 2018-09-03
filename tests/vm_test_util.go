@@ -25,11 +25,11 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
 )
 
@@ -44,14 +44,14 @@ func (t *VMTest) UnmarshalJSON(data []byte) error {
 }
 
 type vmJSON struct {
-	Env           stEnv                 `json:"env"`
-	Exec          vmExec                `json:"exec"`
-	Logs          common.UnprefixedHash `json:"logs"`
-	GasRemaining  *math.HexOrDecimal64  `json:"gas"`
-	Out           hexutil.Bytes         `json:"out"`
-	Pre           core.GenesisAlloc     `json:"pre"`
-	Post          core.GenesisAlloc     `json:"post"`
-	PostStateRoot common.Hash           `json:"postStateRoot"`
+	Env           stEnv                   `json:"env"`
+	Exec          vmExec                  `json:"exec"`
+	Logs          common.UnprefixedHash   `json:"logs"`
+	GasRemaining  *math.HexOrDecimal64    `json:"gas"`
+	Out           hexutil.Bytes           `json:"out"`
+	Pre           blockchain.GenesisAlloc `json:"pre"`
+	Post          blockchain.GenesisAlloc `json:"post"`
+	PostStateRoot common.Hash             `json:"postStateRoot"`
 }
 
 //go:generate gencodec -type vmExec -field-override vmExecMarshaling -out gen_vmexec.go
@@ -79,7 +79,7 @@ type vmExecMarshaling struct {
 }
 
 func (t *VMTest) Run(vmconfig vm.Config) error {
-	statedb := MakePreState(gxdb.NewMemDatabase(), t.json.Pre)
+	statedb := MakePreState(database.NewMemDatabase(), t.json.Pre)
 	ret, gasRemaining, err := t.exec(statedb, vmconfig)
 
 	if t.json.GasRemaining == nil {
@@ -127,7 +127,7 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 			initialCall = false
 			return true
 		}
-		return core.CanTransfer(db, address, amount)
+		return blockchain.CanTransfer(db, address, amount)
 	}
 	transfer := func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {}
 	context := vm.Context{

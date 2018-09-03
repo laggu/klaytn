@@ -19,7 +19,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/core/vm"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 )
 
 func TestVM(t *testing.T) {

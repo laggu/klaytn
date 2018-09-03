@@ -6,7 +6,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/p2p"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/node"
 )
 

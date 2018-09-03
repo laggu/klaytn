@@ -48,7 +48,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
-	"github.com/ground-x/go-gxplatform/internal/build"
+	"github.com/ground-x/go-gxplatform/utils/build"
 	"io/ioutil"
 	"log"
 	"os"

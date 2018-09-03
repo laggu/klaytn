@@ -1,11 +1,11 @@
-// Package gxplatform defines interfaces for interacting with GXPlatform.
-package gxplatform
+// Package klaytn defines interfaces for interacting with KLAYTN.
+package klaytn
 
 import (
 	"context"
 	"errors"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"math/big"
 )
 

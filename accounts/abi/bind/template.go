@@ -55,7 +55,7 @@ import (
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
 	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core/types"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/event"
 )
 
@@ -426,7 +426,7 @@ const tmplSourceJava = `
 package {{.Package}};
 
 import org.ethereum.geth.*;
-import org.ethereum.geth.internal.*;
+import org.ethereum.geth.utils.*;
 
 {{range $contract := .Contracts}}
 	public class {{.Type}} {

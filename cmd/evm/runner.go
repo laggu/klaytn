@@ -30,11 +30,11 @@ import (
 	"github.com/ground-x/go-gxplatform/cmd/evm/internal/compiler"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/core"
-	"github.com/ground-x/go-gxplatform/core/state"
-	"github.com/ground-x/go-gxplatform/core/vm"
-	"github.com/ground-x/go-gxplatform/core/vm/runtime"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/blockchain/vm/runtime"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	cli "gopkg.in/urfave/cli.v1"
@@ -50,7 +50,7 @@ var runCommand = cli.Command{
 
 // readGenesis will read the given JSON format genesis file and return
 // the initialized Genesis structure
-func readGenesis(genesisPath string) *core.Genesis {
+func readGenesis(genesisPath string) *blockchain.Genesis {
 	// Make sure we have a valid genesis JSON
 	//genesisPath := ctx.Args().First()
 	if len(genesisPath) == 0 {
@@ -62,7 +62,7 @@ func readGenesis(genesisPath string) *core.Genesis {
 	}
 	defer file.Close()
 
-	genesis := new(core.Genesis)
+	genesis := new(blockchain.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
@@ -98,13 +98,13 @@ func runCmd(ctx *cli.Context) error {
 	}
 	if ctx.GlobalString(GenesisFlag.Name) != "" {
 		gen := readGenesis(ctx.GlobalString(GenesisFlag.Name))
-		db := gxdb.NewMemDatabase()
+		db := database.NewMemDatabase()
 		genesis := gen.ToBlock(db)
 		statedb, _ = state.New(genesis.Root(), state.NewDatabase(db))
 		chainConfig = gen.Config
 		blockNumber = gen.Number
 	} else {
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(gxdb.NewMemDatabase()))
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemDatabase()))
 	}
 	if ctx.GlobalString(SenderFlag.Name) != "" {
 		sender = common.HexToAddress(ctx.GlobalString(SenderFlag.Name))

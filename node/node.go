@@ -18,8 +18,8 @@ package node
 
 import (
 	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/p2p"
-	"github.com/ground-x/go-gxplatform/rpc"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"net"
 	"sync"
 
@@ -27,13 +27,13 @@ import (
 	"fmt"
 	"github.com/prometheus/prometheus/util/flock"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/gxdb"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
-	"github.com/ground-x/go-gxplatform/internal/debug"
+	"github.com/ground-x/go-gxplatform/api/debug"
 )
 
 const (
@@ -628,15 +628,15 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int) (gxdb.Database, error) {
+func (n *Node) OpenDatabase(name string, cache, handles int) (database.Database, error) {
 	if n.config.DataDir == "" {
-		return gxdb.NewMemDatabase(), nil
+		return database.NewMemDatabase(), nil
 	}
 	switch n.config.DBType {
-	case gxdb.LEVELDB:
-		return gxdb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
-	case gxdb.BADGER :
-		return gxdb.NewBGDatabase(n.config.resolvePath(name))
+	case database.LEVELDB:
+		return database.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	case database.BADGER :
+		return database.NewBGDatabase(n.config.resolvePath(name))
 	default :
 		return nil, errors.New("fail to open database because wrong type")
 	}
