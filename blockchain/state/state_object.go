@@ -61,7 +61,6 @@ func (self Storage) Copy() Storage {
 // Finally, call CommitTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address  common.Address
-	addrHash common.Hash // hash of gxplatform address of the account
 	data     Account
 	db       *StateDB
 
@@ -112,7 +111,6 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	return &stateObject{
 		db:            db,
 		address:       address,
-		addrHash:      crypto.Keccak256Hash(address[:]),
 		data:          data,
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
@@ -149,9 +147,9 @@ func (c *stateObject) touch() {
 func (c *stateObject) getTrie(db Database) Trie {
 	if c.trie == nil {
 		var err error
-		c.trie, err = db.OpenStorageTrie(c.addrHash, c.data.Root)
+		c.trie, err = db.OpenStorageTrie(c.data.Root)
 		if err != nil {
-			c.trie, _ = db.OpenStorageTrie(c.addrHash, common.Hash{})
+			c.trie, _ = db.OpenStorageTrie(common.Hash{})
 			c.setError(fmt.Errorf("can't create storage trie: %v", err))
 		}
 	}
@@ -302,7 +300,7 @@ func (self *stateObject) Code(db Database) []byte {
 	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
 		return nil
 	}
-	code, err := db.ContractCode(self.addrHash, common.BytesToHash(self.CodeHash()))
+	code, err := db.ContractCode(common.BytesToHash(self.CodeHash()))
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}

@@ -219,7 +219,7 @@ func (self *StateDB) GetCodeSize(addr common.Address) int {
 	if stateObject.code != nil {
 		return len(stateObject.code)
 	}
-	size, err := self.db.ContractCodeSize(stateObject.addrHash, common.BytesToHash(stateObject.CodeHash()))
+	size, err := self.db.ContractCodeSize(common.BytesToHash(stateObject.CodeHash()))
 	if err != nil {
 		self.setError(err)
 	}
