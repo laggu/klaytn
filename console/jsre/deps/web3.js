@@ -1761,40 +1761,29 @@ if (typeof XMLHttpRequest === 'undefined') {
 /// required to define ETH_BIGNUMBER_ROUNDING_MODE
 var BigNumber = require('bignumber.js');
 
-var ETH_UNITS = [
-    'wei',
-    'kwei',
-    'Mwei',
-    'Gwei',
-    'szabo',
-    'finney',
-    'femtoether',
-    'picoether',
-    'nanoether',
-    'microether',
-    'milliether',
-    'nano',
-    'micro',
-    'milli',
-    'ether',
-    'grand',
-    'Mether',
-    'Gether',
-    'Tether',
-    'Pether',
-    'Eether',
-    'Zether',
-    'Yether',
-    'Nether',
-    'Dether',
-    'Vether',
-    'Uether'
+var KLAY_UNITS = [
+    'peb',
+    'kpeb',
+    'Mpeb',
+    'Gpeb',
+    'ston',
+    'uKLAY',
+    'mKLAY',
+    'KLAY',
+    'kKLAY',
+    'MKLAY',
+    'GKLAY',
+    'TKLAY',
+    'PKLAY',
+    'EKLAY',
+    'ZKLAY',
+    'YKLAY',
 ];
 
 module.exports = {
     ETH_PADDING: 32,
     ETH_SIGNATURE_LENGTH: 4,
-    ETH_UNITS: ETH_UNITS,
+    ETH_UNITS: KLAY_UNITS,
     ETH_BIGNUMBER_ROUNDING_MODE: { ROUNDING_MODE: BigNumber.ROUND_DOWN },
     ETH_POLLING_TIMEOUT: 1000/2,
     defaultBlock: 'latest',
@@ -1884,33 +1873,49 @@ var sha3 = require('./sha3.js');
 var utf8 = require('utf8');
 
 var unitMap = {
-    'noether':      '0',
-    'wei':          '1',
-    'kwei':         '1000',
-    'Kwei':         '1000',
-    'babbage':      '1000',
-    'femtoether':   '1000',
-    'mwei':         '1000000',
-    'Mwei':         '1000000',
-    'lovelace':     '1000000',
-    'picoether':    '1000000',
-    'gwei':         '1000000000',
-    'Gwei':         '1000000000',
-    'shannon':      '1000000000',
-    'nanoether':    '1000000000',
-    'nano':         '1000000000',
-    'szabo':        '1000000000000',
-    'microether':   '1000000000000',
-    'micro':        '1000000000000',
-    'finney':       '1000000000000000',
-    'milliether':    '1000000000000000',
-    'milli':         '1000000000000000',
-    'ether':        '1000000000000000000',
-    'kether':       '1000000000000000000000',
-    'grand':        '1000000000000000000000',
-    'mether':       '1000000000000000000000000',
-    'gether':       '1000000000000000000000000000',
-    'tether':       '1000000000000000000000000000000'
+    'noKLAY':      '0',
+    'peb':         '1',
+    'kpeb':        '1000',
+    'Mpeb':        '1000000',
+    'Gpeb':        '1000000000',
+    'ston':        '1000000000',
+    'uKLAY':       '1000000000000',
+    'mKLAY':       '1000000000000000',
+    'KLAY':        '1000000000000000000',
+    'kKLAY':       '1000000000000000000000',
+    'MKLAY':       '1000000000000000000000000',
+    'GKLAY':       '1000000000000000000000000000',
+    'TKLAY':       '1000000000000000000000000000000'
+};
+
+var unitEthToKlayMap = {
+    'noether':      'noKLAY',
+    'wei':          'peb',
+    'kwei':         'kpeb',
+    'Kwei':         'kpeb',
+    'babbage':      'kpeb',
+    'femtoether':   'kpeb',
+    'mwei':         'Mpeb',
+    'Mwei':         'Mpeb',
+    'lovelace':     'Mpeb',
+    'picoether':    'Mpeb',
+    'gwei':         'Gpeb',
+    'Gwei':         'Gpeb',
+    'shannon':      'Gpeb',
+    'nanoether':    'Gpeb',
+    'nano':         'Gpeb',
+    'szabo':        'uKLAY',
+    'microether':   'uKLAY',
+    'micro':        'uKLAY',
+    'finney':       'mKLAY',
+    'milliether':   'mKLAY',
+    'milli':        'mKLAY',
+    'ether':        'KLAY',
+    'kether':       'kKLAY',
+    'grand':        'kKLAY',
+    'mether':       'MKLAY',
+    'gether':       'GKLAY',
+    'tether':       'TKLAY'
 };
 
 /**
@@ -2121,18 +2126,49 @@ var toHex = function (val) {
 };
 
 /**
- * Returns value of unit in Wei
+ * Return entries of JSON object
+ */
+function entries(obj) {
+    var entry_arr = [];
+    for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            entry_arr.push([key, obj[key]]);
+        }
+    }
+    return entry_arr;
+};
+
+/**
+ * Returns more readable stringified string of 2-D array object
+ *
+ * @method fancyStringfy2D
+ * @param {String} 2-D array object
+ * @returns {String} more readable stringified of 2-D array object
+ */
+function fancyStringify2D(obj) {
+    result = "";
+    stringified = JSON.stringify(obj, null, 2);
+    matches = stringified.match(/\"[a-zA-Z0-9]*\"/g);
+    for (var i = 0; i < matches.length; i+=2) {
+        result += matches[i] + ": " + matches[i+1] + "\n";
+    }
+    return result;
+};
+
+/**
+ * Returns value of unit in peb
  *
  * @method getValueOfUnit
  * @param {String} unit the unit to convert to, default ether
- * @returns {BigNumber} value of the unit (in Wei)
- * @throws error if the unit is not correct:w
+ * @returns {BigNumber} value of the unit (in peb)
+ * @throws error if the unit is not correct
  */
 var getValueOfUnit = function (unit) {
-    unit = unit ? unit.toLowerCase() : 'ether';
+    unit = unit ? unit : 'KLAY';
     var unitValue = unitMap[unit];
     if (unitValue === undefined) {
-        throw new Error('This unit doesn\'t exists, please use the one of the following units' + JSON.stringify(unitMap, null, 2));
+        throw new Error('This unit doesn\'t exist, please use one of the following units\n'
+                        + fancyStringify2D(entries(unitMap)));
     }
     return new BigNumber(unitValue, 10);
 };
@@ -2159,6 +2195,34 @@ var getValueOfUnit = function (unit) {
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var fromWei = function(number, unit) {
+    var klayUnit = unitEthToKlayMap[unit] ? unitEthToKlayMap[unit] : unit;
+    var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(klayUnit));
+
+    return isBigNumber(number) ? returnValue : returnValue.toString(10);
+};
+
+/**
+ * Takes a number of peb and converts it to any other KLAY unit.
+ *
+ * Possible units are:
+ *   SI Short
+ * - kpeb
+ * - Mpeb
+ * - Gpeb
+ * - uKLAY
+ * - mKLAY
+ * - KLAY
+ * - kKLAY
+ * - MKLAY
+ * - GKLAY
+ * - TKLAY
+ *
+ * @method fromPeb
+ * @param {Number|String} number can be a number, number string or a HEX of a decimal
+ * @param {String} unit the unit to convert to, default KLAY
+ * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
+ */
+var fromPeb = function(number, unit) {
     var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2187,6 +2251,34 @@ var fromWei = function(number, unit) {
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var toWei = function(number, unit) {
+    var klayUnit = unitEthToKlayMap[unit] ? unitEthToKlayMap[unit] : unit;
+    var returnValue = toBigNumber(number).times(getValueOfUnit(klayUnit));
+
+    return isBigNumber(number) ? returnValue : returnValue.toString(10);
+};
+
+/**
+ * Takes a number of a unit and converts it to peb.
+ *
+ * Possible units are:
+ *   SI Short
+ * - kpeb
+ * - Mpeb
+ * - Gpeb
+ * - uKLAY
+ * - mKLAY
+ * - KLAY
+ * - kKLAY
+ * - MKLAY
+ * - GKLAY
+ * - TKLAY
+ *
+ * @method toPeb
+ * @param {Number|String|BigNumber} number can be a number, number string or a HEX of a decimal
+ * @param {String} unit the unit to convert from, default ether
+ * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
+ */
+var toPeb = function(number, unit) {
     var returnValue = toBigNumber(number).times(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2455,6 +2547,8 @@ module.exports = {
     extractTypeName: extractTypeName,
     toWei: toWei,
     fromWei: fromWei,
+    toPeb: toPeb,
+    fromPeb: fromPeb,
     toBigNumber: toBigNumber,
     toTwosComplement: toTwosComplement,
     toAddress: toAddress,
@@ -2577,6 +2671,8 @@ Web3.prototype.fromDecimal = utils.fromDecimal;
 Web3.prototype.toBigNumber = utils.toBigNumber;
 Web3.prototype.toWei = utils.toWei;
 Web3.prototype.fromWei = utils.fromWei;
+Web3.prototype.toPeb = utils.toPeb;
+Web3.prototype.fromPeb = utils.fromPeb;
 Web3.prototype.isAddress = utils.isAddress;
 Web3.prototype.isChecksumAddress = utils.isChecksumAddress;
 Web3.prototype.toChecksumAddress = utils.toChecksumAddress;
