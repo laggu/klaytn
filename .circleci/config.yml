@@ -5,78 +5,115 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.9
+    - image: circleci/golang:1.9
     working_directory: /go/src/github.com/ground-x/go-gxplatform
     steps:
-      - checkout
-      - run:
-          name: "Build and run tests"
-          command: |
-            make all
-            git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/tests.git tests/testdata
-            make test
+    - checkout
+    - run:
+        name: "Build and run tests"
+        command: |
+          make all
+          git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/tests.git tests/testdata
+          make test
 
   dockernize:
     docker:
-      - image: circleci/golang:1.9
+    - image: circleci/golang:1.9
     working_directory: /go/src/github.com/ground-x/go-gxplatform
     steps:
-      - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          name: "Install awscli"
-          command: |
-            curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-            unzip awscli-bundle.zip
-            sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
-      - run:
-          name: "Log in to AWS ECR"
-          command: eval $(aws ecr get-login --no-include-email --region ap-northeast-2)
-      - run:
-          name: "Build & Push Docker Image"
-          command: |
-            docker build -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1 .
-            docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest
-            docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1
+    - checkout
+    - setup_remote_docker:
+        docker_layer_caching: true
+    - run:
+        name: "Install awscli"
+        command: |
+          curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+          unzip awscli-bundle.zip
+          sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+    - run:
+        name: "Log in to AWS ECR"
+        command: eval $(aws ecr get-login --no-include-email --region ap-northeast-2)
+    - run:
+        name: "Build & Push Docker Image"
+        command: |
+          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest -t $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1 .
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1
 
-  rpmpackage:
+  rpm-untagged:
     docker:
-      - image: bitaholic/circleci-rpmbuild:latest
+    - image: bitaholic/circleci-rpmbuild:latest
     working_directory: /go/src/github.com/ground-x/go-gxplatform
     steps:
-      - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
-      - run:
-          name: "Build & Deploy rpm package"
-          command: |
-            go run build/rpm/main.go $CIRCLE_BUILD_NUM > /rpmbuild/SPECS/go-klaytn-devel.spec
-            cd ..
-            mv go-gxplatform go-klaytn-devel
-            tar czf go-klaytn-devel.tar.gz go-klaytn-devel
-            mv go-klaytn-devel.tar.gz /rpmbuild/SOURCES/
-            rpmbuild -ba /rpmbuild/SPECS/go-klaytn-devel.spec
-            scp -o StrictHostKeyChecking=no /rpmbuild/RPMS/x86_64/*.rpm ec2-user@52.79.114.173:/srv/repo/
-            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+    - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+    - run:
+        name: "Build & Deploy rpm package"
+        command: |
+          export GOPATH=/go
+          export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+          go run build/rpm/main.go gen_spec --devel --build_num $CIRCLE_BUILD_NUM > /rpmbuild/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
+          cd ..
+          mv go-gxplatform klaytn-devel-$KLAYTN_VERSION
+          tar czf klaytn-devel-$KLAYTN_VERSION.tar.gz klaytn-devel-$KLAYTN_VERSION
+          mv klaytn-devel-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
+          rpmbuild -ba /rpmbuild/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
+          scp -o StrictHostKeyChecking=no /rpmbuild/RPMS/x86_64/klaytn-devel-v*.rpm ec2-user@52.79.114.173:/srv/repo/
+          ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  rpm-tagged:
+    docker:
+    - image: bitaholic/circleci-rpmbuild:latest
+    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    steps:
+    - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+    - run:
+        name: "Build & Deploy rpm package"
+        command: |
+          export GOPATH=/go
+          export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+          export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+          go run build/rpm/main.go gen_spec > /rpmbuild/SPECS/klaytn-$KLAYTN_VERSION.spec
+          cd ..
+          mv go-gxplatform klaytn-$KLAYTN_VERSION
+          tar czf klaytn-$KLAYTN_VERSION.tar.gz klaytn-$KLAYTN_VERSION
+          mv klaytn-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
+          rpmbuild -ba /rpmbuild/SPECS/klaytn-$KLAYTN_VERSION.spec
+          scp -o StrictHostKeyChecking=no /rpmbuild/RPMS/x86_64/klaytn-v*.rpm ec2-user@52.79.114.173:/srv/repo/
+          ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
 workflows:
   version: 2
-  build_and_dockernize:
+  build_n_packaging:
     jobs:
-      - build
-      - dockernize:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - master
-      - rpmpackage:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - master
+    - build:
+        filters:
+          tags:
+            only: /.*/
+    - dockernize:
+        requires:
+        - build
+        filters:
+          branches:
+            only:
+            - master
+    - rpm-untagged:
+        requires:
+        - build
+        filters:
+          branches:
+            only:
+            - master
+    - rpm-tagged:
+        requires:
+        - build
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/

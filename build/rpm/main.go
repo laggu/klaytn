@@ -3,14 +3,16 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/urfave/cli"
 	"os"
-	"strconv"
 	"text/template"
 )
 
 type RpmSpec struct {
 	BuildNumber int
 	Version     string
+	Name        string
 }
 
 func (r RpmSpec) String() string {
@@ -30,34 +32,75 @@ func (r RpmSpec) String() string {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Error : genrpmspec <buildNumber>")
-		os.Exit(1)
+	app := cli.NewApp()
+	app.Name = "klaytn_rpmtool"
+	app.Version = "0.1"
+	app.Commands = []cli.Command{
+		{
+			Name:    "gen_spec",
+			Aliases: []string{"a"},
+			Usage:   "generate rpm sepc file",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "devel",
+					Usage: "generate spec for devel version",
+				},
+				cli.IntFlag{
+					Name:  "build_num",
+					Usage: "build number",
+				},
+			},
+			Action: genspec,
+		},
+		{
+			Name:    "version",
+			Aliases: []string{"v"},
+			Usage:   "return klaytn version",
+			Action: func(c *cli.Context) error {
+				fmt.Print(params.Version)
+				return nil
+			},
+		},
+		{
+			Name:    "release_num",
+			Aliases: []string{"r"},
+			Usage:   "return klaytn release number",
+			Action: func(c *cli.Context) error {
+				fmt.Print(params.ReleaseNum)
+				return nil
+			},
+		},
 	}
-	version := ""
-	if len(os.Args) == 3 {
-		version = os.Args[2]
-	}
-	rpmSpec := new(RpmSpec)
-	buildNumber, err := strconv.Atoi(os.Args[1])
 
-	if err != nil {
-		fmt.Printf("BuildNumber must be int, %v", err)
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	rpmSpec.BuildNumber = buildNumber
-	if version != "" {
-		rpmSpec.Version = version
-	} else {
-		rpmSpec.Version = "devel"
-	}
-	fmt.Println(rpmSpec)
 }
 
-var rpmSpecTemplate = `Name:               go-klaytn
+func genspec(c *cli.Context) error {
+	rpmSpec := new(RpmSpec)
+	if c.Bool("devel") {
+		buildNum := c.Int("build_num")
+		if buildNum == 0 {
+			fmt.Println("BuildNumber should be set")
+			os.Exit(1)
+		}
+		rpmSpec.BuildNumber = buildNum
+		rpmSpec.Name = "klaytn-devel"
+	} else {
+		rpmSpec.BuildNumber = params.ReleaseNum
+		rpmSpec.Name = "klaytn"
+	}
+	rpmSpec.Version = params.Version
+	fmt.Println(rpmSpec)
+	return nil
+}
+
+var rpmSpecTemplate = `Name:               {{ .Name }}
 Version:            {{ .Version }}
 Release:            {{ .BuildNumber }}%{?dist}
-Summary:            the go-klaytn package
+Summary:            the Klaytn package
 
 Group:              Application/blockchain
 License:            GNU
