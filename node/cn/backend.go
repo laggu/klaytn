@@ -162,7 +162,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	}
 	gxp.txPool = blockchain.NewTxPool(config.TxPool, gxp.chainConfig, gxp.blockchain)
 
-	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb); err != nil {
+	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb, ctx.NodeType()); err != nil {
 		return nil, err
 	}
 	gxp.protocolManager.wsendpoint = config.WsEndpoint

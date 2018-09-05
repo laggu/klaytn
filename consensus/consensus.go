@@ -101,7 +101,7 @@ type Handler interface {
 	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
 
 	// SetBroadcaster sets the broadcaster to send message to peers
-	SetBroadcaster(Broadcaster)
+	SetBroadcaster(Broadcaster, p2p.ConnType)
 }
 
 // Istanbul is a consensus engine to avoid byzantine failure

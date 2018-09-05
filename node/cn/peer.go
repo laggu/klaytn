@@ -555,6 +555,19 @@ func (ps *peerSet) PeersWithoutBlock(hash common.Hash) []*peer {
 	return list
 }
 
+func (ps *peerSet) CNWithoutBlock(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.cnpeers))
+	for _, p := range ps.cnpeers {
+		if !p.knownBlocks.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
 // in their set of known hashes.
 func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
@@ -563,6 +576,19 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
+		if !p.knownTxs.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+func (ps *peerSet) CNWithoutTx(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.cnpeers))
+	for _, p := range ps.cnpeers {
 		if !p.knownTxs.Has(hash) {
 			list = append(list, p)
 		}

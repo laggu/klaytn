@@ -95,12 +95,14 @@ type ProtocolManager struct {
 	txMsgLock    sync.RWMutex
 	blockMsgLock sync.RWMutex
 	msgCh        chan p2p.Msg
+
+	nodetype     p2p.ConnType
 }
 
 // Ranger
 func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *blockchain.BlockChain, chaindb database.Database) (*ProtocolManager, error) {
 	txpool := &EmptyTxPool{}
-	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chaindb)
+	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chaindb, node.RANGERNODE)
 }
 
 func (pm *ProtocolManager) GetTxPool() txPool {
@@ -109,7 +111,7 @@ func (pm *ProtocolManager) GetTxPool() txPool {
 
 // NewProtocolManager returns a new klaytn sub protocol manager. The klaytn sub protocol manages peers capable
 // with the klaytn network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chaindb database.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chaindb database.Database, nodetype p2p.ConnType) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
@@ -124,11 +126,12 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		quitSync:    make(chan struct{}),
 		msgCh:       make(chan p2p.Msg, 50),
 		engine:      engine,
+		nodetype:    nodetype,
 	}
 
 	// istanbul BFT
 	if handler, ok := engine.(consensus.Handler); ok {
-		handler.SetBroadcaster(manager)
+		handler.SetBroadcaster(manager, manager.nodetype)
 	}
 
 	// Figure out whether to allow fast sync or not
@@ -807,16 +810,25 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 
 	// Broadcast transactions to a batch of peers not knowing about it
 	for _, tx := range txs {
-		peers := pm.peers.PeersWithoutTx(tx.Hash())
+		if pm.nodetype == node.CONSENSUSNODE {
+			peers := pm.peers.CNWithoutTx(tx.Hash())
 
-		// TODO-GX Code Check
-		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
-		half := (len(peers) / 2) + 2
-		peers = pm.subPeers(peers, half)
-		for _, peer := range peers {
-			txset[peer] = append(txset[peer], tx)
+			// TODO-GX Code Check
+			//peers = peers[:int(math.Sqrt(float64(len(peers))))]
+			half := (len(peers) / 2) + 2
+			peers = pm.subPeers(peers, half)
+			for _, peer := range peers {
+				txset[peer] = append(txset[peer], tx)
+			}
+			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+		} else {
+			peers := pm.peers.PeersWithoutTx(tx.Hash())
+
+			for _, peer := range peers {
+				txset[peer] = append(txset[peer], tx)
+			}
+			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 		}
-		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs := range txset {
@@ -846,10 +858,11 @@ func (pm *ProtocolManager) BroadcastCNTxs(txs types.Transactions) {
 
 	// Broadcast transactions to a batch of peers not knowing about it
 	for _, tx := range txs {
-		peers := pm.peers.PeersWithoutTx(tx.Hash())
+		peers := pm.peers.CNWithoutTx(tx.Hash())
 
 		// TODO-GX Code Check
-		peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		half := (len(peers) / 2) + 2
+		peers = pm.subPeers(peers, half)
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
 		}

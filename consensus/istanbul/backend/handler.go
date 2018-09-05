@@ -90,9 +90,11 @@ func (sb *backend) ValidatePeerType(addr common.Address) bool {
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
-func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
+func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype p2p.ConnType) {
 	sb.broadcaster = broadcaster
-	sb.broadcaster.RegisterValiator(node.CONSENSUSNODE, sb)
+	if nodetype == node.CONSENSUSNODE {
+		sb.broadcaster.RegisterValiator(node.CONSENSUSNODE, sb)
+	}
 }
 
 func (sb *backend) NewChainHead() error {

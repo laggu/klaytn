@@ -66,6 +66,10 @@ func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
 	return ctx.config.NodeKey()
 }
 
+func (ctx *ServiceContext) NodeType() p2p.ConnType {
+	return ctx.config.P2P.ConnectionType
+}
+
 // ServiceConstructor is the function signature of the constructors needed to be
 // registered for service instantiation.
 type ServiceConstructor func(ctx *ServiceContext) (Service, error)
