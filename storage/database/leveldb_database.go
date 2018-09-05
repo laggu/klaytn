@@ -57,6 +57,7 @@ func getLDBOptions(cache, handles int) *opt.Options {
 		BlockCacheCapacity:     cache / 2 * opt.MiB,
 		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
+		DisableBufferPool:		true,
 	}
 }
 
