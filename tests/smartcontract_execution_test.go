@@ -45,7 +45,7 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 		contractAddr := crypto.CreateAddress(*userAddr, accountMap.GetNonce(*userAddr))
 
 		signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-		tx := types.NewTransaction(accountMap.GetNonce(*userAddr), common.Address{},
+		tx := types.NewContractCreation(accountMap.GetNonce(*userAddr),
 			big.NewInt(0), 50000000, big.NewInt(0), common.FromHex(contract.Code))
 		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[0])
 		if err != nil {
@@ -117,7 +117,7 @@ func makeRewardTransactions(c *deployedContract, accountMap *AccountMap, bcdata 
 		}
 
 		tx := types.NewTransaction(fromNonces[idx], c.address, big.NewInt(10), 5000000, big.NewInt(0), data)
-		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[0])
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +171,7 @@ func makeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
 		//fromNonces[idx]++
 	}
 
-	return nil, nil
+	return transactions, nil
 }
 
 func executeBalanceOf(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData,
