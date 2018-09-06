@@ -399,7 +399,7 @@ var (
 	// Network Settings
 	NodeTypeFlag = cli.StringFlag{
 		Name:  "nodetype",
-		Usage: "klaytn node type (consensus node (cn), ranager node (rn), general node (gn), ...)",
+		Usage: "klaytn node type (consensus node (cn), ranger node (rn), general node (gn), ...)",
 		Value: "cn",
 	}
 	MaxPeersFlag = cli.IntFlag{

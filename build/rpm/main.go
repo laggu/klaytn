@@ -128,7 +128,7 @@ cp build/rpm/etc/init.d/klay $RPM_BUILD_ROOT/etc/init.d/klay
 cp build/rpm/etc/klay/conf/klay.conf $RPM_BUILD_ROOT/etc/klay/conf/klay.conf
 
 %files
-%attr(754, -, -) /usr/local/bin/klay
+%attr(755, -, -) /usr/local/bin/klay
 %attr(644, -, -) /etc/klay/conf/klay.conf
 %attr(754, -, -) /etc/init.d/klay
 `

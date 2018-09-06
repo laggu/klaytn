@@ -24,14 +24,43 @@ lockfile=${LOCKFILE-/var/lock/subsys/klay}
 pidfile=${PIDFILE-/var/run/klay.pid}
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
-OPTIONS="--srvtype fasthttp --metrics --prometheus --verbosity 3 --txpool.accountslots 20000 --txpool.accountqueue 20000 \
---txpool.globalslots 40960 --txpool.globalqueue 40960 --networkid $NETWORK_ID --nodiscover --wsorigins * \
---datadir $DATA_DIR --syncmode full --mine --rpc --rpcapi admin,db,klay,debug,miner,net,txpool,personal,web3,istanbul \
---targetgaslimit 9990234376 --ws --wsaddr 0.0.0.0 --wsport $WS_PORT --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcvhosts * \
---maxpeers 5000 --rpcport $RPC_PORT --port $PORT"
+
+case $NODE_TYPE in
+    CN)
+        OPTIONS="--srvtype fasthttp --metrics --prometheus --verbosity 3 --txpool.accountslots 20000 --txpool.accountqueue 20000 \
+        --txpool.globalslots 40960 --txpool.globalqueue 40960 --networkid $NETWORK_ID --nodiscover --wsorigins * \
+        --datadir $DATA_DIR --syncmode full --mine --rpc --rpcapi admin,db,klay,debug,miner,net,txpool,personal,web3,istanbul \
+        --targetgaslimit 9990234376 --ws --wsaddr 0.0.0.0 --wsport $WS_PORT --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcvhosts * \
+        --maxpeers 5000 --rpcport $RPC_PORT --port $PORT --nodetype cn"
+        ;;
+    PN)
+        OPTIONS="--srvtype fasthttp --metrics --prometheus --verbosity 3 --txpool.accountslots 20000 --txpool.accountqueue 20000 \
+        --txpool.globalslots 40960 --txpool.globalqueue 40960 --networkid $NETWORK_ID --nodiscover --wsorigins * \
+        --datadir $DATA_DIR --syncmode full --rpc --rpcapi admin,txpool,personal,klay,debug,net,web3 --targetgaslimit 9990234376 --ws --wsaddr 0.0.0.0 \
+        --wsport $WS_PORT --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcvhosts * --maxpeers 5000 --rpcport $RPC_PORT --port $PORT --nodetype gn"
+        ;;
+    RN)
+        OPTIONS="--srvtype fasthttp --metrics --prometheus --verbosity 3 --txpool.accountslots 20000 --txpool.accountqueue 20000 \
+        --txpool.globalslots 40960 --txpool.globalqueue 40960 --networkid $NETWORK_ID --nodiscover --wsorigins * \
+        --datadir $DATA_DIR --syncmode full --rpc --rpcapi admin,txpool,personal,klay,debug,net,web3 --targetgaslimit 9990234376 --ws --wsaddr 0.0.0.0 \
+        --wsport $WS_PORT --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcvhosts * --maxpeers 5000 --rpcport $RPC_PORT --port $PORT --nodetype rn"
+        ;;
+    GN)
+        OPTIONS="--srvtype fasthttp --verbosity 3 --txpool.accountslots 20000 --txpool.accountqueue 20000 \
+        --txpool.globalslots 40960 --txpool.globalqueue 40960 --networkid $NETWORK_ID --nodiscover --wsorigins * \
+        --datadir $DATA_DIR --syncmode full --rpc --rpcapi admin,txpool,personal,klay,debug,net,web3 --targetgaslimit 9990234376 --ws --wsaddr 0.0.0.0 \
+        --wsport $WS_PORT --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcvhosts * --maxpeers 5000 --rpcport $RPC_PORT --port $PORT" --nodetype gn"
+        ;;
+    *)
+        OPTIONS="--srvtype fasthttp --verbosity 3 --txpool.accountslots 20000 --txpool.accountqueue 20000 \
+        --txpool.globalslots 40960 --txpool.globalqueue 40960 --networkid $NETWORK_ID --nodiscover --wsorigins * \
+        --datadir $DATA_DIR --syncmode full --rpc --rpcapi klay --targetgaslimit 9990234376 --ws --wsaddr 0.0.0.0 \
+        --wsport $WS_PORT --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcvhosts * --maxpeers 5000 --rpcport $RPC_PORT --port $PORT" --nodetype gn"
+        ;;
+esac
 
 start() {
-        echo -n "Starting $prog: "
+        echo -n "Starting $prog ($NODE_TYPE): "
         if [ ! -d ${LOG_DIR} ]; then
                 mkdir -p ${LOG_DIR}
         fi
@@ -59,7 +88,7 @@ start() {
 }
 
 stop() {
-        echo -n "Shutting down $prog: "
+        echo -n "Shutting down $prog ($NODE_TYPE): "
         killproc -p ${pidfile} -d ${STOP_TIMEOUT} $klay
         RETVAL=$?
         echo
