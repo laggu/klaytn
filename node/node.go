@@ -638,7 +638,7 @@ func (n *Node) OpenDatabase(name string, cache, handles int) (database.Database,
 	case database.BADGER :
 		return database.NewBGDatabase(n.config.resolvePath(name))
 	default :
-		return nil, errors.New("fail to open database because wrong type")
+		return nil, errors.New("failed to open database due to undefined database type")
 	}
 }
 
