@@ -27,8 +27,8 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
-func newEmptySecure() *SecureTrie {
-	trie, _ := NewSecure(common.Hash{}, NewDatabase(database.NewMemDatabase()), 0)
+func newEmptySecureTrie() *SecureTrie {
+	trie, _ := NewSecureTrie(common.Hash{}, NewDatabase(database.NewMemDatabase()), 0)
 	return trie
 }
 
@@ -37,7 +37,7 @@ func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
 	triedb := NewDatabase(database.NewMemDatabase())
 
-	trie, _ := NewSecure(common.Hash{}, triedb, 0)
+	trie, _ := NewSecureTrie(common.Hash{}, triedb, 0)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
@@ -65,7 +65,7 @@ func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 }
 
 func TestSecureDelete(t *testing.T) {
-	trie := newEmptySecure()
+	trie := newEmptySecureTrie()
 	vals := []struct{ k, v string }{
 		{"do", "verb"},
 		{"ether", "wookiedoo"},
@@ -91,7 +91,7 @@ func TestSecureDelete(t *testing.T) {
 }
 
 func TestSecureGetKey(t *testing.T) {
-	trie := newEmptySecure()
+	trie := newEmptySecureTrie()
 	trie.Update([]byte("foo"), []byte("bar"))
 
 	key := []byte("foo")

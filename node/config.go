@@ -30,7 +30,7 @@ const (
 // all registered services.
 type Config struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of geth is "geth". If no
+	// used in the devp2p node identifier. The instance name of klaytn is "klay". If no
 	// value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
 
@@ -239,7 +239,7 @@ func (c *Config) name() string {
 	return c.Name
 }
 
-// These resources are resolved differently for "geth" instances.
+// These resources are resolved differently for "klay" instances.
 var isOldGethResource = map[string]bool{
 	"chaindata":          true,
 	"nodes":              true,

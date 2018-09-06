@@ -35,22 +35,22 @@ var (
 )
 
 var (
-	cacheMissCounter   = metrics.NewRegisteredCounter("trie/cachemiss", nil)
-	cacheUnloadCounter = metrics.NewRegisteredCounter("trie/cacheunload", nil)
+	trieCacheMissCounter   = metrics.NewRegisteredCounter("trie/cachemiss", nil)
+	trieCacheUnloadCounter = metrics.NewRegisteredCounter("trie/cacheunload", nil)
 )
 
-// CacheMisses retrieves a global counter measuring the number of cache misses
+// TrieCacheMisses retrieves a global counter measuring the number of cache misses
 // the trie had since process startup. This isn't useful for anything apart from
 // trie debugging purposes.
-func CacheMisses() int64 {
-	return cacheMissCounter.Count()
+func TrieCacheMisses() int64 {
+	return trieCacheMissCounter.Count()
 }
 
-// CacheUnloads retrieves a global counter measuring the number of cache unloads
+// TrieCacheUnloads retrieves a global counter measuring the number of cache unloads
 // the trie did since process startup. This isn't useful for anything apart from
 // trie debugging purposes.
-func CacheUnloads() int64 {
-	return cacheUnloadCounter.Count()
+func TrieCacheUnloads() int64 {
+	return trieCacheUnloadCounter.Count()
 }
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
@@ -60,7 +60,7 @@ type LeafCallback func(leaf []byte, parent common.Hash) error
 
 // Trie is a Merkle Patricia Trie.
 // The zero value is an empty trie with no database.
-// Use New to create a trie that sits on top of a database.
+// Use NewTrie to create a trie that sits on top of a database.
 //
 // Trie is not safe for concurrent use.
 type Trie struct {
@@ -86,15 +86,15 @@ func (t *Trie) newFlag() nodeFlag {
 	return nodeFlag{dirty: true, gen: t.cachegen}
 }
 
-// New creates a trie with an existing root node from db.
+// NewTrie creates a trie with an existing root node from db.
 //
 // If root is the zero hash or the sha3 hash of an empty string, the
 // trie is initially empty and does not require a database. Otherwise,
-// New will panic if db is nil and returns a MissingNodeError if root does
+// NewTrie will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
-func New(root common.Hash, db *Database) (*Trie, error) {
+func NewTrie(root common.Hash, db *Database) (*Trie, error) {
 	if db == nil {
-		panic("statedb.New called without a database")
+		panic("statedb.NewTrie called without a database")
 	}
 	trie := &Trie{
 		db:           db,
@@ -429,7 +429,7 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 }
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
-	cacheMissCounter.Inc(1)
+	trieCacheMissCounter.Inc(1)
 
 	hash := common.BytesToHash(n)
 	if node := t.db.node(hash, t.cachegen); node != nil {

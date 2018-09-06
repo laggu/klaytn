@@ -142,7 +142,7 @@ func SerializeEdges(edges []VisEdge) (ret string) {
 // You can execute only this test by `go test -run TestPrintTrie`
 ////////////////////////////////////////////////////////////////////////////////
 func TestPrintTrie(t *testing.T) {
-	trie := newEmpty()
+	trie := newEmptyTrie()
 	vals := []struct{ k, v string }{
 
 		//{"ether", "wookiedoo"},

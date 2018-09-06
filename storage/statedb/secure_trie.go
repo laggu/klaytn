@@ -28,7 +28,7 @@ import (
 // increase the access time.
 //
 // Contrary to a regular trie, a SecureTrie can only be created with
-// New and must have an attached database. The database also stores
+// NewTrie and must have an attached database. The database also stores
 // the preimage of each key.
 //
 // SecureTrie is not safe for concurrent use.
@@ -39,22 +39,22 @@ type SecureTrie struct {
 	secKeyCacheOwner *SecureTrie // Pointer to self, replace the key cache on mismatch
 }
 
-// NewSecure creates a trie with an existing root node from a backing database
+// NewSecureTrie creates a trie with an existing root node from a backing database
 // and optional intermediate in-memory node pool.
 //
 // If root is the zero hash or the sha3 hash of an empty string, the
-// trie is initially empty. Otherwise, New will panic if db is nil
+// trie is initially empty. Otherwise, NewTrie will panic if db is nil
 // and returns MissingNodeError if the root node cannot be found.
 //
 // Accessing the trie loads nodes from the database or node pool on demand.
 // Loaded nodes are kept around until their 'cache generation' expires.
 // A new cache generation is created by each call to Commit.
 // cachelimit sets the number of past cache generations to keep.
-func NewSecure(root common.Hash, db *Database, cachelimit uint16) (*SecureTrie, error) {
+func NewSecureTrie(root common.Hash, db *Database, cachelimit uint16) (*SecureTrie, error) {
 	if db == nil {
-		panic("statedb.NewSecure called without a database")
+		panic("statedb.NewSecureTrie called without a database")
 	}
-	trie, err := New(root, db)
+	trie, err := NewTrie(root, db)
 	if err != nil {
 		return nil, err
 	}

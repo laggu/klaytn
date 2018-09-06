@@ -173,7 +173,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 				panic(fmt.Sprintf("state write error: %v", err))
 			}
 			if err := statedb.Database().TrieDB().Commit(root, false); err != nil {
-				panic(fmt.Sprintf("statedb write error: %v", err))
+				panic(fmt.Sprintf("trie write error: %v", err))
 			}
 			return block, b.receipts
 		}

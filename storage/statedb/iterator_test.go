@@ -27,7 +27,7 @@ import (
 )
 
 func TestIterator(t *testing.T) {
-	trie := newEmpty()
+	trie := newEmptyTrie()
 	vals := []struct{ k, v string }{
 		{"do", "verb"},
 		{"ether", "wookiedoo"},
@@ -63,7 +63,7 @@ type kv struct {
 }
 
 func TestIteratorLargeData(t *testing.T) {
-	trie := newEmpty()
+	trie := newEmptyTrie()
 	vals := make(map[string]*kv)
 
 	for i := byte(0); i < 255; i++ {
@@ -153,7 +153,7 @@ var testdata2 = []kvs{
 }
 
 func TestIteratorSeek(t *testing.T) {
-	trie := newEmpty()
+	trie := newEmptyTrie()
 	for _, val := range testdata1 {
 		trie.Update([]byte(val.k), []byte(val.v))
 	}
@@ -194,13 +194,13 @@ func checkIteratorOrder(want []kvs, it *Iterator) error {
 }
 
 func TestDifferenceIterator(t *testing.T) {
-	triea := newEmpty()
+	triea := newEmptyTrie()
 	for _, val := range testdata1 {
 		triea.Update([]byte(val.k), []byte(val.v))
 	}
 	triea.Commit(nil)
 
-	trieb := newEmpty()
+	trieb := newEmptyTrie()
 	for _, val := range testdata2 {
 		trieb.Update([]byte(val.k), []byte(val.v))
 	}
@@ -230,13 +230,13 @@ func TestDifferenceIterator(t *testing.T) {
 }
 
 func TestUnionIterator(t *testing.T) {
-	triea := newEmpty()
+	triea := newEmptyTrie()
 	for _, val := range testdata1 {
 		triea.Update([]byte(val.k), []byte(val.v))
 	}
 	triea.Commit(nil)
 
-	trieb := newEmpty()
+	trieb := newEmptyTrie()
 	for _, val := range testdata2 {
 		trieb.Update([]byte(val.k), []byte(val.v))
 	}
@@ -292,7 +292,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 	diskdb := database.NewMemDatabase()
 	triedb := NewDatabase(diskdb)
 
-	tr, _ := New(common.Hash{}, triedb)
+	tr, _ := NewTrie(common.Hash{}, triedb)
 	for _, val := range testdata1 {
 		tr.Update([]byte(val.k), []byte(val.v))
 	}
@@ -313,7 +313,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 	}
 	for i := 0; i < 20; i++ {
 		// Create trie that will load all nodes from DB.
-		tr, _ := New(tr.Hash(), triedb)
+		tr, _ := NewTrie(tr.Hash(), triedb)
 
 		// Remove a random node from the database. It can't be the root node
 		// because that one is already loaded.
@@ -379,7 +379,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	diskdb := database.NewMemDatabase()
 	triedb := NewDatabase(diskdb)
 
-	ctr, _ := New(common.Hash{}, triedb)
+	ctr, _ := NewTrie(common.Hash{}, triedb)
 	for _, val := range testdata1 {
 		ctr.Update([]byte(val.k), []byte(val.v))
 	}
@@ -401,7 +401,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	}
 	// Create a new iterator that seeks to "bars". Seeking can't proceed because
 	// the node is missing.
-	tr, _ := New(root, triedb)
+	tr, _ := NewTrie(root, triedb)
 	it := tr.NodeIterator([]byte("bars"))
 	missing, ok := it.Error().(*MissingNodeError)
 	if !ok {

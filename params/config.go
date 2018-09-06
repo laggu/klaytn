@@ -55,7 +55,7 @@ var (
 	}
 
 	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the GX Platform blockchain developers into the Clique consensus.
+	// and accepted by the klaytn developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.

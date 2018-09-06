@@ -28,7 +28,7 @@ import (
 func makeTestTrie() (*Database, *Trie, map[string][]byte) {
 	// Create an empty trie
 	triedb := NewDatabase(database.NewMemDatabase())
-	trie, _ := New(common.Hash{}, triedb)
+	trie, _ := NewTrie(common.Hash{}, triedb)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
@@ -59,7 +59,7 @@ func makeTestTrie() (*Database, *Trie, map[string][]byte) {
 // content map.
 func checkTrieContents(t *testing.T, db *Database, root []byte, content map[string][]byte) {
 	// Check root availability and trie contents
-	trie, err := New(common.BytesToHash(root), db)
+	trie, err := NewTrie(common.BytesToHash(root), db)
 	if err != nil {
 		t.Fatalf("failed to create trie at %x: %v", root, err)
 	}
@@ -76,7 +76,7 @@ func checkTrieContents(t *testing.T, db *Database, root []byte, content map[stri
 // checkTrieConsistency checks that all nodes in a trie are indeed present.
 func checkTrieConsistency(db *Database, root common.Hash) error {
 	// Create and iterate a trie rooted in a subnode
-	trie, err := New(root, db)
+	trie, err := NewTrie(root, db)
 	if err != nil {
 		return nil // Consider a non existent state consistent
 	}
@@ -90,8 +90,8 @@ func checkTrieConsistency(db *Database, root common.Hash) error {
 func TestEmptyTrieSync(t *testing.T) {
 	dbA := NewDatabase(database.NewMemDatabase())
 	dbB := NewDatabase(database.NewMemDatabase())
-	emptyA, _ := New(common.Hash{}, dbA)
-	emptyB, _ := New(emptyRoot, dbB)
+	emptyA, _ := NewTrie(common.Hash{}, dbA)
+	emptyB, _ := NewTrie(emptyRoot, dbB)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
 		if req := NewTrieSync(trie.Hash(), database.NewMemDatabase(), nil).Missing(1); len(req) != 0 {
