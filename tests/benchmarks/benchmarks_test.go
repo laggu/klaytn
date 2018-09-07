@@ -110,27 +110,59 @@ func BenchmarkInterpreterSload100000(bench *testing.B) {
 	}
 }
 
-func TestInterpreterSstore100000(t *testing.T) {
+func TestInterpreterSstoreNonZero2NonZero100000(t *testing.T) {
 	//
 	// Test code
 	//       Initialize (PUSH)
 	//       Loop 10000 times for below code
 	//              Write to database 10 times //  (PUSH PUSH SSTORE) x 10
 	//
-	code := common.Hex2Bytes(sstore100000)
+	code := common.Hex2Bytes(sstoreNonZero2NonZero100000)
 	intrp, contract := prepareInterpreterAndContract(code)
 
 	intrp.Run(contract, nil)
 }
 
-func BenchmarkInterpreterSstore100000(bench *testing.B) {
+func BenchmarkInterpreterSstoreZero2Zero100000(bench *testing.B) {
 	//
 	// Test code
 	//       Initialize (PUSH)
 	//       Loop 10000 times for below code
 	//              Write to database 10 times //  (PUSH PUSH SSTORE) x 10
 	//
-	code := common.Hex2Bytes(sstore100000)
+	code := common.Hex2Bytes(sstoreZero2Zero100000)
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterSstoreNonZero2NonZero100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize (PUSH)
+	//       Loop 10000 times for below code
+	//              Write to database 10 times //  (PUSH PUSH SSTORE) x 10
+	//
+	code := common.Hex2Bytes(sstoreNonZero2NonZero100000)
+	intrp, contract := prepareInterpreterAndContract(code)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		intrp.Run(contract, nil)
+	}
+}
+
+func BenchmarkInterpreterSstoreMixed100000(bench *testing.B) {
+	//
+	// Test code
+	//       Initialize (PUSH)
+	//       Loop 10000 times for below code
+	//              Write to database 10 times //  (PUSH PUSH SSTORE) x 10
+	//
+	code := common.Hex2Bytes(sstoreMixed100000)
 	intrp, contract := prepareInterpreterAndContract(code)
 
 	bench.ResetTimer()
