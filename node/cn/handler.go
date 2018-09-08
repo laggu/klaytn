@@ -350,6 +350,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 
 	// TODO-GX check global worker and peer worker
     messageChannel := make(chan p2p.Msg, channelSizePerPeer)
+    defer close(messageChannel)
     errChannel := make(chan error, channelSizePerPeer)
     for w := 1; w <= concurrentPerPeer; w++ {
     	go pm.processMsg(messageChannel, p, addr, errChannel)
@@ -372,7 +373,6 @@ func (pm *ProtocolManager) handle(p *peer) error {
 
 		select {
 		case err :=<- errChannel:
-			close(messageChannel)
 			return err
 		default:
 		}
@@ -394,6 +394,7 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p *peer, addr common
 		}
 		msg.Discard()
 	}
+	p.Log().Debug("ProtocolManager.processMsg closed", "PeerName", p.Name())
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote
