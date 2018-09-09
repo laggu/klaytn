@@ -194,6 +194,48 @@ func executeBalanceOf(c *deployedContract, transactions types.Transactions, prof
 	return nil
 }
 
+func makeQuickSortTransactions(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
+	numTransactions int) (types.Transactions, error) {
+	abii, err := abi.JSON(strings.NewReader(c.abi))
+	if err != nil {
+		return nil, err
+	}
+
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	transactions := make(types.Transactions, numTransactions)
+
+	numAddrs := len(bcdata.addrs)
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range bcdata.addrs {
+		fromNonces[i] = accountMap.GetNonce(*addr)
+	}
+	for i := 0; i < numTransactions; i++ {
+		idx := i % numAddrs
+
+		data, err := abii.Pack("sort", big.NewInt(100), big.NewInt(123))
+		if err != nil {
+			return nil, err
+		}
+
+		tx := types.NewTransaction(fromNonces[idx], c.address, nil, 10000000, big.NewInt(0), data)
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		transactions[i] = signedTx
+		fromNonces[idx]++
+	}
+
+	return transactions, nil
+}
+
+func executeQuickSortTransactions(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData,
+	accountMap *AccountMap) error {
+	return bcdata.GenABlockWithTransactions(accountMap, transactions, prof)
+}
+
 func executeSmartContract(b *testing.B, opt *ContractExecutionOption, prof *profile.Profiler) {
 	// Initialize blockchain
 	start := time.Now()
@@ -250,6 +292,7 @@ func BenchmarkSmartContractExecute(b *testing.B) {
 	benches := []ContractExecutionOption{
 		{"GXPReward:reward", "../contracts/reward/contract/GXPReward.sol", makeRewardTransactions, executeRewardTransactions},
 		{"GXPReward:balanceOf", "../contracts/reward/contract/GXPReward.sol", makeBalanceOf, executeBalanceOf},
+		{"QuickSort:sort", "./testdata/contracts/sort/QuickSort.sol", makeQuickSortTransactions, executeQuickSortTransactions},
 	}
 
 	for _, bench := range benches {
