@@ -14,10 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"bufio"
 	"errors"
 	"github.com/rs/cors"
 	"github.com/valyala/fasthttp"
-	"bufio"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
 const (
@@ -155,13 +156,21 @@ func NewHTTPServer(cors []string, vhosts []string, srv *Server) *http.Server {
 }
 
 func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Server {
-	// TODO-GX add corshandler and vhosthandler for fasthttp
+	if len(cors) == 0 {
+		for _, vhost := range vhosts {
+			if vhost == "*" {
+				return &fasthttp.Server{Concurrency: 3000 , Handler:srv.HandleFastHTTP}
+			}
+		}
+	}
 	// Wrap the CORS-handler within a host-handler
-	//handler := newCorsHandler(srv, cors)
-	//handler = newVHostHandler(vhosts, handler)
+	handler := newCorsHandler(srv, cors)
+	handler = newVHostHandler(vhosts, handler)
+
+	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 
 	// TODO-GX concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{Concurrency: 3000 , Handler:srv.HandleFastHTTP}
+	return &fasthttp.Server{Concurrency: 3000, Handler: fhandler}
 }
 
 // ServeHTTP serves JSON-RPC requests over HTTP.
@@ -214,7 +223,7 @@ func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
 	ctx = context.WithValue(ctx, "scheme", string(requestCtx.URI().Scheme()))
 	ctx = context.WithValue(ctx, "local", requestCtx.LocalAddr().String())
 
-	reader := bufio.NewReaderSize(bytes.NewReader(r.Body()),maxRequestContentLength)
+	reader := bufio.NewReaderSize(bytes.NewReader(r.Body()), maxRequestContentLength)
 	codec := NewJSONCodec(&httpReadWriteNopCloser{reader, w.BodyWriter()})
 	defer codec.Close()
 
@@ -270,6 +279,13 @@ func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {
 		AllowedHeaders: []string{"*"},
 	})
 	return c.Handler(srv)
+}
+
+func (srv *Server) newFastCorsHandler(requestCtx *fasthttp.RequestCtx, allowedOrigins []string) {
+	// disable CORS support if user has not specified a custom CORS configuration
+	if len(allowedOrigins) == 0 {
+		return
+	}
 }
 
 // virtualHostHandler is a handler which validates the Host-header of incoming requests.
