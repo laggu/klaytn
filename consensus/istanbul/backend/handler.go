@@ -93,7 +93,7 @@ func (sb *backend) ValidatePeerType(addr common.Address) bool {
 func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype p2p.ConnType) {
 	sb.broadcaster = broadcaster
 	if nodetype == node.CONSENSUSNODE {
-		sb.broadcaster.RegisterValiator(node.CONSENSUSNODE, sb)
+		sb.broadcaster.RegisterValidator(node.CONSENSUSNODE, sb)
 	}
 }
 

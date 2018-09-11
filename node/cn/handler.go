@@ -217,7 +217,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 }
 
 // istanbul BFT
-func (pm *ProtocolManager) RegisterValiator(conType p2p.ConnType, validator p2p.PeerTypeValidator) {
+func (pm *ProtocolManager) RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator) {
 	pm.peers.validator[conType] = validator
 }
 

@@ -50,7 +50,7 @@ type Broadcaster interface {
 
     GetPeers() []common.Address
 
-	RegisterValiator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
+	RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
 }
 
 // Peer defines the interface to communicate with peer
