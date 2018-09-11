@@ -246,31 +246,12 @@ func (self *worker) unregister(agent Agent) {
 	agent.Stop()
 }
 
-func (self *worker) update() {
+func (self *worker) handleTxsCh(quitByErr chan bool) {
 	defer self.txsSub.Unsubscribe()
-	defer self.chainHeadSub.Unsubscribe()
-	defer self.chainSideSub.Unsubscribe()
 
 	for {
-		// A real event arrived, process interesting content
 		select {
-		// Handle ChainHeadEvent
-		case <-self.chainHeadCh:
-			// istanbul BFT
-			if h, ok := self.engine.(consensus.Handler); ok {
-				h.NewChainHead()
-			}
-			self.commitNewWork()
-
-			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
-			//         Later we may be able to refine below code.
-			// Handle ChainSideEvent
-		case ev := <-self.chainSideCh:
-			self.uncleMu.Lock()
-			self.possibleUncles[ev.Block.Hash()] = ev.Block
-			self.uncleMu.Unlock()
-
-			// Handle NewTxsEvent
+		// Handle NewTxsEvent
 		case ev := <-self.txsCh:
 			// Apply transactions to the pending state if we're not mining.
 			//
@@ -300,12 +281,47 @@ func (self *worker) update() {
 				}
 			}
 
+		case <-quitByErr:
+			return
+		}
+	}
+}
+
+func (self *worker) update() {
+	defer self.chainHeadSub.Unsubscribe()
+	defer self.chainSideSub.Unsubscribe()
+
+	quitByErr := make(chan bool, 1)
+	go self.handleTxsCh(quitByErr)
+
+	for {
+		// A real event arrived, process interesting content
+		select {
+		// Handle ChainHeadEvent
+		case <-self.chainHeadCh:
+			// istanbul BFT
+			if h, ok := self.engine.(consensus.Handler); ok {
+				h.NewChainHead()
+			}
+			self.commitNewWork()
+
+			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			//         Later we may be able to refine below code.
+			// Handle ChainSideEvent
+		case ev := <-self.chainSideCh:
+			self.uncleMu.Lock()
+			self.possibleUncles[ev.Block.Hash()] = ev.Block
+			self.uncleMu.Unlock()
+
 			// System stopped
 		case <-self.txsSub.Err():
+			quitByErr <- true
 			return
 		case <-self.chainHeadSub.Err():
+			quitByErr <- true
 			return
 		case <-self.chainSideSub.Err():
+			quitByErr <- true
 			return
 		}
 	}
@@ -415,6 +431,13 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 }
 
 func (self *worker) commitNewWork() {
+	// Check any fork transitions needed
+	pending, err := self.gxp.TxPool().Pending()
+	if err != nil {
+		log.Error("Failed to fetch pending transactions", "err", err)
+		return
+	}
+
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -453,7 +476,7 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	// Could potentially happen if starting to mine in an odd state.
-	err := self.makeCurrent(parent, header)
+	err = self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
 		return
@@ -463,14 +486,8 @@ func (self *worker) commitNewWork() {
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
 
-	// Create the current work task and check any fork transitions needed
+	// Create the current work task
 	work := self.current
-	pending, err := self.gxp.TxPool().Pending()
-
-	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
-		return
-	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending) // TODO-GX-issue136 gasPrice
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
