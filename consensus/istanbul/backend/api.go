@@ -131,17 +131,52 @@ func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 }
 
 func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Address, []common.Address, error) {
-	valSet := api.istanbul.ParentValidators(block)
-	proposer := api.istanbul.GetProposer(block.NumberU64())
-	hash := block.Hash()
-
-	validators := valSet.SubListWithProposer(hash, proposer)
-	validatorAddrs := make([]common.Address, len(validators))
-	for i, v := range validators {
-		validatorAddrs[i] = v.Address()
+	// get the proposer of this block.
+	proposer, err := ecrecover(block.Header())
+	if err != nil {
+		return common.Address{}, []common.Address{}, err
 	}
 
-	return proposer, validatorAddrs, nil
+	// get the snapshot of the previous block.
+	blockNumber := block.NumberU64()
+	parentHash := block.ParentHash()
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	if err != nil {
+		return proposer, []common.Address{}, err
+	}
+
+	// get the committee list of this block.
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer)
+	commiteeAddrs := make([]common.Address, len(committee))
+	for i, v := range committee {
+		commiteeAddrs[i] = v.Address()
+	}
+
+	// verify the committee list of the block using istanbul
+	//proposalSeal := istanbulCore.PrepareCommittedSeal(block.Hash())
+	//extra, err := types.ExtractIstanbulExtra(block.Header())
+	//istanbulAddrs := make([]common.Address, len(commiteeAddrs))
+	//for i, seal := range extra.CommittedSeal {
+	//	addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
+	//	istanbulAddrs[i] = addr
+	//	if err != nil {
+	//		return proposer, []common.Address{}, err
+	//	}
+	//
+	//	var found bool = false
+	//	for _, v := range commiteeAddrs {
+	//		if addr == v {
+	//			found = true
+	//			break
+	//		}
+	//	}
+	//	if found == false {
+	//		log.Error("validator is different!", "snap", commiteeAddrs, "istanbul", istanbulAddrs)
+	//		return proposer, commiteeAddrs, errors.New("validator set is different from Istanbul engine!!")
+	//	}
+	//}
+
+	return proposer, commiteeAddrs, nil
 }
 
 func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, committee []common.Address,
