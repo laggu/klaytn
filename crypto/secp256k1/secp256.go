@@ -177,3 +177,83 @@ func checkSignature(sig []byte) error {
 	}
 	return nil
 }
+
+// SchnorrVerifyMulti verifies a Schnorr signature.
+// Returns true iff (R, s) is a valid signature verifiable by P; false otherwise.
+// R and P should be uncompressed points on SECP256k1 curve with proper padding in front (i.e., starting with 0x04).
+// P can be a single key or a combined public key s.t. P = P0 + P1 + ... + PN where Pi is a public key for i = 0..N.
+// s is a 32-byte scalar.
+func SchnorrVerifyNative(message, R, s, P []byte) bool {
+	e := hash(message, P, R)
+	var (
+		Pdata = (*C.uchar)(unsafe.Pointer(&P[1])) // skipping the first byte (i.e., key format indicator such as 0x04)
+		Rdata = (*C.uchar)(unsafe.Pointer(&R[1])) // same here
+		sdata = (*C.uchar)(unsafe.Pointer(&s[0]))
+		edata = (*C.uchar)(unsafe.Pointer(&e[0]))
+	)
+	return 0 != C.secp256k1_ext_schnorr_verify(context, Pdata, Rdata, sdata, edata)
+}
+
+// ScPointMul is a simple C-binding performing multiplication between a curve point and a scalar.
+// Returns a point in the uncompressed format.
+func ScPointMul(point, a []byte) []byte {
+	out := make([]byte, 64)
+	var (
+		odata = (*C.uchar)(unsafe.Pointer(&out[0]))
+		pdata = (*C.uchar)(unsafe.Pointer(&point[1]))
+		adata = (*C.uchar)(unsafe.Pointer(&a[0]))
+	)
+	if C.secp256k1_ext_scalar_mul_bytes(context, odata, pdata, adata) == 0 {
+		panic("libsecp256k1 error")
+	}
+	return append([]byte{4}, out ...) // the returned point does not have the format byte in front
+}
+
+// ScBaseMul is a simple C-binding performing a * G where a is an input scalar and G is SECP256k1 curve.
+func ScBaseMul(a []byte) []byte {
+	var (
+		out   = make([]byte, 64)
+		adata = (*C.uchar)(unsafe.Pointer(&a[0]))
+		odata = (*C.uchar)(unsafe.Pointer(&out[0]))
+	)
+	if C.secp256k1_ext_scalar_base_mult(context, odata, adata) == 0 {
+		panic("libsecp256k1 error")
+	}
+	return append([]byte{4}, out ...)
+}
+
+// ScMul is a simple C-binding performing multiplication for two input scalars.
+func ScMul(a, b []byte) []byte {
+	var (
+		out   = make([]byte, 32)
+		adata = (*C.uchar)(unsafe.Pointer(&a[0]))
+		bdata = (*C.uchar)(unsafe.Pointer(&b[0]))
+		odata = (*C.uchar)(unsafe.Pointer(&out[0]))
+	)
+	C.secp256k1_ext_sc_mul(odata, adata, bdata)
+	return out
+}
+
+// ScSub is a simple C-binding performing subtraction between two input scalars.
+func ScSub(a, b []byte) []byte {
+	var (
+		out   = make([]byte, 32)
+		adata = (*C.uchar)(unsafe.Pointer(&a[0]))
+		bdata = (*C.uchar)(unsafe.Pointer(&b[0]))
+		odata = (*C.uchar)(unsafe.Pointer(&out[0]))
+	)
+	C.secp256k1_ext_sc_sub(odata, adata, bdata)
+	return out
+}
+
+// ScAdd is a simple C-binding performing addition between two input scalars.
+func ScAdd(a, b []byte) []byte {
+	var (
+		out   = make([]byte, 32)
+		adata = (*C.uchar)(unsafe.Pointer(&a[0]))
+		bdata = (*C.uchar)(unsafe.Pointer(&b[0]))
+		odata = (*C.uchar)(unsafe.Pointer(&out[0]))
+	)
+	C.secp256k1_ext_sc_add(odata, adata, bdata)
+	return out
+}

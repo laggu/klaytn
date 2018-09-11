@@ -140,3 +140,200 @@ int secp256k1_ext_scalar_mul(const secp256k1_context* ctx, unsigned char *point,
 	secp256k1_scalar_clear(&s);
 	return ret;
 }
+
+// eric.kim@groundx.xyz
+// The following functions are added to support Schnorr signature scheme:
+int secp256k1_ext_scalar_mul_bytes(const secp256k1_context* ctx, unsigned char *out, unsigned char *point, const unsigned char *scalar);
+int secp256k1_ext_scalar_base_mult(const secp256k1_context* ctx, unsigned char *out, const unsigned char *scalar);
+int secp256k1_ext_schnorr_verify(const secp256k1_context* ctx, unsigned char *P, unsigned char *R, const unsigned char *s, const unsigned char *e);
+int secp256k1_ext_sc_mul(unsigned char *out, unsigned char *s1, unsigned char *s2);
+int secp256k1_ext_sc_sub(unsigned char *out, unsigned char *s1, unsigned char *s2);
+int secp256k1_ext_sc_add(unsigned char *out, unsigned char *s1, unsigned char *s2);
+
+// secp256k1_ext_scalar_mul_bytes multiplies a point by a scalar in constant time.
+//
+// Returns: 1: multiplication was successful
+//          0: scalar was invalid (zero or overflow)
+// Args:    ctx:      pointer to a context object (cannot be NULL)
+//  Out:    out:      the 64-byte multiplied point, encoded as two 256bit big-endian numbers
+//  In:     point:    pointer to a 64-byte public point, encoded as two 256bit big-endian numbers
+//          scalar:   a 32-byte scalar with which to multiply the point
+int secp256k1_ext_scalar_mul_bytes(const secp256k1_context* ctx, unsigned char *out, unsigned char *point, const unsigned char *scalar) {
+	int ret = 0;
+	int overflow = 0;
+	secp256k1_fe feX, feY;
+	secp256k1_gej res;
+	secp256k1_ge ge;
+	secp256k1_scalar s;
+	ARG_CHECK(point != NULL);
+	ARG_CHECK(scalar != NULL);
+	(void)ctx;
+
+	secp256k1_fe_set_b32(&feX, point);
+	secp256k1_fe_set_b32(&feY, point+32);
+	secp256k1_ge_set_xy(&ge, &feX, &feY);
+	secp256k1_scalar_set_b32(&s, scalar, &overflow);
+	if (overflow || secp256k1_scalar_is_zero(&s)) {
+		ret = 0;
+	} else {
+		secp256k1_ecmult_const(&res, &ge, &s);
+		secp256k1_ge_set_gej(&ge, &res);
+		/* Note: can't use secp256k1_pubkey_save here because it is not constant time. */
+		secp256k1_fe_normalize(&ge.x);
+		secp256k1_fe_normalize(&ge.y);
+		secp256k1_fe_get_b32(out, &ge.x);
+		secp256k1_fe_get_b32(out+32, &ge.y);
+		ret = 1;
+	}
+	secp256k1_scalar_clear(&s);
+	return ret;
+}
+
+// secp256k1_ext_scalar_base_mult multiplies a scalar to the SECP256k1 curve
+// Out: res:    the 64-byte multiplied point, encoded as two 256-bit big-endian numbers
+// In:  scalar: a 32-byte scalar with which to multiply the point
+int secp256k1_ext_scalar_base_mult(const secp256k1_context* ctx, unsigned char *out, const unsigned char *scalar) {
+    int overflow = 0;
+    secp256k1_gej point;
+    secp256k1_fe feX, feY;
+    secp256k1_ge ge;
+    secp256k1_scalar s;
+
+    secp256k1_scalar_set_b32(&s, scalar, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&s)) {
+        return 0;
+    }
+
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &point, &s);
+    secp256k1_ge_set_gej(&ge, &point);
+    /* Note: can't use secp256k1_pubkey_save here because it is not constant time. */
+    secp256k1_fe_normalize(&ge.x);
+    secp256k1_fe_normalize(&ge.y);
+    secp256k1_fe_get_b32(out, &ge.x);
+    secp256k1_fe_get_b32(out+32, &ge.y);
+    secp256k1_scalar_clear(&s);
+    return 1;
+}
+
+// secp256k1_ext_schnorr_verify verifies a Schnorr signature.
+// Args:    ctx:    pointer to a context object (cannot be NULL)
+//   In:    P:      a public key that is an elliptic curve point (64 bytes, big-endian)
+//          R:      a part of a signature that is an elliptic curve point (64 bytes, big-endian)
+//          s:      a part of a signature that is a scalar (32 bytes, big-endian)
+//          e:      a derived random for this signature (32 bytes, big-endian; e = SHA256(msg || P || R))
+int secp256k1_ext_schnorr_verify(const secp256k1_context* ctx, unsigned char *P, unsigned char *R,
+                                    const unsigned char *s, const unsigned char *e) {
+    int overflow = 0;
+    secp256k1_fe feX, feY;
+    secp256k1_gej V, ep, sg;
+    secp256k1_ge ge;
+    secp256k1_scalar sc;
+    unsigned char tmp[64];
+    (void)ctx;
+
+    // compute e * P
+    secp256k1_fe_set_b32(&feX, P);
+    secp256k1_fe_set_b32(&feY, P+32);
+    secp256k1_ge_set_xy(&ge, &feX, &feY);
+    secp256k1_scalar_set_b32(&sc, e, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&sc)) {
+        return 0;
+    }
+    secp256k1_ecmult_const(&ep, &ge, &sc); // ep => e * P
+    secp256k1_scalar_clear(&sc);
+
+    // compute s * G
+    secp256k1_scalar_set_b32(&sc, s, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&sc)) {
+        return 0;
+    }
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &sg, &sc);
+    secp256k1_ge_set_gej(&ge, &sg); // ge => s * G
+    secp256k1_scalar_clear(&sc);
+
+    // compute s * G + e * P
+    secp256k1_gej_add_ge(&V, &ep, &ge); // V => s * G + e * P
+
+    secp256k1_ge_set_gej(&ge, &V);
+    secp256k1_fe_normalize(&ge.x);
+    secp256k1_fe_normalize(&ge.y);
+    secp256k1_fe_get_b32(tmp, &ge.x);
+    secp256k1_fe_get_b32(tmp+32, &ge.y); // tmp1 => s * G + e * P
+
+    return 0 == memcmp(tmp, R, 64);
+}
+
+// secp256k1_ext_sc_mul multiplies two 32-byte scalars and returns the outcome.
+// returns 0 in case of an overflow.
+int secp256k1_ext_sc_mul(unsigned char *out, unsigned char *s1, unsigned char *s2) {
+    int overflow = 0;
+    secp256k1_scalar r, a, b;
+
+    secp256k1_scalar_set_b32(&a, s1, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&a)) {
+        return 0;
+    }
+    secp256k1_scalar_set_b32(&b, s2, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&b)) {
+        return 0;
+    }
+
+    secp256k1_scalar_mul(&r, &a, &b);
+
+    secp256k1_scalar_clear(&a);
+    secp256k1_scalar_clear(&b);
+
+    secp256k1_scalar_get_b32(out, &r);
+    return 1;
+}
+
+// secp256k1_ext_sc_sub subtracts s2 from s1 where both s1 and s2 are 32-byte scalars.
+// returns 0 in case of an overflow.
+int secp256k1_ext_sc_sub(unsigned char *out, unsigned char *s1, unsigned char *s2) {
+    int overflow = 0;
+    secp256k1_scalar r, n, a, b;
+
+    secp256k1_scalar_set_b32(&a, s1, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&a)) {
+        return 0;
+    }
+    secp256k1_scalar_set_b32(&b, s2, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&b)) {
+        return 0;
+    }
+
+    secp256k1_scalar_negate(&n, &b);
+    secp256k1_scalar_add(&r, &a, &n);
+
+    secp256k1_scalar_clear(&a);
+    secp256k1_scalar_clear(&b);
+    secp256k1_scalar_clear(&n);
+
+    secp256k1_scalar_get_b32(out, &r);
+    return 1;
+}
+
+// secp256k1_ext_sc_add adds s1 and s2 where both s1 and s2 are 32-byte scalars.
+// returns 0 in case of an overflow.
+int secp256k1_ext_sc_add(unsigned char *out, unsigned char *s1, unsigned char *s2) {
+    int overflow = 0;
+    secp256k1_scalar r, a, b;
+
+    secp256k1_scalar_set_b32(&a, s1, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&a)) {
+        return 0;
+    }
+    secp256k1_scalar_set_b32(&b, s2, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&b)) {
+        return 0;
+    }
+
+    secp256k1_scalar_add(&r, &a, &b);
+
+    secp256k1_scalar_clear(&a);
+    secp256k1_scalar_clear(&b);
+
+    secp256k1_scalar_get_b32(out, &r);
+    return 1;
+}
+
