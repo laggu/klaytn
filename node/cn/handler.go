@@ -810,8 +810,8 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	var txset = make(map[*peer]types.Transactions)
 
 	// Broadcast transactions to a batch of peers not knowing about it
-	for _, tx := range txs {
-		if pm.nodetype == node.CONSENSUSNODE {
+	if pm.nodetype == node.CONSENSUSNODE {
+		for _, tx := range txs {
 			peers := pm.peers.CNWithoutTx(tx.Hash())
 
 			// TODO-GX Code Check
@@ -822,7 +822,15 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 				txset[peer] = append(txset[peer], tx)
 			}
 			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
-		} else {
+		}
+
+		// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		for peer, txs := range txset {
+			//peer.SendTransactions(txs)
+			peer.AsyncSendTransactions(txs)
+		}
+	} else {
+		for _, tx := range txs {
 			peers := pm.peers.PeersWithoutTx(tx.Hash())
 
 			for _, peer := range peers {
@@ -830,11 +838,15 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 			}
 			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 		}
-	}
-	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
-	for peer, txs := range txset {
-		//peer.SendTransactions(txs)
-		peer.AsyncSendTransactions(txs)
+		// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		for peer, txs := range txset {
+			// TODO-GX Handle network-failed txs
+			//peer.AsyncSendTransactions(txs)
+			err := peer.SendTransactions(txs)
+			if err != nil {
+				log.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+			}
+		}
 	}
 }
 
