@@ -372,3 +372,23 @@ func FindCommonAncestor(db DatabaseReader, a, b *types.Header) *types.Header {
 	}
 	return a
 }
+
+func ReadIstanbulSnapshot(db DatabaseReader, hash common.Hash) ([]byte, error) {
+	return db.Get(istanbulSnapshotKey(hash))
+}
+
+func WriteIstanbulSnapshot(db DatabaseWriter, hash common.Hash, blob []byte) error {
+	return db.Put(istanbulSnapshotKey(hash), blob)
+}
+
+func WriteMerkleProof(db DatabaseWriter, key, value []byte) error {
+	return db.Put(key, value)
+}
+
+func ReadCachedTrieNode(db DatabaseReader, hash common.Hash) ([]byte, error) {
+	return db.Get(hash[:])
+}
+
+func ReadCachedTrieNodePreimage(db DatabaseReader, secureKey []byte) ([]byte, error) {
+	return db.Get(secureKey)
+}

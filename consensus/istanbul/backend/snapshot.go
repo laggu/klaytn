@@ -8,6 +8,7 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus/istanbul/validator"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/storage/rawdb"
 )
 
 const (
@@ -57,7 +58,7 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet istanbul.
 
 // loadSnapshot loads an existing snapshot from the database.
 func loadSnapshot(epoch uint64, subSize int, db database.Database, hash common.Hash) (*Snapshot, error) {
-	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
+	blob, err := rawdb.ReadIstanbulSnapshot(db, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +78,7 @@ func (s *Snapshot) store(db database.Database) error {
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte(dbKeySnapshotPrefix), s.Hash[:]...), blob)
+	return rawdb.WriteIstanbulSnapshot(db, s.Hash, blob)
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.

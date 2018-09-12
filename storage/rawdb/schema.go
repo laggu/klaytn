@@ -40,6 +40,12 @@ var (
 	// fastTrieProgressKey tracks the number of trie entries imported during fast sync.
 	fastTrieProgressKey = []byte("TrieSync")
 
+	validSectionKey = []byte("count")
+
+	sectionHeadKeyPrefix = []byte("shead")
+
+	istanbulSnapshotKeyPrefix = []byte("istanbul-snapshot")
+
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`, used for indexes).
 	headerPrefix       = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
 	headerTDSuffix     = []byte("t") // headerPrefix + num (uint64 big endian) + hash + headerTDSuffix -> td
@@ -130,4 +136,12 @@ func preimageKey(hash common.Hash) []byte {
 // configKey = configPrefix + hash
 func configKey(hash common.Hash) []byte {
 	return append(configPrefix, hash.Bytes()...)
+}
+
+func sectionHeadKey(encodedSection []byte) []byte {
+	return append(sectionHeadKeyPrefix, encodedSection ...)
+}
+
+func istanbulSnapshotKey(hash common.Hash) []byte {
+	return append(istanbulSnapshotKeyPrefix, hash[:]...)
 }

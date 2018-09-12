@@ -81,6 +81,8 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDb database.Putter) error 
 					hash = crypto.Keccak256(enc)
 				}
 				proofDb.Put(hash, enc)
+				//TODO-GX Commented out due to import cycle, will be resolved in soon
+				//rawdb.WriteMerkleProof(proofDb, hash, enc)
 			}
 		}
 	}

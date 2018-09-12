@@ -105,3 +105,23 @@ func WriteBloomBits(db DatabaseWriter, bit uint, section uint64, head common.Has
 		log.Crit("Failed to store bloom bits", "err", err)
 	}
 }
+
+func ReadValidSections(db DatabaseReader) ([]byte, error) {
+	return db.Get(validSectionKey)
+}
+
+func WriteValidSections(db DatabaseWriter, encodedSections []byte) {
+	db.Put(validSectionKey, encodedSections)
+}
+
+func ReadSectionHead(db DatabaseReader, encodedSection []byte) ([]byte, error) {
+	return db.Get(sectionHeadKey(encodedSection))
+}
+
+func WriteSectionHead(db DatabaseWriter, encodedSection []byte, hash common.Hash) {
+	db.Put(sectionHeadKey(encodedSection), hash.Bytes())
+}
+
+func DeleteSectionHead(db DatabaseDeleter, encodedSection []byte) {
+	db.Delete(sectionHeadKey(encodedSection))
+}
