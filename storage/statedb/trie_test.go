@@ -518,10 +518,15 @@ const benchElemCount = 20000
 
 func benchGet(b *testing.B, commit bool) {
 	trie := new(Trie)
+
 	if commit {
-		_, tmpdb := tempDB()
+		dbDir, tmpdb := tempDB()
 		trie, _ = NewTrie(common.Hash{}, tmpdb)
+
+		defer os.RemoveAll(dbDir)
+		defer tmpdb.diskdb.Close()
 	}
+
 	k := make([]byte, 32)
 	for i := 0; i < benchElemCount; i++ {
 		binary.LittleEndian.PutUint64(k, uint64(i))
@@ -537,12 +542,6 @@ func benchGet(b *testing.B, commit bool) {
 		trie.Get(k)
 	}
 	b.StopTimer()
-
-	if commit {
-		ldb := trie.db.diskdb.(*database.LDBDatabase)
-		ldb.Close()
-		os.RemoveAll(ldb.Path())
-	}
 }
 
 func benchUpdate(b *testing.B, e binary.ByteOrder) *Trie {

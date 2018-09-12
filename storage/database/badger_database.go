@@ -7,14 +7,14 @@ import (
 	"fmt"
 )
 
-type BGDatabase struct {
+type badgerDB struct {
 	fn string      // filename for reporting
 	db *badger.DB
 
 	log log.Logger // Contextual logger tracking the database path
 }
 
-func NewBGDatabase(path string) (*BGDatabase, error) {
+func NewBGDatabase(path string) (*badgerDB, error) {
 
 	logger := log.New("database", path)
 
@@ -48,24 +48,24 @@ func NewBGDatabase(path string) (*BGDatabase, error) {
 		return nil, err
 	}
 
-	return &BGDatabase{
+	return &badgerDB{
 		fn:  path,
 		db:  db,
 		log: logger,
 	}, nil
 }
 
-func (db *BGDatabase) Type() string {
+func (db *badgerDB) Type() string {
 	return BADGER
 }
 
 // Path returns the path to the database directory.
-func (db *BGDatabase) Path() string {
+func (db *badgerDB) Path() string {
 	return db.fn
 }
 
 // Put puts the given key / value to the queue
-func (db *BGDatabase) Put(key []byte, value []byte) error {
+func (db *badgerDB) Put(key []byte, value []byte) error {
 	// Generate the data to write to disk, update the meter and write
 	//value = rle.Compress(value)
 
@@ -79,7 +79,7 @@ func (db *BGDatabase) Put(key []byte, value []byte) error {
 	return txn.Commit(nil)
 }
 
-func (db *BGDatabase) Has(key []byte) (bool, error) {
+func (db *badgerDB) Has(key []byte) (bool, error) {
 	// Retrieve the key and increment the miss counter if not found
 	txn := db.db.NewTransaction(false)
 	defer txn.Discard()
@@ -94,7 +94,7 @@ func (db *BGDatabase) Has(key []byte) (bool, error) {
 }
 
 // Get returns the given key if it's present.
-func (db *BGDatabase) Get(key []byte) ([]byte, error) {
+func (db *badgerDB) Get(key []byte) ([]byte, error) {
 	// Retrieve the key and increment the miss counter if not found
 	txn := db.db.NewTransaction(false)
 	defer txn.Discard()
@@ -107,7 +107,7 @@ func (db *BGDatabase) Get(key []byte) ([]byte, error) {
 }
 
 // Delete deletes the key from the queue and database
-func (db *BGDatabase) Delete(key []byte) error {
+func (db *badgerDB) Delete(key []byte) error {
 	// Execute the actual operation
 	txn := db.db.NewTransaction(true)
 	defer txn.Discard()
@@ -119,13 +119,13 @@ func (db *BGDatabase) Delete(key []byte) error {
 	return txn.Commit(nil)
 }
 
-func (db *BGDatabase) NewIterator() *badger.Iterator {
+func (db *badgerDB) NewIterator() *badger.Iterator {
 	// Execute the actual operation
 	txn := db.db.NewTransaction(false)
 	return txn.NewIterator(badger.DefaultIteratorOptions)
 }
 
-func (db *BGDatabase) Close() {
+func (db *badgerDB) Close() {
 	err := db.db.Close()
 	if err == nil {
 		db.log.Info("Database closed")
@@ -134,16 +134,18 @@ func (db *BGDatabase) Close() {
 	}
 }
 
-func (db *BGDatabase) LDB() *badger.DB {
+func (db *badgerDB) LDB() *badger.DB {
 	return db.db
 }
 
-func (db *BGDatabase) NewBatch() Batch {
+func (db *badgerDB) NewBatch() Batch {
 
 	txn := db.db.NewTransaction(true)
 
 	return &bdBatch{db: db.db, txn:txn}
 }
+
+func (db *badgerDB) Meter(prefix string) {}
 
 type bdBatch struct {
 	db   *badger.DB
@@ -199,6 +201,10 @@ func (dt *bdtable) Delete(key []byte) error {
 
 func (dt *bdtable) Close() {
 	// Do nothing; don't close the underlying DB.
+}
+
+func (dt *bdtable) Meter(prefix string) {
+	dt.db.Meter(prefix)
 }
 
 type bdtableBatch struct {

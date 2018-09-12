@@ -241,15 +241,15 @@ func removeDirs(dirs []string) {
 	}
 }
 
-func genDatabases(b *testing.B, dirs []string, opts *opt.Options) []*LDBDatabase {
-	databases := make([]*LDBDatabase, len(dirs), len(dirs))
+func genDatabases(b *testing.B, dirs []string, opts *opt.Options) []*levelDB {
+	databases := make([]*levelDB, len(dirs), len(dirs))
 	for i := 0; i < len(dirs); i++ {
 		databases[i], _ = NewLDBDatabaseWithOptions(dirs[i], opts)
 	}
 	return databases
 }
 
-func closeDBs(databases []*LDBDatabase) {
+func closeDBs(databases []*levelDB) {
 	for _, db := range databases {
 		db.Close()
 	}

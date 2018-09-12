@@ -35,7 +35,7 @@ import (
 
 var OpenFileLimit = 64
 
-type LDBDatabase struct {
+type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
@@ -61,7 +61,7 @@ func getLDBOptions(cache, handles int) *opt.Options {
 	}
 }
 
-func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
+func NewLDBDatabase(file string, cache int, handles int) (*levelDB, error) {
 	logger := log.New("database", file)
 
 	// Ensure we have some minimal caching and file guarantees
@@ -82,7 +82,7 @@ func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &LDBDatabase{
+	return &levelDB{
 		fn:  file,
 		db:  db,
 		log: logger,
@@ -90,7 +90,7 @@ func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
 
 }
 
-func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*LDBDatabase, error) {
+func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*levelDB, error) {
 	logger := log.New("database", file)
 
 	// Open the db and recover any potential corruptions
@@ -102,7 +102,7 @@ func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*LDBDatabase, err
 	if err != nil {
 		return nil, err
 	}
-	return &LDBDatabase{
+	return &levelDB{
 		fn:  file,
 		db:  db,
 		log: logger,
@@ -110,29 +110,29 @@ func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*LDBDatabase, err
 
 }
 
-func (db *LDBDatabase) Type() string {
+func (db *levelDB) Type() string {
 	return LEVELDB
 }
 
 // Path returns the path to the database directory.
-func (db *LDBDatabase) Path() string {
+func (db *levelDB) Path() string {
 	return db.fn
 }
 
 // Put puts the given key / value to the queue
-func (db *LDBDatabase) Put(key []byte, value []byte) error {
+func (db *levelDB) Put(key []byte, value []byte) error {
 	// Generate the data to write to disk, update the meter and write
 	//value = rle.Compress(value)
 
 	return db.db.Put(key, value, nil)
 }
 
-func (db *LDBDatabase) Has(key []byte) (bool, error) {
+func (db *levelDB) Has(key []byte) (bool, error) {
 	return db.db.Has(key, nil)
 }
 
 // Get returns the given key if it's present.
-func (db *LDBDatabase) Get(key []byte) ([]byte, error) {
+func (db *levelDB) Get(key []byte) ([]byte, error) {
 	// Retrieve the key and increment the miss counter if not found
 	dat, err := db.db.Get(key, nil)
 	if err != nil {
@@ -143,21 +143,21 @@ func (db *LDBDatabase) Get(key []byte) ([]byte, error) {
 }
 
 // Delete deletes the key from the queue and database
-func (db *LDBDatabase) Delete(key []byte) error {
+func (db *levelDB) Delete(key []byte) error {
 	// Execute the actual operation
 	return db.db.Delete(key, nil)
 }
 
-func (db *LDBDatabase) NewIterator() iterator.Iterator {
+func (db *levelDB) NewIterator() iterator.Iterator {
 	return db.db.NewIterator(nil, nil)
 }
 
 // NewIteratorWithPrefix returns a iterator to iterate over subset of database content with a particular prefix.
-func (db *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
+func (db *levelDB) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
 	return db.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 
-func (db *LDBDatabase) Close() {
+func (db *levelDB) Close() {
 	// Stop the metrics collection to avoid internal database races
 	db.quitLock.Lock()
 	defer db.quitLock.Unlock()
@@ -177,12 +177,12 @@ func (db *LDBDatabase) Close() {
 	}
 }
 
-func (db *LDBDatabase) LDB() *leveldb.DB {
+func (db *levelDB) LDB() *leveldb.DB {
 	return db.db
 }
 
 // Meter configures the database metrics collectors and
-func (db *LDBDatabase) Meter(prefix string) {
+func (db *levelDB) Meter(prefix string) {
 	// Short circuit metering if the metrics system is disabled
 	if !metrics.Enabled {
 		return
@@ -217,7 +217,7 @@ func (db *LDBDatabase) Meter(prefix string) {
 //
 // This is how the iostats look like (currently):
 // Read(MB):3895.04860 Write(MB):3654.64712
-func (db *LDBDatabase) meter(refresh time.Duration) {
+func (db *levelDB) meter(refresh time.Duration) {
 	// Create the counters to store current and previous compaction values
 	compactions := make([][]float64, 2)
 	for i := 0; i < 2; i++ {
@@ -326,7 +326,7 @@ func (db *LDBDatabase) meter(refresh time.Duration) {
 	}
 }
 
-func (db *LDBDatabase) NewBatch() Batch {
+func (db *levelDB) NewBatch() Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
 }
 
@@ -382,6 +382,10 @@ func (dt *table) Delete(key []byte) error {
 
 func (dt *table) Close() {
 	// Do nothing; don't close the underlying DB.
+}
+
+func (dt *table) Meter(prefix string) {
+	dt.db.Meter(prefix)
 }
 
 type tableBatch struct {

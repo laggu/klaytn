@@ -12,12 +12,12 @@ const (
 )
 
 type ShardDatabase struct {
-    dbs  []*LDBDatabase
+    dbs  []*levelDB
 }
 
 func NewShardDatabase(file string, cache int, handles int) (*ShardDatabase, error) {
 
-	dbs := make([]*LDBDatabase,SHARDS)
+	dbs := make([]*levelDB,SHARDS)
 	for i := 0; i < SHARDS; i++ {
 		shardName := file + "-" + string(i)
 		db, err := NewLDBDatabase(shardName, cache, handles)
@@ -74,83 +74,83 @@ func (db *ShardDatabase) Close() {
 }
 
 func (db *ShardDatabase) NewBatch() Batch {
-	return &sahrdBatch{dbs:db.dbs}
+	return &shardBatch{dbs: db.dbs}
 }
 
-type sahrdBatch struct {
-	dbs   []*LDBDatabase
+type shardBatch struct {
+	dbs   []*levelDB
 	b     []*leveldb.Batch
 	size int
 }
 
-func (b *sahrdBatch) Put(key, value []byte) error {
+func (b *shardBatch) Put(key, value []byte) error {
 	b.dbs[getPartition(key)].Put(key,value)
 	b.size += len(value)
 	return nil
 }
 
-func (b *sahrdBatch) Write() error {
+func (b *shardBatch) Write() error {
 	return nil
 }
 
-func (b *sahrdBatch) ValueSize() int {
+func (b *shardBatch) ValueSize() int {
 	return b.size
 }
 
-func (b *sahrdBatch) Reset() {
+func (b *shardBatch) Reset() {
 	b.size = 0
 }
 
-type shardtable struct {
+type shardTable struct {
 	db     Database
 	prefix string
 }
 
-func (dt *shardtable) Type() string {
+func (dt *shardTable) Type() string {
 	return dt.db.Type()
 }
 
-func (dt *shardtable) Put(key []byte, value []byte) error {
+func (dt *shardTable) Put(key []byte, value []byte) error {
 	return dt.db.Put(append([]byte(dt.prefix), key...), value)
 }
 
-func (dt *shardtable) Has(key []byte) (bool, error) {
+func (dt *shardTable) Has(key []byte) (bool, error) {
 	return dt.db.Has(append([]byte(dt.prefix), key...))
 }
 
-func (dt *shardtable) Get(key []byte) ([]byte, error) {
+func (dt *shardTable) Get(key []byte) ([]byte, error) {
 	return dt.db.Get(append([]byte(dt.prefix), key...))
 }
 
-func (dt *shardtable) Delete(key []byte) error {
+func (dt *shardTable) Delete(key []byte) error {
 	return dt.db.Delete(append([]byte(dt.prefix), key...))
 }
 
-func (dt *shardtable) Close() {
+func (dt *shardTable) Close() {
 	// Do nothing; don't close the underlying DB.
 }
 
-type shardtableBatch struct {
+type shardTableBatch struct {
 	batch  Batch
 	prefix string
 }
 
-func (dt *shardtable) NewBatch() Batch {
-	return &shardtableBatch{dt.db.NewBatch(), dt.prefix}
+func (dt *shardTable) NewBatch() Batch {
+	return &shardTableBatch{dt.db.NewBatch(), dt.prefix}
 }
 
-func (tb *shardtableBatch) Put(key, value []byte) error {
+func (tb *shardTableBatch) Put(key, value []byte) error {
 	return tb.batch.Put(append([]byte(tb.prefix), key...), value)
 }
 
-func (tb *shardtableBatch) Write() error {
+func (tb *shardTableBatch) Write() error {
 	return tb.batch.Write()
 }
 
-func (tb *shardtableBatch) ValueSize() int {
+func (tb *shardTableBatch) ValueSize() int {
 	return tb.batch.ValueSize()
 }
 
-func (tb *shardtableBatch) Reset() {
+func (tb *shardTableBatch) Reset() {
 	tb.batch.Reset()
 }

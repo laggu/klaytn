@@ -120,7 +120,7 @@ func BenchmarkVerifyProof(b *testing.B) {
 	trie, vals := randomTrie(100)
 	root := trie.Hash()
 	var keys []string
-	var proofs []*database.MemDatabase
+	var proofs []database.Database
 	for k := range vals {
 		keys = append(keys, k)
 		proof := database.NewMemDatabase()

@@ -3,12 +3,8 @@ package utils
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
@@ -216,76 +212,77 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 	return nil
 }
 
-// ImportPreimages imports a batch of exported hash preimages into the database.
-func ImportPreimages(db *database.LDBDatabase, fn string) error {
-	log.Info("Importing preimages", "file", fn)
-
-	// Open the file handle and potentially unwrap the gzip stream
-	fh, err := os.Open(fn)
-	if err != nil {
-		return err
-	}
-	defer fh.Close()
-
-	var reader io.Reader = fh
-	if strings.HasSuffix(fn, ".gz") {
-		if reader, err = gzip.NewReader(reader); err != nil {
-			return err
-		}
-	}
-	stream := rlp.NewStream(reader, 0)
-
-	// Import the preimages in batches to prevent disk trashing
-	preimages := make(map[common.Hash][]byte)
-
-	for {
-		// Read the next entry and ensure it's not junk
-		var blob []byte
-
-		if err := stream.Decode(&blob); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		// Accumulate the preimages and flush when enough ws gathered
-		preimages[crypto.Keccak256Hash(blob)] = common.CopyBytes(blob)
-		if len(preimages) > 1024 {
-			rawdb.WritePreimages(db, 0, preimages)
-			preimages = make(map[common.Hash][]byte)
-		}
-	}
-	// Flush the last batch preimage data
-	if len(preimages) > 0 {
-		rawdb.WritePreimages(db, 0, preimages)
-	}
-	return nil
-}
-
-// ExportPreimages exports all known hash preimages into the specified file,
-// truncating any data already present in the file.
-func ExportPreimages(db *database.LDBDatabase, fn string) error {
-	log.Info("Exporting preimages", "file", fn)
-
-	// Open the file handle and potentially wrap with a gzip stream
-	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer fh.Close()
-
-	var writer io.Writer = fh
-	if strings.HasSuffix(fn, ".gz") {
-		writer = gzip.NewWriter(writer)
-		defer writer.(*gzip.Writer).Close()
-	}
-	// Iterate over the preimages and export them
-	it := db.NewIteratorWithPrefix([]byte("secure-key-"))
-	for it.Next() {
-		if err := rlp.Encode(writer, it.Value()); err != nil {
-			return err
-		}
-	}
-	log.Info("Exported preimages", "file", fn)
-	return nil
-}
+// TODO-GX Commented out due to mismatched interface.
+//// ImportPreimages imports a batch of exported hash preimages into the database.
+//func ImportPreimages(db *database.levelDB, fn string) error {
+//	log.Info("Importing preimages", "file", fn)
+//
+//	// Open the file handle and potentially unwrap the gzip stream
+//	fh, err := os.Open(fn)
+//	if err != nil {
+//		return err
+//	}
+//	defer fh.Close()
+//
+//	var reader io.Reader = fh
+//	if strings.HasSuffix(fn, ".gz") {
+//		if reader, err = gzip.NewReader(reader); err != nil {
+//			return err
+//		}
+//	}
+//	stream := rlp.NewStream(reader, 0)
+//
+//	// Import the preimages in batches to prevent disk trashing
+//	preimages := make(map[common.Hash][]byte)
+//
+//	for {
+//		// Read the next entry and ensure it's not junk
+//		var blob []byte
+//
+//		if err := stream.Decode(&blob); err != nil {
+//			if err == io.EOF {
+//				break
+//			}
+//			return err
+//		}
+//		// Accumulate the preimages and flush when enough ws gathered
+//		preimages[crypto.Keccak256Hash(blob)] = common.CopyBytes(blob)
+//		if len(preimages) > 1024 {
+//			rawdb.WritePreimages(db, 0, preimages)
+//			preimages = make(map[common.Hash][]byte)
+//		}
+//	}
+//	// Flush the last batch preimage data
+//	if len(preimages) > 0 {
+//		rawdb.WritePreimages(db, 0, preimages)
+//	}
+//	return nil
+//}
+//
+//// ExportPreimages exports all known hash preimages into the specified file,
+//// truncating any data already present in the file.
+//func ExportPreimages(db *database.levelDB, fn string) error {
+//	log.Info("Exporting preimages", "file", fn)
+//
+//	// Open the file handle and potentially wrap with a gzip stream
+//	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+//	if err != nil {
+//		return err
+//	}
+//	defer fh.Close()
+//
+//	var writer io.Writer = fh
+//	if strings.HasSuffix(fn, ".gz") {
+//		writer = gzip.NewWriter(writer)
+//		defer writer.(*gzip.Writer).Close()
+//	}
+//	// Iterate over the preimages and export them
+//	it := db.NewIteratorWithPrefix([]byte("secure-key-"))
+//	for it.Next() {
+//		if err := rlp.Encode(writer, it.Value()); err != nil {
+//			return err
+//		}
+//	}
+//	log.Info("Exported preimages", "file", fn)
+//	return nil
+//}

@@ -29,7 +29,7 @@ import (
 	"testing"
 	)
 
-func newTestLDB() (*LDBDatabase, func()) {
+func newTestLDB() (*levelDB, func()) {
 	dirName, err := ioutil.TempDir(os.TempDir(), "klay_leveldb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
@@ -45,7 +45,7 @@ func newTestLDB() (*LDBDatabase, func()) {
 	}
 }
 
-func newTestBadgerDB() (*BGDatabase, func()) {
+func newTestBadgerDB() (*badgerDB, func()) {
 	dirName, err := ioutil.TempDir(os.TempDir(), "klay_badgerdb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
