@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/blockchain"
@@ -55,6 +56,9 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
+		// Initialize DeriveSha implementation
+		types.InitDeriveSha(genesis.Config.DeriveShaImpl)
+
 		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis)
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)

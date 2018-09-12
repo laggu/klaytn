@@ -30,28 +30,36 @@ type DerivableList interface {
 	GetRlp(i int) []byte
 }
 
-type DeriveShaImplType int
 const (
-	ImplDeriveShaOriginal DeriveShaImplType = iota
+	ImplDeriveShaOriginal int = iota
 	ImplDeriveShaSimple
 	ImplDeriveShaConcat
 )
 
-var implDeriveSha DeriveShaImplType = ImplDeriveShaOriginal
+type DeriveShaFunc func(list DerivableList) common.Hash
 
-// TODO-GX: Replace body with one implementation in the future
-func DeriveSha(list DerivableList) common.Hash {
-	switch implDeriveSha {
+var fDeriveSha DeriveShaFunc = DeriveShaOrig
+
+func InitDeriveSha(deriveShaImpl int) {
+	switch deriveShaImpl {
 	case ImplDeriveShaOriginal:
-		return DeriveShaOrig(list)
+		log.Info("Using DeriveShaOrig!")
+		fDeriveSha = DeriveShaOrig
 	case ImplDeriveShaSimple:
-		return DeriveShaSimple(list)
+		log.Info("Using DeriveShaSimple!")
+		fDeriveSha = DeriveShaSimple
 	case ImplDeriveShaConcat:
-		return DeriveShaConcat(list)
+		log.Info("Using DeriveShaConcat!")
+		fDeriveSha = DeriveShaConcat
+	default:
+		log.Warn("Undefined deriveShaImpl!! use DeriveShaOrig!")
 	}
+	// reset EmptyRootHash.
+	EmptyRootHash = fDeriveSha(Transactions{})
+}
 
-	log.Warn("UndefinedDeriveSha! Use original!")
-	return DeriveShaOrig(list)
+func DeriveSha(list DerivableList) common.Hash {
+	return fDeriveSha(list)
 }
 
 func DeriveShaOrig(list DerivableList) common.Hash {
@@ -70,11 +78,11 @@ func DeriveShaOrig(list DerivableList) common.Hash {
 func DeriveShaSimple(list DerivableList) common.Hash {
 	hasher := sha3.NewKeccak256()
 
-	encoded := make([][]byte, list.Len())
+	encoded := make([][]byte, 0, list.Len())
 	for i := 0; i < list.Len(); i++ {
 		hasher.Reset()
 		hasher.Write(list.GetRlp((i)))
-		encoded[i] = hasher.Sum(nil)
+		encoded = append(encoded, hasher.Sum(nil))
 	}
 
 	for len(encoded) > 1 {
@@ -94,6 +102,12 @@ func DeriveShaSimple(list DerivableList) common.Hash {
 		encoded = encoded[0:len(encoded)/2]
 	}
 
+	if len(encoded) == 0 {
+		hasher.Reset()
+		hasher.Write(nil)
+		return common.BytesToHash(hasher.Sum(nil))
+	}
+
 	return common.BytesToHash(encoded[0])
 }
 
@@ -103,12 +117,10 @@ func DeriveShaSimple(list DerivableList) common.Hash {
 // 2. make a hash of the byte slice.
 func DeriveShaConcat(list DerivableList) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
-	keybuf := new(bytes.Buffer)
 
 	for i := 0; i < list.Len(); i++ {
-		keybuf.Write(list.GetRlp(i))
+		hasher.Write(list.GetRlp(i))
 	}
-	hasher.Write(keybuf.Bytes())
 	hasher.Sum(hash[:0])
 
 	return hash
