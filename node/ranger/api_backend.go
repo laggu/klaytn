@@ -29,8 +29,8 @@ func (b *RangerAPIBackend) GetTransactionInCache(hash common.Hash) (*types.Trans
 	return nil, common.Hash{}, 0, 0
 }
 
-func (b *RangerAPIBackend) GetReceiptInCache(blockHash common.Hash) (types.Receipts, error) {
-	return nil, errors.New("doesn't support getreceiptIncache")
+func (b *RangerAPIBackend) GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error) {
+	return nil, errors.New("doesn't support getreceiptsIncache")
 }
 
 func (b *RangerAPIBackend) ChainConfig() *params.ChainConfig {

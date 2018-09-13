@@ -1092,7 +1092,7 @@ func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transactio
 	return txLookup.Tx, txLookup.BlockHash, txLookup.BlockIndex, txLookup.Index
 }
 
-func (bc *BlockChain) GetReceiptInCache(blockHash common.Hash) (types.Receipts, error) {
+func (bc *BlockChain) GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error) {
 	value, ok := bc.recentReceipts.Get(blockHash)
 	if !ok {
 		cacheGetRecentReceiptsMissMeter.Mark(1)

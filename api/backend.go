@@ -53,7 +53,7 @@ type Backend interface {
 	CurrentBlock() *types.Block
 
 	GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
-	GetReceiptInCache(blockHash common.Hash) (types.Receipts, error)
+	GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

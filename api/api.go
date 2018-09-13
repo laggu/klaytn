@@ -1023,7 +1023,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 			return nil, nil
 		}
 	}
-	receipts, err := s.b.GetReceiptInCache(blockHash)
+	receipts, err := s.b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
 		receipts, err = s.b.GetReceipts(ctx, blockHash)
 	}
@@ -1077,7 +1077,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 	if tx == nil {
 		return nil, nil
 	}
-	receipts, err := s.b.GetReceiptInCache(blockHash)
+	receipts, err := s.b.GetReceiptsInCache(blockHash)
 	if err != nil {
 		return nil, err
 	}

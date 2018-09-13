@@ -252,7 +252,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 		return nil, err
 	}
 
-	receipts, err := b.GetReceiptInCache(blockHash)
+	receipts, err := b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
 		receipts = b.GetReceiptsByHash(blockHash)
 	}
@@ -311,7 +311,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 		return nil, err
 	}
 
-	receipts, err := b.GetReceiptInCache(blockHash)
+	receipts, err := b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
 		receipts = b.GetReceiptsByHash(blockHash)
 	}
