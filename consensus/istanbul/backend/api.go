@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
@@ -233,6 +234,7 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 	}
 }
 
+// TODO-GX: This API functions should be managed with API functions with namespace "klay"
 func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumber) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
@@ -240,6 +242,9 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 	blockNumber := uint64(number.Int64())
 	block := b.GetBlockByNumber(blockNumber)
+	if block == nil {
+		return nil, errors.New(fmt.Sprintf("block %d not found", blockNumber))
+	}
 	blockHash := block.Hash()
 
 	proposer, committee, err := api.getProposerAndValidators(block)
@@ -252,6 +257,45 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 		receipts = b.GetReceiptsByHash(blockHash)
 	}
 	return api.makeRPCOutput(block, proposer, committee, block.Transactions(), receipts), nil
+}
+
+func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.BlockNumber, end *rpc.BlockNumber) (map[string]interface{}, error){
+	blocks := make(map[string]interface{})
+
+	// check error status.
+	s := start.Int64()
+	e := end.Int64()
+	if s < 0 {
+		return nil, errors.New("start should be positive")
+	}
+
+	eChain := api.chain.CurrentHeader().Number.Int64()
+	if e > eChain {
+		return nil, errors.New(fmt.Sprintf("end should be smaller than the last block number %d", eChain))
+	}
+
+	if s > e {
+		return nil, errors.New("start should be smaller than end")
+	}
+
+	if (e - s) > 50 {
+		return nil, errors.New("number of requested blocks should be smaller than 50")
+	}
+
+	// gather s~e blocks
+	for i := s; i <= e; i++ {
+		strIdx := fmt.Sprintf("0x%x", i)
+
+		blockNum := rpc.BlockNumber(i)
+		r, err := api.GetBlockWithConsensusInfoByNumber(&blockNum)
+		if err != nil {
+			return nil, err
+		}
+
+		blocks[strIdx] = r
+	}
+
+	return blocks, nil
 }
 
 func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) (map[string]interface{}, error) {
