@@ -261,7 +261,7 @@ func getReceiptStatusFromVMerr(vmerr error) (status uint) {
 	default:
 		status = types.ReceiptStatusErrDefault
 	}
-	log.Error("getReceiptStatusFromVMErr", "vmerr", vmerr, "status", status)
+	//log.Error("getReceiptStatusFromVMErr", "vmerr", vmerr, "status", status)
 	return
 }
 
