@@ -26,6 +26,7 @@ import (
 	"io"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/storage/rawdb"
 )
 
 var (
@@ -340,9 +341,7 @@ func (db *Database) node(hash common.Hash, cachegen uint16) node {
 		return node.obj(hash, cachegen)
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := db.diskdb.Get(hash[:])
-	//TODO-GX Commented out due to import cycle, will be resolved in soon
-	//enc, err := rawdb.ReadCachedTrieNode(db.diskdb, hash)
+	enc, err := rawdb.ReadCachedTrieNode(db.diskdb, hash)
 	if err != nil || enc == nil {
 		return nil
 	}
@@ -361,9 +360,7 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 		return node.rlp(), nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	return db.diskdb.Get(hash[:])
-	//TODO-GX Commented out due to import cycle, will be resolved in soon
-	//return rawdb.ReadCachedTrieNode(db.diskdb, hash)
+	return rawdb.ReadCachedTrieNode(db.diskdb, hash)
 }
 
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
@@ -378,9 +375,7 @@ func (db *Database) preimage(hash common.Hash) ([]byte, error) {
 		return preimage, nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	return db.diskdb.Get(db.secureKey(hash[:]))
-	//TODO-GX Commented out due to import cycle, will be resolved in soon
-	//return rawdb.ReadCachedTrieNodePreimage(db.diskdb, db.secureKey(hash[:]))
+	return rawdb.ReadCachedTrieNodePreimage(db.diskdb, db.secureKey(hash[:]))
 }
 
 // secureKey returns the database key for the preimage of key, as an ephemeral

@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/storage/rawdb"
 )
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
@@ -80,9 +81,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDb database.Putter) error 
 				if !ok {
 					hash = crypto.Keccak256(enc)
 				}
-				proofDb.Put(hash, enc)
-				//TODO-GX Commented out due to import cycle, will be resolved in soon
-				//rawdb.WriteMerkleProof(proofDb, hash, enc)
+				rawdb.WriteMerkleProof(proofDb, hash, enc)
 			}
 		}
 	}
