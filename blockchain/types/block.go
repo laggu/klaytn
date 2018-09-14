@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	EmptyRootHash  = DeriveSha(Transactions{})
+	EmptyRootHash  = common.Hash{}
 	EmptyUncleHash = CalcUncleHash(nil)
 )
 

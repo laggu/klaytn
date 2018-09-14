@@ -2,20 +2,18 @@ package tests
 
 import (
 	"fmt"
-	"time"
-	"testing"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
+	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"testing"
+	"time"
 )
 
-type HashFunc func(list types.DerivableList) common.Hash
-
 func BenchmarkDeriveSha(b *testing.B) {
-	funcs := map[string]HashFunc{
-		"Orig":types.DeriveShaOrig,
-		"Simple":types.DeriveShaSimple,
-		"Concat": types.DeriveShaConcat }
+	funcs := map[string]types.IDeriveSha{
+		"Orig":statedb.DeriveShaOrig{},
+		"Simple":types.DeriveShaSimple{},
+		"Concat": types.DeriveShaConcat{} }
 
 	NTS := []int{1000}
 
@@ -29,7 +27,7 @@ func BenchmarkDeriveSha(b *testing.B) {
 	}
 }
 
-func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha HashFunc) {
+func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.IDeriveSha) {
 	// Initialize blockchain
 	start := time.Now()
 	maxAccounts := numTransactions * 2
@@ -59,7 +57,7 @@ func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha HashFu
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		hash := sha(txs)
+		hash := sha.DeriveSha(txs)
 		if testing.Verbose() {
 			fmt.Printf("[%d] txhash = %s\n", i, hash.Hex())
 		}

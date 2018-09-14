@@ -167,7 +167,7 @@ func NewBlockChain(db database.Database, cacheConfig *CacheConfig, chainConfig *
 	badBlocks, _ := common.NewCache(badBlocksCacheType, maxBadBlocks)
 
 	// Initialize DeriveSha implementation
-	types.InitDeriveSha(chainConfig.DeriveShaImpl)
+	InitDeriveSha(chainConfig.DeriveShaImpl)
 
 	recentTransactions, _ := common.NewCache(recentTransactionsType, maxRecentTransactions)
 	recentReceipts, _ := common.NewCache(recentReceiptsType, maxRecentReceipts)

@@ -17,12 +17,8 @@
 package types
 
 import (
-	"bytes"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/log"
 )
 
 type DerivableList interface {
@@ -36,46 +32,27 @@ const (
 	ImplDeriveShaConcat
 )
 
-type DeriveShaFunc func(list DerivableList) common.Hash
+type IDeriveSha interface {
+	DeriveSha(list DerivableList) common.Hash
+}
 
-var fDeriveSha DeriveShaFunc = DeriveShaOrig
+var deriveShaObj IDeriveSha = nil
 
-func InitDeriveSha(deriveShaImpl int) {
-	switch deriveShaImpl {
-	case ImplDeriveShaOriginal:
-		log.Info("Using DeriveShaOrig!")
-		fDeriveSha = DeriveShaOrig
-	case ImplDeriveShaSimple:
-		log.Info("Using DeriveShaSimple!")
-		fDeriveSha = DeriveShaSimple
-	case ImplDeriveShaConcat:
-		log.Info("Using DeriveShaConcat!")
-		fDeriveSha = DeriveShaConcat
-	default:
-		log.Warn("Undefined deriveShaImpl!! use DeriveShaOrig!")
-	}
+func InitDeriveSha(i IDeriveSha) {
+	deriveShaObj = i;
+
 	// reset EmptyRootHash.
-	EmptyRootHash = fDeriveSha(Transactions{})
+	EmptyRootHash = DeriveSha(Transactions{})
 }
 
 func DeriveSha(list DerivableList) common.Hash {
-	return fDeriveSha(list)
-}
-
-func DeriveShaOrig(list DerivableList) common.Hash {
-	keybuf := new(bytes.Buffer)
-	trie := new(statedb.Trie)
-	for i := 0; i < list.Len(); i++ {
-		keybuf.Reset()
-		rlp.Encode(keybuf, uint(i))
-		trie.Update(keybuf.Bytes(), list.GetRlp(i))
-	}
-	return trie.Hash()
+	return deriveShaObj.DeriveSha(list)
 }
 
 // An alternative implementation of DeriveSha()
 // This function generates a hash of `DerivableList` by simulating merkle tree generation
-func DeriveShaSimple(list DerivableList) common.Hash {
+type DeriveShaSimple struct {}
+func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
 	hasher := sha3.NewKeccak256()
 
 	encoded := make([][]byte, 0, list.Len())
@@ -115,7 +92,8 @@ func DeriveShaSimple(list DerivableList) common.Hash {
 // This function generates a hash of `DerivableList` as below:
 // 1. make a byte slice by concatenating RLP-encoded items
 // 2. make a hash of the byte slice.
-func DeriveShaConcat(list DerivableList) (hash common.Hash) {
+type DeriveShaConcat struct {}
+func (d DeriveShaConcat) DeriveSha(list DerivableList) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 
 	for i := 0; i < list.Len(); i++ {
