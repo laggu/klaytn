@@ -647,11 +647,12 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
 	gp := new(blockchain.GasPool).AddGas(math.MaxUint64) // TODO-GX-issue136
-	res, gas, failed, err := blockchain.ApplyMessage(evm, msg, gp)
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gp)
+	err = kerr.Err
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
 	}
-	return res, gas, failed, err
+	return res, gas, kerr.Status != types.ReceiptStatusSuccessful, err
 }
 
 // Call executes the given transaction on the state for the given block number.
@@ -1059,7 +1060,14 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	if len(receipt.PostState) > 0 {
 		fields["root"] = hexutil.Bytes(receipt.PostState)
 	}
-	fields["status"] = hexutil.Uint(receipt.Status)
+
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
+		fields["txError"] = hexutil.Uint(receipt.Status)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
+	}
+
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
 	}
@@ -1110,7 +1118,14 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 	if len(receipt.PostState) > 0 {
 		fields["root"] = hexutil.Bytes(receipt.PostState)
 	}
-	fields["status"] = hexutil.Uint(receipt.Status)
+
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
+		fields["txError"] = hexutil.Uint(receipt.Status)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
+	}
+
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
 	}

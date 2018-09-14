@@ -83,7 +83,8 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 	vmenv := vm.NewEVM(evmContext, statedb, bcdata.bc.Config(), &vm.Config{})
 	gaspool := new(blockchain.GasPool).AddGas(math.MaxUint64)
 
-	ret, _, _, err := blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	ret, _, kerr := blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	err = kerr.Err
 	if err != nil {
 		return nil, err
 	}

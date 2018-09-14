@@ -90,7 +90,8 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
+	_, gas, kerr := ApplyMessage(vmenv, msg, gp)
+	err = kerr.Err
 	if err != nil {
 		return nil, 0, err
 	}
@@ -101,7 +102,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// NOTE-GX The immediate root is not saved according to EIP-658.
 	// Create a new receipt for the transaction, storing the gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(nil, failed, *usedGas)
+	receipt := types.NewReceipt(nil, kerr.Status, *usedGas)
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.

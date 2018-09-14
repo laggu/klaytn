@@ -3898,6 +3898,10 @@ var outputTransactionReceiptFormatter = function (receipt){
     receipt.cumulativeGasUsed = utils.toDecimal(receipt.cumulativeGasUsed);
     receipt.gasUsed = utils.toDecimal(receipt.gasUsed);
 
+
+    //console.log(receipt.txError, 'receipt.txError')
+    //console.log(receipt.status, 'receipt.status')
+
     if(utils.isArray(receipt.logs)) {
         receipt.logs = receipt.logs.map(function(log){
             return outputLogFormatter(log);

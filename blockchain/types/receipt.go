@@ -17,11 +17,11 @@
 package types
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/log"
 	"io"
 	"unsafe"
 )
@@ -39,6 +39,25 @@ const (
 
 	// ReceiptStatusSuccessful is the status code of a transaction if execution succeeded.
 	ReceiptStatusSuccessful = uint(1)
+
+	// TODO-GX Enable more error below.
+	// Klaytn specific
+	ReceiptStatusErrDefault                  = uint(0x02) // Default
+	ReceiptStatusErrDepth                    = uint(0x03)
+	ReceiptStatusErrContractAddressCollision = uint(0x04)
+	ReceiptStatusErrCodeStoreOutOfGas        = uint(0x05)
+	ReceiptStatuserrMaxCodeSizeExceed        = uint(0x06)
+	ReceiptStatusErrOutOfGas                 = uint(0x07)
+	ReceiptStatusErrWriteProtection          = uint(0x08)
+	ReceiptStatusErrExecutionReverted        = uint(0x09)
+//	ReceiptStatusErrGasUintOverflow          = uint(0x0a) // TODO-GX
+//  ReceiptStatusErrInvalidJumpDestination   = uint(0x0b) // TODO-GX
+//	ReceiptStatusErrInvalidOpcode            = uint(0x0c) // Default case, because no static message available
+//	ReceiptStatusErrStackUnderflow           = uint(0x0d) // Default case, because no static message available
+//	ReceiptStatusErrStackOverflow            = uint(0x0e) // Default case, because no static message available
+//	ReceiptStatusErrInsufficientBalance      = uint(0x0f) // No receipt available for this error
+//	ReceiptStatusErrTotalTimeLimitReached    = uint(0x10) // No receipt available for this error
+
 )
 
 // Receipt represents the results of a transaction.
@@ -82,14 +101,8 @@ type receiptStorageRLP struct {
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
-func NewReceipt(root []byte, failed bool, cumulativeGasUsed uint64) *Receipt {
-	r := &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: cumulativeGasUsed}
-	if failed {
-		r.Status = ReceiptStatusFailed
-	} else {
-		r.Status = ReceiptStatusSuccessful
-	}
-	return r
+func NewReceipt(root []byte, status uint, cumulativeGasUsed uint64) *Receipt {
+	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: cumulativeGasUsed, Status: status}
 }
 
 // EncodeRLP implements rlp.Encoder, and flattens the consensus fields of a receipt
@@ -113,11 +126,14 @@ func (r *Receipt) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (r *Receipt) setStatus(postStateOrStatus []byte) error {
+	// NOTE-GX Status use only one byte.
+	var status uint = ReceiptStatusFailed
+	if len(postStateOrStatus) == 1 {
+		status = uint(postStateOrStatus[0])
+	}
 	switch {
-	case bytes.Equal(postStateOrStatus, receiptStatusSuccessfulRLP):
-		r.Status = ReceiptStatusSuccessful
-	case bytes.Equal(postStateOrStatus, receiptStatusFailedRLP):
-		r.Status = ReceiptStatusFailed
+	case ReceiptStatusSuccessful <= status && status <= ReceiptStatusErrExecutionReverted:
+		r.Status = status
 	case len(postStateOrStatus) == len(common.Hash{}):
 		r.PostState = postStateOrStatus
 	default:
@@ -128,10 +144,12 @@ func (r *Receipt) setStatus(postStateOrStatus []byte) error {
 
 func (r *Receipt) statusEncoding() []byte {
 	if len(r.PostState) == 0 {
-		if r.Status == ReceiptStatusFailed {
+		if ReceiptStatusSuccessful <= r.Status && r.Status <= ReceiptStatusErrExecutionReverted {
+			return []byte{byte(r.Status)}
+		} else {
+			log.Error("statusEncoding", "status invalid receipt status", r.Status)
 			return receiptStatusFailedRLP
 		}
-		return receiptStatusSuccessfulRLP
 	}
 	return r.PostState
 }

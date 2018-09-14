@@ -12,7 +12,7 @@ func makeStackFunc(pop, push int) stackValidationFunc {
 		}
 
 		if stack.len()+push-pop > int(params.StackLimit) {
-			return fmt.Errorf("stack limit reached %d (%d)", stack.len(), params.StackLimit)
+			return fmt.Errorf("stack limit reached %d (%d)", stack.len(), params.StackLimit) // TODO-GX-error
 		}
 		return nil
 	}

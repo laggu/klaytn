@@ -8,6 +8,7 @@ import (
 	"github.com/ground-x/go-gxplatform/params"
 	"math"
 	"math/big"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 var (
@@ -56,6 +57,17 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+}
+
+// TODO-GX Later we can merge Err and Status into one uniform error.
+//         This might require changing overall error handling mechanism in Klaytn.
+// Klaytn error type
+// - Status: Indicate status of transaction after execution.
+//           This value will be stored in Receipt if Receipt is available.
+//           Please see getReceiptStatusFromVMerr() how this value is calculated.
+type kerror struct {
+	Err error
+	Status uint
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
@@ -111,7 +123,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
+func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, kerror) {
 	return NewStateTransition(evm, msg, gp).TransitionDb()
 }
 
@@ -164,9 +176,9 @@ func (st *StateTransition) preCheck() error {
 // TransitionDb will transition the state by applying the current message and
 // returning the result including the used gas. It returns an error if failed.
 // An error indicates a consensus issue.
-func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bool, err error) {
+func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerror) {
 	// TODO-GX-issue136
-	if err = st.preCheck(); err != nil {
+	if kerr.Err = st.preCheck(); kerr.Err != nil {
 		return
 	}
 	msg := st.msg
@@ -176,18 +188,21 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	// TODO-GX-issue136
 	// Pay intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation, true)
-	if err != nil {
-		return nil, 0, false, err
+	kerr.Err = err
+	if kerr.Err != nil {
+		kerr.Status = getReceiptStatusFromVMerr(nil)
+		return nil, 0, kerr
 	}
-	if err = st.useGas(gas); err != nil {
-		return nil, 0, false, err
+	if kerr.Err = st.useGas(gas); kerr.Err != nil {
+		kerr.Status = getReceiptStatusFromVMerr(nil)
+		return nil, 0, kerr
 	}
 
 	var (
 		evm = st.evm
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
-		// error.
+		// error and total time limit reached error.
 		vmerr error
 	)
 	if contractCreation {
@@ -208,14 +223,46 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		// execution time of txs for a candidate block reached the predefined
 		// limit.
 		if vmerr == vm.ErrInsufficientBalance || vmerr == vm.ErrTotalTimeLimitReached {
-			return nil, 0, false, vmerr
+			kerr.Err = vmerr
+			kerr.Status = getReceiptStatusFromVMerr(nil)
+			return nil, 0, kerr
 		}
 	}
 	// TODO-GX-issue136
 	st.refundGas()
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)) // TODO-GX-issue136 gasPrice
 
-	return ret, st.gasUsed(), vmerr != nil, err
+	kerr.Status = getReceiptStatusFromVMerr(vmerr)
+	return ret, st.gasUsed(), kerr
+}
+
+// Get appropriate status code for VM error
+func getReceiptStatusFromVMerr(vmerr error) (status uint) {
+	// TODO-GX Add more VM error to ReceiptStatus
+	switch vmerr {
+	case nil:
+		status = types.ReceiptStatusSuccessful
+	case vm.ErrDepth:
+		status = types.ReceiptStatusErrDepth
+	case vm.ErrContractAddressCollision:
+		status = types.ReceiptStatusErrContractAddressCollision
+	case vm.ErrCodeStoreOutOfGas:
+		status = types.ReceiptStatusErrCodeStoreOutOfGas
+	case vm.ErrCodeStoreOutOfGas:
+		status = types.ReceiptStatusErrCodeStoreOutOfGas
+	case vm.ErrMaxCodeSizeExceeded:
+		status = types.ReceiptStatuserrMaxCodeSizeExceed
+	case vm.ErrOutOfGas:
+		status = types.ReceiptStatusErrOutOfGas
+	case vm.ErrWriteProtection:
+		status = types.ReceiptStatusErrWriteProtection
+	case vm.ErrExecutionReverted:
+		status = types.ReceiptStatusErrExecutionReverted
+	default:
+		status = types.ReceiptStatusErrDefault
+	}
+	log.Error("getReceiptStatusFromVMErr", "vmerr", vmerr, "status", status)
+	return
 }
 
 func (st *StateTransition) refundGas() {

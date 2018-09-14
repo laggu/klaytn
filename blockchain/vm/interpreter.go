@@ -81,7 +81,7 @@ func (in *Interpreter) enforceRestrictions(op OpCode, operation operation, stack
 		// account to the others means the state is modified and should also
 		// return with an error.
 		if operation.writes || (op == CALL && stack.Back(2).BitLen() > 0) {
-			return errWriteProtection
+			return ErrWriteProtection
 		}
 	}
 	return nil
@@ -92,7 +92,7 @@ func (in *Interpreter) enforceRestrictions(op OpCode, operation operation, stack
 //
 // It's important to note that any errors returned by the interpreter should be
 // considered a revert-and-consume-all-gas operation except for
-// errExecutionReverted which means revert-and-keep-gas-left.
+// ErrExecutionReverted which means revert-and-keep-gas-left.
 func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	if in.intPool == nil {
 		in.intPool = poolOfIntPools.get()
@@ -162,13 +162,13 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		op = contract.GetOp(pc)
 		operation := in.cfg.JumpTable[op]
 		if !operation.valid {
-			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
+			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-GX-error
 		}
-		if err := operation.validateStack(stack); err != nil {
+		if err := operation.validateStack(stack); err != nil { // TODO-GX-error
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
-		if err := in.enforceRestrictions(op, operation, stack); err != nil {
+		if err := in.enforceRestrictions(op, operation, stack); err != nil { // TODO-GX-error
 			return nil, err
 		}
 
@@ -179,12 +179,12 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if operation.memorySize != nil {
 			memSize, overflow := bigUint64(operation.memorySize(stack))
 			if overflow {
-				return nil, errGasUintOverflow
+				return nil, errGasUintOverflow // TODO-GX-error
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
-				return nil, errGasUintOverflow
+				return nil, errGasUintOverflow // TODO-GX-error
 			}
 			if allocatedMemorySize < memorySize {
 				extraSize = memorySize - allocatedMemorySize
@@ -196,7 +196,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
 		// TODO-GX-issue136
 		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas // TODO-GX-issue136
+			return nil, ErrOutOfGas // TODO-GX-issue136 TODO-GX-error
 		}
 		if extraSize > 0 {
 			mem.Increase(extraSize)
@@ -223,9 +223,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 
 		switch {
 		case err != nil:
-			return nil, err
+			return nil, err  // TODO-GX-error
 		case operation.reverts:
-			return res, errExecutionReverted
+			return res, ErrExecutionReverted // TODO-GX-error
 		case operation.halts:
 			return res, nil
 		case !operation.jumps:
@@ -235,7 +235,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 
 	abort := atomic.LoadInt32(&in.evm.abort)
 	if (abort & CancelByTotalTimeLimit) != 0 {
-		return nil, ErrTotalTimeLimitReached
+		return nil, ErrTotalTimeLimitReached // TODO-GX-error
 	}
 	return nil, nil
 }
