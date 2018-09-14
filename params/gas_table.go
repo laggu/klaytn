@@ -69,14 +69,14 @@ var (
 	// GasTableEIP158 contain the gas re-prices for
 	// the EIP15* phase.
 	GasTableEIP158 = GasTable{
-		ExtcodeSize: 700,
-		ExtcodeCopy: 700,
-		Balance:     400,
-		SLoad:       200,
-		Calls:       700,
-		Suicide:     5000,
-		ExpByte:     50,
+		ExtcodeSize: 700, // G_extcode
+		ExtcodeCopy: 700, // G_extcode
+		Balance:     400, // G_balance
+		SLoad:       200, // G_sload
+		Calls:       700, // G_call
+		Suicide:     5000,// G_selfdestruct
+		ExpByte:     50,  // G_expbyte
 
-		CreateBySuicide: 25000,
+		CreateBySuicide: 25000, // G_newaccount
 	}
 )
