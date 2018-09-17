@@ -74,7 +74,7 @@ type Trie interface {
 	Prove(key []byte, fromLevel uint, proofDb database.Putter) error
 }
 
-func NewDatabase(db database.Database) Database {
+func NewDatabase(db database.DBManager) Database {
 	var cacheConfig common.CacheConfiger
 	if common.DefaultCacheType == common.LRUShardCacheType {
 		cacheConfig = common.LRUShardConfig{CacheSize: codeSizeCacheSize, NumShards: shardsCodeSizeCache}
@@ -82,6 +82,7 @@ func NewDatabase(db database.Database) Database {
 		cacheConfig = common.LRUConfig{CacheSize: codeSizeCacheSize}
 	}
 	csc, _ := common.NewCache(cacheConfig)
+
 	return &cachingDB{
 		db:            statedb.NewDatabase(db),
 		codeSizeCache: csc,
@@ -178,6 +179,7 @@ func (m cachedTrie) Commit(onleaf statedb.LeafCallback) (common.Hash, error) {
 	return root, err
 }
 
-func (m cachedTrie) Prove(key []byte, fromLevel uint, proofDb database.Putter) error {
-	return m.SecureTrie.Prove(key, fromLevel, proofDb)
+// TODO-GX Below Prove is only used in tests, not in core codes.
+func (m cachedTrie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error {
+	return m.SecureTrie.Prove(key, fromLevel, proofDB)
 }

@@ -23,7 +23,7 @@ type Backend interface {
 	Downloader() *downloader.Downloader
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
-	ChainDb() database.Database
+	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
 

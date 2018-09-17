@@ -27,7 +27,7 @@ import (
 // makeTestTrie create a sample test trie to test node-wise reconstruction.
 func makeTestTrie() (*Database, *Trie, map[string][]byte) {
 	// Create an empty trie
-	triedb := NewDatabase(database.NewMemDatabase())
+	triedb := NewDatabase(database.NewMemoryDBManager())
 	trie, _ := NewTrie(common.Hash{}, triedb)
 
 	// Fill it with some arbitrary data
@@ -88,13 +88,15 @@ func checkTrieConsistency(db *Database, root common.Hash) error {
 
 // Tests that an empty trie is not scheduled for syncing.
 func TestEmptyTrieSync(t *testing.T) {
-	dbA := NewDatabase(database.NewMemDatabase())
-	dbB := NewDatabase(database.NewMemDatabase())
+	memDBManagerA := database.NewMemoryDBManager()
+	memDBManagerB := database.NewMemoryDBManager()
+	dbA := NewDatabase(memDBManagerA)
+	dbB := NewDatabase(memDBManagerB)
 	emptyA, _ := NewTrie(common.Hash{}, dbA)
 	emptyB, _ := NewTrie(emptyRoot, dbB)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
-		if req := NewTrieSync(trie.Hash(), database.NewMemDatabase(), nil).Missing(1); len(req) != 0 {
+		if req := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil).Missing(1); len(req) != 0 {
 			t.Errorf("test %d: content requested for empty trie: %v", i, req)
 		}
 	}
@@ -110,9 +112,10 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
-	sched := NewTrieSync(srcTrie.Hash(), diskdb, nil)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(batch)...)
 	for len(queue) > 0 {
@@ -143,9 +146,10 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
-	sched := NewTrieSync(srcTrie.Hash(), diskdb, nil)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(10000)...)
 	for len(queue) > 0 {
@@ -181,9 +185,10 @@ func testIterativeRandomTrieSync(t *testing.T, batch int) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
-	sched := NewTrieSync(srcTrie.Hash(), diskdb, nil)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(batch) {
@@ -222,9 +227,10 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
-	sched := NewTrieSync(srcTrie.Hash(), diskdb, nil)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(10000) {
@@ -269,9 +275,10 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
-	sched := NewTrieSync(srcTrie.Hash(), diskdb, nil)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
 	requested := make(map[common.Hash]struct{})
@@ -309,9 +316,10 @@ func TestIncompleteTrieSync(t *testing.T) {
 	srcDb, srcTrie, _ := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
-	sched := NewTrieSync(srcTrie.Hash(), diskdb, nil)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
 
 	added := []common.Hash{}
 	queue := append([]common.Hash{}, sched.Missing(1)...)

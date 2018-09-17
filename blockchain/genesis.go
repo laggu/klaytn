@@ -9,7 +9,6 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/storage/database"
@@ -133,13 +132,13 @@ func (e *GenesisMismatchError) Error() string {
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.AllGxhashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
-	stored := rawdb.ReadCanonicalHash(db, 0)
+	stored := db.ReadCanonicalHash(0)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
 			log.Info("Writing default main-net genesis block")
@@ -161,10 +160,10 @@ func SetupGenesisBlock(db database.Database, genesis *Genesis) (*params.ChainCon
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
-	storedcfg := rawdb.ReadChainConfig(db, stored)
+	storedcfg := db.ReadChainConfig(stored)
 	if storedcfg == nil {
 		log.Warn("Found genesis block without chain config")
-		rawdb.WriteChainConfig(db, stored, newcfg)
+		db.WriteChainConfig(stored, newcfg)
 		return newcfg, stored, nil
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
@@ -176,7 +175,7 @@ func SetupGenesisBlock(db database.Database, genesis *Genesis) (*params.ChainCon
 
 	// Check config compatibility and write the config. Compatibility errors
 	// are returned to the caller unless we're already at block zero.
-	height := rawdb.ReadHeaderNumber(db, rawdb.ReadHeadHeaderHash(db))
+	height := db.ReadHeaderNumber(db.ReadHeadHeaderHash())
 	if height == nil {
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
@@ -184,7 +183,7 @@ func SetupGenesisBlock(db database.Database, genesis *Genesis) (*params.ChainCon
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
 		return newcfg, stored, compatErr
 	}
-	rawdb.WriteChainConfig(db, stored, newcfg)
+	db.WriteChainConfig(stored, newcfg)
 	return newcfg, stored, nil
 }
 
@@ -199,9 +198,9 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 
 // ToBlock creates the genesis block and writes state of a genesis specification
 // to the given database (or discards it if nil).
-func (g *Genesis) ToBlock(db database.Database) *types.Block {
+func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	if db == nil {
-		db = database.NewMemDatabase()
+		db = database.NewMemoryDBManager()
 	}
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
@@ -240,29 +239,29 @@ func (g *Genesis) ToBlock(db database.Database) *types.Block {
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
-func (g *Genesis) Commit(db database.Database) (*types.Block, error) {
+func (g *Genesis) Commit(db database.DBManager) (*types.Block, error) {
 	block := g.ToBlock(db)
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
-	rawdb.WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty)
-	rawdb.WriteBlock(db, block)
-	rawdb.WriteReceipts(db, block.Hash(), block.NumberU64(), nil)
-	rawdb.WriteCanonicalHash(db, block.Hash(), block.NumberU64())
-	rawdb.WriteHeadBlockHash(db, block.Hash())
-	rawdb.WriteHeadHeaderHash(db, block.Hash())
+	db.WriteTd(block.Hash(), block.NumberU64(), g.Difficulty)
+	db.WriteBlock(block)
+	db.WriteReceipts(block.Hash(), block.NumberU64(), nil)
+	db.WriteCanonicalHash(block.Hash(), block.NumberU64())
+	db.WriteHeadBlockHash(block.Hash())
+	db.WriteHeadHeaderHash(block.Hash())
 
 	config := g.Config
 	if config == nil {
 		config = params.AllGxhashProtocolChanges
 	}
-	rawdb.WriteChainConfig(db, block.Hash(), config)
+	db.WriteChainConfig(block.Hash(), config)
 	return block, nil
 }
 
 // MustCommit writes the genesis block and state to db, panicking on error.
 // The block is committed as the canonical head block.
-func (g *Genesis) MustCommit(db database.Database) *types.Block {
+func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	block, err := g.Commit(db)
 	if err != nil {
 		panic(err)
@@ -271,7 +270,7 @@ func (g *Genesis) MustCommit(db database.Database) *types.Block {
 }
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given peb balance.
-func GenesisBlockForTesting(db database.Database, addr common.Address, balance *big.Int) *types.Block {
+func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance *big.Int) *types.Block {
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	return g.MustCommit(db)
 }

@@ -72,14 +72,14 @@ func newSyncMemBatch() *syncMemBatch {
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
-	database DatabaseReader           // Persistent database to check for existing entries
+	database database.DBManager       // Persistent database to check for existing entries
 	membatch *syncMemBatch            // Memory buffer to avoid frequest database writes
 	requests map[common.Hash]*request // Pending requests pertaining to a key hash
 	queue    *prque.Prque             // Priority queue with the pending requests
 }
 
 // NewTrieSync creates a new trie data download scheduler.
-func NewTrieSync(root common.Hash, database DatabaseReader, callback LeafCallback) *TrieSync {
+func NewTrieSync(root common.Hash, database database.DBManager, callback LeafCallback) *TrieSync {
 	ts := &TrieSync{
 		database: database,
 		membatch: newSyncMemBatch(),
@@ -100,7 +100,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 		return
 	}
 	key := root.Bytes()
-	blob, _ := s.database.Get(key)
+	blob, _ := s.database.ReadStateTrieNode(key)
 	if local, err := decodeNode(key, blob, 0); local != nil && err == nil {
 		return
 	}
@@ -134,7 +134,7 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if ok, _ := s.database.Has(hash.Bytes()); ok {
+	if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -292,7 +292,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}
-			if ok, _ := s.database.Has(node); ok {
+			if ok, _ := s.database.HasStateTrieNode(node); ok {
 				continue
 			}
 			// Locally unknown node, schedule for retrieval

@@ -100,9 +100,9 @@ type ProtocolManager struct {
 }
 
 // Ranger
-func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *blockchain.BlockChain, chaindb database.Database) (*ProtocolManager, error) {
+func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager) (*ProtocolManager, error) {
 	txpool := &EmptyTxPool{}
-	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chaindb, node.RANGERNODE)
+	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chainDB, node.RANGERNODE)
 }
 
 func (pm *ProtocolManager) GetTxPool() txPool {
@@ -111,7 +111,7 @@ func (pm *ProtocolManager) GetTxPool() txPool {
 
 // NewProtocolManager returns a new klaytn sub protocol manager. The klaytn sub protocol manages peers capable
 // with the klaytn network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chaindb database.Database, nodetype p2p.ConnType) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
@@ -194,7 +194,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		return nil, errIncompatibleConfig
 	}
 	// Construct the different synchronisation mechanisms
-	manager.downloader = downloader.New(mode, chaindb, manager.eventMux, blockchain, nil, manager.removePeer)
+	manager.downloader = downloader.New(mode, chainDB, manager.eventMux, blockchain, nil, manager.removePeer)
 
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(blockchain, header, true)

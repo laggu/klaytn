@@ -28,14 +28,14 @@ import (
 )
 
 func newEmptySecureTrie() *SecureTrie {
-	trie, _ := NewSecureTrie(common.Hash{}, NewDatabase(database.NewMemDatabase()), 0)
+	trie, _ := NewSecureTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), 0)
 	return trie
 }
 
 // makeTestSecureTrie creates a large enough secure trie for testing.
 func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
-	triedb := NewDatabase(database.NewMemDatabase())
+	triedb := NewDatabase(database.NewMemoryDBManager())
 
 	trie, _ := NewSecureTrie(common.Hash{}, triedb, 0)
 

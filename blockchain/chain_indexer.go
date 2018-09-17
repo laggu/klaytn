@@ -3,16 +3,15 @@ package blockchain
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/log"
 	"sync"
 	"sync/atomic"
 	"time"
-)
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	)
 
 // ChainIndexerBackend defines the methods needed to process chain segments in
 // the background and write the segment results into the database. These can be
@@ -49,8 +48,8 @@ type ChainIndexerChain interface {
 // after an entire section has been finished or in case of rollbacks that might
 // affect already finished sections.
 type ChainIndexer struct {
-	chainDb  database.Database   // Chain database to index the data from
-	indexDb  database.Database   // Prefixed table-view of the db to write index metadata into
+	chainDB  database.DBManager   // Chain database to index the data from
+	indexDB  database.DBManager   // Prefixed table-view of the db to write index metadata into
 	backend  ChainIndexerBackend // Background processor generating the index data content
 	children []*ChainIndexer     // Child indexers to cascade chain updates to
 
@@ -74,10 +73,10 @@ type ChainIndexer struct {
 // NewChainIndexer creates a new chain indexer to do background processing on
 // chain segments of a given size after certain number of confirmations passed.
 // The throttling parameter might be used to prevent database thrashing.
-func NewChainIndexer(chainDb, indexDb database.Database, backend ChainIndexerBackend, section, confirm uint64, throttling time.Duration, kind string) *ChainIndexer {
+func NewChainIndexer(chainDB, indexDB database.DBManager, backend ChainIndexerBackend, section, confirm uint64, throttling time.Duration, kind string) *ChainIndexer {
 	c := &ChainIndexer{
-		chainDb:     chainDb,
-		indexDb:     indexDb,
+		chainDB:     chainDB,
+		indexDB:     indexDB,
 		backend:     backend,
 		update:      make(chan struct{}, 1),
 		quit:        make(chan chan error),
@@ -190,7 +189,7 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainE
 
 				// TODO(karalabe): This operation is expensive and might block, causing the event system to
 				// potentially also lock up. We need to do with on a different thread somehow.
-				if h := rawdb.FindCommonAncestor(c.chainDb, prevHeader, header); h != nil {
+				if h := c.chainDB.FindCommonAncestor(prevHeader, header); h != nil {
 					c.newHead(h.Number.Uint64(), true)
 				}
 			}
@@ -333,11 +332,11 @@ func (c *ChainIndexer) processSection(section uint64, lastHead common.Hash) (com
 	}
 
 	for number := section * c.sectionSize; number < (section+1)*c.sectionSize; number++ {
-		hash := rawdb.ReadCanonicalHash(c.chainDb, number)
+		hash := c.chainDB.ReadCanonicalHash(number)
 		if hash == (common.Hash{}) {
 			return common.Hash{}, fmt.Errorf("canonical block #%d unknown", number)
 		}
-		header := rawdb.ReadHeader(c.chainDb, hash, number)
+		header := c.chainDB.ReadHeader(hash, number)
 		if header == nil {
 			return common.Hash{}, fmt.Errorf("block #%d [%x…] not found", number, hash[:4])
 		} else if header.ParentHash != lastHead {
@@ -379,7 +378,7 @@ func (c *ChainIndexer) AddChildIndexer(indexer *ChainIndexer) {
 // loadValidSections reads the number of valid sections from the index database
 // and caches is into the local state.
 func (c *ChainIndexer) loadValidSections() {
-	data, _ := rawdb.ReadValidSections(c.indexDb)
+	data, _ := c.indexDB.ReadValidSections()
 	if len(data) == 8 {
 		c.storedSections = binary.BigEndian.Uint64(data[:])
 	}
@@ -390,7 +389,7 @@ func (c *ChainIndexer) setValidSections(sections uint64) {
 	// Set the current number of valid sections in the database
 	var data [8]byte
 	binary.BigEndian.PutUint64(data[:], sections)
-	rawdb.WriteValidSections(c.indexDb, data[:])
+	c.indexDB.WriteValidSections(data[:])
 
 	// Remove any reorged sections, caching the valids in the mean time
 	for c.storedSections > sections {
@@ -406,7 +405,7 @@ func (c *ChainIndexer) SectionHead(section uint64) common.Hash {
 	var data [8]byte
 	binary.BigEndian.PutUint64(data[:], section)
 
-	hash, _ := rawdb.ReadSectionHead(c.indexDb, data[:])
+	hash, _ := c.indexDB.ReadSectionHead(data[:])
 	if len(hash) == len(common.Hash{}) {
 		return common.BytesToHash(hash)
 	}
@@ -419,7 +418,7 @@ func (c *ChainIndexer) setSectionHead(section uint64, hash common.Hash) {
 	var data [8]byte
 	binary.BigEndian.PutUint64(data[:], section)
 
-	rawdb.WriteSectionHead(c.indexDb, data[:], hash)
+	c.indexDB.WriteSectionHead(data[:], hash)
 }
 
 // removeSectionHead removes the reference to a processed section from the index
@@ -428,5 +427,5 @@ func (c *ChainIndexer) removeSectionHead(section uint64) {
 	var data [8]byte
 	binary.BigEndian.PutUint64(data[:], section)
 
-	rawdb.DeleteSectionHead(c.indexDb, data[:])
+	c.indexDB.DeleteSectionHead(data[:])
 }

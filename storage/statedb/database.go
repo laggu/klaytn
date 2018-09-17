@@ -26,7 +26,6 @@ import (
 	"io"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 )
 
 var (
@@ -61,7 +60,7 @@ type DatabaseReader interface {
 // the disk database. The aim is to accumulate trie writes in-memory and only
 // periodically flush a couple tries to disk, garbage collecting the remainder.
 type Database struct {
-	diskdb database.Database // Persistent storage for matured trie nodes
+	diskDB database.DBManager // Persistent storage for matured trie nodes
 
 	nodes     map[common.Hash]*cachedNode // Data and references relationships of a node
 	oldest common.Hash                 // Oldest tracked node, flush-list head
@@ -262,17 +261,17 @@ func expandNode(hash hashNode, n node, cachegen uint16) node {
 
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
-func NewDatabase(diskdb database.Database) *Database {
+func NewDatabase(diskDB database.DBManager) *Database {
 	return &Database{
-		diskdb: diskdb,
+		diskDB:    diskDB,
 		nodes:     map[common.Hash]*cachedNode{{}: {}},
 		preimages: make(map[common.Hash][]byte),
 	}
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
-func (db *Database) DiskDB() DatabaseReader {
-	return db.diskdb
+func (db *Database) DiskDB() database.DBManager {
+	return db.diskDB
 }
 
 // InsertBlob writes a new reference tracked blob to the memory database if it's
@@ -341,7 +340,7 @@ func (db *Database) node(hash common.Hash, cachegen uint16) node {
 		return node.obj(hash, cachegen)
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := rawdb.ReadCachedTrieNode(db.diskdb, hash)
+	enc, err := db.diskDB.ReadCachedTrieNode(hash)
 	if err != nil || enc == nil {
 		return nil
 	}
@@ -360,7 +359,7 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 		return node.rlp(), nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	return rawdb.ReadCachedTrieNode(db.diskdb, hash)
+	return db.diskDB.ReadCachedTrieNode(hash)
 }
 
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
@@ -375,7 +374,7 @@ func (db *Database) preimage(hash common.Hash) ([]byte, error) {
 		return preimage, nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	return rawdb.ReadCachedTrieNodePreimage(db.diskdb, db.secureKey(hash[:]))
+	return db.diskDB.ReadCachedTrieNodePreimage(db.secureKey(hash[:]))
 }
 
 // secureKey returns the database key for the preimage of key, as an ephemeral
@@ -499,7 +498,6 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	db.lock.RLock()
 
 	nodes, nodeSize, start := len(db.nodes), db.nodesSize, time.Now()
-	batch := db.diskdb.NewBatch()
 
 	// db.nodesSize only contains the useful data in the cache, but when reporting
 	// the total memory consumption, the maintenance metadata is also needed to be
@@ -510,23 +508,15 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	// leave for later to deduplicate writes.
 	flushPreimages := db.preimagesSize > 4*1024*1024
 	if flushPreimages {
-		for hash, preimage := range db.preimages {
-			if err := batch.Put(db.secureKey(hash[:]), preimage); err != nil {
-				log.Error("Failed to commit preimage from trie database", "err", err)
-				db.lock.RUnlock()
-				return err
-			}
-			if batch.ValueSize() > database.IdealBatchSize {
-				if err := batch.Write(); err != nil {
-					db.lock.RUnlock()
-					return err
-				}
-				batch.Reset()
-			}
+		if err := db.writeBatchPreimages(); err != nil {
+			db.lock.RUnlock()
+			return err
 		}
 	}
 	// Keep committing nodes from the flush-list until we're below allowance
 	oldest := db.oldest
+	// TODO-GX What kind of batch should be used below?
+	batch := db.diskDB.NewBatch(database.StateTrieDB)
 	for size > limit && oldest != (common.Hash{}) {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
@@ -590,6 +580,53 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	return nil
 }
 
+
+func (db* Database) writeBatchPreimages() error {
+	// TODO-GX What kind of batch should be used below?
+	preimagesBatch := db.diskDB.NewBatch(database.PreimagesDB)
+
+	// Move all of the accumulated preimages into a write batch
+	for hash, preimage := range db.preimages {
+		if err := preimagesBatch.Put(db.secureKey(hash[:]), preimage); err != nil {
+			log.Error("Failed to commit preimages from trie database", "err", err)
+			return err
+		}
+		if preimagesBatch.ValueSize() > database.IdealBatchSize {
+			if err := preimagesBatch.Write(); err != nil {
+				return err
+			}
+			preimagesBatch.Reset()
+		}
+	}
+
+	// Write batch ready, unlock for readers during persistence
+	if err := preimagesBatch.Write(); err != nil {
+		log.Error("Failed to write preimages to disk", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+func (db* Database) writeBatchNodes(node common.Hash) error {
+	// TODO-GX What kind of batch should be used below?
+	nodesBatch := db.diskDB.NewBatch(database.StateTrieDB)
+
+	if err := db.commit(node, nodesBatch); err != nil {
+		log.Error("Failed to commit trie from trie database", "err", err)
+		return err
+	}
+
+	// Write batch ready, unlock for readers during persistence
+	if err := nodesBatch.Write(); err != nil {
+		log.Error("Failed to write trie to disk", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+
 // Commit iterates over all the children of a particular node, writes them out
 // to disk, forcefully tearing down all references in both directions.
 //
@@ -602,35 +639,18 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	db.lock.RLock()
 
 	start := time.Now()
-	batch := db.diskdb.NewBatch()
-
-	// Move all of the accumulated preimages into a write batch
-	for hash, preimage := range db.preimages {
-		if err := batch.Put(db.secureKey(hash[:]), preimage); err != nil {
-			log.Error("Failed to commit preimage from trie database", "err", err)
-			db.lock.RUnlock()
-			return err
-		}
-		if batch.ValueSize() > database.IdealBatchSize {
-			if err := batch.Write(); err != nil {
-				return err
-			}
-			batch.Reset()
-		}
+	if err := db.writeBatchPreimages(); err != nil {
+		db.lock.RUnlock()
+		return err
 	}
+
 	// Move the trie itself into the batch, flushing if enough data is accumulated
 	nodes, storage := len(db.nodes), db.nodesSize
-	if err := db.commit(node, batch); err != nil {
-		log.Error("Failed to commit trie from trie database", "err", err)
+	if err := db.writeBatchNodes(node); err != nil {
 		db.lock.RUnlock()
 		return err
 	}
-	// Write batch ready, unlock for readers during persistence
-	if err := batch.Write(); err != nil {
-		log.Error("Failed to write trie to disk", "err", err)
-		db.lock.RUnlock()
-		return err
-	}
+
 	db.lock.RUnlock()
 
 	// Write successful, clear out the flushed data

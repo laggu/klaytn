@@ -164,8 +164,8 @@ func (b *RangerAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return common.Big0, nil
 }
 
-func (b *RangerAPIBackend) ChainDb() database.Database {
-	return b.ranger.ChainDb()
+func (b *RangerAPIBackend) ChainDB() database.DBManager {
+	return b.ranger.ChainDB()
 }
 
 func (b *RangerAPIBackend) EventMux() *event.TypeMux {

@@ -5,10 +5,11 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 // NewStateSync create a new state trie download scheduler.
-func NewStateSync(root common.Hash, database statedb.DatabaseReader) *statedb.TrieSync {
+func NewStateSync(root common.Hash, database database.DBManager) *statedb.TrieSync {
 	var syncer *statedb.TrieSync
 	callback := func(leaf []byte, parent common.Hash) error {
 		var obj Account

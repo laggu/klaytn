@@ -21,7 +21,7 @@ type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() 	 *blockchain.BlockChain
 	TxPool() 	     *blockchain.TxPool
-	ChainDb() 		 database.Database
+	ChainDB() 		 database.DBManager
 }
 
 // Miner creates blocks and searches for proof-of-work values.

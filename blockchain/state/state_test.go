@@ -28,7 +28,7 @@ import (
 )
 
 type StateSuite struct {
-	db    database.Database
+	db    database.DBManager
 	state *StateDB
 }
 
@@ -87,7 +87,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 }
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
-	s.db = database.NewMemDatabase()
+	s.db = database.NewMemoryDBManager()
 	s.state, _ = New(common.Hash{}, NewDatabase(s.db))
 }
 
@@ -138,7 +138,8 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // printing/logging in tests (-check.vv does not work)
 // This test is to compare deleted/non-deleted stateObject after restoring.
 func TestSnapshotForDeletedObject(t *testing.T) {
-	state, _ := New(common.Hash{}, NewDatabase(database.NewMemDatabase()))
+	memDB := database.NewMemoryDBManager()
+	state, _ := New(common.Hash{}, NewDatabase(memDB))
 
 	stateObjAddr0 := toAddr([]byte("so0"))
 	stateObjAddr1 := toAddr([]byte("so1"))

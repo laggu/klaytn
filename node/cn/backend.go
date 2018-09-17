@@ -10,7 +10,6 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/event"
@@ -57,7 +56,7 @@ type GXP struct {
 	lesServer       LesServer
 
 	// DB interfaces
-	chainDb database.Database // Block chain database
+	chainDB database.DBManager // Block chain database
 
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
@@ -95,11 +94,11 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-	chainDb, err := CreateDB(ctx, config, "chaindata")
+	chainDB, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
 	}
-	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDb, config.Genesis)
+	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
@@ -112,11 +111,11 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 
 	gxp := &GXP{
 		config:         config,
-		chainDb:        chainDb,
+		chainDB:        chainDB,
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config , chainConfig, chainDb),
+		engine:         CreateConsensusEngine(ctx, config , chainConfig, chainDB),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
@@ -124,7 +123,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		rewardbase:     config.Rewardbase,
 		rewardcontract: config.RewardContract,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
+		bloomIndexer:   NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 	}
 
 	// istanbul BFT. force to set the istanbul coinbase to node key address
@@ -135,17 +134,17 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	log.Info("Initialising Klaytn protocol", "versions", gxp.engine.Protocol().Versions , "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
-		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
+		bcVersion := chainDB.ReadDatabaseVersion()
 		if bcVersion != blockchain.BlockChainVersion && bcVersion != 0 {
 			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run klay upgradedb.\n", bcVersion, blockchain.BlockChainVersion)
 		}
-		rawdb.WriteDatabaseVersion(chainDb, blockchain.BlockChainVersion)
+		chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 	}
 	var (
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &blockchain.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
 	)
-	gxp.blockchain, err = blockchain.NewBlockChain(chainDb, cacheConfig, gxp.chainConfig, gxp.engine, vmConfig)
+	gxp.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, gxp.chainConfig, gxp.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +152,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
 		gxp.blockchain.SetHead(compat.RewindTo)
-		rawdb.WriteChainConfig(chainDb, genesisHash, chainConfig)
+		chainDB.WriteChainConfig(genesisHash, chainConfig)
 	}
 	gxp.bloomIndexer.Start(gxp.blockchain)
 
@@ -162,7 +161,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	}
 	gxp.txPool = blockchain.NewTxPool(config.TxPool, gxp.chainConfig, gxp.blockchain)
 
-	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb, ctx.NodeType()); err != nil {
+	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDB, ctx.NodeType()); err != nil {
 		return nil, err
 	}
 	gxp.protocolManager.wsendpoint = config.WsEndpoint
@@ -212,17 +211,16 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 }
 
 // CreateDB creates the chain database.
-func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.Database, error) {
+func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.DBManager, error) {
 	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
 	}
-	db.Meter("klay/db/chaindata/")
 	return db, nil
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a klaytn service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.Database) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	//if chainConfig.Clique != nil {
 	//	return clique.New(chainConfig.Clique, db)
@@ -464,7 +462,7 @@ func (s *GXP) BlockChain() *blockchain.BlockChain { return s.blockchain }
 func (s *GXP) TxPool() *blockchain.TxPool         { return s.txPool }
 func (s *GXP) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *GXP) Engine() consensus.Engine           { return s.engine }
-func (s *GXP) ChainDb() database.Database         { return s.chainDb }
+func (s *GXP) ChainDB() database.DBManager        { return s.chainDB }
 func (s *GXP) IsListening() bool                  { return true } // Always listening
 func (s *GXP) GxpVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *GXP) NetVersion() uint64                 { return s.networkId }
@@ -517,7 +515,7 @@ func (s *GXP) Stop() error {
 	s.miner.Stop()
 	s.eventMux.Stop()
 
-	s.chainDb.Close()
+	s.chainDB.Close()
 	close(s.shutdownChan)
 
 	return nil

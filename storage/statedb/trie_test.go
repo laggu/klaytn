@@ -43,7 +43,7 @@ func init() {
 
 // Used for testing
 func newEmptyTrie() *Trie {
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemDatabase()))
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
 	return trie
 }
 
@@ -67,7 +67,7 @@ func TestNull(t *testing.T) {
 }
 
 func TestMissingRoot(t *testing.T) {
-	trie, err := NewTrie(common.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemDatabase()))
+	trie, err := NewTrie(common.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemoryDBManager()))
 	if trie != nil {
 		t.Error("NewTrie returned non-nil trie for invalid root")
 	}
@@ -80,8 +80,9 @@ func TestMissingNodeDisk(t *testing.T)    { testMissingNode(t, false) }
 func TestMissingNodeMemonly(t *testing.T) { testMissingNode(t, true) }
 
 func testMissingNode(t *testing.T, memonly bool) {
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
 
 	trie, _ := NewTrie(common.Hash{}, triedb)
 	updateString(trie, "120000", "qwerqwerqwerqwerqwerqwerqwerqwer")
@@ -317,14 +318,14 @@ func TestLargeValue(t *testing.T) {
 }
 
 type countingDB struct {
-	database.Database
+	database.DBManager
 	gets map[string]int
 }
 
-func (db *countingDB) Get(key []byte) ([]byte, error) {
-	db.gets[string(key)]++
-	return db.Database.Get(key)
-}
+//func (db *countingDB) Get(key []byte) ([]byte, error) {
+//	db.gets[string(key)]++
+//	return db.Database.Get(key)
+//}
 
 // TestCacheUnload checks that decoded nodes are unloaded after a
 // certain number of commit operations.
@@ -342,7 +343,7 @@ func TestCacheUnload(t *testing.T) {
 	// Commit the trie repeatedly and access key1.
 	// The branch containing it is loaded from DB exactly two times:
 	// in the 0th and 6th iteration.
-	db := &countingDB{Database: trie.db.diskdb, gets: make(map[string]int)}
+	db := &countingDB{trie.db.diskDB, make(map[string]int)}
 	trie, _ = NewTrie(root, NewDatabase(db))
 	trie.SetCacheLimit(5)
 	for i := 0; i < 12; i++ {
@@ -411,7 +412,7 @@ func (randTest) Generate(r *rand.Rand, size int) reflect.Value {
 }
 
 func runRandTest(rt randTest) bool {
-	triedb := NewDatabase(database.NewMemDatabase())
+	triedb := NewDatabase(database.NewMemoryDBManager())
 
 	tr, _ := NewTrie(common.Hash{}, triedb)
 	values := make(map[string]string) // tracks content of the trie
@@ -524,7 +525,7 @@ func benchGet(b *testing.B, commit bool) {
 		trie, _ = NewTrie(common.Hash{}, tmpdb)
 
 		defer os.RemoveAll(dbDir)
-		defer tmpdb.diskdb.Close()
+		defer tmpdb.diskDB.Close()
 	}
 
 	k := make([]byte, 32)
@@ -594,7 +595,7 @@ func tempDB() (string, *Database) {
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary directory: %v", err))
 	}
-	diskdb, err := database.NewLDBDatabase(dir, 256, 0)
+	diskdb, err := database.NewDBManager(dir, database.LEVELDB, 256, 0)
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary database: %v", err))
 	}

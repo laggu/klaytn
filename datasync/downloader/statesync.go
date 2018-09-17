@@ -2,16 +2,15 @@ package downloader
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
 	"hash"
 	"sync"
 	"time"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto/sha3"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/storage/statedb"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into
@@ -311,11 +310,11 @@ func (s *stateSync) commit(force bool) error {
 		return nil
 	}
 	start := time.Now()
-	b := s.d.stateDB.NewBatch()
-	if written, err := s.sched.Commit(b); written == 0 || err != nil {
+	stateTrieBatch := s.d.stateDB.NewBatch(database.StateTrieDB)
+	if written, err := s.sched.Commit(stateTrieBatch); written == 0 || err != nil {
 		return err
 	}
-	if err := b.Write(); err != nil {
+	if err := stateTrieBatch.Write(); err != nil {
 		return fmt.Errorf("DB write error: %v", err)
 	}
 	s.updateStats(s.numUncommitted, 0, 0, time.Since(start))
@@ -459,6 +458,6 @@ func (s *stateSync) updateStats(written, duplicate, unexpected int, duration tim
 		log.Info("Imported new state entries", "count", written, "elapsed", common.PrettyDuration(duration), "processed", s.d.syncStatsState.processed, "pending", s.d.syncStatsState.pending, "retry", len(s.tasks), "duplicate", s.d.syncStatsState.duplicate, "unexpected", s.d.syncStatsState.unexpected)
 	}
 	if written > 0 {
-		rawdb.WriteFastTrieProgress(s.d.stateDB, s.d.syncStatsState.processed)
+		s.d.stateDB.WriteFastTrieProgress(s.d.syncStatsState.processed)
 	}
 }

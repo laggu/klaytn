@@ -1,15 +1,15 @@
 package cn
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/bitutil"
+	"time"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/bitutil"
+	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
-	"time"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 const (
@@ -44,8 +44,8 @@ func (eth *GXP) startBloomHandlers() {
 					task := <-request
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := rawdb.ReadCanonicalHash(eth.chainDb, (section+1)*params.BloomBitsBlocks-1)
-						if compVector, err := rawdb.ReadBloomBits(eth.chainDb, task.Bit, section, head); err == nil {
+						head := eth.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
+						if compVector, err := eth.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head)); err == nil {
 							if blob, err := bitutil.DecompressBytes(compVector, int(params.BloomBitsBlocks)/8); err == nil {
 								task.Bitsets[i] = blob
 							} else {
@@ -77,7 +77,7 @@ const (
 type BloomIndexer struct {
 	size uint64 // section size to generate bloombits for
 
-	db  database.Database    // database instance to write index data and metadata into
+	db  database.DBManager   // database instance to write index data and metadata into
 	gen *bloombits.Generator // generator to rotate the bloom bits crating the bloom index
 
 	section uint64      // Section is the section number being processed currently
@@ -86,15 +86,13 @@ type BloomIndexer struct {
 
 // NewBloomIndexer returns a chain indexer that generates bloom bits data for the
 // canonical chain for fast logs filtering.
-func NewBloomIndexer(db database.Database, size uint64) *blockchain.ChainIndexer {
+func NewBloomIndexer(db database.DBManager, size uint64) *blockchain.ChainIndexer {
 	backend := &BloomIndexer{
 		db:   db,
 		size: size,
 	}
 
-	table := database.NewTable(db, string(rawdb.BloomBitsIndexPrefix))
-
-	return blockchain.NewChainIndexer(db, table, backend, size, bloomConfirms, bloomThrottling, "bloombits")
+	return blockchain.NewChainIndexer(db, db, backend, size, bloomConfirms, bloomThrottling, "bloombits")
 }
 
 // Reset implements blockchain.ChainIndexerBackend, starting a new bloombits index
@@ -115,14 +113,17 @@ func (b *BloomIndexer) Process(header *types.Header) {
 // Commit implements blockchain.ChainIndexerBackend, finalizing the bloom section and
 // writing it out into the database.
 func (b *BloomIndexer) Commit() error {
-	batch := b.db.NewBatch()
+	batch := b.db.NewBatch(database.BloomBitsDB)
 
 	for i := 0; i < types.BloomBitLength; i++ {
 		bits, err := b.gen.Bitset(uint(i))
 		if err != nil {
 			return err
 		}
-		rawdb.WriteBloomBits(batch, uint(i), b.section, b.head, bitutil.CompressBytes(bits))
+		err = batch.Put(database.BloomBitsKey(uint(i), b.section, b.head), bitutil.CompressBytes(bits))
+		if err != nil {
+			log.Crit("Failed to store bloom bits", "err", err)
+		}
 	}
 	return batch.Write()
 }

@@ -1,29 +1,28 @@
 package ranger
 
 import (
-	"math/big"
-	"github.com/ground-x/go-gxplatform/api"
-	"sync"
-	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/node/cn"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/work"
-	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
+	"math/big"
+	"sync"
+	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/api"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/datasync/downloader"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/client"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/bitutil"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/datasync/downloader"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/go-gxplatform/node/cn"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/work"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -46,7 +45,7 @@ type Ranger struct {
 	protocolManager *cn.ProtocolManager
 
 	// DB interfaces
-	chainDb database.Database // Block chain database
+	chainDB database.DBManager // Block chain database
 
 	eventMux       *event.TypeMux
 	accountManager *accounts.Manager
@@ -86,11 +85,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 
 	peerCache, _ := lru.New(peerCacheLimit)
 
-	chainDb, err := CreateDB(ctx, config, "chaindata")
+	chainDB, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
 	}
-	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDb, config.Genesis)
+	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
@@ -103,7 +102,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 
 	ranger := &Ranger{
 		config:         config,
-		chainDb:        chainDb,
+		chainDB:        chainDB,
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
@@ -112,7 +111,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Gxbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   cn.NewBloomIndexer(chainDb, params.BloomBitsBlocks),
+		bloomIndexer:   cn.NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		consUrl:        config.ConsensusURL,
 		proofCh:        make(chan NewProofEvent),
 		peerCache:      peerCache,
@@ -128,17 +127,17 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	log.Info("Initialising klaytn protocol" , "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
-		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
+		bcVersion := chainDB.ReadDatabaseVersion()
 		if bcVersion != blockchain.BlockChainVersion && bcVersion != 0 {
 			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run ranger upgradedb.\n", bcVersion, blockchain.BlockChainVersion)
 		}
-		rawdb.WriteDatabaseVersion(chainDb, blockchain.BlockChainVersion)
+		chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 	}
 	var (
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &blockchain.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
 	)
-	ranger.blockchain, err = blockchain.NewBlockChain(chainDb, cacheConfig, ranger.chainConfig, ranger.engine, vmConfig)
+	ranger.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, ranger.chainConfig, ranger.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +145,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
 		ranger.blockchain.SetHead(compat.RewindTo)
-		rawdb.WriteChainConfig(chainDb, genesisHash, chainConfig)
+		chainDB.WriteChainConfig(genesisHash, chainConfig)
 	}
 	ranger.bloomIndexer.Start(ranger.blockchain)
 
@@ -157,7 +156,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 
 	ranger.txPool = blockchain.NewTxPool(blockchain.DefaultTxPoolConfig , ranger.chainConfig, ranger.blockchain)
 
-	if ranger.protocolManager, err = cn.NewRangerPM(ranger.chainConfig, config.SyncMode, config.NetworkId, ranger.eventMux, ranger.engine, ranger.blockchain, chainDb); err != nil {
+	if ranger.protocolManager, err = cn.NewRangerPM(ranger.chainConfig, config.SyncMode, config.NetworkId, ranger.eventMux, ranger.engine, ranger.blockchain, chainDB); err != nil {
 		return nil, err
 	}
 
@@ -199,12 +198,11 @@ func (s *Ranger) Coinbase() (eb common.Address, err error) {
 }
 
 // CreateDB creates the chain database.
-func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.Database, error) {
+func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.DBManager, error) {
 	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
 	}
-	db.Meter("klay/db/chaindata/")
 	return db, nil
 }
 
@@ -217,7 +215,7 @@ func (s *Ranger) BlockChain() *blockchain.BlockChain { return s.blockchain }
 func (s *Ranger) TxPool() *blockchain.TxPool         { return s.txPool }
 func (s *Ranger) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Ranger) Engine() consensus.Engine           { return s.engine }
-func (s *Ranger) ChainDb() database.Database         { return s.chainDb }
+func (s *Ranger) ChainDB() database.DBManager        { return s.chainDB }
 func (s *Ranger) IsListening() bool                  { return true } // Always listening
 func (s *Ranger) GxpVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Ranger) NetVersion() uint64                 { return s.networkId }
@@ -268,7 +266,7 @@ func (s *Ranger) Stop() error {
 	s.miner.Stop()
 	s.eventMux.Stop()
 
-	s.chainDb.Close()
+	s.chainDB.Close()
 	close(s.shutdownChan)
 
 	s.proofSub.Unsubscribe()
@@ -291,8 +289,8 @@ func (rn *Ranger) startBloomHandlers() {
 					task := <-request
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := rawdb.ReadCanonicalHash(rn.chainDb, (section+1)*params.BloomBitsBlocks-1)
-						if compVector, err := rawdb.ReadBloomBits(rn.chainDb, task.Bit, section, head); err == nil {
+						head := rn.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
+						if compVector, err := rn.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head)); err == nil {
 							if blob, err := bitutil.DecompressBytes(compVector, int(params.BloomBitsBlocks)/8); err == nil {
 								task.Bitsets[i] = blob
 							} else {

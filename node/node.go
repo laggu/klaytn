@@ -626,18 +626,11 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int) (database.Database, error) {
+func (n *Node) OpenDatabase(name string, cache, handles int) (database.DBManager, error) {
 	if n.config.DataDir == "" {
-		return database.NewMemDatabase(), nil
+		return database.NewMemoryDBManager(), nil
 	}
-	switch n.config.DBType {
-	case database.LEVELDB:
-		return database.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
-	case database.BADGER :
-		return database.NewBGDatabase(n.config.resolvePath(name))
-	default :
-		return nil, errors.New("failed to open database due to undefined database type")
-	}
+	return database.NewDBManager(n.config.resolvePath(name), database.LEVELDB, cache, handles)
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.

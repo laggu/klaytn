@@ -54,19 +54,20 @@ type BCData struct {
 	bc                 *blockchain.BlockChain
 	addrs              []*common.Address
 	privKeys           []*ecdsa.PrivateKey
-	db                 database.Database
+	db                 database.DBManager
 	rewardBase         *common.Address
 	validatorAddresses []common.Address
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine             consensus.Istanbul
 }
 
+var dir = "chaindata"
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	conf := node.DefaultConfig
 
 	// Remove leveldb dir if exists
-	if _, err := os.Stat("chaindata"); err == nil {
-		os.RemoveAll("chaindata")
+	if _, err := os.Stat(dir); err == nil {
+		os.RemoveAll(dir)
 	}
 
 	// Remove transactions.rlp if exists
@@ -76,7 +77,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
-	chainDb, err := NewDatabase(database.LEVELDB)
+	chainDb, err := NewDatabase(dir, database.LEVELDB)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +126,7 @@ func (bcdata *BCData) Shutdown() {
 	bcdata.db.Close()
 	// Remove leveldb dir which was created for this test.
 	if removeChaindataOnExit {
-		os.RemoveAll("chaindata")
+		os.RemoveAll(dir)
 		os.RemoveAll(transactionsJournalFilename)
 	}
 }
@@ -283,19 +284,12 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-func NewDatabase(dbtype string) (db database.Database, err error) {
-	switch dbtype {
-	case database.LEVELDB:
-		db, err = database.NewLDBDatabase("chaindata", 16, 16)
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		db = database.NewMemDatabase()
+func NewDatabase(dir, dbType string) (db database.DBManager, err error) {
+	if dir == "" {
+		return database.NewMemoryDBManager(), nil
+	} else {
+		return database.NewDBManager(dir, dbType, 16, 16)
 	}
-
-	return
 }
 
 // Copied from consensus/istanbul/backend/engine.go
@@ -317,7 +311,7 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 	return append(buf.Bytes(), payload...), nil
 }
 
-func initBlockchain(conf *node.Config, db database.Database, coinbaseAddrs []*common.Address, validators []common.Address,
+func initBlockchain(conf *node.Config, db database.DBManager, coinbaseAddrs []*common.Address, validators []common.Address,
 	engine consensus.Engine) (*blockchain.BlockChain, error) {
 
 	extraData, err := prepareIstanbulExtra(validators)

@@ -25,7 +25,6 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
@@ -175,12 +174,10 @@ func genUncles(i int, gen *BlockGen) {
 
 func benchInsertChain(b *testing.B, databaseType string, gen func(int, *BlockGen)) {
 	// 1. Create the database
-	var db database.Database
-
 	dir := genTempDirForDB(b)
 	defer os.RemoveAll(dir)
 
-	db = genKlaytnDatabase(b, dir, databaseType)
+	db := genDBManagerForTest(b, dir, databaseType)
 	defer db.Close()
 
 
@@ -299,7 +296,7 @@ func BenchmarkChainWrite_full_100k_badgerDB(b *testing.B) {
 
 // makeChainForBench writes a given number of headers or empty blocks/receipts
 // into a database.
-func makeChainForBench(db database.Database, full bool, count uint64) {
+func makeChainForBench(db database.DBManager, full bool, count uint64) {
 	var hash common.Hash
 	for n := uint64(0); n < count; n++ {
 		header := &types.Header{
@@ -313,15 +310,15 @@ func makeChainForBench(db database.Database, full bool, count uint64) {
 		}
 		hash = header.Hash()
 
-		rawdb.WriteHeader(db, header)
-		rawdb.WriteCanonicalHash(db, hash, n)
-		rawdb.WriteTd(db, hash, n, big.NewInt(int64(n+1)))
+		db.WriteHeader(header)
+		db.WriteCanonicalHash(hash, n)
+		db.WriteTd(hash, n, big.NewInt(int64(n+1)))
 
 		if full || n == 0 {
-			rawdb.WriteHeadBlockHash(db, hash)
+			db.WriteHeadBlockHash(hash)
 			block := types.NewBlockWithHeader(header)
-			rawdb.WriteBody(db, hash, n, block.Body())
-			rawdb.WriteReceipts(db, hash, n, nil)
+			db.WriteBody(hash, n, block.Body())
+			db.WriteReceipts(hash, n, nil)
 		}
 	}
 }
@@ -331,7 +328,7 @@ func benchWriteChain(b *testing.B, full bool, databaseType string, count uint64)
 	for i := 0; i < b.N; i++ {
 		dir := genTempDirForDB(b)
 
-		db := genKlaytnDatabase(b, dir, databaseType)
+		db := genDBManagerForTest(b, dir, databaseType)
 		makeChainForBench(db, full, count)
 
 		db.Close()
@@ -344,7 +341,7 @@ func benchReadChain(b *testing.B, full bool, databaseType string, count uint64) 
 	dir := genTempDirForDB(b)
 	defer os.RemoveAll(dir)
 
-	db := genKlaytnDatabase(b, dir, databaseType)
+	db := genDBManagerForTest(b, dir, databaseType)
 	makeChainForBench(db, full, count)
 	db.Close()
 
@@ -353,7 +350,7 @@ func benchReadChain(b *testing.B, full bool, databaseType string, count uint64) 
 
 	for i := 0; i < b.N; i++ {
 
-		db = genKlaytnDatabase(b, dir, databaseType)
+		db = genDBManagerForTest(b, dir, databaseType)
 
 		chain, err := NewBlockChain(db, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
 		if err != nil {
@@ -364,8 +361,8 @@ func benchReadChain(b *testing.B, full bool, databaseType string, count uint64) 
 			header := chain.GetHeaderByNumber(n)
 			if full {
 				hash := header.Hash()
-				rawdb.ReadBody(db, hash, n)
-				rawdb.ReadReceipts(db, hash, n)
+				db.ReadBody(hash, n)
+				db.ReadReceipts(hash, n)
 			}
 		}
 		chain.Stop()
@@ -382,26 +379,16 @@ func genTempDirForDB(b *testing.B) (string) {
 	return dir
 }
 
-// genKlaytnDatabase returns database.Database according to entered databaseType
-func genKlaytnDatabase(b *testing.B, dir string, databaseType string) (database.Database) {
-	var db database.Database
-	var err error
-
-	if databaseType == database.MEMDB {
-		db = database.NewMemDatabase()
-	} else if databaseType == database.BADGER {
-		db, err = database.NewBGDatabase(dir)
+// genDBManagerForTest returns database.Database according to entered databaseType
+func genDBManagerForTest(b *testing.B, dir string, dbType string) (database.DBManager) {
+	if dbType == database.MEMDB {
+		db := database.NewMemoryDBManager()
+		return db
+	} else  {
+		db, err := database.NewDBManager(dir, dbType, 128, 128)
 		if err != nil {
-			b.Fatalf("cannot create temporary badgerDB at %v, %v", dir, err)
+			b.Fatalf("cannot create temporary database %v at %v, %v", dbType, dir, err)
 		}
-	} else if databaseType == database.LEVELDB {
-		db, err = database.NewLDBDatabase(dir, 128, 128)
-		if err != nil {
-			b.Fatalf("cannot create temporary levelDB at %v, %v", dir, err)
-		}
-	} else {
-		b.Fatalf("unexpected databaseType has been entered: %s", databaseType)
+		return db
 	}
-
-	return db
 }

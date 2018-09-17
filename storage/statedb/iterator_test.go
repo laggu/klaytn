@@ -120,7 +120,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 			}
 		}
 	}
-	for _, key := range db.diskdb.(*database.MemDatabase).Keys() {
+	for _, key := range db.diskDB.GetMemDB().Keys() {
 		if _, ok := hashes[common.BytesToHash(key)]; !ok {
 			t.Errorf("state entry not reported %x", key)
 		}
@@ -289,8 +289,9 @@ func TestIteratorContinueAfterErrorDisk(t *testing.T)    { testIteratorContinueA
 func TestIteratorContinueAfterErrorMemonly(t *testing.T) { testIteratorContinueAfterError(t, true) }
 
 func testIteratorContinueAfterError(t *testing.T, memonly bool) {
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
 
 	tr, _ := NewTrie(common.Hash{}, triedb)
 	for _, val := range testdata1 {
@@ -376,8 +377,9 @@ func TestIteratorContinueAfterSeekErrorMemonly(t *testing.T) {
 
 func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	// Commit test trie to db, then remove the node containing "bars".
-	diskdb := database.NewMemDatabase()
-	triedb := NewDatabase(diskdb)
+	memDBManager := database.NewMemoryDBManager()
+	diskdb := memDBManager.GetMemDB()
+	triedb := NewDatabase(memDBManager)
 
 	ctr, _ := NewTrie(common.Hash{}, triedb)
 	for _, val := range testdata1 {

@@ -98,7 +98,7 @@ type worker struct {
 	gxp     Backend
 	chain   *blockchain.BlockChain
 	proc    blockchain.Validator
-	chainDb database.Database
+	chainDB database.DBManager
 
 	coinbase common.Address
 	extra    []byte
@@ -129,7 +129,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		txsCh:          make(chan blockchain.NewTxsEvent, txChanSize),
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDb:        gxp.ChainDb(),
+		chainDB:        gxp.ChainDB(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          gxp.BlockChain(),
 		proc:           gxp.BlockChain().Validator(),

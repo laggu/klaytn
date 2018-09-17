@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/rawdb"
 )
 
+// TODO-GX Below Prove is only used in tests, not in core codes.
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
 // on the path to the value at key. The value itself is also included in the last
 // node and can be retrieved by verifying the proof.
@@ -34,7 +35,7 @@ import (
 // If the trie does not contain a value for key, the returned proof contains all
 // nodes of the longest existing prefix of the key (at least the root node), ending
 // with the node that proves the absence of the key.
-func (t *Trie) Prove(key []byte, fromLevel uint, proofDb database.Putter) error {
+func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error {
 	// Collect all nodes on the path to key.
 	key = keybytesToHex(key)
 	nodes := []node{}
@@ -81,13 +82,14 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDb database.Putter) error 
 				if !ok {
 					hash = crypto.Keccak256(enc)
 				}
-				rawdb.WriteMerkleProof(proofDb, hash, enc)
+				rawdb.WriteMerkleProof(proofDB, hash, enc)
 			}
 		}
 	}
 	return nil
 }
 
+// TODO-GX Below Prove is only used in tests, not in core codes.
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
 // on the path to the value at key. The value itself is also included in the last
 // node and can be retrieved by verifying the proof.
@@ -95,18 +97,18 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDb database.Putter) error 
 // If the trie does not contain a value for key, the returned proof contains all
 // nodes of the longest existing prefix of the key (at least the root node), ending
 // with the node that proves the absence of the key.
-func (t *SecureTrie) Prove(key []byte, fromLevel uint, proofDb database.Putter) error {
-	return t.trie.Prove(key, fromLevel, proofDb)
+func (t *SecureTrie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error {
+	return t.trie.Prove(key, fromLevel, proofDB)
 }
 
 // VerifyProof checks merkle proofs. The given proof must contain the value for
 // key in a trie with the given root hash. VerifyProof returns an error if the
 // proof contains invalid trie nodes or the wrong value.
-func VerifyProof(rootHash common.Hash, key []byte, proofDb DatabaseReader) (value []byte, err error, nodes int) {
+func VerifyProof(rootHash common.Hash, key []byte, proofDB DatabaseReader) (value []byte, err error, nodes int) {
 	key = keybytesToHex(key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
-		buf, _ := proofDb.Get(wantHash[:])
+		buf, _ := proofDB.Get(wantHash[:])
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}

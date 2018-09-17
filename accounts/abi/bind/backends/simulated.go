@@ -18,7 +18,6 @@ import (
 	"github.com/ground-x/go-gxplatform/event"
 	"context"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
@@ -34,7 +33,7 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
-	database   database.Database      // In memory database to store our testing data
+	database   database.DBManager      // In memory database to store our testing data
 	blockchain *blockchain.BlockChain // GXP blockchain to handle the consensus
 
 	mu           sync.Mutex
@@ -49,7 +48,7 @@ type SimulatedBackend struct {
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc blockchain.GenesisAlloc) *SimulatedBackend {
-	database := database.NewMemDatabase()
+	database := database.NewMemoryDBManager()
 	genesis := blockchain.Genesis{Config: params.AllGxhashProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := blockchain.NewBlockChain(database, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
@@ -143,7 +142,7 @@ func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Addres
 
 // TransactionReceipt returns the receipt of a transaction.
 func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	receipt, _, _, _ := rawdb.ReadReceipt(b.database, txHash)
+	receipt, _, _, _ := b.database.ReadReceipt(txHash)
 	return receipt, nil
 }
 
@@ -400,11 +399,11 @@ func (m callmsg) Data() []byte         { return m.CallMsg.Data }
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
 type filterBackend struct {
-	db database.Database
+	db database.DBManager
 	bc *blockchain.BlockChain
 }
 
-func (fb *filterBackend) ChainDb() database.Database { return fb.db }
+func (fb *filterBackend) ChainDB() database.DBManager { return fb.db }
 func (fb *filterBackend) EventMux() *event.TypeMux   { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {

@@ -13,7 +13,7 @@ import (
 )
 
 type Backend interface {
-	ChainDb() database.Database
+	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
 	GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error)
@@ -32,7 +32,7 @@ type Backend interface {
 type Filter struct {
 	backend Backend
 
-	db         database.Database
+	db         database.DBManager
 	begin, end int64
 	addresses  []common.Address
 	topics     [][]common.Hash
@@ -70,7 +70,7 @@ func New(backend Backend, begin, end int64, addresses []common.Address, topics [
 		end:       end,
 		addresses: addresses,
 		topics:    topics,
-		db:        backend.ChainDb(),
+		db:        backend.ChainDB(),
 		matcher:   bloombits.NewMatcher(size, filters),
 	}
 }

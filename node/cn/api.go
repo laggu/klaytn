@@ -19,7 +19,6 @@ import (
 	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"github.com/ground-x/go-gxplatform/params"
 	"context"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"errors"
 )
 
@@ -353,7 +352,7 @@ func NewPrivateDebugAPI(config *params.ChainConfig, eth *GXP) *PrivateDebugAPI {
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
 func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	if preimage := rawdb.ReadPreimage(api.gxp.ChainDb(), hash); preimage != nil {
+	if preimage := api.gxp.ChainDB().ReadPreimage(hash); preimage != nil {
 		return preimage, nil
 	}
 	return nil, errors.New("unknown preimage")
@@ -474,11 +473,11 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
 	}
 
-	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), statedb.NewDatabase(api.gxp.chainDb), 0)
+	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), statedb.NewDatabase(api.gxp.chainDB), 0)
 	if err != nil {
 		return nil, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), statedb.NewDatabase(api.gxp.chainDb), 0)
+	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), statedb.NewDatabase(api.gxp.chainDB), 0)
 	if err != nil {
 		return nil, err
 	}

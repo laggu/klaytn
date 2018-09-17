@@ -38,8 +38,9 @@ import (
 // Updating a state statedb without commit must not affect persistent DB.
 func TestUpdateLeaks(t *testing.T) {
 	// Create an empty state database
-	db := database.NewMemDatabase()
-	state, _ := New(common.Hash{}, NewDatabase(db))
+	memDBManager := database.NewMemoryDBManager()
+	db := memDBManager.GetMemDB()
+	state, _ := New(common.Hash{}, NewDatabase(memDBManager))
 
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
@@ -66,10 +67,14 @@ func TestUpdateLeaks(t *testing.T) {
 // only the one right before the commit.
 func TestIntermediateLeaks(t *testing.T) {
 	// Create two state databases, one transitioning to the final state, the other final from the beginning
-	transDb := database.NewMemDatabase()
-	finalDb := database.NewMemDatabase()
-	transState, _ := New(common.Hash{}, NewDatabase(transDb))
-	finalState, _ := New(common.Hash{}, NewDatabase(finalDb))
+	transDBManager := database.NewMemoryDBManager()
+	finalDBManager := database.NewMemoryDBManager()
+
+	transDb := transDBManager.GetMemDB()
+	finalDb := finalDBManager.GetMemDB()
+
+	transState, _ := New(common.Hash{}, NewDatabase(transDBManager))
+	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager))
 
 	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
 		state.SetBalance(addr, big.NewInt(int64(11*i)+int64(tweak)))
@@ -122,7 +127,7 @@ func TestIntermediateLeaks(t *testing.T) {
 // https://github.com/ethereum/go-ethereum/pull/15549.
 func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
-	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemDatabase()))
+	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
 
 	for i := byte(0); i < 255; i++ {
 		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -336,7 +341,7 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		state, _     = New(common.Hash{}, NewDatabase(database.NewMemDatabase()))
+		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -429,7 +434,7 @@ func (s *StateSuite) TestSnapshotWithJournalDirties(c *check.C) {
 // TestCopyOfCopy tests that modified objects are carried over to the copy, and the copy of the copy.
 // See https://github.com/ethereum/go-ethereum/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
-	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemDatabase()))
+	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
 	addr := common.HexToAddress("aaaa")
 	sdb.SetBalance(addr, big.NewInt(42))
 

@@ -93,7 +93,8 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemDatabase()))
+		memDBManager := database.NewMemoryDBManager()
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -123,7 +124,8 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemDatabase()))
+		memDBManager := database.NewMemoryDBManager()
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
 	}
 	var (
 		vmenv  = NewEnv(cfg)

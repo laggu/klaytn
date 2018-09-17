@@ -1170,7 +1170,7 @@ func SetupNetwork(ctx *cli.Context) {
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
-func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.Database {
+func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	var (
 		cache   = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 		handles = makeDatabaseHandles()
@@ -1179,11 +1179,11 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.Database {
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	chainDb, err := stack.OpenDatabase(name, cache, handles)
+	chainDB, err := stack.OpenDatabase(name, cache, handles)
 	if err != nil {
 		Fatalf("Could not open database: %v", err)
 	}
-	return chainDb
+	return chainDB
 }
 
 func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
@@ -1198,7 +1198,7 @@ func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
 }
 
 // MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain, chainDb database.Database) {
+func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain, chainDb database.DBManager) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 

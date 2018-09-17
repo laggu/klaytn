@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/storage/database"
@@ -80,7 +79,7 @@ type Downloader struct {
 
 	queue   *queue   // Scheduler for selecting the hashes to download
 	peers   *peerSet // Set of active peers from which download can proceed
-	stateDB database.Database
+	stateDB database.DBManager
 
 	rttEstimate   uint64 // Round trip time to target for download requests
 	rttConfidence uint64 // Confidence in the estimated RTT (unit: millionths to allow atomic ops)
@@ -180,14 +179,14 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(mode SyncMode, stateDb database.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
+func New(mode SyncMode, stateDB database.DBManager, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
 
 	dl := &Downloader{
 		mode:           mode,
-		stateDB:        stateDb,
+		stateDB:        stateDB,
 		mux:            mux,
 		queue:          newQueue(),
 		peers:          newPeerSet(),
@@ -206,7 +205,7 @@ func New(mode SyncMode, stateDb database.Database, mux *event.TypeMux, chain Blo
 		stateCh:        make(chan dataPack),
 		stateSyncStart: make(chan *stateSync),
 		syncStatsState: stateSyncStats{
-			processed: rawdb.ReadFastTrieProgress(stateDb),
+			processed: stateDB.ReadFastTrieProgress(),
 		},
 		trackStateReq: make(chan *stateReq),
 	}

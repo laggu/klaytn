@@ -179,8 +179,8 @@ func (b *GxpAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) { //
 	return b.gpo.SuggestPrice(ctx)
 }
 
-func (b *GxpAPIBackend) ChainDb() database.Database {
-	return b.gxp.ChainDb()
+func (b *GxpAPIBackend) ChainDB() database.DBManager {
+	return b.gxp.ChainDB()
 }
 
 func (b *GxpAPIBackend) EventMux() *event.TypeMux {
