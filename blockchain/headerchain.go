@@ -22,7 +22,6 @@ import (
 
 	"errors"
 	"fmt"
-	"github.com/hashicorp/golang-lru"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/storage/rawdb"
@@ -42,6 +41,48 @@ const (
 	numberCacheLimit = 2048
 )
 
+const (
+	numShardsHeaderCache = 4096
+	numShardsTdCache     = 4096
+	numShardsNumberCache = 4096
+)
+
+type headerChainCacheKey int
+
+const (
+	hedearCacheIndex headerChainCacheKey = iota
+	tdCacheIndex
+	numberCacheIndex
+
+	headerChainCacheKeySize
+)
+
+var headerLRUCacheConfig = [headerChainCacheKeySize]common.CacheConfiger {
+	hedearCacheIndex: 	common.LRUConfig{CacheSize: headerCacheLimit},
+	tdCacheIndex: 		common.LRUConfig{CacheSize: tdCacheLimit},
+	numberCacheIndex: 	common.LRUConfig{CacheSize: numberCacheLimit},
+}
+
+var	headerLRUShardCacheConfig = [headerChainCacheKeySize]common.CacheConfiger {
+	hedearCacheIndex: 	common.LRUShardConfig{CacheSize: headerCacheLimit, NumShards: numShardsHeaderCache},
+	tdCacheIndex: 		common.LRUShardConfig{CacheSize: tdCacheLimit, NumShards: numShardsTdCache},
+	numberCacheIndex: 	common.LRUShardConfig{CacheSize: numberCacheLimit, NumShards: numShardsNumberCache},
+}
+
+func newHeaderChainCache(cacheNameKey headerChainCacheKey, cacheType common.CacheType) common.Cache {
+	var cache common.Cache
+
+	switch cacheType {
+	case common.LRUCacheType:
+		cache, _ = common.NewCache(headerLRUCacheConfig[cacheNameKey])
+	case common.LRUShardCacheType:
+		cache, _ = common.NewCache(headerLRUShardCacheConfig[cacheNameKey])
+	default:
+		cache, _ = common.NewCache(headerLRUCacheConfig[cacheNameKey])
+	}
+	return cache
+}
+
 // HeaderChain implements the basic block header chain logic that is shared by
 // blockchain.BlockChain and light.LightChain. It is not usable in itself, only as
 // a part of either structure.
@@ -56,9 +97,9 @@ type HeaderChain struct {
 	currentHeader     atomic.Value
 	currentHeaderHash common.Hash
 
-	headerCache *lru.Cache
-	tdCache     *lru.Cache
-	numberCache *lru.Cache
+	headerCache common.Cache
+	tdCache     common.Cache
+	numberCache common.Cache
 
 	procInterrupt func() bool
 
@@ -71,10 +112,6 @@ type HeaderChain struct {
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
 func NewHeaderChain(chainDb database.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
-	headerCache, _ := lru.New(headerCacheLimit)
-	tdCache, _ := lru.New(tdCacheLimit)
-	numberCache, _ := lru.New(numberCacheLimit)
-
 	// Seed a fast but crypto originating random generator
 	seed, err := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
@@ -84,9 +121,9 @@ func NewHeaderChain(chainDb database.Database, config *params.ChainConfig, engin
 	hc := &HeaderChain{
 		config:        config,
 		chainDb:       chainDb,
-		headerCache:   headerCache,
-		tdCache:       tdCache,
-		numberCache:   numberCache,
+		headerCache:   newHeaderChainCache(hedearCacheIndex, common.DefaultCacheType),
+		tdCache:       newHeaderChainCache(tdCacheIndex, common.DefaultCacheType),
+		numberCache:   newHeaderChainCache(numberCacheIndex, common.DefaultCacheType),
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
 		engine:        engine,

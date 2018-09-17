@@ -17,42 +17,50 @@
 
 package common
 
-import "github.com/hashicorp/golang-lru"
-
-const (
-	LRUCacheType = iota
-	ARCCacheType
-	//FREE_CACHE
-	//BIG_CACHE
-	//GO_CACHE
+import (
+	"github.com/hashicorp/golang-lru"
+	"math"
+	"errors"
+	"github.com/ground-x/go-gxplatform/log"
 )
 
-type Cache interface {
-	Add(key, value interface{}) (evicted bool)
-	Get(key interface{}) (value interface{}, ok bool)
-	Contains(key interface{}) bool
-	Purge()
+type CacheType int
 
-	Keys() []interface{}
-	Peek(key interface{}) (value interface{}, ok bool)
-	Remove(key interface{})
-	Len() int
+const (
+	LRUCacheType CacheType = iota
+	LRUShardCacheType
+	ARCChacheType
+)
+
+//it's set by flag
+var DefaultCacheType CacheType = LRUCacheType
+var CacheScale int = 100 // cache size = preset size * CacheScale / 100
+
+type CacheKey interface {
+	getShardIndex(shardMask int) int
+}
+
+type Cache interface {
+	Add(key CacheKey, value interface{}) (evicted bool)
+	Get(key CacheKey) (value interface{}, ok bool)
+	Contains(key CacheKey) bool
+	Purge()
 }
 
 type lruCache struct {
 	lru *lru.Cache
 }
 
-func (cache *lruCache) Add(key, value interface{}) (evicted bool) {
+func (cache *lruCache) Add(key CacheKey, value interface{}) (evicted bool) {
 	return cache.lru.Add(key, value)
 }
 
-func (cache *lruCache) Get(key interface{}) (value interface{}, ok bool) {
+func (cache *lruCache) Get(key CacheKey) (value interface{}, ok bool) {
 	value, ok = cache.lru.Get(key)
 	return
 }
 
-func (cache *lruCache) Contains(key interface{}) bool {
+func (cache *lruCache) Contains(key CacheKey) bool {
 	return cache.lru.Contains(key)
 }
 
@@ -64,11 +72,11 @@ func (cache *lruCache) Keys() []interface{} {
 	return cache.lru.Keys()
 }
 
-func (cache *lruCache) Peek(key interface{}) (value interface{}, ok bool) {
+func (cache *lruCache) Peek(key CacheKey) (value interface{}, ok bool) {
 	return cache.lru.Peek(key)
 }
 
-func (cache *lruCache) Remove(key interface{}) {
+func (cache *lruCache) Remove(key CacheKey) {
 	cache.lru.Remove(key)
 }
 
@@ -76,26 +84,21 @@ func (cache *lruCache) Len() int {
 	return cache.lru.Len()
 }
 
-func NewLRUCache(size int) (*lruCache, error) {
-	lru, err := lru.New(size)
-	return &lruCache{lru}, err
-}
-
 type arcCache struct {
 	arc *lru.ARCCache
 }
 
-func (cache *arcCache) Add(key, value interface{}) (evicted bool) {
+func (cache *arcCache) Add(key CacheKey, value interface{}) (evicted bool) {
 	cache.arc.Add(key, value)
 	//TODO-GX: need to be removed or should be added according to usage of evicted flag
 	return true
 }
 
-func (cache *arcCache) Get(key interface{}) (value interface{}, ok bool) {
+func (cache *arcCache) Get(key CacheKey) (value interface{}, ok bool) {
 	return cache.arc.Get(key)
 }
 
-func (cache *arcCache) Contains(key interface{}) bool {
+func (cache *arcCache) Contains(key CacheKey) bool {
 	return cache.arc.Contains(key)
 }
 
@@ -107,11 +110,11 @@ func (cache *arcCache) Keys() []interface{} {
 	return cache.arc.Keys()
 }
 
-func (cache *arcCache) Peek(key interface{}) (value interface{}, ok bool) {
+func (cache *arcCache) Peek(key CacheKey) (value interface{}, ok bool) {
 	return cache.arc.Peek(key)
 }
 
-func (cache *arcCache) Remove(key interface{}) {
+func (cache *arcCache) Remove(key CacheKey) {
 	cache.arc.Remove(key)
 }
 
@@ -119,24 +122,113 @@ func (cache *arcCache) Len() int {
 	return cache.arc.Len()
 }
 
-func NewARCCache(size int) (*arcCache, error) {
-	arc, err := lru.NewARC(size)
-	return &arcCache{arc}, err
+type lruShardCache struct {
+	shards			[]*lru.Cache
+	shardIndexMask	int
 }
 
-func NewCache(cacheType, size int) (Cache, error) {
-	var newCache Cache
-	var err error
+func (cache *lruShardCache) Add(key CacheKey, val interface{}) (evicted bool) {
+	shardIndex := key.getShardIndex(cache.shardIndexMask)
+	return cache.shards[shardIndex].Add(key, val)
+}
 
-	switch cacheType {
-	case LRUCacheType:
-		newCache, err = NewLRUCache(size)
-	case ARCCacheType:
-		newCache, err = NewARCCache(size)
-	default:
-		// default caching policy = LRU
-		newCache, err = NewLRUCache(size)
+func (cache *lruShardCache) Get(key CacheKey) (value interface{}, ok bool) {
+	shardIndex := key.getShardIndex(cache.shardIndexMask)
+	return cache.shards[shardIndex].Get(key)
+}
+
+func (cache *lruShardCache) Contains(key CacheKey) bool {
+	shardIndex := key.getShardIndex(cache.shardIndexMask)
+	return cache.shards[shardIndex].Contains(key)
+}
+
+func (cache *lruShardCache) Purge() {
+	for _, shard := range cache.shards {
+		s := shard
+		go s.Purge()
+	}
+}
+
+func NewCache(config CacheConfiger) (Cache, error) {
+	if config == nil {
+		return nil, errors.New("cache config is nil")
+	}
+	return config.newCache()
+}
+
+type CacheConfiger interface {
+	newCache() (Cache, error)
+}
+
+type LRUConfig struct {
+	CacheSize int
+}
+
+func (c LRUConfig) newCache() (Cache, error) {
+	cacheSize := c.CacheSize * CacheScale / 100
+	lru, err := lru.New(cacheSize)
+	return &lruCache{lru}, err
+}
+
+type LRUShardConfig struct {
+	CacheSize int
+	NumShards int
+}
+
+const (
+	minShardSize = 10
+	minNumShards = 2
+)
+//If key is not common.Hash nor common.Address then you should set numShard 1 or use LRU Cache
+//The number of shards is readjusted to meet the minimum shard size.
+func (c LRUShardConfig) newCache() (Cache, error) {
+	cacheSize := c.CacheSize * CacheScale / 100
+
+	if cacheSize < 1 {
+		log.Error("Negative Cache Size Error", "Cache Size", cacheSize, "Cache Scale", CacheScale)
+		return nil, errors.New("Must provide a positive size ")
 	}
 
-	return newCache, err
+	numShards := c.makeNumShardsPowOf2()
+
+	if c.NumShards != numShards {
+		log.Warn("numShards is ", "Expected", c.NumShards,"Actual", numShards)
+	}
+	if cacheSize % numShards != 0 {
+		log.Warn("Cache size is ", "Expected",cacheSize,"Actual", cacheSize - (cacheSize % numShards))
+	}
+
+	lruShard := &lruShardCache{shards : make([]*lru.Cache,numShards), shardIndexMask:numShards - 1}
+	shardsSize := cacheSize/numShards
+	var err error
+	for i := 0 ; i < numShards; i++ {
+		lruShard.shards[i], err = lru.NewWithEvict(shardsSize, nil)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+	return lruShard, nil
+}
+
+func (c LRUShardConfig) makeNumShardsPowOf2() int {
+	maxNumShards := float64(c.CacheSize * CacheScale / 100 / minShardSize)
+	numShards := int(math.Min(float64(c.NumShards), maxNumShards))
+
+	preNumShards := minNumShards
+	for numShards > minNumShards {
+		preNumShards = numShards
+		numShards = numShards & (numShards - 1)
+	}
+
+	return preNumShards
+}
+
+type ARCConfig struct {
+	CacheSize int
+}
+
+func (c ARCConfig) newCache() (Cache, error) {
+	arc, err := lru.NewARC(c.CacheSize)
+	return &arcCache{arc}, err
 }

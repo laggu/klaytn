@@ -243,6 +243,14 @@ var (
 		Usage: "Number of trie node generations to keep in memory",
 		Value: int(state.MaxTrieCacheGen),
 	}
+	CacheTypeFlag = cli.IntFlag{
+		Name: "cache.type",
+		Usage: "Cache Type: 0=LRU, 1=LRUShard",
+	}
+	CacheScaleFlag = cli.IntFlag{
+		Name: "cache.scale",
+		Usage: "Scale of cache (cache size = preset size * scale of cache(%))",
+	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
@@ -973,6 +981,12 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
 	}
+	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
+		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
+	}
+	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
+		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
+	}
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
 	}
@@ -1062,6 +1076,12 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	}
+	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
+		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
+	}
+	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
+		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
 	}
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)

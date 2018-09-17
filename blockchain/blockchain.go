@@ -42,6 +42,7 @@ import (
 	"sync/atomic"
 	"time"
 	"reflect"
+	"github.com/hashicorp/golang-lru"
 )
 
 var (
@@ -52,13 +53,8 @@ var (
 
 // TODO-GX: Below should be handled by ini or other configurations.
 const (
-	bodyCacheType          = common.LRUCacheType
-	bodyRLPCacheType       = common.LRUCacheType
-	blockCacheType         = common.LRUCacheType
 	futureBlocksCacheType  = common.LRUCacheType
 	badBlocksCacheType     = common.LRUCacheType
-	recentTransactionsType = common.LRUCacheType
-	recentReceiptsType     = common.LRUCacheType
 )
 
 // Below is the list of the constants for cache size.
@@ -74,10 +70,58 @@ const (
 )
 
 const (
+	numShardsBodyCache          = 4096
+	numShardsBlockCache         = 4096
+	numShardsRecentTransactions = 4096
+	numShardsRecentReceipts     = 4096
+)
+
+const (
 	triesInMemory = 128
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
 )
+
+type blockChainCacheKey int
+const (
+	bodyCacheIndex blockChainCacheKey = iota
+	bodyRLPCacheIndex
+	blockCacheIndex
+	recentTransactionsIndex
+	recentReceiptsIndex
+
+	blockCacheKeySize
+)
+
+var blockLRUCacheConfig = [blockCacheKeySize]common.CacheConfiger {
+	bodyCacheIndex: 	common.LRUConfig{CacheSize: maxBodyCache},
+	bodyRLPCacheIndex: 	common.LRUConfig{CacheSize: maxBodyCache},
+	blockCacheIndex: 	common.LRUConfig{CacheSize: maxBlockCache},
+	recentTransactionsIndex: 	common.LRUConfig{CacheSize: maxRecentTransactions},
+	recentReceiptsIndex: 		common.LRUConfig{CacheSize: maxRecentReceipts},
+}
+
+var blockLRUShardCacheConfig = [blockCacheKeySize]common.CacheConfiger {
+	bodyCacheIndex: 	common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
+	bodyRLPCacheIndex: 	common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
+	blockCacheIndex: 	common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
+	recentTransactionsIndex:	common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
+	recentReceiptsIndex: 		common.LRUShardConfig{CacheSize: maxRecentReceipts,		NumShards: numShardsRecentReceipts},
+}
+
+func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheType) common.Cache {
+	var cache common.Cache
+
+	switch cacheType {
+	case common.LRUCacheType:
+		cache, _ = common.NewCache(blockLRUCacheConfig[cacheNameKey])
+	case common.LRUShardCacheType:
+		cache, _ = common.NewCache(blockLRUShardCacheConfig[cacheNameKey])
+	default:
+		cache, _ = common.NewCache(blockLRUCacheConfig[cacheNameKey])
+	}
+	return cache
+}
 
 // CacheConfig contains the configuration values for the trie caching/pruning
 // that's resident in a blockchain.
@@ -130,7 +174,7 @@ type BlockChain struct {
 	bodyCache    common.Cache   // Cache for the most recent block bodies
 	bodyRLPCache common.Cache   // Cache for the most recent block bodies in RLP encoded format
 	blockCache   common.Cache   // Cache for the most recent entire blocks
-	futureBlocks common.Cache   // future blocks are blocks added for later processing
+	futureBlocks *lru.Cache   // future blocks are blocks added for later processing
 
 	quit    chan struct{} // blockchain quit channel
 	running int32         // running must be called atomically
@@ -143,7 +187,7 @@ type BlockChain struct {
 	validator Validator // block and state validator interface
 	vmConfig  vm.Config
 
-	badBlocks common.Cache // Bad block cache
+	badBlocks *lru.Cache // Bad block cache
 
 	recentTransactions common.Cache // recent insertblock
 	recentReceipts     common.Cache // recent receipts
@@ -160,17 +204,11 @@ func NewBlockChain(db database.Database, cacheConfig *CacheConfig, chainConfig *
 			TrieTimeLimit: 5 * time.Minute,
 		}
 	}
-	bodyCache, _ := common.NewCache(bodyCacheType, maxBodyCache)
-	bodyRLPCache, _ := common.NewCache(bodyRLPCacheType, maxBodyCache)
-	blockCache, _ := common.NewCache(blockCacheType, maxBlockCache)
-	futureBlocks, _ := common.NewCache(futureBlocksCacheType, maxFutureBlocks)
-	badBlocks, _ := common.NewCache(badBlocksCacheType, maxBadBlocks)
-
 	// Initialize DeriveSha implementation
 	InitDeriveSha(chainConfig.DeriveShaImpl)
 
-	recentTransactions, _ := common.NewCache(recentTransactionsType, maxRecentTransactions)
-	recentReceipts, _ := common.NewCache(recentReceiptsType, maxRecentReceipts)
+	futureBlocks, _ := lru.New(maxFutureBlocks)
+	badBlocks, _ := lru.New(maxBadBlocks)
 
 	bc := &BlockChain{
 		chainConfig:  chainConfig,
@@ -179,17 +217,18 @@ func NewBlockChain(db database.Database, cacheConfig *CacheConfig, chainConfig *
 		triegc:       prque.New(),
 		stateCache:   state.NewDatabase(db),
 		quit:         make(chan struct{}),
-		bodyCache:    bodyCache,
-		bodyRLPCache: bodyRLPCache,
-		blockCache:   blockCache,
+		bodyCache:    newBlockChainCache(bodyCacheIndex,	common.DefaultCacheType),
+		bodyRLPCache: newBlockChainCache(bodyRLPCacheIndex, common.DefaultCacheType),
+		blockCache:   newBlockChainCache(blockCacheIndex, 	common.DefaultCacheType),
 		futureBlocks: futureBlocks,
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		// tx, receipt cache
-		recentTransactions: recentTransactions,
-		recentReceipts:     recentReceipts,
+		recentTransactions: newBlockChainCache(recentTransactionsIndex, common.DefaultCacheType),
+		recentReceipts:     newBlockChainCache(recentReceiptsIndex, 	common.DefaultCacheType),
 	}
+
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 
@@ -741,7 +780,13 @@ func (bc *BlockChain) Stop() {
 func (bc *BlockChain) procFutureBlocks() {
 	blocks := make([]*types.Block, 0, bc.futureBlocks.Len())
 	for _, hash := range bc.futureBlocks.Keys() {
-		if block, exist := bc.futureBlocks.Peek(hash); exist {
+		hashKey, ok := hash.(common.CacheKey)
+		if !ok {
+			log.Error("invalid key type","expect","common.CacheKey","actual",reflect.TypeOf(hash))
+			continue
+		}
+
+		if block, exist := bc.futureBlocks.Peek(hashKey); exist {
 			cacheGetFutureBlockHitMeter.Mark(1)
 			blocks = append(blocks, block.(*types.Block))
 		} else {
@@ -1537,7 +1582,13 @@ type BadBlockArgs struct {
 func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
 	headers := make([]BadBlockArgs, 0, bc.badBlocks.Len())
 	for _, hash := range bc.badBlocks.Keys() {
-		if hdr, exist := bc.badBlocks.Peek(hash); exist {
+		hashKey, ok := hash.(common.CacheKey)
+		if !ok {
+			log.Error("invalid key type","expect","common.CacheKey","actual",reflect.TypeOf(hash))
+			continue
+		}
+
+		if hdr, exist := bc.badBlocks.Peek(hashKey); exist {
 			cacheGetBadBlockHitMeter.Mark(1)
 			header := hdr.(*types.Header)
 			headers = append(headers, BadBlockArgs{header.Hash(), header})

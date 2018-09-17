@@ -51,6 +51,7 @@ var (
 		utils.CacheDatabaseFlag,
 		utils.CacheGCFlag,
 		utils.TrieCacheGenFlag,
+		utils.CacheTypeFlag,
 		utils.ListenPortFlag,
 		utils.CoinbaseFlag,
 		utils.GasPriceFlag,

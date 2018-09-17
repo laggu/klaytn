@@ -24,8 +24,7 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/statedb"
 
 	"fmt"
-	lru "github.com/hashicorp/golang-lru"
-)
+	)
 
 // Trie cache generation limit after which to evict trie nodes from memory.
 var MaxTrieCacheGen = uint16(120)
@@ -37,6 +36,9 @@ const (
 
 	// Number of codehash->size associations to keep
 	codeSizeCacheSize = 100000
+
+	// Number of shards in cache
+	shardsCodeSizeCache = 4096
 )
 
 // Database wraps access to tries and contract code.
@@ -73,7 +75,13 @@ type Trie interface {
 }
 
 func NewDatabase(db database.Database) Database {
-	csc, _ := lru.New(codeSizeCacheSize)
+	var cacheConfig common.CacheConfiger
+	if common.DefaultCacheType == common.LRUShardCacheType {
+		cacheConfig = common.LRUShardConfig{CacheSize: codeSizeCacheSize, NumShards: shardsCodeSizeCache}
+	} else {
+		cacheConfig = common.LRUConfig{CacheSize: codeSizeCacheSize}
+	}
+	csc, _ := common.NewCache(cacheConfig)
 	return &cachingDB{
 		db:            statedb.NewDatabase(db),
 		codeSizeCache: csc,
@@ -84,7 +92,7 @@ type cachingDB struct {
 	db            *statedb.Database
 	mu            sync.Mutex
 	pastTries     []*statedb.SecureTrie
-	codeSizeCache *lru.Cache
+	codeSizeCache common.Cache
 }
 
 // OpenTrie opens the main account trie.

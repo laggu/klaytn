@@ -116,6 +116,10 @@ func (h Hash) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(h)
 }
 
+func (h Hash) getShardIndex(shardMask int) int {
+	return ((int(h[2]) << 16) + (int(h[1]) << 8) + int(h[0])) & shardMask
+}
+
 func EmptyHash(h Hash) bool {
 	return h == Hash{}
 }
@@ -228,6 +232,10 @@ func (a *Address) UnmarshalText(input []byte) error {
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
 	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
+}
+
+func (a Address) getShardIndex(shardMask int) int {
+	return ((int(a[2]) << 16) + (int(a[1]) << 8) + int(a[0])) & shardMask
 }
 
 // UnprefixedAddress allows marshaling an Address without 0x prefix.
