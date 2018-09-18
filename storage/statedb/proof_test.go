@@ -36,7 +36,7 @@ func TestProof(t *testing.T) {
 	trie, vals := randomTrie(500)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs := database.NewMemDatabase()
+		proofs := database.NewMemoryDBManager()
 		if trie.Prove(kv.k, 0, proofs) != nil {
 			t.Fatalf("missing key %x while constructing proof", kv.k)
 		}
@@ -53,12 +53,13 @@ func TestProof(t *testing.T) {
 func TestOneElementProof(t *testing.T) {
 	trie := new(Trie)
 	updateString(trie, "k", "v")
-	proofs := database.NewMemDatabase()
-	trie.Prove([]byte("k"), 0, proofs)
+	memDBManager := database.NewMemoryDBManager()
+	proofs := memDBManager.GetMemDB()
+	trie.Prove([]byte("k"), 0, memDBManager)
 	if len(proofs.Keys()) != 1 {
 		t.Error("proof should have one element")
 	}
-	val, err, _ := VerifyProof(trie.Hash(), []byte("k"), proofs)
+	val, err, _ := VerifyProof(trie.Hash(), []byte("k"), memDBManager)
 	if err != nil {
 		t.Fatalf("VerifyProof error: %v\nproof hashes: %v", err, proofs.Keys())
 	}
@@ -71,8 +72,9 @@ func TestVerifyBadProof(t *testing.T) {
 	trie, vals := randomTrie(800)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs := database.NewMemDatabase()
-		trie.Prove(kv.k, 0, proofs)
+		memDBManager := database.NewMemoryDBManager()
+		proofs := memDBManager.GetMemDB()
+		trie.Prove(kv.k, 0, memDBManager)
 		if len(proofs.Keys()) == 0 {
 			t.Fatal("zero length proof")
 		}
@@ -82,7 +84,7 @@ func TestVerifyBadProof(t *testing.T) {
 		proofs.Delete(key)
 		mutateByte(node)
 		proofs.Put(crypto.Keccak256(node), node)
-		if _, err, _ := VerifyProof(root, kv.k, proofs); err == nil {
+		if _, err, _ := VerifyProof(root, kv.k, memDBManager); err == nil {
 			t.Fatalf("expected proof to fail for key %x", kv.k)
 		}
 	}
@@ -109,8 +111,9 @@ func BenchmarkProve(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		kv := vals[keys[i%len(keys)]]
-		proofs := database.NewMemDatabase()
-		if trie.Prove(kv.k, 0, proofs); len(proofs.Keys()) == 0 {
+		memDBManager := database.NewMemoryDBManager()
+		proofs := memDBManager.GetMemDB()
+		if trie.Prove(kv.k, 0, memDBManager); len(proofs.Keys()) == 0 {
 			b.Fatalf("zero length proof for %x", kv.k)
 		}
 	}
@@ -120,10 +123,10 @@ func BenchmarkVerifyProof(b *testing.B) {
 	trie, vals := randomTrie(100)
 	root := trie.Hash()
 	var keys []string
-	var proofs []database.Database
+	var proofs []database.DBManager
 	for k := range vals {
 		keys = append(keys, k)
-		proof := database.NewMemDatabase()
+		proof := database.NewMemoryDBManager()
 		trie.Prove([]byte(k), 0, proof)
 		proofs = append(proofs, proof)
 	}

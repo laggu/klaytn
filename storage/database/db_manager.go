@@ -24,9 +24,9 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"encoding/binary"
 	"bytes"
+	"encoding/json"
 )
 
 type DBManager interface {
@@ -73,6 +73,7 @@ type DBManager interface {
 
 	ReadReceipts(hash common.Hash, number uint64) types.Receipts
 	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) error
+	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) error
 	DeleteReceipts(hash common.Hash, number uint64)
 
 	ReadBlock(hash common.Hash, number uint64) *types.Block
@@ -95,6 +96,7 @@ type DBManager interface {
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
 	WriteTxLookupEntries(block *types.Block) error
+	PutTxLookupEntriesToBatch(batch Batch, block *types.Block) error
 	DeleteTxLookupEntry(hash common.Hash)
 
 	ReadTransaction(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
@@ -102,7 +104,7 @@ type DBManager interface {
 	ReadReceipt(hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
 
 	ReadBloomBits(bloomBitsKey []byte) ([]byte, error)
-	WriteBloomBits(bloomBitsKey []byte, bits []byte)
+	WriteBloomBits(bloomBitsKey []byte, bits []byte) error
 
 	ReadValidSections() ([]byte, error)
 	WriteValidSections(encodedSections []byte)
@@ -192,7 +194,7 @@ func NewDBManager(dir string, dbType string, cache, handles int) (DBManager, err
 
 	for i:=0; i < int(databaseEntryTypeSize); i++ {
 		if i == int(indexSectionsDB) {
-			dbm.dbs[i] = NewTable(db, string(rawdb.BloomBitsIndexPrefix))
+			dbm.dbs[i] = NewTable(db, string(BloomBitsIndexPrefix))
 		} else {
 			dbm.dbs[i] = db
 		}
@@ -495,29 +497,98 @@ func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 }
 
 // TotalDifficulty operations.
+// ReadTd retrieves a block's total difficulty corresponding to the hash.
 func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
-	return rawdb.ReadTd(dbm.getDatabase(tdDB), hash, number)
+	db := dbm.getDatabase(tdDB)
+	data, _ := db.Get(headerTDKey(number, hash))
+	if len(data) == 0 {
+		return nil
+	}
+	td := new(big.Int)
+	if err := rlp.Decode(bytes.NewReader(data), td); err != nil {
+		log.Error("Invalid block total difficulty RLP", "hash", hash, "err", err)
+		return nil
+	}
+	return td
 }
 
+// WriteTd stores the total difficulty of a block into the database.
 func (dbm *databaseManager) WriteTd(hash common.Hash, number uint64, td *big.Int) {
-	rawdb.WriteTd(dbm.getDatabase(tdDB), hash, number, td)
+	db := dbm.getDatabase(tdDB)
+	data, err := rlp.EncodeToBytes(td)
+	if err != nil {
+		log.Crit("Failed to RLP encode block total difficulty", "err", err)
+	}
+	if err := db.Put(headerTDKey(number, hash), data); err != nil {
+		log.Crit("Failed to store block total difficulty", "err", err)
+	}
 }
 
+// DeleteTd removes all block total difficulty data associated with a hash.
 func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
-	rawdb.DeleteTd(dbm.getDatabase(tdDB), hash, number)
+	db := dbm.getDatabase(tdDB)
+	if err := db.Delete(headerTDKey(number, hash)); err != nil {
+		log.Crit("Failed to delete block total difficulty", "err", err)
+	}
 }
 
 // Receipts operations.
+// ReadReceipts retrieves all the transaction receipts belonging to a block.
 func (dbm *databaseManager) ReadReceipts(hash common.Hash, number uint64) types.Receipts {
-	return rawdb.ReadReceipts(dbm.getDatabase(ReceiptsDB), hash, number)
+	db := dbm.getDatabase(ReceiptsDB)
+	// Retrieve the flattened receipt slice
+	data, _ := db.Get(blockReceiptsKey(number, hash))
+	if len(data) == 0 {
+		return nil
+	}
+	// Convert the revceipts from their database form to their internal representation
+	storageReceipts := []*types.ReceiptForStorage{}
+	if err := rlp.DecodeBytes(data, &storageReceipts); err != nil {
+		log.Error("Invalid receipt array RLP", "hash", hash, "err", err)
+		return nil
+	}
+	receipts := make(types.Receipts, len(storageReceipts))
+	for i, receipt := range storageReceipts {
+		receipts[i] = (*types.Receipt)(receipt)
+	}
+	return receipts
 }
 
+// WriteReceipts stores all the transaction receipts belonging to a block.
 func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) error {
-	return rawdb.WriteReceipts(dbm.getDatabase(ReceiptsDB), hash, number, receipts)
+	db := dbm.getDatabase(ReceiptsDB)
+	return putReceiptsToPutter(db, hash, number, receipts)
 }
 
+func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) error {
+	return putReceiptsToPutter(batch, hash, number, receipts)
+}
+
+func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipts types.Receipts) error {
+	// Convert the receipts into their database form and serialize them
+	storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
+	for i, receipt := range receipts {
+		storageReceipts[i] = (*types.ReceiptForStorage)(receipt)
+	}
+	bytes, err := rlp.EncodeToBytes(storageReceipts)
+	if err != nil {
+		log.Crit("Failed to encode block receipts", "err", err)
+		return err
+	}
+	// Store the flattened receipt slice
+	if err := putter.Put(blockReceiptsKey(number, hash), bytes); err != nil {
+		log.Crit("Failed to store block receipts", "err", err)
+		return err
+	}
+	return nil
+}
+
+// DeleteReceipts removes all receipt data associated with a block hash.
 func (dbm *databaseManager) DeleteReceipts(hash common.Hash, number uint64) {
-	rawdb.DeleteReceipts(dbm.getDatabase(ReceiptsDB), hash, number)
+	db := dbm.getDatabase(ReceiptsDB)
+	if err := db.Delete(blockReceiptsKey(number, hash)); err != nil {
+		log.Crit("Failed to delete block receipts", "err", err)
+	}
 }
 
 // Block operations.
@@ -586,52 +657,98 @@ func (dbm *databaseManager) FindCommonAncestor(a, b *types.Header) *types.Header
 
 // Istanbul Snapshot operations.
 func (dbm *databaseManager) ReadIstanbulSnapshot(hash common.Hash) ([]byte, error) {
-	return rawdb.ReadIstanbulSnapshot(dbm.getDatabase(istanbulSnapshotDB), hash)
+	db := dbm.getDatabase(istanbulSnapshotDB)
+	return db.Get(istanbulSnapshotKey(hash))
 }
 
 func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) error {
-	return rawdb.WriteIstanbulSnapshot(dbm.getDatabase(istanbulSnapshotDB), hash, blob)
+	db := dbm.getDatabase(istanbulSnapshotDB)
+	return db.Put(istanbulSnapshotKey(hash), blob)
 }
 
 // Merkle Proof operation.
 func (dbm *databaseManager) WriteMerkleProof(key, value []byte) error {
-	return rawdb.WriteMerkleProof(dbm.getDatabase(merkleProofDB), key, value)
+	db := dbm.getDatabase(merkleProofDB)
+	return db.Put(key, value)
 }
 
 // Cached Trie Node operation.
 func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
-	return rawdb.ReadCachedTrieNode(dbm.getDatabase(StateTrieDB), hash)
+	db := dbm.getDatabase(StateTrieDB)
+	return db.Get(hash[:])
 }
 
 // Cached Trie Node Preimage operation.
 func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	return rawdb.ReadCachedTrieNodePreimage(dbm.getDatabase(PreimagesDB), secureKey)
+	db := dbm.getDatabase(PreimagesDB)
+	return db.Get(secureKey)
 }
 
 // State Trie Related operations.
 func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
-	return rawdb.ReadStateTrieNode(dbm.getDatabase(StateTrieDB), key)
+	db := dbm.getDatabase(StateTrieDB)
+	return db.Get(key)
 }
 
 func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
-	val, err := rawdb.ReadStateTrieNode(dbm.getDatabase(StateTrieDB), key)
+	val, err := dbm.ReadStateTrieNode(key)
 	if val == nil || err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-// from accessors_indexes.go
+// ReadTxLookupEntry retrieves the positional metadata associated with a transaction
+// hash to allow retrieving the transaction or receipt by hash.
 func (dbm *databaseManager) ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64) {
-	return rawdb.ReadTxLookupEntry(dbm.getDatabase(TxLookUpEntryDB), hash)
+	db := dbm.getDatabase(TxLookUpEntryDB)
+	data, _ := db.Get(txLookupKey(hash))
+	if len(data) == 0 {
+		return common.Hash{}, 0, 0
+	}
+	var entry TxLookupEntry
+	if err := rlp.DecodeBytes(data, &entry); err != nil {
+		log.Error("Invalid transaction lookup entry RLP", "hash", hash, "err", err)
+		return common.Hash{}, 0, 0
+	}
+	return entry.BlockHash, entry.BlockIndex, entry.Index
 }
 
+// WriteTxLookupEntries stores a positional metadata for every transaction from
+// a block, enabling hash based transaction and receipt lookups.
 func (dbm *databaseManager) WriteTxLookupEntries(block *types.Block) error {
-	return rawdb.WriteTxLookupEntries(dbm.getDatabase(TxLookUpEntryDB), block)
+	db := dbm.getDatabase(TxLookUpEntryDB)
+	return putTxLookupEntriesToPutter(db, block)
 }
 
+func (dbm *databaseManager) PutTxLookupEntriesToBatch(batch Batch, block *types.Block) error {
+	return putTxLookupEntriesToPutter(batch, block)
+}
+
+func putTxLookupEntriesToPutter(putter Putter, block *types.Block) error {
+	for i, tx := range block.Transactions() {
+		entry := TxLookupEntry{
+			BlockHash:  block.Hash(),
+			BlockIndex: block.NumberU64(),
+			Index:      uint64(i),
+		}
+		data, err := rlp.EncodeToBytes(entry)
+		if err != nil {
+			log.Crit("Failed to encode transaction lookup entry", "err", err)
+			return err
+		}
+		if err := putter.Put(txLookupKey(tx.Hash()), data); err != nil {
+			log.Crit("Failed to store transaction lookup entry", "err", err)
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteTxLookupEntry removes all transaction data associated with a hash.
 func (dbm *databaseManager) DeleteTxLookupEntry(hash common.Hash) {
-	rawdb.DeleteTxLookupEntry(dbm.getDatabase(TxLookUpEntryDB), hash)
+	db := dbm.getDatabase(TxLookUpEntryDB)
+	db.Delete(txLookupKey(hash))
 }
 
 // ReadTransaction retrieves a specific transaction from the database, along with
@@ -665,61 +782,116 @@ func (dbm *databaseManager) ReadReceipt(hash common.Hash) (*types.Receipt, commo
 }
 
 // BloomBits operations.
+// ReadBloomBits retrieves the compressed bloom bit vector belonging to the given
+// section and bit index from the.
 func (dbm *databaseManager) ReadBloomBits(bloomBitsKey []byte) ([]byte, error) {
-	return rawdb.ReadBloomBits(dbm.getDatabase(BloomBitsDB), bloomBitsKey)
+	db := dbm.getDatabase(BloomBitsDB)
+	return db.Get(bloomBitsKey)
 }
 
-func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) {
-	rawdb.WriteBloomBits(dbm.getDatabase(BloomBitsDB), bloomBitsKey, bits)
+// WriteBloomBits stores the compressed bloom bits vector belonging to the given
+// section and bit index.
+func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) error {
+	db := dbm.getDatabase(BloomBitsDB)
+	return db.Put(bloomBitsKey, bits)
 }
 
 // ValidSections operation.
 func (dbm *databaseManager) ReadValidSections() ([]byte, error) {
-	return rawdb.ReadValidSections(dbm.getDatabase(indexSectionsDB))
+	db := dbm.getDatabase(indexSectionsDB)
+	return db.Get(validSectionKey)
 }
 
 func (dbm *databaseManager) WriteValidSections(encodedSections []byte) {
-	rawdb.WriteValidSections(dbm.getDatabase(indexSectionsDB), encodedSections)
+	db := dbm.getDatabase(indexSectionsDB)
+	db.Put(validSectionKey, encodedSections)
 }
 
 // SectionHead operation.
 func (dbm *databaseManager) ReadSectionHead(encodedSection []byte) ([]byte, error) {
-	return rawdb.ReadSectionHead(dbm.getDatabase(indexSectionsDB), encodedSection)
+	db := dbm.getDatabase(indexSectionsDB)
+	return db.Get(sectionHeadKey(encodedSection))
 }
 
 func (dbm *databaseManager) WriteSectionHead(encodedSection []byte, hash common.Hash) {
-	rawdb.WriteSectionHead(dbm.getDatabase(indexSectionsDB), encodedSection, hash)
+	db := dbm.getDatabase(indexSectionsDB)
+	db.Put(sectionHeadKey(encodedSection), hash.Bytes())
 }
 
 func (dbm *databaseManager) DeleteSectionHead(encodedSection []byte) {
-	rawdb.DeleteSectionHead(dbm.getDatabase(indexSectionsDB), encodedSection)
+	db := dbm.getDatabase(indexSectionsDB)
+	db.Delete(sectionHeadKey(encodedSection))
 }
 
-// from accessors_metadata.go
+// ReadDatabaseVersion retrieves the version number of the database.
 func (dbm *databaseManager) ReadDatabaseVersion() int {
-	return rawdb.ReadDatabaseVersion(dbm.getDatabase(databaseVersionDB))
+	db := dbm.getDatabase(databaseVersionDB)
+	var version int
+
+	enc, _ := db.Get(databaseVerisionKey)
+	rlp.DecodeBytes(enc, &version)
+
+	return version
 }
 
+// WriteDatabaseVersion stores the version number of the database
 func (dbm *databaseManager) WriteDatabaseVersion(version int) {
-	rawdb.WriteDatabaseVersion(dbm.getDatabase(databaseVersionDB), version)
+	db := dbm.getDatabase(databaseVersionDB)
+	enc, _ := rlp.EncodeToBytes(version)
+	if err := db.Put(databaseVerisionKey, enc); err != nil {
+		log.Crit("Failed to store the database version", "err", err)
+	}
 }
 
-// ChainConfig operations.
+// ReadChainConfig retrieves the consensus settings based on the given genesis hash.
 func (dbm *databaseManager) ReadChainConfig(hash common.Hash) *params.ChainConfig {
-	return rawdb.ReadChainConfig(dbm.getDatabase(chainConfigDB), hash)
+	db := dbm.getDatabase(chainConfigDB)
+	data, _ := db.Get(configKey(hash))
+	if len(data) == 0 {
+		return nil
+	}
+	var config params.ChainConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		log.Error("Invalid chain config JSON", "hash", hash, "err", err)
+		return nil
+	}
+	return &config
 }
 
 func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.ChainConfig) {
-	rawdb.WriteChainConfig(dbm.getDatabase(chainConfigDB), hash, cfg)
+	db := dbm.getDatabase(chainConfigDB)
+	if cfg == nil {
+		return
+	}
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		log.Crit("Failed to JSON encode chain config", "err", err)
+	}
+	if err := db.Put(configKey(hash), data); err != nil {
+		log.Crit("Failed to store chain config", "err", err)
+	}
 }
 
-// Preimages operations.
+// ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
-	return rawdb.ReadPreimage(dbm.getDatabase(PreimagesDB), hash)
+	db := dbm.getDatabase(PreimagesDB)
+	data, _ := db.Get(preimageKey(hash))
+	return data
 }
 
+// WritePreimages writes the provided set of preimages to the database. `number` is the
+// current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) error {
-	return rawdb.WritePreimages(dbm.getDatabase(PreimagesDB), number, preimages)
+	db := dbm.getDatabase(PreimagesDB)
+	for hash, preimage := range preimages {
+		if err := db.Put(preimageKey(hash), preimage); err != nil {
+			log.Crit("Failed to store trie preimage", "err", err)
+			return err
+		}
+	}
+	preimageCounter.Inc(int64(len(preimages)))
+	preimageHitCounter.Inc(int64(len(preimages)))
+	return nil
 }
 
 // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits

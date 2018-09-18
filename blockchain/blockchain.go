@@ -22,7 +22,6 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/mclock"
 	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
@@ -952,8 +951,8 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		}
 		// Write all the data out into the database
 		bc.db.PutBodyToBatch(bodyBatch, block.Hash(), block.NumberU64(), block.Body())
-		rawdb.WriteReceipts(receiptsBatch, block.Hash(), block.NumberU64(), receipts)
-		rawdb.WriteTxLookupEntries(txLookupEntriesBatch, block)
+		bc.db.PutReceiptsToBatch(receiptsBatch, block.Hash(), block.NumberU64(), receipts)
+		bc.db.PutTxLookupEntriesToBatch(txLookupEntriesBatch, block)
 
 		stats.processed++
 

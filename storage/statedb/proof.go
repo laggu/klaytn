@@ -24,7 +24,6 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/storage/rawdb"
 )
 
 // TODO-GX Below Prove is only used in tests, not in core codes.
@@ -35,7 +34,7 @@ import (
 // If the trie does not contain a value for key, the returned proof contains all
 // nodes of the longest existing prefix of the key (at least the root node), ending
 // with the node that proves the absence of the key.
-func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error {
+func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.DBManager) error {
 	// Collect all nodes on the path to key.
 	key = keybytesToHex(key)
 	nodes := []node{}
@@ -82,7 +81,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error 
 				if !ok {
 					hash = crypto.Keccak256(enc)
 				}
-				rawdb.WriteMerkleProof(proofDB, hash, enc)
+				proofDB.WriteMerkleProof(hash, enc)
 			}
 		}
 	}
@@ -97,18 +96,18 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error 
 // If the trie does not contain a value for key, the returned proof contains all
 // nodes of the longest existing prefix of the key (at least the root node), ending
 // with the node that proves the absence of the key.
-func (t *SecureTrie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error {
+func (t *SecureTrie) Prove(key []byte, fromLevel uint, proofDB database.DBManager) error {
 	return t.trie.Prove(key, fromLevel, proofDB)
 }
 
 // VerifyProof checks merkle proofs. The given proof must contain the value for
 // key in a trie with the given root hash. VerifyProof returns an error if the
 // proof contains invalid trie nodes or the wrong value.
-func VerifyProof(rootHash common.Hash, key []byte, proofDB DatabaseReader) (value []byte, err error, nodes int) {
+func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (value []byte, err error, nodes int) {
 	key = keybytesToHex(key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
-		buf, _ := proofDB.Get(wantHash[:])
+		buf, _ := proofDB.ReadCachedTrieNode(wantHash)
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}

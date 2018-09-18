@@ -71,7 +71,7 @@ type Trie interface {
 	Hash() common.Hash
 	NodeIterator(startKey []byte) statedb.NodeIterator
 	GetKey([]byte) []byte // TODO(fjl): remove this when SecureTrie is removed
-	Prove(key []byte, fromLevel uint, proofDb database.Putter) error
+	Prove(key []byte, fromLevel uint, proofDb database.DBManager) error
 }
 
 func NewDatabase(db database.DBManager) Database {
@@ -180,6 +180,6 @@ func (m cachedTrie) Commit(onleaf statedb.LeafCallback) (common.Hash, error) {
 }
 
 // TODO-GX Below Prove is only used in tests, not in core codes.
-func (m cachedTrie) Prove(key []byte, fromLevel uint, proofDB database.Putter) error {
+func (m cachedTrie) Prove(key []byte, fromLevel uint, proofDB database.DBManager) error {
 	return m.SecureTrie.Prove(key, fromLevel, proofDB)
 }
