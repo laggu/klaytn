@@ -175,7 +175,8 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	gxp.protocolManager.SetRewardbase(gxp.rewardbase)
 	gxp.protocolManager.SetRewardContract(gxp.rewardcontract)
 
-	gxp.miner = work.New(gxp, gxp.chainConfig, gxp.EventMux(), gxp.engine)
+	// TODO-GX improve to handle drop transaction on network traffic in BN,GN,RN
+	gxp.miner = work.New(gxp, gxp.chainConfig, gxp.EventMux(), gxp.engine, ctx.NodeType())
 	// istanbul BFT
 	gxp.miner.SetExtra(makeExtraData(config.ExtraData, gxp.chainConfig.IsBFT))
 
@@ -467,6 +468,9 @@ func (s *GXP) IsListening() bool                  { return true } // Always list
 func (s *GXP) GxpVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *GXP) NetVersion() uint64                 { return s.networkId }
 func (s *GXP) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *GXP) ReBroadcastTxs(transactions types.Transactions) {
+	s.protocolManager.ReBroadcastTxs(transactions)
+}
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.

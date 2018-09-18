@@ -18,6 +18,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/node"
 )
 
 const (
@@ -118,9 +120,11 @@ type worker struct {
 	// atomic status counters
 	mining int32
 	atWork int32
+
+	nodetype p2p.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, gxp Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, gxp Backend, mux *event.TypeMux, nodetype p2p.ConnType) *worker {
 	worker := &worker{
 		config:         config,
 		engine:         engine,
@@ -137,6 +141,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(gxp.BlockChain(), miningLogAtDepth),
+		nodetype:       nodetype,
 	}
 
 	// istanbul BFT
@@ -336,6 +341,15 @@ func (self *worker) wait() {
 			if result == nil {
 				continue
 			}
+
+			// TODO-KLAYTN drop or missing tx
+			if self.nodetype != node.CONSENSUSNODE {
+				//if self.nodetype == node.RANGERNODE || self.nodetype == node.GENERALNODE {
+					self.gxp.ReBroadcastTxs(result.Task.Transactions())
+				//}
+				continue
+			}
+
 			block := result.Block
 			work := result.Task
 
@@ -448,9 +462,14 @@ func (self *worker) commitNewWork() {
 	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
 
+	// TODO-KLAYTN drop or missing tx
 	tstamp := tstart.Unix()
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-		tstamp = parent.Time().Int64() + 1
+		//if self.nodetype == node.RANGERNODE || self.nodetype == node.GENERALNODE {
+		//	tstamp = parent.Time().Int64() + 5
+		//} else {
+			tstamp = parent.Time().Int64() + 1
+		//}
 	}
 	// this will ensure we're not going off too far in the future
 	if now := time.Now().Unix(); tstamp > now+1 {

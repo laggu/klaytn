@@ -818,7 +818,13 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 		case node.CONSENSUSNODE:
 			pm.broadcastCNTx(txs)
 		default:
-			pm.broadcastNoCNTx(txs)
+			pm.broadcastNoCNTx(txs, false)
+	}
+}
+
+func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
+	if pm.nodetype != node.CONSENSUSNODE {
+		pm.broadcastNoCNTx(txs, true)
 	}
 }
 
@@ -827,7 +833,7 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 	for _, tx := range txs {
 		peers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(peers) == 0 {
-			log.Info("No peer to broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+			log.Trace("No peer to broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 			return
 		}
 
@@ -848,10 +854,18 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 	}
 }
 
-func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions) {
+func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) {
+	// TODO-GX resend max transaction
+	var threshold = 3000
 	var cntxset = make(map[*peer]types.Transactions)
 	var txset = make(map[*peer]types.Transactions)
 	for _, tx := range txs {
+		if resend {
+			threshold--
+			if threshold == 0 {
+				break
+			}
+		}
 		peers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(peers) >  0 {
 			// TODO-GX optimize pickSize or propagation way
@@ -862,7 +876,22 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions) {
 			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 		}
 
-		peers = pm.peers.AnotherTypePeersWithoutTx(tx.Hash(), node.CONSENSUSNODE)
+		// TODO-KLAYTN drop or missing tx
+		if resend {
+			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
+				peers = pm.peers.TypePeersWithTx(tx.Hash(), node.BRIDGENODE)
+			} else {
+				peers = pm.peers.TypePeersWithTx(tx.Hash(), node.CONSENSUSNODE)
+			}
+		} else {
+			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
+				peers = pm.peers.TypePeersWithoutTx(tx.Hash(), node.BRIDGENODE)
+				for _, peer := range peers {
+					txset[peer] = append(txset[peer], tx)
+				}
+			}
+			peers = pm.peers.TypePeersWithoutTx(tx.Hash(), pm.nodetype)
+		}
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
 		}

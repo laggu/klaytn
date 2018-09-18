@@ -5,6 +5,8 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"sync"
 	"sync/atomic"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/node"
 )
 
 type CpuAgent struct {
@@ -19,14 +21,17 @@ type CpuAgent struct {
 	engine consensus.Engine
 
 	isMining int32 // isMining indicates whether the agent is currently mining
+
+	nodetype p2p.ConnType
 }
 
-func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine) *CpuAgent {
+func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine, nodetype p2p.ConnType) *CpuAgent {
 	miner := &CpuAgent{
 		chain:  chain,
 		engine: engine,
 		stop:   make(chan struct{}, 1),
 		workCh: make(chan *Task, 1),
+		nodetype: nodetype,
 	}
 	return miner
 }
@@ -82,6 +87,12 @@ out:
 }
 
 func (self *CpuAgent) mine(work *Task, stop <-chan struct{}) {
+	// TODO-KLAYTN drop or missing tx and remove mining on BN, RN, GN
+	if self.nodetype != node.CONSENSUSNODE {
+		self.returnCh <- &Result{work, nil}
+		return
+	}
+
 	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash())
 

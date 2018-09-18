@@ -427,7 +427,7 @@ func newPeerSet() *peerSet {
 	peerSet.validator[node.CONSENSUSNODE] = ByPassValidator{}
 	peerSet.validator[node.RANGERNODE] = ByPassValidator{}
 	peerSet.validator[node.GENERALNODE] = ByPassValidator{}
-	peerSet.validator[node.DELIVERYNODE] = ByPassValidator{}
+	peerSet.validator[node.BRIDGENODE] = ByPassValidator{}
 
 	return peerSet
 }
@@ -622,6 +622,19 @@ func (ps *peerSet) TypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) [
 	return list
 }
 
+func (ps *peerSet) TypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if p.ConnType() == nodetype && p.knownTxs.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
 func (ps *peerSet) AnotherTypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
@@ -629,6 +642,20 @@ func (ps *peerSet) AnotherTypePeersWithoutTx(hash common.Hash, nodetype p2p.Conn
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if p.ConnType() != nodetype && !p.knownTxs.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+// TODO-KLAYTN drop or missing tx
+func (ps *peerSet) AnotherTypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if p.ConnType() != nodetype && p.knownTxs.Has(hash) {
 			list = append(list, p)
 		}
 	}

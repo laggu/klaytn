@@ -14,6 +14,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	"sync/atomic"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
 )
 
 // Backend wraps all methods required for mining.
@@ -22,6 +23,7 @@ type Backend interface {
 	BlockChain() 	 *blockchain.BlockChain
 	TxPool() 	     *blockchain.TxPool
 	ChainDB() 		 database.DBManager
+	ReBroadcastTxs(transactions types.Transactions)
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -39,15 +41,16 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
+func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype p2p.ConnType) *Miner {
 	miner := &Miner{
 		eth:      eth,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, eth, mux),
+		worker:   newWorker(config, engine, common.Address{}, eth, mux, nodetype),
 		canStart: 1,
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	// TODO-KLAYTN drop or missing tx
+	miner.Register(NewCpuAgent(eth.BlockChain(), engine, nodetype))
 	go miner.update()
 
 	return miner

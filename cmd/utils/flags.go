@@ -407,8 +407,8 @@ var (
 	// Network Settings
 	NodeTypeFlag = cli.StringFlag{
 		Name:  "nodetype",
-		Usage: "klaytn node type (consensus node (cn), ranger node (rn), general node (gn), ...)",
-		Value: "cn",
+		Usage: "klaytn node type (consensus node (cn), bridge node (bn), ranger node (rn), general node (gn), ...)",
+		Value: "gn",
 	}
 	MaxPeersFlag = cli.IntFlag{
 		Name:  "maxpeers",
@@ -765,7 +765,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NodeTypeFlag.Name) {
 		cfg.ConnectionType = convertNodeType(ctx.GlobalString(NodeTypeFlag.Name))
 	} else {
-		cfg.ConnectionType = convertNodeType("cn")
+		cfg.ConnectionType = convertNodeType("gn")
 	}
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
@@ -813,8 +813,8 @@ func convertNodeType(nodetype string) p2p.ConnType {
 		return node.CONSENSUSNODE
 	case "rn":
 		return node.RANGERNODE
-	case "dn":
-		return node.DELIVERYNODE
+	case "bn":
+		return node.BRIDGENODE
 	default:
 		return node.GENERALNODE
 	}
@@ -1149,7 +1149,7 @@ func RegisterKlaytnService(stack *node.Node, cfg *cn.Config) {
 		return fullNode, err
 	})
 	if err != nil {
-		Fatalf("Failed to register the GXP service: %v", err)
+		Fatalf("Failed to register the Klaytn service: %v", err)
 	}
 }
 
@@ -1159,7 +1159,7 @@ func RegisterRanagerService(stack *node.Node, cfg *ranger.Config) {
 		return fullNode, err
 	})
 	if err != nil {
-		Fatalf("Failed to register the GXP service: %v", err)
+		Fatalf("Failed to register the Klaytn service: %v", err)
 	}
 }
 

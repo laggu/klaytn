@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/work"
 	"github.com/hashicorp/golang-lru"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 const (
@@ -160,7 +161,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 		return nil, err
 	}
 
-	ranger.miner = work.New(ranger, ranger.chainConfig, ranger.EventMux(), ranger.engine)
+	ranger.miner = work.New(ranger, ranger.chainConfig, ranger.EventMux(), ranger.engine, ctx.NodeType())
 	ranger.APIBackend = &RangerAPIBackend{ranger}
 
 	ranger.proofSub = ranger.proofFeed.Subscribe(ranger.proofCh)
@@ -220,7 +221,10 @@ func (s *Ranger) IsListening() bool                  { return true } // Always l
 func (s *Ranger) GxpVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Ranger) NetVersion() uint64                 { return s.networkId }
 func (s *Ranger) Downloader() *downloader.Downloader { return s.protocolManager.Downloader() }
-
+// TODO-KLAYTN drop or missing tx
+func (s *Ranger) ReBroadcastTxs(transactions types.Transactions) {
+	s.protocolManager.ReBroadcastTxs(transactions)
+}
 
 // APIs returns the collection of RPC services the klaytn package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
