@@ -16,6 +16,11 @@ klay:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/klay\" to launch klay."
 
+bootnode:
+	build/env.sh go run build/ci.go install ./cmd/bootnode
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
+
 istanbul:
 	build/env.sh go run build/ci.go install ./cmd/istanbul
 	@echo "Done building."
