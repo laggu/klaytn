@@ -201,7 +201,7 @@ func (p *peer) Send(msgcode uint64, data interface{}) error {
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
-		p.knownTxs.Add(tx.Hash())
+		p.MarkTransaction(tx.Hash())
 	}
 	return p2p.Send(p.rw, TxMsg, txs)
 }
@@ -210,7 +210,7 @@ func (p *peer) AsyncSendTransactions(txs []*types.Transaction) {
 	select {
 	case p.queuedTxs <- txs:
 		for _, tx := range txs {
-			p.knownTxs.Add(tx.Hash())
+			p.MarkTransaction(tx.Hash())
 		}
 	default:
 		p.Log().Debug("Dropping transaction propagation", "count", len(txs))
