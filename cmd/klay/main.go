@@ -78,6 +78,7 @@ var (
 		utils.CacheGCFlag,
 		utils.TrieCacheGenFlag,
 		utils.CacheTypeFlag,
+		utils.CacheScaleFlag,
 		utils.ListenPortFlag,
 		utils.NodeTypeFlag,
 		utils.MaxPeersFlag,
