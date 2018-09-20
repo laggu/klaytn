@@ -497,9 +497,15 @@ func (bc *BlockChain) repair(head **types.Block) error {
 		if _, err := state.New((*head).Root(), bc.stateCache); err == nil {
 			log.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
 			return nil
+		} else {
+			// Should abort and return error, otherwise it will fall into infinite loop
+			if (*head).NumberU64() == 0 {
+				return errors.New("rewound to block number 0, but repair failed")
+			} else {
+				// If headBlockNumber > 0, rewind one block and recheck state availability there
+				(*head) = bc.GetBlock((*head).ParentHash(), (*head).NumberU64()-1)
+			}
 		}
-		// Otherwise rewind one block and recheck state availability there
-		(*head) = bc.GetBlock((*head).ParentHash(), (*head).NumberU64()-1)
 	}
 }
 
