@@ -44,6 +44,7 @@ var (
 	// General tx metrics
 	invalidTxCounter     = metrics.NewRegisteredCounter("txpool/invalid", nil)
 	underpricedTxCounter = metrics.NewRegisteredCounter("txpool/underpriced", nil)
+	refusedTxCounter     = metrics.NewRegisteredCounter("txpool/refuse", nil)
 )
 
 // TxStatus is the current status of a transaction as seen by the pool.
@@ -580,6 +581,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
+	// If pool is already full, we refuse to add tx to pool.
+	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
+		log.Trace("Rejecting a transaction due to full txpool", "hash", tx.Hash())
+		refusedTxCounter.Inc(1)
+		return false, fmt.Errorf("txpool is full: %d", uint64(len(pool.all)))
+	}
+
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
