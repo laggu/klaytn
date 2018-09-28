@@ -42,6 +42,8 @@ const (
 
 	// TODO-GX Enable more error below.
 	// Klaytn specific
+	// NOTE-GX Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
+	//         Add a new ReceiptStatusErrXXX before ReceiptStatusLast
 	ReceiptStatusErrDefault                  = uint(0x02) // Default
 	ReceiptStatusErrDepth                    = uint(0x03)
 	ReceiptStatusErrContractAddressCollision = uint(0x04)
@@ -50,14 +52,15 @@ const (
 	ReceiptStatusErrOutOfGas                 = uint(0x07)
 	ReceiptStatusErrWriteProtection          = uint(0x08)
 	ReceiptStatusErrExecutionReverted        = uint(0x09)
-//	ReceiptStatusErrGasUintOverflow          = uint(0x0a) // TODO-GX
-//  ReceiptStatusErrInvalidJumpDestination   = uint(0x0b) // TODO-GX
-//	ReceiptStatusErrInvalidOpcode            = uint(0x0c) // Default case, because no static message available
-//	ReceiptStatusErrStackUnderflow           = uint(0x0d) // Default case, because no static message available
-//	ReceiptStatusErrStackOverflow            = uint(0x0e) // Default case, because no static message available
-//	ReceiptStatusErrInsufficientBalance      = uint(0x0f) // No receipt available for this error
-//	ReceiptStatusErrTotalTimeLimitReached    = uint(0x10) // No receipt available for this error
-	ReceiptStatusErrOpcodeCntLimitReached    = uint(0x11)
+	ReceiptStatusErrOpcodeCntLimitReached    = uint(0x0a)
+	ReceiptStatusLast                        = uint(0x0b) // Last value which is not an actual ReceiptStatus
+//	ReceiptStatusErrInvalidJumpDestination   // TODO-GX
+//	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
+//	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
+//	ReceiptStatusErrStackOverflow            // Default case, because no static message available
+//	ReceiptStatusErrInsufficientBalance      // No receipt available for this error
+//	ReceiptStatusErrTotalTimeLimitReached    // No receipt available for this error
+//	ReceiptStatusErrGasUintOverflow          // TODO-GX
 
 )
 
@@ -133,7 +136,7 @@ func (r *Receipt) setStatus(postStateOrStatus []byte) error {
 		status = uint(postStateOrStatus[0])
 	}
 	switch {
-	case ReceiptStatusSuccessful <= status && status <= ReceiptStatusErrExecutionReverted:
+	case ReceiptStatusSuccessful <= status && status < ReceiptStatusLast:
 		r.Status = status
 	case len(postStateOrStatus) == len(common.Hash{}):
 		r.PostState = postStateOrStatus
@@ -145,7 +148,7 @@ func (r *Receipt) setStatus(postStateOrStatus []byte) error {
 
 func (r *Receipt) statusEncoding() []byte {
 	if len(r.PostState) == 0 {
-		if ReceiptStatusSuccessful <= r.Status && r.Status <= ReceiptStatusErrExecutionReverted {
+		if ReceiptStatusSuccessful <= r.Status && r.Status < ReceiptStatusLast {
 			return []byte{byte(r.Status)}
 		} else {
 			log.Error("statusEncoding", "status invalid receipt status", r.Status)
