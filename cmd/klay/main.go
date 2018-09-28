@@ -173,7 +173,13 @@ func init() {
 				go pClient.UpdatePrometheusMetrics()
 				http.Handle("/metrics", promhttp.Handler())
 				port := ctx.GlobalInt(metrics.PrometheusExporterPortFlag)
-				go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+
+				go func() {
+					err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+					if err != nil {
+						log.Error("PrometheusExporter starting failed:", "port", port, "err", err)
+					}
+				}()
 			}
 		}
 
