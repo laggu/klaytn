@@ -41,6 +41,9 @@ type Config struct {
 
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
+
+	// UseOpcodeCntLimit is to enable applying the opcode count limit.
+	UseOpcodeCntLimit bool
 }
 
 // Interpreter is used to run Ethereum based contracts and will utilise the
@@ -155,6 +158,14 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
 			logged, pcCopy, gasCopy = false, pc, contract.Gas
+		}
+
+		// NOTE-GX We currently limit tx's execution time using the number of executed opcodes.
+		if in.evm.vmConfig.UseOpcodeCntLimit {
+			in.evm.opcodeCnt++
+			if in.evm.opcodeCnt > params.OpcodeCntLimit {
+				return nil, ErrOpcodeCntLimitReached
+			}
 		}
 
 		// Get the operation from the jump table and validate the stack to ensure there are

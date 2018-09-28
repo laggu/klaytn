@@ -256,6 +256,8 @@ func getReceiptStatusFromVMerr(vmerr error) (status uint) {
 		status = types.ReceiptStatusErrWriteProtection
 	case vm.ErrExecutionReverted:
 		status = types.ReceiptStatusErrExecutionReverted
+	case vm.ErrOpcodeCntLimitReached:
+		status = types.ReceiptStatusErrOpcodeCntLimitReached
 	default:
 		status = types.ReceiptStatusErrDefault
 	}

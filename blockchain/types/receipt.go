@@ -57,6 +57,7 @@ const (
 //	ReceiptStatusErrStackOverflow            = uint(0x0e) // Default case, because no static message available
 //	ReceiptStatusErrInsufficientBalance      = uint(0x0f) // No receipt available for this error
 //	ReceiptStatusErrTotalTimeLimitReached    = uint(0x10) // No receipt available for this error
+	ReceiptStatusErrOpcodeCntLimitReached    = uint(0x11)
 
 )
 

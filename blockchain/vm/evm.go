@@ -112,6 +112,9 @@ type EVM struct {
 	// available gas is calculated in gasCall* according to the 63/64 rule and later
 	// applied in opCall*.
 	callGasTemp uint64
+
+	// opcodeCnt is the number of executed opcodes.
+	opcodeCnt uint64
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should

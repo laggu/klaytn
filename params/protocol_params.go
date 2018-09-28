@@ -94,8 +94,9 @@ var (
 
 // Parameters for execution time limit
 var (
-	// TODO-GX Determine a more practical value through actual running experience
+	// TODO-GX Determine more practical values through actual running experience
 	TotalTimeLimit = 500 * time.Millisecond // Execution time limit for all txs in a block
+	OpcodeCntLimit = uint64(3000000)        // Opcode count limit for tx
 )
 
 // istanbul BFT

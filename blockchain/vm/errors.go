@@ -1,6 +1,10 @@
 package vm
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"github.com/ground-x/go-gxplatform/params"
+)
 
 // List execution errors
 var (
@@ -11,4 +15,5 @@ var (
 	ErrInsufficientBalance      = errors.New("insufficient balance for transfer")
 	ErrContractAddressCollision = errors.New("contract address collision")
 	ErrTotalTimeLimitReached    = errors.New("reached the total execution time limit for txs in a block")
+	ErrOpcodeCntLimitReached    = errors.New(fmt.Sprintf("reached the opcode count limit (%d) for tx", params.OpcodeCntLimit))
 )

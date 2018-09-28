@@ -38,6 +38,7 @@ const (
 var (
 	// Metrics for miner
 	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
+	tooLongTxCounter = metrics.NewRegisteredCounter("miner/toolongtx", nil)
 )
 
 // Agent can register themself with the worker
@@ -643,6 +644,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 	vmConfig := &vm.Config{
 		JumpTable: vm.ConstantinopleInstructionSet,
 		RunningEVM: chEVM,
+		UseOpcodeCntLimit: true,
 	}
 
 	for atomic.LoadInt32(&abort) == 0 {
@@ -697,6 +699,10 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 		case vm.ErrTotalTimeLimitReached:
 			log.Warn("Transaction aborted due to time limit", "hash", tx.Hash())
 			timeLimitReachedCounter.Inc(1)
+			if env.tcount == 0 {
+				log.Error("Transaction is too long", "hash", tx.Hash())
+				tooLongTxCounter.Inc(1)
+			}
 			break
 
 		case nil:
