@@ -112,8 +112,8 @@ func blockReceiptsKey(number uint64, hash common.Hash) []byte {
 	return append(append(blockReceiptsPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
 }
 
-// txLookupKey = txLookupPrefix + hash
-func txLookupKey(hash common.Hash) []byte {
+// TxLookupKey = txLookupPrefix + hash
+func TxLookupKey(hash common.Hash) []byte {
 	return append(txLookupPrefix, hash.Bytes()...)
 }
 

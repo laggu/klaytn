@@ -1131,7 +1131,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			}
 		}
 		// Write the positional metadata for transaction/receipt lookups and preimages
-		if err := bc.db.WriteTxLookupEntries(block); err != nil {
+		if err := bc.writeTxLookupEntries(block); err != nil {
 			return NonStatTy, err
 		}
 		if err := bc.db.WritePreimages(block.NumberU64(), state.Preimages()); err != nil {
@@ -1140,10 +1140,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 		// TODO-GX goroutine for performance
 		bc.recentReceipts.Add(block.Hash(), receipts)
-		for i, tx := range block.Transactions() {
-			bc.recentTransactions.Add(tx.Hash(), &TransactionLookup{tx, block.Hash(), block.NumberU64(), uint64(i)})
-		}
-
 		status = CanonStatTy
 	} else {
 		status = SideStatTy
@@ -1162,6 +1158,31 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	log.Debug("blockchain.writeblockwithstate", "num", block.Number(), "parenthash", block.Header().ParentHash, "txs", len(block.Transactions()), "elapsed", elapsed)
 
 	return status, nil
+}
+
+func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
+	batch := bc.db.NewBatch(database.TxLookUpEntryDB)
+	for i, tx := range block.Transactions() {
+		entry := database.TxLookupEntry{
+			BlockHash:  block.Hash(),
+			BlockIndex: block.NumberU64(),
+			Index:      uint64(i),
+		}
+		data, err := rlp.EncodeToBytes(entry)
+		if err != nil {
+			log.Crit("Failed to encode transaction lookup entry", "err", err)
+			return err
+		}
+		if err := batch.Put(database.TxLookupKey(tx.Hash()), data); err != nil {
+			log.Crit("Failed to store transaction lookup entry", "err", err)
+			return err
+		}
+		bc.recentTransactions.Add(tx.Hash(), &entry)
+	}
+	if err := batch.Write(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {

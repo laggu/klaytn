@@ -702,7 +702,7 @@ func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
 // hash to allow retrieving the transaction or receipt by hash.
 func (dbm *databaseManager) ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64) {
 	db := dbm.getDatabase(TxLookUpEntryDB)
-	data, _ := db.Get(txLookupKey(hash))
+	data, _ := db.Get(TxLookupKey(hash))
 	if len(data) == 0 {
 		return common.Hash{}, 0, 0
 	}
@@ -737,7 +737,7 @@ func putTxLookupEntriesToPutter(putter Putter, block *types.Block) error {
 			log.Crit("Failed to encode transaction lookup entry", "err", err)
 			return err
 		}
-		if err := putter.Put(txLookupKey(tx.Hash()), data); err != nil {
+		if err := putter.Put(TxLookupKey(tx.Hash()), data); err != nil {
 			log.Crit("Failed to store transaction lookup entry", "err", err)
 			return err
 		}
@@ -748,7 +748,7 @@ func putTxLookupEntriesToPutter(putter Putter, block *types.Block) error {
 // DeleteTxLookupEntry removes all transaction data associated with a hash.
 func (dbm *databaseManager) DeleteTxLookupEntry(hash common.Hash) {
 	db := dbm.getDatabase(TxLookUpEntryDB)
-	db.Delete(txLookupKey(hash))
+	db.Delete(TxLookupKey(hash))
 }
 
 // ReadTransaction retrieves a specific transaction from the database, along with
@@ -882,12 +882,16 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) error {
-	db := dbm.getDatabase(PreimagesDB)
+	batch := dbm.getDatabase(PreimagesDB).NewBatch()
 	for hash, preimage := range preimages {
-		if err := db.Put(preimageKey(hash), preimage); err != nil {
+		if err := batch.Put(preimageKey(hash), preimage); err != nil {
 			log.Crit("Failed to store trie preimage", "err", err)
 			return err
 		}
+	}
+	if err := batch.Write(); err != nil {
+		log.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
+		return err
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
