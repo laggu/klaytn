@@ -248,8 +248,6 @@ func getReceiptStatusFromVMerr(vmerr error) (status uint) {
 		status = types.ReceiptStatusErrContractAddressCollision
 	case vm.ErrCodeStoreOutOfGas:
 		status = types.ReceiptStatusErrCodeStoreOutOfGas
-	case vm.ErrCodeStoreOutOfGas:
-		status = types.ReceiptStatusErrCodeStoreOutOfGas
 	case vm.ErrMaxCodeSizeExceeded:
 		status = types.ReceiptStatuserrMaxCodeSizeExceed
 	case vm.ErrOutOfGas:
