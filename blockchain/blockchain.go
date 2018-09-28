@@ -1018,9 +1018,7 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 
 type TransactionLookup struct {
 	Tx         *types.Transaction
-	BlockHash  common.Hash
-	BlockIndex uint64
-	Index      uint64
+	*database.TxLookupEntry
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
@@ -1177,7 +1175,7 @@ func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
 			log.Crit("Failed to store transaction lookup entry", "err", err)
 			return err
 		}
-		bc.recentTransactions.Add(tx.Hash(), &entry)
+		bc.recentTransactions.Add(tx.Hash(), &TransactionLookup{tx, &entry})
 	}
 	if err := batch.Write(); err != nil {
 		return err
