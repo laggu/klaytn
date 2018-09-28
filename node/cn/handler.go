@@ -677,7 +677,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		// Mark the hashes as present at the remote node
 		// Schedule all the unknown hashes for retrieval
 		for _, block := range announces {
-			p.MarkBlock(block.Hash)
+			p.AddToKnownBlocks(block.Hash)
 
 			if !pm.blockchain.HasBlock(block.Hash, block.Number) {
 				pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
@@ -694,7 +694,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		request.Block.ReceivedFrom = p
 
 		// Mark the peer as owning the block and schedule it for import
-		p.MarkBlock(request.Block.Hash())
+		p.AddToKnownBlocks(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
@@ -733,7 +733,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 			if tx == nil {
 				return errResp(ErrDecode, "transaction %d is nil", i)
 			}
-			p.MarkTransaction(tx.Hash())
+			p.AddToKnownTxs(tx.Hash())
 		}
 		pm.txpool.AddRemotes(txs)
 

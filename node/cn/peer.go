@@ -170,9 +170,9 @@ func (p *peer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
-// MarkBlock marks a block as known for the peer, ensuring that the block will
+// AddToKnownBlocks adds a block to knownBlocks for the peer, ensuring that the block will
 // never be propagated to this particular peer.
-func (p *peer) MarkBlock(hash common.Hash) {
+func (p *peer) AddToKnownBlocks(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known block hash
 	for p.knownBlocks.Size() >= maxKnownBlocks {
 		p.knownBlocks.Pop()
@@ -180,9 +180,9 @@ func (p *peer) MarkBlock(hash common.Hash) {
 	p.knownBlocks.Add(hash)
 }
 
-// MarkTransaction marks a transaction as known for the peer, ensuring that it
+// AddToKnownTxs adds a transaction to knownTxs for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (p *peer) MarkTransaction(hash common.Hash) {
+func (p *peer) AddToKnownTxs(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known transaction hash
 	for p.knownTxs.Size() >= maxKnownTxs {
 		p.knownTxs.Pop()
@@ -201,7 +201,7 @@ func (p *peer) Send(msgcode uint64, data interface{}) error {
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
-		p.MarkTransaction(tx.Hash())
+		p.AddToKnownTxs(tx.Hash())
 	}
 	return p2p.Send(p.rw, TxMsg, txs)
 }
@@ -210,7 +210,7 @@ func (p *peer) AsyncSendTransactions(txs []*types.Transaction) {
 	select {
 	case p.queuedTxs <- txs:
 		for _, tx := range txs {
-			p.MarkTransaction(tx.Hash())
+			p.AddToKnownTxs(tx.Hash())
 		}
 	default:
 		p.Log().Debug("Dropping transaction propagation", "count", len(txs))
