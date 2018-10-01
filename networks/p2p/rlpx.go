@@ -17,6 +17,7 @@
 package p2p
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
@@ -120,6 +121,46 @@ func (t *rlpx) close(err error) {
 	}
 	t.fd.Close()
 }
+
+func (c *rlpx) writeType(myConnType ConnType) error {
+	if !myConnType.Valid() {
+		return errors.New("Connection Type is not valid")
+	}
+	byteW := byte(int(myConnType))
+	if _, err := c.fd.Write([]byte{byteW}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *rlpx) readType() (error, byte) {
+	r := bufio.NewReader(c.fd)
+	byteVal, err := r.ReadByte()
+	if err != nil {
+		return err, 0
+	}
+	return nil, byteVal
+}
+
+func (c *rlpx) doConnTypeHandshake(myConnType ConnType) (ConnType, error) {
+	var e error
+	var b byte
+	werr := make(chan error, 1)
+	go func() { werr <- c.writeType(myConnType) }()
+	if e, b = c.readType(); e != nil {
+		<-werr // make sure the write terminates too
+		return ConnTypeUndefined, e
+	}
+	if e = <-werr; e != nil {
+		return ConnTypeUndefined, e
+	}
+	conntype := ConnType(int(b))
+	if !conntype.Valid() {
+		return ConnTypeUndefined, fmt.Errorf("invalid connection type: %v", conntype)
+	}
+	return conntype, nil
+}
+
 
 func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err error) {
 	// Writing our handshake happens concurrently, we prefer

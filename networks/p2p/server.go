@@ -33,7 +33,6 @@ import (
 	"github.com/ground-x/go-gxplatform/networks/p2p/netutil"
 
 	"github.com/ground-x/go-gxplatform/common"
-	"bufio"
 )
 
 const (
@@ -199,14 +198,13 @@ const (
 	staticDialedConn
 	inboundConn
 	trustedConn
-	skipConnType 			// skip connection handshaking in testing
 )
 
 type ConnType int
 
 
 const (
-	ConnTypeUndefined ConnType = 0
+	ConnTypeUndefined ConnType = -1
 )
 
 
@@ -224,6 +222,7 @@ type conn struct {
 }
 
 type transport interface {
+	doConnTypeHandshake(myConnType ConnType) (ConnType, error)
 	// The two handshakes.
 	doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error)
 	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
@@ -256,55 +255,6 @@ func (ct ConnType) Valid() bool {
 
 func (c *conn) Inbound() bool {
 	return c.flags&inboundConn != 0
-}
-
-// skip connection handshaking in testing
-func (c *conn) skipconntype() bool {
-	return c.flags&skipConnType != 0
-}
-
-func (c *conn) writeType(myConnType ConnType) error {
-	if !myConnType.Valid() {
-		return errors.New("Connection Type is too big")
-	}
-	byteW := byte(int(myConnType))
-	if _, err := c.fd.Write([]byte{byteW}); err != nil {
-		return err;
-	}
-	return nil
-}
-
-func (c *conn) readType() (error, byte) {
-	r := bufio.NewReader(c.fd)
-	byteVal, err := r.ReadByte()
-	//println(fmt.Sprintf("VAL: %d\n", byteVal))
-	if err != nil {
-		return err, 0
-	}
-	return nil, byteVal
-}
-
-func (c *conn) doHandshakeConnType(myConnType ConnType) error {
-	// skip connection handshaking in testing
-	if c.skipconntype() {
-		return nil
-	}
-	var e error
-	var b byte
-	werr := make(chan error, 1)
-	go func() { werr <- c.writeType(myConnType) }()
-	if e, b = c.readType(); e != nil {
-		<-werr // make sure the write terminates too
-		return e
-	}
-	if err := <-werr; err != nil {
-		return err
-	}
-	c.conntype = ConnType(int(b))
-	if !c.conntype.Valid() {
-		return errors.New("Connection received invalid connection type from remote peer")
-	}
-	return nil
 }
 
 func (f connFlag) String() string {
@@ -920,10 +870,9 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *discover.Node) e
 	}
 
 	var err error
-
 	// Run the connection type handshake
-	if err = c.doHandshakeConnType(srv.ConnectionType); err != nil {
-		srv.log.Error("Failed ReadConnType", "addr", c.fd.RemoteAddr(), "conn", c.flags,
+	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
+		srv.log.Error("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
 			"conntype", c.conntype, "err",  err)
 		return err
 	}

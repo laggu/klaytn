@@ -44,6 +44,10 @@ func (c *testTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake, 
 	return &protoHandshake{ID: c.id, Name: "test"}, nil
 }
 
+func (c *testTransport) doConnTypeHandshake(myConnType ConnType) (ConnType, error) {
+	return 1, nil
+}
+
 func (c *testTransport) close(err error) {
 	c.rlpx.fd.Close()
 	c.closeErr = err
@@ -96,7 +100,7 @@ func TestServerListen(t *testing.T) {
 		t.Fatalf("could not dial: %v", err)
 	}
 	c := makeconn(conn, randomID())
-	c.doHandshakeConnType(c.conntype)
+	c.doConnTypeHandshake(c.conntype)
 
 	defer conn.Close()
 
@@ -132,7 +136,7 @@ func TestServerDial(t *testing.T) {
 		}
 
 		c := makeconn(conn, randomID())
-		c.doHandshakeConnType(c.conntype)
+		c.doConnTypeHandshake(c.conntype)
 		accepted <- conn
 	}()
 
@@ -384,40 +388,40 @@ func TestServerSetupConn(t *testing.T) {
 		},
 		{
 			tt:           &setupTransport{id: id, encHandshakeErr: errors.New("read error")},
-			flags:        inboundConn|skipConnType,
+			flags:        inboundConn,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: errors.New("read error"),
 		},
 		{
 			tt:           &setupTransport{id: id},
 			dialDest:     &discover.Node{ID: randomID()},
-			flags:        dynDialedConn|skipConnType,
+			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, phs: &protoHandshake{ID: randomID()}},
 			dialDest:     &discover.Node{ID: id},
-			flags:        dynDialedConn|skipConnType,
+			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, protoHandshakeErr: errors.New("foo")},
 			dialDest:     &discover.Node{ID: id},
-			flags:        dynDialedConn|skipConnType,
+			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: errors.New("foo"),
 		},
 		{
 			tt:           &setupTransport{id: srvid, phs: &protoHandshake{ID: srvid}},
-			flags:        inboundConn|skipConnType,
+			flags:        inboundConn,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: DiscSelf,
 		},
 		{
 			tt:           &setupTransport{id: id, phs: &protoHandshake{ID: id}},
-			flags:        inboundConn|skipConnType,
+			flags:        inboundConn,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: DiscUselessPeer,
 		},
@@ -430,6 +434,7 @@ func TestServerSetupConn(t *testing.T) {
 				MaxPeers:   10,
 				NoDial:     true,
 				Protocols:  []Protocol{discard},
+				ConnectionType: 1,
 			},
 			newTransport: func(fd net.Conn) transport { return test.tt },
 			log:          log.New(),
@@ -459,6 +464,10 @@ type setupTransport struct {
 
 	calls    string
 	closeErr error
+}
+
+func (c *setupTransport) doConnTypeHandshake(myConnType ConnType) (ConnType, error) {
+	return 1, nil
 }
 
 func (c *setupTransport) doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error) {
