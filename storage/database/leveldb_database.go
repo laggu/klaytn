@@ -235,7 +235,7 @@ func (db *levelDB) meter(refresh time.Duration) {
 
 	// Iterate ad infinitum and collect the stats
 hasError:
-	for i := 1; errc == nil && merr == nil; i++ {
+	for i := 1; ; i++ {
 		// Retrieve the database stats
 		stats, err := db.db.GetProperty("leveldb.stats")
 		if err != nil {
@@ -322,7 +322,7 @@ hasError:
 		select {
 		case errc = <-db.quitChan:
 			// Quit requesting, stop hammering the database
-
+			break hasError
 		case <-time.After(refresh):
 			// Timeout, gather a new set of stats
 		}
