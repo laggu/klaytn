@@ -223,20 +223,15 @@ var (
 		Value: cn.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
-	CacheFlag = cli.IntFlag{
-		Name:  "cache",
-		Usage: "Megabytes of memory allocated to internal caching",
-		Value: 1024,
+	LevelDBCacheSizeFlag = cli.IntFlag{
+		Name:  "db.leveldb.cache-size",
+		Usage: "Size of in-memory cache in LevelDB (MiB)",
+		Value: 768,
 	}
-	CacheDatabaseFlag = cli.IntFlag{
-		Name:  "cache.database",
-		Usage: "Percentage of cache memory allowance to use for database io",
-		Value: 75,
-	}
-	CacheGCFlag = cli.IntFlag{
-		Name:  "cache.gc",
-		Usage: "Percentage of cache memory allowance to use for trie pruning",
-		Value: 25,
+	TrieMemoryCacheSizeFlag = cli.IntFlag{
+		Name:  "trie.cache-size",
+		Usage: "Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk",
+		Value: 256,
 	}
 	TrieCacheGenFlag = cli.IntFlag{
 		Name:  "trie-cache-gens",
@@ -968,8 +963,8 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
 	}
 
-	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
-		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
+	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
+		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 	}
 	cfg.DatabaseHandles = makeDatabaseHandles()
 
@@ -978,8 +973,8 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 	}
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 
-	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
-		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
+		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
 	}
 	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
 		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
@@ -1064,8 +1059,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
 	}
 
-	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
-		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
+	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
+		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 	}
 	cfg.DatabaseHandles = makeDatabaseHandles()
 
@@ -1074,8 +1069,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 
-	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
-		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
+		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
 	}
 	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
 		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
@@ -1172,14 +1167,14 @@ func SetupNetwork(ctx *cli.Context) {
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	var (
-		cache   = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
-		handles = makeDatabaseHandles()
+		ldbCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
+		numHandles = makeDatabaseHandles()
 	)
 	name := "chaindata"
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	chainDB, err := stack.OpenDatabase(name, cache, handles)
+	chainDB, err := stack.OpenDatabase(name, ldbCacheSize, numHandles)
 	if err != nil {
 		Fatalf("Could not open database: %v", err)
 	}
@@ -1221,16 +1216,16 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
-	cache := &blockchain.CacheConfig{
-		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
-		TrieNodeLimit: cn.DefaultConfig.TrieCache,
-		TrieTimeLimit: cn.DefaultConfig.TrieTimeout,
+	trieConfig := &blockchain.TrieConfig{
+		Disabled:  ctx.GlobalString(GCModeFlag.Name) == "archive",
+		CacheSize: cn.DefaultConfig.TrieCacheSize,
+		TimeLimit: cn.DefaultConfig.TrieTimeout,
 	}
-	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
-		cache.TrieNodeLimit = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
+		trieConfig.CacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
 	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = blockchain.NewBlockChain(chainDb, cache, config, engine, vmcfg)
+	chain, err = blockchain.NewBlockChain(chainDb, trieConfig, config, engine, vmcfg)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

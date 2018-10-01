@@ -27,12 +27,12 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:     1,
-	LightPeers:    100,
-	DatabaseCache: 768,
-	TrieCache:     256,
-	TrieTimeout:   5 * time.Minute,
-	GasPrice:      big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
+	NetworkId:        1,
+	LightPeers:       100,
+	LevelDBCacheSize: 768,
+	TrieCacheSize:    256,
+	TrieTimeout:      5 * time.Minute,
+	GasPrice:         big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
 
 	TxPool: blockchain.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
@@ -77,8 +77,8 @@ type Config struct {
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
-	DatabaseCache      int
-	TrieCache          int
+	LevelDBCacheSize   int
+	TrieCacheSize      int
 	TrieTimeout        time.Duration
 
 	// Mining-related options

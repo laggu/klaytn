@@ -141,10 +141,10 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 	}
 	var (
-		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		cacheConfig = &blockchain.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
+		vmConfig   = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, TimeLimit: config.TrieTimeout}
 	)
-	gxp.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, gxp.chainConfig, gxp.engine, vmConfig)
+	gxp.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, gxp.chainConfig, gxp.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.DBManager, error) {
-	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
+	db, err := ctx.OpenDatabase(name, config.LevelDBCacheSize, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
 	}

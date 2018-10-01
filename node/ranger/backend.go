@@ -135,10 +135,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 		chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 	}
 	var (
-		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		cacheConfig = &blockchain.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
+		vmConfig   = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, TimeLimit: config.TrieTimeout}
 	)
-	ranger.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, ranger.chainConfig, ranger.engine, vmConfig)
+	ranger.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, ranger.chainConfig, ranger.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (s *Ranger) Coinbase() (eb common.Address, err error) {
 
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.DBManager, error) {
-	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
+	db, err := ctx.OpenDatabase(name, config.LevelDBCacheSize, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
 	}

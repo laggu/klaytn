@@ -52,30 +52,30 @@ type levelDB struct {
 	log log.Logger // Contextual logger tracking the database path
 }
 
-func getLDBOptions(cache, handles int) *opt.Options {
+func getLDBOptions(ldbCacheSize, numHandles int) *opt.Options {
 	return &opt.Options{
-		OpenFilesCacheCapacity: handles,
-		BlockCacheCapacity:     cache / 2 * opt.MiB,
-		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
+		OpenFilesCacheCapacity: numHandles,
+		BlockCacheCapacity:     ldbCacheSize / 2 * opt.MiB,
+		WriteBuffer:            ldbCacheSize / 4 * opt.MiB, // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
 		DisableBufferPool:		true,
 	}
 }
 
-func NewLDBDatabase(file string, cache int, handles int) (*levelDB, error) {
+func NewLDBDatabase(file string, ldbCacheSize, numHandles int) (*levelDB, error) {
 	logger := log.New("database", file)
 
 	// Ensure we have some minimal caching and file guarantees
-	if cache < 16 {
-		cache = 16
+	if ldbCacheSize < 16 {
+		ldbCacheSize = 16
 	}
-	if handles < 16 {
-		handles = 16
+	if numHandles < 16 {
+		numHandles = 16
 	}
-	logger.Info("Allocated cache and file handles", "cache", cache, "handles", handles)
+	logger.Info("Allocated LevelDB with write buffer and file handles", "writeBufferSize", ldbCacheSize, "numHandles", numHandles)
 
 	// Open the db and recover any potential corruptions
-	db, err := leveldb.OpenFile(file, getLDBOptions(cache, handles))
+	db, err := leveldb.OpenFile(file, getLDBOptions(ldbCacheSize, numHandles))
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
 		db, err = leveldb.RecoverFile(file, nil)
 	}
@@ -88,7 +88,6 @@ func NewLDBDatabase(file string, cache int, handles int) (*levelDB, error) {
 		db:  db,
 		log: logger,
 	}, nil
-
 }
 
 func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*levelDB, error) {

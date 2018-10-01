@@ -122,12 +122,12 @@ func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheT
 	return cache
 }
 
-// CacheConfig contains the configuration values for the trie caching/pruning
+// TrieConfig contains the configuration values for the trie caching/pruning
 // that's resident in a blockchain.
-type CacheConfig struct {
-	Disabled      bool          // Whether to disable trie write caching (archive node)
-	TrieNodeLimit int           // Memory limit (MB) at which to flush the current in-memory trie to disk
-	TrieTimeLimit time.Duration // Time limit after which to flush the current in-memory trie to disk
+type TrieConfig struct {
+	Disabled  bool          // Whether to disable trie write caching (archive node)
+	CacheSize int           // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	TimeLimit time.Duration // Time limit after which to flush the current in-memory trie to disk
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -146,7 +146,7 @@ type CacheConfig struct {
 // canonical chain.
 type BlockChain struct {
 	chainConfig *params.ChainConfig // Chain & network configuration
-	cacheConfig *CacheConfig        // Cache configuration for pruning
+	trieConfig  *TrieConfig         // Trie configuration for pruning
 
 	db     database.DBManager // Low level persistent database to store final content in
 	triegc *prque.Prque      // Priority queue mapping block numbers to tries to gc
@@ -196,11 +196,11 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default klaytn validator and
 // Processor.
-func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
-	if cacheConfig == nil {
-		cacheConfig = &CacheConfig{
-			TrieNodeLimit: 256 * 1024 * 1024,
-			TrieTimeLimit: 5 * time.Minute,
+func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+	if trieConfig == nil {
+		trieConfig = &TrieConfig{
+			CacheSize: 256 * 1024 * 1024,
+			TimeLimit: 5 * time.Minute,
 		}
 	}
 	// Initialize DeriveSha implementation
@@ -211,7 +211,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	bc := &BlockChain{
 		chainConfig:  chainConfig,
-		cacheConfig:  cacheConfig,
+		trieConfig:   trieConfig,
 		db:           db,
 		triegc:       prque.New(),
 		stateCache:   state.NewDatabase(db),
@@ -759,7 +759,7 @@ func (bc *BlockChain) Stop() {
 	//  - HEAD:     So we don't need to reprocess any blocks in the general case
 	//  - HEAD-1:   So we don't do large reorgs if our HEAD becomes an uncle
 	//  - HEAD-127: So we have a hard limit on the number of blocks reexecuted
-	if !bc.cacheConfig.Disabled {
+	if !bc.trieConfig.Disabled {
 		triedb := bc.stateCache.TrieDB()
 
 		for _, offset := range []uint64{0, 1, triesInMemory - 1} {
@@ -1057,7 +1057,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	trieDB := bc.stateCache.TrieDB()
 
 	// If we're running an archive node, always flush
-	if bc.cacheConfig.Disabled {
+	if bc.trieConfig.Disabled {
 		if err := trieDB.Commit(root, false); err != nil {
 			return NonStatTy, err
 		}
@@ -1070,7 +1070,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			// If we exceeded our memory allowance, flush matured singleton nodes to disk
 			var (
 				nodes, imgs = trieDB.Size()
-				limit       = common.StorageSize(bc.cacheConfig.TrieNodeLimit) * 1024 * 1024
+				limit       = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
 			)
 			if nodes > limit || imgs > 4*1024*1024 {
 				// TODO-GX error from Cap is ignored.
@@ -1081,11 +1081,11 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			chosen := header.Number.Uint64()
 
 			// If we exceeded out time allowance, flush an entire statedb to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit {
+			if bc.gcproc > bc.trieConfig.TimeLimit {
 				// If we're exceeding limits but haven't reached a large enough memory gap,
 				// warn the user that the system is becoming unstable.
-				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {
-					log.Info("State in memory for too long, committing", "time", bc.gcproc, "allowance", bc.cacheConfig.TrieTimeLimit, "optimum", float64(chosen-lastWrite)/triesInMemory)
+				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.trieConfig.TimeLimit {
+					log.Info("State in memory for too long, committing", "time", bc.gcproc, "allowance", bc.trieConfig.TimeLimit, "optimum", float64(chosen-lastWrite)/triesInMemory)
 				}
 				// Flush an entire statedb and restart the counters
 				// TODO-GX error from Commit is ignored.

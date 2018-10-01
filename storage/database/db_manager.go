@@ -169,7 +169,7 @@ func NewMemoryDBManager() (DBManager) {
 	return &dbm
 }
 
-func NewDBManager(dir string, dbType string, cache, handles int) (DBManager, error) {
+func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManager, error) {
 	dbm := databaseManager{make([]Database, databaseEntryTypeSize, databaseEntryTypeSize), false}
 
 	// TODO-GX Should be replaced by initialization function with mapping information.
@@ -177,14 +177,14 @@ func NewDBManager(dir string, dbType string, cache, handles int) (DBManager, err
 	var err error
 	switch dbType {
 	case LEVELDB:
-		db, err = NewLDBDatabase(dir, cache, handles)
+		db, err = NewLDBDatabase(dir, ldbCacheSize, handles)
 		db.Meter("klay/db/chaindata/")
 	case BADGER:
 		db, err = NewBGDatabase(dir)
 	case MEMDB:
 		db = NewMemDatabase()
 	default:
-		db, err = NewLDBDatabase(dir, cache, handles)
+		db, err = NewLDBDatabase(dir, ldbCacheSize, handles)
 		log.Warn("database type is not set, fall back to default LevelDB")
 	}
 

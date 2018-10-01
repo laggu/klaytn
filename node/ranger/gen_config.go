@@ -25,8 +25,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NoPruning               bool
 		SkipBcVersionCheck      bool `toml:"-"`
 		DatabaseHandles         int  `toml:"-"`
-		DatabaseCache           int
-		TrieCache               int
+		LevelDBCacheSize        int
+		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		Gxbase                  common.Address `toml:",omitempty"`
 		MinerThreads            int            `toml:",omitempty"`
@@ -45,8 +45,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.NoPruning = c.NoPruning
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.DatabaseHandles = c.DatabaseHandles
-	enc.DatabaseCache = c.DatabaseCache
-	enc.TrieCache = c.TrieCache
+	enc.LevelDBCacheSize = c.LevelDBCacheSize
+	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.Gxbase = c.Gxbase
 	enc.MinerThreads = c.MinerThreads
@@ -69,8 +69,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NoPruning               *bool
 		SkipBcVersionCheck      *bool `toml:"-"`
 		DatabaseHandles         *int  `toml:"-"`
-		DatabaseCache           *int
-		TrieCache               *int
+		LevelDBCacheSize        *int
+		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		Gxbase                  *common.Address `toml:",omitempty"`
 		MinerThreads            *int            `toml:",omitempty"`
@@ -104,11 +104,11 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.DatabaseHandles != nil {
 		c.DatabaseHandles = *dec.DatabaseHandles
 	}
-	if dec.DatabaseCache != nil {
-		c.DatabaseCache = *dec.DatabaseCache
+	if dec.LevelDBCacheSize != nil {
+		c.LevelDBCacheSize = *dec.LevelDBCacheSize
 	}
-	if dec.TrieCache != nil {
-		c.TrieCache = *dec.TrieCache
+	if dec.TrieCacheSize != nil {
+		c.TrieCacheSize = *dec.TrieCacheSize
 	}
 	if dec.TrieTimeout != nil {
 		c.TrieTimeout = *dec.TrieTimeout

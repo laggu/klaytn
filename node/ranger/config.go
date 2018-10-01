@@ -26,13 +26,13 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:     1,
-	DatabaseCache: 768,
-	TrieCache:     256,
-	TrieTimeout:   5 * time.Minute,
-	GasPrice:      big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
-	Istanbul: *istanbul.DefaultConfig,
-	ConsensusURL:  "ws://localhost:8546",
+	NetworkId:        1,
+	LevelDBCacheSize: 768,
+	TrieCacheSize:    256,
+	TrieTimeout:      5 * time.Minute,
+	GasPrice:         big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
+	Istanbul:         *istanbul.DefaultConfig,
+	ConsensusURL:     "ws://localhost:8546",
 }
 
 func init() {
@@ -64,8 +64,8 @@ type Config struct {
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
-	DatabaseCache      int
-	TrieCache          int
+	LevelDBCacheSize   int
+	TrieCacheSize      int
 	TrieTimeout        time.Duration
 
 	// Mining-related options
