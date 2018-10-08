@@ -132,6 +132,11 @@ func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 }
 
 func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Address, []common.Address, error) {
+	blockNumber := block.NumberU64()
+	if blockNumber == 0 {
+		return common.Address{}, []common.Address{}, nil
+	}
+
 	// get the proposer of this block.
 	proposer, err := ecrecover(block.Header())
 	if err != nil {
@@ -139,7 +144,6 @@ func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Ad
 	}
 
 	// get the snapshot of the previous block.
-	blockNumber := block.NumberU64()
 	parentHash := block.ParentHash()
 	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
 	if err != nil {
