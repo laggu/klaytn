@@ -572,6 +572,25 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	return nil
 }
 
+// getMaxTxFromQueue finds a queued transaction in the queue, which has the largest nonce.
+// It returns nil when given tx is found in the queue. It returns given tx when there is no
+// tx which has nonce grater than given tx.
+func (pool *TxPool) getMaxTxFromQueue(tx *types.Transaction, from common.Address) (*types.Transaction) {
+	queuedTxs := pool.queue[from].txs.items
+	var maxTx *types.Transaction
+	for _, t := range queuedTxs {
+		if t.Nonce() == tx.Nonce() {
+			return nil
+		}
+		if maxTx == nil {
+			maxTx = t
+		} else if t.Nonce() > maxTx.Nonce() {
+			maxTx = t
+		}
+	}
+	return maxTx
+}
+
 // add validates a transaction and inserts it into the non-executable queue for
 // later pending promotion and execution. If the transaction is a replacement for
 // an already pending or queued one, it overwrites the previous and returns this
@@ -582,10 +601,31 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If pool is already full, we refuse to add tx to pool.
+	// However, when given tx has missing nonce, which is smaller than max nonce,
+	// remove a tx with max nonce and insert the given tx.
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
-		log.Trace("Rejecting a transaction due to full txpool", "hash", tx.Hash())
-		refusedTxCounter.Inc(1)
-		return false, fmt.Errorf("txpool is full: %d", uint64(len(pool.all)))
+		from, _ := types.Sender(pool.signer, tx)
+		if pool.queue[from] == nil {
+			log.Trace("Rejecting a transaction because TxPool is full", "hash", tx.Hash())
+			refusedTxCounter.Inc(1)
+			return false, fmt.Errorf("txpool is full: %d", uint64(len(pool.all)))
+		}
+
+		maxTx := pool.getMaxTxFromQueue(tx, from)
+		if maxTx == nil {
+			log.Trace("Rejecting a transaction because TxPool is full and the given transaction already exists in TxPool", "hash", tx.Hash())
+			refusedTxCounter.Inc(1)
+			return false, fmt.Errorf("txpool is full and the tx already exists in txpool: %d", uint64(len(pool.all)))
+		}
+
+		if maxTx.Nonce() > tx.Nonce() {
+			pool.removeTx(maxTx.Hash(), true)
+			log.Info("Removed a tx with the largest nonce to insert a new tx with smaller nonce", "account", from, "new nonce", tx.Nonce(), "removed nonce", maxTx.Nonce())
+		} else {
+			log.Trace("Rejecting a transaction because TxPool is full and the given transaction has the largest nonce", "hash", tx.Hash())
+			refusedTxCounter.Inc(1)
+			return false, fmt.Errorf("txpool is full and the tx has the largest nonce: %d", uint64(len(pool.all)))
+		}
 	}
 
 	// If the transaction is already known, discard it
