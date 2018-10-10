@@ -855,35 +855,32 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 }
 
 func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) {
-	// TODO-GX resend max transaction
-	var threshold = 3000
 	var cntxset = make(map[*peer]types.Transactions)
 	var txset = make(map[*peer]types.Transactions)
 	for _, tx := range txs {
+		// TODO-GX drop or missing tx
 		if resend {
-			threshold--
-			if threshold == 0 {
-				break
-			}
-		}
-		peers := pm.peers.CNWithoutTx(tx.Hash())
-		if len(peers) >  0 {
-			// TODO-GX optimize pickSize or propagation way
-			peers = pm.subPeers(peers, 2)
-			for _, peer := range peers {
-				cntxset[peer] = append(cntxset[peer], tx)
-			}
-			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
-		}
-
-		// TODO-KLAYTN drop or missing tx
-		if resend {
+			var peers []*peer
 			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
-				peers = pm.peers.TypePeersWithTx(tx.Hash(), node.BRIDGENODE)
+				peers = pm.peers.TypePeers(node.BRIDGENODE)
 			} else {
-				peers = pm.peers.TypePeersWithTx(tx.Hash(), node.CONSENSUSNODE)
+				peers = pm.peers.TypePeers(node.CONSENSUSNODE)
+			}
+            // TODO-GX need to tuning pickSize. currently 3 is for availability and efficiency
+			peers = pm.subPeers(peers, 3)
+			for _, peer := range peers {
+				txset[peer] = append(txset[peer], tx)
 			}
 		} else {
+			peers := pm.peers.CNWithoutTx(tx.Hash())
+			if len(peers) >  0 {
+				// TODO-GX optimize pickSize or propagation way
+				peers = pm.subPeers(peers, 2)
+				for _, peer := range peers {
+					cntxset[peer] = append(cntxset[peer], tx)
+				}
+				log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+			}
 			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
 				peers = pm.peers.TypePeersWithoutTx(tx.Hash(), node.BRIDGENODE)
 				for _, peer := range peers {
@@ -891,27 +888,37 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 				}
 			}
 			peers = pm.peers.TypePeersWithoutTx(tx.Hash(), pm.nodetype)
+
+			for _, peer := range peers {
+				txset[peer] = append(txset[peer], tx)
+			}
+			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 		}
-		for _, peer := range peers {
-			txset[peer] = append(txset[peer], tx)
-		}
-		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 
-	for peer, txs := range cntxset {
-		// TODO-GX Handle network-failed txs
-		//peer.AsyncSendTransactions(txs)
-		err := peer.SendTransactions(txs)
-		if err != nil {
-			log.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+	if resend {
+		for peer, txs := range txset {
+			err := peer.ReSendTransactions(txs)
+			if err != nil {
+				log.Error("peer.ReSendTransactions", "peer", peer.addr, "numTxs", len(txs))
+			}
 		}
-	}
-	for peer, txs := range txset {
-		err := peer.SendTransactions(txs)
-		if err != nil {
-			log.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+	} else {
+		for peer, txs := range cntxset {
+			// TODO-GX Handle network-failed txs
+			//peer.AsyncSendTransactions(txs)
+			err := peer.SendTransactions(txs)
+			if err != nil {
+				log.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+			}
 		}
-		//peer.AsyncSendTransactions(txs)
+		for peer, txs := range txset {
+			err := peer.SendTransactions(txs)
+			if err != nil {
+				log.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+			}
+			//peer.AsyncSendTransactions(txs)
+		}
 	}
 }
 

@@ -33,6 +33,8 @@ const (
 	chainHeadChanSize = 10
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+	// maxResendSize is the size of resending transactions to peer in order to prevent the txs from missing.
+	maxResendTxSize = 1000
 )
 
 var (
@@ -345,9 +347,30 @@ func (self *worker) wait() {
 
 			// TODO-KLAYTN drop or missing tx
 			if self.nodetype != node.CONSENSUSNODE {
-				//if self.nodetype == node.RANGERNODE || self.nodetype == node.GENERALNODE {
-					self.gxp.ReBroadcastTxs(result.Task.Transactions())
-				//}
+				pending, err := self.gxp.TxPool().Pending()
+				if err != nil {
+					log.Error("Failed to fetch pending transactions", "err", err)
+					continue
+				}
+
+				if len(pending) > 0 {
+					accounts := len(pending)
+					resendTxSize := maxResendTxSize / accounts
+					if resendTxSize == 0 {
+						resendTxSize = 1
+					}
+					var resendTxs []*types.Transaction
+					for _, sortedTxs := range pending {
+						if len(sortedTxs) >= resendTxSize {
+							resendTxs = append(resendTxs, sortedTxs[:resendTxSize]...)
+						} else {
+							resendTxs = append(resendTxs, sortedTxs...)
+						}
+					}
+					if resendTxs != nil {
+						self.gxp.ReBroadcastTxs(resendTxs)
+					}
+				}
 				continue
 			}
 

@@ -23,7 +23,7 @@ var (
 )
 
 const (
-	maxKnownTxs      = 32768 * 1000 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownTxs      = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks   = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 
 	// maxQueuedTxs is the maximum number of transaction lists to queue up before
@@ -173,21 +173,25 @@ func (p *peer) SetHead(hash common.Hash, td *big.Int) {
 // AddToKnownBlocks adds a block to knownBlocks for the peer, ensuring that the block will
 // never be propagated to this particular peer.
 func (p *peer) AddToKnownBlocks(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known block hash
-	for p.knownBlocks.Size() >= maxKnownBlocks {
-		p.knownBlocks.Pop()
+	if !p.knownBlocks.Has(hash) {
+		// If we reached the memory allowance, drop a previously known block hash
+		for p.knownBlocks.Size() >= maxKnownBlocks {
+			p.knownBlocks.Pop()
+		}
+		p.knownBlocks.Add(hash)
 	}
-	p.knownBlocks.Add(hash)
 }
 
 // AddToKnownTxs adds a transaction to knownTxs for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (p *peer) AddToKnownTxs(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known transaction hash
-	for p.knownTxs.Size() >= maxKnownTxs {
-		p.knownTxs.Pop()
+	if !p.knownTxs.Has(hash) {
+		// If we reached the memory allowance, drop a previously known transaction hash
+		for p.knownTxs.Size() >= maxKnownTxs {
+			p.knownTxs.Pop()
+		}
+		p.knownTxs.Add(hash)
 	}
-	p.knownTxs.Add(hash)
 }
 
 // istanbul BFT
@@ -203,6 +207,11 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
 		p.AddToKnownTxs(tx.Hash())
 	}
+	return p2p.Send(p.rw, TxMsg, txs)
+}
+
+// ReSendTransaction sends txs to a peer in order to prevent the txs from missing.
+func (p *peer) ReSendTransactions(txs types.Transactions) error {
 	return p2p.Send(p.rw, TxMsg, txs)
 }
 
@@ -588,6 +597,18 @@ func (ps *peerSet) CNWithoutBlock(hash common.Hash) []*peer {
 	list := make([]*peer, 0, len(ps.cnpeers))
 	for _, p := range ps.cnpeers {
 		if !p.knownBlocks.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+func (ps *peerSet) TypePeers(nodetype p2p.ConnType) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if p.ConnType() == nodetype {
 			list = append(list, p)
 		}
 	}
