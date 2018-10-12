@@ -290,7 +290,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				th.SetThreads(threads)
 			}
 		}
-		if err := gxp.StartMining(true); err != nil {
+		// TODO-GX disable accept tx before finishing sync.
+		if err := gxp.StartMining(false); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	} else {
