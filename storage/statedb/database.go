@@ -130,10 +130,11 @@ func (n rawShortNode) fstring(ind string) string     { panic("this should never 
 // memory database write layer.
 type cachedNode struct {
 	node node   // Cached collapsed trie node, or raw rlp data
+	// TODO-GX: need to change data type of this if we increase the code size limit
 	size uint16 // Byte size of the useful cached data
 
-	parents  uint16                 // Number of live nodes referencing this one
-	children map[common.Hash]uint16 // External children referenced by this node
+	parents  uint64                 // Number of live nodes referencing this one
+	children map[common.Hash]uint64 // External children referenced by this node
 
 	flushPrev common.Hash // Previous node in the flush-list
 	flushNext common.Hash // Next node in the flush-list
@@ -419,7 +420,7 @@ func (db *Database) reference(child common.Hash, parent common.Hash) {
 	}
 	// If the reference already exists, only duplicate for roots
 	if db.nodes[parent].children == nil {
-		db.nodes[parent].children = make(map[common.Hash]uint16)
+		db.nodes[parent].children = make(map[common.Hash]uint64)
 	} else if _, ok = db.nodes[parent].children[child]; ok && parent != (common.Hash{}) {
 		return
 	}
