@@ -53,6 +53,10 @@ var (
 		Usage: "pprof HTTP server listening interface",
 		Value: "127.0.0.1",
 	}
+	memprofileFlag = cli.StringFlag{
+		Name:  "memprofile",
+		Usage: "Write memory profile to the given file",
+	}
 	memprofilerateFlag = cli.IntFlag{
 		Name:  "memprofilerate",
 		Usage: "Turn on memory profiling with the given rate",
@@ -76,7 +80,8 @@ var (
 var Flags = []cli.Flag{
 	verbosityFlag, vmoduleFlag, backtraceAtFlag, debugFlag,
 	pprofFlag, pprofAddrFlag, pprofPortFlag,
-	memprofilerateFlag, blockprofilerateFlag, cpuprofileFlag, traceFlag,
+	memprofileFlag, memprofilerateFlag,
+	blockprofilerateFlag, cpuprofileFlag, traceFlag,
 }
 
 var glogger *log.GlogHandler
@@ -113,6 +118,7 @@ func Setup(ctx *cli.Context) error {
 			return err
 		}
 	}
+	Handler.memFile = ctx.GlobalString(memprofileFlag.Name)
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
@@ -138,6 +144,9 @@ func StartPProf(address string) {
 // Exit stops all running profiles, flushing their output to the
 // respective file.
 func Exit() {
+	if Handler.memFile != "" {
+		Handler.WriteMemProfile(Handler.memFile)
+	}
 	Handler.StopCPUProfile()
 	Handler.StopGoTrace()
 }

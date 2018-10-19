@@ -25,6 +25,7 @@ type HandlerT struct {
 	mu        sync.Mutex
 	cpuW      io.WriteCloser
 	cpuFile   string
+	memFile   string
 	traceW    io.WriteCloser
 	traceFile string
 }
