@@ -5,6 +5,7 @@ import (
 	"os"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/fjl/memsize/memsizeui"
 	colorable "github.com/mattn/go-colorable"
