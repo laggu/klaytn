@@ -759,12 +759,17 @@ func (bc *BlockChain) Stop() {
 	//  - HEAD:     So we don't need to reprocess any blocks in the general case
 	//  - HEAD-1:   So we don't do large reorgs if our HEAD becomes an uncle
 	//  - HEAD-127: So we have a hard limit on the number of blocks reexecuted
-	if !bc.trieConfig.Disabled {
+	if !bc.isArchiveMode() {
 		triedb := bc.stateCache.TrieDB()
 
 		for _, offset := range []uint64{0, 1, triesInMemory - 1} {
 			if number := bc.CurrentBlock().NumberU64(); number > offset {
 				recent := bc.GetBlockByNumber(number - offset)
+
+				if recent == nil {
+					log.Error("Failed to find recent block from persistent", "blockNumber", number - offset)
+					continue
+				}
 
 				log.Info("Writing cached state to disk", "block", recent.Number(), "hash", recent.Hash(), "root", recent.Root())
 				if err := triedb.Commit(recent.Root(), true); err != nil {
@@ -1011,7 +1016,10 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), td); err != nil {
 		return err
 	}
-	bc.db.WriteBlock(block)
+
+	if err := bc.db.WriteBlock(block); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -1057,7 +1065,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	trieDB := bc.stateCache.TrieDB()
 
 	// If we're running an archive node, always flush
-	if bc.trieConfig.Disabled {
+	if bc.isArchiveMode() {
 		if err := trieDB.Commit(root, false); err != nil {
 			return NonStatTy, err
 		}
@@ -1820,4 +1828,10 @@ func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) event.Su
 // SubscribeLogsEvent registers a subscription of []*types.Log.
 func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
+}
+
+// isArchiveMode returns whether current blockchain is in archiving mode or not.
+// trieConfig.Disabled means trie caching is diabled.
+func (bc* BlockChain) isArchiveMode() bool {
+	return bc.trieConfig.Disabled
 }
