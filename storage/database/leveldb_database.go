@@ -17,8 +17,6 @@
 package database
 
 import (
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -31,7 +29,6 @@ import (
 
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
-	"fmt"
 )
 
 var OpenFileLimit = 64
@@ -184,17 +181,18 @@ func (db *levelDB) LDB() *leveldb.DB {
 
 // Meter configures the database metrics collectors and
 func (db *levelDB) Meter(prefix string) {
+	// Initialize all the metrics collector at the requested prefix
+	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compaction/time", nil)
+	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
+	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
+	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
+	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
+
 	// Short circuit metering if the metrics system is disabled
+	// Above meters are initialized by NilMeter if metrics.Enabled == false
 	if !metrics.Enabled {
 		return
 	}
-
-	// Initialize all the metrics collector at the requested prefix
-	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compact/time", nil)
-	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compact/input", nil)
-	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compact/output", nil)
-	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
-	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
 
 	// Create a quit channel for the periodic collector and run it
 	db.quitLock.Lock()
@@ -219,103 +217,52 @@ func (db *levelDB) Meter(prefix string) {
 // This is how the iostats look like (currently):
 // Read(MB):3895.04860 Write(MB):3654.64712
 func (db *levelDB) meter(refresh time.Duration) {
-	// Create the counters to store current and previous compaction values
-	compactions := make([][]float64, 2)
-	for i := 0; i < 2; i++ {
-		compactions[i] = make([]float64, 3)
-	}
-	// Create database for iostats.
-	var iostats [2]float64
+	s := new(leveldb.DBStats)
+
+	// Compaction related stats
+	var prevCompRead, prevCompWrite int64
+	var prevCompTime time.Duration
+
+	// IO related stats
+	var prevRead, prevWrite uint64
 
 	var (
 		errc chan error
 		merr error
 	)
 
-	// Iterate ad infinitum and collect the stats
+	// Keep collecting stats unless an error occurs
 hasError:
-	for i := 1; ; i++ {
-		// Retrieve the database stats
-		stats, err := db.db.GetProperty("leveldb.stats")
-		if err != nil {
-			db.log.Error("Failed to read database stats", "err", err)
-			merr = err
-			break
-		}
-		// Find the compaction table, skip the header
-		lines := strings.Split(stats, "\n")
-		for len(lines) > 0 && strings.TrimSpace(lines[0]) != "Compactions" {
-			lines = lines[1:]
-		}
-		if len(lines) <= 3 {
-			db.log.Error("Compaction table not found")
-			merr = errors.New("compaction table not found")
-			break
-		}
-		lines = lines[3:]
-
-		// Iterate over all the table rows, and accumulate the entries
-		for j := 0; j < len(compactions[i%2]); j++ {
-			compactions[i%2][j] = 0
-		}
-		for _, line := range lines {
-			parts := strings.Split(line, "|")
-			if len(parts) != 6 {
-				break
-			}
-			for idx, counter := range parts[3:] {
-				value, err := strconv.ParseFloat(strings.TrimSpace(counter), 64)
-				if err != nil {
-					db.log.Error("Compaction entry parsing failed", "err", err)
-					merr = err
-					break hasError
-				}
-				compactions[i%2][idx] += value
-			}
-		}
-		// Update all the requested meters
-		if db.compTimeMeter != nil {
-			db.compTimeMeter.Mark(int64((compactions[i%2][0] - compactions[(i-1)%2][0]) * 1000 * 1000 * 1000))
-		}
-		if db.compReadMeter != nil {
-			db.compReadMeter.Mark(int64((compactions[i%2][1] - compactions[(i-1)%2][1]) * 1024 * 1024))
-		}
-		if db.compWriteMeter != nil {
-			db.compWriteMeter.Mark(int64((compactions[i%2][2] - compactions[(i-1)%2][2]) * 1024 * 1024))
-		}
-
-		// Retrieve the database iostats.
-		ioStats, err := db.db.GetProperty("leveldb.iostats")
-		if err != nil {
-			db.log.Error("Failed to read database iostats", "err", err)
-			merr = err
+	for {
+		merr = db.db.Stats(s)
+		if merr != nil {
 			break
 		}
 
-		var readSize, writeSize float64
-		parts := strings.Split(ioStats, " ")
-		if len(parts) < 2 {
-			db.log.Error("Bad syntax of ioStats", "ioStats", ioStats)
-			merr = fmt.Errorf("bad syntax of ioStats %s", ioStats)
-			break
+		// Compaction related stats
+		var currCompRead, currCompWrite int64
+		var currCompTime time.Duration
+		for i := 0; i < len(s.LevelDurations); i++ {
+			currCompTime  += s.LevelDurations[i]
+			currCompRead  += s.LevelRead[i]
+			currCompWrite += s.LevelWrite[i]
 		}
-		if n, err := fmt.Sscanf(parts[0], "Read(MB):%f", &readSize); n != 1 || err != nil {
-			db.log.Error("Bad syntax of read entry", "entry", parts[0])
-			merr = err
-			break
-		}
-		if n, err := fmt.Sscanf(parts[1], "Write(MB):%f", &writeSize); n != 1 || err != nil {
-			db.log.Error("Bad syntax of write entry", "entry", parts[1])
-			merr = err
-			break
-		}
-		if db.diskReadMeter != nil {
-			db.diskReadMeter.Mark(int64((readSize - iostats[0]) * 1024 * 1024))
-		}
-		if db.diskWriteMeter != nil {
-			db.diskWriteMeter.Mark(int64((writeSize - iostats[1]) * 1024 * 1024))
-		}
-		iostats[0], iostats[1] = readSize, writeSize
+
+		db.compTimeMeter.Mark(int64(currCompTime.Seconds() - prevCompTime.Seconds()))
+		db.compReadMeter.Mark(int64(currCompRead - prevCompRead))
+		db.compWriteMeter.Mark(int64(currCompWrite - prevCompWrite))
+
+		prevCompTime = currCompTime
+		prevCompRead = currCompRead
+		prevCompWrite = currCompWrite
+
+		// IO related stats
+		currRead, currWrite := s.IORead, s.IOWrite
+
+		db.diskReadMeter.Mark(int64(currRead - prevRead))
+		db.diskWriteMeter.Mark(int64(currWrite - prevWrite))
+
+		prevRead, prevWrite = currRead, currWrite
 
 		// Sleep a bit, then repeat the stats collection
 		select {
