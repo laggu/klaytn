@@ -488,14 +488,24 @@ func (self *StateDB) Copy() *StateDB {
 		}
 	}
 
-	for hash, logs := range self.logs {
-		state.logs[hash] = make([]*types.Log, len(logs))
-		copy(state.logs[hash], logs)
-	}
+	deepCopyLogs(self, state)
+
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage
 	}
 	return state
+}
+
+// deepCopyLogs deep-copies StateDB.logs from the left to the right.
+func deepCopyLogs(from, to *StateDB) {
+	for hash, logs := range from.logs {
+		copied := make([]*types.Log, len(logs))
+		for i, log := range logs {
+			copied[i] = new(types.Log)
+			*copied[i] = *log
+		}
+		to.logs[hash] = copied
+	}
 }
 
 // Snapshot returns an identifier for the current revision of the state.
