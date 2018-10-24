@@ -39,7 +39,7 @@ type IDeriveSha interface {
 var deriveShaObj IDeriveSha = nil
 
 func InitDeriveSha(i IDeriveSha) {
-	deriveShaObj = i;
+	deriveShaObj = i
 
 	// reset EmptyRootHash.
 	EmptyRootHash = DeriveSha(Transactions{})
