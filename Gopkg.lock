@@ -581,6 +581,14 @@
   revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
 
 [[projects]]
+  branch = "v2"
+  digest = "1:3d3f9391ab615be8655ae0d686a1564f3fec413979bb1aaf018bac1ec1bb1cc7"
+  name = "gopkg.in/natefinch/npipe.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6"
+
+[[projects]]
   digest = "1:9935525a8c49b8434a0b0a54e1980e94a6fae73aaff45c5d33ba8dff69de123e"
   name = "gopkg.in/sourcemap.v1"
   packages = [
@@ -659,6 +667,7 @@
     "gopkg.in/check.v1",
     "gopkg.in/fatih/set.v0",
     "gopkg.in/karalabe/cookiejar.v2/collections/prque",
+    "gopkg.in/natefinch/npipe.v2",
     "gopkg.in/urfave/cli.v1",
   ]
   solver-name = "gps-cdcl"

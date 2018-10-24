@@ -1,3 +1,5 @@
+// +build darwin,!ios freebsd linux,!arm64 netbsd solaris
+
 package keystore
 
 import (
