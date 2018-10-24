@@ -65,7 +65,7 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
-// Header represents a block header in the Ethereum blockchain.
+// Header represents a block header in the Klaytn blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
@@ -150,7 +150,7 @@ type Body struct {
 	Uncles       []*Header
 }
 
-// Block represents an entire block in the Ethereum blockchain.
+// Block represents an entire block in the Klaytn blockchain.
 type Block struct {
 	header       *Header
 	uncles       []*Header
@@ -265,7 +265,7 @@ func CopyHeader(h *Header) *Header {
 	return &cpy
 }
 
-// DecodeRLP decodes the Ethereum
+// DecodeRLP decodes the Klaytn
 func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	var eb extblock
 	_, size, _ := s.Kind()
@@ -277,7 +277,7 @@ func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// EncodeRLP serializes b into the Ethereum RLP block format.
+// EncodeRLP serializes b into the Klaytn RLP block format.
 func (b *Block) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, extblock{
 		Header: b.header,

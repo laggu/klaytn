@@ -346,8 +346,8 @@ type PrivateDebugAPI struct {
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related
 // private debug methods of the GXP service.
-func NewPrivateDebugAPI(config *params.ChainConfig, eth *GXP) *PrivateDebugAPI {
-	return &PrivateDebugAPI{config: config, gxp: eth}
+func NewPrivateDebugAPI(config *params.ChainConfig, gxp *GXP) *PrivateDebugAPI {
+	return &PrivateDebugAPI{config: config, gxp: gxp}
 }
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
