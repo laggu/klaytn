@@ -312,6 +312,12 @@ func (db *Database) insert(hash common.Hash, blob []byte, node node) {
 	if db.oldest == (common.Hash{}) {
 		db.oldest, db.newest = hash, hash
 	} else {
+		if _, ok := db.nodes[db.newest]; !ok {
+			missingNewest := db.newest
+			db.newest = db.getLastNodeHashInFlushList()
+			db.nodes[db.newest].flushNext = common.Hash{}
+			log.Error("Found a newest node for missingNewest", "oldNewest", missingNewest, "newNewest", db.newest)
+		}
 		db.nodes[db.newest].flushNext, db.newest = hash, hash
 	}
 	db.nodesSize += common.StorageSize(common.HashLength + entry.size)
@@ -474,12 +480,7 @@ func (db *Database) dereference(child common.Hash, parent common.Hash) {
 	}
 	if node.parents == 0 {
 		// Remove the node from the flush-list
-		if child == db.oldest {
-			db.oldest = node.flushNext
-		} else {
-			db.nodes[node.flushPrev].flushNext = node.flushNext
-			db.nodes[node.flushNext].flushPrev = node.flushPrev
-		}
+		db.removeNodeInFlushList(child)
 		// Dereference all children and delete the node
 		for _, hash := range node.childs() {
 			db.dereference(hash, child)
@@ -566,6 +567,8 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	}
 	if db.oldest != (common.Hash{}) {
 		db.nodes[db.oldest].flushPrev = common.Hash{}
+	} else {
+		db.newest = common.Hash{}
 	}
 	db.flushnodes += uint64(nodes - len(db.nodes))
 	db.flushsize += nodeSize - db.nodesSize
@@ -717,12 +720,7 @@ func (db *Database) uncache(hash common.Hash) {
 		return
 	}
 	// Node still exists, remove it from the flush-list
-	if hash == db.oldest {
-		db.oldest = node.flushNext
-	} else {
-		db.nodes[node.flushPrev].flushNext = node.flushNext
-		db.nodes[node.flushNext].flushPrev = node.flushPrev
-	}
+	db.removeNodeInFlushList(hash)
 	// Uncache the node's subtries and remove the node itself too
 	for _, child := range node.childs() {
 		db.uncache(child)
@@ -784,4 +782,46 @@ func (db *Database) accumulate(hash common.Hash, reachable map[common.Hash]struc
 	for _, child := range node.childs() {
 		db.accumulate(child, reachable)
 	}
+}
+
+func (db *Database) removeNodeInFlushList(hash common.Hash) {
+	node, ok := db.nodes[hash]
+	if !ok {
+		return
+	}
+
+	if hash == db.oldest && hash == db.newest {
+		db.oldest = common.Hash{}
+		db.newest = common.Hash{}
+	} else if hash == db.oldest {
+		db.oldest = node.flushNext
+		db.nodes[node.flushNext].flushPrev  = common.Hash{}
+	} else if hash == db.newest {
+		db.newest = node.flushPrev
+		db.nodes[node.flushPrev].flushNext = common.Hash{}
+	} else {
+		db.nodes[node.flushPrev].flushNext = node.flushNext
+		db.nodes[node.flushNext].flushPrev = node.flushPrev
+	}
+}
+
+func (db *Database) getLastNodeHashInFlushList() common.Hash {
+	var lastNodeHash common.Hash
+	nodeHash := db.oldest
+	for {
+		if _, ok := db.nodes[nodeHash]; ok{
+			lastNodeHash = nodeHash
+		} else {
+			log.Debug("not found next noode in map of flush list")
+			break
+		}
+
+		if db.nodes[nodeHash].flushNext != (common.Hash{}) {
+			nodeHash = db.nodes[nodeHash].flushNext
+		} else {
+			log.Debug("found last noode in map of flush list")
+			break
+		}
+	}
+	return lastNodeHash
 }
