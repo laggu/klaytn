@@ -834,7 +834,7 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 		peers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(peers) == 0 {
 			log.Trace("No peer to broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
-			return
+			continue
 		}
 
 		// TODO-GX Code Check
