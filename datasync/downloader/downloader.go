@@ -46,6 +46,8 @@ var (
 	fsHeaderForceVerify    = 24              // Number of headers to verify before and after the pivot to accept it
 	fsHeaderContCheck      = 3 * time.Second // Time interval to check for header continuations during state download
 	fsMinFullBlocks        = 64              // Number of blocks to retrieve fully even in fast sync
+
+	spawnTimeOut = 1 * time.Minute			// Maximum waiting time for completion of spawned d.processes
 )
 
 var (
@@ -71,6 +73,7 @@ var (
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")
 	errNoSyncActive            = errors.New("no sync active")
 	errTooOld                  = errors.New("peer doesn't speak recent enough protocol version (need version >= 62)")
+	errSpawnTimeOut            = errors.New("spawn time out")
 )
 
 type Downloader struct {
@@ -452,20 +455,39 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	} else if d.mode == FullSync {
 		fetchers = append(fetchers, d.processFullSyncContent)
 	}
-	return d.spawnSync(fetchers)
+	return d.spawnSync(fetchers, p.id)
 }
 
 // spawnSync runs d.process and all given fetcher functions to completion in
 // separate goroutines, returning the first error that appears.
-func (d *Downloader) spawnSync(fetchers []func() error) error {
+func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	errc := make(chan error, len(fetchers))
 	d.cancelWg.Add(len(fetchers))
+
+	log.Debug("spawnSync started","peerID",peerID)
+
 	for _, fn := range fetchers {
 		fn := fn
 		go func() { defer d.cancelWg.Done(); errc <- fn() }()
 	}
 	// Wait for the first error, then terminate the others.
 	var err error
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	quit := make(chan struct{})
+	// This timeout goroutine will terminate running fetchers without error after spawnTimeOut.
+	go func(){
+		defer wg.Done()
+		select {
+			case <- time.After(spawnTimeOut):
+				log.Warn("spawnSync timeout","peerID",peerID)
+				errc <- errSpawnTimeOut
+			case <- quit:
+				log.Debug("spawnSync timeout goroutine is quited","peerID",peerID)
+		}
+	}()
+
 	for i := 0; i < len(fetchers); i++ {
 		if i == len(fetchers)-1 {
 			// Close the queue when all fetchers have exited.
@@ -477,8 +499,19 @@ func (d *Downloader) spawnSync(fetchers []func() error) error {
 			break
 		}
 	}
+
+	// Generally, before timeout, all spawned fetchers will be terminated.
+	// In that case, timeout goroutine will quit by closing quit channel.
+	close(quit)
+
 	d.queue.Close()
 	d.Cancel()
+
+	// Waiting for quit of timeout goroutine.
+	log.Debug("spawnSync is waiting timeout goroutine","peerID",peerID)
+	wg.Wait()
+	log.Debug("spawnSync terminated","peerID",peerID)
+
 	return err
 }
 
