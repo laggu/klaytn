@@ -42,6 +42,7 @@ type levelDB struct {
 	compWriteMeter metrics.Meter // Meter for measuring the data written during compaction
 	diskReadMeter  metrics.Meter // Meter for measuring the effective amount of data read
 	diskWriteMeter metrics.Meter // Meter for measuring the effective amount of data written
+	blockCacheGauge metrics.Gauge // Gauge for measuring the current size of block cache
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
@@ -187,6 +188,7 @@ func (db *levelDB) Meter(prefix string) {
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
 	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
+	db.blockCacheGauge = metrics.NewRegisteredGauge(prefix+"blockcache", nil)
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metrics.Enabled == false
@@ -263,6 +265,9 @@ hasError:
 		db.diskWriteMeter.Mark(int64(currWrite - prevWrite))
 
 		prevRead, prevWrite = currRead, currWrite
+
+		// BlockCache size
+		db.blockCacheGauge.Update(int64(s.BlockCacheSize))
 
 		// Sleep a bit, then repeat the stats collection
 		select {
