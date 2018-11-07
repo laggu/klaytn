@@ -572,19 +572,18 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	return nil
 }
 
-// getMaxTxFromQueue finds a queued transaction in the queue, which has the largest nonce.
-// It returns nil when given tx is found in the queue. It returns given tx when there is no
-// tx which has nonce grater than given tx.
-func (pool *TxPool) getMaxTxFromQueue(tx *types.Transaction, from common.Address) (*types.Transaction) {
-	queuedTxs := pool.queue[from].txs.items
-	var maxTx *types.Transaction
-	for _, t := range queuedTxs {
-		if t.Nonce() == tx.Nonce() {
-			return nil
-		}
-		if maxTx == nil {
-			maxTx = t
-		} else if t.Nonce() > maxTx.Nonce() {
+// getMaxTxFromQueueWhenNonceIsMissing finds and returns a trasaction with max nonce in queue when a given Tx has missing nonce.
+// Otherwise it returns a given Tx itself.
+func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, from *common.Address) (*types.Transaction) {
+	txs := pool.queue[*from].txs
+
+	maxTx := tx
+	if txs.Get(tx.Nonce()) != nil {
+		return maxTx
+	}
+
+	for _, t := range txs.items {
+		if maxTx.Nonce() < t.Nonce() {
 			maxTx = t
 		}
 	}
@@ -600,34 +599,6 @@ func (pool *TxPool) getMaxTxFromQueue(tx *types.Transaction, from common.Address
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
-	// If pool is already full, we refuse to add tx to pool.
-	// However, when given tx has missing nonce, which is smaller than max nonce,
-	// remove a tx with max nonce and insert the given tx.
-	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
-		from, _ := types.Sender(pool.signer, tx)
-		if pool.queue[from] == nil {
-			log.Trace("Rejecting a transaction because TxPool is full", "hash", tx.Hash())
-			refusedTxCounter.Inc(1)
-			return false, fmt.Errorf("txpool is full: %d", uint64(len(pool.all)))
-		}
-
-		maxTx := pool.getMaxTxFromQueue(tx, from)
-		if maxTx == nil {
-			log.Trace("Rejecting a transaction because TxPool is full and the given transaction already exists in TxPool", "hash", tx.Hash())
-			refusedTxCounter.Inc(1)
-			return false, fmt.Errorf("txpool is full and the tx already exists in txpool: %d", uint64(len(pool.all)))
-		}
-
-		if maxTx.Nonce() > tx.Nonce() {
-			pool.removeTx(maxTx.Hash(), true)
-			log.Info("Removed a tx with the largest nonce to insert a new tx with smaller nonce", "account", from, "new nonce", tx.Nonce(), "removed nonce", maxTx.Nonce())
-		} else {
-			log.Trace("Rejecting a transaction because TxPool is full and the given transaction has the largest nonce", "hash", tx.Hash())
-			refusedTxCounter.Inc(1)
-			return false, fmt.Errorf("txpool is full and the tx has the largest nonce: %d", uint64(len(pool.all)))
-		}
-	}
-
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
@@ -641,8 +612,34 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		invalidTxCounter.Inc(1)
 		return false, err
 	}
-	// If the transaction pool is full, discard underpriced transactions
+
+	// If the transaction pool is full and new Tx is valid,
+	// (1) discard a new Tx if there is no room for the account of the Tx
+	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
+	// (3) discard a new Tx if the new Tx does not have a missing nonce
+	// (4) discard underpriced transactions
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
+		// (1) discard a new Tx if there is no room for the account of the Tx
+		from, _ := types.Sender(pool.signer, tx)
+		if pool.queue[from] == nil {
+			log.Trace("Rejecting a new Tx, because TxPool is full and there is no room for the account", "hash", tx.Hash(), "account", from)
+			refusedTxCounter.Inc(1)
+			return false, fmt.Errorf("txpool is full: %d", uint64(len(pool.all)))
+		}
+
+		maxTx := pool.getMaxTxFromQueueWhenNonceIsMissing(tx, &from)
+		if maxTx != tx {
+			// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
+			pool.removeTx(maxTx.Hash(), true)
+			log.Info("Removing an old Tx with the max nonce to insert a new Tx with missing nonce, because TxPool is full", "account", from, "new nonce(previously missing)", tx.Nonce(), "removed max nonce", maxTx.Nonce())
+		} else {
+			// (3) discard a new Tx if the new Tx does not have a missing nonce
+			log.Trace("Rejecting a new Tx, because TxPool is full and a new TX does not have missing nonce", "hash", tx.Hash())
+			refusedTxCounter.Inc(1)
+			return false, fmt.Errorf("txpool is full and the new tx does not have missing nonce: %d", uint64(len(pool.all)))
+		}
+
+		// (4) discard underpriced transactions
 		// TODO-GX-issue136 gasPrice
 		// If the new transaction is underpriced, don't accept it
 		if !local && pool.priced.Underpriced(tx, pool.locals) {
