@@ -1,14 +1,16 @@
 package backend
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"errors"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"reflect"
 )
 
 // API is a user facing RPC API to dump Istanbul state
@@ -111,22 +113,36 @@ type APIExtension struct {
 	istanbul *backend
 }
 
+var (
+	errPendingNotAllowed = errors.New("pending is not allowed")
+	errInternalError = errors.New("internal error")
+	errStartNotPositive = errors.New("start block number should be positive")
+	errEndLargetThanLatest = errors.New("end block number should be smaller than the latest block number")
+	errStartLargerThanEnd = errors.New("start should be smaller than end")
+	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
+)
+
 // GetValidators retrieves the list of authorized validators at the specified block.
 func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
+	} else if *number == rpc.PendingBlockNumber {
+		log.Info("Cannot get validators of the pending block.", "number", number)
+		return nil, errPendingNotAllowed
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	// Ensure we have an actually valid block and return the validators from its snapshot
 	if header == nil {
-		return nil, errUnknownBlock
+		log.Info("Failed to find the requested block", "number", number)
+		return nil, nil // return nil if block is not found.
 	}
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
-		return nil, err
+		log.Info("Failed to get snapshot.", "hash", header.Hash(), "err", err)
+		return nil, errInternalError
 	}
 	return snap.validators(), nil
 }
@@ -242,18 +258,41 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumber) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
-		return nil, errors.New("chain is not blockchain.BlockChain")
+		log.Error("chain is not a type of blockchain.BlockChain", "type", reflect.TypeOf(api.chain))
+		return nil, errInternalError
 	}
-	blockNumber := uint64(number.Int64())
-	block := b.GetBlockByNumber(blockNumber)
+	var block *types.Block
+	var blockNumber uint64
+
+	if number == nil {
+		number = new(rpc.BlockNumber)
+		*number = rpc.LatestBlockNumber
+	}
+
+	if *number == rpc.PendingBlockNumber {
+		log.Info("Cannot get consensus information of the PendingBlock.")
+		return nil, errPendingNotAllowed
+	}
+
+	if *number == rpc.LatestBlockNumber {
+		block = b.CurrentBlock()
+		blockNumber = block.NumberU64()
+	} else  {
+		// rpc.EarliestBlockNumber == 0, no need to treat it as a special case.
+		blockNumber = uint64(number.Int64())
+		block = b.GetBlockByNumber(blockNumber)
+	}
+
 	if block == nil {
-		return nil, errors.New(fmt.Sprintf("block %d not found", blockNumber))
+		log.Info("Finding a block by number failed.", "blockNum", blockNumber)
+		return nil, nil // return nil if block is not found.
 	}
 	blockHash := block.Hash()
 
 	proposer, committee, err := api.getProposerAndValidators(block)
 	if err != nil {
-		return nil, err
+		log.Info("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
+		return nil, errInternalError
 	}
 
 	receipts, err := b.GetReceiptsInCache(blockHash)
@@ -263,27 +302,31 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	return api.makeRPCOutput(block, proposer, committee, block.Transactions(), receipts), nil
 }
 
-func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.BlockNumber, end *rpc.BlockNumber) (map[string]interface{}, error){
+func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.BlockNumber, end *rpc.BlockNumber) (map[string]interface{}, error) {
 	blocks := make(map[string]interface{})
 
 	// check error status.
 	s := start.Int64()
 	e := end.Int64()
 	if s < 0 {
-		return nil, errors.New("start should be positive")
+		log.Info("start should be positive", "start", s)
+		return nil, errStartNotPositive
 	}
 
 	eChain := api.chain.CurrentHeader().Number.Int64()
 	if e > eChain {
-		return nil, errors.New(fmt.Sprintf("end should be smaller than the last block number %d", eChain))
+		log.Info("end should be smaller than the lastest block number", "end", end, "eChain", eChain)
+		return nil, errEndLargetThanLatest
 	}
 
 	if s > e {
-		return nil, errors.New("start should be smaller than end")
+		log.Info("start should be smaller than end", "start", s, "end", e)
+		return nil, errStartLargerThanEnd
 	}
 
 	if (e - s) > 50 {
-		return nil, errors.New("number of requested blocks should be smaller than 50")
+		log.Info("number of requested blocks should be smaller than 50", "start", s, "end", e)
+		return nil, errRequestedBlocksTooLarge
 	}
 
 	// gather s~e blocks
@@ -291,12 +334,13 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 		strIdx := fmt.Sprintf("0x%x", i)
 
 		blockNum := rpc.BlockNumber(i)
-		r, err := api.GetBlockWithConsensusInfoByNumber(&blockNum)
+		b, err := api.GetBlockWithConsensusInfoByNumber(&blockNum)
 		if err != nil {
-			return nil, err
+			log.Info("error on GetBlockWithConsensusInfoByNumber", "err", err)
+			blocks[strIdx] = nil
+		} else {
+			blocks[strIdx] = b
 		}
-
-		blocks[strIdx] = r
 	}
 
 	return blocks, nil
@@ -305,17 +349,23 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
-		return nil, errors.New("chain is not blockchain.BlockChain")
+		log.Error("chain is not a type of blockchain.Blockchain, returning...", "type", reflect.TypeOf(api.chain))
+		return nil, errInternalError
 	}
 
 	block := b.GetBlockByHash(blockHash)
+	if block == nil {
+		log.Info("Finding a block failed.", "blockHash", blockHash)
+		return nil, nil // return nil if block is not found.
+	}
 
 	proposer, committee, err := api.getProposerAndValidators(block)
 	if err != nil {
-		return nil, err
+		log.Info("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
+		return nil, errInternalError
 	}
 
-	receipts, err := b.GetReceiptsInCache(blockHash)
+	receipts, _ := b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
 		receipts = b.GetReceiptsByHash(blockHash)
 	}

@@ -356,7 +356,7 @@ web3._extend({
 			name: 'getValidators',
 			call: 'klay_getValidators',
 			params: 1,
-			inputFormatter: [null]
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getBlockWithConsensusInfo',
