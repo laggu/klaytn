@@ -3,8 +3,6 @@ package debug
 import (
 	"runtime"
 	"os"
-	"fmt"
-	"net/http"
 	_ "net/http/pprof"
 
 	"github.com/fjl/memsize/memsizeui"
@@ -13,8 +11,6 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/log/term"
 	"io"
-	"github.com/ground-x/go-gxplatform/metrics/exp"
-	"github.com/ground-x/go-gxplatform/metrics"
 )
 
 var Memsize memsizeui.Handler
@@ -122,23 +118,9 @@ func Setup(ctx *cli.Context) error {
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
-		address := fmt.Sprintf("%s:%d", ctx.GlobalString(pprofAddrFlag.Name), ctx.GlobalInt(pprofPortFlag.Name))
-		StartPProf(address)
+		Handler.StartPProf(ctx.GlobalString(pprofAddrFlag.Name), ctx.GlobalInt(pprofPortFlag.Name))
 	}
 	return nil
-}
-
-func StartPProf(address string) {
-	// Hook go-metrics into expvar on any /debug/metrics request, load all vars
-	// from the registry into expvar, and execute regular expvar handler.
-	exp.Exp(metrics.DefaultRegistry)
-	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
-	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
-	go func() {
-		if err := http.ListenAndServe(address, nil); err != nil {
-			log.Error("Failure in running pprof server", "err", err)
-		}
-	}()
 }
 
 // Exit stops all running profiles, flushing their output to the
@@ -149,4 +131,5 @@ func Exit() {
 	}
 	Handler.StopCPUProfile()
 	Handler.StopGoTrace()
+	Handler.StopPProf()
 }

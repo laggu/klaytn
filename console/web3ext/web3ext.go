@@ -183,6 +183,22 @@ web3._extend({
 			params: 0,
 		}),
 		new web3._extend.Method({
+			name: 'startPProf',
+			call: 'debug_startPProf',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'stopPProf',
+			call: 'debug_stopPProf',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'isPProfRunning',
+			call: 'debug_isPProfRunning',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'cpuProfile',
 			call: 'debug_cpuProfile',
 			params: 2

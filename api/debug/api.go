@@ -1,6 +1,8 @@
 package debug
 
 import (
+	"fmt"
+	"net/http"
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
@@ -11,6 +13,8 @@ import (
 	"sync"
 	"time"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/metrics/exp"
 	"errors"
 	"io"
 )
@@ -28,6 +32,10 @@ type HandlerT struct {
 	memFile   string
 	traceW    io.WriteCloser
 	traceFile string
+
+	// For the pprof http server
+	handlerInited bool
+	pprofServer   *http.Server
 }
 
 // Verbosity sets the log verbosity ceiling. The verbosity of individual packages
@@ -60,6 +68,72 @@ func (*HandlerT) GcStats() *debug.GCStats {
 	s := new(debug.GCStats)
 	debug.ReadGCStats(s)
 	return s
+}
+
+func (h *HandlerT) StartPProf(address string, port int) error {
+	// Set the default server address and port if they are not set
+	if address == "" {
+		address = pprofAddrFlag.Value
+	}
+	if port == 0 {
+		port = pprofPortFlag.Value
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.pprofServer != nil {
+		return errors.New("pprof server is already running")
+	}
+
+	serverAddr := fmt.Sprintf("%s:%d", address, port)
+	httpServer := &http.Server{Addr: serverAddr}
+
+	if !h.handlerInited {
+		// Hook go-metrics into expvar on any /debug/metrics request, load all vars
+		// from the registry into expvar, and execute regular expvar handler.
+		exp.Exp(metrics.DefaultRegistry)
+		http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
+		h.handlerInited = true
+	}
+
+	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", serverAddr))
+	go func(handle *HandlerT) {
+		if err := httpServer.ListenAndServe(); err != nil {
+			if err == http.ErrServerClosed {
+				log.Info("pprof server is closed")
+			} else {
+				log.Error("Failure in running pprof server", "err", err)
+			}
+		}
+		h.mu.Lock()
+		h.pprofServer = nil
+		h.mu.Unlock()
+	}(h)
+
+	h.pprofServer = httpServer
+
+	return nil
+}
+
+func (h *HandlerT) StopPProf() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.pprofServer == nil {
+		return errors.New("pprof server is not running")
+	}
+
+	log.Info("Shutting down pprof server")
+	h.pprofServer.Close()
+
+	return nil
+}
+
+func (h *HandlerT) IsPProfRunning() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.pprofServer != nil
 }
 
 // CpuProfile turns on CPU profiling for nsec seconds and writes
