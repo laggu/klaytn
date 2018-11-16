@@ -297,14 +297,6 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	if c.P2P.PrivateKey != nil {
 		return c.P2P.PrivateKey
 	}
-	// Generate ephemeral key if no datadir is being used.
-	if c.DataDir == "" {
-		key, err := crypto.GenerateKey()
-		if err != nil {
-			log.Crit(fmt.Sprintf("Failed to generate ephemeral node key: %v", err))
-		}
-		return key
-	}
 
 	keyfile := c.resolvePath(datadirPrivateKey)
 	if key, err := crypto.LoadECDSA(keyfile); err == nil {
@@ -313,16 +305,15 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	// No persistent key found, generate and store a new one.
 	key, err := crypto.GenerateKey()
 	if err != nil {
-		log.Crit(fmt.Sprintf("Failed to generate node key: %v", err))
+		log.Crit("Failed to generate node key", "err", err)
 	}
 	instanceDir := filepath.Join(c.DataDir, c.name())
 	if err := os.MkdirAll(instanceDir, 0700); err != nil {
-		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
-		return key
+		log.Crit("Failed to make dir to persist node key", "err", err)
 	}
 	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
-		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
+		log.Crit("Failed to persist node key", "err", err)
 	}
 	return key
 }
