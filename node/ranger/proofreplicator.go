@@ -49,7 +49,7 @@ func (rn *Ranger) proofReplication() error {
 				statedb, _ := rn.blockchain.State()
 				nonce := statedb.GetNonce(account.Address)
 
-				log.Error("receive msg", "num", msg.proof.BlockNumber, "proof.nonce", msg.proof.Nonce, "addr", msg.proof.Solver,"nonce",nonce)
+				log.Debug("receive msg", "num", msg.proof.BlockNumber, "proof.nonce", msg.proof.Nonce, "addr", msg.proof.Solver,"nonce",nonce)
 
 				var chainID *big.Int
 				tx, err := wallet.SignTx(account, types.NewTransaction(nonce, to, amount, gaslimit, gasprice, data), chainID)

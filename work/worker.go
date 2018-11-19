@@ -723,7 +723,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 			log.Warn("Transaction aborted due to time limit", "hash", tx.Hash())
 			timeLimitReachedCounter.Inc(1)
 			if env.tcount == 0 {
-				log.Error("Transaction is too long", "hash", tx.Hash())
+				log.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
 				tooLongTxCounter.Inc(1)
 			}
 			break
