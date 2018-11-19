@@ -78,32 +78,23 @@ type RecordKeyNames struct {
 	Lvl  string
 }
 
-// A Logger writes key/value pairs to a Handler
-type Logger interface {
-	// New returns a new Logger that has this logger's context plus the given context
-	New(ctx ...interface{}) Logger
+var (
+	root          = &log15Logger{[]interface{}{}, new(swapHandler)}
+	StdoutHandler = StreamHandler(os.Stdout, LogfmtFormat())
+	StderrHandler = StreamHandler(os.Stderr, LogfmtFormat())
+)
 
-	// GetHandler gets the handler associated with the logger.
-	GetHandler() Handler
-
-	// SetHandler updates the logger to write records to the specified handler.
-	SetHandler(h Handler)
-
-	// Log a message at the given level with context key/value pairs
-	Trace(msg string, ctx ...interface{})
-	Debug(msg string, ctx ...interface{})
-	Info(msg string, ctx ...interface{})
-	Warn(msg string, ctx ...interface{})
-	Error(msg string, ctx ...interface{})
-	Crit(msg string, ctx ...interface{})
+// Root returns the root logger
+func Root() Logger {
+	return root
 }
 
-type logger struct {
+type log15Logger struct {
 	ctx []interface{}
 	h   *swapHandler
 }
 
-func (l *logger) write(msg string, lvl Lvl, ctx []interface{}) {
+func (l *log15Logger) write(msg string, lvl Lvl, ctx []interface{}) {
 	l.h.Log(&Record{
 		Time: time.Now(),
 		Lvl:  lvl,
@@ -118,8 +109,8 @@ func (l *logger) write(msg string, lvl Lvl, ctx []interface{}) {
 	})
 }
 
-func (l *logger) New(ctx ...interface{}) Logger {
-	child := &logger{newContext(l.ctx, ctx), new(swapHandler)}
+func (l *log15Logger) New(ctx ...interface{}) Logger {
+	child := &log15Logger{newContext(l.ctx, ctx), new(swapHandler)}
 	child.SetHandler(l.h)
 	return child
 }
@@ -132,36 +123,36 @@ func newContext(prefix []interface{}, suffix []interface{}) []interface{} {
 	return newCtx
 }
 
-func (l *logger) Trace(msg string, ctx ...interface{}) {
+func (l *log15Logger) Trace(msg string, ctx ...interface{}) {
 	l.write(msg, LvlTrace, ctx)
 }
 
-func (l *logger) Debug(msg string, ctx ...interface{}) {
+func (l *log15Logger) Debug(msg string, ctx ...interface{}) {
 	l.write(msg, LvlDebug, ctx)
 }
 
-func (l *logger) Info(msg string, ctx ...interface{}) {
+func (l *log15Logger) Info(msg string, ctx ...interface{}) {
 	l.write(msg, LvlInfo, ctx)
 }
 
-func (l *logger) Warn(msg string, ctx ...interface{}) {
+func (l *log15Logger) Warn(msg string, ctx ...interface{}) {
 	l.write(msg, LvlWarn, ctx)
 }
 
-func (l *logger) Error(msg string, ctx ...interface{}) {
+func (l *log15Logger) Error(msg string, ctx ...interface{}) {
 	l.write(msg, LvlError, ctx)
 }
 
-func (l *logger) Crit(msg string, ctx ...interface{}) {
+func (l *log15Logger) Crit(msg string, ctx ...interface{}) {
 	l.write(msg, LvlCrit, ctx)
 	os.Exit(1)
 }
 
-func (l *logger) GetHandler() Handler {
+func (l *log15Logger) GetHandler() Handler {
 	return l.h.Get()
 }
 
-func (l *logger) SetHandler(h Handler) {
+func (l *log15Logger) SetHandler(h Handler) {
 	l.h.Swap(h)
 }
 

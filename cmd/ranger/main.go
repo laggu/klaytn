@@ -68,6 +68,7 @@ var (
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
 		utils.RPCVirtualHostsFlag,
+		utils.LoggerTypeFlag,
 		utils.EthStatsURLFlag,
 		utils.MetricsEnabledFlag,
 		utils.NoCompactionFlag,

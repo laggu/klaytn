@@ -42,6 +42,7 @@ type HandlerT struct {
 // and source files can be raised using Vmodule.
 func (*HandlerT) Verbosity(level int) {
 	glogger.Verbosity(log.Lvl(level))
+	log.ChangeGlobalLogLevel(log.Lvl(level))
 }
 
 // Vmodule sets the log verbosity pattern. See package log for details on the

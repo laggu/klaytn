@@ -32,6 +32,7 @@ func enableLog() {
 	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
 	log.PrintOrigins(true)
 	glogger.Verbosity(log.Lvl(5))
+	log.ChangeGlobalLogLevel(log.Lvl(5))
 	glogger.Vmodule("")
 	glogger.BacktraceAt("")
 	log.Root().SetHandler(glogger)

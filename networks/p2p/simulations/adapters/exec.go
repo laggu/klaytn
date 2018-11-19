@@ -368,6 +368,7 @@ func ExternalIP() net.IP {
 func execP2PNode() {
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.LogfmtFormat()))
 	glogger.Verbosity(log.LvlInfo)
+	log.ChangeGlobalLogLevel(log.Lvl(log.LvlInfo))
 	log.Root().SetHandler(glogger)
 
 	// read the services from argv

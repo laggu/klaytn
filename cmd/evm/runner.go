@@ -72,6 +72,7 @@ func readGenesis(genesisPath string) *blockchain.Genesis {
 func runCmd(ctx *cli.Context) error {
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
 	glogger.Verbosity(log.Lvl(ctx.GlobalInt(VerbosityFlag.Name)))
+	log.ChangeGlobalLogLevel(log.Lvl(ctx.GlobalInt(VerbosityFlag.Name)))
 	log.Root().SetHandler(glogger)
 	logconfig := &vm.LogConfig{
 		DisableMemory: ctx.GlobalBool(DisableMemoryFlag.Name),

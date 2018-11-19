@@ -55,6 +55,7 @@ func stateTestCmd(ctx *cli.Context) error {
 	// Configure the go-gxplatform logger
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
 	glogger.Verbosity(log.Lvl(ctx.GlobalInt(VerbosityFlag.Name)))
+	log.ChangeGlobalLogLevel(log.Lvl(ctx.GlobalInt(VerbosityFlag.Name)))
 	log.Root().SetHandler(glogger)
 
 	// Configure the EVM logger

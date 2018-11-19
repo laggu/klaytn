@@ -303,6 +303,11 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
+	LoggerTypeFlag = cli.StringFlag{
+		Name: "logger",
+		Usage: "Determines the type of logger used in Klaytn logging",
+		Value: log.ZapLogger,
+	}
 	EthStatsURLFlag = cli.StringFlag{
 		Name:  "ethstats",
 		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
@@ -999,6 +1004,8 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 
+	setLogger(ctx)
+
 	// Override any default configs for hard coded network.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
@@ -1033,6 +1040,22 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
 		state.MaxTrieCacheGen = uint16(gen)
+	}
+}
+
+func setLogger(ctx *cli.Context) {
+	if ctx.GlobalIsSet(LoggerTypeFlag.Name) {
+		switch ctx.GlobalString(LoggerTypeFlag.Name) {
+		case "zap":
+			log.SetBaseLogger(log.ZapLogger)
+			log.BaseLogType = log.ZapLogger
+		case "log15":
+			log.SetBaseLogger(log.Log15Logger)
+			log.BaseLogType = log.Log15Logger
+		default:
+			log.SetBaseLogger(log.Log15Logger)
+			log.BaseLogType = log.Log15Logger
+		}
 	}
 }
 
@@ -1087,6 +1110,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
+
+	setLogger(ctx)
+
 	// TODO-GX Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
