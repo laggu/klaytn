@@ -32,7 +32,7 @@ var (
 )
 
 func(re *RangerEngine) Author(header *types.Header) (common.Address, error) {
-	log.Info("RangeEngine.Author","header",header.Hash())
+	log.Debug("RangeEngine.Author","header",header.Hash())
 	return ecrecover(header)
 }
 
@@ -67,7 +67,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 }
 
 func(re *RangerEngine) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	log.Info("RangeEngine.VerifyHeader") // ,"header",header.Hash())
+	log.Debug("RangeEngine.VerifyHeader") // ,"header",header.Hash())
 	return nil
 }
 

@@ -124,7 +124,7 @@ func (a *RemoteAgent) SubmitWork(nonce types.BlockNonce, mixDigest, hash common.
 	// Make sure the work submitted is present
 	work := a.work[hash]
 	if work == nil {
-		log.Info("Task submitted but none pending", "hash", hash)
+		log.Debug("Task submitted but none pending", "hash", hash)
 		return false
 	}
 	// Make sure the Engine solutions is indeed valid

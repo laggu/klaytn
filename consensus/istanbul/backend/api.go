@@ -129,19 +129,19 @@ func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else if *number == rpc.PendingBlockNumber {
-		log.Info("Cannot get validators of the pending block.", "number", number)
+		log.Error("Cannot get validators of the pending block.", "number", number)
 		return nil, errPendingNotAllowed
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	// Ensure we have an actually valid block and return the validators from its snapshot
 	if header == nil {
-		log.Info("Failed to find the requested block", "number", number)
+		log.Error("Failed to find the requested block", "number", number)
 		return nil, nil // return nil if block is not found.
 	}
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
-		log.Info("Failed to get snapshot.", "hash", header.Hash(), "err", err)
+		log.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
 		return nil, errInternalError
 	}
 	return snap.validators(), nil
@@ -270,7 +270,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 
 	if *number == rpc.PendingBlockNumber {
-		log.Info("Cannot get consensus information of the PendingBlock.")
+		log.Error("Cannot get consensus information of the PendingBlock.")
 		return nil, errPendingNotAllowed
 	}
 
@@ -284,14 +284,14 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 
 	if block == nil {
-		log.Info("Finding a block by number failed.", "blockNum", blockNumber)
+		log.Error("Finding a block by number failed.", "blockNum", blockNumber)
 		return nil, nil // return nil if block is not found.
 	}
 	blockHash := block.Hash()
 
 	proposer, committee, err := api.getProposerAndValidators(block)
 	if err != nil {
-		log.Info("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
+		log.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
 	}
 
@@ -309,23 +309,23 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 	s := start.Int64()
 	e := end.Int64()
 	if s < 0 {
-		log.Info("start should be positive", "start", s)
+		log.Error("start should be positive", "start", s)
 		return nil, errStartNotPositive
 	}
 
 	eChain := api.chain.CurrentHeader().Number.Int64()
 	if e > eChain {
-		log.Info("end should be smaller than the lastest block number", "end", end, "eChain", eChain)
+		log.Error("end should be smaller than the lastest block number", "end", end, "eChain", eChain)
 		return nil, errEndLargetThanLatest
 	}
 
 	if s > e {
-		log.Info("start should be smaller than end", "start", s, "end", e)
+		log.Error("start should be smaller than end", "start", s, "end", e)
 		return nil, errStartLargerThanEnd
 	}
 
 	if (e - s) > 50 {
-		log.Info("number of requested blocks should be smaller than 50", "start", s, "end", e)
+		log.Error("number of requested blocks should be smaller than 50", "start", s, "end", e)
 		return nil, errRequestedBlocksTooLarge
 	}
 
@@ -336,7 +336,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 		blockNum := rpc.BlockNumber(i)
 		b, err := api.GetBlockWithConsensusInfoByNumber(&blockNum)
 		if err != nil {
-			log.Info("error on GetBlockWithConsensusInfoByNumber", "err", err)
+			log.Error("error on GetBlockWithConsensusInfoByNumber", "err", err)
 			blocks[strIdx] = nil
 		} else {
 			blocks[strIdx] = b
@@ -355,13 +355,13 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 
 	block := b.GetBlockByHash(blockHash)
 	if block == nil {
-		log.Info("Finding a block failed.", "blockHash", blockHash)
+		log.Error("Finding a block failed.", "blockHash", blockHash)
 		return nil, nil // return nil if block is not found.
 	}
 
 	proposer, committee, err := api.getProposerAndValidators(block)
 	if err != nil {
-		log.Info("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
+		log.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
 	}
 

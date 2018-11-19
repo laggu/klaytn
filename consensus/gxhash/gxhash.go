@@ -401,10 +401,10 @@ func New(config Config) *Gxhash {
 		config.CachesInMem = 1
 	}
 	if config.CacheDir != "" && config.CachesOnDisk > 0 {
-		log.Info("Disk storage enabled for ethash caches", "dir", config.CacheDir, "count", config.CachesOnDisk)
+		log.Debug("Disk storage enabled for ethash caches", "dir", config.CacheDir, "count", config.CachesOnDisk)
 	}
 	if config.DatasetDir != "" && config.DatasetsOnDisk > 0 {
-		log.Info("Disk storage enabled for ethash DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
+		log.Debug("Disk storage enabled for ethash DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
 	}
 	return &Gxhash{
 		config:   config,
