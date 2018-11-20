@@ -47,7 +47,7 @@ type levelDB struct {
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
 
-	log log.Logger // Contextual logger tracking the database path
+	logger log.Logger // Contextual logger tracking the database path
 }
 
 func getLDBOptions(ldbCacheSize, numHandles int) *opt.Options {
@@ -61,7 +61,7 @@ func getLDBOptions(ldbCacheSize, numHandles int) *opt.Options {
 }
 
 func NewLDBDatabase(file string, ldbCacheSize, numHandles int) (*levelDB, error) {
-	logger := log.New("database", file)
+	localLogger := logger.NewWith("path", file)
 
 	// Ensure we have some minimal caching and file guarantees
 	if ldbCacheSize < 16 {
@@ -70,7 +70,7 @@ func NewLDBDatabase(file string, ldbCacheSize, numHandles int) (*levelDB, error)
 	if numHandles < 16 {
 		numHandles = 16
 	}
-	logger.Info("Allocated LevelDB with write buffer and file handles", "writeBufferSize", ldbCacheSize, "numHandles", numHandles)
+	localLogger.Info("Allocated LevelDB with write buffer and file handles", "writeBufferSize", ldbCacheSize, "numHandles", numHandles)
 
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(file, getLDBOptions(ldbCacheSize, numHandles))
@@ -82,14 +82,14 @@ func NewLDBDatabase(file string, ldbCacheSize, numHandles int) (*levelDB, error)
 		return nil, err
 	}
 	return &levelDB{
-		fn:  file,
-		db:  db,
-		log: logger,
+		fn:     file,
+		db:     db,
+		logger: localLogger,
 	}, nil
 }
 
 func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*levelDB, error) {
-	logger := log.New("database", file)
+	localLogger := logger.NewWith("path", file)
 
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(file, opt)
@@ -101,9 +101,9 @@ func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*levelDB, error) 
 		return nil, err
 	}
 	return &levelDB{
-		fn:  file,
-		db:  db,
-		log: logger,
+		fn:     file,
+		db:     db,
+		logger: localLogger,
 	}, nil
 
 }
@@ -164,15 +164,15 @@ func (db *levelDB) Close() {
 		errc := make(chan error)
 		db.quitChan <- errc
 		if err := <-errc; err != nil {
-			db.log.Error("Metrics collection failed", "err", err)
+			db.logger.Error("Metrics collection failed", "err", err)
 		}
 		db.quitChan = nil
 	}
 	err := db.db.Close()
 	if err == nil {
-		db.log.Info("Database closed")
+		db.logger.Info("Database closed")
 	} else {
-		db.log.Error("Failed to close database", "err", err)
+		db.logger.Error("Failed to close database", "err", err)
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/fatih/set.v0"
-	"github.com/ground-x/go-gxplatform/log"
 	"net"
 	"net/http"
 	"net/url"
@@ -103,7 +102,7 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 		srv.ServeCodec(NewCodec(&httpReadWriteNopCloser{reader, ctx.Response.BodyWriter()}, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 	})
 	if err != nil {
-		log.Error("FastWebsocketHandler fail to upgrade message","err",err)
+		logger.Error("FastWebsocketHandler fail to upgrade message","err",err)
 		return
 	}
 }
@@ -143,14 +142,14 @@ func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.Reques
 		}
 	}
 
-	log.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
+	logger.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
 
 	f := func(ctx *fasthttp.RequestCtx) bool {
 		origin := strings.ToLower(string(ctx.Request.Header.Peek("Origin")))
 		if allowAllOrigins || origins.Has(origin) {
 			return true
 		}
-		log.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
+		logger.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
 		return false
 	}
 
@@ -181,14 +180,14 @@ func wsHandshakeValidator(allowedOrigins []string) func(*websocket.Config, *http
 		}
 	}
 
-	log.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
+	logger.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
 
 	f := func(cfg *websocket.Config, req *http.Request) error {
 		origin := strings.ToLower(req.Header.Get("Origin"))
 		if allowAllOrigins || origins.Has(origin) {
 			return nil
 		}
-		log.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
+		logger.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
 		return fmt.Errorf("origin %s not allowed", origin)
 	}
 

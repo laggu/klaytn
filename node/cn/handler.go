@@ -14,7 +14,6 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
 	"github.com/ground-x/go-gxplatform/datasync/fetcher"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
@@ -136,7 +135,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 
 	// Figure out whether to allow fast sync or not
 	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() > 0 {
-		log.Warn("Blockchain not empty, fast sync disabled")
+		logger.Warn("Blockchain not empty, fast sync disabled")
 		mode = downloader.FullSync
 	}
 	if mode == downloader.FastSync {
@@ -205,7 +204,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	inserter := func(blocks types.Blocks) (int, error) {
 		// If fast sync is running, deny importing weird blocks
 		if atomic.LoadUint32(&manager.fastSync) == 1 {
-			log.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
+			logger.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
 			return 0, nil
 		}
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
@@ -243,12 +242,12 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing klaytn peer", "peer", id)
+	logger.Debug("Removing klaytn peer", "peer", id)
 
 	// Unregister the peer from the downloader and GXP peer set
 	pm.downloader.UnregisterPeer(id)
 	if err := pm.peers.Unregister(id); err != nil {
-		log.Error("Peer removal failed", "peer", id, "err", err)
+		logger.Error("Peer removal failed", "peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
@@ -274,7 +273,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 }
 
 func (pm *ProtocolManager) Stop() {
-	log.Info("Stopping klaytn protocol")
+	logger.Info("Stopping klaytn protocol")
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
@@ -295,7 +294,7 @@ func (pm *ProtocolManager) Stop() {
 	// Wait for all peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
 
-	log.Info("klaytn protocol stopped")
+	logger.Info("klaytn protocol stopped")
 }
 
 func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -527,7 +526,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
-				log.Debug("Failed to deliver headers", "err", err)
+				logger.Debug("Failed to deliver headers", "err", err)
 			}
 		}
 
@@ -580,7 +579,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		if len(transactions) > 0 || len(uncles) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, transactions, uncles)
 			if err != nil {
-				log.Debug("Failed to deliver bodies", "err", err)
+				logger.Debug("Failed to deliver bodies", "err", err)
 			}
 		}
 
@@ -619,7 +618,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		}
 		// Deliver all to the downloader
 		if err := pm.downloader.DeliverNodeData(p.id, data); err != nil {
-			log.Debug("Failed to deliver node state data", "err", err)
+			logger.Debug("Failed to deliver node state data", "err", err)
 		}
 
 	case p.version >= gxp63 && msg.Code == GetReceiptsMsg:
@@ -650,7 +649,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 			}
 			// If known, encode and queue for response packet
 			if encoded, err := rlp.EncodeToBytes(results); err != nil {
-				log.Error("Failed to encode receipt", "err", err)
+				logger.Error("Failed to encode receipt", "err", err)
 			} else {
 				receipts = append(receipts, encoded)
 				bytes += len(encoded)
@@ -666,7 +665,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		}
 		// Deliver all to the downloader
 		if err := pm.downloader.DeliverReceipts(p.id, receipts); err != nil {
-			log.Debug("Failed to deliver receipts", "err", err)
+			logger.Debug("Failed to deliver receipts", "err", err)
 		}
 
 	case msg.Code == NewBlockHashesMsg:
@@ -744,20 +743,20 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		// Look up the rewardwallet containing the requested signer
 		tx := new(types.Transaction)
 		if err := msg.Decode(tx); err != nil {
-			log.Error("ErrDecode","msg",msg, "err",err)
+			logger.Error("ErrDecode","msg",msg, "err",err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		signer := types.MakeSigner(pm.chainconfig, pm.blockchain.CurrentBlock().Number())
 		from, err := types.Sender(signer, tx)
 		if err != nil {
-			log.Error("ErrDecode","msg",msg, "err",err)
+			logger.Error("ErrDecode","msg",msg, "err",err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		err = pm.PoRValidate(from, tx)
 		if err != nil {
-			log.Error("PoRValidate","msg",msg, "err",err)
+			logger.Error("PoRValidate","msg",msg, "err",err)
 			return errors.New("fail to validate por")
 		}
 
@@ -785,7 +784,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 		if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent != nil {
 			td = new(big.Int).Add(block.Difficulty(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
 		} else {
-			log.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
+			logger.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
 			return
 		}
 
@@ -797,7 +796,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 			//peer.SendNewBlock(block, td)
 			peer.AsyncSendNewBlock(block, td)
 		}
-		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+		logger.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
 	}
 	// Otherwise if the block is indeed in out own chain, announce it
@@ -806,7 +805,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 			//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 			peer.AsyncSendNewBlockHash(block)
 		}
-		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+		logger.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 	}
 }
 
@@ -833,7 +832,7 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 	for _, tx := range txs {
 		peers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(peers) == 0 {
-			log.Trace("No peer to broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+			logger.Trace("No peer to broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 			continue
 		}
 
@@ -844,7 +843,7 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
 		}
-		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
@@ -879,7 +878,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 				for _, peer := range peers {
 					cntxset[peer] = append(cntxset[peer], tx)
 				}
-				log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+				logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 			}
 			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
 				peers = pm.peers.TypePeersWithoutTx(tx.Hash(), node.BRIDGENODE)
@@ -892,7 +891,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			for _, peer := range peers {
 				txset[peer] = append(txset[peer], tx)
 			}
-			log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+			logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 		}
 	}
 
@@ -900,7 +899,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 		for peer, txs := range txset {
 			err := peer.ReSendTransactions(txs)
 			if err != nil {
-				log.Error("peer.ReSendTransactions", "peer", peer.addr, "numTxs", len(txs))
+				logger.Error("peer.ReSendTransactions", "peer", peer.addr, "numTxs", len(txs))
 			}
 		}
 	} else {
@@ -909,13 +908,13 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			//peer.AsyncSendTransactions(txs)
 			err := peer.SendTransactions(txs)
 			if err != nil {
-				log.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+				logger.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
 			}
 		}
 		for peer, txs := range txset {
 			err := peer.SendTransactions(txs)
 			if err != nil {
-				log.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+				logger.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
 			}
 			//peer.AsyncSendTransactions(txs)
 		}

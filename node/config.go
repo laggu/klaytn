@@ -305,15 +305,15 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	// No persistent key found, generate and store a new one.
 	key, err := crypto.GenerateKey()
 	if err != nil {
-		log.Crit("Failed to generate node key", "err", err)
+		logger.Crit("Failed to generate node key", "err", err)
 	}
 	instanceDir := filepath.Join(c.DataDir, c.name())
 	if err := os.MkdirAll(instanceDir, 0700); err != nil {
-		log.Crit("Failed to make dir to persist node key", "err", err)
+		logger.Crit("Failed to make dir to persist node key", "err", err)
 	}
 	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
-		log.Crit("Failed to persist node key", "err", err)
+		logger.Crit("Failed to persist node key", "err", err)
 	}
 	return key
 }
@@ -341,7 +341,7 @@ func (c *Config) parsePersistentNodes(path string) []*discover.Node {
 	// Load the nodes from the config file.
 	var nodelist []string
 	if err := common.LoadJSON(path, &nodelist); err != nil {
-		log.Error(fmt.Sprintf("Can't load node file %s: %v", path, err))
+		logger.Error(fmt.Sprintf("Can't load node file %s: %v", path, err))
 		return nil
 	}
 	// Interpret the list as a discovery node array
@@ -352,7 +352,7 @@ func (c *Config) parsePersistentNodes(path string) []*discover.Node {
 		}
 		node, err := discover.ParseNode(url)
 		if err != nil {
-			log.Error(fmt.Sprintf("Node URL %s: %v\n", url, err))
+			logger.Error(fmt.Sprintf("Node URL %s: %v\n", url, err))
 			continue
 		}
 		nodes = append(nodes, node)

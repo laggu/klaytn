@@ -15,7 +15,6 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/node/cn"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
@@ -99,7 +98,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	//         So let's update ranger.Config.GasPrice using ChainConfig.UnitPrice.
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
-	log.Info("Initialised chain configuration", "config", chainConfig)
+	logger.Info("Initialised chain configuration", "config", chainConfig)
 
 	ranger := &Ranger{
 		config:         config,
@@ -125,7 +124,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	//	ranger.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	//}
 
-	log.Info("Initialising klaytn protocol" , "network", config.NetworkId)
+	logger.Info("Initialising klaytn protocol" , "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := chainDB.ReadDatabaseVersion()
@@ -144,7 +143,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
-		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+		logger.Warn("Rewinding chain to upgrade configuration", "err", compat)
 		ranger.blockchain.SetHead(compat.RewindTo)
 		chainDB.WriteChainConfig(genesisHash, chainConfig)
 	}
@@ -152,7 +151,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 
 	ranger.cnClient, err = client.Dial(ranger.consUrl)
 	if err != nil {
-		log.Error("Fail to connect consensus node","err",err)
+		logger.Error("Fail to connect consensus node","err",err)
 	}
 
 	ranger.txPool = blockchain.NewTxPool(blockchain.DefaultTxPoolConfig , ranger.chainConfig, ranger.blockchain)
@@ -191,7 +190,7 @@ func (s *Ranger) Coinbase() (eb common.Address, err error) {
 			s.coinbase = coinbase
 			s.lock.Unlock()
 
-			log.Info("Coinbase automatically configured", "address", coinbase)
+			logger.Info("Coinbase automatically configured", "address", coinbase)
 			return coinbase, nil
 		}
 	}

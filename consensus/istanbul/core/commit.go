@@ -7,7 +7,7 @@ import (
 	)
 
 func (c *core) sendCommit() {
-	logger := c.logger.New("state", c.state)
+	logger := c.logger.NewWith("state", c.state)
 	if c.current.Preprepare == nil {
 		logger.Error("Failed to get parentHash from roundState in sendCommit")
 		return
@@ -27,7 +27,7 @@ func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash, pr
 }
 
 func (c *core) broadcastCommit(sub *istanbul.Subject) {
-	logger := c.logger.New("state", c.state)
+	logger := c.logger.NewWith("state", c.state)
 
 	encodedSubject, err := Encode(sub)
 	if err != nil {
@@ -50,10 +50,10 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return errFailedDecodeCommit
 	}
 
-	//log.Error("receive handle commit","num", commit.View.Sequence)
+	//logger.Error("receive handle commit","num", commit.View.Sequence)
 
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
-		//log.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
+		//logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
 	}
 
@@ -67,7 +67,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	//
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
-	//log.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
+	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
 	if c.current.Commits.Size() > 2*c.valSet.F() && c.state.Cmp(StateCommitted) < 0 {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
@@ -79,7 +79,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
 func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) error {
-	logger := c.logger.New("from", src, "state", c.state)
+	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(commit, sub) {
@@ -91,7 +91,7 @@ func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) er
 }
 
 func (c *core) acceptCommit(msg *message, src istanbul.Validator) error {
-	logger := c.logger.New("from", src, "state", c.state)
+	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	// Add the COMMIT message to current round state
 	if err := c.current.Commits.Add(msg); err != nil {

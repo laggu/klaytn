@@ -109,10 +109,14 @@ func (l *log15Logger) write(msg string, lvl Lvl, ctx []interface{}) {
 	})
 }
 
-func (l *log15Logger) New(ctx ...interface{}) Logger {
-	child := &log15Logger{newContext(l.ctx, ctx), new(swapHandler)}
+func (l *log15Logger) NewWith(keysAndValues ...interface{}) Logger {
+	child := &log15Logger{newContext(l.ctx, keysAndValues), new(swapHandler)}
 	child.SetHandler(l.h)
 	return child
+}
+
+func (l *log15Logger) newModuleLogger(moduleName string) Logger {
+	return l.NewWith("module", moduleName)
 }
 
 func newContext(prefix []interface{}, suffix []interface{}) []interface{} {

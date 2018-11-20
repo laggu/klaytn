@@ -18,23 +18,22 @@ package blockchain
 
 import (
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/storage/statedb"
 )
 
 func InitDeriveSha(deriveShaImpl int) {
 	switch deriveShaImpl {
 	case types.ImplDeriveShaOriginal:
-		log.Info("Using DeriveShaOrig!")
+		logger.Info("Using DeriveShaOrig!")
 		types.InitDeriveSha(statedb.DeriveShaOrig{})
 	case types.ImplDeriveShaSimple:
-		log.Info("Using DeriveShaSimple!")
+		logger.Info("Using DeriveShaSimple!")
 		types.InitDeriveSha(types.DeriveShaSimple{})
 	case types.ImplDeriveShaConcat:
-		log.Info("Using DeriveShaConcat!")
+		logger.Info("Using DeriveShaConcat!")
 		types.InitDeriveSha(types.DeriveShaConcat{})
 	default:
-		log.Warn("Undefined deriveShaImpl!! use DeriveShaOrig!")
+		logger.Warn("Undefined deriveShaImpl!! use DeriveShaOrig!")
 		types.InitDeriveSha(statedb.DeriveShaOrig{})
 	}
 }

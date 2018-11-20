@@ -17,6 +17,8 @@ import (
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 )
 
+var logger = log.NewModuleLogger("work")
+
 // Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
@@ -70,7 +72,7 @@ out:
 			if self.Mining() {
 				self.Stop()
 				atomic.StoreInt32(&self.shouldStart, 1)
-				log.Info("Mining aborted due to sync")
+				logger.Info("Mining aborted due to sync")
 			}
 		case downloader.DoneEvent, downloader.FailedEvent:
 			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
@@ -93,12 +95,12 @@ func (self *Miner) Start(coinbase common.Address) {
 	self.SetCoinbase(coinbase)
 
 	if atomic.LoadInt32(&self.canStart) == 0 {
-		log.Info("Network syncing, will start work afterwards")
+		logger.Info("Network syncing, will start work afterwards")
 		return
 	}
 	atomic.StoreInt32(&self.mining, 1)
 
-	log.Info("Starting mining operation")
+	logger.Info("Starting mining operation")
 	self.worker.start()
 	self.worker.commitNewWork()
 }

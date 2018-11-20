@@ -20,6 +20,8 @@ type bridge struct {
 	printer  io.Writer    // Output writer to serialize any display strings to
 }
 
+var logger = log.NewModuleLogger("console")
+
 // newBridge creates a new JavaScript wrapper around an RPC client.
 func newBridge(client *rpc.Client, prompter UserPrompter, printer io.Writer) *bridge {
 	return &bridge{
@@ -332,7 +334,7 @@ func setError(resp *otto.Object, code int, msg string) {
 func throwJSException(msg interface{}) otto.Value {
 	val, err := otto.ToValue(msg)
 	if err != nil {
-		log.Error("Failed to serialize JavaScript exception", "exception", msg, "err", err)
+		logger.Error("Failed to serialize JavaScript exception", "exception", msg, "err", err)
 	}
 	panic(val)
 }

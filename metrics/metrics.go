@@ -21,6 +21,7 @@ import (
 // for less cluttered pprof profiles.
 var Enabled = false
 var EnabledPrometheusExport = false
+var logger = log.NewModuleLogger("metrics")
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
 const MetricsEnabledFlag = "metrics"
@@ -68,7 +69,7 @@ func CollectProcessMetrics(refresh time.Duration) {
 		diskWrites = GetOrRegisterMeter("system/disk/writecount", DefaultRegistry)
 		diskWriteBytes = GetOrRegisterMeter("system/disk/writedata", DefaultRegistry)
 	} else {
-		log.Debug("Failed to read disk metrics", "err", err)
+		logger.Debug("Failed to read disk metrics", "err", err)
 	}
 	// Iterate loading the different stats and updating the meters
 	for i := 1; ; i++ {

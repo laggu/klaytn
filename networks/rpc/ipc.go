@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/p2p/netutil"
 	"net"
 )
@@ -12,12 +11,12 @@ func (srv *Server) ServeListener(l net.Listener) error {
 	for {
 		conn, err := l.Accept()
 		if netutil.IsTemporaryError(err) {
-			log.Warn("RPC accept error", "err", err)
+			logger.Warn("RPC accept error", "err", err)
 			continue
 		} else if err != nil {
 			return err
 		}
-		log.Trace("Accepted connection", "addr", conn.RemoteAddr())
+		logger.Trace("Accepted connection", "addr", conn.RemoteAddr())
 		go srv.ServeCodec(NewJSONCodec(conn), OptionMethodInvocation|OptionSubscriptions)
 	}
 }

@@ -30,6 +30,8 @@ const (
 )
 
 var (
+	logger = log.NewModuleLogger("cmd/klay")
+
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
 	// Git tag (set via linker flags if exists)
@@ -165,9 +167,9 @@ func init() {
 
 		// Start prometheus exporter
 		if metrics.Enabled {
-			log.Info("Enabling metrics collection")
+			logger.Info("Enabling metrics collection")
 			if metrics.EnabledPrometheusExport {
-				log.Info("Enabling Prometheus Exporter")
+				logger.Info("Enabling Prometheus Exporter")
 				pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
 					"", prometheus.DefaultRegisterer, 3*time.Second)
 				go pClient.UpdatePrometheusMetrics()
@@ -177,7 +179,7 @@ func init() {
 				go func() {
 					err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 					if err != nil {
-						log.Error("PrometheusExporter starting failed:", "port", port, "err", err)
+						logger.Error("PrometheusExporter starting failed:", "port", port, "err", err)
 					}
 				}()
 			}
@@ -248,7 +250,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		// Open any wallets already attached
 		for _, wallet := range stack.AccountManager().Wallets() {
 			if err := wallet.Open(""); err != nil {
-				log.Warn("Failed to open wallet", "url", wallet.URL(), "err", err)
+				logger.Warn("Failed to open wallet", "url", wallet.URL(), "err", err)
 			}
 		}
 		// Listen for wallet event till termination
@@ -256,11 +258,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			switch event.Kind {
 			case accounts.WalletArrived:
 				if err := event.Wallet.Open(""); err != nil {
-					log.Warn("New wallet appeared, failed to open", "url", event.Wallet.URL(), "err", err)
+					logger.Warn("New wallet appeared, failed to open", "url", event.Wallet.URL(), "err", err)
 				}
 			case accounts.WalletOpened:
 				status, _ := event.Wallet.Status()
-				log.Info("New wallet appeared", "url", event.Wallet.URL(), "status", status)
+				logger.Info("New wallet appeared", "url", event.Wallet.URL(), "status", status)
 
 				if event.Wallet.URL().Scheme == "ledger" {
 					event.Wallet.SelfDerive(accounts.DefaultLedgerBaseDerivationPath, stateReader)
@@ -269,7 +271,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				}
 
 			case accounts.WalletDropped:
-				log.Info("Old wallet dropped", "url", event.Wallet.URL())
+				logger.Info("Old wallet dropped", "url", event.Wallet.URL())
 				event.Wallet.Close()
 			}
 		}

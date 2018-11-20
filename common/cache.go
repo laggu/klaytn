@@ -35,6 +35,7 @@ const (
 //it's set by flag
 var DefaultCacheType CacheType = LRUCacheType
 var CacheScale int = 100 // cache size = preset size * CacheScale / 100
+var logger = log.NewModuleLogger("common")
 
 type CacheKey interface {
 	getShardIndex(shardMask int) int
@@ -185,17 +186,17 @@ func (c LRUShardConfig) newCache() (Cache, error) {
 	cacheSize := c.CacheSize * CacheScale / 100
 
 	if cacheSize < 1 {
-		log.Error("Negative Cache Size Error", "Cache Size", cacheSize, "Cache Scale", CacheScale)
+		logger.Error("Negative Cache Size Error", "Cache Size", cacheSize, "Cache Scale", CacheScale)
 		return nil, errors.New("Must provide a positive size ")
 	}
 
 	numShards := c.makeNumShardsPowOf2()
 
 	if c.NumShards != numShards {
-		log.Warn("numShards is ", "Expected", c.NumShards,"Actual", numShards)
+		logger.Warn("numShards is ", "Expected", c.NumShards,"Actual", numShards)
 	}
 	if cacheSize % numShards != 0 {
-		log.Warn("Cache size is ", "Expected",cacheSize,"Actual", cacheSize - (cacheSize % numShards))
+		logger.Warn("Cache size is ", "Expected",cacheSize,"Actual", cacheSize - (cacheSize % numShards))
 	}
 
 	lruShard := &lruShardCache{shards : make([]*lru.Cache,numShards), shardIndexMask:numShards - 1}

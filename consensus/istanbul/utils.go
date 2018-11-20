@@ -8,6 +8,8 @@ import (
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 )
 
+var logger = log.NewModuleLogger("consensus/istanbul")
+
 func RLPHash(v interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, v)
@@ -31,7 +33,7 @@ func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (comm
 	// 1. Get signature address
 	signer, err := GetSignatureAddress(data, sig)
 	if err != nil {
-		log.Error("Failed to get signer address", "err", err)
+		logger.Error("Failed to get signer address", "err", err)
 		return common.Address{}, err
 	}
 

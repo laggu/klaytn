@@ -18,7 +18,6 @@ package statedb
 
 import (
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/log"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all
@@ -66,7 +65,7 @@ func NewSecureTrie(root common.Hash, db *Database, cachelimit uint16) (*SecureTr
 func (t *SecureTrie) Get(key []byte) []byte {
 	res, err := t.TryGet(key)
 	if err != nil {
-		log.Error("Unhandled trie error in SecureTrie.Get", "err", err)
+		logger.Error("Unhandled trie error in SecureTrie.Get", "err", err)
 	}
 	return res
 }
@@ -86,7 +85,7 @@ func (t *SecureTrie) TryGet(key []byte) ([]byte, error) {
 // stored in the trie.
 func (t *SecureTrie) Update(key, value []byte) {
 	if err := t.TryUpdate(key, value); err != nil {
-		log.Error("Unhandled trie error in SecureTrie.Update", "err", err)
+		logger.Error("Unhandled trie error in SecureTrie.Update", "err", err)
 	}
 }
 
@@ -111,7 +110,7 @@ func (t *SecureTrie) TryUpdate(key, value []byte) error {
 // Delete removes any existing value for key from the trie.
 func (t *SecureTrie) Delete(key []byte) {
 	if err := t.TryDelete(key); err != nil {
-		log.Error("Unhandled trie error in SecureTrie.Delete", "err", err)
+		logger.Error("Unhandled trie error in SecureTrie.Delete", "err", err)
 	}
 }
 

@@ -124,7 +124,7 @@ func (c *core) sendEvent(ev interface{}) {
 }
 
 func (c *core) handleMsg(payload []byte) error {
-	logger := c.logger.New()
+	logger := c.logger.NewWith()
 
 	// Decode message and check its signature
 	msg := new(message)
@@ -144,7 +144,7 @@ func (c *core) handleMsg(payload []byte) error {
 }
 
 func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
-	logger := c.logger.New("address", c.address, "from", src)
+	logger := c.logger.NewWith("address", c.address, "from", src)
 
 	// Store the message if it's a future message
 	testBacklog := func(err error) error {

@@ -32,6 +32,8 @@ const (
 	defaultGasPrice = 50 * params.Ston // TODO-GX-issue136 default gasPrice
 )
 
+var logger = log.NewModuleLogger("api")
+
 // PublicGXPAPI provides an API to access GXP related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicGXPAPI struct {
@@ -516,7 +518,7 @@ func (s *PublicBlockChainAPI) GetUncleByBlockNumberAndIndex(ctx context.Context,
 	if block != nil {
 		uncles := block.Uncles()
 		if index >= hexutil.Uint(len(uncles)) {
-			log.Debug("Requested uncle not found", "number", blockNr, "hash", block.Hash(), "index", index)
+			logger.Debug("Requested uncle not found", "number", blockNr, "hash", block.Hash(), "index", index)
 			return nil, nil
 		}
 		block = types.NewBlockWithHeader(uncles[index])
@@ -532,7 +534,7 @@ func (s *PublicBlockChainAPI) GetUncleByBlockHashAndIndex(ctx context.Context, b
 	if block != nil {
 		uncles := block.Uncles()
 		if index >= hexutil.Uint(len(uncles)) {
-			log.Debug("Requested uncle not found", "number", block.Number(), "hash", blockHash, "index", index)
+			logger.Debug("Requested uncle not found", "number", block.Number(), "hash", blockHash, "index", index)
 			return nil, nil
 		}
 		block = types.NewBlockWithHeader(uncles[index])
@@ -592,7 +594,7 @@ type CallArgs struct {
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
-	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
+	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
@@ -1237,13 +1239,13 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	//	signer := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
 	//	from, err := types.Sender(signer, tx)
 	//	if err != nil {
-	//		log.Error("api.submitTransaction make from","err",err)
+	//		logger.Error("api.submitTransaction make from","err",err)
 	//		return common.Hash{}, err
 	//	}
 	//	addr := crypto.CreateAddress(from, tx.Nonce())
-	//	log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
+	//	logger.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	//} else {
-	//	log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+	//	logger.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	//}
 	return tx.Hash(), nil
 }
@@ -1493,10 +1495,10 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 		return fmt.Errorf("chaindbCompact does not work for memory databases")
 	}
 	for b := byte(0); b < 255; b++ {
-		log.Info("Compacting chain database", "range", fmt.Sprintf("0x%0.2X-0x%0.2X", b, b+1))
+		logger.Info("Compacting chain database", "range", fmt.Sprintf("0x%0.2X-0x%0.2X", b, b+1))
 		err := ldb.LDB().CompactRange(util.Range{Start: []byte{b}, Limit: []byte{b + 1}})
 		if err != nil {
-			log.Error("Database compaction failed", "err", err)
+			logger.Error("Database compaction failed", "err", err)
 			return err
 		}
 	}

@@ -3,10 +3,9 @@ package gxhash
 import (
 	"encoding/binary"
 	"github.com/ground-x/go-gxplatform/common"
-	bitutil "github.com/ground-x/go-gxplatform/common/bitutil"
+	"github.com/ground-x/go-gxplatform/common/bitutil"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/log"
 	"hash"
 	"math/big"
 	"reflect"
@@ -110,15 +109,15 @@ func seedHash(block uint64) []byte {
 // This method places the result into dest in machine byte order.
 func generateCache(dest []uint32, epoch uint64, seed []byte) {
 	// Print some debug logs to allow analysis on low end devices
-	logger := log.New("epoch", epoch)
+	localLogger := logger.NewWith("epoch", epoch)
 
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
 
-		logFn := logger.Debug
+		logFn := localLogger.Debug
 		if elapsed > 3*time.Second {
-			logFn = logger.Info
+			logFn = localLogger.Info
 		}
 		logFn("Generated ethash verification cache", "elapsed", common.PrettyDuration(elapsed))
 	}()
@@ -144,7 +143,7 @@ func generateCache(dest []uint32, epoch uint64, seed []byte) {
 			case <-done:
 				return
 			case <-time.After(3 * time.Second):
-				logger.Info("Generating ethash verification cache", "percentage", atomic.LoadUint32(&progress)*100/uint32(rows)/4, "elapsed", common.PrettyDuration(time.Since(start)))
+				localLogger.Info("Generating ethash verification cache", "percentage", atomic.LoadUint32(&progress)*100/uint32(rows)/4, "elapsed", common.PrettyDuration(time.Since(start)))
 			}
 		}
 	}()
@@ -247,15 +246,15 @@ func generateDatasetItem(cache []uint32, index uint32, keccak512 hasher) []byte 
 // This method places the result into dest in machine byte order.
 func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 	// Print some debug logs to allow analysis on low end devices
-	logger := log.New("epoch", epoch)
+	localLogger := logger.NewWith("epoch", epoch)
 
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
 
-		logFn := logger.Debug
+		logFn := localLogger.Debug
 		if elapsed > 3*time.Second {
-			logFn = logger.Info
+			logFn = localLogger.Info
 		}
 		logFn("Generated ethash verification cache", "elapsed", common.PrettyDuration(elapsed))
 	}()
@@ -301,7 +300,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 				copy(dataset[index*hashBytes:], item)
 
 				if status := atomic.AddUint32(&progress, 1); status%percent == 0 {
-					logger.Info("Generating DAG in progress", "percentage", uint64(status*100)/(size/hashBytes), "elapsed", common.PrettyDuration(time.Since(start)))
+					localLogger.Info("Generating DAG in progress", "percentage", uint64(status*100)/(size/hashBytes), "elapsed", common.PrettyDuration(time.Since(start)))
 				}
 			}
 		}(i)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"gopkg.in/fatih/set.v0"
-	"github.com/ground-x/go-gxplatform/log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -118,7 +117,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 			const size = 64 << 10
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
-			log.Error(string(buf))
+			logger.Error(string(buf))
 		}
 		s.codecsMu.Lock()
 		s.codecs.Remove(codec)
@@ -149,7 +148,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		if err != nil {
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
-				log.Debug(fmt.Sprintf("read error %v\n", err))
+				logger.Debug(fmt.Sprintf("read error %v\n", err))
 				codec.Write(codec.CreateErrorResponse(nil, err))
 			}
 			// Error or end of stream, wait for requests and tear down
@@ -175,7 +174,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 
 		//if reqs[0].callb.method.Name == "SendRawTransaction" {
 		//	atomic.AddInt64(&exeCount,1)
-		//	log.Error("## request", "method", reqs[0].callb.method.Name,"#call",atomic.LoadInt64(&exeCount))
+		//	logger.Error("## request", "method", reqs[0].callb.method.Name,"#call",atomic.LoadInt64(&exeCount))
 		//}
 
 		// If a single shot request is executing, run and return immediately
@@ -221,7 +220,7 @@ func (s *Server) ServeSingleRequest(ctx context.Context, codec ServerCodec, opti
 // close all codecs which will cancel pending requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
-		log.Debug("RPC Server shutdown initiatied")
+		logger.Debug("RPC Server shutdown initiatied")
 		s.codecsMu.Lock()
 		defer s.codecsMu.Unlock()
 		s.codecs.Each(func(c interface{}) bool {
@@ -307,7 +306,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	//if req.callb.method.Name == "GetTransactionReceipt" {
 	//	callCount++
 	//}
-	//log.Error("### rpc.server", "#tx", callSendTx, "#receipt", callCount)
+	//logger.Error("### rpc.server", "#tx", callSendTx, "#receipt", callCount)
 
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)
@@ -337,7 +336,7 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 	}
 
 	if err := codec.Write(response); err != nil {
-		log.Error(fmt.Sprintf("%v\n", err))
+		logger.Error(fmt.Sprintf("%v\n", err))
 		codec.Close()
 	}
 
@@ -364,7 +363,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 	}
 
 	if err := codec.Write(responses); err != nil {
-		log.Error(fmt.Sprintf("%v\n", err))
+		logger.Error(fmt.Sprintf("%v\n", err))
 		codec.Close()
 	}
 

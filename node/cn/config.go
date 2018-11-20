@@ -15,7 +15,10 @@ import (
 	"runtime"
 	"time"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/log"
 )
+
+var logger = log.NewModuleLogger("node/cn")
 
 // DefaultConfig contains default settings for use on the klaytn main net.
 var DefaultConfig = Config{

@@ -9,22 +9,24 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 )
 
+var logger = log.NewModuleLogger("accounts/abi/bind")
+
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.
 func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*types.Receipt, error) {
 	queryTicker := time.NewTicker(time.Second)
 	defer queryTicker.Stop()
 
-	logger := log.New("hash", tx.Hash())
+	localLogger := logger.NewWith("hash", tx.Hash())
 	for {
 		receipt, err := b.TransactionReceipt(ctx, tx.Hash())
 		if receipt != nil {
 			return receipt, nil
 		}
 		if err != nil {
-			logger.Trace("Receipt retrieval failed", "err", err)
+			localLogger.Trace("Receipt retrieval failed", "err", err)
 		} else {
-			logger.Trace("Transaction not yet mined")
+			localLogger.Trace("Transaction not yet mined")
 		}
 		// Wait for the next round.
 		select {

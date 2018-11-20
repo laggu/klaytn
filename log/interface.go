@@ -27,7 +27,11 @@ func SetBaseLogger(logType string) {
 
 // New returns a new logger with the given context.
 func New(keyAndValues ...interface{}) Logger {
-	return baseLogger.New(keyAndValues...)
+	return baseLogger.NewWith(keyAndValues...)
+}
+
+func NewModuleLogger(moduleName string) Logger {
+	return baseLogger.newModuleLogger(moduleName)
 }
 
 func Trace(msg string, keyAndValues ...interface{}) {

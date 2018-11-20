@@ -27,6 +27,8 @@ func (s accountsByURL) Len() int           { return len(s) }
 func (s accountsByURL) Less(i, j int) bool { return s[i].URL.Cmp(s[j].URL) < 0 }
 func (s accountsByURL) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
+var logger = log.NewModuleLogger("accounts/keystore")
+
 // AmbiguousAddrError is returned when attempting to unlock
 // an address for which more than one file exists.
 type AmbiguousAddrError struct {
@@ -217,7 +219,7 @@ func (ac *accountCache) scanAccounts() error {
 	// Scan the entire folder metadata for file changes
 	creates, deletes, updates, err := ac.fileC.scan(ac.keydir)
 	if err != nil {
-		log.Debug("Failed to reload keystore contents", "err", err)
+		logger.Debug("Failed to reload keystore contents", "err", err)
 		return err
 	}
 	if creates.Size() == 0 && deletes.Size() == 0 && updates.Size() == 0 {
@@ -233,7 +235,7 @@ func (ac *accountCache) scanAccounts() error {
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
 		if err != nil {
-			log.Trace("Failed to open keystore file", "path", path, "err", err)
+			logger.Trace("Failed to open keystore file", "path", path, "err", err)
 			return nil
 		}
 		defer fd.Close()
@@ -244,9 +246,9 @@ func (ac *accountCache) scanAccounts() error {
 		addr := common.HexToAddress(key.Address)
 		switch {
 		case err != nil:
-			log.Debug("Failed to decode keystore key", "path", path, "err", err)
+			logger.Debug("Failed to decode keystore key", "path", path, "err", err)
 		case (addr == common.Address{}):
-			log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
+			logger.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
 		default:
 			return &accounts.Account{Address: addr, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}
 		}
@@ -276,6 +278,6 @@ func (ac *accountCache) scanAccounts() error {
 	case ac.notify <- struct{}{}:
 	default:
 	}
-	log.Trace("Handled keystore changes", "time", end.Sub(start))
+	logger.Trace("Handled keystore changes", "time", end.Sub(start))
 	return nil
 }

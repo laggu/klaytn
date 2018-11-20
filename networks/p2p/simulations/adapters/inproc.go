@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
@@ -95,7 +94,7 @@ func (s *SimAdapter) NewNode(config *NodeConfig) (Node, error) {
 			Dialer:          s,
 			EnableMsgEvents: config.EnableMsgEvents,
 		},
-		Logger: log.New("node.id", id.String()),
+		Logger: logger.NewWith("node.id", id.String()),
 	})
 	if err != nil {
 		return nil, err

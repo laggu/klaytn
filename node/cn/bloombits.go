@@ -7,7 +7,6 @@ import (
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/bitutil"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/storage/database"
 )
@@ -122,7 +121,7 @@ func (b *BloomIndexer) Commit() error {
 		}
 		err = batch.Put(database.BloomBitsKey(uint(i), b.section, b.head), bitutil.CompressBytes(bits))
 		if err != nil {
-			log.Crit("Failed to store bloom bits", "err", err)
+			logger.Crit("Failed to store bloom bits", "err", err)
 		}
 	}
 	return batch.Write()

@@ -18,7 +18,6 @@ import (
 	"github.com/ground-x/go-gxplatform/node/cn/filters"
 	"github.com/ground-x/go-gxplatform/node/cn/gasprice"
 	"github.com/ground-x/go-gxplatform/api"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/work"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
@@ -107,7 +106,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
-	log.Info("Initialised chain configuration", "config", chainConfig)
+	logger.Info("Initialised chain configuration", "config", chainConfig)
 
 	gxp := &GXP{
 		config:         config,
@@ -131,7 +130,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		gxp.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 
-	log.Info("Initialising Klaytn protocol", "versions", gxp.engine.Protocol().Versions , "network", config.NetworkId)
+	logger.Info("Initialising Klaytn protocol", "versions", gxp.engine.Protocol().Versions , "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := chainDB.ReadDatabaseVersion()
@@ -150,7 +149,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
-		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+		logger.Warn("Rewinding chain to upgrade configuration", "err", compat)
 		gxp.blockchain.SetHead(compat.RewindTo)
 		chainDB.WriteChainConfig(genesisHash, chainConfig)
 	}
@@ -168,7 +167,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 
 	wallet, err := gxp.RewardbaseWallet()
 	if err != nil {
-		log.Error("find err","err",err)
+		logger.Error("find err","err",err)
 	}else {
 		gxp.protocolManager.SetRewardbaseWallet(wallet)
 	}
@@ -205,7 +204,7 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 		})
 	}
 	if uint64(len(extra)) > params.GetMaximumExtraDataSize(isBFT) {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize(isBFT))
+		logger.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize(isBFT))
 		extra = nil
 	}
 	return extra
@@ -237,13 +236,13 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	// Otherwise assume proof-of-work
 	switch {
 	case config.Gxhash.PowMode == gxhash.ModeFake:
-		log.Warn("Gxhash used in fake mode")
+		logger.Warn("Gxhash used in fake mode")
 		return gxhash.NewFaker()
 	case config.Gxhash.PowMode == gxhash.ModeTest:
-		log.Warn("Gxhash used in test mode")
+		logger.Warn("Gxhash used in test mode")
 		return gxhash.NewTester()
 	case config.Gxhash.PowMode == gxhash.ModeShared:
-		log.Warn("Gxhash used in shared mode")
+		logger.Warn("Gxhash used in shared mode")
 		return gxhash.NewShared()
 	default:
 		engine := gxhash.New(gxhash.Config{
@@ -336,7 +335,7 @@ func (s *GXP) Coinbase() (eb common.Address, err error) {
 			s.coinbase = coinbase
 			s.lock.Unlock()
 
-			log.Info("Coinbase automatically configured", "address", coinbase)
+			logger.Info("Coinbase automatically configured", "address", coinbase)
 			return coinbase, nil
 		}
 	}
@@ -359,7 +358,7 @@ func (s *GXP) Rewardbase() (eb common.Address, err error) {
 			s.rewardbase = rewardbase
 			s.lock.Unlock()
 
-			log.Info("Rewardbase automatically configured", "address", rewardbase)
+			logger.Info("Rewardbase automatically configured", "address", rewardbase)
 			return rewardbase, nil
 		}
 	}
@@ -387,7 +386,7 @@ func (s *GXP) RewardbaseWallet() (accounts.Wallet, error) {
 	account := accounts.Account{Address: coinbase}
 	wallet , err := s.AccountManager().Find(account)
 	if err != nil {
-		log.Error("find err","err",err)
+		logger.Error("find err","err",err)
 		return nil, err
 	}
 	return wallet, nil
@@ -398,7 +397,7 @@ func (s *GXP) SetCoinbase(coinbase common.Address) {
 	s.lock.Lock()
 	// istanbul BFT
 	if _, ok := s.engine.(consensus.Istanbul); ok {
-		log.Error("Cannot set coinbase in Istanbul consensus")
+		logger.Error("Cannot set coinbase in Istanbul consensus")
 		return
 	}
 	s.coinbase = coinbase
@@ -413,7 +412,7 @@ func (s *GXP) SetRewardbase(rewardbase common.Address) {
 	s.lock.Unlock()
 	wallet, err := s.RewardbaseWallet()
 	if err != nil {
-		log.Error("find err","err",err)
+		logger.Error("find err","err",err)
 	}
 	s.protocolManager.SetRewardbase(rewardbase)
 	s.protocolManager.SetRewardbaseWallet(wallet)
@@ -432,13 +431,13 @@ func (s *GXP) SetRewardContract(addr common.Address) {
 func (s *GXP) StartMining(local bool) error {
 	eb, err := s.Coinbase()
 	if err != nil {
-		log.Error("Cannot start mining without coinbase", "err", err)
+		logger.Error("Cannot start mining without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 	//if clique, ok := s.engine.(*clique.Clique); ok {
 	//	rewardwallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 	//	if rewardwallet == nil || err != nil {
-	//		log.Error("Coinbase account unavailable locally", "err", err)
+	//		logger.Error("Coinbase account unavailable locally", "err", err)
 	//		return fmt.Errorf("signer missing: %v", err)
 	//	}
 	//	clique.Authorize(eb, rewardwallet.SignHash)

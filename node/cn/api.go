@@ -8,7 +8,6 @@ import (
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/work"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/storage/statedb"
@@ -129,7 +128,7 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 		SetThreads(threads int)
 	}
 	if th, ok := api.e.engine.(threaded); ok {
-		log.Info("Updated mining threads", "threads", *threads)
+		logger.Info("Updated mining threads", "threads", *threads)
 		th.SetThreads(*threads)
 	}
 	// Start the miner and return
@@ -142,7 +141,7 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 		if price.Cmp(api.e.txPool.GasPrice()) == 0 {
 			return api.e.StartMining(true)
 		} else {
-			log.Error("PrivateMinerAPI Start: Invalid unit price from API", "TxPool UnitPrice", api.e.txPool.GasPrice(), "API UnitPrice", price)
+			logger.Error("PrivateMinerAPI Start: Invalid unit price from API", "TxPool UnitPrice", api.e.txPool.GasPrice(), "API UnitPrice", price)
 			return blockchain.ErrInvalidUnitPrice
 		}
 	}
@@ -172,7 +171,7 @@ func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 // SetGasPrice sets the minimum accepted gas price for the miner.
 func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	if api.e.txPool.GasPrice().Cmp((*big.Int)(&gasPrice)) !=0 {
-		log.Debug("PrivateMinerAPI.SetGasPrice", "TxPool UnitPrice", api.e.txPool.GasPrice(), "Given UnitPrice", gasPrice.ToInt())
+		logger.Debug("PrivateMinerAPI.SetGasPrice", "TxPool UnitPrice", api.e.txPool.GasPrice(), "Given UnitPrice", gasPrice.ToInt())
 		return false
 	}
 

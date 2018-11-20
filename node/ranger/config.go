@@ -14,7 +14,10 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/log"
 )
+
+var logger = log.NewModuleLogger("node/ranger")
 
 // DefaultConfig contains default settings for use on the klaytn main net.
 var DefaultConfig = Config{

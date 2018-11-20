@@ -24,6 +24,8 @@ const (
 	fetcherID = "istanbul"
 )
 
+var logger = log.NewModuleLogger("consensus/istanbul/backend")
+
 func New(rewardbase common.Address, rewardcontract common.Address , config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager) consensus.Istanbul {
 
 	recents, _ 		  := lru.NewARC(inmemorySnapshots)
@@ -34,7 +36,7 @@ func New(rewardbase common.Address, rewardcontract common.Address , config *ista
 		istanbulEventMux: new(event.TypeMux),
 		privateKey:       privateKey,
 		address:          crypto.PubkeyToAddress(privateKey.PublicKey),
-		logger:           log.New(),
+		logger:           logger.NewWith(),
 		db:               db,
 		commitCh:         make(chan *types.Block, 1),
 		recents:          recents,
@@ -308,7 +310,7 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
 	signer, err := istanbul.GetSignatureAddress(data, sig)
 	if err != nil {
-		log.Error("Failed to get signer address", "err", err)
+		logger.Error("Failed to get signer address", "err", err)
 		return err
 	}
 	// Compare derived addresses

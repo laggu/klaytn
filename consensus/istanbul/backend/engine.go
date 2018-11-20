@@ -13,7 +13,6 @@ import (
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"math/big"
@@ -546,7 +545,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
 			if s, err := loadSnapshot(sb.config.Epoch, sb.config.SubGroupSize, sb.db, hash); err == nil {
-				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
+				logger.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
 				break
 			}
@@ -565,7 +564,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			if err := snap.store(sb.db); err != nil {
 				return nil, err
 			}
-			log.Trace("Stored genesis voting snapshot to disk")
+			logger.Trace("Stored genesis voting snapshot to disk")
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
@@ -602,7 +601,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}
-		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 	return snap, err
 }

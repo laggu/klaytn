@@ -31,6 +31,7 @@ import (
 var (
 	receiptStatusFailedRLP     = []byte{}
 	receiptStatusSuccessfulRLP = []byte{0x01}
+	logger = log.NewModuleLogger("blockchain/types")
 )
 
 const (
@@ -151,7 +152,7 @@ func (r *Receipt) statusEncoding() []byte {
 		if ReceiptStatusSuccessful <= r.Status && r.Status < ReceiptStatusLast {
 			return []byte{byte(r.Status)}
 		} else {
-			log.Error("statusEncoding", "status invalid receipt status", r.Status)
+			logger.Error("statusEncoding", "status invalid receipt status", r.Status)
 			return receiptStatusFailedRLP
 		}
 	}

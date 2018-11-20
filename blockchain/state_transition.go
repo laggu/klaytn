@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	"math"
 	"math/big"
@@ -214,7 +213,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	}
 	// TODO-GX-issue136
 	if vmerr != nil {
-		log.Debug("VM returned with error", "err", vmerr)
+		logger.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
@@ -261,7 +260,7 @@ func getReceiptStatusFromVMerr(vmerr error) (status uint) {
 	default:
 		status = types.ReceiptStatusErrDefault
 	}
-	//log.Error("getReceiptStatusFromVMErr", "vmerr", vmerr, "status", status)
+	//logger.Error("getReceiptStatusFromVMErr", "vmerr", vmerr, "status", status)
 	return
 }
 

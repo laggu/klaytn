@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/log"
 	"io"
 	"reflect"
 	"strconv"
@@ -169,7 +168,7 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 			// first param must be subscription name
 			var subscribeMethod [1]string
 			if err := json.Unmarshal(in.Payload, &subscribeMethod); err != nil {
-				log.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
+				logger.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
 				return nil, false, &invalidRequestError{"Unable to parse subscription request"}
 			}
 
@@ -221,7 +220,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) 
 				// first param must be subscription name
 				var subscribeMethod [1]string
 				if err := json.Unmarshal(r.Payload, &subscribeMethod); err != nil {
-					log.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
+					logger.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
 					return nil, false, &invalidRequestError{"Unable to parse subscription request"}
 				}
 
@@ -338,7 +337,7 @@ func (c *jsonCodec) Write(res interface{}) error {
 	defer c.encMu.Unlock()
 
 	//if result, ok := res.(*jsonSuccessResponse); ok {
-	//	log.Error("response write","result",result.Result)
+	//	logger.Error("response write","result",result.Result)
 	//}
 	return c.encode(res)
 }

@@ -11,12 +11,12 @@ type badgerDB struct {
 	fn string      // filename for reporting
 	db *badger.DB
 
-	log log.Logger // Contextual logger tracking the database path
+	logger log.Logger // Contextual logger tracking the database path
 }
 
 func NewBGDatabase(path string) (*badgerDB, error) {
 
-	logger := log.New("database", path)
+	localLogger := logger.NewWith("path", path)
 
 	if fi, err := os.Stat(path); err == nil {
 		if !fi.IsDir() {
@@ -40,7 +40,7 @@ func NewBGDatabase(path string) (*badgerDB, error) {
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Error("fail to open badger", err)
+		logger.Error("fail to open badger", err)
 	}
 
 	// (Re)check for errors and abort if opening of the db failed
@@ -49,9 +49,9 @@ func NewBGDatabase(path string) (*badgerDB, error) {
 	}
 
 	return &badgerDB{
-		fn:  path,
-		db:  db,
-		log: logger,
+		fn:     path,
+		db:     db,
+		logger: localLogger,
 	}, nil
 }
 
@@ -128,9 +128,9 @@ func (db *badgerDB) NewIterator() *badger.Iterator {
 func (db *badgerDB) Close() {
 	err := db.db.Close()
 	if err == nil {
-		db.log.Info("Database closed")
+		db.logger.Info("Database closed")
 	} else {
-		db.log.Error("Failed to close database", "err", err)
+		db.logger.Error("Failed to close database", "err", err)
 	}
 }
 

@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var logger = log.NewModuleLogger("networks/p2p/nat")
+
 // An implementation of nat.Interface can map local ports to ports
 // accessible from the Internet.
 type Interface interface {
@@ -80,17 +82,17 @@ const (
 // Map adds a port mapping on m and keeps it alive until c is closed.
 // This function is typically invoked in its own goroutine.
 func Map(m Interface, c chan struct{}, protocol string, extport, intport int, name string) {
-	log := log.New("protobuf", protocol, "extport", extport, "intport", intport, "interface", m)
+	localLogger := logger.NewWith("protobuf", protocol, "extport", extport, "intport", intport, "interface", m)
 	refresh := time.NewTimer(mapUpdateInterval)
 	defer func() {
 		refresh.Stop()
-		log.Debug("Deleting port mapping")
+		localLogger.Debug("Deleting port mapping")
 		m.DeleteMapping(protocol, extport, intport)
 	}()
 	if err := m.AddMapping(protocol, extport, intport, name, mapTimeout); err != nil {
-		log.Debug("Couldn't add port mapping", "err", err)
+		localLogger.Debug("Couldn't add port mapping", "err", err)
 	} else {
-		log.Info("Mapped network port")
+		localLogger.Info("Mapped network port")
 	}
 	for {
 		select {
@@ -99,9 +101,9 @@ func Map(m Interface, c chan struct{}, protocol string, extport, intport int, na
 				return
 			}
 		case <-refresh.C:
-			log.Trace("Refreshing port mapping")
+			localLogger.Trace("Refreshing port mapping")
 			if err := m.AddMapping(protocol, extport, intport, name, mapTimeout); err != nil {
-				log.Debug("Couldn't add port mapping", "err", err)
+				localLogger.Debug("Couldn't add port mapping", "err", err)
 			}
 			refresh.Reset(mapUpdateInterval)
 		}

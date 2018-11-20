@@ -11,7 +11,6 @@ import (
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/params"
 	"math/big"
@@ -273,7 +272,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 				for _, tx := range ev.Txs {
 					acc, err := types.Sender(self.current.signer, tx)
 					if err != nil {
-						log.Error("fail to types.Sender ", err)
+						logger.Error("fail to types.Sender ", err)
 					}
 					txs[acc] = append(txs[acc], tx)
 				}
@@ -349,7 +348,7 @@ func (self *worker) wait() {
 			if self.nodetype != node.CONSENSUSNODE {
 				pending, err := self.gxp.TxPool().Pending()
 				if err != nil {
-					log.Error("Failed to fetch pending transactions", "err", err)
+					logger.Error("Failed to fetch pending transactions", "err", err)
 					continue
 				}
 
@@ -391,7 +390,7 @@ func (self *worker) wait() {
 
 			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			if err != nil {
-				log.Error("Failed writing block to chain", "err", err)
+				logger.Error("Failed writing block to chain", "err", err)
 				continue
 			}
 			work.stateMu.Unlock()
@@ -472,7 +471,7 @@ func (self *worker) commitNewWork() {
 	// Check any fork transitions needed
 	pending, err := self.gxp.TxPool().Pending()
 	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
+		logger.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
 
@@ -498,7 +497,7 @@ func (self *worker) commitNewWork() {
 	// this will ensure we're not going off too far in the future
 	if now := time.Now().Unix(); tstamp > now+1 {
 		wait := time.Duration(tstamp-now) * time.Second
-		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
+		logger.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
 		time.Sleep(wait)
 	}
 
@@ -515,13 +514,13 @@ func (self *worker) commitNewWork() {
 		header.Coinbase = self.coinbase
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
+		logger.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
 	// Could potentially happen if starting to mine in an odd state.
 	err = self.makeCurrent(parent, header)
 	if err != nil {
-		log.Error("Failed to create mining context", "err", err)
+		logger.Error("Failed to create mining context", "err", err)
 		return
 	}
 
@@ -544,12 +543,12 @@ func (self *worker) commitNewWork() {
 			break
 		}
 		if err := self.commitUncle(work, uncle.Header()); err != nil {
-			log.Trace("Bad uncle found and will be removed", "hash", hash)
-			log.Trace(fmt.Sprint(uncle))
+			logger.Trace("Bad uncle found and will be removed", "hash", hash)
+			logger.Trace(fmt.Sprint(uncle))
 
 			badUncles = append(badUncles, hash)
 		} else {
-			log.Debug("Committing new uncle to block", "hash", hash)
+			logger.Debug("Committing new uncle to block", "hash", hash)
 			uncles = append(uncles, uncle.Header())
 		}
 	}
@@ -558,12 +557,12 @@ func (self *worker) commitNewWork() {
 	}
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
-		log.Error("Failed to finalize block for sealing", "err", err)
+		logger.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
-		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
+		logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 
@@ -674,7 +673,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 		// TODO-GX-issue136
 		// If we don't have enough gas for any further transactions then we're done
 		if env.gasPool.Gas() < params.TxGas {
-			log.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
+			logger.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
 			break
 		}
 		// Retrieve the next transaction and abort if all done
@@ -693,8 +692,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
-		//	log.Trace("Ignoring reply protected transaction", "hash", tx.Hash())
-		//	//log.Error("#### worker.commitTransaction","tx.protected",tx.Protected(),"tx.hash",tx.Hash(),"nonce",tx.Nonce(),"to",tx.To())
+		//	logger.Trace("Ignoring reply protected transaction", "hash", tx.Hash())
+		//	//logger.Error("#### worker.commitTransaction","tx.protected",tx.Protected(),"tx.hash",tx.Hash(),"nonce",tx.Nonce(),"to",tx.To())
 		//	txs.Pop()
 		//	continue
 		//}
@@ -706,24 +705,24 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 		// TODO-GX-issue136
 		case blockchain.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
-			log.Trace("Gas limit exceeded for current block", "sender", from)
+			logger.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
-			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Shift()
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			logger.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
 
 		case vm.ErrTotalTimeLimitReached:
-			log.Warn("Transaction aborted due to time limit", "hash", tx.Hash())
+			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash())
 			timeLimitReachedCounter.Inc(1)
 			if env.tcount == 0 {
-				log.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
+				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
 				tooLongTxCounter.Inc(1)
 			}
 			break
@@ -737,7 +736,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
-			log.Error("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			logger.Error("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
 		}
 	}

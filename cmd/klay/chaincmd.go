@@ -5,7 +5,6 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/log"
 	"os"
 )
 
@@ -62,7 +61,7 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}
-		log.Info("Successfully wrote genesis state", "database", name, "hash", hash)
+		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash)
 		chaindb.Close()
 	}
 	return nil

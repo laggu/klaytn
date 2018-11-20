@@ -52,6 +52,7 @@ const (
 
 var (
 	ErrInvalidSubscriptionID = errors.New("invalid id")
+	logger = log.NewModuleLogger("node/cn/filters")
 )
 
 type subscription struct {
@@ -120,7 +121,7 @@ func NewEventSystem(mux *event.TypeMux, backend Backend, lightMode bool) *EventS
 	// Make sure none of the subscriptions are empty
 	if m.txsSub == nil || m.logsSub == nil || m.rmLogsSub == nil || m.chainSub == nil ||
 		m.pendingLogSub.Closed() {
-		log.Crit("Subscribe for event system failed")
+		logger.Crit("Subscribe for event system failed")
 	}
 
 	go m.eventLoop()

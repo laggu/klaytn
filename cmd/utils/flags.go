@@ -555,7 +555,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	for _, url := range urls {
 		node, err := discover.ParseNode(url)
 		if err != nil {
-			log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+			logger.Error("Bootstrap URL invalid", "enode", url, "err", err)
 			continue
 		}
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
@@ -678,11 +678,11 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	if err != nil || index < 0 {
 		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
 	}
-	log.Warn("-------------------------------------------------------------------")
-	log.Warn("Referring to accounts by order in the keystore folder is dangerous!")
-	log.Warn("This functionality is deprecated and will be removed in the future!")
-	log.Warn("Please use explicit addresses! (can search via `geth account list`)")
-	log.Warn("-------------------------------------------------------------------")
+	logger.Warn("-------------------------------------------------------------------")
+	logger.Warn("Referring to accounts by order in the keystore folder is dangerous!")
+	logger.Warn("This functionality is deprecated and will be removed in the future!")
+	logger.Warn("Please use explicit addresses! (can search via `geth account list`)")
+	logger.Warn("-------------------------------------------------------------------")
 
 	accs := ks.Accounts()
 	if len(accs) <= index {
@@ -781,7 +781,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		lightPeers = 0
 	}
 	ethPeers := cfg.MaxPeers - lightPeers
-	log.Info("Maximum peer count", "KLAY", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+	logger.Info("Maximum peer count", "KLAY", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
 
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
@@ -1030,7 +1030,7 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		if err := ks.Unlock(developer, ""); err != nil {
 			Fatalf("Failed to unlock developer account: %v", err)
 		}
-		log.Info("Using developer account", "address", developer.Address)
+		logger.Info("Using developer account", "address", developer.Address)
 
 		cfg.Genesis = blockchain.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
@@ -1149,7 +1149,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		if err := ks.Unlock(developer, ""); err != nil {
 			Fatalf("Failed to unlock developer account: %v", err)
 		}
-		log.Info("Using developer account", "address", developer.Address)
+		logger.Info("Using developer account", "address", developer.Address)
 
 		cfg.Genesis = blockchain.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {

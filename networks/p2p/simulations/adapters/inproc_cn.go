@@ -24,8 +24,7 @@ import (
 	"sync"
 
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/node"
+		"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/pipes"
@@ -89,7 +88,7 @@ func (s *CnAdapter) NewNode(config *NodeConfig) (Node, error) {
 			EnableMsgEvents: config.EnableMsgEvents,
 		},
 		//Logger: log.New("node.id", id.String()),
-		Logger: log.New("node.name", config.Name),
+		Logger: logger.NewWith("node.name", config.Name),
 
 		//Logger: log.New(),
 	})

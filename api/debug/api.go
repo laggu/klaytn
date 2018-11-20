@@ -21,6 +21,7 @@ import (
 
 // Handler is the global debugging handler.
 var Handler = new(HandlerT)
+var logger = log.NewModuleLogger("api/debug")
 
 // HandlerT implements the debugging API.
 // Do not create values of this type, use the one
@@ -98,13 +99,13 @@ func (h *HandlerT) StartPProf(address string, port int) error {
 		h.handlerInited = true
 	}
 
-	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", serverAddr))
+	logger.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", serverAddr))
 	go func(handle *HandlerT) {
 		if err := httpServer.ListenAndServe(); err != nil {
 			if err == http.ErrServerClosed {
-				log.Info("pprof server is closed")
+				logger.Info("pprof server is closed")
 			} else {
-				log.Error("Failure in running pprof server", "err", err)
+				logger.Error("Failure in running pprof server", "err", err)
 			}
 		}
 		h.mu.Lock()
@@ -125,7 +126,7 @@ func (h *HandlerT) StopPProf() error {
 		return errors.New("pprof server is not running")
 	}
 
-	log.Info("Shutting down pprof server")
+	logger.Info("Shutting down pprof server")
 	h.pprofServer.Close()
 
 	return nil
@@ -165,7 +166,7 @@ func (h *HandlerT) StartCPUProfile(file string) error {
 	}
 	h.cpuW = f
 	h.cpuFile = file
-	log.Info("CPU profiling started", "dump", h.cpuFile)
+	logger.Info("CPU profiling started", "dump", h.cpuFile)
 	return nil
 }
 
@@ -177,7 +178,7 @@ func (h *HandlerT) StopCPUProfile() error {
 	if h.cpuW == nil {
 		return errors.New("CPU profiling not in progress")
 	}
-	log.Info("Done writing CPU profile", "dump", h.cpuFile)
+	logger.Info("Done writing CPU profile", "dump", h.cpuFile)
 	h.cpuW.Close()
 	h.cpuW = nil
 	h.cpuFile = ""
@@ -263,7 +264,7 @@ func (*HandlerT) SetGCPercent(v int) int {
 
 func writeProfile(name, file string) error {
 	p := pprof.Lookup(name)
-	log.Info("Writing profile records", "count", p.Count(), "type", name, "dump", file)
+	logger.Info("Writing profile records", "count", p.Count(), "type", name, "dump", file)
 	f, err := os.Create(expandHome(file))
 	if err != nil {
 		return err

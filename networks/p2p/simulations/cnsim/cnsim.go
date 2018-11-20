@@ -20,6 +20,7 @@ import (
 )
 
 var adapterType = flag.String("adapter", "cnsim", `node adapter to use (one of "sim", "exec" or "docker")`)
+var logger = log.NewModuleLogger("networks/p2p/simulations/cnism")
 
 // main() starts a simulation network which contains nodes running a simple
 // ping-pong protocol
@@ -43,37 +44,37 @@ func main() {
 	switch *adapterType {
 
 	case "cnsim":
-		log.Info("using cnsim adapter")
+		logger.Info("using cnsim adapter")
 		adapter = adapters.NewCnAdapter(services)
 
 	case "exec":
 		tmpdir, err := ioutil.TempDir("", "p2p-example")
 		if err != nil {
-			log.Crit("error creating temp dir", "err", err)
+			logger.Crit("error creating temp dir", "err", err)
 		}
 		defer os.RemoveAll(tmpdir)
-		log.Info("using exec adapter", "tmpdir", tmpdir)
+		logger.Info("using exec adapter", "tmpdir", tmpdir)
 		adapter = adapters.NewExecAdapter(tmpdir)
 
 	case "docker":
-		log.Info("using docker adapter")
+		logger.Info("using docker adapter")
 		var err error
 		adapter, err = adapters.NewDockerAdapter()
 		if err != nil {
-			log.Crit("error creating docker adapter", "err", err)
+			logger.Crit("error creating docker adapter", "err", err)
 		}
 
 	default:
-		log.Crit(fmt.Sprintf("unknown node adapter %q", *adapterType))
+		logger.Crit(fmt.Sprintf("unknown node adapter %q", *adapterType))
 	}
 
 	// start the HTTP API
-	log.Info("starting simulation server on 0.0.0.0:8888...")
+	logger.Info("starting simulation server on 0.0.0.0:8888...")
 	network := simulations.NewNetwork(adapter, &simulations.NetworkConfig{
 		DefaultService: "cn-sim",
 	})
 	if err := http.ListenAndServe(":8888", simulations.NewServer(network)); err != nil {
-		log.Crit("error starting simulation server", "err", err)
+		logger.Crit("error starting simulation server", "err", err)
 	}
 }
 
@@ -82,14 +83,14 @@ func main() {
 // return
 type cnSimService struct {
 	id       discover.NodeID
-	log      log.Logger
+	logger   log.Logger
 	received int64
 }
 
 func newCnSimService(id discover.NodeID) *cnSimService {
 	return &cnSimService{
-		id:  id,
-		log: log.New("node.id", id),
+		id:     id,
+		logger: logger.NewWith("node.id", id),
 	}
 }
 
@@ -108,12 +109,12 @@ func (p *cnSimService) APIs() []rpc.API {
 }
 
 func (p *cnSimService) Start(server *p2p.Server) error {
-	p.log.Info("cn-sim service starting")
+	p.logger.Info("cn-sim service starting")
 	return nil
 }
 
 func (p *cnSimService) Stop() error {
-	p.log.Info("cn-sim service stopping")
+	p.logger.Info("cn-sim service stopping")
 	return nil
 }
 
@@ -133,14 +134,14 @@ const (
 // Run implements the ping-pong protocol which sends ping messages to the peer
 // at 10s intervals, and responds to pings with pong messages.
 func (p *cnSimService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-	// log := p.log.New("peer.id", peer.ID())
+	// log := p.logger.New("peer.id", peer.ID())
 
 
 	errC := make(chan error)
 
 	go func() {
 		for range time.Tick(10 * time.Second) {
-			log.Info("sending ping")
+			logger.Info("sending ping")
 			if err := p2p.Send(rw, pingMsgCode, "PING"); err != nil {
 				errC <- err
 				return
@@ -159,10 +160,10 @@ func (p *cnSimService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				errC <- err
 				return
 			}
-			log.Info("received message", "msg.code", msg.Code, "msg.payload", string(payload))
+			logger.Info("received message", "msg.code", msg.Code, "msg.payload", string(payload))
 			atomic.AddInt64(&p.received, 1)
 			if msg.Code == pingMsgCode {
-				log.Info("sending pong")
+				logger.Info("sending pong")
 				go p2p.Send(rw, pongMsgCode, "PONG")
 			}
 		}

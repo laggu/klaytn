@@ -32,6 +32,8 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 )
 
+var logger = log.NewModuleLogger("networks/p2p")
+
 const (
 	baseProtocolVersion    = 5
 	baseProtocolLength     = uint64(16)
@@ -98,7 +100,7 @@ type PeerEvent struct {
 type Peer struct {
 	rw      *conn
 	running map[string]*protoRW
-	log     log.Logger
+	logger  log.Logger
 	created mclock.AbsTime
 
 	wg       sync.WaitGroup
@@ -173,13 +175,13 @@ func newPeer(conn *conn, protocols []Protocol) *Peer {
 		disc:     make(chan DiscReason),
 		protoErr: make(chan error, len(protomap)+1), // protocols + pingLoop
 		closed:   make(chan struct{}),
-		log:      log.New("id", conn.id, "conn", conn.flags),
+		logger:   logger.NewWith("id", conn.id, "conn", conn.flags),
 	}
 	return p
 }
 
 func (p *Peer) Log() log.Logger {
-	return p.log
+	return p.logger
 }
 
 func (p *Peer) run() (remoteRequested bool, err error) {
@@ -229,7 +231,7 @@ loop:
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()
-	log.Debug(fmt.Sprintf("peer(%p) run stopped", p))
+	logger.Debug(fmt.Sprintf("peer(%p) run stopped", p))
 	return remoteRequested, err
 }
 
@@ -242,12 +244,12 @@ func (p *Peer) pingLoop() {
 		case <-ping.C:
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
-				log.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
+				logger.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
 				return
 			}
 			ping.Reset(pingInterval)
 		case <-p.closed:
-			log.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
+			logger.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
 			return
 		}
 	}
@@ -260,13 +262,13 @@ func (p *Peer) readLoop(errc chan<- error) {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
 			errc <- err
-			log.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
+			logger.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
 			errc <- err
-			log.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
+			logger.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
 			return
 		}
 	}
@@ -350,19 +352,19 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 		if p.events != nil {
 			rw = newMsgEventer(rw, p.events, p.ID(), proto.Name)
 		}
-		p.log.Trace(fmt.Sprintf("Starting protocol %s/%d", proto.Name, proto.Version))
+		p.logger.Trace(fmt.Sprintf("Starting protocol %s/%d", proto.Name, proto.Version))
 		go func() {
 			//p.wg.Add(1)
 			defer p.wg.Done()
 			err := proto.Run(p, rw)
 			if err == nil {
-				p.log.Trace(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
+				p.logger.Trace(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
 			} else if err != io.EOF {
-				p.log.Trace(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
+				p.logger.Trace(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
 			}
 			p.protoErr <- err
-			p.log.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))
+			p.logger.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))
 			//p.wg.Done()
 		}()
 	}

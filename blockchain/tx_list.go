@@ -4,7 +4,6 @@ import (
 	"container/heap"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/log"
 	"math"
 	"math/big"
 	"sort"
@@ -241,7 +240,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 		// price as well as checking the percentage threshold to ensure that
 		// this is accurate for low (peb-level) gas price replacements
 		if old.GasPrice().Cmp(tx.GasPrice()) >= 0 || threshold.Cmp(tx.GasPrice()) > 0 {
-			log.Error("already nonce exist","nonce",tx.Nonce(),"with gasprice", old.GasPrice(),"priceBump",priceBump,"new tx.gasprice",tx.GasPrice())
+			logger.Error("already nonce exist","nonce",tx.Nonce(),"with gasprice", old.GasPrice(),"priceBump",priceBump,"new tx.gasprice",tx.GasPrice())
 			return false, nil
 		}
 	}
@@ -469,7 +468,7 @@ func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) boo
 	}
 	// Check if the transaction is underpriced or not
 	if len(*l.items) == 0 {
-		log.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
+		logger.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
 		return false
 	}
 	cheapest := []*types.Transaction(*l.items)[0]

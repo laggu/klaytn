@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"github.com/ground-x/go-gxplatform/log"
 )
 
 // DuplicateMetric is the error returned by Registry.Register when a metric
@@ -194,7 +193,7 @@ func (r *StandardRegistry) UnregisterAll() {
 }
 
 func (r *StandardRegistry) register(name string, i interface{}) error {
-	log.Trace("Metric register ("+name+")")
+	logger.Trace("Metric register ("+name+")")
 	if _, ok := r.metrics[name]; ok {
 		return DuplicateMetric(name)
 	}

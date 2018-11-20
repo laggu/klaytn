@@ -29,6 +29,8 @@ import (
 	"encoding/json"
 )
 
+var logger = log.NewModuleLogger("storage/database")
+
 type DBManager interface {
 	Close()
 	NewBatch(dbType DatabaseEntryType) Batch
@@ -185,7 +187,7 @@ func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManag
 		db = NewMemDatabase()
 	default:
 		db, err = NewLDBDatabase(dir, ldbCacheSize, handles)
-		log.Warn("database type is not set, fall back to default LevelDB")
+		logger.Warn("database type is not set, fall back to default LevelDB")
 	}
 
 	if err != nil {
@@ -211,11 +213,11 @@ func (dbm *databaseManager) GetMemDB() *MemDatabase {
 		if memDB, ok := dbm.dbs[0].(*MemDatabase); ok {
 			return memDB
 		} else {
-			log.Error("DBManager is set as memory DBManager, but actual value is not set as memory DBManager.")
+			logger.Error("DBManager is set as memory DBManager, but actual value is not set as memory DBManager.")
 			return nil
 		}
 	}
-	log.Error("GetMemDB() call to non memory DBManager object.")
+	logger.Error("GetMemDB() call to non memory DBManager object.")
 	return nil
 }
 
@@ -251,7 +253,7 @@ func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
 func (dbm *databaseManager) WriteCanonicalHash(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(canonicalHashDB)
 	if err := db.Put(headerHashKey(number), hash.Bytes()); err != nil {
-		log.Crit("Failed to store number to hash mapping", "err", err)
+		logger.Crit("Failed to store number to hash mapping", "err", err)
 	}
 }
 
@@ -259,7 +261,7 @@ func (dbm *databaseManager) WriteCanonicalHash(hash common.Hash, number uint64) 
 func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 	db := dbm.getDatabase(canonicalHashDB)
 	if err := db.Delete(headerHashKey(number)); err != nil {
-		log.Crit("Failed to delete number to hash mapping", "err", err)
+		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
 }
 
@@ -290,7 +292,7 @@ func (dbm *databaseManager) ReadHeadHeaderHash() common.Hash {
 func (dbm *databaseManager) WriteHeadHeaderHash(hash common.Hash) {
 	db := dbm.getDatabase(headheaderHashDB)
 	if err := db.Put(headHeaderKey, hash.Bytes()); err != nil {
-		log.Crit("Failed to store last header's hash", "err", err)
+		logger.Crit("Failed to store last header's hash", "err", err)
 	}
 }
 
@@ -308,7 +310,7 @@ func (dbm *databaseManager) ReadHeadBlockHash() common.Hash {
 func (dbm *databaseManager) WriteHeadBlockHash(hash common.Hash) {
 	db := dbm.getDatabase(headBlockHashDB)
 	if err := db.Put(headBlockKey, hash.Bytes()); err != nil {
-		log.Crit("Failed to store last block's hash", "err", err)
+		logger.Crit("Failed to store last block's hash", "err", err)
 	}
 }
 
@@ -327,7 +329,7 @@ func (dbm *databaseManager) ReadHeadFastBlockHash() common.Hash {
 func (dbm *databaseManager) WriteHeadFastBlockHash(hash common.Hash) {
 	db := dbm.getDatabase(headFastBlockHashDB)
 	if err := db.Put(headFastBlockKey, hash.Bytes()); err != nil {
-		log.Crit("Failed to store last fast block's hash", "err", err)
+		logger.Crit("Failed to store last fast block's hash", "err", err)
 	}
 }
 
@@ -348,7 +350,7 @@ func (dbm *databaseManager) ReadFastTrieProgress() uint64 {
 func (dbm *databaseManager) WriteFastTrieProgress(count uint64) {
 	db := dbm.getDatabase(fastTrieProgressDB)
 	if err := db.Put(fastTrieProgressKey, new(big.Int).SetUint64(count).Bytes()); err != nil {
-		log.Crit("Failed to store fast sync trie progress", "err", err)
+		logger.Crit("Failed to store fast sync trie progress", "err", err)
 	}
 }
 
@@ -370,7 +372,7 @@ func (dbm *databaseManager) ReadHeader(hash common.Hash, number uint64) *types.H
 	}
 	header := new(types.Header)
 	if err := rlp.Decode(bytes.NewReader(data), header); err != nil {
-		log.Error("Invalid block header RLP", "hash", hash, "err", err)
+		logger.Error("Invalid block header RLP", "hash", hash, "err", err)
 		return nil
 	}
 	return header
@@ -395,18 +397,18 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) error {
 	)
 	key := headerNumberKey(hash)
 	if err := db.Put(key, encoded); err != nil {
-		log.Crit("Failed to store hash to number mapping", "err", err)
+		logger.Crit("Failed to store hash to number mapping", "err", err)
 		return err
 	}
 	// Write the encoded header
 	data, err := rlp.EncodeToBytes(header)
 	if err != nil {
-		log.Crit("Failed to RLP encode header", "err", err)
+		logger.Crit("Failed to RLP encode header", "err", err)
 		return err
 	}
 	key = headerKey(number, hash)
 	if err := db.Put(key, data); err != nil {
-		log.Crit("Failed to store header", "err", err)
+		logger.Crit("Failed to store header", "err", err)
 		return err
 	}
 	return nil
@@ -416,10 +418,10 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) error {
 func (dbm *databaseManager) DeleteHeader(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(headerDB)
 	if err := db.Delete(headerKey(number, hash)); err != nil {
-		log.Crit("Failed to delete header", "err", err)
+		logger.Crit("Failed to delete header", "err", err)
 	}
 	if err := db.Delete(headerNumberKey(hash)); err != nil {
-		log.Crit("Failed to delete hash to number mapping", "err", err)
+		logger.Crit("Failed to delete hash to number mapping", "err", err)
 	}
 }
 
@@ -441,7 +443,7 @@ func (dbm *databaseManager) ReadBody(hash common.Hash, number uint64) *types.Bod
 	}
 	body := new(types.Body)
 	if err := rlp.Decode(bytes.NewReader(data), body); err != nil {
-		log.Error("Invalid block body RLP", "hash", hash, "err", err)
+		logger.Error("Invalid block body RLP", "hash", hash, "err", err)
 		return nil
 	}
 	return body
@@ -458,7 +460,7 @@ func (dbm *databaseManager) ReadBodyRLP(hash common.Hash, number uint64) rlp.Raw
 func (dbm *databaseManager) WriteBody(hash common.Hash, number uint64, body *types.Body) error {
 	data, err := rlp.EncodeToBytes(body)
 	if err != nil {
-		log.Crit("Failed to RLP encode body", "err", err)
+		logger.Crit("Failed to RLP encode body", "err", err)
 		return err
 	}
 	return dbm.WriteBodyRLP(hash, number, data)
@@ -467,12 +469,12 @@ func (dbm *databaseManager) WriteBody(hash common.Hash, number uint64, body *typ
 func (dbm *databaseManager) PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body) error {
 	data, err := rlp.EncodeToBytes(body)
 	if err != nil {
-		log.Crit("Failed to RLP encode body", "err", err)
+		logger.Crit("Failed to RLP encode body", "err", err)
 		return err
 	}
 
 	if err := batch.Put(blockBodyKey(number, hash), data); err != nil {
-		log.Crit("Failed to store block body", "err", err)
+		logger.Crit("Failed to store block body", "err", err)
 		return err
 	}
 	return nil
@@ -482,7 +484,7 @@ func (dbm *databaseManager) PutBodyToBatch(batch Batch, hash common.Hash, number
 func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue) error {
 	db := dbm.getDatabase(BodyDB)
 	if err := db.Put(blockBodyKey(number, hash), rlp); err != nil {
-		log.Crit("Failed to store block body", "err", err)
+		logger.Crit("Failed to store block body", "err", err)
 		return err
 	}
 	return nil
@@ -492,7 +494,7 @@ func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rl
 func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(BodyDB)
 	if err := db.Delete(blockBodyKey(number, hash)); err != nil {
-		log.Crit("Failed to delete block body", "err", err)
+		logger.Crit("Failed to delete block body", "err", err)
 	}
 }
 
@@ -506,7 +508,7 @@ func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
 	}
 	td := new(big.Int)
 	if err := rlp.Decode(bytes.NewReader(data), td); err != nil {
-		log.Error("Invalid block total difficulty RLP", "hash", hash, "err", err)
+		logger.Error("Invalid block total difficulty RLP", "hash", hash, "err", err)
 		return nil
 	}
 	return td
@@ -517,10 +519,10 @@ func (dbm *databaseManager) WriteTd(hash common.Hash, number uint64, td *big.Int
 	db := dbm.getDatabase(tdDB)
 	data, err := rlp.EncodeToBytes(td)
 	if err != nil {
-		log.Crit("Failed to RLP encode block total difficulty", "err", err)
+		logger.Crit("Failed to RLP encode block total difficulty", "err", err)
 	}
 	if err := db.Put(headerTDKey(number, hash), data); err != nil {
-		log.Crit("Failed to store block total difficulty", "err", err)
+		logger.Crit("Failed to store block total difficulty", "err", err)
 	}
 }
 
@@ -528,7 +530,7 @@ func (dbm *databaseManager) WriteTd(hash common.Hash, number uint64, td *big.Int
 func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(tdDB)
 	if err := db.Delete(headerTDKey(number, hash)); err != nil {
-		log.Crit("Failed to delete block total difficulty", "err", err)
+		logger.Crit("Failed to delete block total difficulty", "err", err)
 	}
 }
 
@@ -544,7 +546,7 @@ func (dbm *databaseManager) ReadReceipts(hash common.Hash, number uint64) types.
 	// Convert the revceipts from their database form to their internal representation
 	storageReceipts := []*types.ReceiptForStorage{}
 	if err := rlp.DecodeBytes(data, &storageReceipts); err != nil {
-		log.Error("Invalid receipt array RLP", "hash", hash, "err", err)
+		logger.Error("Invalid receipt array RLP", "hash", hash, "err", err)
 		return nil
 	}
 	receipts := make(types.Receipts, len(storageReceipts))
@@ -572,12 +574,12 @@ func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipt
 	}
 	bytes, err := rlp.EncodeToBytes(storageReceipts)
 	if err != nil {
-		log.Crit("Failed to encode block receipts", "err", err)
+		logger.Crit("Failed to encode block receipts", "err", err)
 		return err
 	}
 	// Store the flattened receipt slice
 	if err := putter.Put(blockReceiptsKey(number, hash), bytes); err != nil {
-		log.Crit("Failed to store block receipts", "err", err)
+		logger.Crit("Failed to store block receipts", "err", err)
 		return err
 	}
 	return nil
@@ -587,7 +589,7 @@ func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipt
 func (dbm *databaseManager) DeleteReceipts(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(ReceiptsDB)
 	if err := db.Delete(blockReceiptsKey(number, hash)); err != nil {
-		log.Crit("Failed to delete block receipts", "err", err)
+		logger.Crit("Failed to delete block receipts", "err", err)
 	}
 }
 
@@ -708,7 +710,7 @@ func (dbm *databaseManager) ReadTxLookupEntry(hash common.Hash) (common.Hash, ui
 	}
 	var entry TxLookupEntry
 	if err := rlp.DecodeBytes(data, &entry); err != nil {
-		log.Error("Invalid transaction lookup entry RLP", "hash", hash, "err", err)
+		logger.Error("Invalid transaction lookup entry RLP", "hash", hash, "err", err)
 		return common.Hash{}, 0, 0
 	}
 	return entry.BlockHash, entry.BlockIndex, entry.Index
@@ -734,11 +736,11 @@ func putTxLookupEntriesToPutter(putter Putter, block *types.Block) error {
 		}
 		data, err := rlp.EncodeToBytes(entry)
 		if err != nil {
-			log.Crit("Failed to encode transaction lookup entry", "err", err)
+			logger.Crit("Failed to encode transaction lookup entry", "err", err)
 			return err
 		}
 		if err := putter.Put(TxLookupKey(tx.Hash()), data); err != nil {
-			log.Crit("Failed to store transaction lookup entry", "err", err)
+			logger.Crit("Failed to store transaction lookup entry", "err", err)
 			return err
 		}
 	}
@@ -760,7 +762,7 @@ func (dbm *databaseManager) ReadTransaction(hash common.Hash) (*types.Transactio
 	}
 	body := dbm.ReadBody(blockHash, blockNumber)
 	if body == nil || len(body.Transactions) <= int(txIndex) {
-		log.Error("Transaction referenced missing", "number", blockNumber, "hash", blockHash, "index", txIndex)
+		logger.Error("Transaction referenced missing", "number", blockNumber, "hash", blockHash, "index", txIndex)
 		return nil, common.Hash{}, 0, 0
 	}
 	return body.Transactions[txIndex], blockHash, blockNumber, txIndex
@@ -775,7 +777,7 @@ func (dbm *databaseManager) ReadReceipt(hash common.Hash) (*types.Receipt, commo
 	}
 	receipts := dbm.ReadReceipts(blockHash, blockNumber)
 	if len(receipts) <= int(receiptIndex) {
-		log.Error("Receipt refereced missing", "number", blockNumber, "hash", blockHash, "index", receiptIndex)
+		logger.Error("Receipt refereced missing", "number", blockNumber, "hash", blockHash, "index", receiptIndex)
 		return nil, common.Hash{}, 0, 0
 	}
 	return receipts[receiptIndex], blockHash, blockNumber, receiptIndex
@@ -839,7 +841,7 @@ func (dbm *databaseManager) WriteDatabaseVersion(version int) {
 	db := dbm.getDatabase(databaseVersionDB)
 	enc, _ := rlp.EncodeToBytes(version)
 	if err := db.Put(databaseVerisionKey, enc); err != nil {
-		log.Crit("Failed to store the database version", "err", err)
+		logger.Crit("Failed to store the database version", "err", err)
 	}
 }
 
@@ -852,7 +854,7 @@ func (dbm *databaseManager) ReadChainConfig(hash common.Hash) *params.ChainConfi
 	}
 	var config params.ChainConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		log.Error("Invalid chain config JSON", "hash", hash, "err", err)
+		logger.Error("Invalid chain config JSON", "hash", hash, "err", err)
 		return nil
 	}
 	return &config
@@ -865,10 +867,10 @@ func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.Chain
 	}
 	data, err := json.Marshal(cfg)
 	if err != nil {
-		log.Crit("Failed to JSON encode chain config", "err", err)
+		logger.Crit("Failed to JSON encode chain config", "err", err)
 	}
 	if err := db.Put(configKey(hash), data); err != nil {
-		log.Crit("Failed to store chain config", "err", err)
+		logger.Crit("Failed to store chain config", "err", err)
 	}
 }
 
@@ -885,12 +887,12 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	batch := dbm.getDatabase(PreimagesDB).NewBatch()
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
-			log.Crit("Failed to store trie preimage", "err", err)
+			logger.Crit("Failed to store trie preimage", "err", err)
 			return err
 		}
 	}
 	if err := batch.Write(); err != nil {
-		log.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
+		logger.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
 		return err
 	}
 	preimageCounter.Inc(int64(len(preimages)))

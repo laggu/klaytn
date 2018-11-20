@@ -29,6 +29,8 @@ import (
 )
 
 var (
+	logger = log.NewModuleLogger("storage/statedb")
+
 	memcacheFlushTimeTimer  = metrics.NewRegisteredResettingTimer("trie/memcache/flush/time", nil)
 	memcacheFlushNodesMeter = metrics.NewRegisteredMeter("trie/memcache/flush/nodes", nil)
 	memcacheFlushSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/flush/size", nil)
@@ -316,7 +318,7 @@ func (db *Database) insert(hash common.Hash, blob []byte, node node) {
 			missingNewest := db.newest
 			db.newest = db.getLastNodeHashInFlushList()
 			db.nodes[db.newest].flushNext = common.Hash{}
-			log.Error("Found a newest node for missingNewest", "oldNewest", missingNewest, "newNewest", db.newest)
+			logger.Error("Found a newest node for missingNewest", "oldNewest", missingNewest, "newNewest", db.newest)
 		}
 		db.nodes[db.newest].flushNext, db.newest = hash, hash
 	}
@@ -450,7 +452,7 @@ func (db *Database) Dereference(root common.Hash) {
 	memcacheGCSizeMeter.Mark(int64(storage - db.nodesSize))
 	memcacheGCNodesMeter.Mark(int64(nodes - len(db.nodes)))
 
-	log.Debug("Dereferenced trie from memory database", "nodes", nodes-len(db.nodes), "size", storage-db.nodesSize, "time", time.Since(start),
+	logger.Debug("Dereferenced trie from memory database", "nodes", nodes-len(db.nodes), "size", storage-db.nodesSize, "time", time.Since(start),
 		"gcnodes", db.gcnodes, "gcsize", db.gcsize, "gctime", db.gctime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
 }
 
@@ -529,7 +531,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		// If we exceeded the ideal batch size, commit and reset
 		if batch.ValueSize() >= database.IdealBatchSize {
 			if err := batch.Write(); err != nil {
-				log.Error("Failed to write flush list to disk", "err", err)
+				logger.Error("Failed to write flush list to disk", "err", err)
 				db.lock.RUnlock()
 				return err
 			}
@@ -544,7 +546,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	}
 	// Flush out any remainder data from the last batch
 	if err := batch.Write(); err != nil {
-		log.Error("Failed to write flush list to disk", "err", err)
+		logger.Error("Failed to write flush list to disk", "err", err)
 		db.lock.RUnlock()
 		return err
 	}
@@ -578,7 +580,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	memcacheFlushSizeMeter.Mark(int64(nodeSize - db.nodesSize))
 	memcacheFlushNodesMeter.Mark(int64(nodes - len(db.nodes)))
 
-	log.Debug("Persisted nodes from memory database", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
+	logger.Debug("Persisted nodes from memory database", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
 		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
 
 	return nil
@@ -592,7 +594,7 @@ func (db* Database) writeBatchPreimages() error {
 	// Move all of the accumulated preimages into a write batch
 	for hash, preimage := range db.preimages {
 		if err := preimagesBatch.Put(db.secureKey(hash[:]), preimage); err != nil {
-			log.Error("Failed to commit preimages from trie database", "err", err)
+			logger.Error("Failed to commit preimages from trie database", "err", err)
 			return err
 		}
 		if preimagesBatch.ValueSize() > database.IdealBatchSize {
@@ -605,7 +607,7 @@ func (db* Database) writeBatchPreimages() error {
 
 	// Write batch ready, unlock for readers during persistence
 	if err := preimagesBatch.Write(); err != nil {
-		log.Error("Failed to write preimages to disk", "err", err)
+		logger.Error("Failed to write preimages to disk", "err", err)
 		return err
 	}
 
@@ -617,13 +619,13 @@ func (db* Database) writeBatchNodes(node common.Hash) error {
 	nodesBatch := db.diskDB.NewBatch(database.StateTrieDB)
 
 	if err := db.commit(node, nodesBatch); err != nil {
-		log.Error("Failed to commit trie from trie database", "err", err)
+		logger.Error("Failed to commit trie from trie database", "err", err)
 		return err
 	}
 
 	// Write batch ready, unlock for readers during persistence
 	if err := nodesBatch.Write(); err != nil {
-		log.Error("Failed to write trie to disk", "err", err)
+		logger.Error("Failed to write trie to disk", "err", err)
 		return err
 	}
 
@@ -670,11 +672,11 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	memcacheCommitSizeMeter.Mark(int64(storage - db.nodesSize))
 	memcacheCommitNodesMeter.Mark(int64(nodes - len(db.nodes)))
 
-	logger := log.Info
+	localLogger := logger.Info
 	if !report {
-		logger = log.Debug
+		localLogger = logger.Debug
 	}
-	logger("Persisted trie from memory database", "nodes", nodes-len(db.nodes), "size", storage-db.nodesSize, "time", time.Since(start),
+	localLogger("Persisted trie from memory database", "nodes", nodes-len(db.nodes), "size", storage-db.nodesSize, "time", time.Since(start),
 		"gcnodes", db.gcnodes, "gcsize", db.gcsize, "gctime", db.gctime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
 
 	// Reset the garbage collection statistics
@@ -812,14 +814,14 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 		if _, ok := db.nodes[nodeHash]; ok{
 			lastNodeHash = nodeHash
 		} else {
-			log.Debug("not found next noode in map of flush list")
+			logger.Debug("not found next noode in map of flush list")
 			break
 		}
 
 		if db.nodes[nodeHash].flushNext != (common.Hash{}) {
 			nodeHash = db.nodes[nodeHash].flushNext
 		} else {
-			log.Debug("found last noode in map of flush list")
+			logger.Debug("found last noode in map of flush list")
 			break
 		}
 	}

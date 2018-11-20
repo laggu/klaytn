@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"github.com/ground-x/go-gxplatform/log"
 	"net"
 )
 
@@ -19,7 +18,7 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
-			log.Debug("HTTP registered", "namespace", api.Namespace)
+			logger.Debug("HTTP registered", "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -48,7 +47,7 @@ func StartFastHTTPEndpoint(endpoint string, apis []API, modules []string, cors [
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
-			log.Debug("FastHTTP registered", "namespace", api.Namespace)
+			logger.Debug("FastHTTP registered", "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -78,7 +77,7 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
-			log.Debug("WebSocket registered", "service", api.Service, "namespace", api.Namespace)
+			logger.Debug("WebSocket registered", "service", api.Service, "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -108,7 +107,7 @@ func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigin
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
-			log.Debug("FastWebSocket registered", "service", api.Service, "namespace", api.Namespace)
+			logger.Debug("FastWebSocket registered", "service", api.Service, "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -132,7 +131,7 @@ func StartIPCEndpoint(ipcEndpoint string, apis []API) (net.Listener, *Server, er
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return nil, nil, err
 		}
-		log.Debug("IPC registered", "namespace", api.Namespace)
+		logger.Debug("IPC registered", "namespace", api.Namespace)
 	}
 	// All APIs registered, start the IPC listener.
 	listener, err := ipcListen(ipcEndpoint)

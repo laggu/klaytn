@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/node"
 )
 
@@ -106,7 +105,7 @@ func (p *peer) broadcast() {
 		select {
 		case txs := <-p.queuedTxs:
 			if err := p.SendTransactions(txs); err != nil {
-				log.Error("fail to SendTransactions","err",err)
+				logger.Error("fail to SendTransactions","err",err)
 				continue
 				//return
 			}
@@ -114,7 +113,7 @@ func (p *peer) broadcast() {
 
 		case prop := <-p.queuedProps:
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
-				log.Error("fail to SendNewBlock","err",err)
+				logger.Error("fail to SendNewBlock","err",err)
 				continue
 				//return
 			}
@@ -122,7 +121,7 @@ func (p *peer) broadcast() {
 
 		case block := <-p.queuedAnns:
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
-				log.Error("fail to SendNewBlockHashes","err",err)
+				logger.Error("fail to SendNewBlockHashes","err",err)
 				continue
 				//return
 			}

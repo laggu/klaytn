@@ -6,7 +6,6 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
@@ -129,19 +128,19 @@ func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else if *number == rpc.PendingBlockNumber {
-		log.Error("Cannot get validators of the pending block.", "number", number)
+		logger.Error("Cannot get validators of the pending block.", "number", number)
 		return nil, errPendingNotAllowed
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	// Ensure we have an actually valid block and return the validators from its snapshot
 	if header == nil {
-		log.Error("Failed to find the requested block", "number", number)
+		logger.Error("Failed to find the requested block", "number", number)
 		return nil, nil // return nil if block is not found.
 	}
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
-		log.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
+		logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
 		return nil, errInternalError
 	}
 	return snap.validators(), nil
@@ -192,7 +191,7 @@ func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Ad
 	//		}
 	//	}
 	//	if found == false {
-	//		log.Error("validator is different!", "snap", commiteeAddrs, "istanbul", istanbulAddrs)
+	//		logger.Error("validator is different!", "snap", commiteeAddrs, "istanbul", istanbulAddrs)
 	//		return proposer, commiteeAddrs, errors.New("validator set is different from Istanbul engine!!")
 	//	}
 	//}
@@ -258,7 +257,7 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumber) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
-		log.Error("chain is not a type of blockchain.BlockChain", "type", reflect.TypeOf(api.chain))
+		logger.Error("chain is not a type of blockchain.BlockChain", "type", reflect.TypeOf(api.chain))
 		return nil, errInternalError
 	}
 	var block *types.Block
@@ -270,7 +269,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 
 	if *number == rpc.PendingBlockNumber {
-		log.Error("Cannot get consensus information of the PendingBlock.")
+		logger.Error("Cannot get consensus information of the PendingBlock.")
 		return nil, errPendingNotAllowed
 	}
 
@@ -284,14 +283,14 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 
 	if block == nil {
-		log.Error("Finding a block by number failed.", "blockNum", blockNumber)
+		logger.Error("Finding a block by number failed.", "blockNum", blockNumber)
 		return nil, nil // return nil if block is not found.
 	}
 	blockHash := block.Hash()
 
 	proposer, committee, err := api.getProposerAndValidators(block)
 	if err != nil {
-		log.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
+		logger.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
 	}
 
@@ -309,23 +308,23 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 	s := start.Int64()
 	e := end.Int64()
 	if s < 0 {
-		log.Error("start should be positive", "start", s)
+		logger.Error("start should be positive", "start", s)
 		return nil, errStartNotPositive
 	}
 
 	eChain := api.chain.CurrentHeader().Number.Int64()
 	if e > eChain {
-		log.Error("end should be smaller than the lastest block number", "end", end, "eChain", eChain)
+		logger.Error("end should be smaller than the lastest block number", "end", end, "eChain", eChain)
 		return nil, errEndLargetThanLatest
 	}
 
 	if s > e {
-		log.Error("start should be smaller than end", "start", s, "end", e)
+		logger.Error("start should be smaller than end", "start", s, "end", e)
 		return nil, errStartLargerThanEnd
 	}
 
 	if (e - s) > 50 {
-		log.Error("number of requested blocks should be smaller than 50", "start", s, "end", e)
+		logger.Error("number of requested blocks should be smaller than 50", "start", s, "end", e)
 		return nil, errRequestedBlocksTooLarge
 	}
 
@@ -336,7 +335,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 		blockNum := rpc.BlockNumber(i)
 		b, err := api.GetBlockWithConsensusInfoByNumber(&blockNum)
 		if err != nil {
-			log.Error("error on GetBlockWithConsensusInfoByNumber", "err", err)
+			logger.Error("error on GetBlockWithConsensusInfoByNumber", "err", err)
 			blocks[strIdx] = nil
 		} else {
 			blocks[strIdx] = b
@@ -349,19 +348,19 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
-		log.Error("chain is not a type of blockchain.Blockchain, returning...", "type", reflect.TypeOf(api.chain))
+		logger.Error("chain is not a type of blockchain.Blockchain, returning...", "type", reflect.TypeOf(api.chain))
 		return nil, errInternalError
 	}
 
 	block := b.GetBlockByHash(blockHash)
 	if block == nil {
-		log.Error("Finding a block failed.", "blockHash", blockHash)
+		logger.Error("Finding a block failed.", "blockHash", blockHash)
 		return nil, nil // return nil if block is not found.
 	}
 
 	proposer, committee, err := api.getProposerAndValidators(block)
 	if err != nil {
-		log.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
+		logger.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
 	}
 

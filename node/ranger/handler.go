@@ -9,7 +9,6 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
@@ -32,7 +31,7 @@ var (
 )
 
 func(re *RangerEngine) Author(header *types.Header) (common.Address, error) {
-	log.Debug("RangeEngine.Author","header",header.Hash())
+	logger.Debug("RangeEngine.Author","header",header.Hash())
 	return ecrecover(header)
 }
 
@@ -67,7 +66,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 }
 
 func(re *RangerEngine) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	log.Debug("RangeEngine.VerifyHeader") // ,"header",header.Hash())
+	logger.Debug("RangeEngine.VerifyHeader") // ,"header",header.Hash())
 	return nil
 }
 
@@ -80,23 +79,23 @@ func(re *RangerEngine) VerifyHeaders(chain consensus.ChainReader, headers []*typ
 }
 
 func(re *RangerEngine) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
-	log.Debug("RangeEngine.VerifyUncles") // ,"num",block.Number(),"hash",block.Hash())
+	logger.Debug("RangeEngine.VerifyUncles") // ,"num",block.Number(),"hash",block.Hash())
 	return nil
 }
 
 func(re *RangerEngine) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	log.Debug("RangeEngine.VerifySeal") // ,"num",header.Number,"hash",header.Hash())
+	logger.Debug("RangeEngine.VerifySeal") // ,"num",header.Number,"hash",header.Hash())
 	return nil
 }
 
 func(re *RangerEngine) Prepare(chain consensus.ChainReader, header *types.Header) error {
-	log.Debug("RangeEngine.Prepare") // ,"num",header.Number,"hash",header.Hash())
+	logger.Debug("RangeEngine.Prepare") // ,"num",header.Number,"hash",header.Hash())
 	return nil
 }
 
 func(re *RangerEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	log.Debug("RangeEngine.Finalize") //,"num",header.Number,"hash",header.Hash())
+	logger.Debug("RangeEngine.Finalize") //,"num",header.Number,"hash",header.Hash())
 
 	// TODO-GX developing klay reward mechanism
 	var reward = big.NewInt(1000000000000000000)        // 1 eth
@@ -116,12 +115,12 @@ func(re *RangerEngine) Finalize(chain consensus.ChainReader, header *types.Heade
 }
 
 func(re *RangerEngine) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
-	log.Debug("RangeEngine.Seal") //,"num",block.Number(),"hash",block.Hash())
+	logger.Debug("RangeEngine.Seal") //,"num",block.Number(),"hash",block.Hash())
 	return &types.Block{}, nil
 }
 
 func(re *RangerEngine) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	log.Debug("RangeEngine.CalcDifficulty")
+	logger.Debug("RangeEngine.CalcDifficulty")
 	return common.Big0
 }
 
@@ -153,7 +152,7 @@ func(re *RangerEngine) HandleMsg(address common.Address, msg p2p.Msg) (bool, err
 		//var proof types.Proof
 		proof := new(types.Proof)
 		if err := msg.Decode(&proof); err != nil {
-			log.Error("Invalid proof RLP", "err", err)
+			logger.Error("Invalid proof RLP", "err", err)
 			return false, nil
 		}
 
@@ -174,16 +173,16 @@ type RangeTxPool struct {
 }
 
 func(re *RangeTxPool) AddRemotes([]*types.Transaction) []error {
-	log.Debug("RangeTxPool.AddRemotes")
+	logger.Debug("RangeTxPool.AddRemotes")
 	return nil
 }
 
 func(re *RangeTxPool) Pending() (map[common.Address]types.Transactions, error) {
-	log.Debug("RangeTxPool.Pending")
+	logger.Debug("RangeTxPool.Pending")
 	return map[common.Address]types.Transactions{}, nil
 }
 
 func(re *RangeTxPool) SubscribeNewTxsEvent(newtxch chan<- blockchain.NewTxsEvent) event.Subscription {
-	log.Debug("RangeTxPool.SubscribeNewTxsEvent")
+	logger.Debug("RangeTxPool.SubscribeNewTxsEvent")
 	return nil
 }

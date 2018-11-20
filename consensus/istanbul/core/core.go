@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+var logger = log.NewModuleLogger("consensus/istanbul/core")
+
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 	c := &core{
@@ -22,7 +24,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		address:            backend.Address(),
 		state:              StateAcceptRequest,
 		handlerWg:          new(sync.WaitGroup),
-		logger:             log.New("address", backend.Address()),
+		logger:             logger.NewWith("address", backend.Address()),
 		backend:            backend,
 		backlogs:           make(map[common.Address]*prque.Prque),
 		backlogsMu:         new(sync.Mutex),
@@ -116,7 +118,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 }
 
 func (c *core) broadcast(msg *message) {
-	logger := c.logger.New("state", c.state)
+	logger := c.logger.NewWith("state", c.state)
 
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
@@ -164,7 +166,7 @@ func (c *core) commit() {
 		}
 	} else {
 		// TODO-GX never happen, but if proposal is nil, mining is not working.
-		log.Error("istanbul.core current.Proposal is NULL")
+		logger.Error("istanbul.core current.Proposal is NULL")
 		c.current.UnlockHash() //Unlock block when insertion fails
 		c.sendNextRoundChange()
 		return
@@ -175,9 +177,9 @@ func (c *core) commit() {
 func (c *core) startNewRound(round *big.Int) {
 	var logger log.Logger
 	if c.current == nil {
-		logger = c.logger.New("old_round", -1, "old_seq", 0)
+		logger = c.logger.NewWith("old_round", -1, "old_seq", 0)
 	} else {
-		logger = c.logger.New("old_round", c.current.Round(), "old_seq", c.current.Sequence())
+		logger = c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence())
 	}
 
 	roundChange := false
@@ -227,7 +229,7 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 
 	// Update logger
-	logger = logger.New("old_proposer", c.valSet.GetProposer())
+	logger = logger.NewWith("old_proposer", c.valSet.GetProposer())
 	// Clear invalid ROUND CHANGE messages
 	c.roundChangeSet = newRoundChangeSet(c.valSet)
 	// New snapshot for new round
@@ -254,7 +256,7 @@ func (c *core) startNewRound(round *big.Int) {
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
-	logger := c.logger.New("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.valSet.GetProposer())
+	logger := c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.valSet.GetProposer())
 
 	if view.Round.Cmp(c.current.Round()) > 0 {
 		c.roundMeter.Mark(new(big.Int).Sub(view.Round, c.current.Round()).Int64())

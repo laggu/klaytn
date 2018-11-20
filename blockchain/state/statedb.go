@@ -41,6 +41,8 @@ var (
 
 	// emptyCode is the known hash of the empty EVM bytecode.
 	emptyCode = crypto.Keccak256Hash(nil)
+
+	logger = log.NewModuleLogger("blockchain/state")
 )
 
 // StateDBs within the ethereum protocol are used to store anything
@@ -374,7 +376,7 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 	}
 	var data Account
 	if err := rlp.DecodeBytes(enc, &data); err != nil {
-		log.Error("Failed to decode state object", "addr", addr, "err", err)
+		logger.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}
 	// Insert into the live set.
@@ -631,6 +633,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		return nil
 	})
-	log.Debug("Trie cache stats after commit", "misses", statedb.TrieCacheMisses(), "unloads", statedb.TrieCacheUnloads())
+	logger.Debug("Trie cache stats after commit", "misses", statedb.TrieCacheMisses(), "unloads", statedb.TrieCacheUnloads())
 	return root, err
 }

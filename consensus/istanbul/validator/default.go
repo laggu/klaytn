@@ -8,7 +8,6 @@ import (
 	"sort"
 	"sync"
 	"math/rand"
-	"github.com/ground-x/go-gxplatform/log"
 	"strings"
 	"strconv"
 	"fmt"
@@ -131,8 +130,8 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	}
 	seed, err := strconv.ParseInt(hashstring, 16, 64)
 	if err != nil {
-		log.Error("input" ,"hash", prevHash.Hex())
-		log.Error("fail to make sub-list of validators","seed", seed, "err",err)
+		logger.Error("input" ,"hash", prevHash.Hex())
+		logger.Error("fail to make sub-list of validators","seed", seed, "err",err)
 		return valSet.validators
 	}
 
@@ -147,7 +146,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
 
 	if proposerIdx == nextproposerIdx {
-		log.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
+		logger.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
 	}
 
 	limit := len(valSet.validators)
@@ -172,7 +171,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	}
 
 	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		log.Error("### subList","prevHash", prevHash.Hex())
+		logger.Error("### subList","prevHash", prevHash.Hex())
 	}
 
 	return subset
@@ -191,8 +190,8 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	}
 	seed, err := strconv.ParseInt(hashstring, 16, 64)
 	if err != nil {
-		log.Error("input" ,"hash", prevHash.Hex())
-		log.Error("fail to make sub-list of validators","seed", seed, "err",err)
+		logger.Error("input" ,"hash", prevHash.Hex())
+		logger.Error("fail to make sub-list of validators","seed", seed, "err",err)
 		return valSet.validators
 	}
 
@@ -213,12 +212,12 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 			vals += fmt.Sprintf("%s,", v.Address().Hex())
 		}
 		vals += "]"
-		log.Error("idx should not be negative!", "proposerIdx", proposerIdx, "nextproposerIdx", nextproposerIdx, "proposer", subset[0].Address().Hex(),
+		logger.Error("idx should not be negative!", "proposerIdx", proposerIdx, "nextproposerIdx", nextproposerIdx, "proposer", subset[0].Address().Hex(),
 			"nextproposer", subset[1].Address().Hex(), "validators", vals)
 	}
 
 	if proposerIdx == nextproposerIdx {
-		log.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
+		logger.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
 	}
 
 	limit := len(valSet.validators)
@@ -243,7 +242,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	}
 
 	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		log.Error("### subList","prevHash", prevHash.Hex())
+		logger.Error("### subList","prevHash", prevHash.Hex())
 	}
 
 	return subset

@@ -42,6 +42,7 @@ var (
 	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
 	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
 	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
+	logger = log.NewModuleLogger("networks/p2p/discover")
 )
 
 // nodeDB stores all nodes we know about.
@@ -183,7 +184,7 @@ func (db *nodeDB) node(id NodeID) *Node {
 	}
 	node := new(Node)
 	if err := rlp.DecodeBytes(blob, node); err != nil {
-		log.Error("Failed to decode node RLP", "err", err)
+		logger.Error("Failed to decode node RLP", "err", err)
 		return nil
 	}
 	node.sha = crypto.Keccak256Hash(node.ID[:])
@@ -232,7 +233,7 @@ func (db *nodeDB) expirer() {
 		select {
 		case <-tick.C:
 			if err := db.expireNodes(); err != nil {
-				log.Error("Failed to expire nodedb items", "err", err)
+				logger.Error("Failed to expire nodedb items", "err", err)
 			}
 		case <-db.quit:
 			return
@@ -355,7 +356,7 @@ func nextNode(it iterator.Iterator) *Node {
 		}
 		var n Node
 		if err := rlp.DecodeBytes(it.Value(), &n); err != nil {
-			log.Warn("Failed to decode node RLP", "id", id, "err", err)
+			logger.Warn("Failed to decode node RLP", "id", id, "err", err)
 			continue
 		}
 		return &n

@@ -24,7 +24,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/p2p/netutil"
 	"crypto/ecdsa"
@@ -148,7 +147,7 @@ func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab disc
 			if selfNodeID != n.ID {
 				s.addStatic(n)
 			} else {
-				log.Debug("[Dial] Ignored static node which has same id with myself", "mySelfID", selfNodeID)
+				logger.Debug("[Dial] Ignored static node which has same id with myself", "mySelfID", selfNodeID)
 			}
 		}
 		return s
@@ -182,11 +181,11 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	var newtasks []task
 	addDial := func(flag connFlag, n *discover.Node) bool {
 		if err := s.checkDial(n, peers); err != nil {
-			log.Trace("[Dial] Skipping dial candidate from discovery nodes", "id", n.ID, "addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)}, "err", err)
+			logger.Trace("[Dial] Skipping dial candidate from discovery nodes", "id", n.ID, "addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)}, "err", err)
 			return false
 		}
 		s.dialing[n.ID] = flag
-		log.Info("[Dial] Add dial candidate from discovery nodes", "id", n.ID, "addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)})
+		logger.Info("[Dial] Add dial candidate from discovery nodes", "id", n.ID, "addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)})
 		newtasks = append(newtasks, &dialTask{flags: flag, dest: n})
 		return true
 	}
@@ -212,12 +211,12 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		err := s.checkDial(t.dest, peers)
 		switch err {
 		case errNotWhitelisted, errSelf:
-			log.Warn("[Dial] Removing static dial candidate from static nodes", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "err", err)
+			logger.Warn("[Dial] Removing static dial candidate from static nodes", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "err", err)
 			delete(s.static, t.dest.ID)
 		case nil:
 			s.dialing[id] = t.flags
 			newtasks = append(newtasks, t)
-			log.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
+			logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
 		}
 	}
 	// If we don't have any peers whatsoever, try to dial a random bootnode. This
@@ -313,7 +312,7 @@ func (t *dialTask) Do(srv *Server) {
 	}
 	err := t.dial(srv, t.dest)
 	if err != nil {
-		log.Trace("Dial error", "task", t, "err", err)
+		logger.Trace("Dial error", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
 		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
 			if t.resolve(srv) {
@@ -331,7 +330,7 @@ func (t *dialTask) Do(srv *Server) {
 // The backoff delay resets when the node is found.
 func (t *dialTask) resolve(srv *Server) bool {
 	if srv.ntab == nil {
-		log.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
+		logger.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
 		return false
 	}
 	if t.resolveDelay == 0 {
@@ -347,13 +346,13 @@ func (t *dialTask) resolve(srv *Server) bool {
 		if t.resolveDelay > maxResolveDelay {
 			t.resolveDelay = maxResolveDelay
 		}
-		log.Debug("Resolving node failed", "id", t.dest.ID, "newdelay", t.resolveDelay)
+		logger.Debug("Resolving node failed", "id", t.dest.ID, "newdelay", t.resolveDelay)
 		return false
 	}
 	// The node was found.
 	t.resolveDelay = initialResolveDelay
 	t.dest = resolved
-	log.Debug("Resolved node", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
+	logger.Debug("Resolved node", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
 	return true
 }
 
@@ -364,7 +363,7 @@ type dialError struct {
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv *Server, dest *discover.Node) error {
 	dialTryCounter.Inc(1)
-	log.Trace("[Dial] Dialing node", "id", dest.ID, "addr", &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)})
+	logger.Trace("[Dial] Dialing node", "id", dest.ID, "addr", &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)})
 
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {

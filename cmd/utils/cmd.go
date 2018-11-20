@@ -20,6 +20,8 @@ const (
 	importBatchSize = 2500
 )
 
+var logger = log.NewModuleLogger("cmd/utils")
+
 // Fatalf formats a message to standard error and exits the program.
 // The message is also printed to standard output if standard error
 // is redirected to a different file.
@@ -49,12 +51,12 @@ func StartNode(stack *node.Node) {
 		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
 		defer signal.Stop(sigc)
 		<-sigc
-		log.Info("Got interrupt, shutting down...")
+		logger.Info("Got interrupt, shutting down...")
 		go stack.Stop()
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+				logger.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
 	}()
@@ -70,7 +72,7 @@ func ImportChain(chain *blockchain.BlockChain, fn string) error {
 	defer close(interrupt)
 	go func() {
 		if _, ok := <-interrupt; ok {
-			log.Info("Interrupted during import, stopping at next batch")
+			logger.Info("Interrupted during import, stopping at next batch")
 		}
 		close(stop)
 	}()
@@ -83,7 +85,7 @@ func ImportChain(chain *blockchain.BlockChain, fn string) error {
 		}
 	}
 
-	log.Info("Importing blockchain", "file", fn)
+	logger.Info("Importing blockchain", "file", fn)
 
 	// Open the file handle and potentially unwrap the gzip stream
 	fh, err := os.Open(fn)
@@ -133,7 +135,7 @@ func ImportChain(chain *blockchain.BlockChain, fn string) error {
 		}
 		missing := missingBlocks(chain, blocks[:i])
 		if len(missing) == 0 {
-			log.Info("Skipping batch as all blocks present", "batch", batch, "first", blocks[0].Hash(), "last", blocks[i-1].Hash())
+			logger.Info("Skipping batch as all blocks present", "batch", batch, "first", blocks[0].Hash(), "last", blocks[i-1].Hash())
 			continue
 		}
 		if _, err := chain.InsertChain(missing); err != nil {
@@ -164,7 +166,7 @@ func missingBlocks(chain *blockchain.BlockChain, blocks []*types.Block) []*types
 // ExportChain exports a blockchain into the specified file, truncating any data
 // already present in the file.
 func ExportChain(blockchain *blockchain.BlockChain, fn string) error {
-	log.Info("Exporting blockchain", "file", fn)
+	logger.Info("Exporting blockchain", "file", fn)
 
 	// Open the file handle and potentially wrap with a gzip stream
 	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
@@ -182,7 +184,7 @@ func ExportChain(blockchain *blockchain.BlockChain, fn string) error {
 	if err := blockchain.Export(writer); err != nil {
 		return err
 	}
-	log.Info("Exported blockchain", "file", fn)
+	logger.Info("Exported blockchain", "file", fn)
 
 	return nil
 }
@@ -190,7 +192,7 @@ func ExportChain(blockchain *blockchain.BlockChain, fn string) error {
 // ExportAppendChain exports a blockchain into the specified file, appending to
 // the file if data already exists in it.
 func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint64, last uint64) error {
-	log.Info("Exporting blockchain", "file", fn)
+	logger.Info("Exporting blockchain", "file", fn)
 
 	// Open the file handle and potentially wrap with a gzip stream
 	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
@@ -208,14 +210,14 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 	if err := blockchain.ExportN(writer, first, last); err != nil {
 		return err
 	}
-	log.Info("Exported blockchain to", "file", fn)
+	logger.Info("Exported blockchain to", "file", fn)
 	return nil
 }
 
 // TODO-GX Commented out due to mismatched interface.
 //// ImportPreimages imports a batch of exported hash preimages into the database.
 //func ImportPreimages(db *database.levelDB, fn string) error {
-//	log.Info("Importing preimages", "file", fn)
+//	logger.Info("Importing preimages", "file", fn)
 //
 //	// Open the file handle and potentially unwrap the gzip stream
 //	fh, err := os.Open(fn)
@@ -262,7 +264,7 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 //// ExportPreimages exports all known hash preimages into the specified file,
 //// truncating any data already present in the file.
 //func ExportPreimages(db *database.levelDB, fn string) error {
-//	log.Info("Exporting preimages", "file", fn)
+//	logger.Info("Exporting preimages", "file", fn)
 //
 //	// Open the file handle and potentially wrap with a gzip stream
 //	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
@@ -283,6 +285,6 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 //			return err
 //		}
 //	}
-//	log.Info("Exported preimages", "file", fn)
+//	logger.Info("Exported preimages", "file", fn)
 //	return nil
 //}

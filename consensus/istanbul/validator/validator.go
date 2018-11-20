@@ -3,7 +3,10 @@ package validator
 import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/log"
 )
+
+var logger = log.NewModuleLogger("consensus/istanbul/validator")
 
 func New(addr common.Address) istanbul.Validator {
 	return &defaultValidator{

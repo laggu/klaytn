@@ -6,7 +6,6 @@ import (
 	"os"
 	"runtime/trace"
 	"errors"
-	"github.com/ground-x/go-gxplatform/log"
 )
 // StartGoTrace turns on tracing, writing to the given file.
 func (h *HandlerT) StartGoTrace(file string) error {
@@ -25,7 +24,7 @@ func (h *HandlerT) StartGoTrace(file string) error {
 	}
 	h.traceW = f
 	h.traceFile = file
-	log.Info("Go tracing started", "dump", h.traceFile)
+	logger.Info("Go tracing started", "dump", h.traceFile)
 	return nil
 }
 
@@ -37,7 +36,7 @@ func (h *HandlerT) StopGoTrace() error {
 	if h.traceW == nil {
 		return errors.New("trace not in progress")
 	}
-	log.Info("Done writing Go trace", "dump", h.traceFile)
+	logger.Info("Done writing Go trace", "dump", h.traceFile)
 	h.traceW.Close()
 	h.traceW = nil
 	h.traceFile = ""

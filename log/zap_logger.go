@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"strings"
+	"sync"
 )
 
 var (
@@ -18,6 +19,7 @@ var (
 	defaultMessageKey = "msg"
 	defaultLoggerName = "defaultlogger"
 	moduleConfigMap = make(map[string]*zap.Config)
+	logMutex = new(sync.Mutex)
 )
 
 func genDefaultEncoderConfig() zapcore.EncoderConfig {
@@ -72,7 +74,8 @@ func genBaseLoggerZap() Logger {
 }
 
 type Logger interface {
-	New(keysAndValues ...interface{}) Logger
+	NewWith(keysAndValues ...interface{}) Logger
+	newModuleLogger(moduleName string) Logger
 	Trace(msg string, keysAndValues ...interface{})
 	Debug(msg string, keysAndValues ...interface{})
 	Info(msg string, keysAndValues ...interface{})
@@ -90,8 +93,29 @@ type zapLogger struct {
 	sl *zap.SugaredLogger
 }
 
-func (zl *zapLogger) New(keysAndValues ...interface{}) Logger {
+func (zl *zapLogger) NewWith(keysAndValues ...interface{}) Logger {
 	return &zapLogger{zl.sl.With(keysAndValues...)}
+}
+
+func (zl *zapLogger) newModuleLogger(moduleName string) Logger {
+	logMutex.Lock()
+	defer logMutex.Unlock()
+
+	moduleName = strings.ToLower(moduleName)
+
+	if moduleConfigMap[moduleName] != nil {
+		baseLogger.Crit("Duplicated log moduleName found!", "moduleName", moduleName)
+	}
+
+	zapCfg := genDefaultConfig()
+	zapCfg.InitialFields["module"] = moduleName
+	logger, err := zapCfg.Build()
+	if err != nil {
+		// TODO-GX Error should be handled.
+	}
+
+	moduleConfigMap[moduleName] = zapCfg
+	return &zapLogger{logger.Sugar()}
 }
 
 func (zl *zapLogger) Trace(msg string, keysAndValues ...interface{}) {
@@ -126,24 +150,6 @@ func (zl *zapLogger) GetHandler() Handler {
 func (zl *zapLogger) SetHandler(h Handler) {
 }
 
-func NewLogger(moduleName string) Logger {
-	moduleName = strings.ToLower(moduleName)
-
-	if moduleConfigMap[moduleName] != nil {
-		Crit("Duplicated log moduleName found!", "moduleName", moduleName)
-	}
-
-	zapCfg := genDefaultConfig()
-	zapCfg.InitialFields["module"] = moduleName
-	logger, err := zapCfg.Build()
-	if err != nil {
-		// TODO-GX Error should be handled.
-	}
-
-	moduleConfigMap[moduleName] = zapCfg
-	return &zapLogger{logger.Sugar()}
-}
-
 func ChangeLogLevel(moduleName string, lvl Lvl) error {
 	moduleName = strings.ToLower(moduleName)
 	cfg := moduleConfigMap[moduleName]
@@ -176,7 +182,7 @@ func lvlToZapLevel(lvl Lvl) zapcore.Level {
 	case LvlTrace:
 		return zapcore.DebugLevel
 	default:
-		Error("Unexpected log level entered. Use InfoLevel instead.", "entered level", lvl)
+		baseLogger.Error("Unexpected log level entered. Use InfoLevel instead.", "entered level", lvl)
 		return zapcore.InfoLevel
 	}
 }

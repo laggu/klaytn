@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/adapters"
@@ -117,7 +116,7 @@ func (net *Network) NewNodeWithConfig(conf *adapters.NodeConfig) (*Node, error) 
 		Node:   cnNode,
 		Config: conf,
 	}
-	log.Trace(fmt.Sprintf("node %v created", conf.ID))
+	logger.Trace(fmt.Sprintf("node %v created", conf.ID))
 	net.nodeMap[conf.ID] = len(net.Nodes)
 	net.Nodes = append(net.Nodes, node)
 
@@ -175,13 +174,13 @@ func (net *Network) startWithSnapshots(id discover.NodeID, snapshots map[string]
 	if node.Up {
 		return fmt.Errorf("node %v already up", id)
 	}
-	log.Trace(fmt.Sprintf("starting node %v: %v using %v", id, node.Up, net.nodeAdapter.Name()))
+	logger.Trace(fmt.Sprintf("starting node %v: %v using %v", id, node.Up, net.nodeAdapter.Name()))
 	if err := node.Start(snapshots); err != nil {
-		log.Warn(fmt.Sprintf("start up failed: %v", err))
+		logger.Warn(fmt.Sprintf("start up failed: %v", err))
 		return err
 	}
 	node.Up = true
-	log.Info(fmt.Sprintf("started node %v: %v", id, node.Up))
+	logger.Info(fmt.Sprintf("started node %v: %v", id, node.Up))
 
 	net.events.Send(NewEvent(node))
 
@@ -210,7 +209,7 @@ func (net *Network) watchPeerEvents(id discover.NodeID, events chan *p2p.PeerEve
 		defer net.lock.Unlock()
 		node := net.getNode(id)
 		if node == nil {
-			log.Error("Can not find node for id", "id", id)
+			logger.Error("Can not find node for id", "id", id)
 			return
 		}
 		node.Up = false
@@ -241,7 +240,7 @@ func (net *Network) watchPeerEvents(id discover.NodeID, events chan *p2p.PeerEve
 
 		case err := <-sub.Err():
 			if err != nil {
-				log.Error(fmt.Sprintf("error getting peer events for node %v", id), "err", err)
+				logger.Error(fmt.Sprintf("error getting peer events for node %v", id), "err", err)
 			}
 			return
 		}
@@ -263,7 +262,7 @@ func (net *Network) Stop(id discover.NodeID) error {
 		return err
 	}
 	node.Up = false
-	log.Info(fmt.Sprintf("stop node %v: %v", id, node.Up))
+	logger.Info(fmt.Sprintf("stop node %v: %v", id, node.Up))
 
 	net.events.Send(ControlEvent(node))
 	return nil
@@ -273,7 +272,7 @@ func (net *Network) Stop(id discover.NodeID) error {
 // Connect connects two nodes together by calling the "admin_addPeer" RPC
 // method on the "one" node so that it connects to the "other" node
 func (net *Network) Connect(oneID, otherID discover.NodeID) error {
-	log.Debug(fmt.Sprintf("connecting %s to %s", oneID, otherID))
+	logger.Debug(fmt.Sprintf("connecting %s to %s", oneID, otherID))
 	conn, err := net.InitConnEx(oneID, otherID)
 	// TODO: temporary remove
 	if err != nil {
@@ -290,7 +289,7 @@ func (net *Network) Connect(oneID, otherID discover.NodeID) error {
 //
 // method on the "one" node that it connect to all "other" nodes
 func(net *Network) ConnectAll() error {
-	log.Debug(fmt.Sprintf("connecting all nodes to all other nodes"))
+	logger.Debug(fmt.Sprintf("connecting all nodes to all other nodes"))
 
 	for _, oneNode := range net.Nodes {
 		oneID := oneNode.ID()
@@ -304,7 +303,7 @@ func(net *Network) ConnectAll() error {
 
 				err := net.Connect(oneID, otherID)
 				if err != nil {
-					log.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
+					logger.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
 					continue;
 				}
 			}
@@ -315,7 +314,7 @@ func(net *Network) ConnectAll() error {
 }
 
 func(net *Network) DisconnectAll() error {
-	log.Debug(fmt.Sprintf("Disconnecting all nodes to all other nodes"))
+	logger.Debug(fmt.Sprintf("Disconnecting all nodes to all other nodes"))
 
 	for _, oneNode := range net.Nodes {
 		oneID := oneNode.ID()
@@ -329,7 +328,7 @@ func(net *Network) DisconnectAll() error {
 
 			err := net.Disconnect(oneID, otherID)
 			if err != nil {
-				log.Error(fmt.Sprintf("Error in DisconnectAll() : %s", err))
+				logger.Error(fmt.Sprintf("Error in DisconnectAll() : %s", err))
 				continue;
 			}
 		}
@@ -371,13 +370,13 @@ func (cr *ConnResult) disconnect(oneID discover.NodeID) {
 }
 
 func (cr *ConnResult) outCnt() {
-	log.Debug(fmt.Sprintf("ConnResult = %v", len(cr.succMap)))
+	logger.Debug(fmt.Sprintf("ConnResult = %v", len(cr.succMap)))
 }
 
 func (cr *ConnResult) output() {
 	cr.outCnt()
 	for k, v := range cr.succMap {
-		log.Debug(fmt.Sprintf("## key = %v, value = %v", k, v))
+		logger.Debug(fmt.Sprintf("## key = %v, value = %v", k, v))
 	}
 }
 
@@ -392,20 +391,20 @@ func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
 
 	node := net.getNode(oneID)
 	if node == nil {
-		log.Debug(fmt.Sprintf("### CheckComplation - cannot find nodeID %v", oneID))
+		logger.Debug(fmt.Sprintf("### CheckComplation - cannot find nodeID %v", oneID))
 		return;
 	}
 	peerCnt := node.Node.GetPeerCount()
 	targetCnt := len(net.Nodes) - 1
-	log.Debug(fmt.Sprintf("### PeerCount: %d, targetCnt: %d", peerCnt, targetCnt))
+	logger.Debug(fmt.Sprintf("### PeerCount: %d, targetCnt: %d", peerCnt, targetCnt))
 
 	if peerCnt == targetCnt {
 		if _, ok := tcResult.succMap[oneID]; !ok {
 			tcResult.succMap[oneID] = true
-			log.Debug(fmt.Sprintf("#### PEER Connection done: Peer Count = %d, %v", peerCnt, node.Node.NodeInfo()))
+			logger.Debug(fmt.Sprintf("#### PEER Connection done: Peer Count = %d, %v", peerCnt, node.Node.NodeInfo()))
 		}
 		if len(net.Nodes) == len(tcResult.succMap) {
-			log.Debug(fmt.Sprintf("###### net(%p)Peer connection test succeed #####", net))
+			logger.Debug(fmt.Sprintf("###### net(%p)Peer connection test succeed #####", net))
 
 			tcResult.output()
 		}
@@ -620,10 +619,10 @@ func (net *Network) InitConn(oneID, otherID discover.NodeID) (*Conn, error) {
 
 	err = conn.nodesUp()
 	if err != nil {
-		log.Trace(fmt.Sprintf("nodes not up: %v", err))
+		logger.Trace(fmt.Sprintf("nodes not up: %v", err))
 		return nil, fmt.Errorf("nodes not up: %v", err)
 	}
-	log.Debug("InitConn - connection initiated")
+	logger.Debug("InitConn - connection initiated")
 	conn.initiated = time.Now()
 	return conn, nil
 }
@@ -650,10 +649,10 @@ func (net *Network) InitConnEx(oneID, otherID discover.NodeID) (*Conn, error) {
 
 	err = conn.nodesUp()
 	if err != nil {
-		log.Trace(fmt.Sprintf("nodes not up: %v", err))
+		logger.Trace(fmt.Sprintf("nodes not up: %v", err))
 		return nil, fmt.Errorf("nodes not up: %v", err)
 	}
-	log.Debug("InitConn - connection initiated")
+	logger.Debug("InitConn - connection initiated")
 	conn.initiated = time.Now()
 	return conn, nil
 }
@@ -661,9 +660,9 @@ func (net *Network) InitConnEx(oneID, otherID discover.NodeID) (*Conn, error) {
 // Shutdown stops all nodes in the network and closes the quit channel
 func (net *Network) Shutdown() {
 	for _, node := range net.Nodes {
-		log.Debug(fmt.Sprintf("stopping node %s", node.ID().TerminalString()))
+		logger.Debug(fmt.Sprintf("stopping node %s", node.ID().TerminalString()))
 		if err := node.Stop(); err != nil {
-			log.Warn(fmt.Sprintf("error stopping node %s", node.ID().TerminalString()), "err", err)
+			logger.Warn(fmt.Sprintf("error stopping node %s", node.ID().TerminalString()), "err", err)
 		}
 	}
 	close(net.quitc)
@@ -877,18 +876,18 @@ func (net *Network) Subscribe(events chan *Event) {
 }
 
 func (net *Network) executeControlEvent(event *Event) {
-	log.Trace("execute control event", "type", event.Type, "event", event)
+	logger.Trace("execute control event", "type", event.Type, "event", event)
 	switch event.Type {
 	case EventTypeNode:
 		if err := net.executeNodeEvent(event); err != nil {
-			log.Error("error executing node event", "event", event, "err", err)
+			logger.Error("error executing node event", "event", event, "err", err)
 		}
 	case EventTypeConn:
 		if err := net.executeConnEvent(event); err != nil {
-			log.Error("error executing conn event", "event", event, "err", err)
+			logger.Error("error executing conn event", "event", event, "err", err)
 		}
 	case EventTypeMsg:
-		log.Warn("ignoring control msg event")
+		logger.Warn("ignoring control msg event")
 	}
 }
 

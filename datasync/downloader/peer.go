@@ -51,7 +51,7 @@ type peerConnection struct {
 	peer Peer
 
 	version int        // Eth protocol version number to switch strategies
-	log     log.Logger // Contextual logger to add extra infos to peer logs
+	logger  log.Logger // Contextual logger to add extra infos to peer logs
 	lock    sync.RWMutex
 }
 
@@ -101,7 +101,7 @@ func newPeerConnection(id string, version int, peer Peer, logger log.Logger) *pe
 		peer: peer,
 
 		version: version,
-		log:     logger,
+		logger:  logger,
 	}
 }
 
@@ -258,7 +258,7 @@ func (p *peerConnection) setIdle(started time.Time, delivered int, throughput *f
 	*throughput = (1-measurementImpact)*(*throughput) + measurementImpact*measured
 	p.rtt = time.Duration((1-measurementImpact)*float64(p.rtt) + measurementImpact*float64(elapsed))
 
-	p.log.Trace("Peer throughput measurements updated",
+	p.logger.Trace("Peer throughput measurements updated",
 		"hps", p.headerThroughput, "bps", p.blockThroughput,
 		"rps", p.receiptThroughput, "sps", p.stateThroughput,
 		"miss", len(p.lacking), "rtt", p.rtt)

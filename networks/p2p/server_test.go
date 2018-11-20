@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"math/rand"
 	"net"
@@ -15,7 +14,7 @@ import (
 )
 
 func init() {
-	// log.Root().SetHandler(log.LvlFilterHandler(log.LvlError, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+	// log.Root().SetHandler(logger.LvlFilterHandler(logger.LvlError, logger.StreamHandler(os.Stderr, logger.TerminalFormat(false))))
 }
 
 type testTransport struct {
@@ -208,7 +207,7 @@ func TestServerTaskScheduling(t *testing.T) {
 		quit:    make(chan struct{}),
 		ntab:    fakeTable{},
 		running: true,
-		log:     log.New(),
+		logger:  logger.NewWith(),
 	}
 	srv.loopWG.Add(1)
 	go func() {
@@ -253,7 +252,7 @@ func TestServerManyTasks(t *testing.T) {
 			quit:    make(chan struct{}),
 			ntab:    fakeTable{},
 			running: true,
-			log:     log.New(),
+			logger:  logger.NewWith(),
 		}
 		done       = make(chan *testTask)
 		start, end = 0, 0
@@ -437,7 +436,7 @@ func TestServerSetupConn(t *testing.T) {
 				ConnectionType: 1,
 			},
 			newTransport: func(fd net.Conn) transport { return test.tt },
-			log:          log.New(),
+			logger:       logger.NewWith(),
 		}
 		if !test.dontstart {
 			if err := srv.Start(); err != nil {
