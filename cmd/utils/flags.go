@@ -1091,6 +1091,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
+	log.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
 
 	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
 		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
