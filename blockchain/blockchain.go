@@ -470,9 +470,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 	defer bc.mu.Unlock()
 
 	// Prepare the genesis block and reinitialise the chain
-	if err := bc.hc.WriteTd(genesis.Hash(), genesis.NumberU64(), genesis.Difficulty()); err != nil {
-		logger.Crit("Failed to write genesis block TD", "err", err)
-	}
+	bc.hc.WriteTd(genesis.Hash(), genesis.NumberU64(), genesis.Difficulty())
 	bc.db.WriteBlock(genesis)
 
 	bc.genesisBlock = genesis
@@ -1009,19 +1007,12 @@ var lastWrite uint64
 // WriteBlockWithoutState writes only the block and its metadata to the database,
 // but does not write any state. This is used to construct competing side forks
 // up to the point where they exceed the canonical total difficulty.
-func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (err error) {
+func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), td); err != nil {
-		return err
-	}
-
-	if err := bc.db.WriteBlock(block); err != nil {
-		return err
-	}
-
-	return nil
+	bc.hc.WriteTd(block.Hash(), block.NumberU64(), td)
+	bc.db.WriteBlock(block)
 }
 
 type TransactionLookup struct {
@@ -1049,14 +1040,10 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
 	// Irrelevant of the canonical status, write the block itself to the database
-	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
-		return NonStatTy, err
-	}
+	bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
 
 	// Write other block data.
-	if err := bc.db.WriteBlock(block); err != nil {
-		return NonStatTy, err
-	}
+	bc.db.WriteBlock(block)
 
 	root, err := state.Commit(true)
 	if err != nil {
@@ -1113,9 +1100,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			}
 		}
 	}
-	if err := bc.db.WriteReceipts(block.Hash(), block.NumberU64(), receipts); err != nil {
-		return NonStatTy, err
-	}
+	bc.db.WriteReceipts(block.Hash(), block.NumberU64(), receipts)
 
 	// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
@@ -1140,9 +1125,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		if err := bc.writeTxLookupEntries(block); err != nil {
 			return NonStatTy, err
 		}
-		if err := bc.db.WritePreimages(block.NumberU64(), state.Preimages()); err != nil {
-			return NonStatTy, err
-		}
+		bc.db.WritePreimages(block.NumberU64(), state.Preimages())
 
 		// TODO-GX goroutine for performance
 		bc.recentReceipts.Add(block.Hash(), receipts)
@@ -1177,15 +1160,14 @@ func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
 		data, err := rlp.EncodeToBytes(entry)
 		if err != nil {
 			logger.Crit("Failed to encode transaction lookup entry", "err", err)
-			return err
 		}
 		if err := batch.Put(database.TxLookupKey(tx.Hash()), data); err != nil {
 			logger.Crit("Failed to store transaction lookup entry", "err", err)
-			return err
 		}
 		bc.recentTransactions.Add(tx.Hash(), &TransactionLookup{tx, &entry})
 	}
 	if err := batch.Write(); err != nil {
+		log.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
 		return err
 	}
 	return nil
@@ -1336,9 +1318,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 			externTd := new(big.Int).Add(bc.GetTd(block.ParentHash(), block.NumberU64()-1), block.Difficulty())
 			if localTd.Cmp(externTd) > 0 {
-				if err = bc.WriteBlockWithoutState(block, externTd); err != nil {
-					return i, events, coalescedLogs, err
-				}
+				bc.WriteBlockWithoutState(block, externTd)
 				continue
 			}
 			// Competitor chain beat canonical, gather all blocks from the common ancestor

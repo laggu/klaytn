@@ -58,15 +58,15 @@ type DBManager interface {
 	HasHeader(hash common.Hash, number uint64) bool
 	ReadHeader(hash common.Hash, number uint64) *types.Header
 	ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
-	WriteHeader(header *types.Header) error
+	WriteHeader(header *types.Header)
 	DeleteHeader(hash common.Hash, number uint64)
 
 	HasBody(hash common.Hash, number uint64) bool
 	ReadBody(hash common.Hash, number uint64) *types.Body
 	ReadBodyRLP(hash common.Hash, number uint64) rlp.RawValue
-	WriteBody(hash common.Hash, number uint64, body *types.Body) error
-	PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body) error
-	WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue) error
+	WriteBody(hash common.Hash, number uint64, body *types.Body)
+	PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body)
+	WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue)
 	DeleteBody(hash common.Hash, number uint64)
 
 	ReadTd(hash common.Hash, number uint64) *big.Int
@@ -74,12 +74,12 @@ type DBManager interface {
 	DeleteTd(hash common.Hash, number uint64)
 
 	ReadReceipts(hash common.Hash, number uint64) types.Receipts
-	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) error
-	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) error
+	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
+	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts)
 	DeleteReceipts(hash common.Hash, number uint64)
 
 	ReadBlock(hash common.Hash, number uint64) *types.Block
-	WriteBlock(block *types.Block) error
+	WriteBlock(block *types.Block)
 	DeleteBlock(hash common.Hash, number uint64)
 
 	FindCommonAncestor(a, b *types.Header) *types.Header
@@ -87,7 +87,7 @@ type DBManager interface {
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
 	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
 
-	WriteMerkleProof(key, value []byte) error
+	WriteMerkleProof(key, value []byte)
 
 	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
@@ -97,8 +97,8 @@ type DBManager interface {
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
-	WriteTxLookupEntries(block *types.Block) error
-	PutTxLookupEntriesToBatch(batch Batch, block *types.Block) error
+	WriteTxLookupEntries(block *types.Block)
+	PutTxLookupEntriesToBatch(batch Batch, block *types.Block)
 	DeleteTxLookupEntry(hash common.Hash)
 
 	ReadTransaction(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
@@ -124,7 +124,7 @@ type DBManager interface {
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
 	ReadPreimage(hash common.Hash) []byte
-	WritePreimages(number uint64, preimages map[common.Hash][]byte) error
+	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 }
 
 
@@ -387,7 +387,7 @@ func (dbm *databaseManager) ReadHeaderRLP(hash common.Hash, number uint64) rlp.R
 
 // WriteHeader stores a block header into the database and also stores the hash-
 // to-number mapping.
-func (dbm *databaseManager) WriteHeader(header *types.Header) error {
+func (dbm *databaseManager) WriteHeader(header *types.Header) {
 	db := dbm.getDatabase(headerDB)
 	// Write the hash -> number mapping
 	var (
@@ -398,20 +398,16 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) error {
 	key := headerNumberKey(hash)
 	if err := db.Put(key, encoded); err != nil {
 		logger.Crit("Failed to store hash to number mapping", "err", err)
-		return err
 	}
 	// Write the encoded header
 	data, err := rlp.EncodeToBytes(header)
 	if err != nil {
 		logger.Crit("Failed to RLP encode header", "err", err)
-		return err
 	}
 	key = headerKey(number, hash)
 	if err := db.Put(key, data); err != nil {
 		logger.Crit("Failed to store header", "err", err)
-		return err
 	}
-	return nil
 }
 
 // DeleteHeader removes all block header data associated with a hash.
@@ -457,37 +453,31 @@ func (dbm *databaseManager) ReadBodyRLP(hash common.Hash, number uint64) rlp.Raw
 }
 
 // WriteBody storea a block body into the database.
-func (dbm *databaseManager) WriteBody(hash common.Hash, number uint64, body *types.Body) error {
+func (dbm *databaseManager) WriteBody(hash common.Hash, number uint64, body *types.Body) {
 	data, err := rlp.EncodeToBytes(body)
 	if err != nil {
 		logger.Crit("Failed to RLP encode body", "err", err)
-		return err
 	}
-	return dbm.WriteBodyRLP(hash, number, data)
+	dbm.WriteBodyRLP(hash, number, data)
 }
 
-func (dbm *databaseManager) PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body) error {
+func (dbm *databaseManager) PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body) {
 	data, err := rlp.EncodeToBytes(body)
 	if err != nil {
 		logger.Crit("Failed to RLP encode body", "err", err)
-		return err
 	}
 
 	if err := batch.Put(blockBodyKey(number, hash), data); err != nil {
 		logger.Crit("Failed to store block body", "err", err)
-		return err
 	}
-	return nil
 }
 
 // WriteBodyRLP stores an RLP encoded block body into the database.
-func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue) error {
+func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue) {
 	db := dbm.getDatabase(BodyDB)
 	if err := db.Put(blockBodyKey(number, hash), rlp); err != nil {
 		logger.Crit("Failed to store block body", "err", err)
-		return err
 	}
-	return nil
 }
 
 // DeleteBody removes all block body data associated with a hash.
@@ -557,16 +547,16 @@ func (dbm *databaseManager) ReadReceipts(hash common.Hash, number uint64) types.
 }
 
 // WriteReceipts stores all the transaction receipts belonging to a block.
-func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) error {
+func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
 	db := dbm.getDatabase(ReceiptsDB)
-	return putReceiptsToPutter(db, hash, number, receipts)
+	putReceiptsToPutter(db, hash, number, receipts)
 }
 
-func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) error {
-	return putReceiptsToPutter(batch, hash, number, receipts)
+func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) {
+	putReceiptsToPutter(batch, hash, number, receipts)
 }
 
-func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipts types.Receipts) error {
+func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipts types.Receipts) {
 	// Convert the receipts into their database form and serialize them
 	storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
 	for i, receipt := range receipts {
@@ -575,14 +565,11 @@ func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipt
 	bytes, err := rlp.EncodeToBytes(storageReceipts)
 	if err != nil {
 		logger.Crit("Failed to encode block receipts", "err", err)
-		return err
 	}
 	// Store the flattened receipt slice
 	if err := putter.Put(blockReceiptsKey(number, hash), bytes); err != nil {
 		logger.Crit("Failed to store block receipts", "err", err)
-		return err
 	}
-	return nil
 }
 
 // DeleteReceipts removes all receipt data associated with a block hash.
@@ -612,14 +599,9 @@ func (dbm *databaseManager) ReadBlock(hash common.Hash, number uint64) *types.Bl
 	return types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
 }
 
-func (dbm *databaseManager) WriteBlock(block *types.Block) error {
-	if err := dbm.WriteBody(block.Hash(), block.NumberU64(), block.Body()); err != nil {
-		return err
-	}
-	if err := dbm.WriteHeader(block.Header()); err != nil {
-		return err
-	}
-	return nil
+func (dbm *databaseManager) WriteBlock(block *types.Block) {
+	dbm.WriteBody(block.Hash(), block.NumberU64(), block.Body())
+	dbm.WriteHeader(block.Header())
 }
 
 func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {
@@ -669,9 +651,11 @@ func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte)
 }
 
 // Merkle Proof operation.
-func (dbm *databaseManager) WriteMerkleProof(key, value []byte) error {
+func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 	db := dbm.getDatabase(merkleProofDB)
-	return db.Put(key, value)
+	if err := db.Put(key, value); err != nil {
+		log.Crit("Failed to write merkle proof", "err", err)
+	}
 }
 
 // Cached Trie Node operation.
@@ -718,16 +702,16 @@ func (dbm *databaseManager) ReadTxLookupEntry(hash common.Hash) (common.Hash, ui
 
 // WriteTxLookupEntries stores a positional metadata for every transaction from
 // a block, enabling hash based transaction and receipt lookups.
-func (dbm *databaseManager) WriteTxLookupEntries(block *types.Block) error {
+func (dbm *databaseManager) WriteTxLookupEntries(block *types.Block) {
 	db := dbm.getDatabase(TxLookUpEntryDB)
-	return putTxLookupEntriesToPutter(db, block)
+	putTxLookupEntriesToPutter(db, block)
 }
 
-func (dbm *databaseManager) PutTxLookupEntriesToBatch(batch Batch, block *types.Block) error {
-	return putTxLookupEntriesToPutter(batch, block)
+func (dbm *databaseManager) PutTxLookupEntriesToBatch(batch Batch, block *types.Block) {
+	putTxLookupEntriesToPutter(batch, block)
 }
 
-func putTxLookupEntriesToPutter(putter Putter, block *types.Block) error {
+func putTxLookupEntriesToPutter(putter Putter, block *types.Block) {
 	for i, tx := range block.Transactions() {
 		entry := TxLookupEntry{
 			BlockHash:  block.Hash(),
@@ -737,14 +721,11 @@ func putTxLookupEntriesToPutter(putter Putter, block *types.Block) error {
 		data, err := rlp.EncodeToBytes(entry)
 		if err != nil {
 			logger.Crit("Failed to encode transaction lookup entry", "err", err)
-			return err
 		}
 		if err := putter.Put(TxLookupKey(tx.Hash()), data); err != nil {
 			logger.Crit("Failed to store transaction lookup entry", "err", err)
-			return err
 		}
 	}
-	return nil
 }
 
 // DeleteTxLookupEntry removes all transaction data associated with a hash.
@@ -883,21 +864,18 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
-func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) error {
+func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
 	batch := dbm.getDatabase(PreimagesDB).NewBatch()
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
-			return err
 		}
 	}
 	if err := batch.Write(); err != nil {
 		logger.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
-		return err
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
-	return nil
 }
 
 // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits

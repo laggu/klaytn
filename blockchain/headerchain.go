@@ -184,9 +184,7 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	externTd := new(big.Int).Add(header.Difficulty, ptd)
 
 	// Irrelevant of the canonical status, write the td and header to the database
-	if err := hc.WriteTd(hash, number, externTd); err != nil {
-		logger.Crit("Failed to write header total difficulty", "err", err)
-	}
+	hc.WriteTd(hash, number, externTd)
 	hc.chainDB.WriteHeader(header)
 
 	// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
@@ -378,10 +376,9 @@ func (hc *HeaderChain) GetTdByHash(hash common.Hash) *big.Int {
 
 // WriteTd stores a block's total difficulty into the database, also caching it
 // along the way.
-func (hc *HeaderChain) WriteTd(hash common.Hash, number uint64, td *big.Int) error {
+func (hc *HeaderChain) WriteTd(hash common.Hash, number uint64, td *big.Int) {
 	hc.chainDB.WriteTd(hash, number, td)
 	hc.tdCache.Add(hash, new(big.Int).Set(td))
-	return nil
 }
 
 // GetHeader retrieves a block header from the database by hash and number,
