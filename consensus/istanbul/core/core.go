@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var logger = log.NewModuleLogger("consensus/istanbul/core")
+var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
 
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {

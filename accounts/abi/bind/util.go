@@ -9,7 +9,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 )
 
-var logger = log.NewModuleLogger("accounts/abi/bind")
+var logger = log.NewModuleLogger(log.AccountsAbiBind)
 
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.

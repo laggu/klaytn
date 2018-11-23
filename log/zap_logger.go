@@ -7,115 +7,45 @@ import (
 	"path/filepath"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"strings"
 	"sync"
+	"fmt"
 )
 
-var (
-	defaultLogOutputPath = ""
-	defaultLogOutputFile = "klaytn-log"
-	defaultLogEncodingType = "json"
-	defaultLogLevel = zapcore.InfoLevel
-	defaultMessageKey = "msg"
-	defaultLoggerName = "defaultlogger"
-	moduleConfigMap = make(map[string]*zap.Config)
-	logMutex = new(sync.Mutex)
-)
-
-func genDefaultEncoderConfig() zapcore.EncoderConfig {
-	return zapcore.EncoderConfig{
-		TimeKey:        "ts",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		//CallerKey:      "caller",
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		//EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
-}
-
-func getDefaultConfig() *zap.Config {
-	return moduleConfigMap[defaultLoggerName]
-}
-
-func genDefaultConfig() *zap.Config {
-	encoderConfig := genDefaultEncoderConfig()
-	return &zap.Config{
-		Encoding:    defaultLogEncodingType,
-		Level:       zap.NewAtomicLevelAt(defaultLogLevel),
-		OutputPaths: []string{defaultLogOutputPath},
-		Development: false,
-		EncoderConfig: encoderConfig,
-	}
-}
-
-func genBaseLoggerZap() Logger {
-	ex, err := os.Executable()
-	if err != nil {
-		// TODO-GX Error should be handled.
-	}
-	// TODO-GX Output path should be set properly.
-	defaultLogOutputPath = path.Join(filepath.Dir(ex), defaultLogOutputFile)
-
-	// defaultLogger is bound to package level log function.
-	// This is to have consistent logging behavior between transition period.
-	defaultLoggerCfg := genDefaultConfig()
-	logger, err := defaultLoggerCfg.Build()
-	if err != nil {
-		// TODO-GX Error should be handled.
+var zlManager = zapLoggerManager{"klaytn-log",
+		"json", zapcore.InfoLevel,
+		sync.Mutex{}, make(map[ModuleID][]*zapLogger),
 	}
 
-	moduleConfigMap[defaultLoggerName] = defaultLoggerCfg
-	return &zapLogger{logger.Sugar()}
-}
-
-type Logger interface {
-	NewWith(keysAndValues ...interface{}) Logger
-	newModuleLogger(moduleName string) Logger
-	Trace(msg string, keysAndValues ...interface{})
-	Debug(msg string, keysAndValues ...interface{})
-	Info(msg string, keysAndValues ...interface{})
-	Warn(msg string, keysAndValues ...interface{})
-	Error(msg string, keysAndValues ...interface{})
-	Crit(msg string, keysAndValues ...interface{})
-
-	// GetHandler gets the handler associated with the logger.
-	GetHandler() Handler
-	// SetHandler updates the logger to write records to the specified handler.
-	SetHandler(h Handler)
+type zapLoggerManager struct {
+	outputPath   string
+	encodingType string
+	logLevel     zapcore.Level
+	mutex        sync.Mutex
+	loggersMap   map[ModuleID][]*zapLogger
 }
 
 type zapLogger struct {
+	mi ModuleID
+	cfg *zap.Config
 	sl *zap.SugaredLogger
 }
 
+// A zapLogger generated from NewWith inherits InitialFields and ModuleID from its parent.
 func (zl *zapLogger) NewWith(keysAndValues ...interface{}) Logger {
-	return &zapLogger{zl.sl.With(keysAndValues...)}
+	newCfg := genDefaultConfig()
+	for k, v := range zl.cfg.InitialFields {
+		newCfg.InitialFields[k] = v
+	}
+	return genLoggerZap(zl.mi, newCfg)
 }
 
-func (zl *zapLogger) newModuleLogger(moduleName string) Logger {
-	logMutex.Lock()
-	defer logMutex.Unlock()
-
-	moduleName = strings.ToLower(moduleName)
-
-	if moduleConfigMap[moduleName] != nil {
-		baseLogger.Crit("Duplicated log moduleName found!", "moduleName", moduleName)
-	}
+func (zl *zapLogger) newModuleLogger(mi ModuleID) Logger {
+	zlManager.mutex.Lock()
+	defer zlManager.mutex.Unlock()
 
 	zapCfg := genDefaultConfig()
-	zapCfg.InitialFields["module"] = moduleName
-	logger, err := zapCfg.Build()
-	if err != nil {
-		// TODO-GX Error should be handled.
-	}
-
-	moduleConfigMap[moduleName] = zapCfg
-	return &zapLogger{logger.Sugar()}
+	zapCfg.InitialFields[module] = mi
+	return genLoggerZap(mi, zapCfg)
 }
 
 func (zl *zapLogger) Trace(msg string, keysAndValues ...interface{}) {
@@ -150,21 +80,94 @@ func (zl *zapLogger) GetHandler() Handler {
 func (zl *zapLogger) SetHandler(h Handler) {
 }
 
-func ChangeLogLevel(moduleName string, lvl Lvl) error {
-	moduleName = strings.ToLower(moduleName)
-	cfg := moduleConfigMap[moduleName]
-	if cfg == nil {
+func (zl *zapLogger) setLevel(lvl Lvl) {
+	zl.cfg.Level.SetLevel(lvlToZapLevel(lvl))
+}
+
+// register registers the receiver to zapLoggerManager.
+func (zl *zapLogger) register() {
+	zlManager.loggersMap[zl.mi] = append(zlManager.loggersMap[zl.mi], zl)
+}
+
+func genBaseLoggerZap() Logger {
+	ex, err := os.Executable()
+	if err != nil {
+		// TODO-GX Error should be handled.
+	}
+	// TODO-GX Output path should be set properly.
+	zlManager.outputPath = path.Join(filepath.Dir(ex), zlManager.outputPath)
+	return genLoggerZap(BaseLogger, genDefaultConfig())
+}
+
+// genLoggerZap creates a zapLogger with given ModuleID and Config.
+func genLoggerZap(mi ModuleID, cfg *zap.Config) Logger {
+	logger, err := cfg.Build()
+	if err != nil {
+		// TODO-GX Error should be handled.
+	}
+	newLogger := &zapLogger{mi,cfg, logger.Sugar()}
+	newLogger.register()
+	return newLogger
+}
+
+// ChangeLogLevelWithName changes the log level of loggers with given ModuleName.
+func ChangeLogLevelWithName(moduleName string, lvl Lvl) error {
+	if err := levelCheck(lvl); err != nil {
+		return err
+	}
+	mi := GetModuleID(moduleName)
+	if mi == ModuleNameLen {
 		return errors.New("entered module name does not match with any existing log module")
 	}
+	return ChangeLogLevelWithID(mi, lvl)
+}
 
-	cfg.Level.SetLevel(lvlToZapLevel(lvl))
+// ChangeLogLevelWithName changes the log level of loggers with given ModuleID.
+func ChangeLogLevelWithID(mi ModuleID, lvl Lvl) error {
+	if err := levelCheck(lvl); err != nil {
+		return err
+	}
+	if err := idCheck(mi); err != nil {
+		return err
+	}
+	loggers := zlManager.loggersMap[mi]
+	for _, logger := range loggers {
+		logger.setLevel(lvl)
+	}
 	return nil
 }
 
-func ChangeGlobalLogLevel(lvl Lvl) {
-	for _, cfg := range moduleConfigMap {
-		cfg.Level.SetLevel(lvlToZapLevel(lvl))
+func ChangeGlobalLogLevel(glogger *GlogHandler, lvl Lvl) error {
+	if err := levelCheck(lvl); err != nil {
+		return err
 	}
+	for _, loggers := range zlManager.loggersMap {
+		for _, logger := range loggers {
+			logger.setLevel(lvl)
+		}
+	}
+	glogger.Verbosity(lvl)
+	return nil
+}
+
+func levelCheck(lvl Lvl) error {
+	if lvl >= LvlEnd {
+		return errors.New(fmt.Sprintf("insert log level less than %d", LvlEnd))
+	}
+	if lvl < LvlCrit {
+		return errors.New(fmt.Sprintf("insert log level greater than or equal to %d", LvlCrit))
+	}
+	return nil
+}
+
+func idCheck(mi ModuleID) error {
+	if mi >= ModuleNameLen {
+		return errors.New(fmt.Sprintf("insert log level less than %d", ModuleNameLen))
+	}
+	if mi <= BaseLogger {
+		return errors.New(fmt.Sprintf("insert log level greater than %d", BaseLogger))
+	}
+	return nil
 }
 
 func lvlToZapLevel(lvl Lvl) zapcore.Level {
@@ -184,5 +187,33 @@ func lvlToZapLevel(lvl Lvl) zapcore.Level {
 	default:
 		baseLogger.Error("Unexpected log level entered. Use InfoLevel instead.", "entered level", lvl)
 		return zapcore.InfoLevel
+	}
+}
+
+func genDefaultEncoderConfig() zapcore.EncoderConfig {
+	return zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		//CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		//EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+}
+
+func genDefaultConfig() *zap.Config {
+	encoderConfig := genDefaultEncoderConfig()
+	return &zap.Config{
+		Encoding:    zlManager.encodingType,
+		Level:       zap.NewAtomicLevelAt(zlManager.logLevel),
+		OutputPaths: []string{zlManager.outputPath},
+		Development: false,
+		EncoderConfig: encoderConfig,
+		InitialFields: make(map[string]interface{}),
 	}
 }

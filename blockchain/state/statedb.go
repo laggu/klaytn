@@ -42,7 +42,7 @@ var (
 	// emptyCode is the known hash of the empty EVM bytecode.
 	emptyCode = crypto.Keccak256Hash(nil)
 
-	logger = log.NewModuleLogger("blockchain/state")
+	logger = log.NewModuleLogger(log.BlockchainState)
 )
 
 // StateDBs within the ethereum protocol are used to store anything

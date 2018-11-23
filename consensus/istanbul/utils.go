@@ -8,7 +8,7 @@ import (
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 )
 
-var logger = log.NewModuleLogger("consensus/istanbul")
+var logger = log.NewModuleLogger(log.ConsensusIstanbul)
 
 func RLPHash(v interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()

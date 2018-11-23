@@ -1,21 +1,37 @@
 package log
 
+const module = "module"
 const (
-	ZapLogger     = "ZapLogger"
-	Log15Logger   = "Log15Logger"
+	ZapLogger     = "zap"
+	Log15Logger   = "log15"
 	DefaultLogger = Log15Logger
 )
 
-var BaseLogType = DefaultLogger
 var baseLogger Logger
+
+type Logger interface {
+	NewWith(keysAndValues ...interface{}) Logger
+	newModuleLogger(mi ModuleID) Logger
+	Trace(msg string, keysAndValues ...interface{})
+	Debug(msg string, keysAndValues ...interface{})
+	Info(msg string, keysAndValues ...interface{})
+	Warn(msg string, keysAndValues ...interface{})
+	Error(msg string, keysAndValues ...interface{})
+	Crit(msg string, keysAndValues ...interface{})
+
+	// GetHandler gets the handler associated with the logger.
+	GetHandler() Handler
+	// SetHandler updates the logger to write records to the specified handler.
+	SetHandler(h Handler)
+}
 
 func init() {
 	root.SetHandler(DiscardHandler())
-	SetBaseLogger(BaseLogType)
+	SetBaseLogger()
 }
 
-func SetBaseLogger(logType string) {
-	switch logType {
+func SetBaseLogger() {
+	switch DefaultLogger {
 	case ZapLogger:
 		baseLogger = genBaseLoggerZap()
 	case Log15Logger:
@@ -25,35 +41,7 @@ func SetBaseLogger(logType string) {
 	}
 }
 
-// New returns a new logger with the given context.
-func New(keyAndValues ...interface{}) Logger {
-	return baseLogger.NewWith(keyAndValues...)
-}
-
-func NewModuleLogger(moduleName string) Logger {
-	return baseLogger.newModuleLogger(moduleName)
-}
-
-func Trace(msg string, keyAndValues ...interface{}) {
-	baseLogger.Trace(msg, keyAndValues...)
-}
-
-func Debug(msg string, keyAndValues ...interface{}) {
-	baseLogger.Debug(msg, keyAndValues...)
-}
-
-func Info(msg string, keyAndValues ...interface{}) {
-	baseLogger.Info(msg, keyAndValues...)
-}
-
-func Warn(msg string, keyAndValues ...interface{}) {
-	baseLogger.Warn(msg, keyAndValues...)
-}
-
-func Error(msg string, keyAndValues ...interface{}) {
-	baseLogger.Error(msg, keyAndValues...)
-}
-
-func Crit(msg string, keyAndValues ...interface{}) {
-	baseLogger.Crit(msg, keyAndValues...)
+func NewModuleLogger(mi ModuleID) Logger {
+	newLogger := baseLogger.newModuleLogger(mi)
+	return newLogger
 }

@@ -27,7 +27,7 @@ func (s accountsByURL) Len() int           { return len(s) }
 func (s accountsByURL) Less(i, j int) bool { return s[i].URL.Cmp(s[j].URL) < 0 }
 func (s accountsByURL) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-var logger = log.NewModuleLogger("accounts/keystore")
+var logger = log.NewModuleLogger(log.AccountsKeystore)
 
 // AmbiguousAddrError is returned when attempting to unlock
 // an address for which more than one file exists.

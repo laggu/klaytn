@@ -47,7 +47,7 @@ import (
 var (
 	blockInsertTimer = metrics.NewRegisteredTimer("chain/inserts", nil)
 	ErrNoGenesis = errors.New("Genesis not found in chain")
-	logger = log.NewModuleLogger("blockchain")
+	logger = log.NewModuleLogger(log.Blockchain)
 )
 
 // TODO-GX: Below should be handled by ini or other configurations.
@@ -1167,7 +1167,7 @@ func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
 		bc.recentTransactions.Add(tx.Hash(), &TransactionLookup{tx, &entry})
 	}
 	if err := batch.Write(); err != nil {
-		log.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
+		logger.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
 		return err
 	}
 	return nil

@@ -32,7 +32,7 @@ const (
 	defaultGasPrice = 50 * params.Ston // TODO-GX-issue136 default gasPrice
 )
 
-var logger = log.NewModuleLogger("api")
+var logger = log.NewModuleLogger(log.API)
 
 // PublicGXPAPI provides an API to access GXP related information.
 // It offers only methods that operate on public data that is freely available to anyone.

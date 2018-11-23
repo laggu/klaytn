@@ -23,7 +23,7 @@ var (
 	ErrClientQuit                = errors.New("client is closed")
 	ErrNoResult                  = errors.New("no result in JSON-RPC response")
 	ErrSubscriptionQueueOverflow = errors.New("subscription queue overflow")
-	logger = log.NewModuleLogger("networks/rpc")
+	logger = log.NewModuleLogger(log.NetworksRPC)
 )
 
 const (

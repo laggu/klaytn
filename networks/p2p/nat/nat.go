@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var logger = log.NewModuleLogger("networks/p2p/nat")
+var logger = log.NewModuleLogger(log.NetworksP2PNat)
 
 // An implementation of nat.Interface can map local ports to ports
 // accessible from the Internet.

@@ -24,7 +24,7 @@ const (
 
 var (
 	errTerminated = errors.New("terminated")
-	logger = log.NewModuleLogger("datasync/fetcher")
+	logger = log.NewModuleLogger(log.DatasyncFetcher)
 )
 
 // blockRetrievalFn is a callback type for retrieving a block from the local chain.

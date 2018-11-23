@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	logger = log.NewModuleLogger("cmd/ranger")
+	logger = log.NewModuleLogger(log.CmdRanger)
 
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
@@ -70,7 +70,6 @@ var (
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
 		utils.RPCVirtualHostsFlag,
-		utils.LoggerTypeFlag,
 		utils.EthStatsURLFlag,
 		utils.MetricsEnabledFlag,
 		utils.NoCompactionFlag,

@@ -36,7 +36,7 @@ var mockerList = map[string]func(net *Network, quit chan struct{}, nodeCount int
 	"boot":          boot,
 }
 
-var logger = log.NewModuleLogger("networks/p2p/simulations")
+var logger = log.NewModuleLogger(log.NetworksP2PSimulations)
 
 //Lookup a mocker by its name, returns the mockerFn
 func LookupMocker(mockerType string) func(net *Network, quit chan struct{}, nodeCount int) {

@@ -17,7 +17,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 )
 
-var logger = log.NewModuleLogger("node/ranger")
+var logger = log.NewModuleLogger(log.NodeRanger)
 
 // DefaultConfig contains default settings for use on the klaytn main net.
 var DefaultConfig = Config{

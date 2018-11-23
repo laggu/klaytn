@@ -31,7 +31,7 @@ import (
 var (
 	receiptStatusFailedRLP     = []byte{}
 	receiptStatusSuccessfulRLP = []byte{0x01}
-	logger = log.NewModuleLogger("blockchain/types")
+	logger = log.NewModuleLogger(log.BlockchainTypes)
 )
 
 const (

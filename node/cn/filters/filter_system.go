@@ -52,7 +52,7 @@ const (
 
 var (
 	ErrInvalidSubscriptionID = errors.New("invalid id")
-	logger = log.NewModuleLogger("node/cn/filters")
+	logger = log.NewModuleLogger(log.NodeCNFilters)
 )
 
 type subscription struct {

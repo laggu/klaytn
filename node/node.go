@@ -36,7 +36,7 @@ import (
 	"github.com/ground-x/go-gxplatform/api/debug"
 )
 
-var logger = log.NewModuleLogger("node")
+var logger = log.NewModuleLogger(log.Node)
 
 const (
 	CONSENSUSNODE = iota

@@ -20,7 +20,7 @@ import (
 )
 
 var adapterType = flag.String("adapter", "cnsim", `node adapter to use (one of "sim", "exec" or "docker")`)
-var logger = log.NewModuleLogger("networks/p2p/simulations/cnism")
+var logger = log.NewModuleLogger(log.NetworksP2PSimulationsCnism)
 
 // main() starts a simulation network which contains nodes running a simple
 // ping-pong protocol

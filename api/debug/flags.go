@@ -96,8 +96,7 @@ func init() {
 func Setup(ctx *cli.Context) error {
 	// logging
 	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
-	glogger.Verbosity(log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
-	log.ChangeGlobalLogLevel(log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
 	glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
 	glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name))
 	log.Root().SetHandler(glogger)

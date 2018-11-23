@@ -32,7 +32,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 )
 
-var logger = log.NewModuleLogger("networks/p2p")
+var logger = log.NewModuleLogger(log.NetworksP2P)
 
 const (
 	baseProtocolVersion    = 5

@@ -35,7 +35,7 @@ const (
 //it's set by flag
 var DefaultCacheType CacheType = LRUCacheType
 var CacheScale int = 100 // cache size = preset size * CacheScale / 100
-var logger = log.NewModuleLogger("common")
+var logger = log.NewModuleLogger(log.Common)
 
 type CacheKey interface {
 	getShardIndex(shardMask int) int

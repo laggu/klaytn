@@ -16,7 +16,6 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/node/cn"
 	"github.com/ground-x/go-gxplatform/node/cn/gasprice"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
@@ -303,11 +302,6 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
-	LoggerTypeFlag = cli.StringFlag{
-		Name: "logger",
-		Usage: "Determines the type of logger used in Klaytn logging",
-		Value: log.ZapLogger,
-	}
 	EthStatsURLFlag = cli.StringFlag{
 		Name:  "ethstats",
 		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
@@ -1004,8 +998,6 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 
-	setLogger(ctx)
-
 	// Override any default configs for hard coded network.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
@@ -1043,22 +1035,6 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 	}
 }
 
-func setLogger(ctx *cli.Context) {
-	if ctx.GlobalIsSet(LoggerTypeFlag.Name) {
-		switch ctx.GlobalString(LoggerTypeFlag.Name) {
-		case "zap":
-			log.SetBaseLogger(log.ZapLogger)
-			log.BaseLogType = log.ZapLogger
-		case "log15":
-			log.SetBaseLogger(log.Log15Logger)
-			log.BaseLogType = log.Log15Logger
-		default:
-			log.SetBaseLogger(log.Log15Logger)
-			log.BaseLogType = log.Log15Logger
-		}
-	}
-}
-
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// Avoid conflicting network flags
@@ -1091,7 +1067,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
-	log.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
+	logger.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
 
 	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
 		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
@@ -1111,8 +1087,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
-
-	setLogger(ctx)
 
 	// TODO-GX Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*

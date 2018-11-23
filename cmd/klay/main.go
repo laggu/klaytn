@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	logger = log.NewModuleLogger("cmd/klay")
+	logger = log.NewModuleLogger(log.CmdKlay)
 
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
@@ -105,7 +105,6 @@ var (
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
 		utils.RPCVirtualHostsFlag,
-		utils.LoggerTypeFlag,
 		utils.EthStatsURLFlag,
 		utils.MetricsEnabledFlag,
 		utils.PrometheusExporterFlag,

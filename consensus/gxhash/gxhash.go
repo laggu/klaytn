@@ -38,7 +38,7 @@ var (
 	// dumpMagic is a dataset dump header to sanity check a data dump.
 	dumpMagic = []uint32{0xbaddcafe, 0xfee1dead}
 
-	logger = log.NewModuleLogger("consensus/gxhash")
+	logger = log.NewModuleLogger(log.ConsensusGxhash)
 )
 
 // isLittleEndian returns whether the local system is running in little or big

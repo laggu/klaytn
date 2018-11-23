@@ -17,7 +17,7 @@ import (
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 )
 
-var logger = log.NewModuleLogger("work")
+var logger = log.NewModuleLogger(log.Work)
 
 // Backend wraps all methods required for mining.
 type Backend interface {

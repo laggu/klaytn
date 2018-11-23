@@ -29,7 +29,7 @@ import (
 	"encoding/json"
 )
 
-var logger = log.NewModuleLogger("storage/database")
+var logger = log.NewModuleLogger(log.StorageDatabase)
 
 type DBManager interface {
 	Close()
@@ -654,7 +654,7 @@ func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte)
 func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 	db := dbm.getDatabase(merkleProofDB)
 	if err := db.Put(key, value); err != nil {
-		log.Crit("Failed to write merkle proof", "err", err)
+		logger.Crit("Failed to write merkle proof", "err", err)
 	}
 }
 

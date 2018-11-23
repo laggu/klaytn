@@ -49,7 +49,7 @@ var (
 
 	spawnTimeOut = 1 * time.Minute			// Maximum waiting time for completion of spawned d.processes
 
-	logger = log.NewModuleLogger("datasync/downloader")
+	logger = log.NewModuleLogger(log.DatasyncDownloader)
 )
 
 var (

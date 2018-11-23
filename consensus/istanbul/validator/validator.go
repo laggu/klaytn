@@ -6,7 +6,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 )
 
-var logger = log.NewModuleLogger("consensus/istanbul/validator")
+var logger = log.NewModuleLogger(log.ConsensusIstanbulValidator)
 
 func New(addr common.Address) istanbul.Validator {
 	return &defaultValidator{

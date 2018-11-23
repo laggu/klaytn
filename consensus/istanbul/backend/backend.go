@@ -24,7 +24,7 @@ const (
 	fetcherID = "istanbul"
 )
 
-var logger = log.NewModuleLogger("consensus/istanbul/backend")
+var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
 func New(rewardbase common.Address, rewardcontract common.Address , config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager) consensus.Istanbul {
 

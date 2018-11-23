@@ -21,7 +21,7 @@ import (
 // for less cluttered pprof profiles.
 var Enabled = false
 var EnabledPrometheusExport = false
-var logger = log.NewModuleLogger("metrics")
+var logger = log.NewModuleLogger(log.Metrics)
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
 const MetricsEnabledFlag = "metrics"

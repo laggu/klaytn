@@ -43,7 +43,7 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-var logger = log.NewModuleLogger("networks/p2p/simulations/adapters")
+var logger = log.NewModuleLogger(log.NetworksP2PSimulationsAdapters)
 
 // ExecAdapter is a NodeAdapter which runs simulation nodes by executing the
 // current binary as a child process.
@@ -369,8 +369,7 @@ func ExternalIP() net.IP {
 // and the node config from the _P2P_NODE_CONFIG environment variable
 func execP2PNode() {
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.LogfmtFormat()))
-	glogger.Verbosity(log.LvlInfo)
-	log.ChangeGlobalLogLevel(log.Lvl(log.LvlInfo))
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlInfo))
 	log.Root().SetHandler(glogger)
 
 	// read the services from argv

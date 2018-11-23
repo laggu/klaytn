@@ -21,6 +21,7 @@ const (
 	LvlInfo
 	LvlDebug
 	LvlTrace
+	LvlEnd
 )
 
 // Aligned returns a 5-character string containing the name of a Lvl.
@@ -115,8 +116,8 @@ func (l *log15Logger) NewWith(keysAndValues ...interface{}) Logger {
 	return child
 }
 
-func (l *log15Logger) newModuleLogger(moduleName string) Logger {
-	return l.NewWith("module", moduleName)
+func (l *log15Logger) newModuleLogger(mi ModuleID) Logger {
+	return l.NewWith(module, mi)
 }
 
 func newContext(prefix []interface{}, suffix []interface{}) []interface{} {

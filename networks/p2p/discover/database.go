@@ -42,7 +42,7 @@ var (
 	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
 	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
 	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
-	logger = log.NewModuleLogger("networks/p2p/discover")
+	logger = log.NewModuleLogger(log.NetworksP2PDiscover)
 )
 
 // nodeDB stores all nodes we know about.

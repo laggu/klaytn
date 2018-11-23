@@ -20,7 +20,7 @@ type bridge struct {
 	printer  io.Writer    // Output writer to serialize any display strings to
 }
 
-var logger = log.NewModuleLogger("console")
+var logger = log.NewModuleLogger(log.Console)
 
 // newBridge creates a new JavaScript wrapper around an RPC client.
 func newBridge(client *rpc.Client, prompter UserPrompter, printer io.Writer) *bridge {

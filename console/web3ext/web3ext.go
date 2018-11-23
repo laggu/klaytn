@@ -147,6 +147,16 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'verbosityByName',
+			call: 'debug_verbosityByName',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'verbosityByID',
+			call: 'debug_verbosityByID',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'vmodule',
 			call: 'debug_vmodule',
 			params: 1

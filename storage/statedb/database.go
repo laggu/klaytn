@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	logger = log.NewModuleLogger("storage/statedb")
+	logger = log.NewModuleLogger(log.StorageStateDB)
 
 	memcacheFlushTimeTimer  = metrics.NewRegisteredResettingTimer("trie/memcache/flush/time", nil)
 	memcacheFlushNodesMeter = metrics.NewRegisteredMeter("trie/memcache/flush/nodes", nil)

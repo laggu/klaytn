@@ -21,7 +21,7 @@ import (
 
 // Handler is the global debugging handler.
 var Handler = new(HandlerT)
-var logger = log.NewModuleLogger("api/debug")
+var logger = log.NewModuleLogger(log.APIDebug)
 
 // HandlerT implements the debugging API.
 // Do not create values of this type, use the one
@@ -41,9 +41,20 @@ type HandlerT struct {
 
 // Verbosity sets the log verbosity ceiling. The verbosity of individual packages
 // and source files can be raised using Vmodule.
-func (*HandlerT) Verbosity(level int) {
-	glogger.Verbosity(log.Lvl(level))
-	log.ChangeGlobalLogLevel(log.Lvl(level))
+func (*HandlerT) Verbosity(level int) error {
+	return log.ChangeGlobalLogLevel(glogger, log.Lvl(level))
+}
+
+// VerbosityByName sets the verbosity of log module with given name.
+// Please note that VerbosityByName only works with zapLogger.
+func (*HandlerT) VerbosityByName(mn string, level int) error {
+	return log.ChangeLogLevelWithName(mn, log.Lvl(level))
+}
+
+// VerbosityByID sets the verbosity of log module with given ModuleID.
+// Please note that VerbosityByID only works with zapLogger.
+func (*HandlerT) VerbosityByID(mi int, level int) error {
+	return log.ChangeLogLevelWithID(log.ModuleID(mi), log.Lvl(level))
 }
 
 // Vmodule sets the log verbosity pattern. See package log for details on the
