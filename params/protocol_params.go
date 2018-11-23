@@ -31,8 +31,6 @@ const (
 	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
 
 	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
-	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
-	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.                  // G_callvalue
 	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.      // G_newaccount
 	TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. // G_transaction
@@ -50,14 +48,11 @@ const (
 	SstoreRefundGas  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
 	JumpdestGas      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero. // G_jumpdest
 	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
-	CallGas          uint64 = 40    // Once per CALL operation & message call transaction.
 	CreateDataGas    uint64 = 200   // Paid per byte for a CREATE operation to succeed in placing code into state. // G_codedeposit
 	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
-	ExpGas           uint64 = 10    // Once per EXP instruction
 	LogGas           uint64 = 375   // Per LOG* operation.                                                          // G_log
 	CopyGas          uint64 = 3     // Partial payment for COPY operations, multiplied by words copied, rounded up. // G_copy
 	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
-	TierStepGas      uint64 = 0     // Once per operation, for a selection of them.
 	LogTopicGas      uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
 	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.               // G_create
 	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.                                  // R_selfdestruct
