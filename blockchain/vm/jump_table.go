@@ -141,7 +141,7 @@ func newFrontierInstructionSet() [256]operation {
 	return [256]operation{
 		STOP: {
 			execute:       opStop,
-			gasCost:       constGasFunc(0),
+			gasCost:       constGasFunc(GasZero),
 			validateStack: makeStackFunc(0, 0),
 			halts:         true,
 			valid:         true,

@@ -26,11 +26,8 @@ var (
 )
 
 const (
-	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
+	// Fee schedule parameters
 
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.                  // G_callvalue
 	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.      // G_newaccount
 	TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. // G_transaction
@@ -40,26 +37,20 @@ const (
 	SstoreSetGas          uint64 = 20000 // Once per SLOAD operation.                                           // G_sset
 	LogDataGas            uint64 = 8     // Per byte in a LOG* operation's data.                                // G_logdata
 	CallStipend           uint64 = 2300  // Free gas given at beginning of call.                                // G_callstipend
-
-	Sha3Gas          uint64 = 30    // Once per SHA3 operation.                                                 // G_sha3
-	Sha3WordGas      uint64 = 6     // Once per word of the SHA3 operation's data.                              // G_sha3word
-	SstoreResetGas   uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
-	SstoreClearGas   uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
-	SstoreRefundGas  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
-	JumpdestGas      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero. // G_jumpdest
-	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
-	CreateDataGas    uint64 = 200   // Paid per byte for a CREATE operation to succeed in placing code into state. // G_codedeposit
-	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
-	LogGas           uint64 = 375   // Per LOG* operation.                                                          // G_log
-	CopyGas          uint64 = 3     // Partial payment for COPY operations, multiplied by words copied, rounded up. // G_copy
-	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
-	LogTopicGas      uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
-	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.               // G_create
-	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.                                  // R_selfdestruct
-	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL. // G_memory
-	TxDataNonZeroGas uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. // G_txdatanonzero
-
-	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
+	Sha3Gas               uint64 = 30    // Once per SHA3 operation.                                                 // G_sha3
+	Sha3WordGas           uint64 = 6     // Once per word of the SHA3 operation's data.                              // G_sha3word
+	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
+	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
+	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
+	JumpdestGas           uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero. // G_jumpdest
+	CreateDataGas         uint64 = 200   // Paid per byte for a CREATE operation to succeed in placing code into state. // G_codedeposit
+	LogGas                uint64 = 375   // Per LOG* operation.                                                          // G_log
+	CopyGas               uint64 = 3     // Partial payment for COPY operations, multiplied by words copied, rounded up. // G_copy
+	CreateGas             uint64 = 32000 // Once per CREATE operation & contract-creation transaction.               // G_create
+	SuicideRefundGas      uint64 = 24000 // Refunded following a suicide operation.                                  // R_selfdestruct
+	MemoryGas             uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL. // G_memory
+	LogTopicGas           uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
+	TxDataNonZeroGas      uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. // G_txdatanonzero
 
 	// Precompiled contract gas prices
 
@@ -75,6 +66,18 @@ const (
 	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
+
+	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
+
+	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
+
+	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
+	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
+	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
+
+	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
 
 	// istanbul BFT
 	BFTMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.

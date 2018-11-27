@@ -7,16 +7,13 @@ import (
 
 // Gas costs
 const (
+	GasZero        uint64 = 0  // G_zero
 	GasQuickStep   uint64 = 2  // G_base
 	GasFastestStep uint64 = 3  // G_verylow
 	GasFastStep    uint64 = 5  // G_low
 	GasMidStep     uint64 = 8  // G_mid
 	GasSlowStep    uint64 = 10 // G_high or G_exp
 	GasExtStep     uint64 = 20 // G_blockhash
-
-	GasReturn       uint64 = 0 // G_zero
-	GasStop         uint64 = 0 // G_zero
-	GasContractByte uint64 = 200
 )
 
 // calcGas returns the actual gas cost of the call.
