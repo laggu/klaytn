@@ -16,6 +16,8 @@ import (
 const (
 	timeFormat     = "1999-05-02T15:04:05-0700"
 	termTimeFormat = "01-02|15:04:05"
+	logTimeFormat  = "2006-01-02T15:04:05.000 Z07"
+	simpleLogTimeFormat = "01/02,15:04:05 Z07"
 	floatFormat    = 'f'
 	termMsgJust    = 40
 )
@@ -103,6 +105,11 @@ func TerminalFormat(usecolor bool) Format {
 			}
 		}
 
+		var module = ""
+		if r.Ctx[0].(string) == "module" {
+			module = fmt.Sprintf("%v",r.Ctx[1]);
+		}
+
 		b := &bytes.Buffer{}
 		lvl := r.Lvl.AlignedString()
 		if atomic.LoadUint32(&locationEnabled) != 0 {
@@ -121,15 +128,15 @@ func TerminalFormat(usecolor bool) Format {
 
 			// Assemble and print the log heading
 			if color > 0 {
-				fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m[%s|%s]%s %s ", color, lvl, r.Time.Format(termTimeFormat), location, padding, r.Msg)
+				fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m[%s] [%s|%s] %s %s ", color, lvl, r.Time.Format(simpleLogTimeFormat), module, location, padding, r.Msg)
 			} else {
-				fmt.Fprintf(b, "%s[%s|%s]%s %s ", lvl, r.Time.Format(termTimeFormat), location, padding, r.Msg)
+				fmt.Fprintf(b, "%s[%s] [%s|%s] %s %s ", lvl, r.Time.Format(simpleLogTimeFormat), module, location, padding, r.Msg)
 			}
 		} else {
 			if color > 0 {
-				fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m[%s] %s ", color, lvl, r.Time.Format(termTimeFormat), r.Msg)
+				fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m[%s] [%s] %s ", color, lvl, r.Time.Format(simpleLogTimeFormat), module, r.Msg)
 			} else {
-				fmt.Fprintf(b, "%s[%s] %s ", lvl, r.Time.Format(termTimeFormat), r.Msg)
+				fmt.Fprintf(b, "%s[%s] [%s] %s ", lvl, r.Time.Format(simpleLogTimeFormat), module, r.Msg)
 			}
 		}
 		// try to justify the log output for short messages
@@ -158,10 +165,8 @@ func LogfmtFormat() Format {
 }
 
 func logfmt(buf *bytes.Buffer, ctx []interface{}, color int, term bool) {
-	for i := 0; i < len(ctx); i += 2 {
-		if i != 0 {
-			buf.WriteByte(' ')
-		}
+	for i := 2; i < len(ctx); i += 2 {
+		buf.WriteByte(' ')
 
 		k, ok := ctx[i].(string)
 		v := formatLogfmtValue(ctx[i+1], term)

@@ -245,6 +245,11 @@ func (n NodeID) TerminalString() string {
 	return hex.EncodeToString(n[:8])
 }
 
+// ShortString returns a shortened 4 digits hex string for logging
+func (n NodeID) ShortString() string {
+	return hex.EncodeToString(n[:4])
+}
+
 // MarshalText implements the encoding.TextMarshaler interface.
 func (n NodeID) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(n[:])), nil
