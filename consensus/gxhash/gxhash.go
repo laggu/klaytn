@@ -399,7 +399,7 @@ type Gxhash struct {
 // New creates a full sized ethash PoW scheme.
 func New(config Config) *Gxhash {
 	if config.CachesInMem <= 0 {
-		logger.Warn("One ethash cache must always be in memory", "requested", config.CachesInMem)
+		logger.Error("One ethash cache must always be in memory", "requested", config.CachesInMem)
 		config.CachesInMem = 1
 	}
 	if config.CacheDir != "" && config.CachesOnDisk > 0 {

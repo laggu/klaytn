@@ -672,11 +672,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	if err != nil || index < 0 {
 		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
 	}
-	logger.Warn("-------------------------------------------------------------------")
-	logger.Warn("Referring to accounts by order in the keystore folder is dangerous!")
-	logger.Warn("This functionality is deprecated and will be removed in the future!")
-	logger.Warn("Please use explicit addresses! (can search via `geth account list`)")
-	logger.Warn("-------------------------------------------------------------------")
+	logger.Warn("Use explicit addresses! Referring to accounts by order in the keystore folder is dangerous and will be deprecated!")
 
 	accs := ks.Accounts()
 	if len(accs) <= index {

@@ -296,20 +296,20 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 		// Make sure chain order is honoured and preserved throughout
 		hash := header.Hash()
 		if header.Number == nil || header.Number.Uint64() != from {
-			logger.Warn("Header broke chain ordering", "number", header.Number, "hash", hash, "expected", from)
+			logger.Trace("Header broke chain ordering", "number", header.Number, "hash", hash, "expected", from)
 			break
 		}
 		if q.headerHead != (common.Hash{}) && q.headerHead != header.ParentHash {
-			logger.Warn("Header broke chain ancestry", "number", header.Number, "hash", hash)
+			logger.Trace("Header broke chain ancestry", "number", header.Number, "hash", hash)
 			break
 		}
 		// Make sure no duplicate requests are executed
 		if _, ok := q.blockTaskPool[hash]; ok {
-			logger.Warn("Header  already scheduled for block fetch", "number", header.Number, "hash", hash)
+			logger.Trace("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
 			continue
 		}
 		if _, ok := q.receiptTaskPool[hash]; ok {
-			logger.Warn("Header already scheduled for receipt fetch", "number", header.Number, "hash", hash)
+			logger.Trace("Header already scheduled for receipt fetch", "number", header.Number, "hash", hash)
 			continue
 		}
 		// Queue the header for content retrieval
@@ -689,12 +689,12 @@ func (q *queue) DeliverHeaders(id string, headers []*types.Header, headerProcCh 
 		for i, header := range headers[1:] {
 			hash := header.Hash()
 			if want := request.From + 1 + uint64(i); header.Number.Uint64() != want {
-				logger.Warn("Header broke chain ordering", "peer", id, "number", header.Number, "hash", hash, "expected", want)
+				logger.Trace("Header broke chain ordering", "peer", id, "number", header.Number, "hash", hash, "expected", want)
 				accepted = false
 				break
 			}
 			if headers[i].Hash() != header.ParentHash {
-				logger.Warn("Header broke chain ancestry", "peer", id, "number", header.Number, "hash", hash)
+				logger.Trace("Header broke chain ancestry", "peer", id, "number", header.Number, "hash", hash)
 				accepted = false
 				break
 			}

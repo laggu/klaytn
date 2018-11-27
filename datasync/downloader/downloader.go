@@ -656,13 +656,13 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			// Make sure the peer actually gave something valid
 			headers := packet.(*headerPack).headers
 			if len(headers) == 0 {
-				p.logger.Warn("Empty head header set")
+				p.logger.Error("Empty head header set")
 				return 0, errEmptyHeaderSet
 			}
 			// Make sure the peer's reply conforms to the request
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
-					p.logger.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
+					p.logger.Error("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
 					return 0, errInvalidChain
 				}
 			}
@@ -679,7 +679,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 
 					// If every header is known, even future ones, the peer straight out lied about its head
 					if number > height && i == limit-1 {
-						p.logger.Warn("Lied about chain head", "reported", height, "found", number)
+						p.logger.Error("Lied about chain head", "reported", height, "found", number)
 						return 0, errStallingPeer
 					}
 					break
@@ -698,7 +698,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	// If the head fetch already found an ancestor, return
 	if !common.EmptyHash(hash) {
 		if int64(number) <= floor {
-			p.logger.Warn("Ancestor below allowance", "number", number, "hash", hash, "allowance", floor)
+			p.logger.Error("Ancestor below allowance", "number", number, "hash", hash, "allowance", floor)
 			return 0, errInvalidAncestor
 		}
 		p.logger.Debug("Found common ancestor", "number", number, "hash", hash)
@@ -876,7 +876,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 			if d.dropPeer == nil {
 				// The dropPeer method is nil when `--copydb` is used for a local copy.
 				// Timeouts can occur if e.g. compaction hits at the wrong time, and can be ignored
-				p.logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", p.id)
+				p.logger.Debug("Downloader wants to drop peer, but peerdrop-function is not set", "peer", p.id)
 				break
 			}
 			// Header retrieval timed out, consider the peer bad and drop
@@ -1100,7 +1100,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 						if d.dropPeer == nil {
 							// The dropPeer method is nil when `--copydb` is used for a local copy.
 							// Timeouts can occur if e.g. compaction hits at the wrong time, and can be ignored
-							peer.logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", pid)
+							peer.logger.Debug("Downloader wants to drop peer, but peerdrop-function is not set", "peer", pid)
 						} else {
 							d.dropPeer(pid)
 						}
@@ -1194,7 +1194,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 				curFastBlock = d.blockchain.CurrentFastBlock().Number()
 				curBlock = d.blockchain.CurrentBlock().Number()
 			}
-			logger.Warn("Rolled back headers", "count", len(hashes),
+			logger.Info("Rolled back headers", "count", len(hashes),
 				"header", fmt.Sprintf("%d->%d", lastHeader, d.lightchain.CurrentHeader().Number),
 				"fast", fmt.Sprintf("%d->%d", lastFastBlock, curFastBlock),
 				"block", fmt.Sprintf("%d->%d", lastBlock, curBlock))
@@ -1431,7 +1431,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 		if atomic.LoadInt32(&d.committed) == 0 {
 			latest = results[len(results)-1].Header
 			if height := latest.Number.Uint64(); height > pivot+2*uint64(fsMinFullBlocks) {
-				logger.Warn("Pivot became stale, moving", "old", pivot, "new", height-uint64(fsMinFullBlocks))
+				logger.Debug("Pivot became stale, moving", "old", pivot, "new", height-uint64(fsMinFullBlocks))
 				pivot = height - uint64(fsMinFullBlocks)
 			}
 		}

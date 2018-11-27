@@ -295,7 +295,7 @@ func (s *stateSync) loop() (err error) {
 			}
 			// Process all the received blobs and check for stale delivery
 			if err = s.process(req); err != nil {
-				logger.Warn("Node data write error", "err", err)
+				logger.Error("Node data write error", "err", err)
 				return err
 			}
 			req.peer.SetNodeDataIdle(len(req.response))

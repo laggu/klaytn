@@ -187,7 +187,7 @@ func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManag
 		db = NewMemDatabase()
 	default:
 		db, err = NewLDBDatabase(dir, ldbCacheSize, handles)
-		logger.Warn("database type is not set, fall back to default LevelDB")
+		logger.Info("database type is not set, fall back to default LevelDB")
 	}
 
 	if err != nil {

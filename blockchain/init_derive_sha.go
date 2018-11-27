@@ -33,7 +33,7 @@ func InitDeriveSha(deriveShaImpl int) {
 		logger.Info("Using DeriveShaConcat!")
 		types.InitDeriveSha(types.DeriveShaConcat{})
 	default:
-		logger.Warn("Undefined deriveShaImpl!! use DeriveShaOrig!")
+		logger.Error("Undefined deriveShaImpl!! use DeriveShaOrig!")
 		types.InitDeriveSha(statedb.DeriveShaOrig{})
 	}
 }

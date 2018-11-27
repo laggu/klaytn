@@ -135,7 +135,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 
 	// Figure out whether to allow fast sync or not
 	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() > 0 {
-		logger.Warn("Blockchain not empty, fast sync disabled")
+		logger.Error("Blockchain not empty, fast sync disabled")
 		mode = downloader.FullSync
 	}
 	if mode == downloader.FastSync {

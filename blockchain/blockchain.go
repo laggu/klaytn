@@ -272,20 +272,20 @@ func (bc *BlockChain) loadLastState() error {
 	head := bc.db.ReadHeadBlockHash()
 	if head == (common.Hash{}) {
 		// Corrupt or empty database, init from scratch
-		logger.Warn("Empty database, resetting chain")
+		logger.Info("Empty database, resetting chain")
 		return bc.Reset()
 	}
 	// Make sure the entire head block is available
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
 		// Corrupt or empty database, init from scratch
-		logger.Warn("Head block missing, resetting chain", "hash", head)
+		logger.Error("Head block missing, resetting chain", "hash", head)
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
 	if _, err := state.New(currentBlock.Root(), bc.stateCache); err != nil {
 		// Dangling block without a state associated, init from scratch
-		logger.Warn("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
+		logger.Error("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
 		if err := bc.repair(&currentBlock); err != nil {
 			return err
 		}
@@ -329,7 +329,7 @@ func (bc *BlockChain) loadLastState() error {
 // though, the head may be further rewound if block bodies are missing (non-archive
 // nodes after a fast sync).
 func (bc *BlockChain) SetHead(head uint64) error {
-	logger.Warn("Rewinding blockchain", "target", head)
+	logger.Info("Rewinding blockchain", "target", head)
 
 	bc.mu.Lock()
 	defer bc.mu.Unlock()

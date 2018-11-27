@@ -356,7 +356,7 @@ func nextNode(it iterator.Iterator) *Node {
 		}
 		var n Node
 		if err := rlp.DecodeBytes(it.Value(), &n); err != nil {
-			logger.Warn("Failed to decode node RLP", "id", id, "err", err)
+			logger.Error("Failed to decode node RLP", "id", id, "err", err)
 			continue
 		}
 		return &n

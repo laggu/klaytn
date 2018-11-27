@@ -161,7 +161,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	newcfg := genesis.configOrDefault(stored)
 	storedcfg := db.ReadChainConfig(stored)
 	if storedcfg == nil {
-		logger.Warn("Found genesis block without chain config")
+		logger.Info("Found genesis block without chain config")
 		db.WriteChainConfig(stored, newcfg)
 		return newcfg, stored, nil
 	}

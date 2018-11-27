@@ -149,7 +149,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
-		logger.Warn("Rewinding chain to upgrade configuration", "err", compat)
+		logger.Error("Rewinding chain to upgrade configuration", "err", compat)
 		gxp.blockchain.SetHead(compat.RewindTo)
 		chainDB.WriteChainConfig(genesisHash, chainConfig)
 	}
@@ -236,13 +236,13 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	// Otherwise assume proof-of-work
 	switch {
 	case config.Gxhash.PowMode == gxhash.ModeFake:
-		logger.Warn("Gxhash used in fake mode")
+		logger.Debug("Gxhash used in fake mode")
 		return gxhash.NewFaker()
 	case config.Gxhash.PowMode == gxhash.ModeTest:
-		logger.Warn("Gxhash used in test mode")
+		logger.Debug("Gxhash used in test mode")
 		return gxhash.NewTester()
 	case config.Gxhash.PowMode == gxhash.ModeShared:
-		logger.Warn("Gxhash used in shared mode")
+		logger.Debug("Gxhash used in shared mode")
 		return gxhash.NewShared()
 	default:
 		engine := gxhash.New(gxhash.Config{

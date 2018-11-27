@@ -536,7 +536,7 @@ func (srv *Server) Start() (err error) {
 		}
 	}
 	if srv.NoDial && srv.ListenAddr == "" {
-		srv.logger.Warn("P2P server will be useless, neither dialing nor listening")
+		srv.logger.Error("P2P server will be useless, neither dialing nor listening")
 	}
 
 	srv.loopWG.Add(1)

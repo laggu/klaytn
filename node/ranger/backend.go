@@ -143,7 +143,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
-		logger.Warn("Rewinding chain to upgrade configuration", "err", compat)
+		logger.Error("Rewinding chain to upgrade configuration", "err", compat)
 		ranger.blockchain.SetHead(compat.RewindTo)
 		chainDB.WriteChainConfig(genesisHash, chainConfig)
 	}

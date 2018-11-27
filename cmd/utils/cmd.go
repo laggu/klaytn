@@ -56,7 +56,7 @@ func StartNode(stack *node.Node) {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				logger.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+				logger.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
 	}()
