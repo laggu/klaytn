@@ -26,6 +26,14 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  digest = "1:306ac49ece706ae4e81490b901805d19161b448da7b5e2362f0507e7a7182e1a"
+  name = "github.com/cespare/cp"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "118c73cfdf4dfc44f5cd1efa4ee578ebea52767f"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:52fbc3bc03701c8c34459bc2a37c27fd83e483b504ca76bd67c510bda107d8c9"
   name = "github.com/clevergo/websocket"
   packages = ["."]
@@ -643,6 +651,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/aristanetworks/goarista/monotime",
+    "github.com/cespare/cp",
     "github.com/clevergo/websocket",
     "github.com/davecgh/go-spew/spew",
     "github.com/dgraph-io/badger",
@@ -675,6 +684,7 @@
     "github.com/robertkrimen/otto",
     "github.com/rs/cors",
     "github.com/spf13/pflag",
+    "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/syndtr/goleveldb/leveldb",
     "github.com/syndtr/goleveldb/leveldb/errors",
