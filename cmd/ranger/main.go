@@ -52,6 +52,7 @@ var (
 		utils.LevelDBCacheSizeFlag,
 		utils.TrieMemoryCacheSizeFlag,
 		utils.TrieCacheGenFlag,
+		utils.TrieBlockIntervalFlag,
 		utils.CacheTypeFlag,
 		utils.CacheScaleFlag,
 		utils.ListenPortFlag,

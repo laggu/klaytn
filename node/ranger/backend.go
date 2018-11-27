@@ -135,7 +135,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 	}
 	var (
 		vmConfig   = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, TimeLimit: config.TrieTimeout}
+		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
 	)
 	ranger.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, ranger.chainConfig, ranger.engine, vmConfig)
 	if err != nil {

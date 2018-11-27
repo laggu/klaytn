@@ -237,6 +237,11 @@ var (
 		Usage: "Number of trie node generations to keep in memory",
 		Value: int(state.MaxTrieCacheGen),
 	}
+	TrieBlockIntervalFlag = cli.UintFlag{
+		Name:  "trie.block-interval",
+		Usage: "An interval in terms of block number to commit the global state to disk",
+		Value: blockchain.DefaultBlockInterval,
+	}
 	CacheTypeFlag = cli.IntFlag{
 		Name: "cache.type",
 		Usage: "Cache Type: 0=LRU, 1=LRUShard",
@@ -974,6 +979,9 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
 		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
 	}
+	if ctx.GlobalIsSet(TrieBlockIntervalFlag.Name) {
+		cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
+	}
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
 	}
@@ -1070,6 +1078,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
 		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
+	}
+	if ctx.GlobalIsSet(TrieBlockIntervalFlag.Name) {
+		cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
 	}
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
@@ -1216,10 +1227,13 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain
 	trieConfig := &blockchain.TrieConfig{
 		Disabled:  ctx.GlobalString(GCModeFlag.Name) == "archive",
 		CacheSize: cn.DefaultConfig.TrieCacheSize,
-		TimeLimit: cn.DefaultConfig.TrieTimeout,
+		BlockInterval: blockchain.DefaultBlockInterval,
 	}
 	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
 		trieConfig.CacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
+	}
+	if ctx.GlobalIsSet(TrieBlockIntervalFlag.Name) {
+		trieConfig.BlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
 	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
 	chain, err = blockchain.NewBlockChain(chainDb, trieConfig, config, engine, vmcfg)

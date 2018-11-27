@@ -141,7 +141,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	}
 	var (
 		vmConfig   = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, TimeLimit: config.TrieTimeout}
+		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
 	)
 	gxp.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, gxp.chainConfig, gxp.engine, vmConfig)
 	if err != nil {

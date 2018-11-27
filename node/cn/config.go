@@ -35,6 +35,7 @@ var DefaultConfig = Config{
 	LevelDBCacheSize: 768,
 	TrieCacheSize:    256,
 	TrieTimeout:      5 * time.Minute,
+	TrieBlockInterval: blockchain.DefaultBlockInterval,
 	GasPrice:         big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
 
 	TxPool: blockchain.DefaultTxPoolConfig,
@@ -83,6 +84,7 @@ type Config struct {
 	LevelDBCacheSize   int
 	TrieCacheSize      int
 	TrieTimeout        time.Duration
+	TrieBlockInterval  uint
 
 	// Mining-related options
 	Gxbase       common.Address `toml:",omitempty"`

@@ -79,6 +79,7 @@ const (
 	triesInMemory = 128
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
+	DefaultBlockInterval = 128
 )
 
 type blockChainCacheKey int
@@ -127,7 +128,7 @@ func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheT
 type TrieConfig struct {
 	Disabled  bool          // Whether to disable trie write caching (archive node)
 	CacheSize int           // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	TimeLimit time.Duration // Time limit after which to flush the current in-memory trie to disk
+	BlockInterval uint      // Block interval to flush the trie. Each interval state trie will be flushed into disk.
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -150,7 +151,6 @@ type BlockChain struct {
 
 	db     database.DBManager // Low level persistent database to store final content in
 	triegc *prque.Prque      // Priority queue mapping block numbers to tries to gc
-	gcproc time.Duration     // Accumulates canonical block processing for trie dumping
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -199,8 +199,9 @@ type BlockChain struct {
 func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if trieConfig == nil {
 		trieConfig = &TrieConfig{
+			Disabled:      false,
 			CacheSize: 256 * 1024 * 1024,
-			TimeLimit: 5 * time.Minute,
+			BlockInterval: DefaultBlockInterval,
 		}
 	}
 	// Initialize DeriveSha implementation
@@ -1002,8 +1003,6 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
-var lastWrite uint64
-
 // WriteBlockWithoutState writes only the block and its metadata to the database,
 // but does not write any state. This is used to construct competing side forks
 // up to the point where they exceed the canonical total difficulty.
@@ -1061,33 +1060,25 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		trieDB.Reference(root, common.Hash{}) // metadata reference to keep trie alive
 		bc.triegc.Push(root, -float32(block.NumberU64()))
 
+		// If we exceeded our memory allowance, flush matured singleton nodes to disk
+		var (
+			nodes, imgs = trieDB.Size()
+			limit       = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
+		)
+		if nodes > limit || imgs > 4*1024*1024 {
+			// TODO-GX error from Cap is ignored.
+			trieDB.Cap(limit - database.IdealBatchSize)
+		}
+
+		if block.NumberU64()%uint64(bc.trieConfig.BlockInterval) == 0 {
+			logger.Trace("Commit the state trie into the disk", "blocknum", block.NumberU64())
+			trieDB.Commit(block.Header().Root, true)
+		}
+
 		if current := block.NumberU64(); current > triesInMemory {
-			// If we exceeded our memory allowance, flush matured singleton nodes to disk
-			var (
-				nodes, imgs = trieDB.Size()
-				limit       = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
-			)
-			if nodes > limit || imgs > 4*1024*1024 {
-				// TODO-GX error from Cap is ignored.
-				trieDB.Cap(limit - database.IdealBatchSize)
-			}
 			// Find the next state trie we need to commit
 			header := bc.GetHeaderByNumber(current - triesInMemory)
 			chosen := header.Number.Uint64()
-
-			// If we exceeded out time allowance, flush an entire statedb to disk
-			if bc.gcproc > bc.trieConfig.TimeLimit {
-				// If we're exceeding limits but haven't reached a large enough memory gap,
-				// warn the user that the system is becoming unstable.
-				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.trieConfig.TimeLimit {
-					logger.Info("State in memory for too long, committing", "time", bc.gcproc, "allowance", bc.trieConfig.TimeLimit, "optimum", float64(chosen-lastWrite)/triesInMemory)
-				}
-				// Flush an entire statedb and restart the counters
-				// TODO-GX error from Commit is ignored.
-				trieDB.Commit(header.Root, true)
-				lastWrite = chosen
-				bc.gcproc = 0
-			}
 
 			// Garbage collect anything below our required write retention
 			for !bc.triegc.Empty() {
@@ -1384,8 +1375,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		proctime := time.Since(bstart)
-
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockWithState(block, receipts, state)
 		if err != nil {
@@ -1400,9 +1389,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainEvent{block, block.Hash(), logs})
 			lastCanon = block
-
-			// Only count canonical blocks for GC processing time
-			bc.gcproc += proctime
 
 		case SideStatTy:
 			logger.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.Difficulty(), "elapsed",
