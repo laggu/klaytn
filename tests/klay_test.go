@@ -24,6 +24,9 @@ import (
 	"math/rand"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"os"
+	"strconv"
 )
 
 var txPerBlock int
@@ -115,15 +118,75 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 	return txs, nil
 }
 
+// makeTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of tokens
+// from accounts in `AccountMap` to a randomly generated account.
+// It returns the generated transactions if successful, or it returns an error if failed.
+func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
+	amount *big.Int, data []byte) (types.Transactions, error) {
+	numAddrs := len(bcdata.addrs)
+	fromAddrs := bcdata.addrs
+
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range fromAddrs {
+		fromNonces[i] = accountMap.GetNonce(*addr)
+	}
+
+	txs := make(types.Transactions, 0, numTransactions)
+
+	for i := 0; i < numTransactions; i++ {
+		idx := i % numAddrs
+
+		txamount := amount
+		if txamount == nil {
+			txamount = big.NewInt(rand.Int63n(10))
+			txamount = txamount.Add(txamount, big.NewInt(1))
+		}
+		var gasLimit uint64 = 1000000
+		gasPrice := new(big.Int).SetInt64(0)
+
+		// generate a new address
+		k, err := crypto.GenerateKey()
+		if err != nil {
+			return nil, err
+		}
+		to := crypto.PubkeyToAddress(k.PublicKey)
+
+		tx := types.NewTransaction(fromNonces[idx], to, txamount, gasLimit, gasPrice, data)
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, signedTx)
+
+		fromNonces[idx]++
+	}
+
+	return txs, nil
+}
+
 func TestValueTransfer(t *testing.T) {
+	var nBlocks int = 3
+	var txPerBlock int = 10
+
+	if i, err := strconv.ParseInt(os.Getenv("NUM_BLOCKS"), 10, 32); err == nil {
+		nBlocks = int(i)
+	}
+
+	if i, err := strconv.ParseInt(os.Getenv("TXS_PER_BLOCK"), 10, 32); err == nil {
+		txPerBlock = int(i)
+	}
+
 	var valueTransferTests = [...]struct {
 		name string
 		opt testOption
 	} {
 		{"SingleSenderMultipleRecipient",
-		 testOption{1000, 1000, 4, 3, []byte{}, makeTransactionsFrom}},
+		 testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom}},
 		{"MultipleSenderMultipleRecipient",
-		 testOption{1000, 2000, 4, 3, []byte{}, makeIndependentTransactions}},
+		 testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions}},
+		{"MultipleSenderRandomRecipient",
+			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom}},
 	}
 
 	for _, test := range valueTransferTests {
