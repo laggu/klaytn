@@ -143,8 +143,9 @@ func (self *Miner) HashRate() (tot int64) {
 
 func (self *Miner) SetExtra(extra []byte) error {
 	// istanbul BFT
-	if uint64(len(extra)) > params.GetMaximumExtraDataSize(self.worker.chain.Config().IsBFT) {
-		return fmt.Errorf("Extra exceeds max length. %d > %v", len(extra), params.MaximumExtraDataSize)
+	maximumExtraDataSize := params.GetMaximumExtraDataSize(self.worker.chain.Config().IsBFT)
+	if uint64(len(extra)) > maximumExtraDataSize {
+		return fmt.Errorf("Extra exceeds max length. %d > %v", len(extra), maximumExtraDataSize)
 	}
 	self.worker.setExtra(extra)
 	return nil
