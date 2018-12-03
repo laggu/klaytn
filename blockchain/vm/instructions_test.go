@@ -474,3 +474,22 @@ func BenchmarkOpMstore(bench *testing.B) {
 	}
 	poolOfIntPools.put(env.interpreter.intPool)
 }
+
+func BenchmarkOpSHA3(bench *testing.B) {
+	var (
+		env   = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		stack = newstack()
+		mem   = NewMemory()
+	)
+	env.interpreter.intPool = poolOfIntPools.get()
+	mem.Resize(32)
+	pc := uint64(0)
+	start := big.NewInt(0)
+
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		stack.pushN(big.NewInt(32), start)
+		opSha3(&pc, env, nil, mem, stack)
+	}
+	poolOfIntPools.put(env.interpreter.intPool)
+}

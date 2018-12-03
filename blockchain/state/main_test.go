@@ -1,4 +1,4 @@
-// Copyright 2017 The go-ethereum Authors
+// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -14,23 +14,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package vm
+package state
 
-import "testing"
+import (
+	"testing"
 
-func TestMemoryGasCost(t *testing.T) {
-	//size := uint64(math.MaxUint64 - 64)
-	size := uint64(0xffffffffe0)
-	v, err := memoryGasCost(&Memory{}, size)
-	if err != nil {
-		t.Error("didn't expect error:", err)
-	}
-	if v != 36028899963961341 {
-		t.Errorf("Expected: 36028899963961341, got %d", v)
-	}
+	checker "gopkg.in/check.v1"
+)
 
-	_, err = memoryGasCost(&Memory{}, size+1)
-	if err == nil {
-		t.Error("expected error")
-	}
-}
+func Test(t *testing.T) { checker.TestingT(t) }
