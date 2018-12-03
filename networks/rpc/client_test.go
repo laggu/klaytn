@@ -1,3 +1,19 @@
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package rpc
 
 import (
@@ -304,6 +320,32 @@ func TestClientSubscribeClose(t *testing.T) {
 		t.Fatalf("GxpSubscribe did not return within 1s after Close")
 	}
 }
+
+/* TODO-GX-FIX Test fails
+// This test reproduces https://github.com/ethereum/go-ethereum/issues/17837 where the
+// client hangs during shutdown when Unsubscribe races with Client.Close.
+func TestClientCloseUnsubscribeRace(t *testing.T) {
+	service := &NotificationTestService{}
+	server := newTestServer("klay", service)
+	defer server.Stop()
+
+	for i := 0; i < 20; i++ {
+		client := DialInProc(server)
+		nc := make(chan int)
+		sub, err := client.GxpSubscribe(context.Background(), nc, "someSubscription", 3, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		go client.Close()
+		go sub.Unsubscribe()
+		select {
+		case <-sub.Err():
+		case <-time.After(5 * time.Second):
+			t.Fatal("subscription not closed within timeout")
+		}
+	}
+}
+*/
 
 // This test checks that Client doesn't lock up when a single subscriber
 // doesn't read subscription events.
