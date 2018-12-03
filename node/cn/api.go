@@ -42,6 +42,7 @@ func (api *PublicGXPAPI) Rewardbase() (common.Address, error) {
 	return api.gxp.Rewardbase()
 }
 
+// RewardContract returns the address of the reward contract.
 func (api *PublicGXPAPI) RewardContract() (common.Address, error) {
 	return api.gxp.RewardContract()
 }
@@ -184,18 +185,19 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	return true
 }
 
-// SetCoinbase sets the coinbase of the miner
+// SetCoinbase sets the coinbase of the miner.
 func (api *PrivateMinerAPI) SetCoinbase(coinbase common.Address) bool {
 	api.e.SetCoinbase(coinbase)
 	return true
 }
 
-// SetRewardbase sets the rewardbase of the CN
+// SetRewardbase sets the rewardbase of the CN.
 func (api *PrivateMinerAPI) SetRewardbase(rewardbase common.Address) bool {
 	api.e.SetRewardbase(rewardbase)
 	return true
 }
 
+// SetRewardContract sets the reward contract of the miner.
 func (api *PrivateMinerAPI) SetRewardContract(addr common.Address) bool {
 	api.e.SetRewardContract(addr)
 	return true

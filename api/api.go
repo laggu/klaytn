@@ -1487,6 +1487,7 @@ func (api *PrivateDebugAPI) ChaindbProperty(property string) (string, error) {
 	return ldb.LDB().GetProperty(property)
 }
 
+// ChaindbCompact compacts the chain database if successful, otherwise it returns nil.
 func (api *PrivateDebugAPI) ChaindbCompact() error {
 	ldb, ok := api.b.ChainDB().(interface {
 		LDB() *leveldb.DB

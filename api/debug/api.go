@@ -83,6 +83,7 @@ func (*HandlerT) GcStats() *debug.GCStats {
 	return s
 }
 
+// StartPProf starts the pprof server.
 func (h *HandlerT) StartPProf(address string, port int) error {
 	// Set the default server address and port if they are not set
 	if address == "" {
@@ -129,6 +130,7 @@ func (h *HandlerT) StartPProf(address string, port int) error {
 	return nil
 }
 
+// StopPProf stops the pprof server.
 func (h *HandlerT) StopPProf() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -143,6 +145,7 @@ func (h *HandlerT) StopPProf() error {
 	return nil
 }
 
+// IsPProfRunning returns true if the pprof HTTP server is running and false otherwise.
 func (h *HandlerT) IsPProfRunning() bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
