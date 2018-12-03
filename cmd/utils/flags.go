@@ -228,17 +228,17 @@ var (
 		Value: 768,
 	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
-		Name:  "trie.cache-size",
-		Usage: "Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk",
+		Name:  "state.cache-size",
+		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
 		Value: 256,
 	}
 	TrieCacheGenFlag = cli.IntFlag{
-		Name:  "trie-cache-gens",
-		Usage: "Number of trie node generations to keep in memory",
+		Name:  "state.cache-gens",
+		Usage: "Number of the global state generations to keep in memory",
 		Value: int(state.MaxTrieCacheGen),
 	}
 	TrieBlockIntervalFlag = cli.UintFlag{
-		Name:  "trie.block-interval",
+		Name:  "state.block-interval",
 		Usage: "An interval in terms of block number to commit the global state to disk",
 		Value: blockchain.DefaultBlockInterval,
 	}
