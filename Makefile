@@ -44,6 +44,9 @@ test:
 
 cover:
 	build/env.sh go run build/ci.go test -coverage
+	go tool cover -func=coverage.out -o coverage_report.txt
+	go tool cover -html=coverage.out -o coverage_report.html
+	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
 
 clean:
 	./build/clean_go_build_cache.sh

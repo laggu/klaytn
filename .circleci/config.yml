@@ -16,6 +16,18 @@ jobs:
           git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/tests.git tests/testdata
           make test
 
+  coverage:
+    docker:
+    - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    steps:
+    - checkout
+    - run:
+        name: "Run coverage tests"
+        command: |
+          git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/tests.git tests/testdata
+          make cover
+
   dockernize:
     docker:
     - image: circleci/golang:1.9
@@ -117,3 +129,13 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 18 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+    - coverage
