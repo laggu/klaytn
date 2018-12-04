@@ -1,6 +1,6 @@
 # How to use Klaytn tests
 
-[Klaytn tests](https://github.com/ground-x/tests) is not currently included
+[Klaytn tests](https://github.com/ground-x/klaytn-tests) is not currently included
 here due to its relatively large size.  It will be added as a git submodule
 later.
 
@@ -17,7 +17,7 @@ clone it in `$HOME/workspace`.
 
 ```
 $ cd $HOME/workspace
-$ git clone git@github.com:ground-x/tests.git
+$ git clone git@github.com:ground-x/klaytn-tests.git
 ```
 
 
@@ -28,7 +28,7 @@ We assume Klaytn source tree is located in
 
 ```
 $ cd $HOME/workspace/go/src/github.com/ground-x/go-gxplatform/tests
-$ ln -s $HOME/workspace/tests testdata
+$ ln -s $HOME/workspace/klaytn-tests testdata
 ```
 
 

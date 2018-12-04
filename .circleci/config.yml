@@ -13,7 +13,7 @@ jobs:
         name: "Build and run tests"
         command: |
           make all
-          git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/tests.git tests/testdata
+          git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/klaytn-tests.git tests/testdata
           make test
 
   coverage:
@@ -25,7 +25,7 @@ jobs:
     - run:
         name: "Run coverage tests"
         command: |
-          git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/tests.git tests/testdata
+          git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/klaytn-tests.git tests/testdata
           make cover
 
   dockernize:
