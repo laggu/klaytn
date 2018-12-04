@@ -589,7 +589,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 
 func (db* Database) writeBatchPreimages() error {
 	// TODO-GX What kind of batch should be used below?
-	preimagesBatch := db.diskDB.NewBatch(database.PreimagesDB)
+	preimagesBatch := db.diskDB.NewBatch(database.StateTrieDB)
 
 	// Move all of the accumulated preimages into a write batch
 	for hash, preimage := range db.preimages {

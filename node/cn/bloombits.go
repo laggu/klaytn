@@ -112,7 +112,7 @@ func (b *BloomIndexer) Process(header *types.Header) {
 // Commit implements blockchain.ChainIndexerBackend, finalizing the bloom section and
 // writing it out into the database.
 func (b *BloomIndexer) Commit() error {
-	batch := b.db.NewBatch(database.BloomBitsDB)
+	batch := b.db.NewBatch(database.MiscDB)
 
 	for i := 0; i < types.BloomBitLength; i++ {
 		bits, err := b.gen.Bitset(uint(i))

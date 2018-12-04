@@ -127,35 +127,26 @@ type DBManager interface {
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 }
 
+type DatabaseEntryType uint8
 
-// TODO-GX Some databases need to be refined or consolidated because some of them are actually the same one.
-type DatabaseEntryType int
 const (
-	canonicalHashDB DatabaseEntryType = iota
-
-	headheaderHashDB
-	headBlockHashDB
-	headFastBlockHashDB
-	fastTrieProgressDB
+	_ DatabaseEntryType = iota
 
 	headerDB
 	BodyDB
 	tdDB
 	ReceiptsDB
-	blockDB
 
 	istanbulSnapshotDB
-	merkleProofDB
+
 	StateTrieDB
-	PreimagesDB
 	TxLookUpEntryDB
 
-	BloomBitsDB
+	MiscDB
+	// indexSectionsDB must appear after MiscDB
 	indexSectionsDB
 
-	databaseVersionDB
-	chainConfigDB
-
+	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
 
@@ -196,7 +187,7 @@ func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManag
 
 	for i:=0; i < int(databaseEntryTypeSize); i++ {
 		if i == int(indexSectionsDB) {
-			dbm.dbs[i] = NewTable(db, string(BloomBitsIndexPrefix))
+			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
 		} else {
 			dbm.dbs[i] = db
 		}
@@ -241,7 +232,7 @@ func (dbm *databaseManager) Close() {
 // Canonical Hash operations.
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
 func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
-	db := dbm.getDatabase(canonicalHashDB)
+	db := dbm.getDatabase(headerDB)
 	data, _ := db.Get(headerHashKey(number))
 	if len(data) == 0 {
 		return common.Hash{}
@@ -251,7 +242,7 @@ func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
 
 // WriteCanonicalHash stores the hash assigned to a canonical block number.
 func (dbm *databaseManager) WriteCanonicalHash(hash common.Hash, number uint64) {
-	db := dbm.getDatabase(canonicalHashDB)
+	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headerHashKey(number), hash.Bytes()); err != nil {
 		logger.Crit("Failed to store number to hash mapping", "err", err)
 	}
@@ -259,7 +250,7 @@ func (dbm *databaseManager) WriteCanonicalHash(hash common.Hash, number uint64) 
 
 // DeleteCanonicalHash removes the number to hash canonical mapping.
 func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
-	db := dbm.getDatabase(canonicalHashDB)
+	db := dbm.getDatabase(headerDB)
 	if err := db.Delete(headerHashKey(number)); err != nil {
 		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
@@ -280,7 +271,7 @@ func (dbm *databaseManager) ReadHeaderNumber(hash common.Hash) *uint64 {
 // Head Header Hash operations.
 // ReadHeadHeaderHash retrieves the hash of the current canonical head header.
 func (dbm *databaseManager) ReadHeadHeaderHash() common.Hash {
-	db := dbm.getDatabase(headheaderHashDB)
+	db := dbm.getDatabase(headerDB)
 	data, _ := db.Get(headHeaderKey)
 	if len(data) == 0 {
 		return common.Hash{}
@@ -290,7 +281,7 @@ func (dbm *databaseManager) ReadHeadHeaderHash() common.Hash {
 
 // WriteHeadHeaderHash stores the hash of the current canonical head header.
 func (dbm *databaseManager) WriteHeadHeaderHash(hash common.Hash) {
-	db := dbm.getDatabase(headheaderHashDB)
+	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headHeaderKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last header's hash", "err", err)
 	}
@@ -298,7 +289,7 @@ func (dbm *databaseManager) WriteHeadHeaderHash(hash common.Hash) {
 
 // Block Hash operations.
 func (dbm *databaseManager) ReadHeadBlockHash() common.Hash {
-	db := dbm.getDatabase(headBlockHashDB)
+	db := dbm.getDatabase(headerDB)
 	data, _ := db.Get(headBlockKey)
 	if len(data) == 0 {
 		return common.Hash{}
@@ -308,7 +299,7 @@ func (dbm *databaseManager) ReadHeadBlockHash() common.Hash {
 
 // WriteHeadBlockHash stores the head block's hash.
 func (dbm *databaseManager) WriteHeadBlockHash(hash common.Hash) {
-	db := dbm.getDatabase(headBlockHashDB)
+	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last block's hash", "err", err)
 	}
@@ -317,7 +308,7 @@ func (dbm *databaseManager) WriteHeadBlockHash(hash common.Hash) {
 // Head Fast Block Hash operations.
 // ReadHeadFastBlockHash retrieves the hash of the current fast-sync head block.
 func (dbm *databaseManager) ReadHeadFastBlockHash() common.Hash {
-	db := dbm.getDatabase(headFastBlockHashDB)
+	db := dbm.getDatabase(headerDB)
 	data, _ := db.Get(headFastBlockKey)
 	if len(data) == 0 {
 		return common.Hash{}
@@ -327,7 +318,7 @@ func (dbm *databaseManager) ReadHeadFastBlockHash() common.Hash {
 
 // WriteHeadFastBlockHash stores the hash of the current fast-sync head block.
 func (dbm *databaseManager) WriteHeadFastBlockHash(hash common.Hash) {
-	db := dbm.getDatabase(headFastBlockHashDB)
+	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headFastBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last fast block's hash", "err", err)
 	}
@@ -337,7 +328,7 @@ func (dbm *databaseManager) WriteHeadFastBlockHash(hash common.Hash) {
 // ReadFastTrieProgress retrieves the number of tries nodes fast synced to allow
 // reporting correct numbers across restarts.
 func (dbm *databaseManager) ReadFastTrieProgress() uint64 {
-	db := dbm.getDatabase(fastTrieProgressDB)
+	db := dbm.getDatabase(MiscDB)
 	data, _ := db.Get(fastTrieProgressKey)
 	if len(data) == 0 {
 		return 0
@@ -348,7 +339,7 @@ func (dbm *databaseManager) ReadFastTrieProgress() uint64 {
 // WriteFastTrieProgress stores the fast sync trie process counter to support
 // retrieving it across restarts.
 func (dbm *databaseManager) WriteFastTrieProgress(count uint64) {
-	db := dbm.getDatabase(fastTrieProgressDB)
+	db := dbm.getDatabase(MiscDB)
 	if err := db.Put(fastTrieProgressKey, new(big.Int).SetUint64(count).Bytes()); err != nil {
 		logger.Crit("Failed to store fast sync trie progress", "err", err)
 	}
@@ -652,7 +643,7 @@ func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte)
 
 // Merkle Proof operation.
 func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
-	db := dbm.getDatabase(merkleProofDB)
+	db := dbm.getDatabase(MiscDB)
 	if err := db.Put(key, value); err != nil {
 		logger.Crit("Failed to write merkle proof", "err", err)
 	}
@@ -666,7 +657,7 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 
 // Cached Trie Node Preimage operation.
 func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	db := dbm.getDatabase(PreimagesDB)
+	db := dbm.getDatabase(StateTrieDB)
 	return db.Get(secureKey)
 }
 
@@ -768,14 +759,14 @@ func (dbm *databaseManager) ReadReceipt(hash common.Hash) (*types.Receipt, commo
 // ReadBloomBits retrieves the compressed bloom bit vector belonging to the given
 // section and bit index from the.
 func (dbm *databaseManager) ReadBloomBits(bloomBitsKey []byte) ([]byte, error) {
-	db := dbm.getDatabase(BloomBitsDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Get(bloomBitsKey)
 }
 
 // WriteBloomBits stores the compressed bloom bits vector belonging to the given
 // section and bit index.
 func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) error {
-	db := dbm.getDatabase(BloomBitsDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Put(bloomBitsKey, bits)
 }
 
@@ -808,7 +799,7 @@ func (dbm *databaseManager) DeleteSectionHead(encodedSection []byte) {
 
 // ReadDatabaseVersion retrieves the version number of the database.
 func (dbm *databaseManager) ReadDatabaseVersion() int {
-	db := dbm.getDatabase(databaseVersionDB)
+	db := dbm.getDatabase(MiscDB)
 	var version int
 
 	enc, _ := db.Get(databaseVerisionKey)
@@ -819,7 +810,7 @@ func (dbm *databaseManager) ReadDatabaseVersion() int {
 
 // WriteDatabaseVersion stores the version number of the database
 func (dbm *databaseManager) WriteDatabaseVersion(version int) {
-	db := dbm.getDatabase(databaseVersionDB)
+	db := dbm.getDatabase(MiscDB)
 	enc, _ := rlp.EncodeToBytes(version)
 	if err := db.Put(databaseVerisionKey, enc); err != nil {
 		logger.Crit("Failed to store the database version", "err", err)
@@ -828,7 +819,7 @@ func (dbm *databaseManager) WriteDatabaseVersion(version int) {
 
 // ReadChainConfig retrieves the consensus settings based on the given genesis hash.
 func (dbm *databaseManager) ReadChainConfig(hash common.Hash) *params.ChainConfig {
-	db := dbm.getDatabase(chainConfigDB)
+	db := dbm.getDatabase(MiscDB)
 	data, _ := db.Get(configKey(hash))
 	if len(data) == 0 {
 		return nil
@@ -842,7 +833,7 @@ func (dbm *databaseManager) ReadChainConfig(hash common.Hash) *params.ChainConfi
 }
 
 func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.ChainConfig) {
-	db := dbm.getDatabase(chainConfigDB)
+	db := dbm.getDatabase(MiscDB)
 	if cfg == nil {
 		return
 	}
@@ -857,7 +848,7 @@ func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.Chain
 
 // ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
-	db := dbm.getDatabase(PreimagesDB)
+	db := dbm.getDatabase(StateTrieDB)
 	data, _ := db.Get(preimageKey(hash))
 	return data
 }
@@ -865,7 +856,7 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
-	batch := dbm.getDatabase(PreimagesDB).NewBatch()
+	batch := dbm.getDatabase(StateTrieDB).NewBatch()
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
