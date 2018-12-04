@@ -16,7 +16,7 @@
 
 package blockchain
 
-// TODO-GX-FIX Fails becuase this test assumes Homestead fee.
+// TODO-GX-FIX Fails because this test assumes Homestead fee.
 /*
 import (
 	"fmt"

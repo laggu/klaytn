@@ -1492,7 +1492,7 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 }
 */
 
-// NOTE-GX Disable this test, becasue we don't have a replacement rule.
+// NOTE-GX Disable this test, because we don't have a replacement rule.
 // Tests that the pool rejects replacement transactions that don't meet the minimum
 // price bump required.
 /*

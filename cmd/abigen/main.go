@@ -19,7 +19,7 @@ var (
 
 	solFlag = flag.String("sol","","Path to the GXP contract Solidity source to build and bind")
 	solcFlag = flag.String("solc","","Solidity compiler to use if source builds are requested")
-	excFlag = flag.String("exc","","Comma seperated types to exclude from binding")
+	excFlag = flag.String("exc","","Comma separated types to exclude from binding")
 
 	pkgFlag  = flag.String("pkg", "", "Package name to generate the binding into")
 	outFlag  = flag.String("out", "", "Output file for the generated binding (default = stdout)")

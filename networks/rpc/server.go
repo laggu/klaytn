@@ -405,7 +405,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			continue
 		}
 
-		// for ethereum compatiblity. convert ethereum namespace to klay namespace.
+		// for ethereum compatibility. convert ethereum namespace to klay namespace.
 		if r.service == "eth" || r.service == "gxp" {
 			r.service = "klay"
 		}
