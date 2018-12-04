@@ -73,4 +73,7 @@ var (
 
 	// ErrInvlidUnitPrice is returned if gas price of transaction is not equal to UnitPrice
 	ErrInvalidUnitPrice = errors.New("invalid unit price")
+
+	// ErrNotYetImplementedAPI is returned if API is not yet implemented
+	ErrNotYetImplementedAPI = errors.New("not yet implemented API")
 )

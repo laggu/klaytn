@@ -1507,8 +1507,12 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 }
 
 // SetHead rewinds the head of the blockchain to a previous block.
-func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
+func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) error {
+	// TODO-GX Error is returned until this API is redesigned and implemented again (Issue #655)
+	return blockchain.ErrNotYetImplementedAPI
+	/*
 	api.b.SetHead(uint64(number))
+	*/
 }
 
 // PublicNetAPI offers network related RPC methods
