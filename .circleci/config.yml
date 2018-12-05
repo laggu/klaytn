@@ -27,6 +27,11 @@ jobs:
         command: |
           git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/klaytn-tests.git tests/testdata
           make cover
+          mkdir -p /tmp/coverage_reports
+          cp coverage_report.txt /tmp/coverage_reports/
+          cp coverage_report.html /tmp/coverage_reports/
+    - store_artifacts:
+        path: /tmp/coverage_reports
 
   dockernize:
     docker:
