@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
@@ -14,10 +13,6 @@ import (
 var (
 	bigZero                  = new(big.Int)
 	tt255                    = math.BigPow(2, 255)
-	ErrWriteProtection       = errors.New("evm: write protection")
-	ErrReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
-	ErrExecutionReverted     = errors.New("evm: execution reverted")
-	ErrMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
 )
 
 func opAdd(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {

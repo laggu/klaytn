@@ -76,4 +76,12 @@ var (
 
 	// ErrNotYetImplementedAPI is returned if API is not yet implemented
 	ErrNotYetImplementedAPI = errors.New("not yet implemented API")
+
+	// Errors returned from GetVMerrFromReceiptStatus
+
+	// ErrInvalidReceiptStatus is returned if status of receipt is invalid from GetVMerrFromReceiptStatus
+	ErrInvalidReceiptStatus = errors.New("unknown receipt status")
+
+	// ErrVMDefault is returned if status of receipt is ReceiptStatusErrDefault from GetVMerrFromReceiptStatus
+	ErrVMDefault = errors.New("VM error occurs while running smart contract")
 )

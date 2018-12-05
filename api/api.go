@@ -604,9 +604,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		return nil, 0, false, err
 	}
 
-	// Propagate ErrExecutionReverted caused by REVERT in smart contract as JSON RPC error
-	if kerr.Status == types.ReceiptStatusErrExecutionReverted {
-		err = vm.ErrExecutionReverted
+	// Propagate error of Receipt as JSON RPC error
+	if err == nil {
+		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
 	}
 
 	return res, gas, kerr.Status != types.ReceiptStatusSuccessful, err

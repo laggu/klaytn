@@ -3,11 +3,11 @@ package blockchain
 import (
 	"errors"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/params"
 	"math"
 	"math/big"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 var (
@@ -235,32 +235,50 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	return ret, st.gasUsed(), kerr
 }
 
-// Get appropriate status code for VM error
+var vmerr2receiptstatus = map[error] uint {
+	nil: types.ReceiptStatusSuccessful,
+	vm.ErrDepth: types.ReceiptStatusErrDepth,
+	vm.ErrContractAddressCollision: types.ReceiptStatusErrContractAddressCollision,
+	vm.ErrCodeStoreOutOfGas: types.ReceiptStatusErrCodeStoreOutOfGas,
+	vm.ErrMaxCodeSizeExceeded: types.ReceiptStatuserrMaxCodeSizeExceed,
+	vm.ErrOutOfGas: types.ReceiptStatusErrOutOfGas,
+	vm.ErrWriteProtection: types.ReceiptStatusErrWriteProtection,
+	vm.ErrExecutionReverted: types.ReceiptStatusErrExecutionReverted,
+	vm.ErrOpcodeCntLimitReached: types.ReceiptStatusErrOpcodeCntLimitReached,
+}
+
+var receiptstatus2vmerr = map[uint] error {
+	types.ReceiptStatusSuccessful: nil,
+	types.ReceiptStatusErrDefault: ErrVMDefault,
+	types.ReceiptStatusErrDepth: vm.ErrDepth,
+	types.ReceiptStatusErrContractAddressCollision: vm.ErrContractAddressCollision,
+	types.ReceiptStatusErrCodeStoreOutOfGas: vm.ErrCodeStoreOutOfGas,
+	types.ReceiptStatuserrMaxCodeSizeExceed: vm.ErrMaxCodeSizeExceeded,
+	types.ReceiptStatusErrOutOfGas: vm.ErrOutOfGas,
+	types.ReceiptStatusErrWriteProtection: vm.ErrWriteProtection,
+	types.ReceiptStatusErrExecutionReverted: vm.ErrExecutionReverted,
+	types.ReceiptStatusErrOpcodeCntLimitReached: vm.ErrOpcodeCntLimitReached,
+}
+
+// getReceiptStatusFromVMerr returns corresponding ReceiptStatus for VM error.
 func getReceiptStatusFromVMerr(vmerr error) (status uint) {
 	// TODO-GX Add more VM error to ReceiptStatus
-	switch vmerr {
-	case nil:
-		status = types.ReceiptStatusSuccessful
-	case vm.ErrDepth:
-		status = types.ReceiptStatusErrDepth
-	case vm.ErrContractAddressCollision:
-		status = types.ReceiptStatusErrContractAddressCollision
-	case vm.ErrCodeStoreOutOfGas:
-		status = types.ReceiptStatusErrCodeStoreOutOfGas
-	case vm.ErrMaxCodeSizeExceeded:
-		status = types.ReceiptStatuserrMaxCodeSizeExceed
-	case vm.ErrOutOfGas:
-		status = types.ReceiptStatusErrOutOfGas
-	case vm.ErrWriteProtection:
-		status = types.ReceiptStatusErrWriteProtection
-	case vm.ErrExecutionReverted:
-		status = types.ReceiptStatusErrExecutionReverted
-	case vm.ErrOpcodeCntLimitReached:
-		status = types.ReceiptStatusErrOpcodeCntLimitReached
-	default:
+	status, ok := vmerr2receiptstatus[vmerr]
+	if !ok {
+		// No corresponding receiptStatus available for vmerr
 		status = types.ReceiptStatusErrDefault
 	}
-	//logger.Error("getReceiptStatusFromVMErr", "vmerr", vmerr, "status", status)
+
+	return
+}
+
+// GetVMerrFromReceiptStatus returns VM error according to status of receipt.
+func GetVMerrFromReceiptStatus(status uint) (vmerr error) {
+	vmerr, ok := receiptstatus2vmerr[status]
+	if !ok {
+		return ErrInvalidReceiptStatus
+	}
+
 	return
 }
 
