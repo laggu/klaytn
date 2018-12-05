@@ -1,6 +1,7 @@
 package ranger
 
 import (
+	"fmt"
 	"math/big"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
@@ -51,7 +52,11 @@ func (b *RangerAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.Block
 	if blockNr == rpc.LatestBlockNumber {
 		return b.ranger.blockchain.CurrentBlock().Header(), nil
 	}
-	return b.ranger.blockchain.GetHeaderByNumber(uint64(blockNr)), nil
+	header := b.ranger.blockchain.GetHeaderByNumber(uint64(blockNr))
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNr)
+	}
+	return header, nil
 }
 
 func (b *RangerAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
@@ -59,7 +64,11 @@ func (b *RangerAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockN
 	if blockNr == rpc.LatestBlockNumber {
 		return b.ranger.blockchain.CurrentBlock(), nil
 	}
-	return b.ranger.blockchain.GetBlockByNumber(uint64(blockNr)), nil
+	block := b.ranger.blockchain.GetBlockByNumber(uint64(blockNr))
+	if block == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNr)
+	}
+	return block, nil
 }
 
 func (b *RangerAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
@@ -73,7 +82,11 @@ func (b *RangerAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr r
 }
 
 func (b *RangerAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	return b.ranger.blockchain.GetBlockByHash(hash), nil
+	block := b.ranger.blockchain.GetBlockByHash(hash)
+	if block == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %s)", hash.String())
+	}
+	return block, nil
 }
 
 func (b *RangerAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {

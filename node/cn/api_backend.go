@@ -2,6 +2,7 @@ package cn
 
 import (
 	"context"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
@@ -56,7 +57,11 @@ func (b *GxpAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNum
 	if blockNr == rpc.LatestBlockNumber {
 		return b.gxp.blockchain.CurrentBlock().Header(), nil
 	}
-	return b.gxp.blockchain.GetHeaderByNumber(uint64(blockNr)), nil
+	header := b.gxp.blockchain.GetHeaderByNumber(uint64(blockNr))
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNr)
+	}
+	return header, nil
 }
 
 func (b *GxpAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
@@ -69,7 +74,11 @@ func (b *GxpAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumb
 	if blockNr == rpc.LatestBlockNumber {
 		return b.gxp.blockchain.CurrentBlock(), nil
 	}
-	return b.gxp.blockchain.GetBlockByNumber(uint64(blockNr)), nil
+	block := b.gxp.blockchain.GetBlockByNumber(uint64(blockNr))
+	if block == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNr)
+	}
+	return block, nil
 }
 
 func (b *GxpAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
@@ -88,7 +97,11 @@ func (b *GxpAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.
 }
 
 func (b *GxpAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	return b.gxp.blockchain.GetBlockByHash(hash), nil
+	block := b.gxp.blockchain.GetBlockByHash(hash)
+	if block == nil {
+		return nil, fmt.Errorf("the block does not exist (block hash: %s)", hash.String())
+	}
+	return block, nil
 }
 
 func (b *GxpAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {

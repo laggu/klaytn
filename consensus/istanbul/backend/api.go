@@ -284,7 +284,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 
 	if block == nil {
 		logger.Error("Finding a block by number failed.", "blockNum", blockNumber)
-		return nil, nil // return nil if block is not found.
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
 	}
 	blockHash := block.Hash()
 
@@ -355,7 +355,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 	block := b.GetBlockByHash(blockHash)
 	if block == nil {
 		logger.Error("Finding a block failed.", "blockHash", blockHash)
-		return nil, nil // return nil if block is not found.
+		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
 	}
 
 	proposer, committee, err := api.getProposerAndValidators(block)
