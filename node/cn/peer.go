@@ -408,8 +408,8 @@ func (p *peer) String() string {
 
 type ByPassValidator struct{}
 
-func (v ByPassValidator) ValidatePeerType(addr common.Address) bool {
-	return true
+func (v ByPassValidator) ValidatePeerType(addr common.Address) error {
+	return nil
 }
 
 // peerSet represents the collection of active peers currently participating in
@@ -457,20 +457,18 @@ func (ps *peerSet) Register(p *peer) error {
 		if _, ok := ps.cnpeers[p.addr]; ok {
 			return errAlreadyRegistered
 		}
-		if ps.validator[node.CONSENSUSNODE].ValidatePeerType(p.addr) {
-			ps.cnpeers[p.addr] = p
-		} else {
-			return errors.New("fail to validate cntype")
+		if err := ps.validator[node.CONSENSUSNODE].ValidatePeerType(p.addr); err != nil {
+			return fmt.Errorf("fail to validate cntype: %s", err)
 		}
+		ps.cnpeers[p.addr] = p
 	} else if p.ConnType() == node.RANGERNODE {
 		if _, ok := ps.rnpeers[p.addr]; ok {
 			return errAlreadyRegistered
 		}
-		if ps.validator[node.RANGERNODE].ValidatePeerType(p.addr) {
-			ps.rnpeers[p.addr] = p
-		} else {
-			return errors.New("fail to validate rntype")
+		if err := ps.validator[node.RANGERNODE].ValidatePeerType(p.addr); err != nil {
+			return fmt.Errorf("fail to validate rntype: %s", err)
 		}
+		ps.rnpeers[p.addr] = p
 	}
 	ps.peers[p.id] = p
 	go p.broadcast()

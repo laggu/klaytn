@@ -477,5 +477,6 @@ func (p *Peer) ConnType() ConnType {
 }
 
 type PeerTypeValidator interface {
-	ValidatePeerType(addr common.Address) bool
+	// ValidatePeerType returns nil if successful. Otherwise, it returns an error object.
+	ValidatePeerType(addr common.Address) error
 }

@@ -76,17 +76,17 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	return false, nil
 }
 
-func (sb *backend) ValidatePeerType(addr common.Address) bool {
+func (sb *backend) ValidatePeerType(addr common.Address) error {
 	// istanbul.Start vs try to connect by peer
 	for sb.chain == nil {
-		return false
+		return errors.New("sb.chain is nil! --mine option might be missing")
 	}
 	for _, val := range sb.getValidators(sb.chain.CurrentHeader().Number.Uint64(), sb.chain.CurrentHeader().Hash()).List() {
 		if addr == val.Address() {
-			return true
+			return nil
 		}
 	}
-	return false
+	return errors.New("invalid address")
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
