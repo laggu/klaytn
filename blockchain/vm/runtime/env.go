@@ -17,9 +17,9 @@
 package runtime
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {

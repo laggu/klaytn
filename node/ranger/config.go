@@ -1,20 +1,20 @@
 package ranger
 
 import (
-	"time"
-	"math/big"
-	"os"
-	"os/user"
-	"runtime"
-	"path/filepath"
-	"github.com/ground-x/go-gxplatform/datasync/downloader"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/datasync/downloader"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/params"
+	"math/big"
+	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.NodeRanger)
@@ -29,14 +29,14 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:        1,
-	LevelDBCacheSize: 768,
-	TrieCacheSize:    256,
-	TrieTimeout:      5 * time.Minute,
+	NetworkId:         1,
+	LevelDBCacheSize:  768,
+	TrieCacheSize:     256,
+	TrieTimeout:       5 * time.Minute,
 	TrieBlockInterval: blockchain.DefaultBlockInterval,
-	GasPrice:         big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
-	Istanbul:         *istanbul.DefaultConfig,
-	ConsensusURL:     "ws://localhost:8546",
+	GasPrice:          big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
+	Istanbul:          *istanbul.DefaultConfig,
+	ConsensusURL:      "ws://localhost:8546",
 }
 
 func init() {

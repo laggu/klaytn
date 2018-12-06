@@ -13,7 +13,7 @@ func NewPublicRangerAPI(e *Ranger) *PublicRangerAPI {
 	return &PublicRangerAPI{e}
 }
 
-func(pr *PublicRangerAPI) Accounts() []common.Address {
+func (pr *PublicRangerAPI) Accounts() []common.Address {
 	addresses := make([]common.Address, 0) // return [] instead of nil if empty
 	for _, wallet := range pr.ranger.accountManager.Wallets() {
 		for _, account := range wallet.Accounts() {

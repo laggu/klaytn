@@ -1,16 +1,16 @@
 package validator
 
 import (
+	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"math"
+	"math/rand"
 	"reflect"
 	"sort"
-	"sync"
-	"math/rand"
-	"strings"
 	"strconv"
-	"fmt"
+	"strings"
+	"sync"
 )
 
 const (
@@ -38,8 +38,7 @@ func (val *defaultValidator) Hash() int64 {
 }
 
 type defaultSet struct {
-
-	subSize    int
+	subSize int
 
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
@@ -124,29 +123,29 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	if len(valSet.validators) <= valSet.subSize {
 		return valSet.validators
 	}
-	hashstring := strings.TrimPrefix(prevHash.Hex(),"0x")
+	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
 	if len(hashstring) > 15 {
 		hashstring = hashstring[:15]
 	}
 	seed, err := strconv.ParseInt(hashstring, 16, 64)
 	if err != nil {
-		logger.Error("input" ,"hash", prevHash.Hex())
-		logger.Error("fail to make sub-list of validators","seed", seed, "err",err)
+		logger.Error("input", "hash", prevHash.Hex())
+		logger.Error("fail to make sub-list of validators", "seed", seed, "err", err)
 		return valSet.validators
 	}
 
 	// shuffle
-	subset := make([]istanbul.Validator,valSet.subSize)
+	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = valSet.GetProposer()
 	// next proposer
 	// TODO how to sync next proposer (how to get exact next proposer ?)
-	subset[1] = valSet.selector(valSet, subset[0].Address() , uint64(0))
+	subset[1] = valSet.selector(valSet, subset[0].Address(), uint64(0))
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
 
 	if proposerIdx == nextproposerIdx {
-		logger.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
+		logger.Error("fail to make propser", "current proposer idx", proposerIdx, "next idx", nextproposerIdx)
 	}
 
 	limit := len(valSet.validators)
@@ -166,12 +165,12 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
 	}
 
-	for i :=0; i < valSet.subSize-2; i++ {
+	for i := 0; i < valSet.subSize-2; i++ {
 		subset[i+2] = valSet.validators[indexs[i]]
 	}
 
 	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		logger.Error("### subList","prevHash", prevHash.Hex())
+		logger.Error("### subList", "prevHash", prevHash.Hex())
 	}
 
 	return subset
@@ -184,23 +183,23 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	if len(valSet.validators) <= valSet.subSize {
 		return valSet.validators
 	}
-	hashstring := strings.TrimPrefix(prevHash.Hex(),"0x")
+	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
 	if len(hashstring) > 15 {
 		hashstring = hashstring[:15]
 	}
 	seed, err := strconv.ParseInt(hashstring, 16, 64)
 	if err != nil {
-		logger.Error("input" ,"hash", prevHash.Hex())
-		logger.Error("fail to make sub-list of validators","seed", seed, "err",err)
+		logger.Error("input", "hash", prevHash.Hex())
+		logger.Error("fail to make sub-list of validators", "seed", seed, "err", err)
 		return valSet.validators
 	}
 
 	// shuffle
-	subset := make([]istanbul.Validator,valSet.subSize)
+	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = New(proposer)
 	// next proposer
 	// TODO how to sync next proposer (how to get exact next proposer ?)
-	subset[1] = valSet.selector(valSet, subset[0].Address() , uint64(0))
+	subset[1] = valSet.selector(valSet, subset[0].Address(), uint64(0))
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
@@ -217,7 +216,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	}
 
 	if proposerIdx == nextproposerIdx {
-		logger.Error("fail to make propser","current proposer idx", proposerIdx, "next idx", nextproposerIdx)
+		logger.Error("fail to make propser", "current proposer idx", proposerIdx, "next idx", nextproposerIdx)
 	}
 
 	limit := len(valSet.validators)
@@ -237,19 +236,19 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
 	}
 
-	for i :=0; i < valSet.subSize-2; i++ {
+	for i := 0; i < valSet.subSize-2; i++ {
 		subset[i+2] = valSet.validators[indexs[i]]
 	}
 
 	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		logger.Error("### subList","prevHash", prevHash.Hex())
+		logger.Error("### subList", "prevHash", prevHash.Hex())
 	}
 
 	return subset
 }
 
 func (valSet *defaultSet) IsSubSet() bool {
-    return valSet.Size() > valSet.subSize
+	return valSet.Size() > valSet.subSize
 }
 
 func (valSet *defaultSet) GetByIndex(i uint64) istanbul.Validator {

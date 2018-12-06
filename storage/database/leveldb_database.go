@@ -37,11 +37,11 @@ type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
-	compTimeMeter  metrics.Meter // Meter for measuring the total time spent in database compaction
-	compReadMeter  metrics.Meter // Meter for measuring the data read during compaction
-	compWriteMeter metrics.Meter // Meter for measuring the data written during compaction
-	diskReadMeter  metrics.Meter // Meter for measuring the effective amount of data read
-	diskWriteMeter metrics.Meter // Meter for measuring the effective amount of data written
+	compTimeMeter   metrics.Meter // Meter for measuring the total time spent in database compaction
+	compReadMeter   metrics.Meter // Meter for measuring the data read during compaction
+	compWriteMeter  metrics.Meter // Meter for measuring the data written during compaction
+	diskReadMeter   metrics.Meter // Meter for measuring the effective amount of data read
+	diskWriteMeter  metrics.Meter // Meter for measuring the effective amount of data written
 	blockCacheGauge metrics.Gauge // Gauge for measuring the current size of block cache
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
@@ -56,7 +56,7 @@ func getLDBOptions(ldbCacheSize, numHandles int) *opt.Options {
 		BlockCacheCapacity:     ldbCacheSize / 2 * opt.MiB,
 		WriteBuffer:            ldbCacheSize / 4 * opt.MiB, // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
-		DisableBufferPool:		true,
+		DisableBufferPool:      true,
 	}
 }
 
@@ -245,8 +245,8 @@ hasError:
 		var currCompRead, currCompWrite int64
 		var currCompTime time.Duration
 		for i := 0; i < len(s.LevelDurations); i++ {
-			currCompTime  += s.LevelDurations[i]
-			currCompRead  += s.LevelRead[i]
+			currCompTime += s.LevelDurations[i]
+			currCompRead += s.LevelRead[i]
 			currCompWrite += s.LevelWrite[i]
 		}
 

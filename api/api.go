@@ -5,27 +5,27 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
-	"strings"
-	"time"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"math/big"
+	"strings"
+	"time"
 )
 
 const (
@@ -885,7 +885,7 @@ func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByNumber(ctx context.
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
 func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (*hexutil.Uint, error) {
-	block, err:= s.b.GetBlock(ctx, blockHash)
+	block, err := s.b.GetBlock(ctx, blockHash)
 	if block != nil && err == nil {
 		n := hexutil.Uint(len(block.Transactions()))
 		return &n, err
@@ -1173,7 +1173,7 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
 }
 
-var submitTxCount = 0;
+var submitTxCount = 0
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
@@ -1459,7 +1459,7 @@ func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) error {
 	// TODO-GX Error is returned until this API is redesigned and implemented again (Issue #655)
 	return blockchain.ErrNotYetImplementedAPI
 	/*
-	api.b.SetHead(uint64(number))
+		api.b.SetHead(uint64(number))
 	*/
 }
 

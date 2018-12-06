@@ -1,23 +1,23 @@
 package compiler
 
 import (
-	"regexp"
 	"bytes"
-	"os/exec"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
-	"encoding/json"
-	"io/ioutil"
-	"errors"
 )
 
 var versionRegexp = regexp.MustCompile(`([0-9]+)\.([0-9]+)\.([0-9]+)`)
 
 type Contract struct {
-	Code        string       `json:"code"`
-	RCode       string       `json:"runtime-code"`
-	Info  ContractInfo       `json:"info"`
+	Code  string       `json:"code"`
+	RCode string       `json:"runtime-code"`
+	Info  ContractInfo `json:"info"`
 }
 
 type ContractInfo struct {
@@ -42,7 +42,7 @@ type Solidity struct {
 type solcOutput struct {
 	Contracts map[string]struct {
 		Bin, Abi, Devdoc, Userdoc, Metadata string
-		BinRuntime string `json:"bin-runtime"`
+		BinRuntime                          string `json:"bin-runtime"`
 	}
 	Version string
 }
@@ -149,7 +149,7 @@ func (s *Solidity) run(cmd *exec.Cmd, source string) (map[string]*Contract, erro
 			return nil, fmt.Errorf("solc: error reading dev doc: %v", err)
 		}
 		contracts[name] = &Contract{
-			Code: "0x" + info.Bin,
+			Code:  "0x" + info.Bin,
 			RCode: "0x" + info.BinRuntime,
 			Info: ContractInfo{
 				Source:          source,
@@ -178,4 +178,3 @@ func slurpFiles(files []string) (string, error) {
 	}
 	return concat.String(), nil
 }
-

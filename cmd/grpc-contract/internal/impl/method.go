@@ -1,10 +1,10 @@
 package impl
 
 import (
-	"strings"
-	"fmt"
 	"bytes"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"strings"
 
 	parser "github.com/zpatrick/go-parser"
 	"text/template"
@@ -100,10 +100,10 @@ func (m Method) isConstant() bool {
 }
 
 func (m Method) isOptField(field string) bool {
-	if strings.HasSuffix(field , "TransactOpts") {
+	if strings.HasSuffix(field, "TransactOpts") {
 		return true
-	} else if strings.HasSuffix(field , "CallOpts") {
-        return true
+	} else if strings.HasSuffix(field, "CallOpts") {
+		return true
 	} else {
 		return false
 	}

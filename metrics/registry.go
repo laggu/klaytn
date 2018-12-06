@@ -193,7 +193,7 @@ func (r *StandardRegistry) UnregisterAll() {
 }
 
 func (r *StandardRegistry) register(name string, i interface{}) error {
-	logger.Trace("Metric register ("+name+")")
+	logger.Trace("Metric register (" + name + ")")
 	if _, ok := r.metrics[name]; ok {
 		return DuplicateMetric(name)
 	}

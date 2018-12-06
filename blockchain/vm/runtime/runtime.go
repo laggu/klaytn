@@ -21,12 +21,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 // Config is a basic type specifying certain configuration flags for running

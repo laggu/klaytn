@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"strings"
-	"regexp"
 	"fmt"
+	"regexp"
+	"strings"
 )
 
 // ToCamelCase converts an under-score string to a camel-case string
@@ -64,4 +64,3 @@ func FormatPackage(name string) string {
 	}
 	return fmt.Sprintf("%v.", name)
 }
-

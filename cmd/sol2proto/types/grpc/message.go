@@ -1,11 +1,11 @@
 package grpc
 
 import (
+	"fmt"
+	"html/template"
+	"io"
 	"path/filepath"
 	"sort"
-	"fmt"
-	"io"
-	"html/template"
 )
 
 // Generate a renderable object from a list of messages

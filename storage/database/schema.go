@@ -55,9 +55,9 @@ var (
 	blockBodyPrefix     = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
 	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
 
-	txLookupPrefix  = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
+	txLookupPrefix = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
 
-	preimagePrefix = []byte("secure-key-") // preimagePrefix + hash -> preimage
+	preimagePrefix = []byte("secure-key-")  // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("klay-config-") // config prefix for the db
 
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
@@ -128,7 +128,7 @@ func configKey(hash common.Hash) []byte {
 }
 
 func sectionHeadKey(encodedSection []byte) []byte {
-	return append(sectionHeadKeyPrefix, encodedSection ...)
+	return append(sectionHeadKeyPrefix, encodedSection...)
 }
 
 func istanbulSnapshotKey(hash common.Hash) []byte {

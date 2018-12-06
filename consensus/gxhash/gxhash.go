@@ -3,11 +3,11 @@ package gxhash
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/hashicorp/golang-lru/simplelru"
 	"math"
 	"math/big"
 	"math/rand"

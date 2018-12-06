@@ -1,11 +1,11 @@
 package abi
 
 import (
-	"reflect"
 	"encoding/binary"
-	"math/big"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
+	"math/big"
+	"reflect"
 )
 
 // reads the integer based on its kind
@@ -211,4 +211,3 @@ func lengthPrefixPointsTo(index int, output []byte) (start int, length int, err 
 	length = int(lengthBig.Uint64())
 	return
 }
-

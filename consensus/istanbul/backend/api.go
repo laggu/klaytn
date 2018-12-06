@@ -3,12 +3,12 @@ package backend
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"reflect"
 )
 
@@ -113,11 +113,11 @@ type APIExtension struct {
 }
 
 var (
-	errPendingNotAllowed = errors.New("pending is not allowed")
-	errInternalError = errors.New("internal error")
-	errStartNotPositive = errors.New("start block number should be positive")
-	errEndLargetThanLatest = errors.New("end block number should be smaller than the latest block number")
-	errStartLargerThanEnd = errors.New("start should be smaller than end")
+	errPendingNotAllowed       = errors.New("pending is not allowed")
+	errInternalError           = errors.New("internal error")
+	errStartNotPositive        = errors.New("start block number should be positive")
+	errEndLargetThanLatest     = errors.New("end block number should be smaller than the latest block number")
+	errStartLargerThanEnd      = errors.New("start should be smaller than end")
 	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
 )
 
@@ -214,27 +214,27 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 		}
 		from, _ := types.Sender(signer, tx)
 
-		rpcTransactions[i] = map[string]interface{} {
-			"blockHash": hash,
-			"blockNumber": (*hexutil.Big)(b.Number()),
-			"from":     from,
-			"gas":      hexutil.Uint64(tx.Gas()),
-			"gasPrice": (*hexutil.Big)(tx.GasPrice()),
-			"gasUsed":  hexutil.Uint64(receipts[i].GasUsed),
-			"txHash":     tx.Hash(),
-			"input":    hexutil.Bytes(tx.Data()),
-			"nonce":    hexutil.Uint64(tx.Nonce()),
-			"to":       tx.To(),
-			"transactionIndex": hexutil.Uint(i),
-			"value":    (*hexutil.Big)(tx.Value()),
-			"contractAddress": receipts[i].ContractAddress,
+		rpcTransactions[i] = map[string]interface{}{
+			"blockHash":         hash,
+			"blockNumber":       (*hexutil.Big)(b.Number()),
+			"from":              from,
+			"gas":               hexutil.Uint64(tx.Gas()),
+			"gasPrice":          (*hexutil.Big)(tx.GasPrice()),
+			"gasUsed":           hexutil.Uint64(receipts[i].GasUsed),
+			"txHash":            tx.Hash(),
+			"input":             hexutil.Bytes(tx.Data()),
+			"nonce":             hexutil.Uint64(tx.Nonce()),
+			"to":                tx.To(),
+			"transactionIndex":  hexutil.Uint(i),
+			"value":             (*hexutil.Big)(tx.Value()),
+			"contractAddress":   receipts[i].ContractAddress,
 			"cumulativeGasUsed": hexutil.Uint64(receipts[i].CumulativeGasUsed),
-			"logs": receipts[i].Logs,
-			"status": hexutil.Uint(receipts[i].Status),
+			"logs":              receipts[i].Logs,
+			"status":            hexutil.Uint(receipts[i].Status),
 		}
 	}
 
-	return map[string]interface{} {
+	return map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
 		"hash":             b.Hash(),
 		"parentHash":       head.ParentHash,
@@ -276,7 +276,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	if *number == rpc.LatestBlockNumber {
 		block = b.CurrentBlock()
 		blockNumber = block.NumberU64()
-	} else  {
+	} else {
 		// rpc.EarliestBlockNumber == 0, no need to treat it as a special case.
 		blockNumber = uint64(number.Int64())
 		block = b.GetBlockByNumber(blockNumber)
@@ -371,4 +371,3 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 
 	return api.makeRPCOutput(block, proposer, committee, block.Transactions(), receipts), nil
 }
-

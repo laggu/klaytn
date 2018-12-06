@@ -3,10 +3,11 @@
 package debug
 
 import (
+	"errors"
 	"os"
 	"runtime/trace"
-	"errors"
 )
+
 // StartGoTrace turns on tracing, writing to the given file.
 func (h *HandlerT) StartGoTrace(file string) error {
 	h.mu.Lock()

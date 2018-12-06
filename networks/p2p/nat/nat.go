@@ -3,8 +3,8 @@ package nat
 import (
 	"errors"
 	"fmt"
-	"github.com/jackpal/go-nat-pmp"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/jackpal/go-nat-pmp"
 	"net"
 	"strings"
 	"sync"

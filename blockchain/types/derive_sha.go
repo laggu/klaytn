@@ -51,7 +51,8 @@ func DeriveSha(list DerivableList) common.Hash {
 
 // An alternative implementation of DeriveSha()
 // This function generates a hash of `DerivableList` by simulating merkle tree generation
-type DeriveShaSimple struct {}
+type DeriveShaSimple struct{}
+
 func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
 	hasher := sha3.NewKeccak256()
 
@@ -64,11 +65,11 @@ func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
 
 	for len(encoded) > 1 {
 		// make even numbers
-		if len(encoded) % 2 == 1 {
+		if len(encoded)%2 == 1 {
 			encoded = append(encoded, encoded[len(encoded)-1])
 		}
 
-		for i := 0; i < len(encoded) / 2; i++ {
+		for i := 0; i < len(encoded)/2; i++ {
 			hasher.Reset()
 			hasher.Write(encoded[2*i])
 			hasher.Write(encoded[2*i+1])
@@ -76,7 +77,7 @@ func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
 			encoded[i] = hasher.Sum(nil)
 		}
 
-		encoded = encoded[0:len(encoded)/2]
+		encoded = encoded[0 : len(encoded)/2]
 	}
 
 	if len(encoded) == 0 {
@@ -92,7 +93,8 @@ func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
 // This function generates a hash of `DerivableList` as below:
 // 1. make a byte slice by concatenating RLP-encoded items
 // 2. make a hash of the byte slice.
-type DeriveShaConcat struct {}
+type DeriveShaConcat struct{}
+
 func (d DeriveShaConcat) DeriveSha(list DerivableList) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 

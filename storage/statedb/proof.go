@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 // TODO-GX Below Prove is only used in tests, not in core codes.

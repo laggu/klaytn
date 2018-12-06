@@ -19,12 +19,12 @@ package vm
 import (
 	"crypto/sha256"
 	"errors"
-	"golang.org/x/crypto/ripemd160"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/bn256"
 	"github.com/ground-x/go-gxplatform/params"
+	"golang.org/x/crypto/ripemd160"
 	"math/big"
 )
 

@@ -26,15 +26,15 @@ import (
 	"time"
 
 	gxplatform "github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 type testBackend struct {
@@ -53,7 +53,7 @@ head := eth.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
 
 rawdb.ReadBloomBits(eth.chainDb, task.Bit, section, head)
 eth.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head))
- */
+*/
 
 func (b *testBackend) ChainDB() database.DBManager {
 	return b.db
@@ -148,7 +148,7 @@ func (b *testBackend) ServiceFilter(ctx context.Context, session *bloombits.Matc
 				task.Bitsets = make([][]byte, len(task.Sections))
 				for i, section := range task.Sections {
 					if rand.Int()%4 != 0 { // Handle occasional missing deliveries
-						head := b.db.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
+						head := b.db.ReadCanonicalHash((section+1)*params.BloomBitsBlocks - 1)
 						task.Bitsets[i], _ = b.db.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head))
 					}
 				}

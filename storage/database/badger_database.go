@@ -1,14 +1,14 @@
 package database
 
 import (
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/dgraph-io/badger"
-	"os"
 	"fmt"
+	"github.com/dgraph-io/badger"
+	"github.com/ground-x/go-gxplatform/log"
+	"os"
 )
 
 type badgerDB struct {
-	fn string      // filename for reporting
+	fn string // filename for reporting
 	db *badger.DB
 
 	logger log.Logger // Contextual logger tracking the database path
@@ -89,7 +89,7 @@ func (db *badgerDB) Has(key []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	value,err := item.Value()
+	value, err := item.Value()
 	return value != nil, err
 }
 
@@ -142,7 +142,7 @@ func (db *badgerDB) NewBatch() Batch {
 
 	txn := db.db.NewTransaction(true)
 
-	return &bdBatch{db: db.db, txn:txn}
+	return &bdBatch{db: db.db, txn: txn}
 }
 
 func (db *badgerDB) Meter(prefix string) {}
@@ -231,5 +231,3 @@ func (tb *bdtableBatch) ValueSize() int {
 func (tb *bdtableBatch) Reset() {
 	tb.batch.Reset()
 }
-
-

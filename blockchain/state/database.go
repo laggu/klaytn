@@ -24,7 +24,7 @@ import (
 	"github.com/ground-x/go-gxplatform/storage/statedb"
 
 	"fmt"
-	)
+)
 
 // Trie cache generation limit after which to evict trie nodes from memory.
 var MaxTrieCacheGen = uint16(120)

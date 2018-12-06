@@ -17,8 +17,8 @@
 package utils
 
 import (
-	"path/filepath"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli"
 )

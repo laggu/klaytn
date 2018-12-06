@@ -71,11 +71,11 @@ const (
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
 	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
 
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
+	MaximumExtraDataSize uint64 = 32 // Maximum size extra data may be after Genesis.
 
-	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
-	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
-	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
+	EpochDuration   uint64 = 30000 // Duration between proof-of-work epochs.
+	CallCreateDepth uint64 = 1024  // Maximum depth of call/create stack.
+	StackLimit      uint64 = 1024  // Maximum size of VM stack allowed.
 
 	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
 

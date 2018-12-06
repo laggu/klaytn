@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/console"
 	"github.com/ground-x/go-gxplatform/crypto"
+	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 )
 

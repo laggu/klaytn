@@ -24,11 +24,11 @@ import (
 	"sync"
 
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/pipes"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/node"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and
@@ -334,7 +334,7 @@ func (sn *SimNode) NodeInfo() *p2p.NodeInfo {
 
 func (sn *SimNode) PeersInfo() []*p2p.PeerInfo {
 	server := sn.Server()
-	if (server == nil) {
+	if server == nil {
 		return nil
 	}
 	return server.PeersInfo()
@@ -349,11 +349,9 @@ func (sn *SimNode) GetPeerCount() int {
 	return srv.PeerCount()
 }
 
-
 func (n *SimNode) DisconnectPeer(destID discover.NodeID) {
 
 }
-
 
 func setSocketBuffer(conn net.Conn, socketReadBuffer int, socketWriteBuffer int) error {
 	switch v := conn.(type) {

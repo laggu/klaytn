@@ -17,10 +17,10 @@
 package vm
 
 import (
-	"testing"
-	"math/big"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/params"
+	"math/big"
+	"testing"
 )
 
 type dummyContractRef struct {

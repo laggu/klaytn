@@ -2,9 +2,9 @@ package blockchain
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/params"
 	"math"
 	"math/big"
@@ -65,7 +65,7 @@ type Message interface {
 //           This value will be stored in Receipt if Receipt is available.
 //           Please see getReceiptStatusFromVMerr() how this value is calculated.
 type kerror struct {
-	Err error
+	Err    error
 	Status uint
 }
 
@@ -235,29 +235,29 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	return ret, st.gasUsed(), kerr
 }
 
-var vmerr2receiptstatus = map[error] uint {
-	nil: types.ReceiptStatusSuccessful,
-	vm.ErrDepth: types.ReceiptStatusErrDepth,
+var vmerr2receiptstatus = map[error]uint{
+	nil:                            types.ReceiptStatusSuccessful,
+	vm.ErrDepth:                    types.ReceiptStatusErrDepth,
 	vm.ErrContractAddressCollision: types.ReceiptStatusErrContractAddressCollision,
-	vm.ErrCodeStoreOutOfGas: types.ReceiptStatusErrCodeStoreOutOfGas,
-	vm.ErrMaxCodeSizeExceeded: types.ReceiptStatuserrMaxCodeSizeExceed,
-	vm.ErrOutOfGas: types.ReceiptStatusErrOutOfGas,
-	vm.ErrWriteProtection: types.ReceiptStatusErrWriteProtection,
-	vm.ErrExecutionReverted: types.ReceiptStatusErrExecutionReverted,
-	vm.ErrOpcodeCntLimitReached: types.ReceiptStatusErrOpcodeCntLimitReached,
+	vm.ErrCodeStoreOutOfGas:        types.ReceiptStatusErrCodeStoreOutOfGas,
+	vm.ErrMaxCodeSizeExceeded:      types.ReceiptStatuserrMaxCodeSizeExceed,
+	vm.ErrOutOfGas:                 types.ReceiptStatusErrOutOfGas,
+	vm.ErrWriteProtection:          types.ReceiptStatusErrWriteProtection,
+	vm.ErrExecutionReverted:        types.ReceiptStatusErrExecutionReverted,
+	vm.ErrOpcodeCntLimitReached:    types.ReceiptStatusErrOpcodeCntLimitReached,
 }
 
-var receiptstatus2vmerr = map[uint] error {
-	types.ReceiptStatusSuccessful: nil,
-	types.ReceiptStatusErrDefault: ErrVMDefault,
-	types.ReceiptStatusErrDepth: vm.ErrDepth,
+var receiptstatus2vmerr = map[uint]error{
+	types.ReceiptStatusSuccessful:                  nil,
+	types.ReceiptStatusErrDefault:                  ErrVMDefault,
+	types.ReceiptStatusErrDepth:                    vm.ErrDepth,
 	types.ReceiptStatusErrContractAddressCollision: vm.ErrContractAddressCollision,
-	types.ReceiptStatusErrCodeStoreOutOfGas: vm.ErrCodeStoreOutOfGas,
-	types.ReceiptStatuserrMaxCodeSizeExceed: vm.ErrMaxCodeSizeExceeded,
-	types.ReceiptStatusErrOutOfGas: vm.ErrOutOfGas,
-	types.ReceiptStatusErrWriteProtection: vm.ErrWriteProtection,
-	types.ReceiptStatusErrExecutionReverted: vm.ErrExecutionReverted,
-	types.ReceiptStatusErrOpcodeCntLimitReached: vm.ErrOpcodeCntLimitReached,
+	types.ReceiptStatusErrCodeStoreOutOfGas:        vm.ErrCodeStoreOutOfGas,
+	types.ReceiptStatuserrMaxCodeSizeExceed:        vm.ErrMaxCodeSizeExceeded,
+	types.ReceiptStatusErrOutOfGas:                 vm.ErrOutOfGas,
+	types.ReceiptStatusErrWriteProtection:          vm.ErrWriteProtection,
+	types.ReceiptStatusErrExecutionReverted:        vm.ErrExecutionReverted,
+	types.ReceiptStatusErrOpcodeCntLimitReached:    vm.ErrOpcodeCntLimitReached,
 }
 
 // getReceiptStatusFromVMerr returns corresponding ReceiptStatus for VM error.

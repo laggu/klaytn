@@ -22,8 +22,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common/math"
 )
 
 // Compiler contains information about the parsed source

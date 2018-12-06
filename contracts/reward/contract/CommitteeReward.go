@@ -9,8 +9,8 @@ import (
 
 	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 // CommitteeRewardABI is the input ABI used to generate the binding from.

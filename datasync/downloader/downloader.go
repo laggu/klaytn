@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -47,7 +47,7 @@ var (
 	fsHeaderContCheck      = 3 * time.Second // Time interval to check for header continuations during state download
 	fsMinFullBlocks        = 64              // Number of blocks to retrieve fully even in fast sync
 
-	spawnTimeOut = 1 * time.Minute			// Maximum waiting time for completion of spawned d.processes
+	spawnTimeOut = 1 * time.Minute // Maximum waiting time for completion of spawned d.processes
 
 	logger = log.NewModuleLogger(log.DatasyncDownloader)
 )
@@ -466,7 +466,7 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	errc := make(chan error, len(fetchers))
 	d.cancelWg.Add(len(fetchers))
 
-	logger.Debug("spawnSync started","peerID",peerID)
+	logger.Debug("spawnSync started", "peerID", peerID)
 
 	for _, fn := range fetchers {
 		fn := fn
@@ -479,14 +479,14 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	wg.Add(1)
 	quit := make(chan struct{})
 	// This timeout goroutine will terminate running fetchers without error after spawnTimeOut.
-	go func(){
+	go func() {
 		defer wg.Done()
 		select {
-			case <- time.After(spawnTimeOut):
-				logger.Warn("spawnSync timeout","peerID",peerID)
-				errc <- errSpawnTimeOut
-			case <- quit:
-				logger.Debug("spawnSync timeout goroutine is quited","peerID",peerID)
+		case <-time.After(spawnTimeOut):
+			logger.Warn("spawnSync timeout", "peerID", peerID)
+			errc <- errSpawnTimeOut
+		case <-quit:
+			logger.Debug("spawnSync timeout goroutine is quited", "peerID", peerID)
 		}
 	}()
 
@@ -510,9 +510,9 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	d.Cancel()
 
 	// Waiting for quit of timeout goroutine.
-	logger.Debug("spawnSync is waiting timeout goroutine","peerID",peerID)
+	logger.Debug("spawnSync is waiting timeout goroutine", "peerID", peerID)
 	wg.Wait()
-	logger.Debug("spawnSync terminated","peerID",peerID)
+	logger.Debug("spawnSync terminated", "peerID", peerID)
 
 	return err
 }

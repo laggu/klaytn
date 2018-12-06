@@ -1,17 +1,17 @@
 package validator
 
 import (
-	"testing"
-	"strings"
+	"fmt"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"reflect"
-	"github.com/ground-x/go-gxplatform/common"
-	"fmt"
+	"strings"
+	"testing"
 )
 
 var (
-	testAddress = "70524d664ffe731100208a0154e556f9bb679ae6"
+	testAddress  = "70524d664ffe731100208a0154e556f9bb679ae6"
 	testAddress2 = "b37866a925bccd69cfa98d43b510f1d23d78a851"
 	testAddress3 = "b37866a925bccd69cfa98d43b510f1d23d78a852"
 	testAddress4 = "b37866a925bccd69cfa98d43b510f1d23d78a853"
@@ -204,12 +204,12 @@ func TestSubSetList(t *testing.T) {
 		t.FailNow()
 	}
 
-	fmt.Printf("%v\n",valSet.GetProposer())
+	fmt.Printf("%v\n", valSet.GetProposer())
 
 	hash := istanbul.RLPHash("sfsfdsfd")
 	vallist := valSet.SubList(hash)
 
-	for idx,val := range vallist {
+	for idx, val := range vallist {
 		fmt.Printf("validator %d, %v\n", idx, val)
 	}
 }

@@ -3,11 +3,11 @@ package cn
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/fatih/set.v0"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync"
 	"time"
@@ -22,8 +22,8 @@ var (
 )
 
 const (
-	maxKnownTxs      = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownBlocks   = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 
 	// maxQueuedTxs is the maximum number of transaction lists to queue up before
 	// dropping broadcasts. This is a sensitive number as a transaction list might
@@ -72,12 +72,12 @@ type peer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+	knownTxs    *set.Set                  // Set of transaction hashes known to be known by this peer
+	knownBlocks *set.Set                  // Set of block hashes known to be known by this peer
 	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
-	queuedProps chan *propEvent			  // Queue of blocks to broadcast to the peer
-	queuedAnns  chan *types.Block	      // Queue of blocks to announce to the peer
-	term        chan struct{}			  // Termination channel to stop the broadcaster
+	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
+	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
+	term        chan struct{}             // Termination channel to stop the broadcaster
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -105,7 +105,7 @@ func (p *peer) broadcast() {
 		select {
 		case txs := <-p.queuedTxs:
 			if err := p.SendTransactions(txs); err != nil {
-				logger.Error("fail to SendTransactions","err",err)
+				logger.Error("fail to SendTransactions", "err", err)
 				continue
 				//return
 			}
@@ -113,7 +113,7 @@ func (p *peer) broadcast() {
 
 		case prop := <-p.queuedProps:
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
-				logger.Error("fail to SendNewBlock","err",err)
+				logger.Error("fail to SendNewBlock", "err", err)
 				continue
 				//return
 			}
@@ -121,7 +121,7 @@ func (p *peer) broadcast() {
 
 		case block := <-p.queuedAnns:
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
-				logger.Error("fail to SendNewBlockHashes","err",err)
+				logger.Error("fail to SendNewBlockHashes", "err", err)
 				continue
 				//return
 			}
@@ -406,7 +406,8 @@ func (p *peer) String() string {
 	)
 }
 
-type ByPassValidator struct {}
+type ByPassValidator struct{}
+
 func (v ByPassValidator) ValidatePeerType(addr common.Address) bool {
 	return true
 }
@@ -414,11 +415,11 @@ func (v ByPassValidator) ValidatePeerType(addr common.Address) bool {
 // peerSet represents the collection of active peers currently participating in
 // the Klaytn sub-protocol.
 type peerSet struct {
-	peers  map[string]*peer
+	peers   map[string]*peer
 	cnpeers map[common.Address]*peer
 	rnpeers map[common.Address]*peer
-	lock   sync.RWMutex
-	closed bool
+	lock    sync.RWMutex
+	closed  bool
 
 	validator map[p2p.ConnType]p2p.PeerTypeValidator
 }
@@ -426,9 +427,9 @@ type peerSet struct {
 // newPeerSet creates a new peer set to track the active participants.
 func newPeerSet() *peerSet {
 	peerSet := &peerSet{
-		peers: make(map[string]*peer),
-		cnpeers: make(map[common.Address]*peer),
-		rnpeers: make(map[common.Address]*peer),
+		peers:     make(map[string]*peer),
+		cnpeers:   make(map[common.Address]*peer),
+		rnpeers:   make(map[common.Address]*peer),
 		validator: make(map[p2p.ConnType]p2p.PeerTypeValidator),
 	}
 
@@ -461,7 +462,7 @@ func (ps *peerSet) Register(p *peer) error {
 		} else {
 			return errors.New("fail to validate cntype")
 		}
-	}else if p.ConnType() == node.RANGERNODE {
+	} else if p.ConnType() == node.RANGERNODE {
 		if _, ok := ps.rnpeers[p.addr]; ok {
 			return errAlreadyRegistered
 		}
@@ -489,7 +490,7 @@ func (ps *peerSet) Unregister(id string) error {
 	}
 	if p.ConnType() == node.CONSENSUSNODE {
 		delete(ps.cnpeers, p.addr)
-	}else if p.ConnType() == node.RANGERNODE {
+	} else if p.ConnType() == node.RANGERNODE {
 		delete(ps.rnpeers, p.addr)
 	}
 	delete(ps.peers, id)

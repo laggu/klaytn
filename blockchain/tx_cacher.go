@@ -1,8 +1,8 @@
 package blockchain
 
 import (
-	"runtime"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"runtime"
 )
 
 // senderCacher is a concurrent tranaction sender recoverer anc cacher.

@@ -2,23 +2,23 @@ package cn
 
 import (
 	"compress/gzip"
+	"context"
+	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/work"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/go-gxplatform/work"
 	"io"
 	"math/big"
 	"os"
 	"strings"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/params"
-	"context"
-	"errors"
 )
 
 // PublicGXPAPI provides an API to access GXPlatform full node-related
@@ -171,7 +171,7 @@ func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 
 // SetGasPrice sets the minimum accepted gas price for the miner.
 func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
-	if api.e.txPool.GasPrice().Cmp((*big.Int)(&gasPrice)) !=0 {
+	if api.e.txPool.GasPrice().Cmp((*big.Int)(&gasPrice)) != 0 {
 		logger.Debug("PrivateMinerAPI.SetGasPrice", "TxPool UnitPrice", api.e.txPool.GasPrice(), "Given UnitPrice", gasPrice.ToInt())
 		return false
 	}
@@ -179,7 +179,6 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	api.e.lock.Lock()
 	api.e.gasPrice = (*big.Int)(&gasPrice)
 	api.e.lock.Unlock()
-
 
 	api.e.txPool.SetGasPrice((*big.Int)(&gasPrice))
 	return true
@@ -496,4 +495,3 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 	}
 	return dirty, nil
 }
-

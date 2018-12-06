@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"errors"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/metrics"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"sync"
 	"time"
 )

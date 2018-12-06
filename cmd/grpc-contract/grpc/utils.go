@@ -1,12 +1,12 @@
 package grpc
 
 import (
-	"os"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/cmd/sol2proto/protobuf"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto"
 	"math/big"
+	"os"
 )
 
 type TransactOptsFn func(m *protobuf.TransactOpts) *bind.TransactOpts

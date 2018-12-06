@@ -2,8 +2,8 @@ package work
 
 import (
 	"container/ring"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"sync"
 )
 

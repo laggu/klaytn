@@ -2,10 +2,10 @@ package work
 
 import (
 	"github.com/ground-x/go-gxplatform/consensus"
-	"sync"
-	"sync/atomic"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/node"
+	"sync"
+	"sync/atomic"
 )
 
 type CpuAgent struct {
@@ -26,10 +26,10 @@ type CpuAgent struct {
 
 func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine, nodetype p2p.ConnType) *CpuAgent {
 	miner := &CpuAgent{
-		chain:  chain,
-		engine: engine,
-		stop:   make(chan struct{}, 1),
-		workCh: make(chan *Task, 1),
+		chain:    chain,
+		engine:   engine,
+		stop:     make(chan struct{}, 1),
+		workCh:   make(chan *Task, 1),
 		nodetype: nodetype,
 	}
 	return miner

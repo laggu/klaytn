@@ -5,26 +5,26 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
 	"github.com/ground-x/go-gxplatform/datasync/fetcher"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
+	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"math"
 	"math/big"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
-	"math/rand"
 )
 
 const (
@@ -95,7 +95,7 @@ type ProtocolManager struct {
 	blockMsgLock sync.RWMutex
 	msgCh        chan p2p.Msg
 
-	nodetype     p2p.ConnType
+	nodetype p2p.ConnType
 }
 
 // Ranger
@@ -348,11 +348,11 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	addr := crypto.PubkeyToAddress(*pubKey)
 
 	// TODO-GX check global worker and peer worker
-    messageChannel := make(chan p2p.Msg, channelSizePerPeer)
-    defer close(messageChannel)
-    errChannel := make(chan error, channelSizePerPeer)
-    for w := 1; w <= concurrentPerPeer; w++ {
-    	go pm.processMsg(messageChannel, p, addr, errChannel)
+	messageChannel := make(chan p2p.Msg, channelSizePerPeer)
+	defer close(messageChannel)
+	errChannel := make(chan error, channelSizePerPeer)
+	for w := 1; w <= concurrentPerPeer; w++ {
+		go pm.processMsg(messageChannel, p, addr, errChannel)
 	}
 
 	// main loop. handle incoming messages.
@@ -371,7 +371,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		messageChannel <- msg
 
 		select {
-		case err :=<- errChannel:
+		case err := <-errChannel:
 			return err
 		default:
 		}
@@ -743,20 +743,20 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		// Look up the rewardwallet containing the requested signer
 		tx := new(types.Transaction)
 		if err := msg.Decode(tx); err != nil {
-			logger.Error("ErrDecode","msg",msg, "err",err)
+			logger.Error("ErrDecode", "msg", msg, "err", err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		signer := types.MakeSigner(pm.chainconfig, pm.blockchain.CurrentBlock().Number())
 		from, err := types.Sender(signer, tx)
 		if err != nil {
-			logger.Error("ErrDecode","msg",msg, "err",err)
+			logger.Error("ErrDecode", "msg", msg, "err", err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		err = pm.PoRValidate(from, tx)
 		if err != nil {
-			logger.Error("PoRValidate","msg",msg, "err",err)
+			logger.Error("PoRValidate", "msg", msg, "err", err)
 			return errors.New("fail to validate por")
 		}
 
@@ -814,10 +814,10 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	// Broadcast transactions to a batch of peers not knowing about it
 	switch pm.nodetype {
-		case node.CONSENSUSNODE:
-			pm.broadcastCNTx(txs)
-		default:
-			pm.broadcastNoCNTx(txs, false)
+	case node.CONSENSUSNODE:
+		pm.broadcastCNTx(txs)
+	default:
+		pm.broadcastNoCNTx(txs, false)
 	}
 }
 
@@ -865,14 +865,14 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			} else {
 				peers = pm.peers.TypePeers(node.CONSENSUSNODE)
 			}
-            // TODO-GX need to tuning pickSize. currently 3 is for availability and efficiency
+			// TODO-GX need to tuning pickSize. currently 3 is for availability and efficiency
 			peers = pm.subPeers(peers, 3)
 			for _, peer := range peers {
 				txset[peer] = append(txset[peer], tx)
 			}
 		} else {
 			peers := pm.peers.CNWithoutTx(tx.Hash())
-			if len(peers) >  0 {
+			if len(peers) > 0 {
 				// TODO-GX optimize pickSize or propagation way
 				peers = pm.subPeers(peers, 2)
 				for _, peer := range peers {

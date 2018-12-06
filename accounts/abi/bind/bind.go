@@ -1,14 +1,14 @@
 package bind
 
 import (
-	"fmt"
-	"strings"
 	"bytes"
-	"unicode"
+	"fmt"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"golang.org/x/tools/imports"
 	"regexp"
-	"github.com/ground-x/go-gxplatform/accounts/abi"
+	"strings"
 	"text/template"
+	"unicode"
 )
 
 // Lang is a target programming language selector to generate bindings for.
@@ -97,14 +97,14 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 			events[original.Name] = &tmplEvent{Original: original, Normalized: normalized}
 		}
 		contracts[types[i]] = &tmplContract{
-			Type:        capitalise(types[i]),
-			InputABI:    strings.Replace(strippedABI, "\"", "\\\"", -1),
-			InputBin:    strings.TrimSpace(bytecodes[i]),
+			Type:            capitalise(types[i]),
+			InputABI:        strings.Replace(strippedABI, "\"", "\\\"", -1),
+			InputBin:        strings.TrimSpace(bytecodes[i]),
 			InputBinRuntime: strings.TrimSpace(runtimebytecodes[i]),
-			Constructor: evmABI.Constructor,
-			Calls:       calls,
-			Transacts:   transacts,
-			Events:      events,
+			Constructor:     evmABI.Constructor,
+			Calls:           calls,
+			Transacts:       transacts,
+			Events:          events,
 		}
 	}
 	// Generate the contract template data content and render it

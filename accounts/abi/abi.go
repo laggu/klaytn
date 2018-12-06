@@ -1,10 +1,10 @@
 package abi
 
 import (
-	"encoding/json"
-	"io"
-	"fmt"
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 )
 
 // The ABI holds information about a contract's context and available
@@ -128,6 +128,3 @@ func (abi *ABI) MethodById(sigdata []byte) (*Method, error) {
 	}
 	return nil, fmt.Errorf("no method with id: %#x", sigdata[:4])
 }
-
-
-

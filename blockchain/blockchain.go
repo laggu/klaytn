@@ -19,41 +19,41 @@ package blockchain
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/mclock"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/mclock"
+	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/hashicorp/golang-lru"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"io"
 	"math/big"
 	mrand "math/rand"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
-	"reflect"
-	"github.com/hashicorp/golang-lru"
 )
 
 var (
 	blockInsertTimer = metrics.NewRegisteredTimer("chain/inserts", nil)
-	ErrNoGenesis = errors.New("Genesis not found in chain")
-	logger = log.NewModuleLogger(log.Blockchain)
+	ErrNoGenesis     = errors.New("Genesis not found in chain")
+	logger           = log.NewModuleLogger(log.Blockchain)
 )
 
 // TODO-GX: Below should be handled by ini or other configurations.
 const (
-	futureBlocksCacheType  = common.LRUCacheType
-	badBlocksCacheType     = common.LRUCacheType
+	futureBlocksCacheType = common.LRUCacheType
+	badBlocksCacheType    = common.LRUCacheType
 )
 
 // Below is the list of the constants for cache size.
@@ -78,11 +78,12 @@ const (
 const (
 	triesInMemory = 128
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
-	BlockChainVersion = 3
+	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
 )
 
 type blockChainCacheKey int
+
 const (
 	bodyCacheIndex blockChainCacheKey = iota
 	bodyRLPCacheIndex
@@ -93,20 +94,20 @@ const (
 	blockCacheKeySize
 )
 
-var blockLRUCacheConfig = [blockCacheKeySize]common.CacheConfiger {
-	bodyCacheIndex: 	common.LRUConfig{CacheSize: maxBodyCache},
-	bodyRLPCacheIndex: 	common.LRUConfig{CacheSize: maxBodyCache},
-	blockCacheIndex: 	common.LRUConfig{CacheSize: maxBlockCache},
-	recentTransactionsIndex: 	common.LRUConfig{CacheSize: maxRecentTransactions},
-	recentReceiptsIndex: 		common.LRUConfig{CacheSize: maxRecentReceipts},
+var blockLRUCacheConfig = [blockCacheKeySize]common.CacheConfiger{
+	bodyCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache},
+	bodyRLPCacheIndex:       common.LRUConfig{CacheSize: maxBodyCache},
+	blockCacheIndex:         common.LRUConfig{CacheSize: maxBlockCache},
+	recentTransactionsIndex: common.LRUConfig{CacheSize: maxRecentTransactions},
+	recentReceiptsIndex:     common.LRUConfig{CacheSize: maxRecentReceipts},
 }
 
-var blockLRUShardCacheConfig = [blockCacheKeySize]common.CacheConfiger {
-	bodyCacheIndex: 	common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	bodyRLPCacheIndex: 	common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	blockCacheIndex: 	common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
-	recentTransactionsIndex:	common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
-	recentReceiptsIndex: 		common.LRUShardConfig{CacheSize: maxRecentReceipts,		NumShards: numShardsRecentReceipts},
+var blockLRUShardCacheConfig = [blockCacheKeySize]common.CacheConfiger{
+	bodyCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
+	bodyRLPCacheIndex:       common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
+	blockCacheIndex:         common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
+	recentTransactionsIndex: common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
+	recentReceiptsIndex:     common.LRUShardConfig{CacheSize: maxRecentReceipts, NumShards: numShardsRecentReceipts},
 }
 
 func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheType) common.Cache {
@@ -126,9 +127,9 @@ func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheT
 // TrieConfig contains the configuration values for the trie caching/pruning
 // that's resident in a blockchain.
 type TrieConfig struct {
-	Disabled  bool          // Whether to disable trie write caching (archive node)
-	CacheSize int           // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval uint      // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+	Disabled      bool // Whether to disable trie write caching (archive node)
+	CacheSize     int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -150,7 +151,7 @@ type BlockChain struct {
 	trieConfig  *TrieConfig         // Trie configuration for pruning
 
 	db     database.DBManager // Low level persistent database to store final content in
-	triegc *prque.Prque      // Priority queue mapping block numbers to tries to gc
+	triegc *prque.Prque       // Priority queue mapping block numbers to tries to gc
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -173,7 +174,7 @@ type BlockChain struct {
 	bodyCache    common.Cache   // Cache for the most recent block bodies
 	bodyRLPCache common.Cache   // Cache for the most recent block bodies in RLP encoded format
 	blockCache   common.Cache   // Cache for the most recent entire blocks
-	futureBlocks *lru.Cache   // future blocks are blocks added for later processing
+	futureBlocks *lru.Cache     // future blocks are blocks added for later processing
 
 	quit    chan struct{} // blockchain quit channel
 	running int32         // running must be called atomically
@@ -200,7 +201,7 @@ func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *p
 	if trieConfig == nil {
 		trieConfig = &TrieConfig{
 			Disabled:      false,
-			CacheSize: 256 * 1024 * 1024,
+			CacheSize:     256 * 1024 * 1024,
 			BlockInterval: DefaultBlockInterval,
 		}
 	}
@@ -217,16 +218,16 @@ func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *p
 		triegc:       prque.New(),
 		stateCache:   state.NewDatabase(db),
 		quit:         make(chan struct{}),
-		bodyCache:    newBlockChainCache(bodyCacheIndex,	common.DefaultCacheType),
+		bodyCache:    newBlockChainCache(bodyCacheIndex, common.DefaultCacheType),
 		bodyRLPCache: newBlockChainCache(bodyRLPCacheIndex, common.DefaultCacheType),
-		blockCache:   newBlockChainCache(blockCacheIndex, 	common.DefaultCacheType),
+		blockCache:   newBlockChainCache(blockCacheIndex, common.DefaultCacheType),
 		futureBlocks: futureBlocks,
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		// tx, receipt cache
 		recentTransactions: newBlockChainCache(recentTransactionsIndex, common.DefaultCacheType),
-		recentReceipts:     newBlockChainCache(recentReceiptsIndex, 	common.DefaultCacheType),
+		recentReceipts:     newBlockChainCache(recentReceiptsIndex, common.DefaultCacheType),
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -766,7 +767,7 @@ func (bc *BlockChain) Stop() {
 				recent := bc.GetBlockByNumber(number - offset)
 
 				if recent == nil {
-					logger.Error("Failed to find recent block from persistent", "blockNumber", number - offset)
+					logger.Error("Failed to find recent block from persistent", "blockNumber", number-offset)
 					continue
 				}
 
@@ -791,7 +792,7 @@ func (bc *BlockChain) procFutureBlocks() {
 	for _, hash := range bc.futureBlocks.Keys() {
 		hashKey, ok := hash.(common.CacheKey)
 		if !ok {
-			logger.Error("invalid key type","expect","common.CacheKey","actual",reflect.TypeOf(hash))
+			logger.Error("invalid key type", "expect", "common.CacheKey", "actual", reflect.TypeOf(hash))
 			continue
 		}
 
@@ -887,7 +888,7 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 	return nil
 }
 
-func writeBatches(batches... database.Batch)  (int, error) {
+func writeBatches(batches ...database.Batch) (int, error) {
 	bytes := 0
 	for _, batch := range batches {
 		if batch.ValueSize() > 0 {
@@ -900,7 +901,7 @@ func writeBatches(batches... database.Batch)  (int, error) {
 	return bytes, nil
 }
 
-func writeBatchesOverThreshold(batches... database.Batch)  (int, error) {
+func writeBatchesOverThreshold(batches ...database.Batch) (int, error) {
 	bytes := 0
 	for _, batch := range batches {
 		if batch.ValueSize() >= database.IdealBatchSize {
@@ -936,8 +937,8 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		bytes = 0
 
 		// TODO-GX Needs to roll back if any one of batches fails
-		bodyBatch = bc.db.NewBatch(database.BodyDB)
-		receiptsBatch = bc.db.NewBatch(database.ReceiptsDB)
+		bodyBatch            = bc.db.NewBatch(database.BodyDB)
+		receiptsBatch        = bc.db.NewBatch(database.ReceiptsDB)
 		txLookupEntriesBatch = bc.db.NewBatch(database.TxLookUpEntryDB)
 	)
 	for i, block := range blockChain {
@@ -1015,7 +1016,7 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) {
 }
 
 type TransactionLookup struct {
-	Tx         *types.Transaction
+	Tx *types.Transaction
 	*database.TxLookupEntry
 }
 
@@ -1619,7 +1620,7 @@ func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
 	for _, hash := range bc.badBlocks.Keys() {
 		hashKey, ok := hash.(common.CacheKey)
 		if !ok {
-			logger.Error("invalid key type","expect","common.CacheKey","actual",reflect.TypeOf(hash))
+			logger.Error("invalid key type", "expect", "common.CacheKey", "actual", reflect.TypeOf(hash))
 			continue
 		}
 
@@ -1798,6 +1799,6 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 
 // isArchiveMode returns whether current blockchain is in archiving mode or not.
 // trieConfig.Disabled means trie caching is diabled.
-func (bc* BlockChain) isArchiveMode() bool {
+func (bc *BlockChain) isArchiveMode() bool {
 	return bc.trieConfig.Disabled
 }

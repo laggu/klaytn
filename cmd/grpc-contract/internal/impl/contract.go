@@ -1,15 +1,15 @@
 package impl
 
 import (
-	"strings"
-	"sort"
-	"fmt"
-	"os"
 	"bytes"
+	"fmt"
 	"golang.org/x/tools/imports"
+	"os"
+	"sort"
+	"strings"
 
-	"text/template"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"text/template"
 )
 
 type Contract struct {
@@ -98,11 +98,11 @@ func (c *Contract) Write(filepath, filename string) {
 		fmt.Printf("Failed to process code: %v\n", err)
 		os.Exit(-1)
 	}
-	utils.WriteFile(string(code), filepath, filename + ".go")
+	utils.WriteFile(string(code), filepath, filename+".go")
 
 	// generate server main
-	server := &Server{c.Name,c.Package}
-	server.Write(filepath, strings.Join([]string{filename,"main"},"_") + ".go")
+	server := &Server{c.Name, c.Package}
+	server.Write(filepath, strings.Join([]string{filename, "main"}, "_")+".go")
 }
 
 type Sources []string

@@ -1,9 +1,9 @@
 package abi
 
 import (
-	"reflect"
-	"fmt"
 	"errors"
+	"fmt"
+	"reflect"
 )
 
 var (
@@ -66,4 +66,3 @@ func typeCheck(t Type, value reflect.Value) error {
 func typeErr(expected, got interface{}) error {
 	return fmt.Errorf("abi: cannot use %v as type %v as argument", got, expected)
 }
-

@@ -17,9 +17,9 @@
 package database
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
 	"bytes"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/common"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -27,7 +27,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	)
+)
 
 func newTestLDB() (*levelDB, func()) {
 	dirName, err := ioutil.TempDir(os.TempDir(), "klay_leveldb_test_")
@@ -175,7 +175,7 @@ func TestShardDB(t *testing.T) {
 
 	key := common.Hex2Bytes("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da306")
 
-	hashstring := strings.TrimPrefix("0x93d6f3d2537d8a0bd7d485dcc59151ebc00da306","0x")
+	hashstring := strings.TrimPrefix("0x93d6f3d2537d8a0bd7d485dcc59151ebc00da306", "0x")
 	if len(hashstring) > 15 {
 		hashstring = hashstring[:15]
 	}
@@ -183,7 +183,7 @@ func TestShardDB(t *testing.T) {
 
 	partition := seed % int64(12)
 
-	idx := common.BytesToHash(key).Big().Mod(common.BytesToHash(key).Big(),big.NewInt(4))
+	idx := common.BytesToHash(key).Big().Mod(common.BytesToHash(key).Big(), big.NewInt(4))
 
 	fmt.Printf("idx %d   %d   %d", idx, partition, seed)
 

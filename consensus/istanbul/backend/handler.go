@@ -2,12 +2,12 @@ package backend
 
 import (
 	"errors"
-	"github.com/hashicorp/golang-lru"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/node"
+	"github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -26,7 +26,7 @@ func (sb *backend) Protocol() consensus.Protocol {
 		Versions: []uint{64},
 		//Lengths:  []uint64{18},
 		//Lengths:  []uint64{19},  // add PoRMsg
-		Lengths:  []uint64{20},  // add PoRSendMsg
+		Lengths: []uint64{20}, // add PoRSendMsg
 	}
 }
 
@@ -46,7 +46,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		if err := msg.Decode(&cmsg); err != nil {
 			return true, errDecodeFailed
 		}
-        data := cmsg.Payload
+		data := cmsg.Payload
 		hash := istanbul.RLPHash(data)
 
 		// Mark peer's message
@@ -68,7 +68,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 		go sb.istanbulEventMux.Post(istanbul.MessageEvent{
 			Payload: data,
-			Hash: cmsg.PrevHash,
+			Hash:    cmsg.PrevHash,
 		})
 
 		return true, nil

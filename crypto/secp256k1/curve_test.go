@@ -1,9 +1,9 @@
 package secp256k1
 
 import (
-	"testing"
 	"encoding/hex"
 	"fmt"
+	"testing"
 )
 
 func TestAddSamePoint(t *testing.T) {
@@ -15,7 +15,7 @@ func TestAddSamePoint(t *testing.T) {
 		Although executing (big.Int).Mul(nil, nil) is not problematic in Go 1.10.3, it has been found invoking the same
 		is fatal in Go 1.11 (causing SIGSEGV; terminating the program).
 
-	 */
+	*/
 	x0, _ := hex.DecodeString("4f52e337ad8bf1ce10cbb72ab91d9954474cea39811040df5558297df3e3c1bf") // Alice
 	x1, _ := hex.DecodeString("4f52e337ad8bf1ce10cbb72ab91d9954474cea39811040df5558297df3e3c1bf") // Alice
 

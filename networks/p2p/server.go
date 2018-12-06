@@ -202,23 +202,21 @@ const (
 
 type ConnType int
 
-
 const (
 	ConnTypeUndefined ConnType = -1
 )
-
 
 // conn wraps a network connection with information gathered
 // during the two handshakes.
 type conn struct {
 	fd net.Conn
 	transport
-	flags connFlag
-	conntype ConnType	  // valid after the encryption handshake at the inbound connection case
-	cont  chan error      // The run loop uses cont to signal errors to SetupConn.
-	id    discover.NodeID // valid after the encryption handshake
-	caps  []Cap           // valid after the protocol handshake
-	name  string          // valid after the protocol handshake
+	flags    connFlag
+	conntype ConnType        // valid after the encryption handshake at the inbound connection case
+	cont     chan error      // The run loop uses cont to signal errors to SetupConn.
+	id       discover.NodeID // valid after the encryption handshake
+	caps     []Cap           // valid after the protocol handshake
+	name     string          // valid after the protocol handshake
 }
 
 type transport interface {
@@ -873,7 +871,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *discover.Node) e
 	// Run the connection type handshake
 	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
 		srv.logger.Error("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
-			"conntype", c.conntype, "err",  err)
+			"conntype", c.conntype, "err", err)
 		return err
 	}
 	srv.logger.Trace("Connection Type Trace", "addr", c.fd.RemoteAddr(), "conn", c.flags, "ConnType", c.conntype.String())

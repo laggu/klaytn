@@ -31,14 +31,14 @@ var (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(1),
-		Gxhash:         new(GxhashConfig),
+		ChainID: big.NewInt(1),
+		Gxhash:  new(GxhashConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(2),
-		Gxhash:         new(GxhashConfig),
+		ChainID: big.NewInt(2),
+		Gxhash:  new(GxhashConfig),
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
@@ -47,11 +47,11 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	AllGxhashProtocolChanges = &ChainConfig{
-		ChainID: big.NewInt(0),
-		Gxhash: new(GxhashConfig),
-		Clique: nil,
+		ChainID:  big.NewInt(0),
+		Gxhash:   new(GxhashConfig),
+		Clique:   nil,
 		Istanbul: nil,
-		IsBFT: false,
+		IsBFT:    false,
 	}
 
 	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
@@ -60,31 +60,31 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	AllCliqueProtocolChanges = &ChainConfig{
-		ChainID: big.NewInt(0),
-		Gxhash: nil,
-		Clique: &CliqueConfig{Period: 0, Epoch: 30000},
+		ChainID:  big.NewInt(0),
+		Gxhash:   nil,
+		Clique:   &CliqueConfig{Period: 0, Epoch: 30000},
 		Istanbul: nil,
-		IsBFT: false,
+		IsBFT:    false,
 	}
 
 	TestChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		Gxhash: new(GxhashConfig),
-		Clique: nil,
-		Istanbul: nil,
-		IsBFT: false,
-		UnitPrice: 1, // NOTE-GX Use UnitPrice 1 for tests
+		ChainID:       big.NewInt(1),
+		Gxhash:        new(GxhashConfig),
+		Clique:        nil,
+		Istanbul:      nil,
+		IsBFT:         false,
+		UnitPrice:     1, // NOTE-GX Use UnitPrice 1 for tests
 		DeriveShaImpl: 0,
 	}
-	TestRules       = TestChainConfig.Rules(new(big.Int))
+	TestRules = TestChainConfig.Rules(new(big.Int))
 
 	// istanbul BFT
 	BFTTestChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		Gxhash: new(GxhashConfig),
-		Clique: nil,
+		ChainID:  big.NewInt(1),
+		Gxhash:   new(GxhashConfig),
+		Clique:   nil,
 		Istanbul: nil,
-		IsBFT: true,
+		IsBFT:    true,
 	}
 )
 
@@ -97,13 +97,13 @@ type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
 	// Various consensus engines
-	Gxhash *GxhashConfig `json:"gxhash,omitempty"`
-	Clique *CliqueConfig `json:"clique,omitempty"`
+	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"`
+	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
-	IsBFT bool `json:"isBFT"`
-	UnitPrice uint64 `json:"unitPrice"`
-	DeriveShaImpl int `json:"deriveShaImpl"`
+	IsBFT         bool   `json:"isBFT"`
+	UnitPrice     uint64 `json:"unitPrice"`
+	DeriveShaImpl int    `json:"deriveShaImpl"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -159,7 +159,7 @@ func (c *ChainConfig) String() string {
 			c.UnitPrice,
 			c.DeriveShaImpl,
 		)
-	}else {
+	} else {
 		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v UnitPrice: %d DeriveShaImpl: %d}",
 			c.ChainID,
 			c.IsBFT,
@@ -260,7 +260,7 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID     *big.Int
+	ChainID *big.Int
 }
 
 // Rules ensures c's ChainID is not nil.

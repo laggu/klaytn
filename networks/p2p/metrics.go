@@ -30,11 +30,11 @@ var (
 	egressConnectMeter  = metrics.NewRegisteredMeter("p2p/OutboundConnects", nil)
 	egressTrafficMeter  = metrics.NewRegisteredMeter("p2p/OutboundTraffic", nil)
 
-	peerCountGauge = metrics.NewRegisteredGauge("p2p/PeerCountGauge", nil)
-	peerInCountGauge = metrics.NewRegisteredGauge("p2p/PeerInCountGauge", nil)
-	peerOutCountGauge = metrics.NewRegisteredGauge("p2p/PeerOutCountGauge",nil)
+	peerCountGauge    = metrics.NewRegisteredGauge("p2p/PeerCountGauge", nil)
+	peerInCountGauge  = metrics.NewRegisteredGauge("p2p/PeerInCountGauge", nil)
+	peerOutCountGauge = metrics.NewRegisteredGauge("p2p/PeerOutCountGauge", nil)
 
-	dialTryCounter = metrics.NewRegisteredCounter("p2p/DialTryCounter", nil)
+	dialTryCounter  = metrics.NewRegisteredCounter("p2p/DialTryCounter", nil)
 	dialFailCounter = metrics.NewRegisteredCounter("p2p/DialFailCounter", nil)
 )
 

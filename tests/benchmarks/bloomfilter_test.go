@@ -19,11 +19,11 @@ package benchmarks
 
 import (
 	"bytes"
-	"testing"
-	"math/big"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"math/big"
+	"testing"
 )
 
 var addrs = []string{
@@ -152,24 +152,24 @@ type testOption struct {
 
 var lookupBenchmarks = [...]struct {
 	name string
-	opt testOption
-} {
+	opt  testOption
+}{
 	{"True", testOption{addrs, true, "expected"}},
 	{"False", testOption{badAddrs, false, "did not expect"}},
 }
 
 var compareBenchmarks = [...]struct {
 	name string
-	opt testOption
-} {
+	opt  testOption
+}{
 	{"Same", testOption{addrs, true, "to be the same as"}},
 	{"Different", testOption{badAddrs, false, "to be different from"}},
 }
 
 var bitandBenchmarks = [...]struct {
 	name string
-	opt testOption
-} {
+	opt  testOption
+}{
 	{"True", testOption{addrs, true, "expected"}},
 	{"False", testOption{badAddrs, false, "did not expect"}},
 }
@@ -203,7 +203,7 @@ func Benchmark_Map_Add(b *testing.B) {
 
 	b.ResetTimer()
 	for k := 0; k < b.N; k++ {
-		addr := addrs[k % numAddrs]
+		addr := addrs[k%numAddrs]
 		toset[addr] = k
 	}
 }
@@ -213,7 +213,7 @@ func benchmark_Map_Lookup(b *testing.B, toset map[string]int, opt *testOption) {
 
 	b.ResetTimer()
 	for k := 0; k < b.N; k++ {
-		addr := opt.testAddrs[k % numAddrs]
+		addr := opt.testAddrs[k%numAddrs]
 		if _, exists := toset[addr]; exists != opt.expected {
 			b.Error(opt.msg, addr, "to test true")
 		}
@@ -237,7 +237,7 @@ func Benchmark_Bloom_Add(b *testing.B) {
 	numAddrs := len(addrs)
 
 	b.ResetTimer()
-	for k := 0; k < b.N / numAddrs; k++ {
+	for k := 0; k < b.N/numAddrs; k++ {
 		var bloom types.Bloom
 		for _, addr := range addrs {
 			bloom.Add(new(big.Int).SetBytes([]byte(addr)))
@@ -250,7 +250,7 @@ func benchmark_Bloom_Lookup(b *testing.B, bloom types.Bloom, opt *testOption) {
 
 	b.ResetTimer()
 	for k := 0; k < b.N; k++ {
-		addr := opt.testAddrs[k % numAddrs]
+		addr := opt.testAddrs[k%numAddrs]
 		if bloom.TestBytes([]byte(addr)) != opt.expected {
 			b.Error(opt.msg, addr, "to test true")
 		}
@@ -353,7 +353,7 @@ func Benchmark_LDBBloom_Add(b *testing.B) {
 	numAddrs := len(addrs)
 
 	b.ResetTimer()
-	for k := 0; k < b.N / numAddrs; k++ {
+	for k := 0; k < b.N/numAddrs; k++ {
 		bloomFilter := filter.NewBloomFilter(bitsPerKey)
 		generator := bloomFilter.NewGenerator()
 		for _, addr := range addrs {
@@ -369,7 +369,7 @@ func benchmark_LDBBloom_Lookup(b *testing.B, bloomFilter filter.Filter, filterIn
 
 	b.ResetTimer()
 	for k := 0; k < b.N; k++ {
-		addr := opt.testAddrs[k % numAddrs]
+		addr := opt.testAddrs[k%numAddrs]
 		if bloomFilter.Contains(filterInstance, []byte(addr)) != opt.expected {
 			b.Error(opt.msg, addr, "to test true")
 		}
@@ -397,7 +397,7 @@ func benchmark_LDBBloom_Compare(b *testing.B, bloomFilter filter.Filter, filterI
 	numAddrs := len(opt.testAddrs)
 	generator2 := bloomFilter.NewGenerator()
 	for i := 0; i < len(addrs); i++ {
-		generator2.Add([]byte(opt.testAddrs[i % numAddrs]))
+		generator2.Add([]byte(opt.testAddrs[i%numAddrs]))
 	}
 	buf2 := &util.Buffer{}
 	generator2.Generate(buf2)

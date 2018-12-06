@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/websocket"
 	"gopkg.in/fatih/set.v0"
 	"net"
 	"net/http"
@@ -13,11 +14,10 @@ import (
 	"os"
 	"strings"
 	"time"
-	"golang.org/x/net/websocket"
 
+	"bufio"
 	fastws "github.com/clevergo/websocket"
 	"github.com/valyala/fasthttp"
-	"bufio"
 )
 
 // websocketJSONCodec is a custom JSON codec with payload size enforcement and
@@ -69,10 +69,10 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 	// TODO-GX handle websocket protocol
 	protocol := ctx.Request.Header.Peek("Sec-WebSocket-Protocol")
 	if protocol != nil {
-		ctx.Response.Header.Set("Sec-WebSocket-Protocol",string(protocol))
+		ctx.Response.Header.Set("Sec-WebSocket-Protocol", string(protocol))
 	}
 
-	err := upgrader.Upgrade(ctx,func(conn *fastws.Conn) {
+	err := upgrader.Upgrade(ctx, func(conn *fastws.Conn) {
 		//Create a custom encode/decode pair to enforce payload size and number encoding
 		encoder := func(v interface{}) error {
 			msg, err := json.Marshal(v)
@@ -98,11 +98,11 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 			//return fastws.ReadJSON(conn, v)
 		}
 
-		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()),maxRequestContentLength)
+		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()), maxRequestContentLength)
 		srv.ServeCodec(NewCodec(&httpReadWriteNopCloser{reader, ctx.Response.BodyWriter()}, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 	})
 	if err != nil {
-		logger.Error("FastWebsocketHandler fail to upgrade message","err",err)
+		logger.Error("FastWebsocketHandler fail to upgrade message", "err", err)
 		return
 	}
 }

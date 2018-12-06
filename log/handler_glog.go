@@ -1,14 +1,14 @@
 package log
 
 import (
-	"sync"
-	"regexp"
-	"sync/atomic"
-	"strings"
-	"strconv"
-	"runtime"
-	"fmt"
 	"errors"
+	"fmt"
+	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 // errVmoduleSyntax is returned when a user vmodule pattern is invalid.

@@ -17,15 +17,15 @@
 package statedb
 
 import (
+	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"io"
 	"sync"
 	"time"
-	"github.com/ground-x/go-gxplatform/metrics"
-	"io"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"fmt"
 )
 
 var (
@@ -64,12 +64,12 @@ type DatabaseReader interface {
 type Database struct {
 	diskDB database.DBManager // Persistent storage for matured trie nodes
 
-	nodes     map[common.Hash]*cachedNode // Data and references relationships of a node
+	nodes  map[common.Hash]*cachedNode // Data and references relationships of a node
 	oldest common.Hash                 // Oldest tracked node, flush-list head
 	newest common.Hash                 // Newest tracked node, flush-list tail
 
-	preimages map[common.Hash][]byte      // Preimages of nodes from the secure trie
-	seckeybuf [secureKeyLength]byte       // Ephemeral buffer for calculating preimage keys
+	preimages map[common.Hash][]byte // Preimages of nodes from the secure trie
+	seckeybuf [secureKeyLength]byte  // Ephemeral buffer for calculating preimage keys
 
 	gctime  time.Duration      // Time spent on garbage collection since last commit
 	gcnodes uint64             // Nodes garbage collected since last commit
@@ -131,7 +131,7 @@ func (n rawShortNode) fstring(ind string) string     { panic("this should never 
 // cachedNode is all the information we know about a single cached node in the
 // memory database write layer.
 type cachedNode struct {
-	node node   // Cached collapsed trie node, or raw rlp data
+	node node // Cached collapsed trie node, or raw rlp data
 	// TODO-GX: need to change data type of this if we increase the code size limit
 	size uint16 // Byte size of the useful cached data
 
@@ -586,8 +586,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	return nil
 }
 
-
-func (db* Database) writeBatchPreimages() error {
+func (db *Database) writeBatchPreimages() error {
 	// TODO-GX What kind of batch should be used below?
 	preimagesBatch := db.diskDB.NewBatch(database.StateTrieDB)
 
@@ -614,7 +613,7 @@ func (db* Database) writeBatchPreimages() error {
 	return nil
 }
 
-func (db* Database) writeBatchNodes(node common.Hash) error {
+func (db *Database) writeBatchNodes(node common.Hash) error {
 	// TODO-GX What kind of batch should be used below?
 	nodesBatch := db.diskDB.NewBatch(database.StateTrieDB)
 
@@ -631,7 +630,6 @@ func (db* Database) writeBatchNodes(node common.Hash) error {
 
 	return nil
 }
-
 
 // Commit iterates over all the children of a particular node, writes them out
 // to disk, forcefully tearing down all references in both directions.
@@ -797,7 +795,7 @@ func (db *Database) removeNodeInFlushList(hash common.Hash) {
 		db.newest = common.Hash{}
 	} else if hash == db.oldest {
 		db.oldest = node.flushNext
-		db.nodes[node.flushNext].flushPrev  = common.Hash{}
+		db.nodes[node.flushNext].flushPrev = common.Hash{}
 	} else if hash == db.newest {
 		db.newest = node.flushPrev
 		db.nodes[node.flushPrev].flushNext = common.Hash{}
@@ -811,7 +809,7 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 	var lastNodeHash common.Hash
 	nodeHash := db.oldest
 	for {
-		if _, ok := db.nodes[nodeHash]; ok{
+		if _, ok := db.nodes[nodeHash]; ok {
 			lastNodeHash = nodeHash
 		} else {
 			logger.Debug("not found next noode in map of flush list")

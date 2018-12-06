@@ -1,11 +1,11 @@
 package abi
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
-	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Type enumerator

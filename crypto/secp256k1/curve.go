@@ -37,7 +37,7 @@ import (
 	"unsafe"
 
 	"github.com/ground-x/go-gxplatform/common/math"
-	)
+)
 
 /*
 #include "libsecp256k1/include/secp256k1.h"

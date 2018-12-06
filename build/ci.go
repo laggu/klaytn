@@ -46,9 +46,9 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/utils/build"
 	"go/parser"
 	"go/token"
-	"github.com/ground-x/go-gxplatform/utils/build"
 	"io/ioutil"
 	"log"
 	"os"
@@ -112,6 +112,8 @@ func main() {
 		doInstall(os.Args[2:])
 	case "test":
 		doTest(os.Args[2:])
+	case "fmt":
+		doFmt(os.Args[2:])
 	case "lint":
 		doLint(os.Args[2:])
 	case "archive":
@@ -280,6 +282,28 @@ func doTest(cmdline []string) {
 	build.MustRun(gotest)
 }
 
+func doFmt(cmdline []string) {
+	// runs gometalinter on requested packages
+	flag.CommandLine.Parse(cmdline)
+
+	packages := []string{"./..."}
+	if len(flag.CommandLine.Args()) > 0 {
+		packages = flag.CommandLine.Args()
+	}
+	// Get metalinter and install all supported linters
+	build.MustRun(goTool("get", "gopkg.in/alecthomas/gometalinter.v2"))
+	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), "--install")
+
+	// Run fast linters batched together
+	configs := []string{
+		"--vendor",
+		//"--tests",
+		"--disable-all",
+		"--enable=gofmt",
+	}
+	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
+}
+
 // runs gometalinter on requested packages
 func doLint(cmdline []string) {
 	flag.CommandLine.Parse(cmdline)
@@ -337,7 +361,7 @@ func doArchive(cmdline []string) {
 	var (
 		env      = build.Env()
 		base     = archiveBasename(*arch, env)
-		gxp     = "klay-" + base + ext
+		gxp      = "klay-" + base + ext
 		alltools = "klay-alltools-" + base + ext
 	)
 	maybeSkipArchive(env)
@@ -625,7 +649,7 @@ func doWindowsInstaller(cmdline []string) {
 	// first section contains the geth binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"Klay":      gxpTool,
+		"Klay":     gxpTool,
 		"DevTools": devTools,
 	}
 	build.Render("build/nsis.klay.nsi", filepath.Join(*workdir, "klay.nsi"), 0644, nil)

@@ -2,9 +2,9 @@ package cn
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"io"

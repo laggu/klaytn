@@ -22,14 +22,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 
 	"crypto/ecdsa"
 )
@@ -44,7 +44,6 @@ func BenchmarkInsertChain_empty_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BADGER, nil)
 }
 
-
 func BenchmarkInsertChain_valueTx_memDB(b *testing.B) {
 	benchInsertChain(b, database.MEMDB, genValueTx(0))
 }
@@ -54,7 +53,6 @@ func BenchmarkInsertChain_valueTx_levelDB(b *testing.B) {
 func BenchmarkInsertChain_valueTx_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BADGER, genValueTx(0))
 }
-
 
 func BenchmarkInsertChain_valueTx_10kB_memDB(b *testing.B) {
 	benchInsertChain(b, database.MEMDB, genValueTx(100*1024))
@@ -66,7 +64,6 @@ func BenchmarkInsertChain_valueTx_10kB_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BADGER, genValueTx(100*1024))
 }
 
-
 func BenchmarkInsertChain_uncles_memDB(b *testing.B) {
 	benchInsertChain(b, database.MEMDB, genUncles)
 }
@@ -77,7 +74,6 @@ func BenchmarkInsertChain_uncles_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BADGER, genUncles)
 }
 
-
 func BenchmarkInsertChain_ring200_memDB(b *testing.B) {
 	benchInsertChain(b, database.MEMDB, genTxRing(200))
 }
@@ -87,7 +83,6 @@ func BenchmarkInsertChain_ring200_levelDB(b *testing.B) {
 func BenchmarkInsertChain_ring200_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BADGER, genTxRing(200))
 }
-
 
 func BenchmarkInsertChain_ring1000_memDB(b *testing.B) {
 	benchInsertChain(b, database.MEMDB, genTxRing(1000))
@@ -180,7 +175,6 @@ func benchInsertChain(b *testing.B, databaseType string, gen func(int, *BlockGen
 	db := genDBManagerForTest(b, dir, databaseType)
 	defer db.Close()
 
-
 	// 2. Generate a chain of b.N blocks using the supplied block generator function.
 	gspec := Genesis{
 		Config: params.TestChainConfig,
@@ -202,34 +196,31 @@ func benchInsertChain(b *testing.B, databaseType string, gen func(int, *BlockGen
 
 // BenchmarkChainRead Series
 func BenchmarkChainRead_header_10k_levelDB(b *testing.B) {
-	benchReadChain(b, false, database.LEVELDB,10000)
+	benchReadChain(b, false, database.LEVELDB, 10000)
 }
 func BenchmarkChainRead_header_10k_badgerDB(b *testing.B) {
-	benchReadChain(b, false,  database.BADGER,10000)
+	benchReadChain(b, false, database.BADGER, 10000)
 }
-
 
 func BenchmarkChainRead_full_10k_levelDB(b *testing.B) {
-	benchReadChain(b, true, database.LEVELDB,10000)
+	benchReadChain(b, true, database.LEVELDB, 10000)
 }
 func BenchmarkChainRead_full_10k_badgerDB(b *testing.B) {
-	benchReadChain(b, true,  database.BADGER,10000)
+	benchReadChain(b, true, database.BADGER, 10000)
 }
-
 
 func BenchmarkChainRead_header_100k_levelDB(b *testing.B) {
-	benchReadChain(b, false, database.LEVELDB,100000)
+	benchReadChain(b, false, database.LEVELDB, 100000)
 }
 func BenchmarkChainRead_header_100k_badgerDB(b *testing.B) {
-	benchReadChain(b, false, database.BADGER,100000)
+	benchReadChain(b, false, database.BADGER, 100000)
 }
-
 
 func BenchmarkChainRead_full_100k_levelDB(b *testing.B) {
-	benchReadChain(b, true, database.LEVELDB,100000)
+	benchReadChain(b, true, database.LEVELDB, 100000)
 }
 func BenchmarkChainRead_full_100k_badgerDB(b *testing.B) {
-	benchReadChain(b, true,  database.BADGER,100000)
+	benchReadChain(b, true, database.BADGER, 100000)
 }
 
 // Disabled because of too long test time
@@ -247,8 +238,6 @@ func BenchmarkChainRead_full_100k_badgerDB(b *testing.B) {
 //	benchReadChain(b, true, database.BADGER,500000)
 //}
 
-
-
 // BenchmarkChainWrite Series
 func BenchmarkChainWrite_header_10k_levelDB(b *testing.B) {
 	benchWriteChain(b, false, database.LEVELDB, 10000)
@@ -258,24 +247,24 @@ func BenchmarkChainWrite_header_10k_badgerDB(b *testing.B) {
 }
 
 func BenchmarkChainWrite_full_10k_levelDB(b *testing.B) {
-	benchWriteChain(b, true, database.LEVELDB,10000)
+	benchWriteChain(b, true, database.LEVELDB, 10000)
 }
 func BenchmarkChainWrite_full_10k_badgerDB(b *testing.B) {
-	benchWriteChain(b, true, database.BADGER,10000)
+	benchWriteChain(b, true, database.BADGER, 10000)
 }
 
 func BenchmarkChainWrite_header_100k_levelDB(b *testing.B) {
-	benchWriteChain(b, false, database.LEVELDB,100000)
+	benchWriteChain(b, false, database.LEVELDB, 100000)
 }
 func BenchmarkChainWrite_header_100k_badgerDB(b *testing.B) {
-	benchWriteChain(b, false, database.BADGER,100000)
+	benchWriteChain(b, false, database.BADGER, 100000)
 }
 
 func BenchmarkChainWrite_full_100k_levelDB(b *testing.B) {
-	benchWriteChain(b, true,  database.LEVELDB,100000)
+	benchWriteChain(b, true, database.LEVELDB, 100000)
 }
 func BenchmarkChainWrite_full_100k_badgerDB(b *testing.B) {
-	benchWriteChain(b, true, database.BADGER,100000)
+	benchWriteChain(b, true, database.BADGER, 100000)
 }
 
 // Disabled because of too long test time
@@ -292,7 +281,6 @@ func BenchmarkChainWrite_full_100k_badgerDB(b *testing.B) {
 //func BenchmarkChainWrite_full_500k_badgerDB(b *testing.B) {
 //	benchWriteChain(b, true, database.BADGER,500000)
 //}
-
 
 // makeChainForBench writes a given number of headers or empty blocks/receipts
 // into a database.
@@ -371,7 +359,7 @@ func benchReadChain(b *testing.B, full bool, databaseType string, count uint64) 
 }
 
 // genTempDirForDB returns temp dir for database
-func genTempDirForDB(b *testing.B) (string) {
+func genTempDirForDB(b *testing.B) string {
 	dir, err := ioutil.TempDir("", "klay-blockchain-bench")
 	if err != nil {
 		b.Fatalf("cannot create temporary directory: %v", err)
@@ -380,11 +368,11 @@ func genTempDirForDB(b *testing.B) (string) {
 }
 
 // genDBManagerForTest returns database.Database according to entered databaseType
-func genDBManagerForTest(b *testing.B, dir string, dbType string) (database.DBManager) {
+func genDBManagerForTest(b *testing.B, dir string, dbType string) database.DBManager {
 	if dbType == database.MEMDB {
 		db := database.NewMemoryDBManager()
 		return db
-	} else  {
+	} else {
 		db, err := database.NewDBManager(dir, dbType, 128, 128)
 		if err != nil {
 			b.Fatalf("cannot create temporary database %v at %v, %v", dbType, dir, err)

@@ -17,7 +17,7 @@
 package gxhash
 
 import (
-        // TODO-GX-FIX Enable below commented-out packages when enabling TestConcurrentDiskCacheGeneration
+	// TODO-GX-FIX Enable below commented-out packages when enabling TestConcurrentDiskCacheGeneration
 	"bytes"
 	// "io/ioutil"
 	// "math/big"

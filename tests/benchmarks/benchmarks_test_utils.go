@@ -22,13 +22,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 type BenchConfig struct {
@@ -51,7 +51,7 @@ type BenchConfig struct {
 func makeBenchConfig() *BenchConfig {
 	cfg := &BenchConfig{}
 
-	cfg.ChainConfig = &params.ChainConfig{ ChainID: big.NewInt(1), }
+	cfg.ChainConfig = &params.ChainConfig{ChainID: big.NewInt(1)}
 	cfg.Difficulty = new(big.Int)
 	// Origin      common.Address
 	// Coinbase    common.Address
@@ -69,7 +69,7 @@ func makeBenchConfig() *BenchConfig {
 		return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 	}
 
-	return cfg;
+	return cfg
 }
 
 func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) {
@@ -92,16 +92,16 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 	evm := vm.NewEVM(context, cfg.State, cfg.ChainConfig, &cfg.EVMConfig)
 
 	address := common.BytesToAddress([]byte("contract"))
-	sender  := vm.AccountRef(cfg.Origin)
+	sender := vm.AccountRef(cfg.Origin)
 
 	cfg.State.CreateAccount(address)
 	cfg.State.SetCode(address, code)
 
 	// Parameters for NewContract()
 	caller := sender
-	to     := vm.AccountRef(address)
-	value  := cfg.Value
-	gas    := cfg.GasLimit
+	to := vm.AccountRef(address)
+	value := cfg.Value
+	gas := cfg.GasLimit
 
 	contract := vm.NewContract(caller, to, value, gas)
 
@@ -109,4 +109,3 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 
 	return evm.Interpreter(), contract
 }
-

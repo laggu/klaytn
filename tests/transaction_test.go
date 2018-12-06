@@ -17,8 +17,8 @@
 package tests
 
 import (
-	"testing"
 	"github.com/ground-x/go-gxplatform/params"
+	"testing"
 )
 
 func TestTransaction(t *testing.T) {

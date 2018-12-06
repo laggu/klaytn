@@ -141,7 +141,7 @@ func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmCon
 func (evm *EVM) Cancel(reason int32) {
 	for {
 		abort := atomic.LoadInt32(&evm.abort)
-		swapped := atomic.CompareAndSwapInt32(&evm.abort, abort, abort | reason)
+		swapped := atomic.CompareAndSwapInt32(&evm.abort, abort, abort|reason)
 		if swapped {
 			break
 		}

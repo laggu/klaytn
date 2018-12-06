@@ -2,13 +2,13 @@ package core
 
 import (
 	"bytes"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math"
 	"math/big"
 	"sync"
@@ -32,10 +32,10 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
 
-		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
-		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
-		consensusTimer:     metrics.NewRegisteredTimer("consensus/istanbul/core/timer", nil),
-		enabledRN:          false,
+		roundMeter:     metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
+		sequenceMeter:  metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
+		consensusTimer: metrics.NewRegisteredTimer("consensus/istanbul/core/timer", nil),
+		enabledRN:      false,
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -73,13 +73,13 @@ type core struct {
 
 	consensusTimestamp time.Time
 	// the meter to record the round change rate
-	roundMeter 	   metrics.Meter
+	roundMeter metrics.Meter
 	// the meter to record the sequence update rate
-	sequenceMeter  metrics.Meter
+	sequenceMeter metrics.Meter
 	// the timer to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimer metrics.Timer
 
-	enabledRN      bool
+	enabledRN bool
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -188,30 +188,30 @@ func (c *core) startNewRound(round *big.Int) {
 	//if c.valSet != nil && c.valSet.IsSubSet() {
 	//	c.current = nil
 	//} else {
-		if c.current == nil {
-			logger.Trace("Start to the initial round")
-		} else if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
-			diff := new(big.Int).Sub(lastProposal.Number(), c.current.Sequence())
-			c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
+	if c.current == nil {
+		logger.Trace("Start to the initial round")
+	} else if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
+		diff := new(big.Int).Sub(lastProposal.Number(), c.current.Sequence())
+		c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
 
-			if !c.consensusTimestamp.IsZero() {
-				c.consensusTimer.UpdateSince(c.consensusTimestamp)
-				c.consensusTimestamp = time.Time{}
-			}
-			logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
-		} else if lastProposal.Number().Cmp(big.NewInt(c.current.Sequence().Int64()-1)) == 0 {
-			if round.Cmp(common.Big0) == 0 {
-				// same seq and round, don't need to start new round
-				return
-			} else if round.Cmp(c.current.Round()) < 0 {
-				logger.Warn("New round should not be smaller than current round", "seq", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
-				return
-			}
-			roundChange = true
-		} else {
-			logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Number().Int64())
+		if !c.consensusTimestamp.IsZero() {
+			c.consensusTimer.UpdateSince(c.consensusTimestamp)
+			c.consensusTimestamp = time.Time{}
+		}
+		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
+	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Sequence().Int64()-1)) == 0 {
+		if round.Cmp(common.Big0) == 0 {
+			// same seq and round, don't need to start new round
+			return
+		} else if round.Cmp(c.current.Round()) < 0 {
+			logger.Warn("New round should not be smaller than current round", "seq", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
 			return
 		}
+		roundChange = true
+	} else {
+		logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Number().Int64())
+		return
+	}
 	//}
 
 	var newView *istanbul.View

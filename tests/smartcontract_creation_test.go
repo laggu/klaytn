@@ -1,24 +1,24 @@
 package tests
 
 import (
-	"os"
-	"io"
-	"time"
-	"testing"
-	"math/big"
-	"path/filepath"
-	"github.com/mattn/go-colorable"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/log/term"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common/profile"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/compiler"
+	"github.com/ground-x/go-gxplatform/common/profile"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/log/term"
+	"github.com/mattn/go-colorable"
+	"io"
+	"math/big"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
 )
 
-type testData struct{
+type testData struct {
 	name string
-	opt testOption
+	opt  testOption
 }
 
 // TODO-GX: To enable logging in the test code, we can use the following function.
@@ -113,7 +113,7 @@ func deploySmartContract(b *testing.B, opt *testOption, prof *profile.Profiler) 
 	b.ResetTimer()
 	for i := 0; i < b.N/txPerBlock; i++ {
 		//fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
-		err := bcdata.GenABlock( accountMap, opt, txPerBlock, prof)
+		err := bcdata.GenABlock(accountMap, opt, txPerBlock, prof)
 		if err != nil {
 			b.Fatal(err)
 		}

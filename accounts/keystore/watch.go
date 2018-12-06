@@ -3,8 +3,8 @@
 package keystore
 
 import (
-	"time"
 	"github.com/rjeczalik/notify"
+	"time"
 )
 
 type watcher struct {

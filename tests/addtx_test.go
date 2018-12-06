@@ -17,20 +17,20 @@
 package tests
 
 import (
-	"os"
-	"fmt"
-	"time"
-	"sync"
+	"crypto/ecdsa"
 	"flag"
-	"testing"
+	"fmt"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/profile"
 	"math/big"
 	"math/rand"
-	"crypto/ecdsa"
+	"os"
 	"runtime/pprof"
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common/profile"
+	"sync"
+	"testing"
+	"time"
 )
 
 var cpuprofile bool = false
@@ -44,7 +44,7 @@ func init() {
 ////////////////////////////////////////////////////////////////////////////////
 func BenchmarkAddTx(b *testing.B) {
 	cacheSender := []bool{false, true}
-	maxAccounts := []int{1000+100, 1000+1000, 1000+10000}
+	maxAccounts := []int{1000 + 100, 1000 + 1000, 1000 + 10000}
 	numValidators := []int{4}
 	parallels := []string{"parallel", "sequential", "queueing"}
 	numQueues := []int{1, 2, 4, 8}
@@ -176,7 +176,7 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 		}
 
 		pending, _ := txpool.Stats()
-		if pending % (maxAccounts-1000) != 0 {
+		if pending%(maxAccounts-1000) != 0 {
 			b.Fatalf("pending(%d) should be divided by %d!\n", pending, maxAccounts-1000)
 		}
 	}
@@ -221,7 +221,7 @@ func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privK
 
 		if cacheSender {
 			signed_addr, err := types.Sender(signer, signedTx)
-			if signed_addr != *from  {
+			if signed_addr != *from {
 				fmt.Printf("signed address(%s) != from(%s)\n", signed_addr.Hex(), from.Hex())
 			}
 			if err != nil {

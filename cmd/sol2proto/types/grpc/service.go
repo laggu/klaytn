@@ -2,11 +2,11 @@ package grpc
 
 import (
 	"fmt"
-	"sort"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"io"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"html/template"
+	"io"
+	"sort"
 )
 
 // Generate a renderable object and required message types from an GXP contract ABI

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-		"sync"
+	"sync"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/event"
-		"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/params"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"sort"
@@ -147,7 +147,7 @@ type TxPool struct {
 	journal *txJournal  // Journal of local transaction to back up to disk
 
 	//TODO-GX
-	txMu     sync.RWMutex
+	txMu sync.RWMutex
 
 	pending map[common.Address]*txList         // All currently processable transactions
 	queue   map[common.Address]*txList         // Queued but non-processable transactions
@@ -180,7 +180,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
 		// TODO-GX We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
 		//         later we have to change this rule when governance of UnitPrice is determined.
-		gasPrice:    new(big.Int).SetUint64(chainconfig.UnitPrice),
+		gasPrice: new(big.Int).SetUint64(chainconfig.UnitPrice),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -517,7 +517,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// NOTE-GX Drop transactions with unexpected gasPrice
-	if pool.gasPrice.Cmp(tx.GasPrice()) !=0 {
+	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
 		logger.Info("fail to validate unitprice", "klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
 		return ErrInvalidUnitPrice
 	}
@@ -573,7 +573,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 // getMaxTxFromQueueWhenNonceIsMissing finds and returns a trasaction with max nonce in queue when a given Tx has missing nonce.
 // Otherwise it returns a given Tx itself.
-func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, from *common.Address) (*types.Transaction) {
+func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, from *common.Address) *types.Transaction {
 	txs := pool.queue[*from].txs
 
 	maxTx := tx

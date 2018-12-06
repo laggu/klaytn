@@ -18,8 +18,8 @@
 package log
 
 import (
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type ModuleID int

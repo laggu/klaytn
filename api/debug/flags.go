@@ -1,15 +1,15 @@
 package debug
 
 import (
-	"runtime"
-	"os"
 	_ "net/http/pprof"
+	"os"
+	"runtime"
 
 	"github.com/fjl/memsize/memsizeui"
-	colorable "github.com/mattn/go-colorable"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/log/term"
+	colorable "github.com/mattn/go-colorable"
+	"gopkg.in/urfave/cli.v1"
 	"io"
 )
 

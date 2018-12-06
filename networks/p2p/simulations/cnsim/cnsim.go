@@ -1,21 +1,19 @@
-
-
 package main
 
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"sync/atomic"
 	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/p2p/simulations"
 	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/adapters"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/node"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"sync/atomic"
 	"time"
 )
 
@@ -135,7 +133,6 @@ const (
 // at 10s intervals, and responds to pings with pong messages.
 func (p *cnSimService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 	// log := p.logger.New("peer.id", peer.ID())
-
 
 	errC := make(chan error)
 

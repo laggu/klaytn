@@ -13,11 +13,11 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/ground-x/go-gxplatform/console/jsre"
+	"github.com/ground-x/go-gxplatform/console/web3ext"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
-	"github.com/ground-x/go-gxplatform/console/jsre"
-	"github.com/ground-x/go-gxplatform/console/web3ext"
 )
 
 var (

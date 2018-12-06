@@ -1,10 +1,8 @@
-
 //go:generate abigen --sol contract/GXPReward.sol --pkg contract --out contract/GXPReward.go
 //go:generate abigen --sol contract/CommitteeReward.sol --pkg contract --out contract/CommitteeReward.go
 //go:generate abigen --sol contract/RNReward.sol --pkg contract --out contract/RNReward.go
 //go:generate abigen --sol contract/ProposerReward.sol --pkg contract --out contract/ProposerReward.go
 //go:generate abigen --sol contract/PIRerve.sol --pkg contract --out contract/PIRerve.go
-
 
 package reward
 
@@ -19,19 +17,19 @@ type Reward struct {
 	contractBackend bind.ContractBackend
 }
 
-func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, contractBackend bind.ContractBackend) (*Reward, error){
-     gxpreward, err := contract.NewGXPReward(contractAddr, contractBackend)
-     if err != nil {
-     	return nil, err
-	 }
+func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, contractBackend bind.ContractBackend) (*Reward, error) {
+	gxpreward, err := contract.NewGXPReward(contractAddr, contractBackend)
+	if err != nil {
+		return nil, err
+	}
 
-	 return &Reward{
-	 	&contract.GXPRewardSession{
-	 		Contract:     gxpreward,
-	 		TransactOpts: *transactOpts,
+	return &Reward{
+		&contract.GXPRewardSession{
+			Contract:     gxpreward,
+			TransactOpts: *transactOpts,
 		},
 		contractBackend,
-	 }, nil
+	}, nil
 }
 
 func DeployReward(transactOpts *bind.TransactOpts, contractBackend bind.ContractBackend) (common.Address, *Reward, error) {

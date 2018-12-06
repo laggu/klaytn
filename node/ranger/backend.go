@@ -2,12 +2,11 @@ package ranger
 
 import (
 	"fmt"
-	"math/big"
-	"sync"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/api"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/client"
 	"github.com/ground-x/go-gxplatform/common"
@@ -15,15 +14,16 @@ import (
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/node/cn"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/go-gxplatform/node/cn"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/work"
 	"github.com/hashicorp/golang-lru"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"math/big"
+	"sync"
 )
 
 const (
@@ -65,23 +65,22 @@ type Ranger struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
 
 	// consensus node url
-	consUrl string
+	consUrl  string
 	cnClient *client.Client
 
 	// consensus
 	engine consensus.Engine
 
 	proofFeed event.Feed
-	proofCh chan NewProofEvent
-	proofSub event.Subscription
+	proofCh   chan NewProofEvent
+	proofSub  event.Subscription
 
-	peerCache  *lru.Cache
+	peerCache *lru.Cache
 }
 
 // New creates a new klaytn object (including the
 // initialisation of the common klaytn object)
 func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
-
 
 	peerCache, _ := lru.New(peerCacheLimit)
 
@@ -117,14 +116,14 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 		peerCache:      peerCache,
 	}
 
-	ranger.engine = &RangerEngine{proofFeed:&ranger.proofFeed}
+	ranger.engine = &RangerEngine{proofFeed: &ranger.proofFeed}
 
 	// istanbul BFT. force to set the istanbul coinbase to node key address
 	//if chainConfig.Istanbul != nil {
 	//	ranger.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	//}
 
-	logger.Info("Initialising klaytn protocol" , "network", config.NetworkId)
+	logger.Info("Initialising klaytn protocol", "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := chainDB.ReadDatabaseVersion()
@@ -151,10 +150,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ranger, error) {
 
 	ranger.cnClient, err = client.Dial(ranger.consUrl)
 	if err != nil {
-		logger.Error("Fail to connect consensus node","err",err)
+		logger.Error("Fail to connect consensus node", "err", err)
 	}
 
-	ranger.txPool = blockchain.NewTxPool(blockchain.DefaultTxPoolConfig , ranger.chainConfig, ranger.blockchain)
+	ranger.txPool = blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, ranger.chainConfig, ranger.blockchain)
 
 	if ranger.protocolManager, err = cn.NewRangerPM(ranger.chainConfig, config.SyncMode, config.NetworkId, ranger.eventMux, ranger.engine, ranger.blockchain, chainDB); err != nil {
 		return nil, err
@@ -177,7 +176,7 @@ func (s *Ranger) Coinbase() (eb common.Address, err error) {
 	if coinbase != (common.Address{}) {
 		// validator address in istanbul bft isn't in keystore.
 		account := accounts.Account{Address: coinbase}
-		_ , err := s.accountManager.Find(account)
+		_, err := s.accountManager.Find(account)
 		if err == nil {
 			return coinbase, nil
 		}
@@ -220,6 +219,7 @@ func (s *Ranger) IsListening() bool                  { return true } // Always l
 func (s *Ranger) GxpVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Ranger) NetVersion() uint64                 { return s.networkId }
 func (s *Ranger) Downloader() *downloader.Downloader { return s.protocolManager.Downloader() }
+
 // TODO-KLAYTN drop or missing tx
 func (s *Ranger) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
@@ -231,7 +231,7 @@ func (s *Ranger) APIs() []rpc.API {
 	apis := api.GetAPIs(s.APIBackend)
 
 	// Append all the local APIs and return
-	return append(apis,[]rpc.API{
+	return append(apis, []rpc.API{
 		{
 			Namespace: "klay",
 			Version:   "1.0",
@@ -292,7 +292,7 @@ func (rn *Ranger) startBloomHandlers() {
 					task := <-request
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := rn.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
+						head := rn.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks - 1)
 						if compVector, err := rn.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head)); err == nil {
 							if blob, err := bitutil.DecompressBytes(compVector, int(params.BloomBitsBlocks)/8); err == nil {
 								task.Bitsets[i] = blob

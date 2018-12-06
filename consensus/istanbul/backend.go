@@ -1,11 +1,11 @@
 package istanbul
 
 import (
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/event"
 	"math/big"
 	"time"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 // Backend provides application specific functions for Istanbul core
@@ -69,5 +69,4 @@ type Backend interface {
 	GetRewardContract() common.Address
 
 	GetSubGroupSize() int
-
 }

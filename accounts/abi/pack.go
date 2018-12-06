@@ -1,10 +1,10 @@
 package abi
 
 import (
-	"reflect"
-	"math/big"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
+	"math/big"
+	"reflect"
 )
 
 // packBytesSlice packs the given bytes as [L, V] as the canonical representation
@@ -62,4 +62,3 @@ func packNum(value reflect.Value) []byte {
 	}
 
 }
-

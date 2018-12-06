@@ -17,9 +17,9 @@
 package state
 
 import (
-	"testing"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/storage/database"
+	"testing"
 )
 
 var addr = common.BytesToAddress([]byte("test"))

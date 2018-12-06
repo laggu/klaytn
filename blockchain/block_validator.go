@@ -2,9 +2,9 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/params"
 )
 

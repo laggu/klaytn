@@ -1,8 +1,8 @@
 package consensus
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 )
 
@@ -48,7 +48,7 @@ type Broadcaster interface {
 
 	GetRNPeers() map[common.Address]Peer
 
-    GetPeers() []common.Address
+	GetPeers() []common.Address
 
 	RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
 }

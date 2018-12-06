@@ -1,8 +1,8 @@
 package secp256k1
 
 import (
-	"crypto/sha256"
 	"bytes"
+	"crypto/sha256"
 	"sort"
 )
 
@@ -130,22 +130,22 @@ func SchnorrVerify(G *BitCurve, msg, R, s, P []byte) bool {
 
 	Thus, Alice and Bob can publish (R, s) as a signature for m.
 	Verifying (R, s) can be done by computing R = s * G + H(m || P || R) * P.
- */
+*/
 
 // ComputeC derives the common value for multiple public keys.
-func ComputeC(keys ... []byte) []byte {
+func ComputeC(keys ...[]byte) []byte {
 	sort.SliceStable(keys, func(i, j int) bool {
 		return bytes.Compare(keys[i], keys[j]) < 0
 	})
-	return hash(keys ...)
+	return hash(keys...)
 }
 
 // SchnorrSignMultiBootstrap computes an individual share of a Schnorr multi-signature given all public keys.
 // Q: a dedicated, security hardened public key for this multi-signature party
 // R: a part of the generating multi-signature for the input publickey
 // y: a dedicated, security hardened private key for this multi-signature party
-func SchnorrSignMultiBootstrap(G *BitCurve, msg, privateKey, publicKey []byte, othersPublicKeys ... []byte) (Q, R, y []byte) {
-	C := ComputeC(append([][]byte{publicKey}, othersPublicKeys ...) ...)
+func SchnorrSignMultiBootstrap(G *BitCurve, msg, privateKey, publicKey []byte, othersPublicKeys ...[]byte) (Q, R, y []byte) {
+	C := ComputeC(append([][]byte{publicKey}, othersPublicKeys...)...)
 
 	z := hash(C, publicKey)
 
@@ -171,7 +171,7 @@ func SchnorrSignMultiComputeS(msg, P, R, y []byte) []byte {
 }
 
 // Simple helper function concatenating all input bytes and summing it up with SHA256.
-func hash(bytes ... []byte) []byte {
+func hash(bytes ...[]byte) []byte {
 	h := sha256.New()
 	for _, b := range bytes {
 		h.Write(b)

@@ -17,13 +17,13 @@
 package profile
 
 import (
-	"time"
 	"fmt"
 	"sync"
+	"time"
 )
 
 type TimeRecord struct {
-	count int
+	count    int
 	duration time.Duration
 }
 
@@ -42,7 +42,7 @@ func (p *Profiler) Profile(key string, d time.Duration) {
 		r.count += 1
 		r.duration += d
 	} else {
-		p.profMap[key] = &TimeRecord{count:1, duration:d}
+		p.profMap[key] = &TimeRecord{count: 1, duration: d}
 	}
 
 	p.mutex.Unlock()

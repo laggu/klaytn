@@ -27,22 +27,22 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
 )
 
 var (
 	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
 	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
 	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
-	logger = log.NewModuleLogger(log.NetworksP2PDiscover)
+	logger               = log.NewModuleLogger(log.NetworksP2PDiscover)
 )
 
 // nodeDB stores all nodes we know about.

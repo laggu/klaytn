@@ -1,12 +1,12 @@
 package bind
 
 import (
-	"math/big"
 	"context"
-	"github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"errors"
+	"github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
+	"math/big"
 )
 
 var (
@@ -93,4 +93,3 @@ type ContractBackend interface {
 	ContractTransactor
 	ContractFilterer
 }
-

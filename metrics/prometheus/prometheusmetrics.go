@@ -2,10 +2,10 @@ package prometheusmetrics
 
 import (
 	"fmt"
+	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 	"time"
-	"github.com/ground-x/go-gxplatform/metrics"
 )
 
 // PrometheusConfig provides a container with config parameters for the Prometheus Exporter
@@ -59,7 +59,7 @@ func (c *PrometheusConfig) gaugeFromNameAndValue(name string, val float64) {
 }
 
 func (c *PrometheusConfig) UpdatePrometheusMetrics() {
-	for _ = range time.Tick(c.FlushInterval) {
+	for range time.Tick(c.FlushInterval) {
 		c.UpdatePrometheusMetricsOnce()
 	}
 }

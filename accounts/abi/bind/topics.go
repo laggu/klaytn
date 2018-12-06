@@ -1,13 +1,13 @@
 package bind
 
 import (
-	"reflect"
-	"math/big"
+	"errors"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"errors"
+	"math/big"
+	"reflect"
 )
 
 // makeTopics converts a filter query argument list into a filter topic set.
@@ -170,4 +170,3 @@ func parseTopics(out interface{}, fields abi.Arguments, topics []common.Hash) er
 	}
 	return nil
 }
-

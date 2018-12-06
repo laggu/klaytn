@@ -3,15 +3,15 @@ package blockchain
 import (
 	"encoding/binary"
 	"fmt"
-	"sync"
-	"sync/atomic"
-	"time"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/storage/database"
-	)
+	"sync"
+	"sync/atomic"
+	"time"
+)
 
 // ChainIndexerBackend defines the methods needed to process chain segments in
 // the background and write the segment results into the database. These can be
@@ -48,8 +48,8 @@ type ChainIndexerChain interface {
 // after an entire section has been finished or in case of rollbacks that might
 // affect already finished sections.
 type ChainIndexer struct {
-	chainDB  database.DBManager   // Chain database to index the data from
-	indexDB  database.DBManager   // Prefixed table-view of the db to write index metadata into
+	chainDB  database.DBManager  // Chain database to index the data from
+	indexDB  database.DBManager  // Prefixed table-view of the db to write index metadata into
 	backend  ChainIndexerBackend // Background processor generating the index data content
 	children []*ChainIndexer     // Child indexers to cascade chain updates to
 
@@ -66,8 +66,8 @@ type ChainIndexer struct {
 
 	throttling time.Duration // Disk throttling to prevent a heavy upgrade from hogging resources
 
-	logger  log.Logger
-	lock sync.RWMutex
+	logger log.Logger
+	lock   sync.RWMutex
 }
 
 // NewChainIndexer creates a new chain indexer to do background processing on
@@ -83,7 +83,7 @@ func NewChainIndexer(chainDB, indexDB database.DBManager, backend ChainIndexerBa
 		sectionSize: section,
 		confirmsReq: confirm,
 		throttling:  throttling,
-		logger:         logger.NewWith("type", kind),
+		logger:      logger.NewWith("type", kind),
 	}
 	// Initialize database dependent fields and start the updater
 	c.loadValidSections()

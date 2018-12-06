@@ -18,12 +18,11 @@
 package blockchain
 
 import (
+	"errors"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"testing"
-	"errors"
 )
-
 
 func TestGetVMerrFromReceiptStatus(t *testing.T) {
 	err := GetVMerrFromReceiptStatus(types.ReceiptStatusFailed)

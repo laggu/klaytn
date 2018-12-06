@@ -636,7 +636,6 @@ func (s *Server) StopNode(w http.ResponseWriter, req *http.Request) {
 	s.JSON(w, http.StatusOK, node.NodeInfo())
 }
 
-
 func (s *Server) ConnectAll(w http.ResponseWriter, req *http.Request) {
 	if err := s.network.ConnectAll(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

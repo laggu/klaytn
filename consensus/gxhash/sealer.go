@@ -2,9 +2,9 @@ package gxhash
 
 import (
 	crand "crypto/rand"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"math"
 	"math/big"
 	"math/rand"

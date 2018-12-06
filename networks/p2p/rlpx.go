@@ -161,7 +161,6 @@ func (c *rlpx) doConnTypeHandshake(myConnType ConnType) (ConnType, error) {
 	return conntype, nil
 }
 
-
 func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err error) {
 	// Writing our handshake happens concurrently, we prefer
 	// returning the handshake read error. If the remote side

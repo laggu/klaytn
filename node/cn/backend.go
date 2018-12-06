@@ -4,33 +4,33 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
+	"github.com/ground-x/go-gxplatform/api"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	istanbulBackend "github.com/ground-x/go-gxplatform/consensus/istanbul/backend"
+	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/node/cn/filters"
 	"github.com/ground-x/go-gxplatform/node/cn/gasprice"
-	"github.com/ground-x/go-gxplatform/api"
-	"github.com/ground-x/go-gxplatform/work"
-	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/work"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	istanbulBackend "github.com/ground-x/go-gxplatform/consensus/istanbul/backend"
-	"github.com/ground-x/go-gxplatform/crypto"
 )
 
 type LesServer interface {
@@ -70,7 +70,7 @@ type GXP struct {
 	gasPrice *big.Int
 	coinbase common.Address
 
-	rewardbase common.Address
+	rewardbase     common.Address
 	rewardcontract common.Address
 
 	networkId     uint64
@@ -114,7 +114,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config , chainConfig, chainDB),
+		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDB),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
@@ -130,7 +130,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		gxp.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 
-	logger.Info("Initialising Klaytn protocol", "versions", gxp.engine.Protocol().Versions , "network", config.NetworkId)
+	logger.Info("Initialising Klaytn protocol", "versions", gxp.engine.Protocol().Versions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := chainDB.ReadDatabaseVersion()
@@ -167,8 +167,8 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 
 	wallet, err := gxp.RewardbaseWallet()
 	if err != nil {
-		logger.Error("find err","err",err)
-	}else {
+		logger.Error("find err", "err", err)
+	} else {
 		gxp.protocolManager.SetRewardbaseWallet(wallet)
 	}
 	gxp.protocolManager.SetRewardbase(gxp.rewardbase)
@@ -384,9 +384,9 @@ func (s *GXP) RewardbaseWallet() (accounts.Wallet, error) {
 	}
 
 	account := accounts.Account{Address: coinbase}
-	wallet , err := s.AccountManager().Find(account)
+	wallet, err := s.AccountManager().Find(account)
 	if err != nil {
-		logger.Error("find err","err",err)
+		logger.Error("find err", "err", err)
 		return nil, err
 	}
 	return wallet, nil
@@ -412,7 +412,7 @@ func (s *GXP) SetRewardbase(rewardbase common.Address) {
 	s.lock.Unlock()
 	wallet, err := s.RewardbaseWallet()
 	if err != nil {
-		logger.Error("find err","err",err)
+		logger.Error("find err", "err", err)
 	}
 	s.protocolManager.SetRewardbase(rewardbase)
 	s.protocolManager.SetRewardbaseWallet(wallet)

@@ -60,9 +60,9 @@ func (self Storage) Copy() Storage {
 // Account values can be accessed and modified through the object.
 // Finally, call CommitTrie to write the modified storage trie into a database.
 type stateObject struct {
-	address  common.Address
-	data     Account
-	db       *StateDB
+	address common.Address
+	data    Account
+	db      *StateDB
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are

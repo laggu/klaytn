@@ -1,14 +1,14 @@
 package main
 
 import (
-	"gopkg.in/urfave/cli.v1"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/console"
-	"path/filepath"
-	"fmt"
-	"github.com/ground-x/go-gxplatform/node"
-	"strings"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/node"
+	"gopkg.in/urfave/cli.v1"
+	"path/filepath"
+	"strings"
 )
 
 var (

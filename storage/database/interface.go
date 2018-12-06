@@ -20,8 +20,8 @@ package database
 // The value was determined empirically.
 const (
 	LEVELDB = "leveldb"
-	BADGER = "badger"
-	MEMDB = "memdb"
+	BADGER  = "badger"
+	MEMDB   = "memdb"
 	CACHEDB = "cachedb"
 	SHARDDB = "sharddb"
 

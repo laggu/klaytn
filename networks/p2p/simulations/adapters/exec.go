@@ -36,10 +36,10 @@ import (
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/node"
 	"golang.org/x/net/websocket"
 )
 
@@ -318,7 +318,6 @@ func (n *ExecNode) Snapshots() (map[string][]byte, error) {
 	var snapshots map[string][]byte
 	return snapshots, n.client.Call(&snapshots, "simulation_snapshot")
 }
-
 
 // TODO
 func (sn *ExecNode) PeersInfo() []*p2p.PeerInfo {

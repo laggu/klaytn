@@ -1,10 +1,10 @@
 package database
 
 import (
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/ground-x/go-gxplatform/common"
-	"strings"
+	"github.com/syndtr/goleveldb/leveldb"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -12,12 +12,12 @@ const (
 )
 
 type ShardDatabase struct {
-    dbs  []*levelDB
+	dbs []*levelDB
 }
 
 func NewShardDatabase(file string, cache int, handles int) (*ShardDatabase, error) {
 
-	dbs := make([]*levelDB,SHARDS)
+	dbs := make([]*levelDB, SHARDS)
 	for i := 0; i < SHARDS; i++ {
 		shardName := file + "-" + string(i)
 		db, err := NewLDBDatabase(shardName, cache, handles)
@@ -38,7 +38,7 @@ func (db *ShardDatabase) Type() string {
 }
 
 func getPartition(key []byte) int64 {
-	hashstring := strings.TrimPrefix(common.Bytes2Hex(key),"0x")
+	hashstring := strings.TrimPrefix(common.Bytes2Hex(key), "0x")
 	if len(hashstring) > 15 {
 		hashstring = hashstring[:15]
 	}
@@ -68,9 +68,9 @@ func (db *ShardDatabase) Delete(key []byte) error {
 }
 
 func (db *ShardDatabase) Close() {
-   for _, db := range db.dbs {
-   	   db.Close()
-   }
+	for _, db := range db.dbs {
+		db.Close()
+	}
 }
 
 func (db *ShardDatabase) NewBatch() Batch {
@@ -78,13 +78,13 @@ func (db *ShardDatabase) NewBatch() Batch {
 }
 
 type shardBatch struct {
-	dbs   []*levelDB
-	b     []*leveldb.Batch
+	dbs  []*levelDB
+	b    []*leveldb.Batch
 	size int
 }
 
 func (b *shardBatch) Put(key, value []byte) error {
-	b.dbs[getPartition(key)].Put(key,value)
+	b.dbs[getPartition(key)].Put(key, value)
 	b.size += len(value)
 	return nil
 }

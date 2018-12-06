@@ -3,18 +3,18 @@ package work
 import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
+	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/params"
-	"sync/atomic"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"sync/atomic"
 )
 
 var logger = log.NewModuleLogger(log.Work)
@@ -22,9 +22,9 @@ var logger = log.NewModuleLogger(log.Work)
 // Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
-	BlockChain() 	 *blockchain.BlockChain
-	TxPool() 	     *blockchain.TxPool
-	ChainDB() 		 database.DBManager
+	BlockChain() *blockchain.BlockChain
+	TxPool() *blockchain.TxPool
+	ChainDB() database.DBManager
 	ReBroadcastTxs(transactions types.Transactions)
 }
 

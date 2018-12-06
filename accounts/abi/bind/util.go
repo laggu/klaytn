@@ -1,12 +1,12 @@
 package bind
 
 import (
-	"time"
-	"fmt"
 	"context"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/log"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.AccountsAbiBind)
@@ -59,4 +59,3 @@ func WaitDeployed(ctx context.Context, b DeployBackend, tx *types.Transaction) (
 	}
 	return receipt.ContractAddress, err
 }
-

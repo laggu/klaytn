@@ -7,7 +7,8 @@ import (
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 )
 
-type DeriveShaOrig struct {}
+type DeriveShaOrig struct{}
+
 func (d DeriveShaOrig) DeriveSha(list types.DerivableList) common.Hash {
 	keybuf := new(bytes.Buffer)
 	trie := new(Trie)
@@ -18,4 +19,3 @@ func (d DeriveShaOrig) DeriveSha(list types.DerivableList) common.Hash {
 	}
 	return trie.Hash()
 }
-

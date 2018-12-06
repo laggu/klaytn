@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"os"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 )
 

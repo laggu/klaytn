@@ -18,15 +18,15 @@
 package database
 
 import (
+	"github.com/stretchr/testify/require"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
-	"github.com/stretchr/testify/require"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"sync"
 )
 
 func genTempDirForTestDB(b *testing.B) string {
@@ -136,7 +136,7 @@ const (
 	getKlaynumGets       = 1000
 )
 
-var getKlayOptions = [...] struct {
+var getKlayOptions = [...]struct {
 	name          string
 	valueLength   int
 	numInsertions int
@@ -206,7 +206,7 @@ func Benchmark_KlayOptions_Put(b *testing.B) {
 		putKlayNumInsertions = 1000 * 10
 	)
 
-	putKlayOptions := [...] struct {
+	putKlayOptions := [...]struct {
 		name          string
 		valueLength   int
 		numInsertions int
@@ -299,7 +299,7 @@ func Benchmark_KlayOptions_Batch(b *testing.B) {
 		batchKlayNumInsertions = 1000 * 10
 	)
 
-	putKlayOptions := [...] struct {
+	putKlayOptions := [...]struct {
 		name          string
 		valueLength   int
 		numInsertions int
@@ -373,7 +373,7 @@ func Benchmark_IdealBatchSize(b *testing.B) {
 	// key = 32 bytes, value = rowSize bytes
 	const rowSize = 250
 
-	benchmarks := [] idealBatchBM{
+	benchmarks := []idealBatchBM{
 		// to run test with total size smaller than 1,000 rows
 		// go test -bench=Benchmark_IdealBatchSize/SmallBatches
 		{"SmallBatches_100Rows_10Batch_250Bytes", 100, 10, rowSize},

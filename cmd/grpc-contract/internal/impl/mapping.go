@@ -1,10 +1,10 @@
 package impl
 
 import (
-	"fmt"
-	"os"
 	"bytes"
+	"fmt"
 	parser "github.com/zpatrick/go-parser"
+	"os"
 	"text/template"
 )
 

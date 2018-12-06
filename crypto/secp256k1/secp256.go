@@ -206,7 +206,7 @@ func ScPointMul(point, a []byte) []byte {
 	if C.secp256k1_ext_scalar_mul_bytes(context, odata, pdata, adata) == 0 {
 		panic("libsecp256k1 error")
 	}
-	return append([]byte{4}, out ...) // the returned point does not have the format byte in front
+	return append([]byte{4}, out...) // the returned point does not have the format byte in front
 }
 
 // ScBaseMul is a simple C-binding performing a * G where a is an input scalar and G is SECP256k1 curve.
@@ -219,7 +219,7 @@ func ScBaseMul(a []byte) []byte {
 	if C.secp256k1_ext_scalar_base_mult(context, odata, adata) == 0 {
 		panic("libsecp256k1 error")
 	}
-	return append([]byte{4}, out ...)
+	return append([]byte{4}, out...)
 }
 
 // ScMul is a simple C-binding performing multiplication for two input scalars.

@@ -1,25 +1,25 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"strings"
-	"encoding/json"
-	"io/ioutil"
 	"github.com/ground-x/go-gxplatform/common/compiler"
+	"io/ioutil"
+	"os"
+	"strings"
 )
 
 var (
-	abiFlag         = flag.String("abi","","Path to the GXP contract ABI json to bind")
-	binFlag         = flag.String("bin","","Path to the GXP contract bytecode (generate deploy method")
-	binruntimesFlag = flag.String("bin-runtime","","Path to the GXP contract runtime-bytecode")
-	typFlag         = flag.String("type","","Struct name for the binding (default = package name)")
+	abiFlag         = flag.String("abi", "", "Path to the GXP contract ABI json to bind")
+	binFlag         = flag.String("bin", "", "Path to the GXP contract bytecode (generate deploy method")
+	binruntimesFlag = flag.String("bin-runtime", "", "Path to the GXP contract runtime-bytecode")
+	typFlag         = flag.String("type", "", "Struct name for the binding (default = package name)")
 
-	solFlag = flag.String("sol","","Path to the GXP contract Solidity source to build and bind")
-	solcFlag = flag.String("solc","","Solidity compiler to use if source builds are requested")
-	excFlag = flag.String("exc","","Comma separated types to exclude from binding")
+	solFlag  = flag.String("sol", "", "Path to the GXP contract Solidity source to build and bind")
+	solcFlag = flag.String("solc", "", "Solidity compiler to use if source builds are requested")
+	excFlag  = flag.String("exc", "", "Comma separated types to exclude from binding")
 
 	pkgFlag  = flag.String("pkg", "", "Package name to generate the binding into")
 	outFlag  = flag.String("out", "", "Output file for the generated binding (default = stdout)")
@@ -133,4 +133,3 @@ func main() {
 		os.Exit(-1)
 	}
 }
-

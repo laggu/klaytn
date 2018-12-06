@@ -11,15 +11,15 @@ import (
 
 func BenchmarkDeriveSha(b *testing.B) {
 	funcs := map[string]types.IDeriveSha{
-		"Orig":statedb.DeriveShaOrig{},
-		"Simple":types.DeriveShaSimple{},
-		"Concat": types.DeriveShaConcat{} }
+		"Orig":   statedb.DeriveShaOrig{},
+		"Simple": types.DeriveShaSimple{},
+		"Concat": types.DeriveShaConcat{}}
 
 	NTS := []int{1000}
 
 	for k, f := range funcs {
 		for _, nt := range NTS {
-			testName := fmt.Sprintf("%s,%d",k, nt)
+			testName := fmt.Sprintf("%s,%d", k, nt)
 			b.Run(testName, func(b *testing.B) {
 				benchDeriveSha(b, nt, 4, f)
 			})

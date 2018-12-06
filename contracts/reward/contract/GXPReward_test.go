@@ -1,15 +1,15 @@
 package contract
 
 import (
-	"math/big"
-	"log"
+	"context"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"testing"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind/backends"
 	"github.com/ground-x/go-gxplatform/blockchain"
-	"context"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"log"
+	"math/big"
+	"testing"
 )
 
 func TestSmartContract(t *testing.T) {
@@ -20,7 +20,7 @@ func TestSmartContract(t *testing.T) {
 	key2, _ := crypto.GenerateKey()
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(1000000000000000000)}, auth2.From:{Balance: big.NewInt(1000000000000000000)},}
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(1000000000000000000)}, auth2.From: {Balance: big.NewInt(1000000000000000000)}}
 	sim := backends.NewSimulatedBackend(alloc)
 
 	// Deploy a token contract on the simulated blockchain
@@ -29,7 +29,7 @@ func TestSmartContract(t *testing.T) {
 		log.Fatalf("Failed to deploy new token contract: %v", err)
 	}
 	// Print the current (non existent) and pending name of the contract
-	tx, err := reward.Reward(&bind.TransactOpts{From: auth.From, Signer:auth.Signer , Value:big.NewInt(500000000)},auth2.From)
+	tx, err := reward.Reward(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: big.NewInt(500000000)}, auth2.From)
 	if err != nil {
 		log.Fatalf("Failed to call reward : %v", err)
 	}
@@ -41,13 +41,13 @@ func TestSmartContract(t *testing.T) {
 	balance, _ := reward.BalanceOf((&bind.CallOpts{Pending: true}), auth2.From)
 	fmt.Println("balance :", balance)
 
-	amount , _ := reward.TotalAmount((&bind.CallOpts{Pending: true}))
+	amount, _ := reward.TotalAmount((&bind.CallOpts{Pending: true}))
 	fmt.Println("total amount :", amount)
 
 	balance1, _ := sim.BalanceAt(context.Background(), auth2.From, big.NewInt(1))
 	fmt.Println("before reward, balance :", balance1)
 
-	tx2, err2 := reward.SafeWithdrawal(&bind.TransactOpts{From: auth2.From, Signer:auth2.Signer , Value:big.NewInt(0)})
+	tx2, err2 := reward.SafeWithdrawal(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, Value: big.NewInt(0)})
 	if err2 != nil {
 		log.Fatalf("Failed to call reward : %v", err2)
 	}

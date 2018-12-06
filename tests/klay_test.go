@@ -18,18 +18,19 @@ package tests
 
 import (
 	"flag"
-	"time"
-	"testing"
-	"math/big"
-	"math/rand"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
 	"github.com/ground-x/go-gxplatform/crypto"
+	"math/big"
+	"math/rand"
 	"os"
 	"strconv"
+	"testing"
+	"time"
 )
 
 var txPerBlock int
+
 func init() {
 	flag.IntVar(&txPerBlock, "txs-per-block", 1000,
 		"Specify the number of transactions per block")
@@ -57,7 +58,7 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	txs := make(types.Transactions, 0, numTransactions)
 	nonce := accountMap.GetNonce(from)
 	for i := 0; i < numTransactions; i++ {
-		a := toAddrs[i % numAddrs]
+		a := toAddrs[i%numAddrs]
 		txamount := amount
 		if txamount == nil {
 			txamount = big.NewInt(rand.Int63n(10))
@@ -179,12 +180,12 @@ func TestValueTransfer(t *testing.T) {
 
 	var valueTransferTests = [...]struct {
 		name string
-		opt testOption
-	} {
+		opt  testOption
+	}{
 		{"SingleSenderMultipleRecipient",
-		 testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom}},
+			testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom}},
 		{"MultipleSenderMultipleRecipient",
-		 testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions}},
+			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions}},
 		{"MultipleSenderRandomRecipient",
 			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom}},
 	}

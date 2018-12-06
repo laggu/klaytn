@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
@@ -34,7 +34,6 @@ func TestChainIndexerSingle(t *testing.T) {
 		testChainIndexer(t, 1)
 	}
 }
-
 
 // TODO-GX-FIX Failed test.
 /*
@@ -96,7 +95,7 @@ func testChainIndexer(t *testing.T, count int) {
 	inject := func(number uint64) {
 		header := &types.Header{Number: big.NewInt(int64(number)), Extra: big.NewInt(rand.Int63()).Bytes()}
 		if number > 0 {
-			header.ParentHash = db.ReadCanonicalHash(number-1)
+			header.ParentHash = db.ReadCanonicalHash(number - 1)
 		}
 		db.WriteHeader(header)
 		db.WriteCanonicalHash(header.Hash(), number)

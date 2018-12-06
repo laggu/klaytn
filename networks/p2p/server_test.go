@@ -76,11 +76,11 @@ func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer)) *Server {
 		PrivateKey: newkey(),
 	}
 	server := &Server{
-		Config:       config,
-		newPeerHook:  pf,
+		Config:      config,
+		newPeerHook: pf,
 		newTransport: func(fd net.Conn) transport {
 			return newTestTransport(id, fd)
-	},
+		},
 	}
 	if err := server.Start(); err != nil {
 		t.Fatalf("Could not start server: %v", err)
@@ -445,10 +445,10 @@ func TestServerSetupConn(t *testing.T) {
 	for i, test := range tests {
 		srv := &Server{
 			Config: Config{
-				PrivateKey: srvkey,
-				MaxPeers:   10,
-				NoDial:     true,
-				Protocols:  []Protocol{discard},
+				PrivateKey:     srvkey,
+				MaxPeers:       10,
+				NoDial:         true,
+				Protocols:      []Protocol{discard},
 				ConnectionType: 1,
 			},
 			newTransport: func(fd net.Conn) transport { return test.tt },

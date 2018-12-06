@@ -1,7 +1,6 @@
 package cn
 
 import (
-	"time"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
@@ -9,6 +8,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common/bitutil"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/storage/database"
+	"time"
 )
 
 const (
@@ -43,7 +43,7 @@ func (gxp *GXP) startBloomHandlers() {
 					task := <-request
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := gxp.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
+						head := gxp.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks - 1)
 						if compVector, err := gxp.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head)); err == nil {
 							if blob, err := bitutil.DecompressBytes(compVector, int(params.BloomBitsBlocks)/8); err == nil {
 								task.Bitsets[i] = blob

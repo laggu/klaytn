@@ -28,8 +28,8 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
+	"github.com/ground-x/go-gxplatform/node"
 )
 
 var (

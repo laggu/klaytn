@@ -1,11 +1,11 @@
 package grpc
 
 import (
-	"strings"
-	"fmt"
 	"bytes"
-	"html/template"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"html/template"
+	"strings"
 )
 
 type Argument struct {
@@ -39,27 +39,27 @@ var methodTemplate = `rpc {{ .Name }}({{ ToInputMsg }}) returns ({{ ToOutputMsg 
 func (m Method) String() string {
 	tmpl, err := template.New("method").
 		Funcs(template.FuncMap(
-		map[string]interface{}{
-			"ToInputMsg": func() string {
-				if len(m.Inputs) > 0 {
-					return m.RequestName()
-				} else if m.Const {
-					return Empty.Name
-				}
-				return TransactionReq.Name
-			},
-			"ToOutputMsg": func() string {
-				// if it's not a const method, we return
-				// the transaction hash
-				if m.Const {
-					if len(m.Outputs) > 0 {
-						return m.ResponseName()
+			map[string]interface{}{
+				"ToInputMsg": func() string {
+					if len(m.Inputs) > 0 {
+						return m.RequestName()
+					} else if m.Const {
+						return Empty.Name
 					}
-					return Empty.Name
-				}
-				return TransactionResp.Name
-			},
-		})).Parse(methodTemplate)
+					return TransactionReq.Name
+				},
+				"ToOutputMsg": func() string {
+					// if it's not a const method, we return
+					// the transaction hash
+					if m.Const {
+						if len(m.Outputs) > 0 {
+							return m.ResponseName()
+						}
+						return Empty.Name
+					}
+					return TransactionResp.Name
+				},
+			})).Parse(methodTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template, %v", err)
 		return ""
@@ -169,14 +169,14 @@ var messageTemplate = `message {{ .Name }} {
 func (m Message) String() string {
 	tmpl, err := template.New("message").
 		Funcs(template.FuncMap(
-		map[string]interface{}{
-			"PrintArgs": func(args []Argument) (result string) {
-				for index, arg := range args {
-					result = result + "    " + arg.String() + " = " + fmt.Sprintf("%d", index+1) + ";\n"
-				}
-				return result
-			},
-		})).Parse(messageTemplate)
+			map[string]interface{}{
+				"PrintArgs": func(args []Argument) (result string) {
+					for index, arg := range args {
+						result = result + "    " + arg.String() + " = " + fmt.Sprintf("%d", index+1) + ";\n"
+					}
+					return result
+				},
+			})).Parse(messageTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template, %v", err)
 		return ""
@@ -225,4 +225,3 @@ func (s Sources) Swap(i, j int) {
 func (s Sources) Less(i, j int) bool {
 	return strings.Compare(s[i], s[j]) < 0
 }
-

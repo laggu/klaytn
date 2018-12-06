@@ -3,7 +3,7 @@ package core
 import (
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
-	)
+)
 
 func (c *core) sendPrepare() {
 	logger := c.logger.NewWith("state", c.state)

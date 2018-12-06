@@ -1,11 +1,11 @@
 package blockchain
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/params"
 )
@@ -77,10 +77,10 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// TODO-GX We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*
-	// istanbul BFT
-	if config.IsBFT && tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
-		return nil, uint64(0), ErrInvalidGasPrice
-	}
+		// istanbul BFT
+		if config.IsBFT && tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
+			return nil, uint64(0), ErrInvalidGasPrice
+		}
 	*/
 
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))

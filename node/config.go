@@ -67,7 +67,6 @@ type Config struct {
 	// scrypt KDF at the expense of security.
 	UseLightweightKDF bool `toml:",omitempty"`
 
-
 	// IPCPath is the requested location to place the IPC endpoint. If the path is
 	// a simple file name, it is placed inside the data directory (or on the root
 	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
@@ -76,7 +75,6 @@ type Config struct {
 
 	// HTTP module type is http server module type (fasthttp and http)
 	HTTPServerType string `toml:",omitempty"`
-
 
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.

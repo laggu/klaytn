@@ -2,19 +2,19 @@ package log
 
 import (
 	"errors"
+	"fmt"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"path"
 	"path/filepath"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"sync"
-	"fmt"
 )
 
 var zlManager = zapLoggerManager{"klaytn-log",
-		"json", zapcore.InfoLevel,
-		sync.Mutex{}, make(map[ModuleID][]*zapLogger),
-	}
+	"json", zapcore.InfoLevel,
+	sync.Mutex{}, make(map[ModuleID][]*zapLogger),
+}
 
 type zapLoggerManager struct {
 	outputPath   string
@@ -25,9 +25,9 @@ type zapLoggerManager struct {
 }
 
 type zapLogger struct {
-	mi ModuleID
+	mi  ModuleID
 	cfg *zap.Config
-	sl *zap.SugaredLogger
+	sl  *zap.SugaredLogger
 }
 
 // A zapLogger generated from NewWith inherits InitialFields and ModuleID from its parent.
@@ -105,7 +105,7 @@ func genLoggerZap(mi ModuleID, cfg *zap.Config) Logger {
 	if err != nil {
 		// TODO-GX Error should be handled.
 	}
-	newLogger := &zapLogger{mi,cfg, logger.Sugar()}
+	newLogger := &zapLogger{mi, cfg, logger.Sugar()}
 	newLogger.register()
 	return newLogger
 }
@@ -192,9 +192,9 @@ func lvlToZapLevel(lvl Lvl) zapcore.Level {
 
 func genDefaultEncoderConfig() zapcore.EncoderConfig {
 	return zapcore.EncoderConfig{
-		TimeKey:        "ts",
-		LevelKey:       "level",
-		NameKey:        "logger",
+		TimeKey:  "ts",
+		LevelKey: "level",
+		NameKey:  "logger",
 		//CallerKey:      "caller",
 		MessageKey:     "msg",
 		StacktraceKey:  "stacktrace",
@@ -209,10 +209,10 @@ func genDefaultEncoderConfig() zapcore.EncoderConfig {
 func genDefaultConfig() *zap.Config {
 	encoderConfig := genDefaultEncoderConfig()
 	return &zap.Config{
-		Encoding:    zlManager.encodingType,
-		Level:       zap.NewAtomicLevelAt(zlManager.logLevel),
-		OutputPaths: []string{zlManager.outputPath},
-		Development: false,
+		Encoding:      zlManager.encodingType,
+		Level:         zap.NewAtomicLevelAt(zlManager.logLevel),
+		OutputPaths:   []string{zlManager.outputPath},
+		Development:   false,
 		EncoderConfig: encoderConfig,
 		InitialFields: make(map[string]interface{}),
 	}

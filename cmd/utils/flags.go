@@ -3,26 +3,27 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/fdlimit"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/fdlimit"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/node/cn"
-	"github.com/ground-x/go-gxplatform/node/cn/gasprice"
 	"github.com/ground-x/go-gxplatform/metrics"
-	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/p2p/nat"
 	"github.com/ground-x/go-gxplatform/networks/p2p/netutil"
+	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/go-gxplatform/node/cn"
+	"github.com/ground-x/go-gxplatform/node/cn/gasprice"
+	"github.com/ground-x/go-gxplatform/node/ranger"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -30,7 +31,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"github.com/ground-x/go-gxplatform/node/ranger"
 )
 
 // NewApp creates an app with sane defaults.
@@ -243,11 +243,11 @@ var (
 		Value: blockchain.DefaultBlockInterval,
 	}
 	CacheTypeFlag = cli.IntFlag{
-		Name: "cache.type",
+		Name:  "cache.type",
 		Usage: "Cache Type: 0=LRU, 1=LRUShard",
 	}
 	CacheScaleFlag = cli.IntFlag{
-		Name: "cache.scale",
+		Name:  "cache.scale",
 		Usage: "Scale of cache (cache size = preset size * scale of cache(%))",
 	}
 	// Miner settings
@@ -316,11 +316,11 @@ var (
 		Usage: "Enable metrics collection and reporting",
 	}
 	PrometheusExporterFlag = cli.BoolFlag{
-		Name: metrics.PrometheusExporterFlag,
+		Name:  metrics.PrometheusExporterFlag,
 		Usage: "Enable prometheus exporter",
 	}
-	PrometheusExporterPortFlag = cli.IntFlag {
-		Name: metrics.PrometheusExporterPortFlag,
+	PrometheusExporterPortFlag = cli.IntFlag{
+		Name:  metrics.PrometheusExporterPortFlag,
 		Usage: "Prometheus exporter listening port",
 		Value: 61001,
 	}
@@ -803,7 +803,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 }
 
 func convertNodeType(nodetype string) p2p.ConnType {
-	switch(strings.ToLower(nodetype)) {
+	switch strings.ToLower(nodetype) {
 	case "cn":
 		return node.CONSENSUSNODE
 	case "rn":
@@ -822,7 +822,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 
 	// httptype is http or fasthttp
 	if ctx.GlobalIsSet(SrvTypeFlag.Name) {
-		cfg.HTTPServerType =ctx.GlobalString(SrvTypeFlag.Name)
+		cfg.HTTPServerType = ctx.GlobalString(SrvTypeFlag.Name)
 	}
 
 	setHTTP(ctx, cfg)
@@ -831,7 +831,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 
 	// dbtype is leveldb or badger
 	if ctx.GlobalIsSet(DbTypeFlag.Name) {
-		cfg.DBType =ctx.GlobalString(DbTypeFlag.Name)
+		cfg.DBType = ctx.GlobalString(DbTypeFlag.Name)
 	}
 
 	switch {
@@ -1097,9 +1097,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	// TODO-GX Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*
-	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-GX-issue136 gasPrice
-	}
+		if ctx.GlobalIsSet(GasPriceFlag.Name) {
+			cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-GX-issue136 gasPrice
+		}
 	*/
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
@@ -1176,7 +1176,7 @@ func SetupNetwork(ctx *cli.Context) {
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	var (
 		ldbCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
-		numHandles = makeDatabaseHandles()
+		numHandles   = makeDatabaseHandles()
 	)
 	name := "chaindata"
 	if ctx.GlobalBool(LightModeFlag.Name) {
@@ -1225,8 +1225,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
 	trieConfig := &blockchain.TrieConfig{
-		Disabled:  ctx.GlobalString(GCModeFlag.Name) == "archive",
-		CacheSize: cn.DefaultConfig.TrieCacheSize,
+		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
+		CacheSize:     cn.DefaultConfig.TrieCacheSize,
 		BlockInterval: blockchain.DefaultBlockInterval,
 	}
 	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {

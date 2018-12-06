@@ -1,11 +1,11 @@
 package secp256k1
 
 import (
-	"testing"
-	"encoding/hex"
-	"time"
-	"fmt"
 	"bytes"
+	"encoding/hex"
+	"fmt"
+	"testing"
+	"time"
 )
 
 func TestSingle(t *testing.T) {
@@ -105,8 +105,8 @@ func TestDouble(t *testing.T) {
 		sumNative += elapsed
 	}
 
-	fmt.Printf("schnorr_go = %d us\n", sumGo.Nanoseconds() / i / 1000)
-	fmt.Printf("schnorr_native = %d us\n", sumNative.Nanoseconds() / i / 1000)
+	fmt.Printf("schnorr_go = %d us\n", sumGo.Nanoseconds()/i/1000)
+	fmt.Printf("schnorr_native = %d us\n", sumNative.Nanoseconds()/i/1000)
 }
 
 func TestScPointMulTest(t *testing.T) {

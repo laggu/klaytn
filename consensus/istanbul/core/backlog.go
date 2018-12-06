@@ -1,9 +1,9 @@
 package core
 
 import (
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 var (
@@ -151,8 +151,8 @@ func (c *core) processBacklog() {
 			logger.Trace("Post backlog event", "msg", msg)
 
 			go c.sendEvent(backlogEvent{
-				src: src,
-				msg: msg,
+				src:  src,
+				msg:  msg,
 				Hash: prevHash,
 			})
 		}

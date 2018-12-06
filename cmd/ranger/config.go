@@ -1,19 +1,19 @@
 package main
 
 import (
-	"github.com/naoina/toml"
-	"reflect"
-	"unicode"
-	"fmt"
-	"os"
 	"bufio"
-	"io"
-	"gopkg.in/urfave/cli.v1"
+	"errors"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/node"
 	rnpkg "github.com/ground-x/go-gxplatform/node/ranger"
-	"errors"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/naoina/toml"
+	"gopkg.in/urfave/cli.v1"
+	"io"
+	"os"
+	"reflect"
+	"unicode"
 )
 
 var (
@@ -83,7 +83,7 @@ func defaultRangerConfig() node.Config {
 func makeConfigRanger(ctx *cli.Context) (*node.Node, rangerConfig) {
 	// Load defaults.
 	cfg := rangerConfig{
-		Gxp:  rnpkg.DefaultConfig ,
+		Gxp:  rnpkg.DefaultConfig,
 		Node: defaultRangerConfig(),
 	}
 

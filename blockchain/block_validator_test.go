@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 // Tests that simple header verification works, for both good and bad blocks.

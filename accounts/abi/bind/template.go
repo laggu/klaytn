@@ -13,7 +13,7 @@ type tmplContract struct {
 	Type            string                 // Type name of the main contract binding
 	InputABI        string                 // JSON ABI used as the input to generate the binding from
 	InputBin        string                 // Optional EVM bytecode used to denetare deploy code from
-	InputBinRuntime string				   // Optional EVM-Runtime bytecode used to add genesis block
+	InputBinRuntime string                 // Optional EVM-Runtime bytecode used to add genesis block
 	Constructor     abi.Method             // Contract constructor for deploy parametrization
 	Calls           map[string]*tmplMethod // Contract calls that only read state data
 	Transacts       map[string]*tmplMethod // Contract calls that write state data
@@ -518,4 +518,3 @@ import org.ethereum.geth.utils.*;
 	}
 {{end}}
 `
-

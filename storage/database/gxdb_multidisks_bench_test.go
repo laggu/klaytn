@@ -117,7 +117,7 @@ func benchmark_MDP_Put_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 const rowSizePutMDP = 250
 const numRowsPutMDP = 1000 * 10
 
-var putMDPBenchmarks = [...] struct {
+var putMDPBenchmarks = [...]struct {
 	name string
 	mdo  multiDiskOption
 }{
@@ -266,7 +266,7 @@ func benchmark_MDP_Batch_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 const rowSizeBatchMDP = 250
 const numRowsBatchMDP = 1000 * 10
 
-var batchMDPBenchmarks = [...] struct {
+var batchMDPBenchmarks = [...]struct {
 	name string
 	mdo  multiDiskOption
 }{
@@ -400,7 +400,7 @@ const rowSizeGetMDP = 250
 const insertedRowsBeforeGetMDP = 1000 * 100 // pre-insertion size before read
 const numReadsMDP = 1000
 
-var getMDPBenchmarks = [...] struct {
+var getMDPBenchmarks = [...]struct {
 	name     string
 	mdo      multiDiskOption
 	numReads int
@@ -517,6 +517,7 @@ func Benchmark_MDP_Parallel_Put(b *testing.B) {
 }
 
 const parallelBatchSizeMDP = 100
+
 func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 
 	for _, bm := range batchMDPBenchmarks {
@@ -543,7 +544,7 @@ func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 				for pb.Next() {
 					partition := rand.Intn(numPartitions)
 					batch := databases[partition].NewBatch()
-					for k:=0; k < parallelBatchSizeMDP; k++ {
+					for k := 0; k < parallelBatchSizeMDP; k++ {
 						idx := rand.Intn(numRows)
 						batch.Put(keys[idx], values[idx])
 					}
@@ -553,4 +554,5 @@ func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 		})
 	}
 }
+
 // TODO-GX: MAKE PRE-LOADED TEST FOR BATCH, PUT

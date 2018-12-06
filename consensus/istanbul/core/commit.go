@@ -4,7 +4,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
-	)
+)
 
 func (c *core) sendCommit() {
 	logger := c.logger.NewWith("state", c.state)
@@ -19,8 +19,8 @@ func (c *core) sendCommit() {
 
 func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash, prevHash common.Hash) {
 	sub := &istanbul.Subject{
-		View:   view,
-		Digest: digest,
+		View:     view,
+		Digest:   digest,
 		PrevHash: prevHash,
 	}
 	c.broadcastCommit(sub)

@@ -17,16 +17,16 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"github.com/getamis/sirius/util"
-	"strings"
-	"io/ioutil"
 	"bytes"
-	"path/filepath"
-	"github.com/ground-x/go-gxplatform/cmd/sol2proto/types/grpc"
+	"fmt"
+	"github.com/getamis/sirius/util"
 	"github.com/ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/go-gxplatform/cmd/sol2proto/types/grpc"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 )
@@ -134,4 +134,3 @@ func getDestinationWriter(filename string) (destination io.WriteCloser, needClos
 
 	return destination, needClose
 }
-

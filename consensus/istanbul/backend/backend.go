@@ -2,18 +2,18 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"github.com/hashicorp/golang-lru"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul/validator"
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/hashicorp/golang-lru"
 	"math/big"
 	"sync"
 	"time"
@@ -26,11 +26,11 @@ const (
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-func New(rewardbase common.Address, rewardcontract common.Address , config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager) consensus.Istanbul {
+func New(rewardbase common.Address, rewardcontract common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager) consensus.Istanbul {
 
-	recents, _ 		  := lru.NewARC(inmemorySnapshots)
+	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
-	knownMessages, _  := lru.NewARC(inmemoryMessages)
+	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
 		config:           config,
 		istanbulEventMux: new(event.TypeMux),
@@ -85,7 +85,7 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	rewardbase common.Address
+	rewardbase     common.Address
 	rewardcontract common.Address
 }
 
@@ -123,7 +123,7 @@ func (sb *backend) Broadcast(prevHash common.Hash, valSet istanbul.ValidatorSet,
 	// sb.Gossip(valSet, payload)
 	// send to self
 	msg := istanbul.MessageEvent{
-		Hash: prevHash,
+		Hash:    prevHash,
 		Payload: payload,
 	}
 	go sb.istanbulEventMux.Post(msg)
@@ -154,8 +154,8 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 			sb.recentMessages.Add(addr, m)
 
 			cmsg := &istanbul.ConsensusMsg{
-				PrevHash:common.Hash{},
-				Payload:payload,
+				PrevHash: common.Hash{},
+				Payload:  payload,
 			}
 
 			//go p.Send(istanbulMsg, payload)
@@ -196,8 +196,8 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 			sb.recentMessages.Add(addr, m)
 
 			cmsg := &istanbul.ConsensusMsg{
-				PrevHash:prevHash,
-				Payload:payload,
+				PrevHash: prevHash,
+				Payload:  payload,
 			}
 
 			go p.Send(istanbulMsg, cmsg)

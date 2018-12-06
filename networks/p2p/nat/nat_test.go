@@ -17,9 +17,9 @@
 package nat
 
 import (
+	"net"
 	"testing"
 	"time"
-	"net"
 )
 
 // This test checks that autodisc doesn't hang and returns

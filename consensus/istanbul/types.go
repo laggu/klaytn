@@ -18,11 +18,11 @@ package istanbul
 
 import (
 	"fmt"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"io"
 	"math/big"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 // Proposal supports retrieving height and serialized block to be used during Istanbul consensus.
@@ -119,8 +119,8 @@ func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 }
 
 type Subject struct {
-	View   *View
-	Digest common.Hash
+	View     *View
+	Digest   common.Hash
 	PrevHash common.Hash
 }
 
@@ -130,8 +130,8 @@ func (b *Subject) EncodeRLP(w io.Writer) error {
 
 func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		View *View
-		Digest common.Hash
+		View     *View
+		Digest   common.Hash
 		PrevHash common.Hash
 	}
 

@@ -18,10 +18,10 @@
 package common
 
 import (
-	"github.com/hashicorp/golang-lru"
-	"math"
 	"errors"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/hashicorp/golang-lru"
+	"math"
 )
 
 type CacheType int
@@ -124,8 +124,8 @@ func (cache *arcCache) Len() int {
 }
 
 type lruShardCache struct {
-	shards			[]*lru.Cache
-	shardIndexMask	int
+	shards         []*lru.Cache
+	shardIndexMask int
 }
 
 func (cache *lruShardCache) Add(key CacheKey, val interface{}) (evicted bool) {
@@ -180,6 +180,7 @@ const (
 	minShardSize = 10
 	minNumShards = 2
 )
+
 //If key is not common.Hash nor common.Address then you should set numShard 1 or use LRU Cache
 //The number of shards is readjusted to meet the minimum shard size.
 func (c LRUShardConfig) newCache() (Cache, error) {
@@ -193,16 +194,16 @@ func (c LRUShardConfig) newCache() (Cache, error) {
 	numShards := c.makeNumShardsPowOf2()
 
 	if c.NumShards != numShards {
-		logger.Warn("numShards is ", "Expected", c.NumShards,"Actual", numShards)
+		logger.Warn("numShards is ", "Expected", c.NumShards, "Actual", numShards)
 	}
-	if cacheSize % numShards != 0 {
-		logger.Warn("Cache size is ", "Expected",cacheSize,"Actual", cacheSize - (cacheSize % numShards))
+	if cacheSize%numShards != 0 {
+		logger.Warn("Cache size is ", "Expected", cacheSize, "Actual", cacheSize-(cacheSize%numShards))
 	}
 
-	lruShard := &lruShardCache{shards : make([]*lru.Cache,numShards), shardIndexMask:numShards - 1}
-	shardsSize := cacheSize/numShards
+	lruShard := &lruShardCache{shards: make([]*lru.Cache, numShards), shardIndexMask: numShards - 1}
+	shardsSize := cacheSize / numShards
 	var err error
-	for i := 0 ; i < numShards; i++ {
+	for i := 0; i < numShards; i++ {
 		lruShard.shards[i], err = lru.NewWithEvict(shardsSize, nil)
 
 		if err != nil {

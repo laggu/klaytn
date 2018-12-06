@@ -1,16 +1,15 @@
 package database
 
 import (
-	"sync"
 	"errors"
 	"github.com/patrickmn/go-cache"
+	"sync"
 	"time"
 )
 
-
 type CacheDatabase struct {
-	cache  *cache.Cache
-	lock sync.RWMutex
+	cache *cache.Cache
+	lock  sync.RWMutex
 }
 
 func NewCacheDatabase() *CacheDatabase {
@@ -30,7 +29,7 @@ func (db *CacheDatabase) Type() string {
 }
 
 func (db *CacheDatabase) Put(key []byte, value []byte) error {
-	db.cache.Set(string(key),value, cache.DefaultExpiration)
+	db.cache.Set(string(key), value, cache.DefaultExpiration)
 	return nil
 }
 
@@ -49,7 +48,7 @@ func (db *CacheDatabase) Get(key []byte) ([]byte, error) {
 
 func (db *CacheDatabase) Keys() [][]byte {
 	keys := [][]byte{}
-	for key,_ := range db.cache.Items() {
+	for key := range db.cache.Items() {
 		keys = append(keys, []byte(key))
 	}
 	return keys
@@ -61,6 +60,3 @@ func (db *CacheDatabase) Delete(key []byte) error {
 }
 
 func (db *CacheDatabase) Close() {}
-
-
-

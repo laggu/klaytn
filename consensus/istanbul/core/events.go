@@ -5,8 +5,8 @@ import (
 )
 
 type backlogEvent struct {
-	src common.Address
-	msg *message
+	src  common.Address
+	msg  *message
 	Hash common.Hash
 }
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	)
+)
 
 const MetadataApi = "rpc"
 

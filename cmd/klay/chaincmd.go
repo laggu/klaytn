@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"gopkg.in/urfave/cli.v1"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
 	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"gopkg.in/urfave/cli.v1"
 	"os"
 )
 

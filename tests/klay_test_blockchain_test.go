@@ -17,30 +17,30 @@
 package tests
 
 import (
-	"os"
-	"fmt"
-	"time"
 	"bytes"
-	"errors"
-	"math/big"
 	"crypto/ecdsa"
+	"errors"
+	"fmt"
+	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/profile"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/crypto/sha3"
+	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/work"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/common/profile"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"math/big"
+	"os"
+	"time"
 
-	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
 	istanbulBackend "github.com/ground-x/go-gxplatform/consensus/istanbul/backend"
+	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
 )
 
 const transactionsJournalFilename = "transactions.rlp"
@@ -62,6 +62,7 @@ type BCData struct {
 }
 
 var dir = "chaindata"
+
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	conf := node.DefaultConfig
 
@@ -117,7 +118,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	return &BCData{bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine }, nil
+		validatorPrivKeys, engine}, nil
 }
 
 func (bcdata *BCData) Shutdown() {
@@ -223,7 +224,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 }
 
 func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
-	numTransactions int, prof *profile.Profiler) (error) {
+	numTransactions int, prof *profile.Profiler) error {
 	// Make a set of transactions
 	start := time.Now()
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
@@ -237,7 +238,7 @@ func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
 }
 
 func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transactions types.Transactions,
-	prof *profile.Profiler) (error){
+	prof *profile.Profiler) error {
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
@@ -258,7 +259,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Insert the block into the blockchain
 	start = time.Now()
-	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil{
+	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
 		return fmt.Errorf("err = %s, n = %d\n", err, n)
 	}
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/ground-x/go-gxplatform/storage/database"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a

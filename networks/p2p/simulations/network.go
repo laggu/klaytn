@@ -288,7 +288,7 @@ func (net *Network) Connect(oneID, otherID discover.NodeID) error {
 
 //
 // method on the "one" node that it connect to all "other" nodes
-func(net *Network) ConnectAll() error {
+func (net *Network) ConnectAll() error {
 	logger.Debug(fmt.Sprintf("connecting all nodes to all other nodes"))
 
 	for _, oneNode := range net.Nodes {
@@ -304,7 +304,7 @@ func(net *Network) ConnectAll() error {
 				err := net.Connect(oneID, otherID)
 				if err != nil {
 					logger.Error(fmt.Sprintf("Error in ConnectAll() : %s", err))
-					continue;
+					continue
 				}
 			}
 		}()
@@ -313,7 +313,7 @@ func(net *Network) ConnectAll() error {
 	return nil
 }
 
-func(net *Network) DisconnectAll() error {
+func (net *Network) DisconnectAll() error {
 	logger.Debug(fmt.Sprintf("Disconnecting all nodes to all other nodes"))
 
 	for _, oneNode := range net.Nodes {
@@ -329,13 +329,12 @@ func(net *Network) DisconnectAll() error {
 			err := net.Disconnect(oneID, otherID)
 			if err != nil {
 				logger.Error(fmt.Sprintf("Error in DisconnectAll() : %s", err))
-				continue;
+				continue
 			}
 		}
 	}
 	return nil
 }
-
 
 // this function does not remove peer, just close the connection for target
 func (net *Network) DisconnectOnly(one, other discover.NodeID) error {
@@ -347,10 +346,9 @@ func (net *Network) DisconnectOnly(one, other discover.NodeID) error {
 	return nil
 }
 
-
 type ConnResult struct {
 	succMap map[discover.NodeID]bool
-	mux sync.Mutex
+	mux     sync.Mutex
 }
 
 func (cr *ConnResult) reset() {
@@ -392,7 +390,7 @@ func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
 	node := net.getNode(oneID)
 	if node == nil {
 		logger.Debug(fmt.Sprintf("### CheckComplation - cannot find nodeID %v", oneID))
-		return;
+		return
 	}
 	peerCnt := node.Node.GetPeerCount()
 	targetCnt := len(net.Nodes) - 1
@@ -410,7 +408,6 @@ func (net *Network) CheckAllConnectDone(oneID discover.NodeID) {
 		}
 	}
 }
-
 
 // Disconnect disconnects two nodes by calling the "admin_removePeer" RPC
 // method on the "one" node so that it disconnects from the "other" node
@@ -626,7 +623,6 @@ func (net *Network) InitConn(oneID, otherID discover.NodeID) (*Conn, error) {
 	conn.initiated = time.Now()
 	return conn, nil
 }
-
 
 // TODO
 // this function made for the testing

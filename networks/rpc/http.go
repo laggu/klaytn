@@ -159,7 +159,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Se
 	if len(cors) == 0 {
 		for _, vhost := range vhosts {
 			if vhost == "*" {
-				return &fasthttp.Server{Concurrency: 3000 , Handler:srv.HandleFastHTTP}
+				return &fasthttp.Server{Concurrency: 3000, Handler: srv.HandleFastHTTP}
 			}
 		}
 	}

@@ -143,11 +143,11 @@ func TestNodeKeyPersistency(t *testing.T) {
 
 	// TODO-GX-FIX Test fails
 	/*
-	// Configure ephemeral node and ensure no key is dumped locally
-	config = &Config{Name: "unit-test", DataDir: ""}
-	config.NodeKey()
-	if _, err := os.Stat(filepath.Join(".", "unit-test", datadirPrivateKey)); err == nil {
-		t.Fatalf("ephemeral node key persisted to disk")
-	}
+		// Configure ephemeral node and ensure no key is dumped locally
+		config = &Config{Name: "unit-test", DataDir: ""}
+		config.NodeKey()
+		if _, err := os.Stat(filepath.Join(".", "unit-test", datadirPrivateKey)); err == nil {
+			t.Fatalf("ephemeral node key persisted to disk")
+		}
 	*/
 }

@@ -1,10 +1,10 @@
 package core
 
 import (
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"time"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
@@ -14,19 +14,18 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()
 
-		if c.enabledRN && c.backend.CurrentBlock().NumberU64() % 10 == 0 {
+		if c.enabledRN && c.backend.CurrentBlock().NumberU64()%10 == 0 {
 			// ranger node
 			proof := &types.Proof{
-				Solver:       c.backend.Address(),
-				BlockNumber:  c.backend.CurrentBlock().Number(),
-				Nonce: 	      c.backend.CurrentBlock().Nonce(),
+				Solver:      c.backend.Address(),
+				BlockNumber: c.backend.CurrentBlock().Number(),
+				Nonce:       c.backend.CurrentBlock().Nonce(),
 			}
 
 			proofpreprepare, err := Encode(&istanbul.ProofPreprepare{
 				View:     curView,
 				Proposal: request.Proposal,
 				Proof:    proof,
-
 			})
 			if err != nil {
 				logger.Error("Failed to encode", "view", curView)
@@ -97,7 +96,7 @@ func (c *core) handleProofPrepare(msg *message, src istanbul.Validator) error {
 		Hash: msg.Hash,
 		Code: msgPreprepare,
 		Msg:  preprepare,
-	},src)
+	}, src)
 	if err != nil {
 		return err
 	}
@@ -164,8 +163,8 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			c.stopFuturePreprepareTimer()
 			c.futurePreprepareTimer = time.AfterFunc(duration, func() {
 				c.sendEvent(backlogEvent{
-					src: src.Address(),
-					msg: msg,
+					src:  src.Address(),
+					msg:  msg,
 					Hash: msg.Hash,
 				})
 			})

@@ -2,14 +2,14 @@ package downloader
 
 import (
 	"fmt"
-	"hash"
-	"sync"
-	"time"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"hash"
+	"sync"
+	"time"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into

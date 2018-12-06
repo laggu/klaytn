@@ -4,13 +4,13 @@ package klaytn
 import (
 	"context"
 	"errors"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"math/big"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.
-var NotFound = errors.New ("not found")
+var NotFound = errors.New("not found")
 
 // Subscription represents an event subscription where events are
 // delivered on a data channel.

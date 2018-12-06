@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
 	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/storage/statedb"
 )
 
 // NewStateSync create a new state trie download scheduler.

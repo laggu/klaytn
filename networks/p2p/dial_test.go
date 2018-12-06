@@ -533,7 +533,6 @@ func TestDialStateAddingSelfNode(t *testing.T) {
 	dialState_func := newDialState(wantStatic, nil, fakeTable{}, 0, nil, privateKey)
 	dialState_normal := newDialState(wantStatic, nil, fakeTable{}, 0, nil, fakePrivateKey)
 
-
 	if len(dialState_nil.static) != 5 {
 		t.Errorf("newDialState() can't process nil privateKey")
 	}
@@ -548,7 +547,6 @@ func TestDialStateAddingSelfNode(t *testing.T) {
 		t.Errorf("newDialState() can't deal with normal case")
 	}
 }
-
 
 // This test checks that static peers will be redialed immediately if they were re-added to a static list.
 func TestDialStaticAfterReset(t *testing.T) {

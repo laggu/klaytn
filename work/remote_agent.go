@@ -2,10 +2,10 @@ package work
 
 import (
 	"errors"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"math/big"
 	"sync"
 	"sync/atomic"

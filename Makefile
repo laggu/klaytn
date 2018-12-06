@@ -48,6 +48,9 @@ cover:
 	go tool cover -html=coverage.out -o coverage_report.html
 	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
 
+fmt:
+	build/env.sh go run build/ci.go fmt
+
 clean:
 	./build/clean_go_build_cache.sh
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*

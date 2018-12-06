@@ -17,8 +17,8 @@
 package blockchain
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.

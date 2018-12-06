@@ -24,11 +24,11 @@ import (
 	"sync"
 
 	"github.com/ground-x/go-gxplatform/event"
-		"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/pipes"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/node"
 )
 
 // CnAdapter is a NodeAdapter which creates in-memory simulation nodes and
@@ -80,10 +80,10 @@ func (s *CnAdapter) NewNode(config *NodeConfig) (Node, error) {
 
 	n, err := node.New(&node.Config{
 		P2P: p2p.Config{
-			PrivateKey:      config.PrivateKey, // from p2psim client
-			MaxPeers:        math.MaxInt32,
-			NoDiscovery:     true,
-			ListenAddr: fmt.Sprintf(":%d", config.Port),
+			PrivateKey:  config.PrivateKey, // from p2psim client
+			MaxPeers:    math.MaxInt32,
+			NoDiscovery: true,
+			ListenAddr:  fmt.Sprintf(":%d", config.Port),
 			//Dialer:          s,
 			EnableMsgEvents: config.EnableMsgEvents,
 		},
@@ -332,7 +332,7 @@ func (sn *CnNode) NodeInfo() *p2p.NodeInfo {
 
 func (sn *CnNode) PeersInfo() []*p2p.PeerInfo {
 	server := sn.Server()
-	if (server == nil) {
+	if server == nil {
 		return nil
 	}
 	return server.PeersInfo()

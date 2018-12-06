@@ -1,16 +1,16 @@
 package bind
 
 import (
-	"math/big"
+	"context"
+	"errors"
 	"fmt"
+	"github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
-	"context"
-	"github.com/ground-x/go-gxplatform/accounts/abi"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform"
-	"errors"
 	"github.com/ground-x/go-gxplatform/event"
+	"math/big"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to
@@ -334,4 +334,3 @@ func ensureContext(ctx context.Context) context.Context {
 	}
 	return ctx
 }
-

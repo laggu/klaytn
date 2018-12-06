@@ -24,12 +24,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/mclock"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/common"
 )
 
 var logger = log.NewModuleLogger(log.NetworksP2P)
@@ -479,4 +479,3 @@ func (p *Peer) ConnType() ConnType {
 type PeerTypeValidator interface {
 	ValidatePeerType(addr common.Address) bool
 }
-

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
@@ -52,7 +52,7 @@ const (
 
 var (
 	ErrInvalidSubscriptionID = errors.New("invalid id")
-	logger = log.NewModuleLogger(log.NodeCNFilters)
+	logger                   = log.NewModuleLogger(log.NodeCNFilters)
 )
 
 type subscription struct {

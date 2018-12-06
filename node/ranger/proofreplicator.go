@@ -2,11 +2,11 @@ package ranger
 
 import (
 	"fmt"
-	"math/big"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/accounts"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
+	"math/big"
 )
 
 func (rn *Ranger) proofReplication() error {
@@ -22,9 +22,9 @@ func (rn *Ranger) proofReplication() error {
 	}
 
 	account := accounts.Account{Address: coinbase}
-	wallet , err := rn.accountManager.Find(account)
+	wallet, err := rn.accountManager.Find(account)
 	if err != nil {
-		logger.Error("find err","err",err)
+		logger.Error("find err", "err", err)
 		return err
 	}
 
@@ -35,9 +35,9 @@ func (rn *Ranger) proofReplication() error {
 	data := []byte{}
 
 	currentProof := types.Proof{
-		Solver: common.Address{},
+		Solver:      common.Address{},
 		BlockNumber: big.NewInt(0),
-		Nonce: 0,
+		Nonce:       0,
 	}
 
 	for {
@@ -48,7 +48,7 @@ func (rn *Ranger) proofReplication() error {
 				statedb, _ := rn.blockchain.State()
 				nonce := statedb.GetNonce(account.Address)
 
-				logger.Debug("receive msg", "num", msg.proof.BlockNumber, "proof.nonce", msg.proof.Nonce, "addr", msg.proof.Solver,"nonce",nonce)
+				logger.Debug("receive msg", "num", msg.proof.BlockNumber, "proof.nonce", msg.proof.Nonce, "addr", msg.proof.Solver, "nonce", nonce)
 
 				var chainID *big.Int
 				tx, err := wallet.SignTx(account, types.NewTransaction(nonce, to, amount, gaslimit, gasprice, data), chainID)
@@ -63,9 +63,9 @@ func (rn *Ranger) proofReplication() error {
 				//	logger.Error("fail to send transaction", "err", err)
 				//}
 
-				if cached, ok := rn.peerCache.Get(msg.addr);ok {
+				if cached, ok := rn.peerCache.Get(msg.addr); ok {
 					cpeer := *cached.(*consensus.Peer)
-					err := cpeer.Send(consensus.PoRSendMsg,tx)
+					err := cpeer.Send(consensus.PoRSendMsg, tx)
 					if err != nil {
 						logger.Error("fail to send transaction", "err", err)
 					}
@@ -74,7 +74,7 @@ func (rn *Ranger) proofReplication() error {
 					m[msg.addr] = true
 					peermap := rn.protocolManager.FindPeers(m)
 					p := peermap[msg.addr]
-					err = p.Send(consensus.PoRSendMsg,tx)
+					err = p.Send(consensus.PoRSendMsg, tx)
 					if err != nil {
 						logger.Error("fail to send transaction", "err", err)
 					}

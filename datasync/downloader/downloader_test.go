@@ -25,14 +25,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/go-gxplatform/storage/statedb"
 )
 
 // Reduce some of the parameters to make the tester faster.
@@ -46,7 +46,7 @@ func init() {
 type downloadTester struct {
 	downloader *Downloader
 
-	genesis *types.Block   // Genesis blocks used by the tester and peers
+	genesis *types.Block       // Genesis blocks used by the tester and peers
 	stateDb database.DBManager // Database used by the tester for syncing from peers
 	peerDb  database.DBManager // Database of the peers containing all data
 

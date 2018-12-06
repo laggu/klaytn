@@ -3,10 +3,10 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul/validator"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
@@ -266,21 +266,21 @@ type snapshotJSON struct {
 	Tally  map[common.Address]Tally `json:"tally"`
 
 	// for validator set
-	Validators []common.Address        `json:"validators"`
-	Policy     istanbul.ProposerPolicy `json:"policy"`
-	SubGroupSize int                   `json:"subgroupsize"`
+	Validators   []common.Address        `json:"validators"`
+	Policy       istanbul.ProposerPolicy `json:"policy"`
+	SubGroupSize int                     `json:"subgroupsize"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	return &snapshotJSON{
-		Epoch:      s.Epoch,
-		Number:     s.Number,
-		Hash:       s.Hash,
-		Votes:      s.Votes,
-		Tally:      s.Tally,
-		Validators: s.validators(),
-		Policy:     s.ValSet.Policy(),
-		SubGroupSize:  s.ValSet.SubGroupSize(),
+		Epoch:        s.Epoch,
+		Number:       s.Number,
+		Hash:         s.Hash,
+		Votes:        s.Votes,
+		Tally:        s.Tally,
+		Validators:   s.validators(),
+		Policy:       s.ValSet.Policy(),
+		SubGroupSize: s.ValSet.SubGroupSize(),
 	}
 }
 

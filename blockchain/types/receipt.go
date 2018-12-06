@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"io"
 	"unsafe"
 )
@@ -31,7 +31,7 @@ import (
 var (
 	receiptStatusFailedRLP     = []byte{}
 	receiptStatusSuccessfulRLP = []byte{0x01}
-	logger = log.NewModuleLogger(log.BlockchainTypes)
+	logger                     = log.NewModuleLogger(log.BlockchainTypes)
 )
 
 const (

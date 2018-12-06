@@ -35,4 +35,3 @@ func ParseEvent(ev abi.Event) (Method, []Message) {
 
 	return method, requiredMessages
 }
-

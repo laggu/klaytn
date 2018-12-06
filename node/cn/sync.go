@@ -1,8 +1,8 @@
 package cn
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
 	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
 	"math/rand"

@@ -19,7 +19,7 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
-        // TODO-GX-FIX Enable below package when enabling TestTransactionJSON
+	// TODO-GX-FIX Enable below package when enabling TestTransactionJSON
 	// "encoding/json"
 	"math/big"
 	"testing"

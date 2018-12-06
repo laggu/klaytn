@@ -17,13 +17,13 @@
 package tests
 
 import (
-	"fmt"
 	"errors"
-	"math/big"
+	"fmt"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"math/big"
 )
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -31,20 +31,20 @@ import (
 ////////////////////////////////////////////////////////////////////////////////
 type AccountInfo struct {
 	balance *big.Int
-	nonce uint64
+	nonce   uint64
 }
 
 type AccountMap struct {
 	m map[common.Address]*AccountInfo
 }
 
-func NewAccountMap() (*AccountMap) {
-	return &AccountMap {
+func NewAccountMap() *AccountMap {
+	return &AccountMap{
 		m: make(map[common.Address]*AccountInfo),
 	}
 }
 
-func (a *AccountMap) Get(addr common.Address) (*AccountInfo) {
+func (a *AccountMap) Get(addr common.Address) *AccountInfo {
 	if acc, ok := a.m[addr]; ok {
 		return &AccountInfo{new(big.Int).Set(acc.balance), acc.nonce}
 	}
@@ -77,7 +77,7 @@ func (a *AccountMap) Set(addr common.Address, v *big.Int, nonce uint64) {
 	a.m[addr] = &AccountInfo{new(big.Int).Set(v), nonce}
 }
 
-func (a *AccountMap) Initialize(bcdata *BCData) (error) {
+func (a *AccountMap) Initialize(bcdata *BCData) error {
 	statedb, err := bcdata.bc.State()
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (a *AccountMap) Initialize(bcdata *BCData) (error) {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, signer types.Signer) (error) {
+func (a *AccountMap) Update(txs types.Transactions, signer types.Signer) error {
 	for _, tx := range txs {
 		to := tx.To()
 		v := tx.Value()
@@ -114,7 +114,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer) (error)
 	return nil
 }
 
-func (a *AccountMap) Verify(statedb *state.StateDB) (error) {
+func (a *AccountMap) Verify(statedb *state.StateDB) error {
 	for addr, acc := range a.m {
 		if acc.nonce != statedb.GetNonce(addr) {
 			return errors.New(fmt.Sprintf("[%s] nonce is different!! statedb(%d) != accountMap(%d).\n",

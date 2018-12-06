@@ -183,7 +183,7 @@ func TestSnapshotForDeletedObject(t *testing.T) {
 
 	so0Restored := state.getStateObject(stateObjAddr0)
 	so0Restored.GetState(state.db, storageAddr) // Update lazily-loaded values before comparing.
-	so0Restored.Code(state.db)					// Update lazily-loaded values before comparing.
+	so0Restored.Code(state.db)                  // Update lazily-loaded values before comparing.
 
 	// non-deleted stateObject should be equal before/after restoring.
 	compareStateObjects(so0Restored, so0, t)

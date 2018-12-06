@@ -138,7 +138,7 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 		V = big.NewInt(int64(sig[64] + 35))
 		V.Add(V, s.chainIdMul)
 	}
- 	return R, S, V, nil
+	return R, S, V, nil
 }
 
 // Hash returns the hash to be signed by the sender.

@@ -21,8 +21,8 @@ import (
 	"sync"
 
 	"fmt"
-	"gopkg.in/fatih/set.v0"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"gopkg.in/fatih/set.v0"
 	"math"
 	"strings"
 )

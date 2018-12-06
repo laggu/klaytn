@@ -1,11 +1,11 @@
 package state
 
 import (
-	"fmt"
 	"encoding/json"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/go-gxplatform/storage/statedb"
 )
 
 type DumpAccount struct {

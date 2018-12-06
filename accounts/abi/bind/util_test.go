@@ -24,9 +24,9 @@ import (
 
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
 	"github.com/ground-x/go-gxplatform/accounts/abi/bind/backends"
-	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
 )
 

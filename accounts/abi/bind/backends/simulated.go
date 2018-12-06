@@ -1,27 +1,27 @@
 package backends
 
 import (
-	"sync"
-	"math/big"
-	"fmt"
-	"time"
-	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
+	"context"
 	"errors"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"fmt"
+	"github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
 	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/consensus/gxhash"
+	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"github.com/ground-x/go-gxplatform/node/cn/filters"
 	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/event"
-	"context"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/blockchain/bloombits"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"math/big"
+	"sync"
+	"time"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -33,7 +33,7 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
-	database   database.DBManager      // In memory database to store our testing data
+	database   database.DBManager     // In memory database to store our testing data
 	blockchain *blockchain.BlockChain // GXP blockchain to handle the consensus
 
 	mu           sync.Mutex
@@ -404,7 +404,7 @@ type filterBackend struct {
 }
 
 func (fb *filterBackend) ChainDB() database.DBManager { return fb.db }
-func (fb *filterBackend) EventMux() *event.TypeMux   { panic("not supported") }
+func (fb *filterBackend) EventMux() *event.TypeMux    { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if block == rpc.LatestBlockNumber {
@@ -441,4 +441,3 @@ func (fb *filterBackend) BloomStatus() (uint64, uint64) { return 4096, 0 }
 func (fb *filterBackend) ServiceFilter(ctx context.Context, ms *bloombits.MatcherSession) {
 	panic("not supported")
 }
-

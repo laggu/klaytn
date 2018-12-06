@@ -136,19 +136,19 @@ func main() {
 					},
 				},
 				{
-					Name:      "connectall",
-					Usage:     "connect between all nodes",
-					Action:    connectAll,
+					Name:   "connectall",
+					Usage:  "connect between all nodes",
+					Action: connectAll,
 				},
 				{
-					Name:      "disconnectall",
-					Usage:     "disconnect between all nodes",
-					Action:    disconnectAll,
+					Name:   "disconnectall",
+					Usage:  "disconnect between all nodes",
+					Action: disconnectAll,
 				},
 				{
-					Name:      "disconnectonly",
-					Usage:     "close the connection of node to target node",
-					Action:    disconnectOnly,
+					Name:   "disconnectonly",
+					Usage:  "close the connection of node to target node",
+					Action: disconnectOnly,
 				},
 				{
 					Name:      "show",
@@ -323,7 +323,7 @@ func connectAll(ctx *cli.Context) error {
 	}
 
 	err := client.ConnectAll()
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 	fmt.Fprintln(ctx.App.Writer, "ConnectAll")
@@ -336,7 +336,7 @@ func disconnectAll(ctx *cli.Context) error {
 	}
 
 	err := client.DisconnectAll()
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 	fmt.Fprintln(ctx.App.Writer, "DisconnectAll")
@@ -353,7 +353,7 @@ func disconnectOnly(ctx *cli.Context) error {
 	peerName := args[1]
 
 	err := client.DisconnectOnly(nodeName, peerName)
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 	fmt.Fprintln(ctx.App.Writer, "DisconnectOnly")

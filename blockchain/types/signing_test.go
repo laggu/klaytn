@@ -122,7 +122,7 @@ func BenchmarkDoubleRecoverEIP155SignerSingleGoroutine(b *testing.B) {
 }
 
 type param struct {
-	signTx *Transaction
+	signTx   *Transaction
 	addrChan chan common.Address
 }
 
@@ -131,10 +131,10 @@ func launchSenderGoroutines(signer *EIP155Signer, num int, paramCh chan param, q
 		go func() {
 			for {
 				select {
-				case p := <- paramCh:
+				case p := <-paramCh:
 					addr, _ := signer.Sender(p.signTx)
 					p.addrChan <- addr
-				case <- quitCh:
+				case <-quitCh:
 					return
 				}
 			}

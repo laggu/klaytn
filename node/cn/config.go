@@ -1,11 +1,13 @@
 package cn
 
 import (
+	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/blockchain"
+	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	"github.com/ground-x/go-gxplatform/datasync/downloader"
+	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/node/cn/gasprice"
 	"github.com/ground-x/go-gxplatform/params"
 	"math/big"
@@ -14,8 +16,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/log"
 )
 
 var logger = log.NewModuleLogger(log.NodeCN)
@@ -30,13 +30,13 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:        1,
-	LightPeers:       100,
-	LevelDBCacheSize: 768,
-	TrieCacheSize:    256,
-	TrieTimeout:      5 * time.Minute,
+	NetworkId:         1,
+	LightPeers:        100,
+	LevelDBCacheSize:  768,
+	TrieCacheSize:     256,
+	TrieTimeout:       5 * time.Minute,
 	TrieBlockInterval: blockchain.DefaultBlockInterval,
-	GasPrice:         big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
+	GasPrice:          big.NewInt(18 * params.Ston), // TODO-GX-issue136 default gasPrice
 
 	TxPool: blockchain.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
@@ -94,7 +94,7 @@ type Config struct {
 
 	// Reward
 	RewardContract common.Address `toml:",omitempty"`
-	Rewardbase   common.Address `toml:",omitempty"`
+	Rewardbase     common.Address `toml:",omitempty"`
 
 	// Gxhash options
 	Gxhash gxhash.Config

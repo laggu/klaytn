@@ -1,13 +1,13 @@
 package main
 
 import (
-	"io/ioutil"
 	"fmt"
-	"os"
-	"strings"
-	"path"
-	"github.com/ground-x/go-gxplatform/cmd/grpc-contract/internal/impl"
 	"github.com/getamis/sirius/util"
+	"github.com/ground-x/go-gxplatform/cmd/grpc-contract/internal/impl"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 	parser "github.com/zpatrick/go-parser"
@@ -138,9 +138,9 @@ func main() {
 
 var (
 	predefinedStructs = map[string]struct{}{
-		"TransactionResp": struct{}{},
-		"Empty":           struct{}{},
-		"TransactionReq":  struct{}{},
+		"TransactionResp": {},
+		"Empty":           {},
+		"TransactionReq":  {},
 	}
 )
 
@@ -159,4 +159,3 @@ func findGoStruct(name string, goFile *parser.GoFile) *parser.GoStruct {
 	}
 	return nil
 }
-

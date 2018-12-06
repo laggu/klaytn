@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform"
+	"github.com/ground-x/go-gxplatform/api"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/api"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"math/big"
 )
 

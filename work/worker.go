@@ -2,23 +2,23 @@ package work
 
 import (
 	"fmt"
-	"gopkg.in/fatih/set.v0"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/go-gxplatform/node"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/node"
 )
 
 const (
@@ -39,7 +39,7 @@ const (
 var (
 	// Metrics for miner
 	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
-	tooLongTxCounter = metrics.NewRegisteredCounter("miner/toolongtx", nil)
+	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
 )
 
 // Agent can register themself with the worker
@@ -410,7 +410,7 @@ func (self *worker) wait() {
 			var events []interface{}
 
 			work.stateMu.RLock()
-			logs   := work.state.Logs()
+			logs := work.state.Logs()
 			work.stateMu.RUnlock()
 
 			events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
@@ -491,7 +491,7 @@ func (self *worker) commitNewWork() {
 		//if self.nodetype == node.RANGERNODE || self.nodetype == node.GENERALNODE {
 		//	tstamp = parent.Time().Int64() + 5
 		//} else {
-			tstamp = parent.Time().Int64() + 1
+		tstamp = parent.Time().Int64() + 1
 		//}
 	}
 	// this will ensure we're not going off too far in the future
@@ -664,8 +664,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 	}()
 
 	vmConfig := &vm.Config{
-		JumpTable: vm.ConstantinopleInstructionSet,
-		RunningEVM: chEVM,
+		JumpTable:         vm.ConstantinopleInstructionSet,
+		RunningEVM:        chEVM,
 		UseOpcodeCntLimit: true,
 	}
 

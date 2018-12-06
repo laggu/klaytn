@@ -22,11 +22,11 @@ import (
 
 	"errors"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 	"math"
 	"math/big"
 	"sync/atomic"
@@ -55,16 +55,16 @@ const (
 	headerChainCacheKeySize
 )
 
-var headerLRUCacheConfig = [headerChainCacheKeySize]common.CacheConfiger {
-	hedearCacheIndex: 	common.LRUConfig{CacheSize: headerCacheLimit},
-	tdCacheIndex: 		common.LRUConfig{CacheSize: tdCacheLimit},
-	numberCacheIndex: 	common.LRUConfig{CacheSize: numberCacheLimit},
+var headerLRUCacheConfig = [headerChainCacheKeySize]common.CacheConfiger{
+	hedearCacheIndex: common.LRUConfig{CacheSize: headerCacheLimit},
+	tdCacheIndex:     common.LRUConfig{CacheSize: tdCacheLimit},
+	numberCacheIndex: common.LRUConfig{CacheSize: numberCacheLimit},
 }
 
-var	headerLRUShardCacheConfig = [headerChainCacheKeySize]common.CacheConfiger {
-	hedearCacheIndex: 	common.LRUShardConfig{CacheSize: headerCacheLimit, NumShards: numShardsHeaderCache},
-	tdCacheIndex: 		common.LRUShardConfig{CacheSize: tdCacheLimit, NumShards: numShardsTdCache},
-	numberCacheIndex: 	common.LRUShardConfig{CacheSize: numberCacheLimit, NumShards: numShardsNumberCache},
+var headerLRUShardCacheConfig = [headerChainCacheKeySize]common.CacheConfiger{
+	hedearCacheIndex: common.LRUShardConfig{CacheSize: headerCacheLimit, NumShards: numShardsHeaderCache},
+	tdCacheIndex:     common.LRUShardConfig{CacheSize: tdCacheLimit, NumShards: numShardsTdCache},
+	numberCacheIndex: common.LRUShardConfig{CacheSize: numberCacheLimit, NumShards: numShardsNumberCache},
 }
 
 func newHeaderChainCache(cacheNameKey headerChainCacheKey, cacheType common.CacheType) common.Cache {

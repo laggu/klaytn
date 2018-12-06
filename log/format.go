@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	timeFormat     = "1999-05-02T15:04:05-0700"
-	termTimeFormat = "01-02|15:04:05"
-	logTimeFormat  = "2006-01-02T15:04:05.000 Z07"
+	timeFormat          = "1999-05-02T15:04:05-0700"
+	termTimeFormat      = "01-02|15:04:05"
+	logTimeFormat       = "2006-01-02T15:04:05.000 Z07"
 	simpleLogTimeFormat = "01/02,15:04:05 Z07"
-	floatFormat    = 'f'
-	termMsgJust    = 40
+	floatFormat         = 'f'
+	termMsgJust         = 40
 )
 
 // locationTrims are trimmed for display to avoid unwieldy log lines.
@@ -107,7 +107,7 @@ func TerminalFormat(usecolor bool) Format {
 
 		var module = ""
 		if r.Ctx[0].(string) == "module" {
-			module = fmt.Sprintf("%v",r.Ctx[1]);
+			module = fmt.Sprintf("%v", r.Ctx[1])
 		}
 
 		b := &bytes.Buffer{}

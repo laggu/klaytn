@@ -3,22 +3,22 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"github.com/hashicorp/golang-lru"
+	"github.com/ground-x/go-gxplatform/blockchain/state"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/hexutil"
 	"github.com/ground-x/go-gxplatform/consensus"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul"
 	istanbulCore "github.com/ground-x/go-gxplatform/consensus/istanbul/core"
 	"github.com/ground-x/go-gxplatform/consensus/istanbul/validator"
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/hashicorp/golang-lru"
 	"math/big"
 	"math/rand"
 	"time"
-	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
 )
 
 const (
@@ -375,7 +375,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// TODO-GX developing klay reward mechanism
 	var reward = big.NewInt(1000000000000000000)        // 1 eth
 	var rewardcontract = big.NewInt(100000000000000000) // 0.1 eth
-	state.AddBalance(header.Rewardbase , reward)
+	state.AddBalance(header.Rewardbase, reward)
 
 	state.AddBalance(common.HexToAddress(contract.RNRewardAddr), rewardcontract)
 	state.AddBalance(common.HexToAddress(contract.CommitteeRewardAddr), rewardcontract)
@@ -474,18 +474,18 @@ func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, pare
 // APIs returns the RPC APIs this consensus engine provides.
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{
-	{
-		Namespace: "istanbul",
-		Version:   "1.0",
-		Service:   &API{chain: chain, istanbul: sb},
-		Public:    true,
-	}, {
-		Namespace: "klay",
-		Version:   "1.0",
-		Service:   &APIExtension{chain: chain, istanbul: sb},
-		Public:    true,
-	},
-    }
+		{
+			Namespace: "istanbul",
+			Version:   "1.0",
+			Service:   &API{chain: chain, istanbul: sb},
+			Public:    true,
+		}, {
+			Namespace: "klay",
+			Version:   "1.0",
+			Service:   &APIExtension{chain: chain, istanbul: sb},
+			Public:    true,
+		},
+	}
 }
 
 // Start implements consensus.Istanbul.Start

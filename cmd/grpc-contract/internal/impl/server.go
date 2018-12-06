@@ -1,11 +1,11 @@
 package impl
 
 import (
-	"fmt"
-	"os"
 	"bytes"
-	"text/template"
+	"fmt"
 	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"os"
+	"text/template"
 )
 
 type Server struct {
@@ -132,4 +132,3 @@ func (s *Server) Write(filepath, filename string) {
 	}
 	utils.WriteFile(result.String(), filepath, filename)
 }
-

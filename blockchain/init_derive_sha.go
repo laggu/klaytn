@@ -37,4 +37,3 @@ func InitDeriveSha(deriveShaImpl int) {
 		types.InitDeriveSha(statedb.DeriveShaOrig{})
 	}
 }
-

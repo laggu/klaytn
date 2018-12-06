@@ -25,15 +25,15 @@ import (
 
 	"errors"
 	"fmt"
-	"github.com/prometheus/prometheus/util/flock"
+	"github.com/ground-x/go-gxplatform/api/debug"
 	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
 	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/prometheus/prometheus/util/flock"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
-	"github.com/ground-x/go-gxplatform/api/debug"
 )
 
 var logger = log.NewModuleLogger(log.Node)
@@ -284,7 +284,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 			n.stopInProc()
 			return err
 		}
-	}else {
+	} else {
 		if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts); err != nil {
 			n.stopIPC()
 			n.stopInProc()

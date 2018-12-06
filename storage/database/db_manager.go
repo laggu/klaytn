@@ -18,15 +18,15 @@
 package database
 
 import (
-	"math/big"
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"encoding/binary"
-	"bytes"
-	"encoding/json"
+	"math/big"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -115,7 +115,6 @@ type DBManager interface {
 	WriteSectionHead(encodedSection []byte, hash common.Hash)
 	DeleteSectionHead(encodedSection []byte)
 
-
 	// from accessors_metadata.go
 	ReadDatabaseVersion() int
 	WriteDatabaseVersion(version int)
@@ -151,11 +150,11 @@ const (
 )
 
 type databaseManager struct {
-	dbs []Database
+	dbs        []Database
 	isMemoryDB bool
 }
 
-func NewMemoryDBManager() (DBManager) {
+func NewMemoryDBManager() DBManager {
 	dbm := databaseManager{make([]Database, 1, 1), true}
 	dbm.dbs[0] = NewMemDatabase()
 
@@ -185,7 +184,7 @@ func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManag
 		return nil, err
 	}
 
-	for i:=0; i < int(databaseEntryTypeSize); i++ {
+	for i := 0; i < int(databaseEntryTypeSize); i++ {
 		if i == int(indexSectionsDB) {
 			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
 		} else {

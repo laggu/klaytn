@@ -3,21 +3,21 @@ package types
 import (
 	"errors"
 	"github.com/ground-x/go-gxplatform/common"
-	"io"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"strings"
+	"io"
 	"math/big"
+	"strings"
 )
 
 var (
-	ProofDigest = common.HexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365")
+	ProofDigest     = common.HexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365")
 	ErrInvalidProof = errors.New("invalid proof message data")
 )
 
 type Proof struct {
-	Solver        common.Address
-	BlockNumber   *big.Int
-	Nonce         uint64
+	Solver      common.Address
+	BlockNumber *big.Int
+	Nonce       uint64
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
@@ -32,9 +32,9 @@ func (pr *Proof) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (pr *Proof) DecodeRLP(s *rlp.Stream) error {
 	var proof struct {
-		Solver        common.Address
-		BlockNumber   *big.Int
-		Nonce         uint64
+		Solver      common.Address
+		BlockNumber *big.Int
+		Nonce       uint64
 	}
 	if err := s.Decode(&proof); err != nil {
 		return err
@@ -45,7 +45,7 @@ func (pr *Proof) DecodeRLP(s *rlp.Stream) error {
 
 func (pr *Proof) Compare(v Proof) bool {
 
-	comp := strings.Compare(pr.Solver.String(),v.Solver.String())
+	comp := strings.Compare(pr.Solver.String(), v.Solver.String())
 	if comp != 0 {
 		return false
 	}

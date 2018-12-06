@@ -2,11 +2,11 @@ package fetcher
 
 import (
 	"errors"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/log"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math/rand"
 	"time"
 )
@@ -17,14 +17,14 @@ const (
 	fetchTimeout  = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
 	maxUncleDist  = 7                      // Maximum allowed backward distance from the chain head
 	// TODO-GX klaytn is 20 times faster than ethereum, so check block height is 20 times
-	maxQueueDist  = 32  * 20               // Maximum allowed distance from the chain head to queue
-	hashLimit     = 256 * 20               // Maximum number of unique blocks a peer may have announced
-	blockLimit    = 64  * 20               // Maximum number of unique blocks a peer may have delivered
+	maxQueueDist = 32 * 20  // Maximum allowed distance from the chain head to queue
+	hashLimit    = 256 * 20 // Maximum number of unique blocks a peer may have announced
+	blockLimit   = 64 * 20  // Maximum number of unique blocks a peer may have delivered
 )
 
 var (
 	errTerminated = errors.New("terminated")
-	logger = log.NewModuleLogger(log.DatasyncFetcher)
+	logger        = log.NewModuleLogger(log.DatasyncFetcher)
 )
 
 // blockRetrievalFn is a callback type for retrieving a block from the local chain.

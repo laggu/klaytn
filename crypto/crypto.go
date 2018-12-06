@@ -37,7 +37,7 @@ var (
 	secp256k1_N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
 	secp256k1_halfN = new(big.Int).Div(secp256k1_N, big.NewInt(2))
 
-    errInvalidPubkey = errors.New("invalid secp256k1 public key")
+	errInvalidPubkey = errors.New("invalid secp256k1 public key")
 )
 
 // Keccak256 calculates and returns the Keccak256 hash of the input data.
