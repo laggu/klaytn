@@ -51,6 +51,12 @@ cover:
 fmt:
 	build/env.sh go run build/ci.go fmt
 
+lint:
+	build/env.sh go run build/ci.go lint
+
+lint-try:
+	build/env.sh go run build/ci.go lint-try
+
 clean:
 	./build/clean_go_build_cache.sh
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*

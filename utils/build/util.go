@@ -34,16 +34,27 @@ import (
 
 var DryRunFlag = flag.Bool("n", false, "dry run, don't execute commands")
 
-// MustRun executes the given command and exits the host process for
-// any error.
-func MustRun(cmd *exec.Cmd) {
+// TryRun executes the given command and returns an error if error occurs.
+func TryRun(cmd *exec.Cmd) error {
 	fmt.Println(">>>", strings.Join(cmd.Args, " "))
 	if !*DryRunFlag {
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
-		if err := cmd.Run(); err != nil {
-			log.Fatal(err)
-		}
+		return cmd.Run()
+	}
+	return nil
+}
+
+// TryRunCommand executes the given command and arguments in strings.
+func TryRunCommand(cmd string, args ...string) {
+	TryRun(exec.Command(cmd, args...))
+}
+
+// MustRun executes the given command and exits the host process for
+// any error.
+func MustRun(cmd *exec.Cmd) {
+	if err := TryRun(cmd); err != nil {
+		log.Fatal(err)
 	}
 }
 

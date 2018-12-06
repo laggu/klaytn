@@ -26,6 +26,7 @@ Available commands are:
    install    [ -arch architecture ] [ -cc compiler ] [ packages... ]                          -- builds packages and executables
    test       [ -coverage ] [ packages... ]                                                    -- runs the tests
    lint                                                                                        -- runs certain pre-selected linters
+   lint-try                                                                                    -- runs certain pre-selected linters and does not stop even if linters fail
    archive    [ -arch architecture ] [ -type zip|tar ] [ -signer key-envvar ] [ -upload dest ] -- archives build artefacts
    importkeys                                                                                  -- imports signing keys from env
    debsrc     [ -signer key-id ] [ -upload dest ]                                              -- creates a debian source package
@@ -115,7 +116,9 @@ func main() {
 	case "fmt":
 		doFmt(os.Args[2:])
 	case "lint":
-		doLint(os.Args[2:])
+		doLint(os.Args[2:], true)
+	case "lint-try":
+		doLint(os.Args[2:], false)
 	case "archive":
 		doArchive(os.Args[2:])
 	case "debsrc":
@@ -304,8 +307,8 @@ func doFmt(cmdline []string) {
 	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
 }
 
-// runs gometalinter on requested packages
-func doLint(cmdline []string) {
+// runs gometalinter on requested packages and exits immediately when linter warning observed if exitOnError is true
+func doLint(cmdline []string, exitOnError bool) {
 	flag.CommandLine.Parse(cmdline)
 
 	packages := []string{"./..."}
@@ -316,6 +319,18 @@ func doLint(cmdline []string) {
 	build.MustRun(goTool("get", "gopkg.in/alecthomas/gometalinter.v2"))
 	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), "--install")
 
+	// Prepare a report file for linters
+	fname := "linter_report.txt"
+	fileOut, err := os.Create(fname)
+	defer fileOut.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Generating a linter report %s using above linters.\n", fname)
+
+	oldStdout := os.Stdout
+	os.Stdout = fileOut
+
 	// Run fast linters batched together
 	configs := []string{
 		"--vendor",
@@ -323,19 +338,34 @@ func doLint(cmdline []string) {
 		"--disable-all",
 		"--enable=goimports",
 		"--enable=varcheck",
-		"--enable=vet",
-		"--enable=gofmt",
 		"--enable=misspell",
 		"--enable=goconst",
 		"--min-occurrences=6", // for goconst
 	}
-	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
+	cmd := filepath.Join(GOBIN, "gometalinter.v2")
+	args := append(configs, packages...)
+	if exitOnError {
+		build.MustRunCommand(cmd, args...)
+	} else {
+		build.TryRunCommand(cmd, args...)
+	}
 
 	// Run slow linters one by one
 	for _, linter := range []string{"unconvert", "gosimple"} {
 		configs = []string{"--vendor", "--tests", "--deadline=10m", "--disable-all", "--enable=" + linter}
-		build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
+		cmd = filepath.Join(GOBIN, "gometalinter.v2")
+		args = append(configs, packages...)
+		if exitOnError {
+			build.MustRunCommand(cmd, args...)
+		} else {
+			build.TryRunCommand(cmd, args...)
+		}
 	}
+
+	// Restore stdout
+	os.Stdout = oldStdout
+
+	fmt.Printf("Succefully generating %s.\n", fname)
 }
 
 // Release Packaging
