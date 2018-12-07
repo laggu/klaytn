@@ -34,6 +34,21 @@ jobs:
     - store_artifacts:
         path: /tmp/coverage_reports
 
+  linters:
+    docker:
+    - image: circleci/golang:1.11.2
+    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    steps:
+    - checkout
+    - run:
+        name: "Run linters"
+        command: |
+          make lint-try
+          mkdir -p /tmp/linter_reports
+          cp linter_report.txt /tmp/linter_reports/
+    - store_artifacts:
+        path: /tmp/linter_reports
+
   dockernize:
     docker:
     - image: circleci/golang:1.11.2
@@ -135,7 +150,7 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
-  nightly:
+  nightly-coverage:
     triggers:
       - schedule:
           cron: "0 18 * * *"
@@ -145,3 +160,13 @@ workflows:
                 - master
     jobs:
     - coverage
+  nightly-linters:
+    triggers:
+      - schedule:
+          cron: "0 19 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+    - linters
