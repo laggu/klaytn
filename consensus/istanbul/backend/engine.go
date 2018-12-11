@@ -529,6 +529,44 @@ func (sb *backend) Stop() error {
 	return nil
 }
 
+// initSnapshot initializes and stores a new Snapshot.
+func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) {
+	genesis := chain.GetHeaderByNumber(0)
+	if err := sb.VerifyHeader(chain, genesis, false); err != nil {
+		return nil, err
+	}
+	istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
+	if err != nil {
+		return nil, err
+	}
+	snap := newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSubSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize))
+	if err := snap.store(sb.db); err != nil {
+		return nil, err
+	}
+	logger.Trace("Stored genesis voting snapshot to disk")
+	return snap, nil
+}
+
+// getPrevHeader returns previous header to find stored Snapshot object.
+func getPrevHeader(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) *types.Header {
+	var header *types.Header
+	if len(parents) > 0 {
+		// If we have explicit parents, pick from there (enforced)
+		header = parents[len(parents)-1]
+		if header.Hash() != hash || header.Number.Uint64() != number {
+			return nil
+		}
+		parents = parents[:len(parents)-1]
+	} else {
+		// No explicit parents (or no more left), reach out to the database
+		header = chain.GetHeader(hash, number)
+		if header == nil {
+			return nil
+		}
+	}
+	return header
+}
+
 // snapshot retrieves the authorization snapshot at a given point in time.
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
@@ -552,39 +590,19 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		// If we're at block zero, make a snapshot
 		if number == 0 {
-			genesis := chain.GetHeaderByNumber(0)
-			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
+			var err error
+			if snap, err = sb.initSnapshot(chain); err != nil {
 				return nil, err
 			}
-			istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
-			if err != nil {
-				return nil, err
-			}
-			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSubSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize))
-			if err := snap.store(sb.db); err != nil {
-				return nil, err
-			}
-			logger.Trace("Stored genesis voting snapshot to disk")
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
-		var header *types.Header
-		if len(parents) > 0 {
-			// If we have explicit parents, pick from there (enforced)
-			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Number.Uint64() != number {
-				return nil, consensus.ErrUnknownAncestor
-			}
-			parents = parents[:len(parents)-1]
+		if header := getPrevHeader(chain, number, hash, parents); header == nil {
+			return nil, consensus.ErrUnknownAncestor
 		} else {
-			// No explicit parents (or no more left), reach out to the database
-			header = chain.GetHeader(hash, number)
-			if header == nil {
-				return nil, consensus.ErrUnknownAncestor
-			}
+			headers = append(headers, header)
+			number, hash = number-1, header.ParentHash
 		}
-		headers = append(headers, header)
-		number, hash = number-1, header.ParentHash
 	}
 	// Previous snapshot found, apply any pending headers on top of it
 	for i := 0; i < len(headers)/2; i++ {
@@ -594,7 +612,6 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	if err != nil {
 		return nil, err
 	}
-	sb.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
@@ -603,6 +620,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
+
+	sb.recents.Add(snap.Hash, snap)
 	return snap, err
 }
 
