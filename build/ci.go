@@ -336,7 +336,6 @@ func doLint(cmdline []string, exitOnError bool) {
 		"--vendor",
 		"--tests",
 		"--disable-all",
-		"--enable=goimports",
 		"--enable=varcheck",
 		"--enable=misspell",
 		"--enable=goconst",
@@ -350,8 +349,29 @@ func doLint(cmdline []string, exitOnError bool) {
 		build.TryRunCommand(cmd, args...)
 	}
 
+	// Run fast linters batched together
+	configs = []string{
+		"--vendor",
+		"--tests",
+		"--disable-all",
+		"--enable=deadcode",
+		"--enable=dupl",
+		"--enable=errcheck",
+		"--enable=ineffassign",
+		"--enable=interfacer",
+		"--enable=unparam",
+		"--enable=unused",
+	}
+	cmd = filepath.Join(GOBIN, "gometalinter.v2")
+	args = append(configs, packages...)
+	if exitOnError {
+		build.MustRunCommand(cmd, args...)
+	} else {
+		build.TryRunCommand(cmd, args...)
+	}
+
 	// Run slow linters one by one
-	for _, linter := range []string{"unconvert", "gosimple"} {
+	for _, linter := range []string{"unconvert", "gosimple", "staticcheck", "gocyclo"} {
 		configs = []string{"--vendor", "--tests", "--deadline=10m", "--disable-all", "--enable=" + linter}
 		cmd = filepath.Join(GOBIN, "gometalinter.v2")
 		args = append(configs, packages...)
