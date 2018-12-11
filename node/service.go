@@ -24,14 +24,14 @@ func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (da
 	if ctx.config.DataDir == "" {
 		return database.NewMemoryDBManager(), nil
 	}
-	return database.NewDBManager(ctx.config.resolvePath(name), database.LEVELDB, cache, handles)
+	return database.NewDBManager(ctx.config.ResolvePath(name), database.LEVELDB, cache, handles)
 }
 
 // ResolvePath resolves a user path into the data directory if that was relative
 // and if the user actually uses persistent storage. It will return an empty string
 // for emphemeral storage and the user's own input for absolute paths.
 func (ctx *ServiceContext) ResolvePath(path string) string {
-	return ctx.config.resolvePath(path)
+	return ctx.config.ResolvePath(path)
 }
 
 // Service retrieves a currently running service registered of a specific type.

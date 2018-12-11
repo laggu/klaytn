@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/accounts"
 	"github.com/ground-x/go-gxplatform/accounts/keystore"
+	"github.com/ground-x/go-gxplatform/api/debug"
 	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
@@ -306,6 +307,12 @@ var (
 		Name:  "vmdebug",
 		Usage: "Record information useful for VM and contract debugging",
 	}
+	VMLogTargetFlag = cli.IntFlag{
+		Name:  "vmlog",
+		Usage: "Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both)",
+		Value: 0,
+	}
+
 	// Logging and debug settings
 	EthStatsURLFlag = cli.StringFlag{
 		Name:  "ethstats",
@@ -1001,6 +1008,11 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
+	if ctx.GlobalIsSet(VMLogTargetFlag.Name) {
+		if _, err := debug.Handler.SetVMLogTarget(ctx.GlobalInt(VMLogTargetFlag.Name)); err != nil {
+			logger.Warn("Incorrect vmlog value", "err", err)
+		}
+	}
 
 	// Override any default configs for hard coded network.
 	switch {
@@ -1104,6 +1116,11 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
+	}
+	if ctx.GlobalIsSet(VMLogTargetFlag.Name) {
+		if _, err := debug.Handler.SetVMLogTarget(ctx.GlobalInt(VMLogTargetFlag.Name)); err != nil {
+			logger.Warn("Incorrect vmlog value", "err", err)
+		}
 	}
 
 	// Override any default configs for hard coded network.

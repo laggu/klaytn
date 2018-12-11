@@ -21,7 +21,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ground-x/go-gxplatform/blockchain/state"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/go-gxplatform/storage/database"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.
@@ -336,6 +339,19 @@ var bn256PairingTests = []precompiledTest{
 	},
 }
 
+// vmlogTests are the test data for the vmlog precompiled contract.
+var vmlogTests = []precompiledTest{
+	{
+		input:    "48656c6c6f204b6c6179746e21",
+		expected: "",
+		name:     "test1",
+	}, {
+		input:    "54686973206973206120746573742063616c6c2e",
+		expected: "",
+		name:     "test2",
+	},
+}
+
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
@@ -479,5 +495,37 @@ func TestPrecompiledBn256Pairing(t *testing.T) {
 func BenchmarkPrecompiledBn256Pairing(bench *testing.B) {
 	for _, test := range bn256PairingTests {
 		benchmarkPrecompiled("08", test, bench)
+	}
+}
+
+// Tests the vmlog precompiled contract.
+func TestPrecompiledVMLog(t *testing.T) {
+	for _, test := range vmlogTests {
+		testPrecompiled("09", test, t)
+	}
+}
+
+// Tests the RunVMLogContract function.
+func TestRunVMLogContract(t *testing.T) {
+	// Only stdout logging is tested to avoid file handling.
+	params.VMLogTarget = params.VMLogToStdout
+
+	p := PrecompiledContractsByzantium[common.HexToAddress("09")]
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
+	statedb.Prepare(txhash, common.Hash{}, 0)
+	evm := NewEVM(Context{}, statedb, params.TestChainConfig, &Config{})
+
+	for _, test := range vmlogTests {
+		in := common.Hex2Bytes(test.input)
+		contract := NewContract(AccountRef(common.HexToAddress("1337")),
+			nil, new(big.Int), p.RequiredGas(in))
+		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
+			if res, err := RunVMLogContract(p, in, contract, evm); err != nil {
+				t.Error(err)
+			} else if common.Bytes2Hex(res) != test.expected {
+				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))
+			}
+		})
 	}
 }

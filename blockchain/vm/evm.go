@@ -49,7 +49,11 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
 		precompiles := PrecompiledContractsByzantium
 		if p := precompiles[*contract.CodeAddr]; p != nil {
-			return RunPrecompiledContract(p, input, contract) // TODO-GX-error
+			if *contract.CodeAddr == vmLogAddress {
+				return RunVMLogContract(p, input, contract, evm)
+			} else {
+				return RunPrecompiledContract(p, input, contract) // TODO-GX-error
+			}
 		}
 	}
 	return evm.interpreter.Run(contract, input)

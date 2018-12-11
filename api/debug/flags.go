@@ -91,6 +91,19 @@ func init() {
 	glogger = log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
 }
 
+// CreateLogDir creates a directory whose path is logdir as well as empty log files.
+func CreateLogDir(logDir string) {
+	if logDir == "" {
+		return
+	}
+	Handler.logDir = logDir
+
+	// Currently failures on directory or file creation is treated as a warning.
+	if err := os.MkdirAll(logDir, 0700); err != nil {
+		logger.Warn("Failed to create a directory", "logDir", logDir, "err", err)
+	}
+}
+
 // Setup initializes profiling and logging based on the CLI flags.
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
@@ -126,6 +139,10 @@ func Setup(ctx *cli.Context) error {
 // Exit stops all running profiles, flushing their output to the
 // respective file.
 func Exit() {
+	if Handler.vmLogFile != nil {
+		Handler.vmLogFile.Close()
+		Handler.vmLogFile = nil
+	}
 	if Handler.memFile != "" {
 		Handler.WriteMemProfile(Handler.memFile)
 	}

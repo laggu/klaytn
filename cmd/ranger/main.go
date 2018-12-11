@@ -67,6 +67,7 @@ var (
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
 		utils.VMEnableDebugFlag,
+		utils.VMLogTargetFlag,
 		utils.NoDiscoverFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
@@ -114,6 +115,8 @@ func init() {
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
+		logdir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
+		debug.CreateLogDir(logdir)
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}

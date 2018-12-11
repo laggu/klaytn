@@ -6,6 +6,7 @@ import (
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/metrics"
 	"github.com/ground-x/go-gxplatform/metrics/exp"
+	"github.com/ground-x/go-gxplatform/params"
 	"io"
 	"net/http"
 	"os"
@@ -37,6 +38,9 @@ type HandlerT struct {
 	// For the pprof http server
 	handlerInited bool
 	pprofServer   *http.Server
+
+	logDir    string   // log directory path
+	vmLogFile *os.File // a file descriptor of the vmlog output file
 }
 
 // Verbosity sets the log verbosity ceiling. The verbosity of individual packages
@@ -302,4 +306,66 @@ func expandHome(p string) string {
 		}
 	}
 	return filepath.Clean(p)
+}
+
+// WriteVMLog writes msg to a vmlog output file.
+func (h *HandlerT) WriteVMLog(msg string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.vmLogFile != nil {
+		if _, err := h.vmLogFile.WriteString(msg + "\n"); err != nil {
+			// Since vmlog is a debugging feature, write failure can be treated as a warning.
+			logger.Warn("Failed to write to a vmlog file", "msg", msg, "err", err)
+		}
+	}
+}
+
+// openVMLogFile opens a file for vmlog output as the append mode.
+func (h *HandlerT) openVMLogFile() {
+	var err error
+	filename := filepath.Join(h.logDir, "vm.log")
+	Handler.vmLogFile, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		logger.Warn("Failed to open a file", "filename", filename, "err", err)
+	}
+}
+
+func vmLogTargetToString(target int) string {
+	switch target {
+	case 0:
+		return "no output"
+	case params.VMLogToFile:
+		return "file"
+	case params.VMLogToStdout:
+		return "stdout"
+	case params.VMLogToAll:
+		return "both file and stdout"
+	default:
+		return ""
+	}
+}
+
+// SetVMLogTarget sets the output target of vmlog.
+func (h *HandlerT) SetVMLogTarget(target int) (string, error) {
+	if target < 0 || target > params.VMLogToAll {
+		return vmLogTargetToString(params.VMLogTarget), fmt.Errorf("target should be between 0 and %d", params.VMLogToAll)
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if (target & params.VMLogToFile) != 0 {
+		if h.vmLogFile == nil {
+			h.openVMLogFile()
+		}
+	} else {
+		if h.vmLogFile != nil {
+			if err := Handler.vmLogFile.Close(); err != nil {
+				logger.Warn("Failed to close the vmlog file", "err", err)
+			}
+			Handler.vmLogFile = nil
+		}
+	}
+
+	params.VMLogTarget = target
+	return vmLogTargetToString(target), nil
 }

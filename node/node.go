@@ -632,12 +632,12 @@ func (n *Node) OpenDatabase(name string, ldbCacheSize, handles int) (database.DB
 	if n.config.DataDir == "" {
 		return database.NewMemoryDBManager(), nil
 	}
-	return database.NewDBManager(n.config.resolvePath(name), database.LEVELDB, ldbCacheSize, handles)
+	return database.NewDBManager(n.config.ResolvePath(name), database.LEVELDB, ldbCacheSize, handles)
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.
 func (n *Node) ResolvePath(x string) string {
-	return n.config.resolvePath(x)
+	return n.config.ResolvePath(x)
 }
 
 func (n *Node) apis() []rpc.API {

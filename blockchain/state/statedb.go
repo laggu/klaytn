@@ -636,3 +636,8 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	logger.Debug("Trie cache stats after commit", "misses", statedb.TrieCacheMisses(), "unloads", statedb.TrieCacheUnloads())
 	return root, err
 }
+
+// GetTxHash returns the hash of current running transaction.
+func (s *StateDB) GetTxHash() common.Hash {
+	return s.thash
+}

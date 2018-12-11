@@ -88,6 +88,21 @@ var (
 	}
 )
 
+var (
+	// VMLogTarget sets the output target of vmlog.
+	// The values below can be OR'ed.
+	//  - 0x0: no output (default)
+	//  - 0x1: file (DATADIR/logs/vm.log)
+	//  - 0x2: stdout (like logger.DEBUG)
+	VMLogTarget = 0x0
+)
+
+const (
+	VMLogToFile   = 0x1
+	VMLogToStdout = 0x2
+	VMLogToAll    = VMLogToFile | VMLogToStdout
+)
+
 // ChainConfig is the blockchain config which determines the blockchain settings.
 //
 // ChainConfig is stored in the database on a per block basis. This means

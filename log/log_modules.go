@@ -93,6 +93,7 @@ const (
 	NodeRanger
 	StorageDatabase
 	StorageStateDB
+	VM
 	Work
 
 	// ModuleNameLen should be placed at the end of the list.
@@ -143,5 +144,6 @@ var moduleNames = [ModuleNameLen]string{
 	"node/ranger",
 	"storage/database",
 	"storage/statedb",
+	"vm",
 	"work",
 }

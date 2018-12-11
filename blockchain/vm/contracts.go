@@ -19,14 +19,18 @@ package vm
 import (
 	"crypto/sha256"
 	"errors"
+	"github.com/ground-x/go-gxplatform/api/debug"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/bn256"
+	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	"golang.org/x/crypto/ripemd160"
 	"math/big"
 )
+
+var logger = log.NewModuleLogger(log.VM)
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
@@ -35,6 +39,9 @@ type PrecompiledContract interface {
 	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
+
+// vmLogAddress is the address of precompiled contract vmLog.
+var vmLogAddress = common.BytesToAddress([]byte{9})
 
 // PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
 // contracts used in the Byzantium release.
@@ -47,6 +54,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{6}): &bn256Add{},
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
+	vmLogAddress:                     &vmLog{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -347,4 +355,37 @@ func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
 		return true32Byte, nil
 	}
 	return false32Byte, nil
+}
+
+// vmLog implemented as a native contract.
+type vmLog struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+func (c *vmLog) RequiredGas(input []byte) uint64 {
+	return uint64(len(input))*params.VMLogPerByteGas + params.VMLogBaseGas
+}
+
+// Run calls logger.Debug with input.
+// Note that this function is only for testing and not used for typical vmlog calls.
+// Invoke RunVMLogContract for the actual logging.
+func (c *vmLog) Run(input []byte) ([]byte, error) {
+	logger.Debug("vmlog", "msg", string(input))
+	return nil, nil
+}
+
+// RunVMLogContract runs the vmlog contract.
+func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	gas := p.RequiredGas(input)
+	if contract.UseGas(gas) {
+		if (params.VMLogTarget & params.VMLogToFile) != 0 {
+			prefix := "tx=" + evm.StateDB.GetTxHash().String() + " caller=" + contract.CallerAddress.String() + " msg="
+			debug.Handler.WriteVMLog(prefix + string(input))
+		}
+		if (params.VMLogTarget & params.VMLogToStdout) != 0 {
+			logger.Debug("vmlog", "tx", evm.StateDB.GetTxHash().String(),
+				"caller", contract.CallerAddress.String(), "msg", string(input))
+		}
+		return nil, nil
+	}
+	return nil, ErrOutOfGas
 }
