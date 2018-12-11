@@ -649,7 +649,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	}
 
 	// Move the trie itself into the batch, flushing if enough data is accumulated
-	nodes, storage := len(db.nodes), db.nodesSize
+	numNodes, nodesSize := len(db.nodes), db.nodesSize
 	if err := db.writeBatchNodes(node); err != nil {
 		db.lock.RUnlock()
 		return err
@@ -667,14 +667,14 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	db.uncache(node)
 
 	memcacheCommitTimeTimer.Update(time.Since(start))
-	memcacheCommitSizeMeter.Mark(int64(storage - db.nodesSize))
-	memcacheCommitNodesMeter.Mark(int64(nodes - len(db.nodes)))
+	memcacheCommitSizeMeter.Mark(int64(nodesSize - db.nodesSize))
+	memcacheCommitNodesMeter.Mark(int64(numNodes - len(db.nodes)))
 
 	localLogger := logger.Info
 	if !report {
 		localLogger = logger.Debug
 	}
-	localLogger("Persisted trie from memory database", "nodes", nodes-len(db.nodes), "size", storage-db.nodesSize, "time", time.Since(start),
+	localLogger("Persisted trie from memory database", "updated nodes", numNodes-len(db.nodes), "updated nodes size", nodesSize-db.nodesSize, "time", time.Since(start),
 		"gcnodes", db.gcnodes, "gcsize", db.gcsize, "gctime", db.gctime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
 
 	// Reset the garbage collection statistics

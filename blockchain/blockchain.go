@@ -1063,12 +1063,12 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
-			nodes, imgs = trieDB.Size()
-			limit       = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
+			nodesSize, preimagesSize = trieDB.Size()
+			nodesSizeLimit           = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
 		)
-		if nodes > limit || imgs > 4*1024*1024 {
+		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
 			// TODO-GX error from Cap is ignored.
-			trieDB.Cap(limit - database.IdealBatchSize)
+			trieDB.Cap(nodesSizeLimit - database.IdealBatchSize)
 		}
 
 		if block.NumberU64()%uint64(bc.trieConfig.BlockInterval) == 0 {
