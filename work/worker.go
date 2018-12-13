@@ -669,6 +669,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 		UseOpcodeCntLimit: true,
 	}
 
+CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// TODO-GX-issue136
 		// If we don't have enough gas for any further transactions then we're done
@@ -725,7 +726,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
 				tooLongTxCounter.Inc(1)
 			}
-			break
+			// NOTE-GX Exit for loop immediately without checking abort variable again.
+			break CommitTransactionLoop
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
