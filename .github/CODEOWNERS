@@ -6,7 +6,6 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 #*       @global-owner1 @global-owner2
-*        @miloveme
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
@@ -22,7 +21,43 @@
 # In this example, @doctocat owns any files in the build/logs
 # directory at the root of the repository and any of its
 # subdirectories.
-#/build/logs/ @doctocat
+#/build/logs/      @doctocat
+
+/.circleci/        @bitaholic
+/.github/          @bitaholic
+/accounts/         @kjhman21
+/api/              @kjhman21
+/blockchain/       @smseo
+/build/*           @hqueue
+/build/rpm/        @bitaholic
+/client/           @KimKyungup
+/cmd/              @KimKyungup
+/common/           @smseo
+/consensus/        @smseo
+/console/          @smseo
+/contracts/        @smseo
+/crypto/           @smseo
+/datasync/         @KimKyungup
+/event/            @bitaholic
+/log/              @ehnuje
+/metrics/          @bitaholic
+/networks/         @KimKyungup
+/node/             @KimKyungup
+/params/           @smseo
+/params/version.go @bitaholic
+/ser/              @kjhman21
+/storage/          @kjhman21
+/tests/            @smseo
+/utils/            @bitaholic
+/vendor/           @bitaholic
+/Gopkg.lock        @bitaholic
+/Gopkg.toml        @bitaholic
+/work/             @smseo
+/.dockerignore     @bitaholic
+/.gitignore        @bitaholic
+/Dockerfile/       @bitaholic
+/interface.go/     @smseo
+/README.md/        @smseo
 
 # The `docs/*` pattern will match files like
 # `docs/getting-started.md` but not further nested files like
