@@ -7,8 +7,7 @@
 #
 # processname: klay
 # config:  /etc/klay/conf/klay.conf
-# pidfile: /etc/run/klay.pid
-# logfile: /etc/log/klay/klay.out
+# pidfile: /var/run/klay.pid
 #
 
 # Source function library.
