@@ -1,3 +1,8 @@
+// Copyright 2018 The go-klaytn Authors
+//
+// This file is derived from metrics/metrics.go (2018/06/04).
+// See LICENSE in the top directory for the original copyright and license.
+//
 // Go port of Coda Hale's Metrics library
 //
 // <https://github.com/rcrowley/go-metrics>
