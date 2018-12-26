@@ -1,3 +1,23 @@
+// Copyright 2018 the go-klaytn Authors
+// Copyright 2018 AMIS Technologies
+// This file is part of the sol2proto
+//
+// The sol2proto is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The sol2proto is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the sol2proto. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from sol2proto/main.go (2018/06/04).
+// Modified and improved for the go-klaytn development.
+
 package main
 
 import (

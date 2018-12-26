@@ -1,3 +1,4 @@
+// Copyright 2018 the go-klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
@@ -13,6 +14,9 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from cmd/p2psim/main.go (2018/06/04).
+// Modified and improved for the go-klaytn development.
 
 // p2psim provides a command-line client for a simulation HTTP API.
 //
