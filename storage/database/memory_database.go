@@ -99,7 +99,9 @@ func (db *MemDatabase) NewBatch() Batch {
 
 func (db *MemDatabase) Len() int { return len(db.db) }
 
-func (db *MemDatabase) Meter(prefix string) {}
+func (db *MemDatabase) Meter(prefix string) {
+	logger.Warn("MemDatabase does not support metrics!")
+}
 
 type kv struct{ k, v []byte }
 

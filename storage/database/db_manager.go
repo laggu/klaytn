@@ -170,7 +170,6 @@ func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManag
 	switch dbType {
 	case LEVELDB:
 		db, err = NewLDBDatabase(dir, ldbCacheSize, handles)
-		db.Meter("klay/db/chaindata/")
 	case BADGER:
 		db, err = NewBGDatabase(dir)
 	case MEMDB:
@@ -184,6 +183,7 @@ func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManag
 		return nil, err
 	}
 
+	db.Meter("klay/db/chaindata/")
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
 		if i == int(indexSectionsDB) {
 			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))

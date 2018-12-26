@@ -145,7 +145,9 @@ func (db *badgerDB) NewBatch() Batch {
 	return &bdBatch{db: db.db, txn: txn}
 }
 
-func (db *badgerDB) Meter(prefix string) {}
+func (db *badgerDB) Meter(prefix string) {
+	logger.Warn("badgerDB does not support metrics!")
+}
 
 type bdBatch struct {
 	db   *badger.DB
