@@ -47,6 +47,7 @@
 /params/version.go @bitaholic
 /ser/              @kjhman21
 /storage/          @kjhman21
+/storage/database/ @ehnuje
 /tests/            @smseo
 /utils/            @bitaholic
 /vendor/           @bitaholic
