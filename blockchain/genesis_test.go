@@ -1,3 +1,4 @@
+// Copyright 2018 The go-klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from core/genesis_test.go (2018/06/04).
+// Modified and improved for the go-klaytn development.
 
 package blockchain
 
