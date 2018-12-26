@@ -1,3 +1,4 @@
+// Copyright 2018 The go-klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -18,6 +19,10 @@
 //
 // Keys are stored as encrypted JSON files according to the Web3 Secret Storage specification.
 // See https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition for more information.
+//
+// This file is derived from accounts/keystore/keystore.go (2018/06/04).
+// Modified and improved for the go-klaytn development.
+
 package keystore
 
 import (
