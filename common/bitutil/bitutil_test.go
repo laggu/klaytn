@@ -1,8 +1,12 @@
+// Copyright 2018 the go-klaytn Authors
 // Copyright 2013 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 // Adapted from: https://golang.org/src/crypto/cipher/xor_test.go
+//
+// This file is derived from common/bitutil/bitutil_test.go (2018/06/04).
+// Modified and improved for the go-klaytn development.
 
 package bitutil
 
