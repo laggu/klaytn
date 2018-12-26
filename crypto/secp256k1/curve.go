@@ -1,3 +1,4 @@
+// Copyright 2018 The go-klaytn Authors.
 // Copyright 2010 The Go Authors. All rights reserved.
 // Copyright 2011 ThePiachu. All rights reserved.
 //
@@ -28,6 +29,9 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// This file is derived from crypto/secp256k1/curve.go (2018/06/04).
+// Modified and improved for the go-klaytn development.
 
 package secp256k1
 
