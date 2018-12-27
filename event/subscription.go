@@ -1,4 +1,4 @@
-// Copyright 2018 go-klaytn Authors
+// Copyright 2018 The go-klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //

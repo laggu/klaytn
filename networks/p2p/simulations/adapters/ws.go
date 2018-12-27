@@ -1,4 +1,4 @@
-// Copyright 2018 the go-klaytn Authors
+// Copyright 2018 The go-klaytn Authors
 // This file is part of the go-klaytn library.
 //
 // The go-klaytn library is free software: you can redistribute it and/or modify
