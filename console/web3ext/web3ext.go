@@ -354,6 +354,18 @@ web3._extend({
 	property: 'klay',
 	methods: [
 		new web3._extend.Method({
+			name: 'getBlockReceipts',
+			call: 'klay_getBlockReceipts',
+			params: 1,
+			outputFormatter: function(receipts) {
+				var formatted = [];
+				for (var i = 0; i < receipts.length; i++) {
+					formatted.push(web3._extend.formatters.outputTransactionReceiptFormatter(receipts[i]));
+				}
+				return formatted;
+			}
+		}),
+		new web3._extend.Method({
 			name: 'sign',
 			call: 'klay_sign',
 			params: 2,

@@ -492,6 +492,31 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 	return header.Number
 }
 
+// GetBlockReceipts returns all the transaction receipts for the given block hash.
+func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
+	receipts, err := s.b.GetReceiptsInCache(blockHash)
+	if receipts == nil {
+		receipts, err = s.b.GetReceipts(ctx, blockHash)
+	}
+	if err != nil {
+		return nil, err
+	}
+	block, err := s.b.GetBlock(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions()
+	if receipts.Len() != txs.Len() {
+		return nil, fmt.Errorf("the size of transactions and receipts is different in the block (%s)", blockHash.String())
+	}
+	fieldsList := make([]map[string]interface{}, 0, len(receipts))
+	for index, receipt := range receipts {
+		fields := rpcOutputReceipt(txs[index], blockHash, block.NumberU64(), uint64(index), receipt)
+		fieldsList = append(fieldsList, fields)
+	}
+	return fieldsList, nil
+}
+
 // GetBalance returns the amount of peb for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
@@ -989,6 +1014,51 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 	return rlp.EncodeToBytes(tx)
 }
 
+// rpcOutputReceipt converts a receipt to the RPC output with the associated information regarding to the
+// block in which the receipt is included, the transaction that outputs the receipt, and the receipt itself.
+func rpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
+	var signer types.Signer = types.FrontierSigner{}
+	if tx.Protected() {
+		signer = types.NewEIP155Signer(tx.ChainId())
+	}
+	from, _ := types.Sender(signer, tx)
+
+	fields := map[string]interface{}{
+		"blockHash":         blockHash,
+		"blockNumber":       hexutil.Uint64(blockNumber),
+		"transactionHash":   receipt.TxHash,
+		"transactionIndex":  hexutil.Uint64(index),
+		"from":              from,
+		"to":                tx.To(),
+		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
+		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
+		"contractAddress":   nil,
+		"logs":              receipt.Logs,
+		"logsBloom":         receipt.Bloom,
+	}
+
+	// Assign post state if exists.
+	if len(receipt.PostState) > 0 {
+		fields["root"] = hexutil.Bytes(receipt.PostState)
+	}
+
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
+		fields["txError"] = hexutil.Uint(receipt.Status)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
+	}
+
+	if receipt.Logs == nil {
+		fields["logs"] = [][]*types.Log{}
+	}
+	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
+	if receipt.ContractAddress != (common.Address{}) {
+		fields["contractAddress"] = receipt.ContractAddress
+	}
+	return fields
+}
+
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
 	// TODO-GX tunning cache and io
@@ -1010,47 +1080,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		return nil, nil
 	}
 	receipt := receipts[index]
-
-	var signer types.Signer = types.FrontierSigner{}
-	if tx.Protected() {
-		signer = types.NewEIP155Signer(tx.ChainId())
-	}
-	from, _ := types.Sender(signer, tx)
-
-	fields := map[string]interface{}{
-		"blockHash":         blockHash,
-		"blockNumber":       hexutil.Uint64(blockNumber),
-		"transactionHash":   hash,
-		"transactionIndex":  hexutil.Uint64(index),
-		"from":              from,
-		"to":                tx.To(),
-		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
-		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
-		"contractAddress":   nil,
-		"logs":              receipt.Logs,
-		"logsBloom":         receipt.Bloom,
-	}
-
-	// Assign post state if exists.
-	if len(receipt.PostState) > 0 {
-		fields["root"] = hexutil.Bytes(receipt.PostState)
-	}
-
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
-		fields["txError"] = hexutil.Uint(receipt.Status)
-	} else {
-		fields["status"] = hexutil.Uint(receipt.Status)
-	}
-
-	if receipt.Logs == nil {
-		fields["logs"] = [][]*types.Log{}
-	}
-	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
-	if receipt.ContractAddress != (common.Address{}) {
-		fields["contractAddress"] = receipt.ContractAddress
-	}
-
+	fields := rpcOutputReceipt(tx, blockHash, blockNumber, index, receipt)
 	return fields, nil
 }
 
@@ -1068,47 +1098,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 		return nil, nil
 	}
 	receipt := receipts[index]
-
-	var signer types.Signer = types.FrontierSigner{}
-	if tx.Protected() {
-		signer = types.NewEIP155Signer(tx.ChainId())
-	}
-	from, _ := types.Sender(signer, tx)
-
-	fields := map[string]interface{}{
-		"blockHash":         blockHash,
-		"blockNumber":       hexutil.Uint64(blockNumber),
-		"transactionHash":   hash,
-		"transactionIndex":  hexutil.Uint64(index),
-		"from":              from,
-		"to":                tx.To(),
-		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
-		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
-		"contractAddress":   nil,
-		"logs":              receipt.Logs,
-		"logsBloom":         receipt.Bloom,
-	}
-
-	// Assign post state if exists.
-	if len(receipt.PostState) > 0 {
-		fields["root"] = hexutil.Bytes(receipt.PostState)
-	}
-
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
-		fields["txError"] = hexutil.Uint(receipt.Status)
-	} else {
-		fields["status"] = hexutil.Uint(receipt.Status)
-	}
-
-	if receipt.Logs == nil {
-		fields["logs"] = [][]*types.Log{}
-	}
-	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
-	if receipt.ContractAddress != (common.Address{}) {
-		fields["contractAddress"] = receipt.ContractAddress
-	}
-
+	fields := rpcOutputReceipt(tx, blockHash, blockNumber, index, receipt)
 	return fields, nil
 }
 
