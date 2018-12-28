@@ -790,7 +790,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 	hash := block.Hash()
-	peers := pm.peers.PeersWithoutBlock(hash)
+	var peers []*peer
 	if pm.nodetype == node.CONSENSUSNODE {
 		peers = pm.peers.PeersWithoutBlock(hash)
 	} else {
