@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: klay android ios klay-cross evm all test clean
+.PHONY: klay klay-cross evm all test clean
 .PHONY: klay-linux klay-linux-386 klay-linux-amd64 klay-linux-mips64 klay-linux-mips64le
 .PHONY: klay-linux-arm klay-linux-arm-5 klay-linux-arm-6 klay-linux-arm-7 klay-linux-arm64
 .PHONY: klay-darwin klay-darwin-386 klay-darwin-amd64
@@ -76,7 +76,7 @@ devtools:
 
 # Cross Compilation Targets (xgo)
 
-klay-cross: klay-linux klay-darwin klay-windows klay-android klay-ios
+klay-cross: klay-linux klay-darwin klay-windows
 	@echo "Full cross compilation done:"
 	@ls -ld $(GOBIN)/klay-*
 
@@ -138,7 +138,7 @@ klay-linux-mips64le:
 	@echo "Linux MIPS64le cross compilation done:"
 	@ls -ld $(GOBIN)/klay-linux-* | grep mips64le
 
-klay-darwin: geth-darwin-386 geth-darwin-amd64
+klay-darwin: klay-darwin-386 klay-darwin-amd64
 	@echo "Darwin cross compilation done:"
 	@ls -ld $(GOBIN)/klay-darwin-*
 
