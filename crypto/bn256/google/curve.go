@@ -258,7 +258,6 @@ func (c *curvePoint) MakeAffine(pool *bnPool) *curvePoint {
 		c.t.SetInt64(0)
 		return c
 	}
-
 	zInv := pool.Get().ModInverse(c.z, P)
 	t := pool.Get().Mul(c.y, zInv)
 	t.Mod(t, P)

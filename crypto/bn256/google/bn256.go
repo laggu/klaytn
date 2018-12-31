@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package bn256 implements a particular bilinear group at the 128-bit security level.
+// Package bn256 implements a particular bilinear group.
 //
 // Bilinear groups are the basis of many of the new cryptographic protocols
 // that have been proposed over the past decade. They consist of a triplet of
@@ -14,6 +14,10 @@
 // Barreto-Naehrig curve as described in
 // http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is compatible
 // with the implementation described in that paper.
+//
+// (This package previously claimed to operate at a 128-bit security level.
+// However, recent improvements in attacks mean that is no longer true. See
+// https://moderncrypto.org/mail-archive/curves/2016/000740.html.)
 package bn256
 
 import (
@@ -105,7 +109,9 @@ func (e *G1) Marshal() []byte {
 	if e.p.IsInfinity() {
 		return make([]byte, numBytes*2)
 	}
+
 	e.p.MakeAffine(nil)
+
 	xBytes := new(big.Int).Mod(e.p.x, P).Bytes()
 	yBytes := new(big.Int).Mod(e.p.y, P).Bytes()
 
@@ -220,6 +226,7 @@ func (e *G2) Add(a, b *G2) *G2 {
 func (n *G2) Marshal() []byte {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
+
 	if n.p.IsInfinity() {
 		return make([]byte, numBytes*4)
 	}

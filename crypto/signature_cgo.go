@@ -1,5 +1,5 @@
 // Copyright 2018 The go-klaytn Authors
-// Copyright 2015 The go-ethereum Authors
+// Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -17,6 +17,8 @@
 //
 // This file is derived from crypto/signature_cgo.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
+
+// +build !nacl,!js,!nocgo
 
 package crypto
 
