@@ -50,6 +50,10 @@ const removeChaindataOnExit = true
 
 const GasLimit uint64 = 1000000000000000000
 
+var (
+	errEmptyPending = errors.New("pending is empty")
+)
+
 type BCData struct {
 	bc                 *blockchain.BlockChain
 	addrs              []*common.Address
@@ -235,6 +239,90 @@ func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
 	prof.Profile("main_makeTransactions", time.Now().Sub(start))
 
 	return bcdata.GenABlockWithTransactions(accountMap, transactions, prof)
+}
+
+func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockchain.TxPool,
+	prof *profile.Profiler) error {
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	pending, err := txpool.Pending()
+	if err != nil {
+		return err
+	}
+	if len(pending) == 0 {
+		return errEmptyPending
+	}
+	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending) // TODO-GX-issue136 gasPrice
+
+	// Set the block header
+	start := time.Now()
+	header, err := bcdata.prepareHeader()
+	if err != nil {
+		return err
+	}
+	prof.Profile("mine_prepareHeader", time.Now().Sub(start))
+
+	statedb, err := bcdata.bc.State()
+	if err != nil {
+		return err
+	}
+
+	start = time.Now()
+	gp := new(blockchain.GasPool)
+	gp = gp.AddGas(GasLimit)
+	task := work.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
+	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
+	newtxs := task.Transactions()
+	receipts := task.Receipts()
+	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
+
+	// Finalize the block
+	start = time.Now()
+	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, []*types.Header{}, receipts)
+	if err != nil {
+		return err
+	}
+	prof.Profile("mine_finalize_block", time.Now().Sub(start))
+
+	start = time.Now()
+	b, err = sealBlock(b, bcdata.validatorPrivKeys)
+	if err != nil {
+		return err
+	}
+	prof.Profile("mine_seal_block", time.Now().Sub(start))
+
+	// Update accountMap
+	start = time.Now()
+	if err := accountMap.Update(newtxs, signer); err != nil {
+		return err
+	}
+	prof.Profile("main_update_accountMap", time.Now().Sub(start))
+
+	// Insert the block into the blockchain
+	start = time.Now()
+	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
+		return fmt.Errorf("err = %s, n = %d\n", err, n)
+	}
+	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
+
+	// Apply reward
+	start = time.Now()
+	rewardAddr := *bcdata.rewardBase
+	accountMap.AddBalance(rewardAddr, big.NewInt(1000000000000000000))
+	prof.Profile("main_apply_reward", time.Now().Sub(start))
+
+	// Verification with accountMap
+	start = time.Now()
+	statedbNew, err := bcdata.bc.State()
+	if err != nil {
+		return err
+	}
+	if err := accountMap.Verify(statedbNew); err != nil {
+		return err
+	}
+	prof.Profile("main_verification", time.Now().Sub(start))
+
+	return nil
 }
 
 func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transactions types.Transactions,

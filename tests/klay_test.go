@@ -19,6 +19,7 @@ package tests
 
 import (
 	"flag"
+	"github.com/ground-x/go-gxplatform/blockchain"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common/profile"
 	"github.com/ground-x/go-gxplatform/crypto"
@@ -231,7 +232,13 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 	}
 }
 
+// BenchmarkValueTransfer measures TPS without txpool operations and network traffics
+// while creating a block. As a disclaimer, this function does not tell that Klaytn
+// can perform this amount of TPS in real environment.
 func BenchmarkValueTransfer(t *testing.B) {
+	if testing.Verbose() {
+		enableLog()
+	}
 	prof := profile.NewProfiler()
 	opt := testOption{t.N, 2000, 4, 1, []byte{}, makeIndependentTransactions}
 
@@ -252,30 +259,33 @@ func BenchmarkValueTransfer(t *testing.B) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	t.ResetTimer()
-	for i := 0; i < t.N/txPerBlock; i++ {
-		//fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
-		err := bcdata.GenABlock(accountMap, &opt, txPerBlock, prof)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	// make txpool
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.AccountSlots = uint64(t.N)
+	txpoolconfig.AccountQueue = uint64(t.N)
+	txpoolconfig.GlobalSlots = 2 * uint64(t.N)
+	txpoolconfig.GlobalQueue = 2 * uint64(t.N)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
-	genBlocks := t.N / txPerBlock
-	remainTxs := t.N % txPerBlock
-	if remainTxs != 0 {
-		err := bcdata.GenABlock(accountMap, &opt, remainTxs, prof)
-		if err != nil {
+	// make t.N transactions
+	txs, err := makeIndependentTransactions(bcdata, accountMap, signer, t.N, nil, []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	txpool.AddRemotes(txs)
+
+	t.ResetTimer()
+	for {
+		if err := bcdata.GenABlockWithTxpool(accountMap, txpool, prof); err != nil {
+			if err == errEmptyPending {
+				break
+			}
 			t.Fatal(err)
 		}
-		genBlocks++
 	}
 	t.StopTimer()
-
-	bcHeight := int(bcdata.bc.CurrentHeader().Number.Uint64())
-	if bcHeight != genBlocks {
-		t.Fatalf("generated blocks should be %d, but %d.\n", genBlocks, bcHeight)
-	}
 
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
