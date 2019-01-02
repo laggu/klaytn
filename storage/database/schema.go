@@ -18,7 +18,6 @@
 // This file is derived from core/rawdb/schema.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package rawdb contains a collection of low level database accessors.
 package database
 
 import (

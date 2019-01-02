@@ -14,11 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package keystore implements encrypted storage of secp256k1 private keys.
-//
-// Keys are stored as encrypted JSON files according to the Web3 Secret Storage specification.
-// See https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition for more information.
 //
 // This file is derived from accounts/keystore/keystore.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
