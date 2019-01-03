@@ -696,7 +696,7 @@ func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
 		}
 	}
 
-	receipts, _ := bc.GetReceiptsInCache(blockHash)
+	receipts := bc.GetReceiptsInCache(blockHash)
 	if receipts == nil {
 		receipts = bc.GetReceiptsByBlockHash(blockHash)
 	}
