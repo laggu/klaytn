@@ -148,7 +148,7 @@ klay-darwin-386:
 	@ls -ld $(GOBIN)/klay-darwin-* | grep 386
 
 klay-darwin-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/klay
 	@echo "Darwin amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/klay-darwin-* | grep amd64
 

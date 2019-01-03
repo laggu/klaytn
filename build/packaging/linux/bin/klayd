@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+
+BIN=$(cd "$(dirname $0)"; pwd)
+CMD_HOME=$(dirname $BIN)
+CONF=$CMD_HOME/conf
+
+source $CONF/klay.conf
+
+pidfile=$RUN_DIR/klay.pid
+
+__pid_run() {
+    unset pid
+    if [ ! -f $pidfile ]; then
+        return
+    fi
+    PID_NUM=$(eval "cat $pidfile")
+    if [[ ! -z "$PID_NUM" ]]; then
+        export pid=$(eval "ps -p $PID_NUM -o pid=")
+    fi
+}
+
+start() {
+    __pid_run
+    [ -n "$pid" ] && echo "klayd already running...[$pid]" && return
+
+    echo -n "Starting klay ($NODE_TYPE): "
+    
+    if [ ! -d $KLAY_HOME ] || [ ! -d $DATA_DIR ]; then
+        echo 
+        echo "  [ERROR] : klaytn is not initiated, Initiate a klaytn with genesis file first."
+        exit 1
+    fi
+
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
+    if [ ! -d $RUN_DIR ]; then
+        mkdir -p $RUN_DIR
+    fi
+
+    case $NODE_TYPE in
+        CN)
+            OPTIONS="--nodetype cn --networkid $NETWORK_ID --datadir $DATA_DIR --port $PORT --srvtype fasthttp --metrics --prometheus --verbosity 3 \
+            --txpool.globalslots 4096 --txpool.globalqueue 4096 --txpool.accountslots 4096 --txpool.accountqueue 4096 --nodiscover \
+            --syncmode full --mine --maxpeers 5000 --db.leveldb.cache-size 10240"
+            ;;
+        BN)
+            OPTIONS="--nodetype bn --networkid $NETWORK_ID  --datadir $DATA_DIR  --port $PORT  --rpc --rpcapi klay --rpcport $RPC_PORT  --rpcaddr 0.0.0.0 \
+            --rpccorsdomain *  --rpcvhosts * --ws  --wsaddr 0.0.0.0 --wsport $WS_PORT --wsorigins * --srvtype fasthttp --metrics --prometheus \
+            --verbosity 3 --txpool.globalslots 2048 --txpool.globalqueue 2048 --txpool.accountslots 2048 --txpool.accountqueue 2048 --txpool.nolocals \
+            --nodiscover  --syncmode full  --mine  --maxpeers 5000 --db.leveldb.cache-size 10240"
+            ;;
+        RN)
+            OPTIONS="--nodetype rn --networkid $NETWORK_ID --datadir $DATA_DIR --port $PORT --rpc --rpcapi klay --rpcport $RPC_PORT --rpcaddr 0.0.0.0 \
+            --rpccorsdomain * --rpcvhosts * --ws --wsaddr 0.0.0.0 --wsport $WS_PORT --wsorigins * --srvtype fasthttp --metrics --prometheus \
+            --verbosity 3 --txpool.globalslots 1024 --txpool.globalqueue 1024 --txpool.accountslots 1024 --txpool.accountqueue 1024 --nodiscover \
+            --syncmode full --mine"
+            ;;
+        *)
+            OPTIONS="--nodetype rn --networkid $NETWORK_ID --datadir $DATA_DIR --port $PORT --rpc --rpcapi klay --rpcport $RPC_PORT --rpcaddr 0.0.0.0 \
+            --rpccorsdomain * --rpcvhosts * --ws --wsaddr 0.0.0.0 --wsport $WS_PORT --wsorigins * --srvtype fasthttp --metrics --prometheus \
+            --verbosity 3 --txpool.globalslots 1024 --txpool.globalqueue 1024 --txpool.accountslots 1024 --txpool.accountqueue 1024 --nodiscover \
+            --syncmode full --mine"
+            ;;
+    esac
+
+    set -f
+    $BIN/klay $OPTIONS >> ${LOG_DIR}/klay.out 2>&1 &
+    RETVAL=$?
+    PIDNUM=$!
+    set +f
+    if [ $RETVAL = 0 ]; then
+        echo $PIDNUM > ${pidfile}
+        echo "OK"
+    else
+        echo "Fail"
+    fi
+    return $RETVAL
+}
+
+stop() {
+    __pid_run
+    [ -z "$pid" ] && echo "klay is not running" && return
+    echo -n "Shutting down klay ($NODE_TYPE): "
+    kill -3 $(eval "cat ${pidfile}")
+    RETVAL=$?
+    [ $RETVAL = 0 ] && rm -f ${pidfile} && echo "OK" && return
+    echo "Failed"
+}
+
+status() {
+    __pid_run
+    if [ -n "$pid" ]; then 
+        echo "klay is running"
+    else
+        echo "klay is down"
+    fi
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        restart
+        ;;
+    *)
+        echo "Usages: klayd {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit 0
