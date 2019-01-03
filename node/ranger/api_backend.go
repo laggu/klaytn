@@ -107,7 +107,7 @@ func (b *RangerAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*typ
 }
 
 func (b *RangerAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	return b.ranger.blockchain.GetReceiptsByHash(hash), nil
+	return b.ranger.blockchain.GetReceiptsByBlockHash(hash), nil
 }
 
 func (b *RangerAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {

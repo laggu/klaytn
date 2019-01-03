@@ -686,18 +686,40 @@ func (bc *BlockChain) GetBlockByNumber(number uint64) *types.Block {
 	return bc.GetBlock(hash, number)
 }
 
-// GetReceiptsByHash retrieves the receipts for all transactions in a given block.
-func (bc *BlockChain) GetReceiptsByHash(hash common.Hash) types.Receipts {
-	number := bc.GetBlockNumber(hash)
+// GetReceiptByTxHash retrieves a receipt for a given transaction hash.
+func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
+	tx, blockHash, _, index := bc.GetTransactionInCache(txHash)
+	if tx == nil {
+		tx, blockHash, _, index = bc.db.ReadTransaction(txHash)
+		if tx == nil {
+			return nil
+		}
+	}
+
+	receipts, _ := bc.GetReceiptsInCache(blockHash)
+	if receipts == nil {
+		receipts = bc.GetReceiptsByBlockHash(blockHash)
+	}
+
+	if len(receipts) <= int(index) {
+		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts))
+		return nil
+	}
+	return receipts[index]
+}
+
+// GetReceiptsByBlockHash retrieves the receipts for all transactions with given block hash.
+func (bc *BlockChain) GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts {
+	number := bc.GetBlockNumber(blockHash)
 	if number == nil {
 		return nil
 	}
-	return bc.db.ReadReceipts(hash, *number)
+	return bc.db.ReadReceipts(blockHash, *number)
 }
 
 // GetLogsByHash retrieves the logs for all receipts in a given block.
 func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
-	receipts := bc.GetReceiptsByHash(hash)
+	receipts := bc.GetReceiptsByBlockHash(hash)
 	if receipts == nil {
 		return nil
 	}
