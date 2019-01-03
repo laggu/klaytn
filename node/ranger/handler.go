@@ -12,6 +12,7 @@ import (
 	"github.com/ground-x/go-gxplatform/event"
 	"github.com/ground-x/go-gxplatform/networks/p2p"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/hashicorp/golang-lru"
 	"math/big"
@@ -98,8 +99,8 @@ func (re *RangerEngine) Finalize(chain consensus.ChainReader, header *types.Head
 	logger.Debug("RangeEngine.Finalize") //,"num",header.Number,"hash",header.Hash())
 
 	// TODO-GX developing klay reward mechanism
-	var reward = big.NewInt(1000000000000000000)        // 1 eth
-	var rewardcontract = big.NewInt(100000000000000000) // 0.1 eth
+	var reward = big.NewInt(params.KLAY)               // 1 KLAY
+	var rewardcontract = big.NewInt(0.1 * params.KLAY) // 0.1 KLAY
 	state.AddBalance(header.Coinbase, reward)
 
 	state.AddBalance(common.HexToAddress(contract.RNRewardAddr), rewardcontract)

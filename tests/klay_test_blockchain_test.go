@@ -308,7 +308,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	// Apply reward
 	start = time.Now()
 	rewardAddr := *bcdata.rewardBase
-	accountMap.AddBalance(rewardAddr, big.NewInt(1000000000000000000))
+	accountMap.AddBalance(rewardAddr, big.NewInt(params.KLAY))
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -355,7 +355,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	// Apply reward
 	start = time.Now()
 	rewardAddr := *bcdata.rewardBase
-	accountMap.AddBalance(rewardAddr, big.NewInt(1000000000000000000))
+	accountMap.AddBalance(rewardAddr, big.NewInt(params.KLAY))
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -416,7 +416,7 @@ func initBlockchain(conf *node.Config, db database.DBManager, coinbaseAddrs []*c
 
 	alloc := make(blockchain.GenesisAlloc)
 	for _, a := range coinbaseAddrs {
-		alloc[*a] = blockchain.GenesisAccount{Balance: big.NewInt(1000000000000000000)}
+		alloc[*a] = blockchain.GenesisAccount{Balance: big.NewInt(params.KLAY)}
 	}
 
 	genesis.Alloc = alloc

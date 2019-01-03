@@ -34,6 +34,7 @@ import (
 	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/hashicorp/golang-lru"
 	"math/big"
@@ -393,8 +394,8 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
 	// TODO-GX developing klay reward mechanism
-	var reward = big.NewInt(1000000000000000000)        // 1 eth
-	var rewardcontract = big.NewInt(100000000000000000) // 0.1 eth
+	var reward = big.NewInt(params.KLAY)               // 1 KLAY
+	var rewardcontract = big.NewInt(0.1 * params.KLAY) // 0.1 KLAY
 	state.AddBalance(header.Rewardbase, reward)
 
 	state.AddBalance(common.HexToAddress(contract.RNRewardAddr), rewardcontract)
