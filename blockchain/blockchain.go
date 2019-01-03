@@ -1206,11 +1206,11 @@ func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transactio
 	return txLookup.Tx, txLookup.BlockHash, txLookup.BlockIndex, txLookup.Index
 }
 
-func (bc *BlockChain) GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error) {
+func (bc *BlockChain) GetReceiptsInCache(blockHash common.Hash) types.Receipts {
 	value, ok := bc.recentReceipts.Get(blockHash)
 	if !ok {
 		cacheGetRecentReceiptsMissMeter.Mark(1)
-		return nil, nil
+		return nil
 	}
 	cacheGetRecentReceiptsHitMeter.Mark(1)
 	items := value.([]*types.Receipt)
@@ -1218,7 +1218,7 @@ func (bc *BlockChain) GetReceiptsInCache(blockHash common.Hash) (types.Receipts,
 	for i, receipt := range items {
 		receipts[i] = receipt
 	}
-	return receipts, nil
+	return receipts
 }
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical

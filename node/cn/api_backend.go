@@ -51,7 +51,7 @@ func (b *GxpAPIBackend) GetTransactionInCache(hash common.Hash) (*types.Transact
 }
 
 func (b *GxpAPIBackend) GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error) {
-	return b.gxp.blockchain.GetReceiptsInCache(blockHash)
+	return b.gxp.blockchain.GetReceiptsInCache(blockHash), nil
 }
 
 func (b *GxpAPIBackend) ChainConfig() *params.ChainConfig {
