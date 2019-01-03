@@ -1655,6 +1655,8 @@ func testFakedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	}
 }
 
+// TODO-GX Disabled because this test fails intermittently in CI (Issue #833)
+/*
 // This test reproduces an issue where unexpected deliveries would
 // block indefinitely if they arrived at the right time.
 // We use data driven subtests to manage this so that it will be parallel on its own
@@ -1677,6 +1679,7 @@ func TestDeliverHeadersHang(t *testing.T) {
 		})
 	}
 }
+*/
 
 type floodingTestPeer struct {
 	peer   Peer

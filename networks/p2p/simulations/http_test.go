@@ -524,6 +524,8 @@ func (t *expectEvents) expect(events ...*Event) {
 	}
 }
 
+// TODO-GX Disabled because this test fails intermittently in CI (Issue #833)
+/*
 // TestHTTPNodeRPC tests calling RPC methods on nodes via the HTTP API
 func TestHTTPNodeRPC(t *testing.T) {
 	// start the server
@@ -584,6 +586,7 @@ func TestHTTPNodeRPC(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 }
+*/
 
 // TestHTTPSnapshot tests creating and loading network snapshots
 func TestHTTPSnapshot(t *testing.T) {

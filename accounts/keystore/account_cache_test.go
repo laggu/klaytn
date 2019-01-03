@@ -23,7 +23,6 @@ package keystore
 import (
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -95,6 +94,8 @@ func TestWatchNewFile(t *testing.T) {
 	t.Errorf("got %s, want %s", spew.Sdump(list), spew.Sdump(wantAccounts))
 }
 
+// TODO-GX Disabled because this test fails intermittently in CI (Issue #833)
+/*
 func TestWatchNoDir(t *testing.T) {
 	t.Parallel()
 
@@ -135,6 +136,7 @@ func TestWatchNoDir(t *testing.T) {
 	}
 	t.Errorf("\ngot  %v\nwant %v", list, wantAccounts)
 }
+*/
 
 func TestCacheInitialReload(t *testing.T) {
 	cache, _ := newAccountCache(cachetestDir)
@@ -319,6 +321,8 @@ func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	return fmt.Errorf("\ngot  %v\nwant %v", list, wantAccounts)
 }
 
+// TODO-GX Disabled because this test fails intermittently in CI (Issue #833)
+/*
 // TestUpdatedKeyfileContents tests that updating the contents of a keystore file
 // is noticed by the watcher, and the account cache is updated accordingly
 func TestUpdatedKeyfileContents(t *testing.T) {
@@ -399,6 +403,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 		return
 	}
 }
+*/
 
 // forceCopyFile is like cp.CopyFile, but doesn't complain if the destination exists.
 func forceCopyFile(dst, src string) error {
