@@ -1,5 +1,5 @@
 // Copyright 2018 The go-klaytn Authors
-// Copyright 2017 The go-ethereum Authors
+// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -15,10 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from internal/jsre/deps/deps.go (2018/06/04).
+// This file is derived from core/blockchain.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-package deps
-
-//go:generate go-bindata -nometadata -pkg deps -o bindata.go bignumber.js web3.js
-//go:generate gofmt -w -s bindata.go
+// Package blockchain implements the Klaytn consensus protocol.
+package blockchain

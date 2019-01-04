@@ -18,7 +18,6 @@
 // This file is derived from core/state/statedb.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package state provides a caching layer atop the Klaytn statedb.
 package state
 
 import (

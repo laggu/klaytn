@@ -18,7 +18,6 @@
 // This file is derived from internal/web3ext/web3ext.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// package web3ext contains geth specific web3.js extensions.
 package web3ext
 
 var Modules = map[string]string{

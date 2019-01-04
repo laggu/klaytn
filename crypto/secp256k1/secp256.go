@@ -6,7 +6,6 @@
 // This file is derived from crypto/secp256k1/secp256.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package secp256k1 wraps the bitcoin secp256k1 C library.
 package secp256k1
 
 /*

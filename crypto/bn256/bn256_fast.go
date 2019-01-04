@@ -8,7 +8,6 @@
 
 // +build amd64 arm64
 
-// Package bn256 implements the Optimal Ate pairing over a 256-bit Barreto-Naehrig curve.
 package bn256
 
 import "github.com/ground-x/go-gxplatform/crypto/bn256/cloudflare"

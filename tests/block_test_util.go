@@ -18,7 +18,6 @@
 // This file is derived from tests/block_test_util.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package tests implements execution of Ethereum JSON tests.
 package tests
 
 import (

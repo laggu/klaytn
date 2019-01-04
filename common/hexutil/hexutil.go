@@ -18,20 +18,6 @@
 // This file is derived from common/hexutil/hexutil.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-/*
-Package hexutil implements hex encoding with 0x prefix.
-This encoding is used by the GXPlatform RPC API to transport binary data in JSON payloads.
-
-Encoding Rules
-
-All hex data must have prefix "0x".
-
-For byte slices, the hex data must be of even length. An empty byte slice
-encodes as "0x".
-
-Integers are encoded using the least amount of digits (no leading zero digits). Their
-encoding may be of uneven length. The number zero encodes as "0x0".
-*/
 package hexutil
 
 import (

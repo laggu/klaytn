@@ -18,7 +18,6 @@
 // This file is derived from core/asm/asm.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Provides support for dealing with EVM assembly instructions (e.g., disassembling them).
 package asm
 
 import (

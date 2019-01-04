@@ -1,5 +1,5 @@
 // Copyright 2018 The go-klaytn Authors
-// Copyright 2017 The go-ethereum Authors
+// Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -15,10 +15,21 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from internal/jsre/deps/deps.go (2018/06/04).
+// This file is derived from common/hexutil/hexutil.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-package deps
+/*
+Package hexutil implements hex encoding with 0x prefix.
+This encoding is used by the Ethereum RPC API to transport binary data in JSON payloads.
 
-//go:generate go-bindata -nometadata -pkg deps -o bindata.go bignumber.js web3.js
-//go:generate gofmt -w -s bindata.go
+Encoding Rules
+
+All hex data must have prefix "0x".
+
+For byte slices, the hex data must be of even length. An empty byte slice
+encodes as "0x".
+
+Integers are encoded using the least amount of digits (no leading zero digits). Their
+encoding may be of uneven length. The number zero encodes as "0x0".
+*/
+package hexutil
