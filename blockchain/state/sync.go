@@ -32,12 +32,12 @@ import (
 func NewStateSync(root common.Hash, database database.DBManager) *statedb.TrieSync {
 	var syncer *statedb.TrieSync
 	callback := func(leaf []byte, parent common.Hash) error {
-		var obj Account
-		if err := rlp.Decode(bytes.NewReader(leaf), &obj); err != nil {
+		obj := newEmptyLegacyAccount()
+		if err := rlp.Decode(bytes.NewReader(leaf), obj); err != nil {
 			return err
 		}
-		syncer.AddSubTrie(obj.Root, 64, parent, nil)
-		syncer.AddRawEntry(common.BytesToHash(obj.CodeHash), 64, parent)
+		syncer.AddSubTrie(obj.GetStorageRoot(), 64, parent, nil)
+		syncer.AddRawEntry(common.BytesToHash(obj.GetCodeHash()), 64, parent)
 		return nil
 	}
 	syncer = statedb.NewTrieSync(root, database, callback)

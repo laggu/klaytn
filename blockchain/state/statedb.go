@@ -335,7 +335,7 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 		prevbalance: new(big.Int).Set(stateObject.Balance()),
 	})
 	stateObject.markSuicided()
-	stateObject.data.Balance = new(big.Int)
+	stateObject.data.SetBalance(new(big.Int))
 
 	return true
 }
@@ -377,8 +377,8 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 		self.setError(err)
 		return nil
 	}
-	var data Account
-	if err := rlp.DecodeBytes(enc, &data); err != nil {
+	data := newEmptyLegacyAccount()
+	if err := rlp.DecodeBytes(enc, data); err != nil {
 		logger.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}
@@ -405,7 +405,7 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	newobj = newObject(self, addr, Account{})
+	newobj = newObject(self, addr, newLegacyAccount())
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
@@ -429,7 +429,7 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 func (self *StateDB) CreateAccount(addr common.Address) {
 	new, prev := self.createObject(addr)
 	if prev != nil {
-		new.setBalance(prev.data.Balance)
+		new.setBalance(prev.data.GetBalance())
 	}
 }
 
@@ -623,14 +623,14 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	}
 	// Write trie changes.
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {
-		var account Account
-		if err := rlp.DecodeBytes(leaf, &account); err != nil {
+		account := newEmptyLegacyAccount()
+		if err := rlp.DecodeBytes(leaf, account); err != nil {
 			return nil
 		}
-		if account.Root != emptyState {
-			s.db.TrieDB().Reference(account.Root, parent)
+		if account.GetStorageRoot() != emptyState {
+			s.db.TrieDB().Reference(account.GetStorageRoot(), parent)
 		}
-		code := common.BytesToHash(account.CodeHash)
+		code := common.BytesToHash(account.GetCodeHash())
 		if code != emptyCode {
 			s.db.TrieDB().Reference(code, parent)
 		}

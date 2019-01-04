@@ -92,12 +92,13 @@ type stateObject struct {
 
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+	return s.data.Empty()
 }
 
-// Account is the Ethereum consensus representation of accounts.
+// LegacyAccount is the Klaytn consensus representation of legacy accounts.
 // These objects are stored in the main account trie.
-type Account struct {
+// TODO-GX: To reduce diff, LegacyAccount remains here. It should be moved to legacy_account.go
+type LegacyAccount struct {
 	Nonce    uint64
 	Balance  *big.Int
 	Root     common.Hash // merkle root of the storage trie
@@ -106,12 +107,6 @@ type Account struct {
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
-	if data.Balance == nil {
-		data.Balance = new(big.Int)
-	}
-	if data.CodeHash == nil {
-		data.CodeHash = emptyCodeHash
-	}
 	return &stateObject{
 		db:            db,
 		address:       address,
@@ -151,7 +146,7 @@ func (c *stateObject) touch() {
 func (c *stateObject) getTrie(db Database) Trie {
 	if c.trie == nil {
 		var err error
-		c.trie, err = db.OpenStorageTrie(c.data.Root)
+		c.trie, err = db.OpenStorageTrie(c.data.GetStorageRoot())
 		if err != nil {
 			c.trie, _ = db.OpenStorageTrie(common.Hash{})
 			c.setError(fmt.Errorf("can't create storage trie: %v", err))
@@ -217,7 +212,7 @@ func (self *stateObject) updateTrie(db Database) Trie {
 // UpdateRoot sets the trie root to the current root hash of
 func (self *stateObject) updateRoot(db Database) {
 	self.updateTrie(db)
-	self.data.Root = self.trie.Hash()
+	self.data.SetStorageRoot(self.trie.Hash())
 }
 
 // CommitTrie the storage trie of the object to dwb.
@@ -229,7 +224,7 @@ func (self *stateObject) CommitTrie(db Database) error {
 	}
 	root, err := self.trie.Commit(nil)
 	if err == nil {
-		self.data.Root = root
+		self.data.SetStorageRoot(root)
 	}
 	return err
 }
@@ -261,20 +256,20 @@ func (c *stateObject) SubBalance(amount *big.Int) {
 func (self *stateObject) SetBalance(amount *big.Int) {
 	self.db.journal.append(balanceChange{
 		account: &self.address,
-		prev:    new(big.Int).Set(self.data.Balance),
+		prev:    new(big.Int).Set(self.data.GetBalance()),
 	})
 	self.setBalance(amount)
 }
 
 func (self *stateObject) setBalance(amount *big.Int) {
-	self.data.Balance = amount
+	self.data.SetBalance(amount)
 }
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *stateObject) ReturnGas(gas *big.Int) {}
 
 func (self *stateObject) deepCopy(db *StateDB) *stateObject {
-	stateObject := newObject(db, self.address, self.data)
+	stateObject := newObject(db, self.address, self.data.DeepCopy())
 	if self.trie != nil {
 		stateObject.trie = db.db.CopyTrie(self.trie)
 	}
@@ -324,32 +319,32 @@ func (self *stateObject) SetCode(codeHash common.Hash, code []byte) {
 
 func (self *stateObject) setCode(codeHash common.Hash, code []byte) {
 	self.code = code
-	self.data.CodeHash = codeHash[:]
+	self.data.SetCodeHash(codeHash[:])
 	self.dirtyCode = true
 }
 
 func (self *stateObject) SetNonce(nonce uint64) {
 	self.db.journal.append(nonceChange{
 		account: &self.address,
-		prev:    self.data.Nonce,
+		prev:    self.data.GetNonce(),
 	})
 	self.setNonce(nonce)
 }
 
 func (self *stateObject) setNonce(nonce uint64) {
-	self.data.Nonce = nonce
+	self.data.SetNonce(nonce)
 }
 
 func (self *stateObject) CodeHash() []byte {
-	return self.data.CodeHash
+	return self.data.GetCodeHash()
 }
 
 func (self *stateObject) Balance() *big.Int {
-	return self.data.Balance
+	return self.data.GetBalance()
 }
 
 func (self *stateObject) Nonce() uint64 {
-	return self.data.Nonce
+	return self.data.GetNonce()
 }
 
 // Never called, but must be present to allow stateObject to be used

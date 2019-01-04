@@ -51,17 +51,17 @@ func (self *StateDB) RawDump() Dump {
 	it := statedb.NewIterator(self.trie.NodeIterator(nil))
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
-		var data Account
-		if err := rlp.DecodeBytes(it.Value, &data); err != nil {
+		data := newEmptyLegacyAccount()
+		if err := rlp.DecodeBytes(it.Value, data); err != nil {
 			panic(err)
 		}
 
 		obj := newObject(nil, common.BytesToAddress(addr), data)
 		account := DumpAccount{
-			Balance:  data.Balance.String(),
-			Nonce:    data.Nonce,
-			Root:     common.Bytes2Hex(data.Root[:]),
-			CodeHash: common.Bytes2Hex(data.CodeHash),
+			Balance:  data.GetBalance().String(),
+			Nonce:    data.GetNonce(),
+			Root:     common.Bytes2Hex(data.GetStorageRoot().Bytes()),
+			CodeHash: common.Bytes2Hex(data.GetCodeHash()),
 			Code:     common.Bytes2Hex(obj.Code(self.db)),
 			Storage:  make(map[string]string),
 		}

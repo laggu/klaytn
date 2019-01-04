@@ -106,7 +106,7 @@ func TestRemoteNonceChange(t *testing.T) {
 	account.nonces = append(account.nonces, nn...)
 	ms.NewNonce(addr)
 
-	ms.StateDB.stateObjects[addr].data.Nonce = 200
+	ms.StateDB.stateObjects[addr].data.SetNonce(200)
 	nonce := ms.NewNonce(addr)
 	if nonce != 200 {
 		t.Error("expected nonce after remote update to be", 200, "got", nonce)
@@ -114,7 +114,7 @@ func TestRemoteNonceChange(t *testing.T) {
 	ms.NewNonce(addr)
 	ms.NewNonce(addr)
 	ms.NewNonce(addr)
-	ms.StateDB.stateObjects[addr].data.Nonce = 200
+	ms.StateDB.stateObjects[addr].data.SetNonce(200)
 	nonce = ms.NewNonce(addr)
 	if nonce != 204 {
 		t.Error("expected nonce after remote update to be", 204, "got", nonce)
