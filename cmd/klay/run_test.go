@@ -27,7 +27,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/ground-x/go-gxplatform/cmd/cmdtest"
+	"github.com/ground-x/go-gxplatform/cmd/utils"
 )
 
 func tmpdir(t *testing.T) string {
@@ -39,7 +39,7 @@ func tmpdir(t *testing.T) string {
 }
 
 type testklay struct {
-	*cmdtest.TestCmd
+	*utils.TestCmd
 
 	// template variables for expect
 	Datadir   string
@@ -69,7 +69,7 @@ func TestMain(m *testing.M) {
 // child g gets a temporary data directory.
 func runKlay(t *testing.T, args ...string) *testklay {
 	tt := &testklay{}
-	tt.TestCmd = cmdtest.NewTestCmd(t, tt)
+	tt.TestCmd = utils.NewTestCmd(t, tt)
 	for i, arg := range args {
 		switch {
 		case arg == "-datadir" || arg == "--datadir":

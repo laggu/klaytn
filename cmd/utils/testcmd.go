@@ -18,7 +18,7 @@
 // This file is derived from cmd/cmdtest/test_cmd.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-package cmdtest
+package utils
 
 import (
 	"bufio"
