@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from core/types/bloom_test.go (2018/06/04).
+// This file is derived from core/types/bloom9_test.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
 package types
