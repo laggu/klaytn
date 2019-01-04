@@ -58,7 +58,7 @@ func newEmptyPublicKeySerializable() *PublicKeySerializable {
 // For that reason, this function serializes only X and Y.
 func (p *PublicKeySerializable) EncodeRLP(w io.Writer) error {
 	// Do not serialize if it is not on S256 curve.
-	if crypto.S256().IsOnCurve(p.X, p.Y) {
+	if !crypto.S256().IsOnCurve(p.X, p.Y) {
 		return errNotS256Curve
 	}
 	return rlp.Encode(w, &publicKeySerializableInternal{
@@ -84,7 +84,7 @@ func (p *PublicKeySerializable) DecodeRLP(s *rlp.Stream) error {
 // For that reason, this function serializes only X and Y.
 func (p *PublicKeySerializable) MarshalJSON() ([]byte, error) {
 	// Do not serialize if it is not on S256 curve.
-	if crypto.S256().IsOnCurve(p.X, p.Y) {
+	if !crypto.S256().IsOnCurve(p.X, p.Y) {
 		return nil, errNotS256Curve
 	}
 	return json.Marshal(&publicKeySerializableInternal{

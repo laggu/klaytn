@@ -18,6 +18,7 @@ package types
 
 import (
 	"encoding/json"
+	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -31,6 +32,11 @@ func TestPublicKeyRLP(t *testing.T) {
 	k.Y.SetUint64(20)
 
 	b, err := rlp.EncodeToBytes(k)
+	assert.Equal(t, err, errNotS256Curve)
+
+	prv, _ := crypto.GenerateKey()
+	k = (*PublicKeySerializable)(&prv.PublicKey)
+	b, err = rlp.EncodeToBytes(k)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,6 +60,11 @@ func TestPublicKeyJSON(t *testing.T) {
 	k.Y.SetUint64(20)
 
 	b, err := json.Marshal(k)
+	assert.Equal(t, err.(*json.MarshalerError).Err, errNotS256Curve)
+
+	prv, _ := crypto.GenerateKey()
+	k = (*PublicKeySerializable)(&prv.PublicKey)
+	b, err = json.Marshal(k)
 	if err != nil {
 		t.Fatal(err)
 	}
