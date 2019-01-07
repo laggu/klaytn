@@ -69,7 +69,7 @@ func (pr *Proof) Compare(v Proof) bool {
 	if pr.BlockNumber.Cmp(v.BlockNumber) != 0 {
 		return false
 	}
-	if (pr.Nonce - pr.Nonce) != 0 {
+	if (pr.Nonce - v.Nonce) != 0 {
 		return false
 	}
 	return true

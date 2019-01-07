@@ -202,7 +202,7 @@ func (h *GlogHandler) Log(r *Record) error {
 	}
 	// Check callsite cache for previously calculated log levels
 	h.lock.RLock()
-	lvl, ok := h.siteCache[r.Call.PC()]
+	lvl, ok := h.siteCache[r.Call.Frame().PC]
 	h.lock.RUnlock()
 
 	// If we didn't cache the callsite yet, calculate it

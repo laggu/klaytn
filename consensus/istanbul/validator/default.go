@@ -50,7 +50,7 @@ func (val *defaultValidator) String() string {
 }
 
 func (val *defaultValidator) Equal(val2 *defaultValidator) bool {
-	return val.address == val.address
+	return val.address == val2.address
 }
 
 func (val *defaultValidator) Hash() int64 {

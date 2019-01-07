@@ -568,16 +568,16 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 	return snap, nil
 }
 
-// getPrevHeader returns previous header to find stored Snapshot object.
-func getPrevHeader(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) *types.Header {
+// getPrevHeaderAndUpdateParents returns previous header to find stored Snapshot object and drops the last element of the parents parameter.
+func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, hash common.Hash, parents *[]*types.Header) *types.Header {
 	var header *types.Header
-	if len(parents) > 0 {
+	if len(*parents) > 0 {
 		// If we have explicit parents, pick from there (enforced)
-		header = parents[len(parents)-1]
+		header = (*parents)[len(*parents)-1]
 		if header.Hash() != hash || header.Number.Uint64() != number {
 			return nil
 		}
-		parents = parents[:len(parents)-1]
+		*parents = (*parents)[:len(*parents)-1]
 	} else {
 		// No explicit parents (or no more left), reach out to the database
 		header = chain.GetHeader(hash, number)
@@ -618,7 +618,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
-		if header := getPrevHeader(chain, number, hash, parents); header == nil {
+		if header := getPrevHeaderAndUpdateParents(chain, number, hash, &parents); header == nil {
 			return nil, consensus.ErrUnknownAncestor
 		} else {
 			headers = append(headers, header)

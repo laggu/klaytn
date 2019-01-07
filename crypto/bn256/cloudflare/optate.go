@@ -1,3 +1,8 @@
+// Copyright 2018 The go-klaytn Authors
+//
+// This file is derived from crypto/bn256/cloudflare/optate.go (2018/06/04).
+// See LICENSE in the top directory for the original copyright and license.
+
 package bn256
 
 func lineFunctionAdd(r, p *twistPoint, q *curvePoint, r2 *gfP2) (a, b, c *gfP2, rOut *twistPoint) {
@@ -199,9 +204,8 @@ func miller(q *twistPoint, p *curvePoint) *gfP12 {
 	r = newR
 
 	r2.Square(&minusQ2.y)
-	a, b, c, newR = lineFunctionAdd(r, minusQ2, bAffine, r2)
+	a, b, c, _ = lineFunctionAdd(r, minusQ2, bAffine, r2)
 	mulLine(ret, a, b, c)
-	r = newR
 
 	return ret
 }
