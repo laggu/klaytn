@@ -21,6 +21,7 @@
 package types
 
 import (
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 
@@ -46,6 +47,30 @@ func TestEIP155Signing(t *testing.T) {
 	if from != addr {
 		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
 	}
+}
+
+func TestEIP155RawSignatureValues(t *testing.T) {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+
+	signer := NewEIP155Signer(big.NewInt(18))
+	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := signer.Hash(tx)
+	sig, err := crypto.Sign(h[:], key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, s, v, err := signer.SignatureValues(tx, sig)
+
+	txV, txR, txS := tx.RawSignatureValues()
+
+	assert.Equal(t, r, txR)
+	assert.Equal(t, s, txS)
+	assert.Equal(t, v, txV)
 }
 
 func TestEIP155ChainId(t *testing.T) {
