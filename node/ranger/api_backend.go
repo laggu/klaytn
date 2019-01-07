@@ -165,8 +165,8 @@ func (b *RangerAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transacti
 	return b.ranger.txPool.Get(hash)
 }
 
-func (b *RangerAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
-	return b.ranger.txPool.State().GetNonce(addr), nil
+func (b *RangerAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) uint64 {
+	return b.ranger.txPool.State().GetNonce(addr)
 }
 
 func (b *RangerAPIBackend) Stats() (pending int, queued int) {

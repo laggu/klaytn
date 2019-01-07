@@ -184,8 +184,8 @@ func (b *GxpAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 	return b.gxp.txPool.Get(hash)
 }
 
-func (b *GxpAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
-	return b.gxp.txPool.State().GetNonce(addr), nil
+func (b *GxpAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) uint64 {
+	return b.gxp.txPool.State().GetNonce(addr)
 }
 
 func (b *GxpAPIBackend) Stats() (pending int, queued int) {
