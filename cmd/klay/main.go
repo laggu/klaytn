@@ -101,6 +101,7 @@ var (
 		utils.TrieBlockIntervalFlag,
 		utils.CacheTypeFlag,
 		utils.CacheScaleFlag,
+		utils.ChildChainIndexingFlag,
 		utils.ListenPortFlag,
 		utils.NodeTypeFlag,
 		utils.MaxPeersFlag,

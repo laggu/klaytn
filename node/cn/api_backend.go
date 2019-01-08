@@ -234,3 +234,11 @@ func (b *GxpAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.gxp.bloomRequests)
 	}
 }
+
+func (b *GxpAPIBackend) GetChildChainIndexingEnabled() bool {
+	return b.gxp.blockchain.GetChildChainIndexingEnabled()
+}
+
+func (b *GxpAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
+	return b.gxp.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
+}

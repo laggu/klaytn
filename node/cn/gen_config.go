@@ -31,6 +31,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		LevelDBCacheSize        int
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
+		TrieBlockInterval       uint
+		ChildChainIndexing      bool
 		Gxbase                  common.Address `toml:",omitempty"`
 		MinerThreads            int            `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
@@ -57,6 +59,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
+	enc.TrieBlockInterval = c.TrieBlockInterval
+	enc.ChildChainIndexing = c.ChildChainIndexing
 	enc.Gxbase = c.Gxbase
 	enc.MinerThreads = c.MinerThreads
 	enc.ExtraData = c.ExtraData
@@ -87,6 +91,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		LevelDBCacheSize        *int
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
+		TrieBlockInterval       *uint
+		ChildChainIndexing      *bool
 		Gxbase                  *common.Address `toml:",omitempty"`
 		MinerThreads            *int            `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
@@ -137,6 +143,12 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TrieTimeout != nil {
 		c.TrieTimeout = *dec.TrieTimeout
+	}
+	if dec.TrieBlockInterval != nil {
+		c.TrieBlockInterval = *dec.TrieBlockInterval
+	}
+	if dec.ChildChainIndexing != nil {
+		c.ChildChainIndexing = *dec.ChildChainIndexing
 	}
 	if dec.Gxbase != nil {
 		c.Gxbase = *dec.Gxbase

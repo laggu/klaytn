@@ -74,6 +74,9 @@ type Backend interface {
 
 	GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error)
+
+	GetChildChainIndexingEnabled() bool
+	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

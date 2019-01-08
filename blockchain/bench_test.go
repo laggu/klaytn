@@ -377,7 +377,7 @@ func genDBManagerForTest(b *testing.B, dir string, dbType string) database.DBMan
 		db := database.NewMemoryDBManager()
 		return db
 	} else {
-		db, err := database.NewDBManager(dir, dbType, 128, 128)
+		db, err := database.NewDBManager(dir, dbType, false, 128, 128)
 		if err != nil {
 			b.Fatalf("cannot create temporary database %v at %v, %v", dbType, dir, err)
 		}

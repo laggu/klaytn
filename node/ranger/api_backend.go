@@ -210,6 +210,14 @@ func (b *RangerAPIBackend) BloomStatus() (uint64, uint64) {
 	return params.BloomBitsBlocks, sections
 }
 
+func (b *RangerAPIBackend) GetChildChainIndexingEnabled() bool {
+	return b.ranger.blockchain.GetChildChainIndexingEnabled()
+}
+
+func (b *RangerAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
+	return b.ranger.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
+}
+
 const (
 	// bloomFilterThreads is the number of goroutines used locally per filter to
 	// multiplex requests onto the global servicing goroutines.

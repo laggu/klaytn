@@ -419,6 +419,15 @@ web3._extend({
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
 		}),
+		new web3._extend.Method({
+			name: 'getChildChainIndexingEnabled',
+			call: 'klay_getChildChainIndexingEnabled'
+		}),
+		new web3._extend.Method({
+			name: 'convertChildChainBlockHashToParentChainTxHash',
+			call: 'klay_convertChildChainBlockHashToParentChainTxHash',
+			params: 1
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

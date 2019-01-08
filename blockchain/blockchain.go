@@ -1828,3 +1828,22 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 func (bc *BlockChain) isArchiveMode() bool {
 	return bc.trieConfig.Disabled
 }
+
+// GetChildChainIndexingEnabled returns the current child chain indexing configuration.
+func (bc *BlockChain) GetChildChainIndexingEnabled() bool {
+	return bc.db.ChildChainIndexingEnabled()
+}
+
+// ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
+// ChildChainTxData, with the key made with given child chain block hash.
+// Index is built when child chain indexing is enabled.
+func (bc *BlockChain) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
+	return bc.db.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
+}
+
+// WriteChildChainTxHash stores a transaction hash of a transaction which contains
+// ChildChainTxData, with the key made with given child chain block hash.
+// Index is built when child chain indexing is enabled.
+func (bc *BlockChain) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
+	bc.db.WriteChildChainTxHash(ccBlockHash, ccTxHash)
+}

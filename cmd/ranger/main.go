@@ -71,6 +71,7 @@ var (
 		utils.TrieBlockIntervalFlag,
 		utils.CacheTypeFlag,
 		utils.CacheScaleFlag,
+		utils.ChildChainIndexingFlag,
 		utils.ListenPortFlag,
 		utils.CoinbaseFlag,
 		utils.GasPriceFlag,

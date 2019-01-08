@@ -105,6 +105,7 @@ type Config struct {
 	TrieCacheSize      int
 	TrieTimeout        time.Duration
 	TrieBlockInterval  uint
+	ChildChainIndexing bool
 
 	// Mining-related options
 	Gxbase       common.Address `toml:",omitempty"`

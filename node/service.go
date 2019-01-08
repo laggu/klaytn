@@ -40,11 +40,11 @@ type ServiceContext struct {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (database.DBManager, error) {
+func (ctx *ServiceContext) OpenDatabase(name string, childChainIndexing bool, cache int, handles int) (database.DBManager, error) {
 	if ctx.config.DataDir == "" {
 		return database.NewMemoryDBManager(), nil
 	}
-	return database.NewDBManager(ctx.config.ResolvePath(name), database.LEVELDB, cache, handles)
+	return database.NewDBManager(ctx.config.ResolvePath(name), database.LEVELDB, childChainIndexing, cache, handles)
 }
 
 // ResolvePath resolves a user path into the data directory if that was relative

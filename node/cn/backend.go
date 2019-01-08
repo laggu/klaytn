@@ -232,7 +232,7 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.DBManager, error) {
-	db, err := ctx.OpenDatabase(name, config.LevelDBCacheSize, config.DatabaseHandles)
+	db, err := ctx.OpenDatabase(name, config.ChildChainIndexing, config.LevelDBCacheSize, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
 	}

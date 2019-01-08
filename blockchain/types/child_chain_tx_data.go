@@ -21,7 +21,7 @@ import (
 	"math/big"
 )
 
-type ServiceChainTxData struct {
+type ChildChainTxData struct {
 	BlockHash     common.Hash
 	TxHash        common.Hash
 	ParentHash    common.Hash
@@ -30,8 +30,8 @@ type ServiceChainTxData struct {
 	BlockNumber   *big.Int
 }
 
-func NewServiceChainTxData(block *Block) *ServiceChainTxData {
-	return &ServiceChainTxData{block.Hash(), block.Header().TxHash,
+func NewChildChainTxData(block *Block) *ChildChainTxData {
+	return &ChildChainTxData{block.Hash(), block.Header().TxHash,
 		block.Header().ParentHash, block.Header().ReceiptHash,
 		block.Header().Root, block.Header().Number}
 }

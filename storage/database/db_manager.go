@@ -123,6 +123,11 @@ type DBManager interface {
 
 	ReadPreimage(hash common.Hash) []byte
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
+
+	// below three operations are used in parent chain side, not child chain side.
+	ChildChainIndexingEnabled() bool
+	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
+	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
 }
 
 type DatabaseEntryType uint8
@@ -144,24 +149,26 @@ const (
 	// indexSectionsDB must appear after MiscDB
 	indexSectionsDB
 
+	childChainDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
 
 type databaseManager struct {
-	dbs        []Database
-	isMemoryDB bool
+	dbs                []Database
+	isMemoryDB         bool
+	childChainIndexing bool
 }
 
 func NewMemoryDBManager() DBManager {
-	dbm := databaseManager{make([]Database, 1, 1), true}
+	dbm := databaseManager{make([]Database, 1, 1), true, false}
 	dbm.dbs[0] = NewMemDatabase()
 
 	return &dbm
 }
 
-func NewDBManager(dir string, dbType string, ldbCacheSize, handles int) (DBManager, error) {
-	dbm := databaseManager{make([]Database, databaseEntryTypeSize, databaseEntryTypeSize), false}
+func NewDBManager(dir string, dbType string, childChainIndexing bool, ldbCacheSize, handles int) (DBManager, error) {
+	dbm := databaseManager{make([]Database, databaseEntryTypeSize, databaseEntryTypeSize), false, childChainIndexing}
 
 	// TODO-GX Should be replaced by initialization function with mapping information.
 	var db Database
@@ -865,6 +872,33 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
+}
+
+// ChildChainIndexingEnabled returns the current child chain indexing configuration.
+func (dbm *databaseManager) ChildChainIndexingEnabled() bool {
+	return dbm.childChainIndexing
+}
+
+// WriteChildChainTxHash writes stores a transaction hash of a transaction which contains
+// ChildChainTxData, with the key made with given child chain block hash.
+func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
+	key := childChainTxHashKey(ccBlockHash)
+	db := dbm.getDatabase(childChainDB)
+	if err := db.Put(key, ccTxHash.Bytes()); err != nil {
+		logger.Crit("Failed to store ChildChainTxHash", "ccBlockHash", ccBlockHash.String(), "ccTxHash", ccTxHash.String(), "err", err)
+	}
+}
+
+// ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
+// ChildChainTxData, with the key made with given child chain block hash.
+func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
+	key := childChainTxHashKey(ccBlockHash)
+	db := dbm.getDatabase(childChainDB)
+	data, _ := db.Get(key)
+	if len(data) == 0 {
+		return common.Hash{}
+	}
+	return common.BytesToHash(data)
 }
 
 // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits

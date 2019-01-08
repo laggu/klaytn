@@ -376,7 +376,7 @@ func NewDatabase(dir, dbType string) (db database.DBManager, err error) {
 	if dir == "" {
 		return database.NewMemoryDBManager(), nil
 	} else {
-		return database.NewDBManager(dir, dbType, 16, 16)
+		return database.NewDBManager(dir, dbType, false, 16, 16)
 	}
 }
 

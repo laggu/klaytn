@@ -68,6 +68,8 @@ var (
 
 	preimageCounter    = metrics.NewRegisteredCounter("db/preimage/total", nil)
 	preimageHitCounter = metrics.NewRegisteredCounter("db/preimage/hits", nil)
+
+	childChainTxHashPrefix = []byte("ccTxHash")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
@@ -136,4 +138,8 @@ func sectionHeadKey(encodedSection []byte) []byte {
 
 func istanbulSnapshotKey(hash common.Hash) []byte {
 	return append(istanbulSnapshotKeyPrefix, hash[:]...)
+}
+
+func childChainTxHashKey(ccBlockHash common.Hash) []byte {
+	return append(append(childChainTxHashPrefix, ccBlockHash.Bytes()...))
 }

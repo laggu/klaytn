@@ -271,6 +271,10 @@ var (
 		Name:  "cache.scale",
 		Usage: "Scale of cache (cache size = preset size * scale of cache(%))",
 	}
+	ChildChainIndexingFlag = cli.BoolFlag{
+		Name:  "childchainindexing",
+		Usage: "Enables storing transaction hash of child chain transaction for fast access to child chain data",
+	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
@@ -1033,6 +1037,9 @@ func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
 			logger.Warn("Incorrect vmlog value", "err", err)
 		}
 	}
+	if ctx.GlobalIsSet(ChildChainIndexingFlag.Name) {
+		cfg.ChildChainIndexing = true
+	}
 
 	// Override any default configs for hard coded network.
 	switch {
@@ -1126,6 +1133,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
+	if ctx.GlobalIsSet(ChildChainIndexingFlag.Name) {
+		cfg.ChildChainIndexing = true
+	}
 
 	// TODO-GX Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*
@@ -1212,14 +1222,15 @@ func SetupNetwork(ctx *cli.Context) {
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	var (
-		ldbCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
-		numHandles   = makeDatabaseHandles()
+		ldbCacheSize       = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
+		numHandles         = makeDatabaseHandles()
+		childChainIndexing = ctx.GlobalBool(ChildChainIndexingFlag.Name)
 	)
 	name := "chaindata"
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	chainDB, err := stack.OpenDatabase(name, ldbCacheSize, numHandles)
+	chainDB, err := stack.OpenDatabase(name, childChainIndexing, ldbCacheSize, numHandles)
 	if err != nil {
 		Fatalf("Could not open database: %v", err)
 	}
