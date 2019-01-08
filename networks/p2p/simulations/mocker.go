@@ -18,8 +18,6 @@
 // This file is derived from p2p/simulations/mocker.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package simulations simulates p2p networks.
-// A mocker simulates starting and stopping real nodes in a network.
 package simulations
 
 import (

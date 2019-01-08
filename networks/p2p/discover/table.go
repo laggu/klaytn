@@ -18,12 +18,6 @@
 // This file is derived from p2p/discover/table.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package discover implements the Node Discovery Protocol.
-//
-// The Node Discovery protocol provides a way to find RLPx nodes that
-// can be connected to. It uses a Kademlia-like protocol to maintain a
-// distributed database of the IDs and endpoints of all listening
-// nodes.
 package discover
 
 import (

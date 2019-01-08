@@ -18,7 +18,6 @@
 // This file is derived from cmd/evm/main.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// evm executes EVM code snippets.
 package main
 
 import (

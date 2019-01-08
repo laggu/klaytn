@@ -18,7 +18,6 @@
 // This file is derived from p2p/server.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package p2p implements the Ethereum p2p network protocols.
 package p2p
 
 import (

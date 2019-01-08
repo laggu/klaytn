@@ -18,26 +18,6 @@
 // This file is derived from cmd/p2psim/main.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// p2psim provides a command-line client for a simulation HTTP API.
-//
-// Here is an example of creating a 2 node network with the first node
-// connected to the second:
-//
-//     $ p2psim node create
-//     Created node01
-//
-//     $ p2psim node start node01
-//     Started node01
-//
-//     $ p2psim node create
-//     Created node02
-//
-//     $ p2psim node start node02
-//     Started node02
-//
-//     $ p2psim node connect node01 node02
-//     Connected node01 to node02
-//
 package main
 
 import (

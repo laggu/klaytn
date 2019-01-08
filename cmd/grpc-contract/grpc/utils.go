@@ -1,18 +1,21 @@
 // Copyright 2018 The go-klaytn Authors
-// This file is part of the go-klaytn library.
+// Copyright 2018 AMIS Technologies
+// This file is part of the sol2proto
 //
-// The go-klaytn library is free software: you can redistribute it and/or modify
+// The sol2proto is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-klaytn library is distributed in the hope that it will be useful,
+// The sol2proto is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// along with the sol2proto. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from grpc-contract/grpc/utils.go (2018/06/04).
 
 package grpc
 

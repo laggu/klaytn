@@ -18,8 +18,6 @@
 // This file is derived from eth/filters/filter_system.go (2018/06/04).
 // Modified and improved for the go-klaytn development.
 
-// Package filters implements an ethereum filtering system for block,
-// transactions and log events.
 package filters
 
 import (
