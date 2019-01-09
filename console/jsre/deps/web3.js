@@ -5314,16 +5314,8 @@ var transactionFromBlockCall = function (args) {
     return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getTransactionByBlockHashAndIndex' : 'klay_getTransactionByBlockNumberAndIndex';
 };
 
-var uncleCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getUncleByBlockHashAndIndex' : 'klay_getUncleByBlockNumberAndIndex';
-};
-
 var getBlockTransactionCountCall = function (args) {
     return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getBlockTransactionCountByHash' : 'klay_getBlockTransactionCountByNumber';
-};
-
-var uncleCountCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getUncleCountByBlockHash' : 'klay_getUncleCountByBlockNumber';
 };
 
 function Klay(web3) {
@@ -5397,15 +5389,6 @@ var methods = function () {
         outputFormatter: formatters.outputBlockFormatter
     });
 
-    var getUncle = new Method({
-        name: 'getUncle',
-        call: uncleCall,
-        params: 2,
-        inputFormatter: [formatters.inputBlockNumberFormatter, utils.toHex],
-        outputFormatter: formatters.outputBlockFormatter,
-
-    });
-
     var getCompilers = new Method({
         name: 'getCompilers',
         call: 'klay_getCompilers',
@@ -5415,14 +5398,6 @@ var methods = function () {
     var getBlockTransactionCount = new Method({
         name: 'getBlockTransactionCount',
         call: getBlockTransactionCountCall,
-        params: 1,
-        inputFormatter: [formatters.inputBlockNumberFormatter],
-        outputFormatter: utils.toDecimal
-    });
-
-    var getBlockUncleCount = new Method({
-        name: 'getBlockUncleCount',
-        call: uncleCountCall,
         params: 1,
         inputFormatter: [formatters.inputBlockNumberFormatter],
         outputFormatter: utils.toDecimal
@@ -5536,10 +5511,8 @@ var methods = function () {
         getStorageAt,
         getCode,
         getBlock,
-        getUncle,
         getCompilers,
         getBlockTransactionCount,
-        getBlockUncleCount,
         getTransaction,
         getTransactionFromBlock,
         getTransactionReceipt,
