@@ -80,3 +80,23 @@ type Account interface {
 	// String returns all attributes of this object as a string.
 	String() string
 }
+
+// NewAccountWithType creates an Account object with the given type.
+func NewAccountWithType(t AccountType) (Account, error) {
+	switch t {
+	case LegacyAccountType:
+		return newLegacyAccount(), nil
+	}
+
+	return nil, ErrUndefinedAccountType
+}
+
+// NewAccountWithType creates an Account object initialized with the given map.
+func NewAccountWithMap(t AccountType, values map[string]interface{}) (Account, error) {
+	switch t {
+	case LegacyAccountType:
+		return newLegacyAccountWithMap(values), nil
+	}
+
+	return nil, ErrUndefinedAccountType
+}

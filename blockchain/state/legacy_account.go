@@ -40,6 +40,28 @@ func newLegacyAccount() *LegacyAccount {
 	}
 }
 
+func newLegacyAccountWithMap(values map[string]interface{}) *LegacyAccount {
+	acc := newLegacyAccount()
+
+	if v, ok := values["nonce"].(uint64); ok {
+		acc.Nonce = v
+	}
+
+	if v, ok := values["balance"].(*big.Int); ok {
+		acc.Balance.Set(v)
+	}
+
+	if v, ok := values["root"].(common.Hash); ok {
+		acc.Root = v
+	}
+
+	if v, ok := values["codeHash"].([]byte); ok {
+		acc.CodeHash = v
+	}
+
+	return acc
+}
+
 func (a *LegacyAccount) Type() AccountType {
 	return LegacyAccountType
 }
