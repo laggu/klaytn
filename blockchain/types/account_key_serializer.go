@@ -40,6 +40,10 @@ func NewAccountKeySerializer() *AccountKeySerializer {
 	return &AccountKeySerializer{}
 }
 
+func (serializer *AccountKeySerializer) GetKey() AccountKey {
+	return serializer.key
+}
+
 func (serializer *AccountKeySerializer) EncodeRLP(w io.Writer) error {
 	if err := rlp.Encode(w, serializer.keyType); err != nil {
 		return err
