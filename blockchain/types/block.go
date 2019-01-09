@@ -72,7 +72,7 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 // Header represents a block header in the Klaytn blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
+	UncleHash   common.Hash    `json:"sha3Uncles,omitempty"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Rewardbase  common.Address `json:"reward"           gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
