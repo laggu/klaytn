@@ -54,7 +54,7 @@ import (
 )
 
 type LesServer interface {
-	Start(srvr *p2p.Server)
+	Start(srvr p2p.Server)
 	Stop()
 	Protocols() []p2p.Protocol
 	SetBloomBitsIndexer(bbIndexer *blockchain.ChainIndexer)
@@ -502,7 +502,7 @@ func (s *GXP) Protocols() []p2p.Protocol {
 
 // Start implements node.Service, starting all internal goroutines needed by the
 // GXP protocol implementation.
-func (s *GXP) Start(srvr *p2p.Server) error {
+func (s *GXP) Start(srvr p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
 
@@ -510,10 +510,10 @@ func (s *GXP) Start(srvr *p2p.Server) error {
 	s.netRPCService = api.NewPublicNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
-	maxPeers := srvr.MaxPeers
+	maxPeers := srvr.MaxPeers()
 	if s.config.LightServ > 0 {
-		if s.config.LightPeers >= srvr.MaxPeers {
-			return fmt.Errorf("invalid peer config: light peer count (%d) >= total peer count (%d)", s.config.LightPeers, srvr.MaxPeers)
+		if s.config.LightPeers >= maxPeers {
+			return fmt.Errorf("invalid peer config: light peer count (%d) >= total peer count (%d)", s.config.LightPeers, maxPeers)
 		}
 		maxPeers -= s.config.LightPeers
 	}

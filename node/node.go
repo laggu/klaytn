@@ -59,7 +59,7 @@ type Node struct {
 	instanceDirLock   flock.Releaser
 
 	serverConfig p2p.Config
-	server       *p2p.Server
+	server       p2p.Server
 
 	serviceFuncs []ServiceConstructor
 	services     map[reflect.Type]Service // Currently running services
@@ -174,7 +174,7 @@ func (n *Node) Start() error {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
 
-	running := &p2p.Server{Config: n.serverConfig}
+	p2pServer := p2p.NewServer(n.serverConfig)
 	n.logger.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
 	// Otherwise copy and specialize the P2P configuration
@@ -203,9 +203,9 @@ func (n *Node) Start() error {
 	}
 	// Gather the protocols and start the freshly assembled P2P server
 	for _, service := range services {
-		running.Protocols = append(running.Protocols, service.Protocols()...)
+		p2pServer.AddProtocols(service.Protocols())
 	}
-	if err := running.Start(); err != nil {
+	if err := p2pServer.Start(); err != nil {
 		return convertFileLockError(err)
 	}
 
@@ -213,11 +213,11 @@ func (n *Node) Start() error {
 	started := []reflect.Type{}
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
-		if err := service.Start(running); err != nil {
+		if err := service.Start(p2pServer); err != nil {
 			for _, kind := range started {
 				services[kind].Stop()
 			}
-			running.Stop()
+			p2pServer.Stop()
 
 			return err
 		}
@@ -230,13 +230,13 @@ func (n *Node) Start() error {
 		for _, service := range services {
 			service.Stop()
 		}
-		running.Stop()
+		p2pServer.Stop()
 		return err
 	}
 
 	// Finish initializing the startup
 	n.services = services
-	n.server = running
+	n.server = p2pServer
 	n.stop = make(chan struct{})
 
 	return nil
@@ -567,7 +567,7 @@ func (n *Node) RPCHandler() (*rpc.Server, error) {
 // Server retrieves the currently running P2P network layer. This method is meant
 // only to inspect fields of the currently running server, life cycle management
 // should be left to this Node entity.
-func (n *Node) Server() *p2p.Server {
+func (n *Node) Server() p2p.Server {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 

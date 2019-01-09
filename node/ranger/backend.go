@@ -261,7 +261,7 @@ func (s *Ranger) Protocols() []p2p.Protocol {
 	return s.protocolManager.SubProtocols
 }
 
-func (s *Ranger) Start(srvr *p2p.Server) error {
+func (s *Ranger) Start(srvr p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
 
@@ -269,7 +269,7 @@ func (s *Ranger) Start(srvr *p2p.Server) error {
 	s.netRPCService = api.NewPublicNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
-	maxPeers := srvr.MaxPeers
+	maxPeers := srvr.MaxPeers()
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
 	return nil

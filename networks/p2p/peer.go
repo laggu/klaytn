@@ -257,7 +257,6 @@ func (p *Peer) pingLoop() {
 			return
 		}
 	}
-
 }
 
 func (p *Peer) readLoop(errc chan<- error) {

@@ -304,7 +304,7 @@ func (sn *CnNode) Services() []node.Service {
 }
 
 // Server returns the underlying p2p.Server
-func (sn *CnNode) Server() *p2p.Server {
+func (sn *CnNode) Server() p2p.Server {
 	return sn.node.Server()
 }
 

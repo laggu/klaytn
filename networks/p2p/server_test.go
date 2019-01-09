@@ -72,18 +72,20 @@ func (c *testTransport) close(err error) {
 	c.closeErr = err
 }
 
-func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer)) *Server {
+func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer)) Server {
 	config := Config{
 		Name:       "test",
 		MaxPeers:   10,
 		ListenAddr: "127.0.0.1:0",
 		PrivateKey: newkey(),
 	}
-	server := &Server{
-		Config:      config,
-		newPeerHook: pf,
-		newTransport: func(fd net.Conn) transport {
-			return newTestTransport(id, fd)
+	server := &SingleChannelServer{
+		BaseServer{
+			Config:      config,
+			newPeerHook: pf,
+			newTransport: func(fd net.Conn) transport {
+				return newTestTransport(id, fd)
+			},
 		},
 	}
 	if err := server.Start(); err != nil {
@@ -114,7 +116,7 @@ func TestServerListen(t *testing.T) {
 	defer srv.Stop()
 
 	// dial the test server
-	conn, err := net.DialTimeout("tcp", srv.ListenAddr, 5*time.Second)
+	conn, err := net.DialTimeout("tcp", srv.GetListenAddress(), 5*time.Second)
 	if err != nil {
 		t.Fatalf("could not dial: %v", err)
 	}
@@ -222,12 +224,14 @@ func TestServerTaskScheduling(t *testing.T) {
 
 	// The Server in this test isn't actually running
 	// because we're only interested in what run does.
-	srv := &Server{
-		Config:  Config{MaxPeers: 10},
-		quit:    make(chan struct{}),
-		ntab:    fakeTable{},
-		running: true,
-		logger:  logger.NewWith(),
+	srv := &SingleChannelServer{
+		BaseServer{
+			Config:  Config{MaxPeers: 10},
+			quit:    make(chan struct{}),
+			ntab:    fakeTable{},
+			running: true,
+			logger:  logger.NewWith(),
+		},
 	}
 	srv.loopWG.Add(1)
 	go func() {
@@ -268,11 +272,13 @@ func TestServerManyTasks(t *testing.T) {
 	}
 
 	var (
-		srv = &Server{
-			quit:    make(chan struct{}),
-			ntab:    fakeTable{},
-			running: true,
-			logger:  logger.NewWith(),
+		srv = &SingleChannelServer{
+			BaseServer{
+				quit:    make(chan struct{}),
+				ntab:    fakeTable{},
+				running: true,
+				logger:  logger.NewWith(),
+			},
 		}
 		done       = make(chan *testTask)
 		start, end = 0, 0
@@ -335,7 +341,7 @@ type testTask struct {
 	called bool
 }
 
-func (t *testTask) Do(srv *Server) {
+func (t *testTask) Do(srv Server) {
 	t.called = true
 }
 
@@ -344,12 +350,14 @@ func (t *testTask) Do(srv *Server) {
 // at capacity. Trusted connections should still be accepted.
 func TestServerAtCap(t *testing.T) {
 	trustedID := randomID()
-	srv := &Server{
-		Config: Config{
-			PrivateKey:   newkey(),
-			MaxPeers:     10,
-			NoDial:       true,
-			TrustedNodes: []*discover.Node{{ID: trustedID}},
+	srv := &SingleChannelServer{
+		BaseServer: BaseServer{
+			Config: Config{
+				PrivateKey:   newkey(),
+				MaxPeers:     10,
+				NoDial:       true,
+				TrustedNodes: []*discover.Node{{ID: trustedID}},
+			},
 		},
 	}
 	if err := srv.Start(); err != nil {
@@ -447,16 +455,18 @@ func TestServerSetupConn(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		srv := &Server{
-			Config: Config{
-				PrivateKey:     srvkey,
-				MaxPeers:       10,
-				NoDial:         true,
-				Protocols:      []Protocol{discard},
-				ConnectionType: 1,
+		srv := &SingleChannelServer{
+			BaseServer{
+				Config: Config{
+					PrivateKey:     srvkey,
+					MaxPeers:       10,
+					NoDial:         true,
+					Protocols:      []Protocol{discard},
+					ConnectionType: 1,
+				},
+				newTransport: func(fd net.Conn) transport { return test.tt },
+				logger:       logger.NewWith(),
 			},
-			newTransport: func(fd net.Conn) transport { return test.tt },
-			logger:       logger.NewWith(),
 		}
 		if !test.dontstart {
 			if err := srv.Start(); err != nil {

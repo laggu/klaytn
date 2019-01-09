@@ -94,7 +94,7 @@ type ProtocolManager struct {
 	minedBlockSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
-	newPeerCh   chan *peer
+	newPeerCh   chan Peer
 	txsyncCh    chan *txsync
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
@@ -139,7 +139,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		blockchain:  blockchain,
 		chainconfig: config,
 		peers:       newPeerSet(),
-		newPeerCh:   make(chan *peer),
+		newPeerCh:   make(chan Peer),
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
@@ -183,10 +183,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 					if p.ConnType() == node.CONSENSUSNODE {
 						return err
 					}
-					peer.addr = common.Address{}
+					peer.SetAddr(common.Address{})
 				} else {
 					addr := crypto.PubkeyToAddress(*pubKey)
-					peer.addr = addr
+					peer.SetAddr(addr)
 				}
 				select {
 				case manager.newPeerCh <- peer:
@@ -271,7 +271,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
-		peer.Peer.Disconnect(p2p.DiscUselessPeer)
+		peer.GetP2PPeer().Disconnect(p2p.DiscUselessPeer)
 	}
 }
 
@@ -317,18 +317,18 @@ func (pm *ProtocolManager) Stop() {
 	logger.Info("klaytn protocol stopped")
 }
 
-func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
+func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 	return newPeer(pv, p, newMeteredMsgWriter(rw))
 }
 
 // handle is the callback invoked to manage the life cycle of an Klaytn peer. When
 // this function terminates, the peer is disconnected.
-func (pm *ProtocolManager) handle(p *peer) error {
+func (pm *ProtocolManager) handle(p Peer) error {
 	// Ignore maxPeers if this is a trusted peer
-	if pm.peers.Len() >= pm.maxPeers && !p.Peer.Info().Network.Trusted {
+	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Network.Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.Log().Debug("klaytn peer connected", "name", p.Name())
+	p.GetP2PPeer().Log().Debug("klaytn peer connected", "name", p.GetP2PPeer().Name())
 
 	// Execute the GXP handshake
 	var (
@@ -339,29 +339,29 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		td      = pm.blockchain.GetTd(hash, number)
 	)
 	if err := p.Handshake(pm.networkId, td, hash, genesis.Hash()); err != nil {
-		p.Log().Debug("klaytn handshake failed", "err", err)
+		p.GetP2PPeer().Log().Debug("klaytn handshake failed", "err", err)
 		return err
 	}
-	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
-		rw.Init(p.version)
+	if rw, ok := p.GetRW().(*meteredMsgReadWriter); ok {
+		rw.Init(p.GetVersion())
 	}
 	// Register the peer locally
 	if err := pm.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.Log().Info("klaytn peer registration failed", "err", err)
+		p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
 		return err
 	}
-	defer pm.removePeer(p.id)
+	defer pm.removePeer(p.GetID())
 
 	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
-	if err := pm.downloader.RegisterPeer(p.id, p.version, p); err != nil {
+	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
 		return err
 	}
 	// Propagate existing transactions. new transactions appearing
 	// after this will be sent via broadcasts.
 	pm.syncTransactions(p)
 
-	pubKey, err := p.ID().Pubkey()
+	pubKey, err := p.GetP2PPeerID().Pubkey()
 	if err != nil {
 		return err
 	}
@@ -377,14 +377,14 @@ func (pm *ProtocolManager) handle(p *peer) error {
 
 	// main loop. handle incoming messages.
 	for {
-		msg, err := p.rw.ReadMsg()
+		msg, err := p.GetRW().ReadMsg()
 		if err != nil {
-			p.Log().Debug("ProtocolManager failed to read msg", "err", err)
+			p.GetP2PPeer().Log().Debug("ProtocolManager failed to read msg", "err", err)
 			return err
 		}
 		if msg.Size > ProtocolMaxMsgSize {
 			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-			p.Log().Debug("ProtocolManager over max msg size", "err", err)
+			p.GetP2PPeer().Log().Debug("ProtocolManager over max msg size", "err", err)
 			return err
 		}
 
@@ -404,21 +404,21 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
-func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p *peer, addr common.Address, errCh chan<- error) {
+func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
 		if err := pm.handleMsg(p, addr, msg); err != nil {
-			p.Log().Debug("ProtocolManager failed to handle message", "msg", msg, "err", err)
+			p.GetP2PPeer().Log().Debug("ProtocolManager failed to handle message", "msg", msg, "err", err)
 			errCh <- err
 			return
 		}
 		msg.Discard()
 	}
-	p.Log().Debug("ProtocolManager.processMsg closed", "PeerName", p.Name())
+	p.GetP2PPeer().Log().Debug("ProtocolManager.processMsg closed", "PeerName", p.GetP2PPeer().Name())
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
-func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) error {
+func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
 	//msg, err := p.rw.ReadMsg()
 	//if err != nil {
@@ -502,8 +502,8 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 					next    = current + query.Skip + 1
 				)
 				if next <= current {
-					infos, _ := json.MarshalIndent(p.Peer.Info(), "", "  ")
-					p.Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
+					infos, _ := json.MarshalIndent(p.GetP2PPeer().Info(), "", "  ")
+					p.GetP2PPeer().Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
 					unknown = true
 				} else {
 					if header := pm.blockchain.GetHeaderByNumber(next); header != nil {
@@ -541,10 +541,10 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		filter := len(headers) == 1
 		if filter {
 			// Irrelevant of the fork checks, send the header to the fetcher just in case
-			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
+			headers = pm.fetcher.FilterHeaders(p.GetID(), headers, time.Now())
 		}
 		if len(headers) > 0 || !filter {
-			err := pm.downloader.DeliverHeaders(p.id, headers)
+			err := pm.downloader.DeliverHeaders(p.GetID(), headers)
 			if err != nil {
 				logger.Debug("Failed to deliver headers", "err", err)
 			}
@@ -594,16 +594,16 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		// Filter out any explicitly requested bodies, deliver the rest to the downloader
 		filter := len(transactions) > 0 || len(uncles) > 0
 		if filter {
-			transactions, uncles = pm.fetcher.FilterBodies(p.id, transactions, uncles, time.Now())
+			transactions, uncles = pm.fetcher.FilterBodies(p.GetID(), transactions, uncles, time.Now())
 		}
 		if len(transactions) > 0 || len(uncles) > 0 || !filter {
-			err := pm.downloader.DeliverBodies(p.id, transactions, uncles)
+			err := pm.downloader.DeliverBodies(p.GetID(), transactions, uncles)
 			if err != nil {
 				logger.Debug("Failed to deliver bodies", "err", err)
 			}
 		}
 
-	case p.version >= gxp63 && msg.Code == GetNodeDataMsg:
+	case p.GetVersion() >= gxp63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -630,18 +630,18 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		}
 		return p.SendNodeData(data)
 
-	case p.version >= gxp63 && msg.Code == NodeDataMsg:
+	case p.GetVersion() >= gxp63 && msg.Code == NodeDataMsg:
 		// A batch of node state data arrived to one of our previous requests
 		var data [][]byte
 		if err := msg.Decode(&data); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Deliver all to the downloader
-		if err := pm.downloader.DeliverNodeData(p.id, data); err != nil {
+		if err := pm.downloader.DeliverNodeData(p.GetID(), data); err != nil {
 			logger.Debug("Failed to deliver node state data", "err", err)
 		}
 
-	case p.version >= gxp63 && msg.Code == GetReceiptsMsg:
+	case p.GetVersion() >= gxp63 && msg.Code == GetReceiptsMsg:
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -677,14 +677,14 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 		}
 		return p.SendReceiptsRLP(receipts)
 
-	case p.version >= gxp63 && msg.Code == ReceiptsMsg:
+	case p.GetVersion() >= gxp63 && msg.Code == ReceiptsMsg:
 		// A batch of receipts arrived to one of our previous requests
 		var receipts [][]*types.Receipt
 		if err := msg.Decode(&receipts); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Deliver all to the downloader
-		if err := pm.downloader.DeliverReceipts(p.id, receipts); err != nil {
+		if err := pm.downloader.DeliverReceipts(p.GetID(), receipts); err != nil {
 			logger.Debug("Failed to deliver receipts", "err", err)
 		}
 
@@ -699,7 +699,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 			p.AddToKnownBlocks(block.Hash)
 
 			if !pm.blockchain.HasBlock(block.Hash, block.Number) {
-				pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
+				pm.fetcher.Notify(p.GetID(), block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 			}
 		}
 
@@ -714,7 +714,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 
 		// Mark the peer as owning the block and schedule it for import
 		p.AddToKnownBlocks(request.Block.Hash())
-		pm.fetcher.Enqueue(p.id, request.Block)
+		pm.fetcher.Enqueue(p.GetID(), request.Block)
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.
@@ -790,7 +790,7 @@ func (pm *ProtocolManager) handleMsg(p *peer, addr common.Address, msg p2p.Msg) 
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 	hash := block.Hash()
-	var peers []*peer
+	var peers []Peer
 	if pm.nodetype == node.CONSENSUSNODE {
 		peers = pm.peers.PeersWithoutBlock(hash)
 	} else {
@@ -848,7 +848,7 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 }
 
 func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
-	var txset = make(map[*peer]types.Transactions)
+	var txset = make(map[Peer]types.Transactions)
 	for _, tx := range txs {
 		peers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(peers) == 0 {
@@ -874,12 +874,12 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 }
 
 func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) {
-	var cntxset = make(map[*peer]types.Transactions)
-	var txset = make(map[*peer]types.Transactions)
+	var cntxset = make(map[Peer]types.Transactions)
+	var txset = make(map[Peer]types.Transactions)
 	for _, tx := range txs {
 		// TODO-GX drop or missing tx
 		if resend {
-			var peers []*peer
+			var peers []Peer
 			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
 				peers = pm.peers.TypePeers(node.BRIDGENODE)
 			} else {
@@ -919,7 +919,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 		for peer, txs := range txset {
 			err := peer.ReSendTransactions(txs)
 			if err != nil {
-				logger.Error("peer.ReSendTransactions", "peer", peer.addr, "numTxs", len(txs))
+				logger.Error("peer.ReSendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs))
 			}
 		}
 	} else {
@@ -928,21 +928,20 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			//peer.AsyncSendTransactions(txs)
 			err := peer.SendTransactions(txs)
 			if err != nil {
-				logger.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+				logger.Error("peer.SendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs))
 			}
 		}
 		for peer, txs := range txset {
 			err := peer.SendTransactions(txs)
 			if err != nil {
-				logger.Error("peer.SendTransactions", "peer", peer.addr, "numTxs", len(txs))
+				logger.Error("peer.SendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs))
 			}
 			//peer.AsyncSendTransactions(txs)
 		}
 	}
 }
 
-func (pm *ProtocolManager) subPeers(peers []*peer, pickSize int) []*peer {
-
+func (pm *ProtocolManager) subPeers(peers []Peer, pickSize int) []Peer {
 	if len(peers) < pickSize {
 		return peers
 	}
@@ -1013,15 +1012,15 @@ func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
 func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
 	m := make(map[common.Address]consensus.Peer)
 	for _, p := range pm.peers.Peers() {
-		addr := p.addr
+		addr := p.GetAddr()
 		if addr == (common.Address{}) {
-			pubKey, err := p.ID().Pubkey()
+			pubKey, err := p.GetP2PPeerID().Pubkey()
 			if err != nil {
 				continue
 			}
 			addr = crypto.PubkeyToAddress(*pubKey)
 		} else {
-			addr = p.addr
+			addr = p.GetAddr()
 		}
 
 		if targets[addr] {
@@ -1060,15 +1059,15 @@ func (pm *ProtocolManager) GetRNPeers() map[common.Address]consensus.Peer {
 func (pm *ProtocolManager) GetPeers() []common.Address {
 	addrs := make([]common.Address, 0)
 	for _, p := range pm.peers.Peers() {
-		addr := p.addr
+		addr := p.GetAddr()
 		if addr == (common.Address{}) {
-			pubKey, err := p.ID().Pubkey()
+			pubKey, err := p.GetP2PPeerID().Pubkey()
 			if err != nil {
 				continue
 			}
 			addr = crypto.PubkeyToAddress(*pubKey)
 		} else {
-			addr = p.addr
+			addr = p.GetAddr()
 		}
 		addrs = append(addrs, addr)
 	}

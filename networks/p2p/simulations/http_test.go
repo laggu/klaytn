@@ -117,7 +117,7 @@ func (t *testService) APIs() []rpc.API {
 	}}
 }
 
-func (t *testService) Start(server *p2p.Server) error {
+func (t *testService) Start(server p2p.Server) error {
 	return nil
 }
 

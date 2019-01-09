@@ -40,12 +40,12 @@ const (
 )
 
 type txsync struct {
-	p   *peer
+	p   Peer
 	txs []*types.Transaction
 }
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
-func (pm *ProtocolManager) syncTransactions(p *peer) {
+func (pm *ProtocolManager) syncTransactions(p Peer) {
 	var txs types.Transactions
 	pending, _ := pm.txpool.Pending()
 	for _, batch := range pending {
@@ -85,10 +85,10 @@ func (pm *ProtocolManager) txsyncLoop() {
 		// Remove the transactions that will be sent.
 		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
 		if len(s.txs) == 0 {
-			delete(pending, s.p.ID())
+			delete(pending, s.p.GetP2PPeerID())
 		}
 		// Send the pack in the background.
-		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
+		s.p.GetP2PPeer().Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		sending = true
 		go func() { done <- pack.p.SendTransactions(pack.txs) }()
 	}
@@ -110,7 +110,7 @@ func (pm *ProtocolManager) txsyncLoop() {
 	for {
 		select {
 		case s := <-pm.txsyncCh:
-			pending[s.p.ID()] = s
+			pending[s.p.GetP2PPeerID()] = s
 			if !sending {
 				send(s)
 			}
@@ -118,8 +118,8 @@ func (pm *ProtocolManager) txsyncLoop() {
 			sending = false
 			// Stop tracking peers that cause send failures.
 			if err != nil {
-				pack.p.Log().Debug("Transaction send failed", "err", err)
-				delete(pending, pack.p.ID())
+				pack.p.GetP2PPeer().Log().Debug("Transaction send failed", "err", err)
+				delete(pending, pack.p.GetP2PPeerID())
 			}
 			// Schedule the next send.
 			if s := pick(); s != nil {
@@ -163,7 +163,7 @@ func (pm *ProtocolManager) syncer() {
 }
 
 // synchronise tries to sync up our local block chain with a remote peer.
-func (pm *ProtocolManager) synchronise(peer *peer) {
+func (pm *ProtocolManager) synchronise(peer Peer) {
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
@@ -199,7 +199,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 	}
 
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
-	if err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode); err != nil {
+	if err := pm.downloader.Synchronise(peer.GetID(), pHead, pTd, mode); err != nil {
 		return
 	}
 	if atomic.LoadUint32(&pm.fastSync) == 1 {

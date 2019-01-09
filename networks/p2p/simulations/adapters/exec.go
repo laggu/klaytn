@@ -476,7 +476,7 @@ func (s *snapshotService) Protocols() []p2p.Protocol {
 	return nil
 }
 
-func (s *snapshotService) Start(*p2p.Server) error {
+func (s *snapshotService) Start(p2p.Server) error {
 	return nil
 }
 

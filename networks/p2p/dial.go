@@ -106,7 +106,7 @@ type pastDial struct {
 }
 
 type task interface {
-	Do(*Server)
+	Do(Server)
 }
 
 // A dialTask is generated for each node that is dialed. Its
@@ -308,7 +308,7 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 	}
 }
 
-func (t *dialTask) Do(srv *Server) {
+func (t *dialTask) Do(srv Server) {
 	if t.dest.Incomplete() {
 		if !t.resolve(srv) {
 			return
@@ -332,8 +332,8 @@ func (t *dialTask) Do(srv *Server) {
 // Resolve operations are throttled with backoff to avoid flooding the
 // discovery network with useless queries for nodes that don't exist.
 // The backoff delay resets when the node is found.
-func (t *dialTask) resolve(srv *Server) bool {
-	if srv.ntab == nil {
+func (t *dialTask) resolve(srv Server) bool {
+	if srv.CheckNilNetworkTable() {
 		logger.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
 		return false
 	}
@@ -343,7 +343,7 @@ func (t *dialTask) resolve(srv *Server) bool {
 	if time.Since(t.lastResolved) < t.resolveDelay {
 		return false
 	}
-	resolved := srv.ntab.Resolve(t.dest.ID)
+	resolved := srv.Resolve(t.dest.ID)
 	t.lastResolved = time.Now()
 	if resolved == nil {
 		t.resolveDelay *= 2
@@ -365,11 +365,11 @@ type dialError struct {
 }
 
 // dial performs the actual connection attempt.
-func (t *dialTask) dial(srv *Server, dest *discover.Node) error {
+func (t *dialTask) dial(srv Server, dest *discover.Node) error {
 	dialTryCounter.Inc(1)
 	logger.Trace("[Dial] Dialing node", "id", dest.ID, "addr", &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)})
 
-	fd, err := srv.Dialer.Dial(dest)
+	fd, err := srv.Dial(dest)
 	if err != nil {
 		dialFailCounter.Inc(1)
 		return &dialError{err}
@@ -382,18 +382,18 @@ func (t *dialTask) String() string {
 	return fmt.Sprintf("%v %x %v:%d", t.flags, t.dest.ID[:8], t.dest.IP, t.dest.TCP)
 }
 
-func (t *discoverTask) Do(srv *Server) {
+func (t *discoverTask) Do(srv Server) {
 	// newTasks generates a lookup task whenever dynamic dials are
 	// necessary. Lookups need to take some time, otherwise the
 	// event loop spins too fast.
-	next := srv.lastLookup.Add(lookupInterval)
+	next := srv.AddLastLookup()
 	if now := time.Now(); now.Before(next) {
 		time.Sleep(next.Sub(now))
 	}
-	srv.lastLookup = time.Now()
+	srv.SetLastLookupToNow()
 	var target discover.NodeID
 	rand.Read(target[:])
-	t.results = srv.ntab.Lookup(target)
+	t.results = srv.Lookup(target)
 }
 
 func (t *discoverTask) String() string {
@@ -404,7 +404,7 @@ func (t *discoverTask) String() string {
 	return s
 }
 
-func (t waitExpireTask) Do(*Server) {
+func (t waitExpireTask) Do(Server) {
 	time.Sleep(t.Duration)
 }
 func (t waitExpireTask) String() string {

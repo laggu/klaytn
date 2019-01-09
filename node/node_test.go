@@ -158,7 +158,7 @@ func TestServiceLifeCycle(t *testing.T) {
 		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
-				startHook: func(*p2p.Server) { started[id] = true },
+				startHook: func(p2p.Server) { started[id] = true },
 				stopHook:  func() { stopped[id] = true },
 			}, nil
 		}
@@ -204,7 +204,7 @@ func TestServiceRestarts(t *testing.T) {
 		running = false
 
 		return &InstrumentedService{
-			startHook: func(*p2p.Server) {
+			startHook: func(p2p.Server) {
 				if running {
 					panic("already running")
 				}
@@ -254,7 +254,7 @@ func TestServiceConstructionAbortion(t *testing.T) {
 		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
-				startHook: func(*p2p.Server) { started[id] = true },
+				startHook: func(p2p.Server) { started[id] = true },
 			}, nil
 		}
 		if err := stack.Register(maker(constructor)); err != nil {
@@ -303,7 +303,7 @@ func TestServiceStartupAbortion(t *testing.T) {
 		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
-				startHook: func(*p2p.Server) { started[id] = true },
+				startHook: func(p2p.Server) { started[id] = true },
 				stopHook:  func() { stopped[id] = true },
 			}, nil
 		}
@@ -356,7 +356,7 @@ func TestServiceTerminationGuarantee(t *testing.T) {
 		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
-				startHook: func(*p2p.Server) { started[id] = true },
+				startHook: func(p2p.Server) { started[id] = true },
 				stopHook:  func() { stopped[id] = true },
 			}, nil
 		}
@@ -483,7 +483,7 @@ func TestProtocolGather(t *testing.T) {
 	}
 	defer stack.Stop()
 
-	protocols := stack.Server().Protocols
+	protocols := stack.Server().GetProtocols()
 	if len(protocols) != 26 {
 		t.Fatalf("mismatching number of protocols launched: have %d, want %d", len(protocols), 26)
 	}

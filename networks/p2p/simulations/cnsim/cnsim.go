@@ -122,7 +122,7 @@ func (p *cnSimService) APIs() []rpc.API {
 	return nil
 }
 
-func (p *cnSimService) Start(server *p2p.Server) error {
+func (p *cnSimService) Start(server p2p.Server) error {
 	p.logger.Info("cn-sim service starting")
 	return nil
 }

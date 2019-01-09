@@ -310,7 +310,7 @@ func (sn *SimNode) Services() []node.Service {
 }
 
 // Server returns the underlying p2p.Server
-func (sn *SimNode) Server() *p2p.Server {
+func (sn *SimNode) Server() p2p.Server {
 	return sn.node.Server()
 }
 
