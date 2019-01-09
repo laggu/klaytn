@@ -73,7 +73,7 @@ type Backend interface {
 	CurrentBlock() *types.Block
 
 	GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
-	GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error)
+	GetReceiptsInCache(blockHash common.Hash) types.Receipts
 
 	GetChildChainIndexingEnabled() bool
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash

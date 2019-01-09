@@ -32,7 +32,6 @@ import (
 	"github.com/ground-x/go-gxplatform/networks/rpc"
 	"github.com/ground-x/go-gxplatform/params"
 	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/pkg/errors"
 	"math/big"
 	"time"
 )
@@ -46,8 +45,8 @@ func (b *RangerAPIBackend) GetTransactionInCache(hash common.Hash) (*types.Trans
 	return nil, common.Hash{}, 0, 0
 }
 
-func (b *RangerAPIBackend) GetReceiptsInCache(blockHash common.Hash) (types.Receipts, error) {
-	return nil, errors.New("doesn't support getreceiptsIncache")
+func (b *RangerAPIBackend) GetReceiptsInCache(blockHash common.Hash) types.Receipts {
+	return nil
 }
 
 func (b *RangerAPIBackend) ChainConfig() *params.ChainConfig {

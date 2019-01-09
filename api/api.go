@@ -492,12 +492,13 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 
 // GetBlockReceipts returns all the transaction receipts for the given block hash.
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
-	receipts, err := s.b.GetReceiptsInCache(blockHash)
+	receipts := s.b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
+		var err error
 		receipts, err = s.b.GetReceipts(ctx, blockHash)
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 	block, err := s.b.GetBlock(ctx, blockHash)
 	if err != nil {
@@ -1076,12 +1077,13 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 			return nil, nil
 		}
 	}
-	receipts, err := s.b.GetReceiptsInCache(blockHash)
+	receipts := s.b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
+		var err error
 		receipts, err = s.b.GetReceipts(ctx, blockHash)
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(receipts) <= int(index) {
 		return nil, nil
@@ -1097,10 +1099,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 	if tx == nil {
 		return nil, nil
 	}
-	receipts, err := s.b.GetReceiptsInCache(blockHash)
-	if err != nil {
-		return nil, err
-	}
+	receipts := s.b.GetReceiptsInCache(blockHash)
 	if len(receipts) <= int(index) {
 		return nil, nil
 	}
