@@ -30,6 +30,15 @@ const (
 	SmartContractAccountType
 )
 
+type AccountValueKeyType uint
+
+const (
+	AccountValueKeyNonce AccountValueKeyType = iota
+	AccountValueKeyBalance
+	AccountValueKeyStorageRoot
+	AccountValueKeyCodeHash
+)
+
 func (a AccountType) String() string {
 	switch a {
 	case LegacyAccountType:
@@ -92,7 +101,7 @@ func NewAccountWithType(t AccountType) (Account, error) {
 }
 
 // NewAccountWithType creates an Account object initialized with the given map.
-func NewAccountWithMap(t AccountType, values map[string]interface{}) (Account, error) {
+func NewAccountWithMap(t AccountType, values map[AccountValueKeyType]interface{}) (Account, error) {
 	switch t {
 	case LegacyAccountType:
 		return newLegacyAccountWithMap(values), nil

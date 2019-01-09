@@ -84,10 +84,10 @@ func genRandomHash() (h common.Hash) {
 }
 
 func genLegacyAccount() *LegacyAccount {
-	return newLegacyAccountWithMap(map[string]interface{}{
-		"nonce":    rand.Uint64(),
-		"balance":  big.NewInt(rand.Int63n(10000)),
-		"root":     genRandomHash(),
-		"codeHash": genRandomHash().Bytes(),
+	return newLegacyAccountWithMap(map[AccountValueKeyType]interface{}{
+		AccountValueKeyNonce:       rand.Uint64(),
+		AccountValueKeyBalance:     big.NewInt(rand.Int63n(10000)),
+		AccountValueKeyStorageRoot: genRandomHash(),
+		AccountValueKeyCodeHash:    genRandomHash().Bytes(),
 	})
 }
