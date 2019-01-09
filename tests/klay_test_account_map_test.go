@@ -22,6 +22,7 @@ import (
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/go-gxplatform/params"
 	"math/big"
 )
 
@@ -34,7 +35,8 @@ type AccountInfo struct {
 }
 
 type AccountMap struct {
-	m map[common.Address]*AccountInfo
+	m        map[common.Address]*AccountInfo
+	coinbase common.Address
 }
 
 func NewAccountMap() *AccountMap {
@@ -86,6 +88,8 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 		a.Set(*addr, statedb.GetBalance(*addr), statedb.GetNonce(*addr))
 	}
 
+	a.coinbase = *bcdata.addrs[0]
+
 	return nil
 }
 
@@ -106,6 +110,12 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer) error {
 
 		a.AddBalance(*to, v)
 		a.SubBalance(from, v)
+
+		// TODO-GX: This gas fee calculation is correct only if the transaction is a value transfer transaction.
+		// Calculate the correct transaction fee by checking the corresponding receipt.
+		fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(params.TxGas))
+		a.SubBalance(from, fee)
+		a.AddBalance(a.coinbase, fee)
 
 		a.IncNonce(from)
 	}
