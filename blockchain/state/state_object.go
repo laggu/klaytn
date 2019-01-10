@@ -65,7 +65,7 @@ func (self Storage) Copy() Storage {
 // Finally, call CommitTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address common.Address
-	data    Account
+	account Account
 	db      *StateDB
 
 	// DB error.
@@ -92,7 +92,7 @@ type stateObject struct {
 
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
-	return s.data.Empty()
+	return s.account.Empty()
 }
 
 // LegacyAccount is the Klaytn consensus representation of legacy accounts.
@@ -110,7 +110,7 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	return &stateObject{
 		db:            db,
 		address:       address,
-		data:          data,
+		account:       data,
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 	}
@@ -118,7 +118,7 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 
 // EncodeRLP implements rlp.Encoder.
 func (c *stateObject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, c.data)
+	return rlp.Encode(w, c.account)
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -145,7 +145,7 @@ func (c *stateObject) touch() {
 
 func (c *stateObject) getTrie(db Database) Trie {
 	if c.trie == nil {
-		if acc, ok := c.data.(ProgramAccount); ok {
+		if acc, ok := c.account.(ProgramAccount); ok {
 			var err error
 			c.trie, err = db.OpenStorageTrie(acc.GetStorageRoot())
 			if err != nil {
@@ -217,7 +217,7 @@ func (self *stateObject) updateTrie(db Database) Trie {
 // UpdateRoot sets the trie root to the current root hash of
 func (self *stateObject) updateRoot(db Database) {
 	self.updateTrie(db)
-	if acc, ok := self.data.(ProgramAccount); ok {
+	if acc, ok := self.account.(ProgramAccount); ok {
 		acc.SetStorageRoot(self.trie.Hash())
 	}
 }
@@ -229,7 +229,7 @@ func (self *stateObject) CommitTrie(db Database) error {
 	if self.dbErr != nil {
 		return self.dbErr
 	}
-	if acc, ok := self.data.(ProgramAccount); ok {
+	if acc, ok := self.account.(ProgramAccount); ok {
 		root, err := self.trie.Commit(nil)
 		if err != nil {
 			return err
@@ -266,20 +266,20 @@ func (c *stateObject) SubBalance(amount *big.Int) {
 func (self *stateObject) SetBalance(amount *big.Int) {
 	self.db.journal.append(balanceChange{
 		account: &self.address,
-		prev:    new(big.Int).Set(self.data.GetBalance()),
+		prev:    new(big.Int).Set(self.account.GetBalance()),
 	})
 	self.setBalance(amount)
 }
 
 func (self *stateObject) setBalance(amount *big.Int) {
-	self.data.SetBalance(amount)
+	self.account.SetBalance(amount)
 }
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *stateObject) ReturnGas(gas *big.Int) {}
 
 func (self *stateObject) deepCopy(db *StateDB) *stateObject {
-	stateObject := newObject(db, self.address, self.data.DeepCopy())
+	stateObject := newObject(db, self.address, self.account.DeepCopy())
 	if self.trie != nil {
 		stateObject.trie = db.db.CopyTrie(self.trie)
 	}
@@ -328,7 +328,7 @@ func (self *stateObject) SetCode(codeHash common.Hash, code []byte) {
 }
 
 func (self *stateObject) setCode(codeHash common.Hash, code []byte) {
-	if acc, ok := self.data.(ProgramAccount); ok {
+	if acc, ok := self.account.(ProgramAccount); ok {
 		self.code = code
 		acc.SetCodeHash(codeHash[:])
 		self.dirtyCode = true
@@ -340,17 +340,17 @@ func (self *stateObject) setCode(codeHash common.Hash, code []byte) {
 func (self *stateObject) SetNonce(nonce uint64) {
 	self.db.journal.append(nonceChange{
 		account: &self.address,
-		prev:    self.data.GetNonce(),
+		prev:    self.account.GetNonce(),
 	})
 	self.setNonce(nonce)
 }
 
 func (self *stateObject) setNonce(nonce uint64) {
-	self.data.SetNonce(nonce)
+	self.account.SetNonce(nonce)
 }
 
 func (self *stateObject) CodeHash() []byte {
-	if acc, ok := self.data.(ProgramAccount); ok {
+	if acc, ok := self.account.(ProgramAccount); ok {
 		return acc.GetCodeHash()
 	}
 	logger.Error("CodeHash() should be called only to a ProgramAccount!")
@@ -358,11 +358,11 @@ func (self *stateObject) CodeHash() []byte {
 }
 
 func (self *stateObject) Balance() *big.Int {
-	return self.data.GetBalance()
+	return self.account.GetBalance()
 }
 
 func (self *stateObject) Nonce() uint64 {
-	return self.data.GetNonce()
+	return self.account.GetNonce()
 }
 
 // Never called, but must be present to allow stateObject to be used
