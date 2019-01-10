@@ -53,22 +53,22 @@ func newAccountCommon() *AccountCommon {
 }
 
 // newAccountCommonWithMap creates an AccountCommon object initialized with the given values.
-func newAccountCommonWithMap(values map[string]interface{}) *AccountCommon {
+func newAccountCommonWithMap(values map[AccountValueKeyType]interface{}) *AccountCommon {
 	acc := newAccountCommon()
 
-	if v, ok := values["nonce"].(uint64); ok {
+	if v, ok := values[AccountValueKeyNonce].(uint64); ok {
 		acc.nonce = v
 	}
 
-	if v, ok := values["balance"].(*big.Int); ok {
+	if v, ok := values[AccountValueKeyBalance].(*big.Int); ok {
 		acc.balance.Set(v)
 	}
 
-	if v, ok := values["humanReadable"].(bool); ok {
+	if v, ok := values[AccountValueKeyHumanReadable].(bool); ok {
 		acc.humanReadable = v
 	}
 
-	if v, ok := values["key"].(types.AccountKey); ok {
+	if v, ok := values[AccountValueKeyAccountKey].(types.AccountKey); ok {
 		acc.key = v
 	}
 

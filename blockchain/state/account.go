@@ -37,6 +37,8 @@ const (
 	AccountValueKeyBalance
 	AccountValueKeyStorageRoot
 	AccountValueKeyCodeHash
+	AccountValueKeyHumanReadable
+	AccountValueKeyAccountKey
 )
 
 func (a AccountType) String() string {
