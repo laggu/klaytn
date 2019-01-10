@@ -69,7 +69,7 @@ func (serializer *TxInternalDataSerializer) DecodeRLP(s *rlp.Stream) error {
 	}
 
 	var err error
-	serializer.tx, err = NewTxInternalDataWithType(serializer.txType)
+	serializer.tx, err = NewTxInternalData(serializer.txType)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (serializer *TxInternalDataSerializer) UnmarshalJSON(b []byte) error {
 	serializer.txType = dec.TxType
 
 	var err error
-	serializer.tx, err = NewTxInternalDataWithType(serializer.txType)
+	serializer.tx, err = NewTxInternalData(serializer.txType)
 	if err != nil {
 		return err
 	}

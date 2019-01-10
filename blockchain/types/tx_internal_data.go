@@ -40,6 +40,17 @@ const (
 	TxTypeBatch, _, _
 )
 
+type TxValueKeyType uint
+
+const (
+	TxValueKeyNonce TxValueKeyType = iota
+	TxValueKeyTo
+	TxValueKeyAmount
+	TxValueKeyGasLimit
+	TxValueKeyGasPrice
+	TxValueKeyData
+)
+
 var (
 	errNotTxTypeValueTransfer                 = errors.New("not value transfer transaction type")
 	errNotTxTypeValueTransferWithFeeDelegator = errors.New("not a fee-delegated value transfer transaction")
@@ -125,20 +136,20 @@ type TxInternalData interface {
 	Equal(t TxInternalData) bool
 }
 
-func NewTxInternalDataWithType(t TxType) (TxInternalData, error) {
-	to := common.HexToAddress("")
-	amount := new(big.Int).SetUint64(0)
-	gasLimit := uint64(0)
-	gasPrice := new(big.Int).SetUint64(0)
-	data := make([]byte, 0)
-
-	var tx TxInternalData
+func NewTxInternalData(t TxType) (TxInternalData, error) {
 	switch t {
 	case TxTypeLegacyTransaction:
-		tx = newTxdata(0, &to, amount, gasLimit, gasPrice, data)
-	default:
-		return nil, errUndefinedTxType
+		return newTxdata(), nil
 	}
 
-	return tx, nil
+	return nil, errUndefinedTxType
+}
+
+func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (TxInternalData, error) {
+	switch t {
+	case TxTypeLegacyTransaction:
+		return newTxdataWithMap(values), nil
+	}
+
+	return nil, errUndefinedTxType
 }

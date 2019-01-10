@@ -89,12 +89,15 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 	}
 }
 
-func genLegacyTransaction() *txdata {
-	nonce := uint64(1234)
-	to := common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b")
-	amount := new(big.Int).SetUint64(10)
-	gasLimit := uint64(9999999999)
-	gasPrice := new(big.Int).SetUint64(25)
-	data := []byte("1234")
-	return newTxdata(nonce, &to, amount, gasLimit, gasPrice, data)
+func genLegacyTransaction() TxInternalData {
+	txdata, _ := NewTxInternalDataWithMap(TxTypeLegacyTransaction, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:    uint64(1234),
+		TxValueKeyTo:       common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyAmount:   new(big.Int).SetUint64(10),
+		TxValueKeyGasLimit: uint64(9999999999),
+		TxValueKeyGasPrice: new(big.Int).SetUint64(25),
+		TxValueKeyData:     []byte("1234"),
+	})
+
+	return txdata
 }

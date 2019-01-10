@@ -76,29 +76,29 @@ func newTxInternalDataCommonWithValues(nonce uint64, to common.Address, amount *
 }
 
 // newTxInternalDataCommonWithMap creates an TxInternalDataCommon object and initializes it with given attributes in the map.
-func newTxInternalDataCommonWithMap(values map[string]interface{}) *TxInternalDataCommon {
+func newTxInternalDataCommonWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataCommon {
 	nonce := uint64(0)
-	if v, ok := values["nonce"].(uint64); ok {
+	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		nonce = v
 	}
 
 	to := common.Address{}
-	if v, ok := values["to"].(common.Address); ok {
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
 		to = v
 	}
 
 	amount := big.NewInt(0)
-	if v, ok := values["amount"].(*big.Int); ok {
+	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
 		amount.Set(v)
 	}
 
 	gasLimit := uint64(0)
-	if v, ok := values["gasLimit"].(uint64); ok {
+	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
 		gasLimit = v
 	}
 
 	gasPrice := big.NewInt(0)
-	if v, ok := values["gasPrice"].(*big.Int); ok {
+	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
 		gasPrice.Set(v)
 	}
 

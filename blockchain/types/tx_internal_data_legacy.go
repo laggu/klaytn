@@ -26,20 +26,29 @@ func newEmptyTxdata() *txdata {
 	return &txdata{}
 }
 
-func newTxdata(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *txdata {
-	if len(data) > 0 {
-		data = common.CopyBytes(data)
-	}
-	d := txdata{
-		AccountNonce: nonce,
-		Recipient:    to,
-		Payload:      data,
+func newTxdata() *txdata {
+	return &txdata{
+		AccountNonce: 0,
+		Recipient:    nil,
+		Payload:      []byte{},
 		Amount:       new(big.Int),
-		GasLimit:     gasLimit,
+		GasLimit:     0,
 		Price:        new(big.Int),
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
+	}
+}
+
+func newTxdataWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *txdata {
+	d := newTxdata()
+
+	d.AccountNonce = nonce
+	d.Recipient = to
+	d.GasLimit = gasLimit
+
+	if len(data) > 0 {
+		d.Payload = common.CopyBytes(data)
 	}
 	if amount != nil {
 		d.Amount.Set(amount)
@@ -48,7 +57,37 @@ func newTxdata(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint6
 		d.Price.Set(gasPrice)
 	}
 
-	return &d
+	return d
+}
+
+func newTxdataWithMap(values map[TxValueKeyType]interface{}) *txdata {
+	d := newTxdata()
+
+	if v, ok := values[TxValueKeyNonce].(uint64); ok {
+		d.AccountNonce = v
+	}
+
+	if v, ok := values[TxValueKeyTo].(*common.Address); ok {
+		d.Recipient = v
+	}
+
+	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
+		d.Amount.Set(v)
+	}
+
+	if v, ok := values[TxValueKeyData].([]byte); ok {
+		d.Payload = common.CopyBytes(v)
+	}
+
+	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
+		d.GasLimit = v
+	}
+
+	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
+		d.Price.Set(v)
+	}
+
+	return d
 }
 
 func (t *txdata) Type() TxType {
