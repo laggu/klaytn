@@ -555,6 +555,36 @@ func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash comm
 	return nil, err
 }
 
+// GetUncleByBlockNumberAndIndex returns the uncle block for the given block hash and index. When fullTx is true
+// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
+// Deprecated: uncle block related function is deprecated, but remains for the compatibility
+func (s *PublicBlockChainAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) map[string]interface{} {
+	logger.Warn("the uncle block related api function is deprecated")
+	return nil
+}
+
+// GetUncleByBlockHashAndIndex returns the uncle block for the given block hash and index. When fullTx is true
+// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
+// Deprecated: uncle block related function is deprecated, but remains for the compatibility
+func (s *PublicBlockChainAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) map[string]interface{} {
+	logger.Warn("the uncle block related api function is deprecated")
+	return nil
+}
+
+// GetUncleCountByBlockNumber returns number of uncles in the block for the given block number
+// Deprecated: uncle block related function is deprecated, but remains for the compatibility
+func (s *PublicBlockChainAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
+	logger.Warn("the uncle block related api function is deprecated")
+	return nil
+}
+
+// GetUncleCountByBlockHash returns number of uncles in the block for the given block hash
+// Deprecated: uncle block related function is deprecated, but remains for the compatibility
+func (s *PublicBlockChainAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
+	logger.Warn("the uncle block related api function is deprecated")
+	return nil
+}
+
 // GetCode returns the code stored at the given address in the state for the given block number.
 func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
