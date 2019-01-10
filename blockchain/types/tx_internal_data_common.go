@@ -165,30 +165,6 @@ func (t *TxInternalDataCommon) GetS() *big.Int {
 	return t.S
 }
 
-func (t *TxInternalDataCommon) SetAccountNonce(n uint64) {
-	t.AccountNonce = n
-}
-
-func (t *TxInternalDataCommon) SetPrice(p *big.Int) {
-	t.Price.Set(p)
-}
-
-func (t *TxInternalDataCommon) SetGasLimit(g uint64) {
-	t.GasLimit = g
-}
-
-func (t *TxInternalDataCommon) SetRecipient(r common.Address) {
-	t.Recipient = r
-}
-
-func (t *TxInternalDataCommon) SetAmount(a *big.Int) {
-	t.Amount.Set(a)
-}
-
-func (t *TxInternalDataCommon) SetFrom(f common.Address) {
-	t.From = f
-}
-
 func (t *TxInternalDataCommon) SetHash(h *common.Hash) {
 	t.Hash = h
 }

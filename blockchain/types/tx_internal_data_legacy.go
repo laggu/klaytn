@@ -114,11 +114,6 @@ func (t *txdata) GetAmount() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *txdata) GetFrom() common.Address {
-	logger.Crit("Should not be called!")
-	return common.Address{}
-}
-
 func (t *txdata) GetHash() *common.Hash {
 	return t.Hash
 }
@@ -143,36 +138,8 @@ func (t *txdata) GetS() *big.Int {
 	return t.S
 }
 
-func (t *txdata) SetAccountNonce(n uint64) {
-	t.AccountNonce = n
-}
-
-func (t *txdata) SetPrice(p *big.Int) {
-	t.Price.Set(p)
-}
-
-func (t *txdata) SetGasLimit(g uint64) {
-	t.GasLimit = g
-}
-
-func (t *txdata) SetRecipient(r common.Address) {
-	t.Recipient = &r
-}
-
-func (t *txdata) SetAmount(a *big.Int) {
-	t.Amount.Set(a)
-}
-
-func (t *txdata) SetFrom(f common.Address) {
-	// DO NOTHING
-}
-
 func (t *txdata) SetHash(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *txdata) SetPayload(b []byte) {
-	t.Payload = b
 }
 
 func (t *txdata) SetVRS(v *big.Int, r *big.Int, s *big.Int) {

@@ -112,20 +112,12 @@ type TxInternalData interface {
 	GetRecipient() *common.Address
 	GetAmount() *big.Int
 	GetPayload() []byte
-	GetFrom() common.Address
 	GetHash() *common.Hash
 	GetVRS() (*big.Int, *big.Int, *big.Int)
 	GetV() *big.Int
 	GetR() *big.Int
 	GetS() *big.Int
 
-	SetAccountNonce(uint64)
-	SetPrice(*big.Int)
-	SetGasLimit(uint64)
-	SetRecipient(common.Address)
-	SetAmount(*big.Int)
-	SetPayload([]byte)
-	SetFrom(common.Address)
 	SetHash(*common.Hash)
 	SetVRS(*big.Int, *big.Int, *big.Int)
 	SetV(*big.Int)
@@ -134,6 +126,14 @@ type TxInternalData interface {
 
 	// Equal returns true if all attributes are the same.
 	Equal(t TxInternalData) bool
+}
+
+// TxInternalDataFrom has a function `GetFrom()`.
+// All other transactions to be implemented will have `from` field, but
+// `txdata` (a legacy transaction type) does not have the field.
+// Hence, this function is defined in another interface TxInternalDataFrom.
+type TxInternalDataFrom interface {
+	GetFrom() common.Address
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {
