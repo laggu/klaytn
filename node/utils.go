@@ -45,21 +45,42 @@ func NewPrivateAdminAPI(node *Node) *PrivateAdminAPI {
 	return &PrivateAdminAPI{node: node}
 }
 
-// AddPeer requests connecting to a remote node, and also maintaining the new
-// connection at all times, even reconnecting if it is lost.
-func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
+// addPeerInternal does common part for AddPeer and AddPeerOnParentChain.
+func addPeerInternal(api *PrivateAdminAPI, url string, onParentChain bool) (*discover.Node, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
 	if server == nil {
-		return false, ErrNodeStopped
+		return nil, ErrNodeStopped
 	}
 	// Try to add the url as a static peer and return
 	node, err := discover.ParseNode(url)
 	if err != nil {
-		return false, fmt.Errorf("invalid enode: %v", err)
+		return nil, fmt.Errorf("invalid enode: %v", err)
 	}
-	server.AddPeer(node)
-	return true, nil
+	server.AddPeer(node, onParentChain)
+	return node, nil
+}
+
+// AddPeer requests connecting to a remote node, and also maintaining the new
+// connection at all times, even reconnecting if it is lost.
+func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
+	// TODO-GX Refactoring this to check whether the url is valid or not by dialing and return it.
+	if _, err := addPeerInternal(api, url, false); err != nil {
+		return false, err
+	} else {
+		return true, nil
+	}
+}
+
+// AddPeerOnParentChain requests connecting to a remote parent chain node, and also maintaining the new
+// connection at all times, even reconnecting if it is lost.
+func (api *PrivateAdminAPI) AddPeerOnParentChain(url string) (bool, error) {
+	// TODO-GX Refactoring this to check whether the url is valid or not by dialing and return it.
+	if _, err := addPeerInternal(api, url, true); err != nil {
+		return false, err
+	} else {
+		return true, nil
+	}
 }
 
 // RemovePeer disconnects from a a remote node if the connection exists

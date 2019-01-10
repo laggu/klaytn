@@ -353,6 +353,9 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	}
 	defer pm.removePeer(p.GetID())
 
+	// TODO-GX-ServiceChain : This info log will be replaced by the routine which manages parent/child chain nodes.
+	p.GetP2PPeer().Log().Info("Added Peer", "peerID", p.GetP2PPeerID(), "onParentChain", p.GetP2PPeer().OnParentChain())
+
 	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
 	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
 		return err

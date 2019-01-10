@@ -154,7 +154,9 @@ type Config struct {
 // NewServer returns new Server interface
 func NewServer(config Config) Server {
 	return &SingleChannelServer{
-		BaseServer{Config: config},
+		BaseServer{
+			Config:            config,
+			peerOnParentChain: make(map[*discover.Node]bool)},
 	}
 }
 
@@ -202,7 +204,7 @@ type Server interface {
 	// AddPeer connects to the given node and maintains the connection until the
 	// server is shut down. If the connection fails for any reason, the server will
 	// attempt to reconnect the peer.
-	AddPeer(node *discover.Node)
+	AddPeer(node *discover.Node, onParentChain bool)
 
 	// RemovePeer disconnects from the given node.
 	RemovePeer(node *discover.Node)
@@ -292,6 +294,8 @@ type BaseServer struct {
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
 	logger        log.Logger
+
+	peerOnParentChain map[*discover.Node]bool
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -322,12 +326,13 @@ const (
 type conn struct {
 	fd net.Conn
 	transport
-	flags    connFlag
-	conntype ConnType        // valid after the encryption handshake at the inbound connection case
-	cont     chan error      // The run loop uses cont to signal errors to SetupConn.
-	id       discover.NodeID // valid after the encryption handshake
-	caps     []Cap           // valid after the protocol handshake
-	name     string          // valid after the protocol handshake
+	flags         connFlag
+	conntype      ConnType        // valid after the encryption handshake at the inbound connection case
+	cont          chan error      // The run loop uses cont to signal errors to SetupConn.
+	id            discover.NodeID // valid after the encryption handshake
+	caps          []Cap           // valid after the protocol handshake
+	name          string          // valid after the protocol handshake
+	onParentChain bool            // The run loop uses this to check parent/child chain node.
 }
 
 type transport interface {
@@ -434,10 +439,30 @@ func (srv *BaseServer) PeerCount() int {
 	return count
 }
 
+// checkIfNodeIsOnParentChain returns the node is on parent chain.
+func (srv *BaseServer) checkIfNodeIsOnParentChain(node *discover.Node) bool {
+	_, exist := srv.peerOnParentChain[node]
+	return exist
+}
+
+// addNodeOnParentChain adds the node in the parent node list.
+func (srv *BaseServer) addNodeOnParentChain(node *discover.Node) {
+	srv.peerOnParentChain[node] = true
+}
+
+// removeNodeOnParentChain removes the node in the parent node list.
+func (srv *BaseServer) removeNodeOnParentChain(node *discover.Node) {
+	delete(srv.peerOnParentChain, node)
+}
+
 // AddPeer connects to the given node and maintains the connection until the
 // server is shut down. If the connection fails for any reason, the server will
 // attempt to reconnect the peer.
-func (srv *BaseServer) AddPeer(node *discover.Node) {
+func (srv *BaseServer) AddPeer(node *discover.Node, onParentChain bool) {
+	if onParentChain {
+		srv.addNodeOnParentChain(node)
+	}
+
 	select {
 	case srv.addstatic <- node:
 	case <-srv.quit:
@@ -446,6 +471,8 @@ func (srv *BaseServer) AddPeer(node *discover.Node) {
 
 // RemovePeer disconnects from the given node.
 func (srv *BaseServer) RemovePeer(node *discover.Node) {
+	srv.removeNodeOnParentChain(node)
+
 	select {
 	case srv.removestatic <- node:
 	case <-srv.quit:
@@ -975,7 +1002,13 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 	if self == nil {
 		return errors.New("shutdown")
 	}
+
 	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error)}
+	if dialDest != nil {
+		// Outbound connection, check if dialDest is on the parent chain.
+		c.onParentChain = srv.checkIfNodeIsOnParentChain(dialDest)
+	}
+
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
