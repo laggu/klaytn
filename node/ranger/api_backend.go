@@ -104,8 +104,8 @@ func (b *RangerAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*typ
 	return block, nil
 }
 
-func (b *RangerAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	return b.ranger.blockchain.GetReceiptsByBlockHash(hash), nil
+func (b *RangerAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) types.Receipts {
+	return b.ranger.blockchain.GetReceiptsByBlockHash(hash)
 }
 
 func (b *RangerAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {

@@ -494,11 +494,7 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
 	receipts := s.b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
-		var err error
-		receipts, err = s.b.GetReceipts(ctx, blockHash)
-		if err != nil {
-			return nil, err
-		}
+		receipts = s.b.GetReceipts(ctx, blockHash)
 	}
 	block, err := s.b.GetBlock(ctx, blockHash)
 	if err != nil {
@@ -1109,11 +1105,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	}
 	receipts := s.b.GetReceiptsInCache(blockHash)
 	if receipts == nil {
-		var err error
-		receipts, err = s.b.GetReceipts(ctx, blockHash)
-		if err != nil {
-			return nil, err
-		}
+		receipts = s.b.GetReceipts(ctx, blockHash)
 	}
 	if len(receipts) <= int(index) {
 		return nil, nil

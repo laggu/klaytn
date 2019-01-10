@@ -433,8 +433,8 @@ func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumb
 	return fb.bc.GetHeaderByNumber(uint64(block.Int64())), nil
 }
 
-func (fb *filterBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	return fb.bc.GetReceiptsByBlockHash(hash), nil
+func (fb *filterBackend) GetReceipts(ctx context.Context, hash common.Hash) types.Receipts {
+	return fb.bc.GetReceiptsByBlockHash(hash)
 }
 
 func (fb *filterBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {

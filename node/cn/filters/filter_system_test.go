@@ -94,11 +94,11 @@ func (b *testBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*type
 	return b.db.ReadHeader(hash, *number), nil
 }
 
-func (b *testBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
+func (b *testBackend) GetReceipts(ctx context.Context, hash common.Hash) types.Receipts {
 	if number := b.db.ReadHeaderNumber(hash); number != nil {
-		return b.db.ReadReceipts(hash, *number), nil
+		return b.db.ReadReceipts(hash, *number)
 	}
-	return nil, nil
+	return nil
 }
 
 func (b *testBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {

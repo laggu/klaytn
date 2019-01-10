@@ -124,8 +124,8 @@ func (b *GxpAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.
 	return block, nil
 }
 
-func (b *GxpAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	return b.gxp.blockchain.GetReceiptsByBlockHash(hash), nil
+func (b *GxpAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) types.Receipts {
+	return b.gxp.blockchain.GetReceiptsByBlockHash(hash)
 }
 
 func (b *GxpAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
