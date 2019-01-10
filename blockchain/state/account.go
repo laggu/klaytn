@@ -63,14 +63,10 @@ type Account interface {
 	GetNonce() uint64
 	GetBalance() *big.Int
 	GetHumanReadable() bool
-	GetStorageRoot() common.Hash
-	GetCodeHash() []byte
 
 	SetNonce(n uint64)
 	SetBalance(b *big.Int)
 	SetHumanReadable(b bool)
-	SetStorageRoot(h common.Hash)
-	SetCodeHash(h []byte)
 
 	// Empty returns whether the account is considered empty.
 	// The "empty" account may be defined differently depending on the actual account type.
@@ -88,6 +84,18 @@ type Account interface {
 
 	// String returns all attributes of this object as a string.
 	String() string
+}
+
+// ProgramAccount is an interface of an account having a program (code + storage).
+// This interface is implemented by LegacyAccount and SmartContractAccount.
+type ProgramAccount interface {
+	Account
+
+	GetStorageRoot() common.Hash
+	GetCodeHash() []byte
+
+	SetStorageRoot(h common.Hash)
+	SetCodeHash(h []byte)
 }
 
 // NewAccountWithType creates an Account object with the given type.

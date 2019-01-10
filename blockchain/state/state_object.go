@@ -145,11 +145,16 @@ func (c *stateObject) touch() {
 
 func (c *stateObject) getTrie(db Database) Trie {
 	if c.trie == nil {
-		var err error
-		c.trie, err = db.OpenStorageTrie(c.data.GetStorageRoot())
-		if err != nil {
+		if acc, ok := c.data.(ProgramAccount); ok {
+			var err error
+			c.trie, err = db.OpenStorageTrie(acc.GetStorageRoot())
+			if err != nil {
+				c.trie, _ = db.OpenStorageTrie(common.Hash{})
+				c.setError(fmt.Errorf("can't create storage trie: %v", err))
+			}
+		} else {
+			// not a contract account, just returns the empty trie.
 			c.trie, _ = db.OpenStorageTrie(common.Hash{})
-			c.setError(fmt.Errorf("can't create storage trie: %v", err))
 		}
 	}
 	return c.trie
@@ -212,7 +217,9 @@ func (self *stateObject) updateTrie(db Database) Trie {
 // UpdateRoot sets the trie root to the current root hash of
 func (self *stateObject) updateRoot(db Database) {
 	self.updateTrie(db)
-	self.data.SetStorageRoot(self.trie.Hash())
+	if acc, ok := self.data.(ProgramAccount); ok {
+		acc.SetStorageRoot(self.trie.Hash())
+	}
 }
 
 // CommitTrie the storage trie of the object to dwb.
@@ -222,11 +229,14 @@ func (self *stateObject) CommitTrie(db Database) error {
 	if self.dbErr != nil {
 		return self.dbErr
 	}
-	root, err := self.trie.Commit(nil)
-	if err == nil {
-		self.data.SetStorageRoot(root)
+	if acc, ok := self.data.(ProgramAccount); ok {
+		root, err := self.trie.Commit(nil)
+		if err != nil {
+			return err
+		}
+		acc.SetStorageRoot(root)
 	}
-	return err
+	return nil
 }
 
 // AddBalance removes amount from c's balance.
@@ -318,9 +328,13 @@ func (self *stateObject) SetCode(codeHash common.Hash, code []byte) {
 }
 
 func (self *stateObject) setCode(codeHash common.Hash, code []byte) {
-	self.code = code
-	self.data.SetCodeHash(codeHash[:])
-	self.dirtyCode = true
+	if acc, ok := self.data.(ProgramAccount); ok {
+		self.code = code
+		acc.SetCodeHash(codeHash[:])
+		self.dirtyCode = true
+	} else {
+		logger.Error("setCode() should be called only to a ProgramAccount!")
+	}
 }
 
 func (self *stateObject) SetNonce(nonce uint64) {
@@ -336,7 +350,11 @@ func (self *stateObject) setNonce(nonce uint64) {
 }
 
 func (self *stateObject) CodeHash() []byte {
-	return self.data.GetCodeHash()
+	if acc, ok := self.data.(ProgramAccount); ok {
+		return acc.GetCodeHash()
+	}
+	logger.Error("CodeHash() should be called only to a ProgramAccount!")
+	return []byte{}
 }
 
 func (self *stateObject) Balance() *big.Int {

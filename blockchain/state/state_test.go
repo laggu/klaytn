@@ -210,8 +210,14 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 	if so0.Nonce() != so1.Nonce() {
 		t.Fatalf("Nonce mismatch: have %v, want %v", so0.Nonce(), so1.Nonce())
 	}
-	if so0.data.GetStorageRoot() != so1.data.GetStorageRoot() {
-		t.Errorf("Root mismatch: have %x, want %x", so0.data.GetStorageRoot().Bytes(), so1.data.GetStorageRoot().Bytes())
+	so0ac, so0ok := so0.data.(ProgramAccount)
+	so1ac, so1ok := so1.data.(ProgramAccount)
+	if so0ok != so1ok {
+		t.Errorf("so0ok(%v) != so1ok(%v). Both should be smart contracts or not!", so0ok, so1ok)
+	}
+	if so0ok && so0ac.GetStorageRoot() != so1ac.GetStorageRoot() {
+		// check the equivalence of storage root only if both are smart contract accounts.
+		t.Errorf("Root mismatch: have %x, want %x", so0ac.GetStorageRoot().Bytes(), so1ac.GetStorageRoot().Bytes())
 	}
 	if !bytes.Equal(so0.CodeHash(), so1.CodeHash()) {
 		t.Fatalf("CodeHash mismatch: have %v, want %v", so0.CodeHash(), so1.CodeHash())
