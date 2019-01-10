@@ -444,7 +444,7 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 		cb(h, value)
 	}
 
-	it := statedb.NewIterator(so.getTrie(db.db).NodeIterator(nil))
+	it := statedb.NewIterator(so.getStorageTrie(db.db).NodeIterator(nil))
 	for it.Next() {
 		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))

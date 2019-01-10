@@ -76,8 +76,8 @@ type stateObject struct {
 	dbErr error
 
 	// Write caches.
-	trie Trie // storage trie, which becomes non-nil on first access
-	code Code // contract bytecode, which gets set when code is loaded
+	storageTrie Trie // storage trie, which becomes non-nil on first access
+	code        Code // contract bytecode, which gets set when code is loaded
 
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
@@ -143,21 +143,21 @@ func (c *stateObject) touch() {
 	}
 }
 
-func (c *stateObject) getTrie(db Database) Trie {
-	if c.trie == nil {
+func (c *stateObject) getStorageTrie(db Database) Trie {
+	if c.storageTrie == nil {
 		if acc, ok := c.account.(ProgramAccount); ok {
 			var err error
-			c.trie, err = db.OpenStorageTrie(acc.GetStorageRoot())
+			c.storageTrie, err = db.OpenStorageTrie(acc.GetStorageRoot())
 			if err != nil {
-				c.trie, _ = db.OpenStorageTrie(common.Hash{})
+				c.storageTrie, _ = db.OpenStorageTrie(common.Hash{})
 				c.setError(fmt.Errorf("can't create storage trie: %v", err))
 			}
 		} else {
 			// not a contract account, just returns the empty trie.
-			c.trie, _ = db.OpenStorageTrie(common.Hash{})
+			c.storageTrie, _ = db.OpenStorageTrie(common.Hash{})
 		}
 	}
-	return c.trie
+	return c.storageTrie
 }
 
 // GetState returns a value in account storage.
@@ -167,7 +167,7 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 		return value
 	}
 	// Load from DB in case it is missing.
-	enc, err := self.getTrie(db).TryGet(key[:])
+	enc, err := self.getStorageTrie(db).TryGet(key[:])
 	if err != nil {
 		self.setError(err)
 		return common.Hash{}
@@ -200,7 +200,7 @@ func (self *stateObject) setState(key, value common.Hash) {
 
 // updateTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateTrie(db Database) Trie {
-	tr := self.getTrie(db)
+	tr := self.getStorageTrie(db)
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
@@ -218,7 +218,7 @@ func (self *stateObject) updateTrie(db Database) Trie {
 func (self *stateObject) updateRoot(db Database) {
 	self.updateTrie(db)
 	if acc, ok := self.account.(ProgramAccount); ok {
-		acc.SetStorageRoot(self.trie.Hash())
+		acc.SetStorageRoot(self.storageTrie.Hash())
 	}
 }
 
@@ -230,7 +230,7 @@ func (self *stateObject) CommitTrie(db Database) error {
 		return self.dbErr
 	}
 	if acc, ok := self.account.(ProgramAccount); ok {
-		root, err := self.trie.Commit(nil)
+		root, err := self.storageTrie.Commit(nil)
 		if err != nil {
 			return err
 		}
@@ -280,8 +280,8 @@ func (c *stateObject) ReturnGas(gas *big.Int) {}
 
 func (self *stateObject) deepCopy(db *StateDB) *stateObject {
 	stateObject := newObject(db, self.address, self.account.DeepCopy())
-	if self.trie != nil {
-		stateObject.trie = db.db.CopyTrie(self.trie)
+	if self.storageTrie != nil {
+		stateObject.storageTrie = db.db.CopyTrie(self.storageTrie)
 	}
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
