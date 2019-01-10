@@ -77,6 +77,7 @@ type Backend interface {
 
 	GetChildChainIndexingEnabled() bool
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
+	GetLatestPeggedBlockNumber() uint64
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

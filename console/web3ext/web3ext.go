@@ -433,6 +433,11 @@ web3._extend({
 			call: 'klay_convertChildChainBlockHashToParentChainTxHash',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getLatestPeggedBlockNumber',
+			call: 'klay_getLatestPeggedBlockNumber',
+			params: 0
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

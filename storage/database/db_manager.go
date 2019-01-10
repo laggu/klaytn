@@ -128,6 +128,10 @@ type DBManager interface {
 	ChildChainIndexingEnabled() bool
 	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
+
+	// below two operations are used in child chain side, not parent chain side.
+	WritePeggedBlockNumber(blockNum uint64)
+	ReadPeggedBlockNumber() uint64
 }
 
 type DatabaseEntryType uint8
@@ -899,6 +903,26 @@ func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBloc
 		return common.Hash{}
 	}
 	return common.BytesToHash(data)
+}
+
+// WritePeggedBlockNumber writes the block number whose data has been pegged to the parent chain.
+func (dbm *databaseManager) WritePeggedBlockNumber(blockNum uint64) {
+	key := lastServiceChainTxReceiptKey
+	db := dbm.getDatabase(childChainDB)
+	if err := db.Put(key, encodeBlockNumber(blockNum)); err != nil {
+		logger.Crit("Failed to store LatestServiceChainBlockNum", "blockNumber", blockNum, "err", err)
+	}
+}
+
+// ReadPeggedBlockNumber returns the latest block number whose data has been pegged to the parent chain.
+func (dbm *databaseManager) ReadPeggedBlockNumber() uint64 {
+	key := lastServiceChainTxReceiptKey
+	db := dbm.getDatabase(childChainDB)
+	data, _ := db.Get(key)
+	if len(data) != 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(data)
 }
 
 // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits

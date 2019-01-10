@@ -242,3 +242,7 @@ func (b *GxpAPIBackend) GetChildChainIndexingEnabled() bool {
 func (b *GxpAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	return b.gxp.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 }
+
+func (b *GxpAPIBackend) GetLatestPeggedBlockNumber() uint64 {
+	return b.gxp.blockchain.GetLatestPeggedBlockNumber()
+}

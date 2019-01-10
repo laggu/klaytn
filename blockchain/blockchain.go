@@ -1847,3 +1847,13 @@ func (bc *BlockChain) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash 
 func (bc *BlockChain) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
 	bc.db.WriteChildChainTxHash(ccBlockHash, ccTxHash)
 }
+
+// GetLatestPeggedBlockNumber returns the latest block number whose data has been pegged to the parent chain.
+func (bc *BlockChain) GetLatestPeggedBlockNumber() uint64 {
+	return bc.db.ReadPeggedBlockNumber()
+}
+
+// WritePeggedBlockNumber writes the block number whose data has been pegged to the parent chain.
+func (bc *BlockChain) WritePeggedBlockNumber(blockNum uint64) {
+	bc.db.WritePeggedBlockNumber(blockNum)
+}

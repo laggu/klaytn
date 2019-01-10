@@ -738,12 +738,20 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	return hexutil.Uint64(hi), nil
 }
 
+// GetChildChainIndexingEnabled returns the current child chain indexing configuration.
 func (s *PublicBlockChainAPI) GetChildChainIndexingEnabled() bool {
 	return s.b.GetChildChainIndexingEnabled()
 }
 
+// ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
+// ChildChainTxData, with the key made with given child chain block hash.
 func (s *PublicBlockChainAPI) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	return s.b.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
+}
+
+// GetLatestPeggedBlockNumber returns the latest block number whose data has been pegged to the parent chain.
+func (s *PublicBlockChainAPI) GetLatestPeggedBlockNumber() uint64 {
+	return s.b.GetLatestPeggedBlockNumber()
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM

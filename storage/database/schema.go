@@ -69,7 +69,8 @@ var (
 	preimageCounter    = metrics.NewRegisteredCounter("db/preimage/total", nil)
 	preimageHitCounter = metrics.NewRegisteredCounter("db/preimage/hits", nil)
 
-	childChainTxHashPrefix = []byte("ccTxHash")
+	childChainTxHashPrefix       = []byte("ccTxHash")
+	lastServiceChainTxReceiptKey = []byte("LastServiceChainTxReceipt")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
