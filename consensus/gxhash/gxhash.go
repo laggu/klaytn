@@ -41,13 +41,14 @@ import (
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")
 
 var (
 	// maxUint256 is a big integer representing 2^256-1
-	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
+	maxUint256 = new(big.Int).Exp(common.Big2, common.Big256, common.Big0)
 
 	// sharedEthash is a full instance that can be shared between multiple users.
 	sharedEthash = New(Config{"", 3, 0, "", 1, 0, ModeNormal})

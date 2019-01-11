@@ -1,7 +1,14 @@
+// Copyright 2018 The go-klaytn Authors
+//
+// This file is derived from crypto/bn256/cloudflare/lattice.go (2018/06/04).
+// See LICENSE in the top directory for the original copyright and license.
+
 package bn256
 
 import (
 	"math/big"
+
+	"github.com/ground-x/go-gxplatform/common"
 )
 
 var half = new(big.Int).Rsh(Order, 1)
@@ -110,6 +117,6 @@ func round(num, denom *big.Int) {
 	num.DivMod(num, denom, r)
 
 	if r.Cmp(half) == 1 {
-		num.Add(num, big.NewInt(1))
+		num.Add(num, common.Big1)
 	}
 }

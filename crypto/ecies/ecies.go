@@ -1,3 +1,4 @@
+// Copyright (c) 2018 The go-klaytn Authors.
 // Copyright (c) 2013 Kyle Isom <kyle@tyrfingr.is>
 // Copyright (c) 2012 The Go Authors. All rights reserved.
 //
@@ -26,6 +27,9 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// This file is derived from crypto/ecies/ecies.go (2018/06/04).
+// Modified and improved for the go-klaytn development.
 
 package ecies
 
@@ -36,6 +40,7 @@ import (
 	"crypto/hmac"
 	"crypto/subtle"
 	"fmt"
+	"github.com/ground-x/go-gxplatform/common"
 	"hash"
 	"io"
 	"math/big"
@@ -144,8 +149,8 @@ var (
 )
 
 var (
-	big2To32   = new(big.Int).Exp(big.NewInt(2), big.NewInt(32), nil)
-	big2To32M1 = new(big.Int).Sub(big2To32, big.NewInt(1))
+	big2To32   = new(big.Int).Exp(common.Big2, common.Big32, nil)
+	big2To32M1 = new(big.Int).Sub(big2To32, common.Big1)
 )
 
 func incCounter(ctr []byte) {

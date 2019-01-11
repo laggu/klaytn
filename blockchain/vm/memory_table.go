@@ -21,6 +21,7 @@
 package vm
 
 import (
+	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/common/math"
 	"math/big"
 )
@@ -46,15 +47,15 @@ func memoryExtCodeCopy(stack *Stack) *big.Int {
 }
 
 func memoryMLoad(stack *Stack) *big.Int {
-	return calcMemSize(stack.Back(0), big.NewInt(32))
+	return calcMemSize(stack.Back(0), common.Big32)
 }
 
 func memoryMStore8(stack *Stack) *big.Int {
-	return calcMemSize(stack.Back(0), big.NewInt(1))
+	return calcMemSize(stack.Back(0), common.Big1)
 }
 
 func memoryMStore(stack *Stack) *big.Int {
-	return calcMemSize(stack.Back(0), big.NewInt(32))
+	return calcMemSize(stack.Back(0), common.Big32)
 }
 
 func memoryCreate(stack *Stack) *big.Int {

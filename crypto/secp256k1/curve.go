@@ -38,6 +38,7 @@ package secp256k1
 
 import (
 	"crypto/elliptic"
+	"github.com/ground-x/go-gxplatform/common"
 	"math/big"
 	"unsafe"
 )
@@ -238,13 +239,13 @@ func (BitCurve *BitCurve) doubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, 
 	d.Mul(d, d)                 //(X1+B)²
 	d.Sub(d, a)                 //(X1+B)²-A
 	d.Sub(d, c)                 //(X1+B)²-A-C
-	d.Mul(d, big.NewInt(2))     //2*((X1+B)²-A-C)
+	d.Mul(d, common.Big2)       //2*((X1+B)²-A-C)
 
-	e := new(big.Int).Mul(big.NewInt(3), a) //3*A
-	f := new(big.Int).Mul(e, e)             //E²
+	e := new(big.Int).Mul(common.Big3, a) //3*A
+	f := new(big.Int).Mul(e, e)           //E²
 
-	x3 := new(big.Int).Mul(big.NewInt(2), d) //2*D
-	x3.Sub(f, x3)                            //F-2*D
+	x3 := new(big.Int).Mul(common.Big2, d) //2*D
+	x3.Sub(f, x3)                          //F-2*D
 	x3.Mod(x3, BitCurve.P)
 
 	y3 := new(big.Int).Sub(d, x3)                  //D-X3
@@ -253,7 +254,7 @@ func (BitCurve *BitCurve) doubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, 
 	y3.Mod(y3, BitCurve.P)
 
 	z3 := new(big.Int).Mul(y, z) //Y1*Z1
-	z3.Mul(big.NewInt(2), z3)    //3*Y1*Z1
+	z3.Mul(common.Big2, z3)      //3*Y1*Z1
 	z3.Mod(z3, BitCurve.P)
 
 	return x3, y3, z3
