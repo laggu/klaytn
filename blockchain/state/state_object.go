@@ -22,6 +22,7 @@ package state
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/crypto"
@@ -31,6 +32,10 @@ import (
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
+
+var (
+	errNotProgramAccount = errors.New("not a program account")
+)
 
 type Code []byte
 
@@ -317,24 +322,26 @@ func (self *stateObject) Code(db Database) []byte {
 	return code
 }
 
-func (self *stateObject) SetCode(codeHash common.Hash, code []byte) {
+func (self *stateObject) SetCode(codeHash common.Hash, code []byte) error {
 	prevcode := self.Code(self.db.db)
 	self.db.journal.append(codeChange{
 		account:  &self.address,
 		prevhash: self.CodeHash(),
 		prevcode: prevcode,
 	})
-	self.setCode(codeHash, code)
+	return self.setCode(codeHash, code)
 }
 
-func (self *stateObject) setCode(codeHash common.Hash, code []byte) {
-	if acc, ok := self.account.(ProgramAccount); ok {
-		self.code = code
-		acc.SetCodeHash(codeHash[:])
-		self.dirtyCode = true
-	} else {
-		logger.Error("setCode() should be called only to a ProgramAccount!")
+func (self *stateObject) setCode(codeHash common.Hash, code []byte) error {
+	acc, ok := self.account.(ProgramAccount)
+	if !ok {
+		logger.Error("setCode() should be called only to a ProgramAccount!", "account address", self.address)
+		return errNotProgramAccount
 	}
+	self.code = code
+	acc.SetCodeHash(codeHash[:])
+	self.dirtyCode = true
+	return nil
 }
 
 func (self *stateObject) SetNonce(nonce uint64) {

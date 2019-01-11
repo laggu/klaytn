@@ -390,7 +390,15 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	if err == nil && !maxCodeSizeExceeded {
 		createDataGas := uint64(len(ret)) * params.CreateDataGas
 		if contract.UseGas(createDataGas) {
-			evm.StateDB.SetCode(contractAddr, ret)
+			if evm.StateDB.SetCode(contractAddr, ret) != nil {
+				// `err` is returned to `vmerr` in `StateTransition.TransitionDb()`.
+				// Then, `vmerr` will be used to make a receipt status using `getReceiptStatusFromVMerr()`.
+				// Since `getReceiptStatusFromVMerr()` uses a map to determine the receipt status,
+				// this `err` should be an error variable declared in vm/errors.go.
+				// TODO-GX: Make a package of error variables containing all exported error variables.
+				// After the above TODO-GX is resolved, we can return the error returned by `SetCode()` directly.
+				err = ErrFailedOnSetCode
+			}
 		} else {
 			err = ErrCodeStoreOutOfGas // TODO-GX-issue136 // TODO-GX-error
 		}

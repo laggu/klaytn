@@ -305,11 +305,13 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	}
 }
 
-func (self *StateDB) SetCode(addr common.Address, code []byte) {
+func (self *StateDB) SetCode(addr common.Address, code []byte) error {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetCode(crypto.Keccak256Hash(code), code)
+		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
+
+	return nil
 }
 
 func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {

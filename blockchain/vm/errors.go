@@ -36,6 +36,7 @@ var (
 	ErrContractAddressCollision = errors.New("contract address collision")
 	ErrTotalTimeLimitReached    = errors.New("reached the total execution time limit for txs in a block")
 	ErrOpcodeCntLimitReached    = errors.New(fmt.Sprintf("reached the opcode count limit (%d) for tx", params.OpcodeCntLimit))
+	ErrFailedOnSetCode          = errors.New("failed on setting code to an account")
 
 	// EVM internal errors
 	ErrWriteProtection       = errors.New("evm: write protection")
