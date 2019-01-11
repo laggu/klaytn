@@ -49,6 +49,7 @@ const (
 	TxValueKeyGasLimit
 	TxValueKeyGasPrice
 	TxValueKeyData
+	TxValueKeyFrom
 )
 
 var (

@@ -52,66 +52,36 @@ func newTxInternalDataCommon() *TxInternalDataCommon {
 	}
 }
 
-// newTxInternalDataCommonWithValues creates an TxInternalDataCommon object and initializes it with given attributes.
-func newTxInternalDataCommonWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64,
-	gasPrice *big.Int) *TxInternalDataCommon {
-	h := common.Hash{}
-
-	d := newTxInternalDataCommon()
-	d.AccountNonce = nonce
-	d.Recipient = to
-	d.GasLimit = gasLimit
-	d.Hash = &h
-	d.From = common.Address{}
-
-	if amount != nil {
-		d.Amount.Set(amount)
-	}
-
-	if gasPrice != nil {
-		d.Price.Set(gasPrice)
-	}
-
-	return d
-}
-
 // newTxInternalDataCommonWithMap creates an TxInternalDataCommon object and initializes it with given attributes in the map.
 func newTxInternalDataCommonWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataCommon {
-	nonce := uint64(0)
+	d := newTxInternalDataCommon()
+
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
-		nonce = v
+		d.AccountNonce = v
 	}
 
-	to := common.Address{}
 	if v, ok := values[TxValueKeyTo].(common.Address); ok {
-		to = v
+		d.Recipient = v
 	}
 
-	amount := big.NewInt(0)
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
-		amount.Set(v)
+		d.Amount.Set(v)
 	}
 
-	gasLimit := uint64(0)
 	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
-		gasLimit = v
+		d.GasLimit = v
 	}
 
-	gasPrice := big.NewInt(0)
 	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
-		gasPrice.Set(v)
+		d.Price.Set(v)
+	}
+
+	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
+		d.From = v
 	}
 
 	h := common.Hash{}
-
-	d := newTxInternalDataCommon()
-	d.AccountNonce = nonce
-	d.Recipient = to
-	d.GasLimit = gasLimit
 	d.Hash = &h
-	d.From = common.Address{}
-	d.Amount = amount
-	d.Price = gasPrice
 
 	return d
 }
