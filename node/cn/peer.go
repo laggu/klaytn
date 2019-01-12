@@ -80,12 +80,12 @@ type propEvent struct {
 }
 
 type Peer interface {
-	// broadcast is a write loop that multiplexes block propagations, announcements
+	// Broadcast is a write loop that multiplexes block propagations, announcements
 	// and transaction broadcasts into the remote peer. The goal is to have an async
 	// writer that does not lock up node internals.
 	Broadcast()
 
-	// close signals the broadcast goroutine to terminate.
+	// Close signals the broadcast goroutine to terminate.
 	Close()
 
 	// Info gathers and returns a collection of metadata known about a peer.
@@ -102,19 +102,18 @@ type Peer interface {
 	// will never be propagated to this particular peer.
 	AddToKnownTxs(hash common.Hash)
 
-	// istanbul BFT
 	// Send writes an RLP-encoded message with the given code.
-	// data should encode as an RLP list.
+	// data should have been encoded as an RLP list.
 	Send(msgcode uint64, data interface{}) error
 
 	// SendTransactions sends transactions to the peer and includes the hashes
 	// in its transaction hash set for future reference.
 	SendTransactions(txs types.Transactions) error
 
-	// ReSendTransaction sends txs to a peer in order to prevent the txs from missing.
+	// ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 	ReSendTransactions(txs types.Transactions) error
 
-	// AsyncSendTransactions sends transactions asynchronously to the peer
+	// AsyncSendTransactions sends transactions asynchronously to the peer.
 	AsyncSendTransactions(txs []*types.Transaction)
 
 	// SendNewBlockHashes announces the availability of a number of blocks through
@@ -217,7 +216,7 @@ type basePeer struct {
 	term        chan struct{}             // Termination channel to stop the broadcaster
 }
 
-// NewPeer returns new Peer interface
+// newPeer returns new Peer interface.
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 	id := p.ID()
 
@@ -237,7 +236,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 	}
 }
 
-// broadcast is a write loop that multiplexes block propagations, announcements
+// Broadcast is a write loop that multiplexes block propagations, announcements
 // and transaction broadcasts into the remote peer. The goal is to have an async
 // writer that does not lock up node internals.
 func (p *basePeer) Broadcast() {
@@ -274,7 +273,7 @@ func (p *basePeer) Broadcast() {
 	}
 }
 
-// close signals the broadcast goroutine to terminate.
+// Close signals the broadcast goroutine to terminate.
 func (p *basePeer) Close() {
 	close(p.term)
 }
@@ -333,9 +332,8 @@ func (p *basePeer) AddToKnownTxs(hash common.Hash) {
 	}
 }
 
-// istanbul BFT
 // Send writes an RLP-encoded message with the given code.
-// data should encode as an RLP list.
+// data should have been encoded as an RLP list.
 func (p *basePeer) Send(msgcode uint64, data interface{}) error {
 	return p2p.Send(p.rw, msgcode, data)
 }
@@ -349,7 +347,7 @@ func (p *basePeer) SendTransactions(txs types.Transactions) error {
 	return p2p.Send(p.rw, TxMsg, txs)
 }
 
-// ReSendTransaction sends txs to a peer in order to prevent the txs from missing.
+// ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
 	return p2p.Send(p.rw, TxMsg, txs)
 }

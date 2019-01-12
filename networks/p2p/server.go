@@ -151,7 +151,7 @@ type Config struct {
 	Logger log.Logger `toml:",omitempty"`
 }
 
-// NewServer returns new Server interface
+// NewServer returns a new Server interface.
 func NewServer(config Config) Server {
 	return &SingleChannelServer{
 		BaseServer{
@@ -162,7 +162,7 @@ func NewServer(config Config) Server {
 
 // Server manages all peer connections.
 type Server interface {
-	// GetProtocols return slice of protocols.
+	// GetProtocols returns a slice of protocols.
 	GetProtocols() []Protocol
 
 	// AddProtocols adds protocols to the server.
@@ -176,7 +176,7 @@ type Server interface {
 	// AddLastLookup adds lastLookup to duration.
 	AddLastLookup() time.Time
 
-	//SetLastLookupToNow sets LastLookup to the current time.
+	// SetLastLookupToNow sets LastLookup to the current time.
 	SetLastLookupToNow()
 
 	// CheckNilNetworkTable returns whether network table is nil.
@@ -198,7 +198,7 @@ type Server interface {
 	Start() (err error)
 
 	// Stop terminates the server and all active peer connections.
-	// It blocks until all active connections have been closed.
+	// It blocks until all active connections are closed.
 	Stop()
 
 	// AddPeer connects to the given node and maintains the connection until the
@@ -227,17 +227,17 @@ type Server interface {
 	// MaxPeers returns maximum count of peers.
 	MaxPeers() int
 
-	// Disconnect try to disconnect peer.
+	// Disconnect tries to disconnect peer.
 	Disconnect(destID discover.NodeID)
 
-	// GetListenAddress returns the listen address of the server
+	// GetListenAddress returns the listen address of the server.
 	GetListenAddress() string
 
 	// Peers returns all connected peers.
 	Peers() []*Peer
 
 	// NodeDialer is used to connect to nodes in the network, typically by using
-	// an underlying net.Dialer but also using net.Pipe in tests
+	// an underlying net.Dialer but also using net.Pipe in tests.
 	NodeDialer
 }
 
@@ -251,7 +251,7 @@ func (srv *BaseServer) AddLastLookup() time.Time {
 	return srv.lastLookup.Add(lookupInterval)
 }
 
-//SetLastLookupToNow sets LastLookup to the current time.
+// SetLastLookupToNow sets LastLookup to the current time.
 func (srv *BaseServer) SetLastLookupToNow() {
 	srv.lastLookup = time.Now()
 }
@@ -400,7 +400,7 @@ func (c *conn) is(f connFlag) bool {
 	return c.flags&f != 0
 }
 
-// GetProtocols return slice of protocols.
+// GetProtocols returns a slice of protocols.
 func (srv *BaseServer) GetProtocols() []Protocol {
 	return srv.Protocols
 }
@@ -516,7 +516,7 @@ func (srv *BaseServer) makeSelf(listener net.Listener, ntab discoverTable) *disc
 }
 
 // Stop terminates the server and all active peer connections.
-// It blocks until all active connections have been closed.
+// It blocks until all active connections are closed.
 func (srv *BaseServer) Stop() {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
@@ -532,7 +532,7 @@ func (srv *BaseServer) Stop() {
 	srv.loopWG.Wait()
 }
 
-// GetListenAddress returns the listen address of the server
+// GetListenAddress returns the listen address of the server.
 func (srv *BaseServer) GetListenAddress() string {
 	return srv.ListenAddr
 }
@@ -1189,12 +1189,12 @@ func (srv *BaseServer) PeersInfo() []*PeerInfo {
 	return infos
 }
 
-// Disconnect try to disconnect peer.
+// Disconnect tries to disconnect peer.
 func (srv *BaseServer) Disconnect(destID discover.NodeID) {
 	srv.discpeer <- destID
 }
 
-// CheckNilNetworkTable returns whether network table is nil
+// CheckNilNetworkTable returns whether network table is nil.
 func (srv *BaseServer) CheckNilNetworkTable() bool {
 	return srv.ntab == nil
 }

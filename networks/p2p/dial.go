@@ -52,7 +52,7 @@ const (
 )
 
 // NodeDialer is used to connect to nodes in the network, typically by using
-// an underlying net.Dialer but also using net.Pipe in tests
+// an underlying net.Dialer but also using net.Pipe in tests.
 type NodeDialer interface {
 	Dial(*discover.Node) (net.Conn, error)
 }
