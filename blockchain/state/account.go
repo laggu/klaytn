@@ -105,6 +105,8 @@ func NewAccountWithType(t AccountType) (Account, error) {
 	switch t {
 	case LegacyAccountType:
 		return newLegacyAccount(), nil
+	case ExternallyOwnedAccountType:
+		return newExternallyOwnedAccount(), nil
 	}
 
 	return nil, ErrUndefinedAccountType
@@ -115,6 +117,8 @@ func NewAccountWithMap(t AccountType, values map[AccountValueKeyType]interface{}
 	switch t {
 	case LegacyAccountType:
 		return newLegacyAccountWithMap(values), nil
+	case ExternallyOwnedAccountType:
+		return newExternallyOwnedAccountWithMap(values), nil
 	}
 
 	return nil, ErrUndefinedAccountType

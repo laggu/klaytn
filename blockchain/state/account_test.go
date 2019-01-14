@@ -18,7 +18,9 @@ package state
 
 import (
 	"fmt"
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/sha3"
 	"github.com/ground-x/go-gxplatform/ser/rlp"
 	"math/big"
@@ -33,6 +35,8 @@ func TestAccountSerialization(t *testing.T) {
 		acc  Account
 	}{
 		{"LegacyAccount", genLegacyAccount()},
+		{"EOA", genEOA()},
+		{"EOAWithPublic", genEOAWithPublicKey()},
 	}
 	var testcases = []struct {
 		Name string
@@ -89,5 +93,35 @@ func genLegacyAccount() *LegacyAccount {
 		AccountValueKeyBalance:     big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyStorageRoot: genRandomHash(),
 		AccountValueKeyCodeHash:    genRandomHash().Bytes(),
+	})
+}
+
+func genEOA() *ExternallyOwnedAccount {
+	humanReadable := false
+	if rand.Int63n(10) >= 5 {
+		humanReadable = true
+	}
+
+	return newExternallyOwnedAccountWithMap(map[AccountValueKeyType]interface{}{
+		AccountValueKeyNonce:         rand.Uint64(),
+		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
+		AccountValueKeyHumanReadable: humanReadable,
+		AccountValueKeyAccountKey:    types.NewAccountKeyNil(),
+	})
+}
+
+func genEOAWithPublicKey() *ExternallyOwnedAccount {
+	humanReadable := false
+	if rand.Int63n(10) >= 5 {
+		humanReadable = true
+	}
+
+	k, _ := crypto.GenerateKey()
+
+	return newExternallyOwnedAccountWithMap(map[AccountValueKeyType]interface{}{
+		AccountValueKeyNonce:         rand.Uint64(),
+		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
+		AccountValueKeyHumanReadable: humanReadable,
+		AccountValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&k.PublicKey),
 	})
 }
