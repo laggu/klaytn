@@ -329,6 +329,21 @@ func (tx *Transaction) String() string {
 	)
 }
 
+// GetChildChainAddr returns the pointer of sender address if a tx is a
+// data pegging tx from child chain. If not, it returns nil.
+func (tx *Transaction) GetChildChainAddr(signer Signer) *common.Address {
+	// TODO-GX-ServiceChain This function will be removed once new transaction type is introduced.
+	from, err := Sender(signer, tx)
+	if err != nil {
+		logger.Error("failed to decode the address of the sender", "tx", tx.hash)
+		return nil
+	}
+	if tx.To() == nil || from != *tx.To() {
+		return nil
+	}
+	return &from
+}
+
 // Transactions is a Transaction slice type for basic sorting.
 type Transactions []*Transaction
 

@@ -1071,6 +1071,10 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data.
 	bc.db.WriteBlock(block)
 
+	if bc.GetChildChainIndexingEnabled() {
+		bc.writeChildChainTxHashFromBlock(block)
+	}
+
 	root, err := state.Commit(true)
 	if err != nil {
 		return NonStatTy, err
@@ -1868,4 +1872,22 @@ func (bc *BlockChain) WriteReceiptFromParentChain(blockHash common.Hash, receipt
 // with corresponding block hash. It assumes that a child chain has only one parent chain.
 func (bc *BlockChain) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
 	return bc.db.ReadReceiptFromParentChain(blockHash)
+}
+
+// writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
+// ChildChainTxData.
+func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
+	txs := block.Transactions()
+	signer := types.MakeSigner(bc.Config(), block.Number())
+	for _, tx := range txs {
+		// TODO-GX-ServiceChain GetChildChainAddr will be removed once new transaction type is introduced.
+		if ccAddr := tx.GetChildChainAddr(signer); ccAddr == nil {
+			continue
+		}
+		ccTxData := new(types.ChildChainTxData)
+		if err := rlp.DecodeBytes(tx.Data(), ccTxData); err != nil {
+			continue
+		}
+		bc.WriteChildChainTxHash(ccTxData.BlockHash, tx.Hash())
+	}
 }
