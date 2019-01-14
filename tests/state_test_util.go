@@ -237,7 +237,12 @@ func (tx *stTransaction) toMessage(ps stPostState) (blockchain.Message, error) {
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true)
+	intrinsicGas, err := types.IntrinsicGas(data, to == nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas)
 	return msg, nil
 }
 

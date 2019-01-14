@@ -26,8 +26,6 @@ import (
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/ground-x/go-gxplatform/kerrors"
-	"github.com/ground-x/go-gxplatform/params"
-	"math"
 	"math/big"
 )
 
@@ -78,9 +76,9 @@ type Message interface {
 	CheckNonce() bool
 	Data() []byte
 
-	// IntrinsicGasBasedOnType returns `intrinsic gas` based on the tx type.
+	// IntrinsicGas returns `intrinsic gas` based on the tx type.
 	// This value is used to differentiate tx fee based on the tx type.
-	IntrinsicGasBasedOnType() uint64
+	IntrinsicGas() (uint64, error)
 }
 
 // TODO-GX Later we can merge Err and Status into one uniform error.
@@ -92,39 +90,6 @@ type Message interface {
 type kerror struct {
 	Err    error
 	Status uint
-}
-
-// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
-	// Set the starting gas for the raw transaction
-	var gas uint64
-	if contractCreation && homestead {
-		gas = params.TxGasContractCreation
-	} else {
-		gas = params.TxGas
-	}
-	// Bump the required gas by the amount of transactional data
-	if len(data) > 0 {
-		// Zero and non-zero bytes are priced differently
-		var nz uint64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
-			return 0, kerrors.ErrOutOfGas
-		}
-		gas += nz * params.TxDataNonZeroGas
-
-		z := uint64(len(data)) - nz
-		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, kerrors.ErrOutOfGas
-		}
-		gas += z * params.TxDataZeroGas
-	}
-	return gas, nil
 }
 
 // NewStateTransition initialises and returns a new state transition object.
@@ -210,9 +175,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	contractCreation := msg.To() == nil
 
 	// TODO-GX-issue136
-	// Pay intrinsic gas
-	gas, err := IntrinsicGas(st.data, contractCreation, true)
-	gas += msg.IntrinsicGasBasedOnType()
+	// Pay intrinsic gas.
+	gas, err := msg.IntrinsicGas()
 	kerr.Err = err
 	if kerr.Err != nil {
 		kerr.Status = getReceiptStatusFromVMerr(nil)

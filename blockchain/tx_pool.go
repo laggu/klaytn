@@ -581,11 +581,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInsufficientFunds
 	}
 	// TODO-GX-issue136
-	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+	intrGas, err := tx.IntrinsicGas()
 	if err != nil {
 		return err
 	}
-	intrGas += tx.IntrinsicGas()
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
 	}

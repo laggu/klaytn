@@ -190,13 +190,13 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Data() []byte         { return common.CopyBytes(tx.data.GetPayload()) }
-func (tx *Transaction) Gas() uint64          { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int   { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int      { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64        { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool     { return true }
-func (tx *Transaction) IntrinsicGas() uint64 { return tx.data.IntrinsicGas() }
+func (tx *Transaction) Data() []byte                  { return common.CopyBytes(tx.data.GetPayload()) }
+func (tx *Transaction) Gas() uint64                   { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int            { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int               { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64                 { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonce() bool              { return true }
+func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
@@ -237,18 +237,21 @@ func (tx *Transaction) Size() common.StorageSize {
 //
 // XXX Rename message to something less arbitrary?
 func (tx *Transaction) AsMessage(s Signer) (Message, error) {
+	intrinsicGas, err := tx.IntrinsicGas()
+	if err != nil {
+		return Message{}, err
+	}
 	msg := Message{
-		nonce:                   tx.data.GetAccountNonce(),
-		gasLimit:                tx.data.GetGasLimit(),
-		gasPrice:                new(big.Int).Set(tx.data.GetPrice()),
-		to:                      tx.data.GetRecipient(),
-		amount:                  tx.data.GetAmount(),
-		data:                    tx.data.GetPayload(),
-		checkNonce:              true,
-		intrinsicGasBasedOnType: tx.IntrinsicGas(),
+		nonce:        tx.data.GetAccountNonce(),
+		gasLimit:     tx.data.GetGasLimit(),
+		gasPrice:     new(big.Int).Set(tx.data.GetPrice()),
+		to:           tx.data.GetRecipient(),
+		amount:       tx.data.GetAmount(),
+		data:         tx.data.GetPayload(),
+		checkNonce:   true,
+		intrinsicGas: intrinsicGas,
 	}
 
-	var err error
 	msg.from, err = Sender(s, tx)
 	return msg, err
 }
@@ -487,37 +490,37 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 //
 // NOTE: In a future PR this will be removed.
 type Message struct {
-	to                      *common.Address
-	from                    common.Address
-	nonce                   uint64
-	amount                  *big.Int
-	gasLimit                uint64
-	gasPrice                *big.Int
-	data                    []byte
-	checkNonce              bool
-	intrinsicGasBasedOnType uint64
+	to           *common.Address
+	from         common.Address
+	nonce        uint64
+	amount       *big.Int
+	gasLimit     uint64
+	gasPrice     *big.Int
+	data         []byte
+	checkNonce   bool
+	intrinsicGas uint64
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) Message {
 	return Message{
-		from:                    from,
-		to:                      to,
-		nonce:                   nonce,
-		amount:                  amount,
-		gasLimit:                gasLimit,
-		gasPrice:                gasPrice,
-		data:                    data,
-		checkNonce:              checkNonce,
-		intrinsicGasBasedOnType: 0,
+		from:         from,
+		to:           to,
+		nonce:        nonce,
+		amount:       amount,
+		gasLimit:     gasLimit,
+		gasPrice:     gasPrice,
+		data:         data,
+		checkNonce:   checkNonce,
+		intrinsicGas: intrinsicGas,
 	}
 }
 
-func (m Message) From() common.Address            { return m.from }
-func (m Message) To() *common.Address             { return m.to }
-func (m Message) GasPrice() *big.Int              { return m.gasPrice }
-func (m Message) Value() *big.Int                 { return m.amount }
-func (m Message) Gas() uint64                     { return m.gasLimit }
-func (m Message) Nonce() uint64                   { return m.nonce }
-func (m Message) Data() []byte                    { return m.data }
-func (m Message) CheckNonce() bool                { return m.checkNonce }
-func (m Message) IntrinsicGasBasedOnType() uint64 { return m.intrinsicGasBasedOnType }
+func (m Message) From() common.Address          { return m.from }
+func (m Message) To() *common.Address           { return m.to }
+func (m Message) GasPrice() *big.Int            { return m.gasPrice }
+func (m Message) Value() *big.Int               { return m.amount }
+func (m Message) Gas() uint64                   { return m.gasLimit }
+func (m Message) Nonce() uint64                 { return m.nonce }
+func (m Message) Data() []byte                  { return m.data }
+func (m Message) CheckNonce() bool              { return m.checkNonce }
+func (m Message) IntrinsicGas() (uint64, error) { return m.intrinsicGas, nil }

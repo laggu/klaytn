@@ -19,6 +19,9 @@ package types
 import (
 	"errors"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/kerrors"
+	"github.com/ground-x/go-gxplatform/params"
+	"math"
 	"math/big"
 )
 
@@ -129,7 +132,7 @@ type TxInternalData interface {
 	Equal(t TxInternalData) bool
 
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
-	IntrinsicGas() uint64
+	IntrinsicGas() (uint64, error)
 
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
@@ -159,4 +162,37 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	}
 
 	return nil, errUndefinedTxType
+}
+
+// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
+	// Set the starting gas for the raw transaction
+	var gas uint64
+	if contractCreation && homestead {
+		gas = params.TxGasContractCreation
+	} else {
+		gas = params.TxGas
+	}
+	// Bump the required gas by the amount of transactional data
+	if len(data) > 0 {
+		// Zero and non-zero bytes are priced differently
+		var nz uint64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		// Make sure we don't exceed uint64 for all data combinations
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+			return 0, kerrors.ErrOutOfGas
+		}
+		gas += nz * params.TxDataNonZeroGas
+
+		z := uint64(len(data)) - nz
+		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+			return 0, kerrors.ErrOutOfGas
+		}
+		gas += z * params.TxDataZeroGas
+	}
+	return gas, nil
 }

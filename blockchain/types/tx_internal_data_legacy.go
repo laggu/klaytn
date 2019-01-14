@@ -160,8 +160,8 @@ func (t *txdata) SetS(s *big.Int) {
 	t.S.Set(s)
 }
 
-func (t *txdata) IntrinsicGas() uint64 {
-	return 0
+func (t *txdata) IntrinsicGas() (uint64, error) {
+	return IntrinsicGas(t.Payload, t.Recipient == nil, true)
 }
 
 func (t *txdata) SerializeForSign() []interface{} {

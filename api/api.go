@@ -638,8 +638,13 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice) // TODO-GX-issue136 default gasPrice
 	}
 
+	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, true)
+	if err != nil {
+		return nil, 0, false, err
+	}
+
 	// Create new call message
-	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, false)
+	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, false, intrinsicGas)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
