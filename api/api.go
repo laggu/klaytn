@@ -754,6 +754,13 @@ func (s *PublicBlockChainAPI) GetLatestPeggedBlockNumber() uint64 {
 	return s.b.GetLatestPeggedBlockNumber()
 }
 
+// GetReceiptFromParentChain returns saved receipt received from parent chain.
+// This receipt is for the transaction sent from the child chain and executed on the parent chain.
+// It assumes that a child chain has only one parent chain.
+func (s *PublicBlockChainAPI) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	return s.b.GetReceiptFromParentChain(blockHash)
+}
+
 // ExecutionResult groups all structured logs emitted by the EVM
 // while replaying a transaction in debug mode as well as transaction
 // execution status, the amount of gas used and the return value

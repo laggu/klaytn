@@ -1857,3 +1857,15 @@ func (bc *BlockChain) GetLatestPeggedBlockNumber() uint64 {
 func (bc *BlockChain) WritePeggedBlockNumber(blockNum uint64) {
 	bc.db.WritePeggedBlockNumber(blockNum)
 }
+
+// WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
+// with corresponding block hash. It assumes that a child chain has only one parent chain.
+func (bc *BlockChain) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
+	bc.db.WriteReceiptFromParentChain(blockHash, receipt)
+}
+
+// GetReceiptFromParentChain returns a receipt received from parent chain to child chain
+// with corresponding block hash. It assumes that a child chain has only one parent chain.
+func (bc *BlockChain) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	return bc.db.ReadReceiptFromParentChain(blockHash)
+}

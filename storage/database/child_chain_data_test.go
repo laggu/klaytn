@@ -17,9 +17,11 @@
 package database
 
 import (
+	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 )
@@ -82,5 +84,40 @@ func TestChildChainData_ReadAndWrite_PeggedBlockNumber(t *testing.T) {
 	dbm.WritePeggedBlockNumber(newBlockNum)
 	blockNumFromDB = dbm.ReadPeggedBlockNumber()
 	assert.Equal(t, newBlockNum, blockNumFromDB)
+
+}
+
+func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
+	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	dbm, err := NewDBManager(dir, LEVELDB, false, 32, 32)
+	if err != nil {
+		t.Fatalf("cannot create DBManager: %v", err)
+	}
+	defer dbm.Close()
+
+	blockHash := common.HexToHash("0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e")
+	rct := &types.Receipt{}
+	rct.TxHash = common.BigToHash(big.NewInt(12345))
+	rct.CumulativeGasUsed = uint64(12345)
+	rct.Status = types.ReceiptStatusSuccessful
+
+	rctFromDB := dbm.ReadReceiptFromParentChain(blockHash)
+	assert.Nil(t, rctFromDB)
+
+	dbm.WriteReceiptFromParentChain(blockHash, rct)
+	rctFromDB = dbm.ReadReceiptFromParentChain(blockHash)
+
+	assert.Equal(t, rct.Status, rctFromDB.Status)
+	assert.Equal(t, rct.CumulativeGasUsed, rctFromDB.CumulativeGasUsed)
+	assert.Equal(t, rct.TxHash, rctFromDB.TxHash)
+
+	newBlockHash := common.HexToHash("0x0f0f0e0e0e0e0e0e0e0e0e0e0e0e0f0f")
+	rctFromDB = dbm.ReadReceiptFromParentChain(newBlockHash)
+	assert.Nil(t, rctFromDB)
 
 }

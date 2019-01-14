@@ -438,6 +438,11 @@ web3._extend({
 			call: 'klay_getLatestPeggedBlockNumber',
 			params: 0
 		}),
+		new web3._extend.Method({
+			name: 'getReceiptFromParentChain',
+			call: 'klay_getReceiptFromParentChain',
+			params: 1
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

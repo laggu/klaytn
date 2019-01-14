@@ -221,6 +221,10 @@ func (b *RangerAPIBackend) GetLatestPeggedBlockNumber() uint64 {
 	return b.ranger.blockchain.GetLatestPeggedBlockNumber()
 }
 
+func (b *RangerAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	return b.ranger.blockchain.GetReceiptFromParentChain(blockHash)
+}
+
 const (
 	// bloomFilterThreads is the number of goroutines used locally per filter to
 	// multiplex requests onto the global servicing goroutines.

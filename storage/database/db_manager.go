@@ -132,6 +132,9 @@ type DBManager interface {
 	// below two operations are used in child chain side, not parent chain side.
 	WritePeggedBlockNumber(blockNum uint64)
 	ReadPeggedBlockNumber() uint64
+
+	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
+	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
 }
 
 type DatabaseEntryType uint8
@@ -923,6 +926,38 @@ func (dbm *databaseManager) ReadPeggedBlockNumber() uint64 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(data)
+}
+
+// WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
+// with corresponding block hash. It assumes that a child chain has only one parent chain.
+func (dbm *databaseManager) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
+	receiptForStorage := (*types.ReceiptForStorage)(receipt)
+	db := dbm.getDatabase(childChainDB)
+	byte, err := rlp.EncodeToBytes(receiptForStorage)
+	if err != nil {
+		logger.Crit("Failed to RLP encode receipt received from parent chain", "receipt.TxHash", receipt.TxHash, "err", err)
+	}
+	key := receiptFromParentChainKey(blockHash)
+	if err = db.Put(key, byte); err != nil {
+		logger.Crit("Failed to store receipt received from parent chain", "receipt.TxHash", receipt.TxHash, "err", err)
+	}
+}
+
+// ReadReceiptFromParentChain returns a receipt received from parent chain to child chain
+// with corresponding block hash. It assumes that a child chain has only one parent chain.
+func (dbm *databaseManager) ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	db := dbm.getDatabase(childChainDB)
+	key := receiptFromParentChainKey(blockHash)
+	data, _ := db.Get(key)
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	serviceChainTxReceipt := new(types.ReceiptForStorage)
+	if err := rlp.Decode(bytes.NewReader(data), serviceChainTxReceipt); err != nil {
+		logger.Error("Invalid Receipt RLP received from parent chain", "err", err)
+		return nil
+	}
+	return (*types.Receipt)(serviceChainTxReceipt)
 }
 
 // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits

@@ -69,8 +69,9 @@ var (
 	preimageCounter    = metrics.NewRegisteredCounter("db/preimage/total", nil)
 	preimageHitCounter = metrics.NewRegisteredCounter("db/preimage/hits", nil)
 
-	childChainTxHashPrefix       = []byte("ccTxHash")
-	lastServiceChainTxReceiptKey = []byte("LastServiceChainTxReceipt")
+	childChainTxHashPrefix          = []byte("ccTxHash")
+	lastServiceChainTxReceiptKey    = []byte("LastServiceChainTxReceipt")
+	receiptFromParentChainKeyPrefix = []byte("receiptFromParentChain")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
@@ -143,4 +144,8 @@ func istanbulSnapshotKey(hash common.Hash) []byte {
 
 func childChainTxHashKey(ccBlockHash common.Hash) []byte {
 	return append(append(childChainTxHashPrefix, ccBlockHash.Bytes()...))
+}
+
+func receiptFromParentChainKey(blockHash common.Hash) []byte {
+	return append(receiptFromParentChainKeyPrefix, blockHash.Bytes()...)
 }

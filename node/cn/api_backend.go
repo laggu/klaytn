@@ -246,3 +246,7 @@ func (b *GxpAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHas
 func (b *GxpAPIBackend) GetLatestPeggedBlockNumber() uint64 {
 	return b.gxp.blockchain.GetLatestPeggedBlockNumber()
 }
+
+func (b *GxpAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	return b.gxp.blockchain.GetReceiptFromParentChain(blockHash)
+}
