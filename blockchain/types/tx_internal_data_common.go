@@ -157,6 +157,17 @@ func (t *TxInternalDataCommon) SetS(s *big.Int) {
 	t.S.Set(s)
 }
 
+func (t *TxInternalDataCommon) SerializeForSign() []interface{} {
+	return []interface{}{
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+	}
+}
+
 func (t *TxInternalDataCommon) Equal(b *TxInternalDataCommon) bool {
 	return t.AccountNonce == b.AccountNonce &&
 		t.Price.Cmp(b.Price) == 0 &&

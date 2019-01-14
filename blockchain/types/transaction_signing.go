@@ -149,15 +149,9 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
-	return rlpHash([]interface{}{
-		tx.data.GetAccountNonce(),
-		tx.data.GetPrice(),
-		tx.data.GetGasLimit(),
-		tx.data.GetRecipient(),
-		tx.data.GetAmount(),
-		tx.data.GetPayload(),
-		s.chainId, uint(0), uint(0),
-	})
+	infs := append(tx.data.SerializeForSign(),
+		s.chainId, uint(0), uint(0))
+	return rlpHash(infs)
 }
 
 // TODO-GX Remove HomesteadSigner
@@ -203,14 +197,7 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
-	return rlpHash([]interface{}{
-		tx.data.GetAccountNonce(),
-		tx.data.GetPrice(),
-		tx.data.GetGasLimit(),
-		tx.data.GetRecipient(),
-		tx.data.GetAmount(),
-		tx.data.GetPayload(),
-	})
+	return rlpHash(tx.data.SerializeForSign())
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {

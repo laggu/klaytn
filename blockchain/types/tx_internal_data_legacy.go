@@ -164,6 +164,17 @@ func (t *txdata) IntrinsicGas() uint64 {
 	return 0
 }
 
+func (t *txdata) SerializeForSign() []interface{} {
+	return []interface{}{
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+	}
+}
+
 func (t *txdata) equalHash(a *txdata) bool {
 	if t.GetHash() == nil && a.GetHash() == nil {
 		return true

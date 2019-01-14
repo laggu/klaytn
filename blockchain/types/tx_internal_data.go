@@ -130,6 +130,9 @@ type TxInternalData interface {
 
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
 	IntrinsicGas() uint64
+
+	// SerializeForSign returns a slice containing attributes to make its tx signature.
+	SerializeForSign() []interface{}
 }
 
 // TxInternalDataFrom has a function `GetFrom()`.
