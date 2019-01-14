@@ -41,6 +41,13 @@ type sigCache struct {
 	from   common.Address
 }
 
+// sigCachePubkey is used to cache the derived public key and contains
+// the signer used to derive it.
+type sigCachePubkey struct {
+	signer Signer
+	pubkey *ecdsa.PublicKey
+}
+
 // TODO-GX Remove the second parameter blockNumber
 // MakeSigner returns a Signer based on the given chain config and block number.
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
@@ -83,11 +90,39 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	return addr, nil
 }
 
+// SenderPubkey returns the public key derived from the signature (V, R, S) using secp256k1
+// elliptic curve and an error if it failed deriving or upon an incorrect
+// signature.
+//
+// SenderPubkey may cache the public key, allowing it to be used regardless of
+// signing method. The cache is invalidated if the cached signer does
+// not match the signer used in the current call.
+func SenderPubkey(signer Signer, tx *Transaction) (*ecdsa.PublicKey, error) {
+	if sc := tx.from.Load(); sc != nil {
+		sigCache := sc.(sigCachePubkey)
+		// If the signer used to derive from in a previous
+		// call is not the same as used current, invalidate
+		// the cache.
+		if sigCache.signer.Equal(signer) {
+			return sigCache.pubkey, nil
+		}
+	}
+
+	pubkey, err := signer.SenderPubkey(tx)
+	if err != nil {
+		return nil, err
+	}
+	tx.from.Store(sigCachePubkey{signer: signer, pubkey: pubkey})
+	return pubkey, nil
+}
+
 // Signer encapsulates transaction signature handling. Note that this interface is not a
 // stable API and may change at any time to accommodate new protocol rules.
 type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
+	// SenderPubkey returns the public key derived from tx signature and txhash.
+	SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
 	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
@@ -120,6 +155,11 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
+	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
+	if tx.data.Type() != TxTypeLegacyTransaction {
+		logger.Warn("No need to execute Sender!", "tx", tx.String())
+	}
+
 	if !tx.Protected() {
 		return HomesteadSigner{}.Sender(tx)
 	}
@@ -130,6 +170,24 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	V := new(big.Int).Sub(txV, s.chainIdMul)
 	V.Sub(V, big8)
 	return recoverPlain(s.Hash(tx), txR, txS, V, true)
+}
+
+func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
+	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
+	if tx.data.Type() == TxTypeLegacyTransaction {
+		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
+	}
+
+	if !tx.Protected() {
+		return HomesteadSigner{}.SenderPubkey(tx)
+	}
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return nil, ErrInvalidChainId
+	}
+	txV, txR, txS := tx.data.GetVRS()
+	V := new(big.Int).Sub(txV, s.chainIdMul)
+	V.Sub(V, big8)
+	return recoverPlainPubkey(s.Hash(tx), txR, txS, V, true)
 }
 
 // WithSignature returns a new transaction with the given signature. This signature
@@ -171,8 +229,23 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
+	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
+	if tx.data.Type() != TxTypeLegacyTransaction {
+		logger.Warn("No need to execute Sender!", "tx", tx.String())
+	}
+
 	v, r, s := tx.data.GetVRS()
 	return recoverPlain(hs.Hash(tx), r, s, v, true)
+}
+
+func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
+	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
+	if tx.data.Type() == TxTypeLegacyTransaction {
+		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
+	}
+
+	v, r, s := tx.data.GetVRS()
+	return recoverPlainPubkey(hs.Hash(tx), r, s, v, true)
 }
 
 type FrontierSigner struct{}
@@ -201,17 +274,32 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
+	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
+	if tx.data.Type() != TxTypeLegacyTransaction {
+		logger.Warn("No need to execute Sender!", "tx", tx.String())
+	}
+
 	v, r, s := tx.data.GetVRS()
 	return recoverPlain(fs.Hash(tx), r, s, v, false)
 }
 
-func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
+func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
+	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
+	if tx.data.Type() == TxTypeLegacyTransaction {
+		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
+	}
+
+	v, r, s := tx.data.GetVRS()
+	return recoverPlainPubkey(fs.Hash(tx), r, s, v, false)
+}
+
+func recoverPlainCommon(sighash common.Hash, R, S, Vb *big.Int, homestead bool) ([]byte, error) {
 	if Vb.BitLen() > 8 {
-		return common.Address{}, ErrInvalidSig
+		return []byte{}, ErrInvalidSig
 	}
 	V := byte(Vb.Uint64() - 27)
 	if !crypto.ValidateSignatureValues(V, R, S, homestead) {
-		return common.Address{}, ErrInvalidSig
+		return []byte{}, ErrInvalidSig
 	}
 	// encode the snature in uncompressed format
 	r, s := R.Bytes(), S.Bytes()
@@ -222,14 +310,37 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (commo
 	// recover the public key from the snature
 	pub, err := crypto.Ecrecover(sighash[:], sig)
 	if err != nil {
-		return common.Address{}, err
+		return []byte{}, err
 	}
 	if len(pub) == 0 || pub[0] != 4 {
-		return common.Address{}, errors.New("invalid public key")
+		return []byte{}, errors.New("invalid public key")
 	}
+	return pub, nil
+}
+
+func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
+	pub, err := recoverPlainCommon(sighash, R, S, Vb, homestead)
+	if err != nil {
+		return common.Address{}, err
+	}
+
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
 	return addr, nil
+}
+
+func recoverPlainPubkey(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (*ecdsa.PublicKey, error) {
+	pub, err := recoverPlainCommon(sighash, R, S, Vb, homestead)
+	if err != nil {
+		return nil, err
+	}
+
+	pubkey, err := crypto.UnmarshalPubkey(pub)
+	if err != nil {
+		return nil, err
+	}
+
+	return pubkey, nil
 }
 
 // deriveChainId derives the chain id from the given v parameter

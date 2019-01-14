@@ -21,6 +21,7 @@
 package client
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/common"
@@ -52,6 +53,12 @@ func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error)
 		return common.Address{}, errNotCached
 	}
 	return s.addr, nil
+}
+
+func (s *senderFromServer) SenderPubkey(tx *types.Transaction) (*ecdsa.PublicKey, error) {
+	// TODO-GX: need to check this routine is never called or not.
+	// `senderFromServer` is only used in klayclient.go.
+	panic("SenderPubkey should not be called!")
 }
 
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
