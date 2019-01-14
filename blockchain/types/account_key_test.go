@@ -30,6 +30,7 @@ func TestAccountKeySerialization(t *testing.T) {
 	}{
 		{"Nil", genAccountKeyNil()},
 		{"Public", genAccountKeyPublic()},
+		{"Fail", genAccountKeyFail()},
 	}
 
 	var testcases = []struct {
@@ -63,8 +64,15 @@ func testAccountKeyRLP(t *testing.T, k AccountKey) {
 		t.Fatal(err)
 	}
 
-	if !k.Equal(dec.key) {
-		t.Errorf("k != dec.key\nk=%v\ndec.key=%v", k, dec.key)
+	switch k.Type() {
+	case AccountKeyTypeFail:
+		if k.Equal(dec.key) {
+			t.Errorf("AlwaysFail key returns true! k != dec.key\nk=%v\ndec.key=%v", k, dec.key)
+		}
+	default:
+		if !k.Equal(dec.key) {
+			t.Errorf("AlwaysFail key returns true! k != dec.key\nk=%v\ndec.key=%v", k, dec.key)
+		}
 	}
 }
 
@@ -82,8 +90,15 @@ func testAccountKeyJSON(t *testing.T, k AccountKey) {
 		t.Fatal(err)
 	}
 
-	if !k.Equal(dec.key) {
-		t.Errorf("k != dec.key\nk=%v\ndec.key=%v", k, dec.key)
+	switch k.Type() {
+	case AccountKeyTypeFail:
+		if k.Equal(dec.key) {
+			t.Errorf("AlwaysFail key returns true! k != dec.key\nk=%v\ndec.key=%v", k, dec.key)
+		}
+	default:
+		if !k.Equal(dec.key) {
+			t.Errorf("AlwaysFail key returns true! k != dec.key\nk=%v\ndec.key=%v", k, dec.key)
+		}
 	}
 }
 
@@ -94,4 +109,8 @@ func genAccountKeyNil() AccountKey {
 func genAccountKeyPublic() AccountKey {
 	k, _ := crypto.GenerateKey()
 	return NewAccountKeyPublicWithValue(&k.PublicKey)
+}
+
+func genAccountKeyFail() AccountKey {
+	return NewAccountKeyFail()
 }

@@ -23,6 +23,7 @@ type AccountKeyType uint
 const (
 	AccountKeyTypeNil AccountKeyType = iota
 	AccountKeyTypePublic
+	AccountKeyTypeFail
 )
 
 var (
@@ -53,6 +54,8 @@ func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 		return NewAccountKeyNil(), nil
 	case AccountKeyTypePublic:
 		return NewAccountKeyPublic(), nil
+	case AccountKeyTypeFail:
+		return NewAccountKeyFail(), nil
 	}
 
 	return nil, errUndefinedAccountKeyType
