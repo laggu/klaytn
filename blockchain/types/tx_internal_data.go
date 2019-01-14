@@ -127,6 +127,9 @@ type TxInternalData interface {
 
 	// Equal returns true if all attributes are the same.
 	Equal(t TxInternalData) bool
+
+	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
+	IntrinsicGas() uint64
 }
 
 // TxInternalDataFrom has a function `GetFrom()`.

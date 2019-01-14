@@ -169,6 +169,10 @@ func (t *TxInternalDataCommon) Equal(b *TxInternalDataCommon) bool {
 		t.S.Cmp(b.S) == 0
 }
 
+func (t *TxInternalDataCommon) IntrinsicGas() uint64 {
+	return 0
+}
+
 func (t *TxInternalDataCommon) String() string {
 	return fmt.Sprintf(`
 	TX(%x)

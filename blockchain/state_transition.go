@@ -76,6 +76,10 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+
+	// IntrinsicGasBasedOnType returns `intrinsic gas` based on the tx type.
+	// This value is used to differentiate tx fee based on the tx type.
+	IntrinsicGasBasedOnType() uint64
 }
 
 // TODO-GX Later we can merge Err and Status into one uniform error.
@@ -207,6 +211,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	// TODO-GX-issue136
 	// Pay intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation, true)
+	gas += msg.IntrinsicGasBasedOnType()
 	kerr.Err = err
 	if kerr.Err != nil {
 		kerr.Status = getReceiptStatusFromVMerr(nil)

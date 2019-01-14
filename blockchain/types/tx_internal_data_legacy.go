@@ -160,6 +160,10 @@ func (t *txdata) SetS(s *big.Int) {
 	t.S.Set(s)
 }
 
+func (t *txdata) IntrinsicGas() uint64 {
+	return 0
+}
+
 func (t *txdata) equalHash(a *txdata) bool {
 	if t.GetHash() == nil && a.GetHash() == nil {
 		return true
