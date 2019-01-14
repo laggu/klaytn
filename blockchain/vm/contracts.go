@@ -28,6 +28,7 @@ import (
 	"github.com/ground-x/go-gxplatform/common/math"
 	"github.com/ground-x/go-gxplatform/crypto"
 	"github.com/ground-x/go-gxplatform/crypto/bn256"
+	"github.com/ground-x/go-gxplatform/kerrors"
 	"github.com/ground-x/go-gxplatform/log"
 	"github.com/ground-x/go-gxplatform/params"
 	"golang.org/x/crypto/ripemd160"
@@ -67,7 +68,7 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 	if contract.UseGas(gas) {
 		return p.Run(input)
 	}
-	return nil, ErrOutOfGas
+	return nil, kerrors.ErrOutOfGas
 }
 
 // ECRECOVER implemented as a native contract.
@@ -391,5 +392,5 @@ func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, e
 		}
 		return nil, nil
 	}
-	return nil, ErrOutOfGas
+	return nil, kerrors.ErrOutOfGas
 }

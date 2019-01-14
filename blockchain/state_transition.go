@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/go-gxplatform/blockchain/types"
 	"github.com/ground-x/go-gxplatform/blockchain/vm"
 	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/go-gxplatform/kerrors"
 	"github.com/ground-x/go-gxplatform/params"
 	"math"
 	"math/big"
@@ -113,13 +114,13 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 		}
 		// Make sure we don't exceed uint64 for all data combinations
 		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
-			return 0, vm.ErrOutOfGas
+			return 0, kerrors.ErrOutOfGas
 		}
 		gas += nz * params.TxDataNonZeroGas
 
 		z := uint64(len(data)) - nz
 		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, vm.ErrOutOfGas
+			return 0, kerrors.ErrOutOfGas
 		}
 		gas += z * params.TxDataZeroGas
 	}
@@ -160,7 +161,7 @@ func (st *StateTransition) to() common.Address {
 
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
-		return vm.ErrOutOfGas
+		return kerrors.ErrOutOfGas
 	}
 	st.gas -= amount
 
@@ -266,7 +267,7 @@ var vmerr2receiptstatus = map[error]uint{
 	vm.ErrContractAddressCollision: types.ReceiptStatusErrContractAddressCollision,
 	vm.ErrCodeStoreOutOfGas:        types.ReceiptStatusErrCodeStoreOutOfGas,
 	vm.ErrMaxCodeSizeExceeded:      types.ReceiptStatuserrMaxCodeSizeExceed,
-	vm.ErrOutOfGas:                 types.ReceiptStatusErrOutOfGas,
+	kerrors.ErrOutOfGas:            types.ReceiptStatusErrOutOfGas,
 	vm.ErrWriteProtection:          types.ReceiptStatusErrWriteProtection,
 	vm.ErrExecutionReverted:        types.ReceiptStatusErrExecutionReverted,
 	vm.ErrOpcodeCntLimitReached:    types.ReceiptStatusErrOpcodeCntLimitReached,
@@ -279,7 +280,7 @@ var receiptstatus2vmerr = map[uint]error{
 	types.ReceiptStatusErrContractAddressCollision: vm.ErrContractAddressCollision,
 	types.ReceiptStatusErrCodeStoreOutOfGas:        vm.ErrCodeStoreOutOfGas,
 	types.ReceiptStatuserrMaxCodeSizeExceed:        vm.ErrMaxCodeSizeExceeded,
-	types.ReceiptStatusErrOutOfGas:                 vm.ErrOutOfGas,
+	types.ReceiptStatusErrOutOfGas:                 kerrors.ErrOutOfGas,
 	types.ReceiptStatusErrWriteProtection:          vm.ErrWriteProtection,
 	types.ReceiptStatusErrExecutionReverted:        vm.ErrExecutionReverted,
 	types.ReceiptStatusErrOpcodeCntLimitReached:    vm.ErrOpcodeCntLimitReached,

@@ -23,6 +23,7 @@ package vm
 import (
 	"fmt"
 	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/go-gxplatform/kerrors"
 	"github.com/ground-x/go-gxplatform/params"
 	"sync/atomic"
 )
@@ -211,7 +212,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
 		// TODO-GX-issue136
 		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas // TODO-GX-issue136 TODO-GX-error
+			return nil, kerrors.ErrOutOfGas // TODO-GX-issue136 TODO-GX-error
 		}
 		if extraSize > 0 {
 			mem.Increase(extraSize)
