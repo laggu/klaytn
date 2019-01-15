@@ -44,7 +44,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/crypto"
 )
 
 var dumpEnc bool

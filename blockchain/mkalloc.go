@@ -33,8 +33,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 	"os"
 	"sort"

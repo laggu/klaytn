@@ -23,9 +23,9 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"errors"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"math/rand"
 	"net"
 	"reflect"

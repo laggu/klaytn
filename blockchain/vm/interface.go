@@ -21,8 +21,8 @@
 package vm
 
 import (
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
 

@@ -21,10 +21,10 @@
 package cn
 
 import (
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/datasync/downloader"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/datasync/downloader"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"math/rand"
 	"sync/atomic"
 	"time"

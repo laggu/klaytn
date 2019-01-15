@@ -18,7 +18,7 @@ package types
 
 import (
 	"encoding/json"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 )
 

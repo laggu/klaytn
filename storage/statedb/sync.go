@@ -23,9 +23,9 @@ package statedb
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 

@@ -28,15 +28,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/vm"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/consensus/gxhash"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 // So we can deterministically seed different blockchains

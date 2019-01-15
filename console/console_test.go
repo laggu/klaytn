@@ -30,12 +30,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/console/jsre"
-	"github.com/ground-x/go-gxplatform/node"
-	"github.com/ground-x/go-gxplatform/node/cn"
+	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/gxhash"
+	"github.com/ground-x/klaytn/console/jsre"
+	"github.com/ground-x/klaytn/node"
+	"github.com/ground-x/klaytn/node/cn"
 )
 
 const (

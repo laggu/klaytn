@@ -23,8 +23,8 @@ package runtime_test
 import (
 	"fmt"
 
-	"github.com/ground-x/go-gxplatform/blockchain/vm/runtime"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/blockchain/vm/runtime"
+	"github.com/ground-x/klaytn/common"
 )
 
 func ExampleExecute() {

@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/params"
 	"github.com/urfave/cli"
 	"os"
 	"text/template"

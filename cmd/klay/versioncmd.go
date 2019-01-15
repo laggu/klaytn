@@ -22,8 +22,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

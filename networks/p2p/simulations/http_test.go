@@ -31,12 +31,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/adapters"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/p2p/simulations/adapters"
+	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/node"
 )
 
 // testService implements the node.Service interface and provides protocols

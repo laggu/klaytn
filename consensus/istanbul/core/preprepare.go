@@ -21,9 +21,9 @@
 package core
 
 import (
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/consensus/istanbul"
 	"time"
 )
 

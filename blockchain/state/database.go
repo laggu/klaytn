@@ -23,9 +23,9 @@ package state
 import (
 	"sync"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/storage/database"
+	"github.com/ground-x/klaytn/storage/statedb"
 
 	"fmt"
 )

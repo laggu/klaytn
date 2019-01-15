@@ -21,9 +21,9 @@
 package consensus
 
 import (
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/networks/p2p"
 )
 
 // Constants to match up protocol versions and messages

@@ -22,10 +22,10 @@ package gxhash
 
 import (
 	"encoding/binary"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/bitutil"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/bitutil"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/crypto/sha3"
 	"hash"
 	"math/big"
 	"reflect"

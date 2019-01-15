@@ -3,7 +3,7 @@ package grpc
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/klaytn/cmd/utils"
 	"html/template"
 	"strings"
 )

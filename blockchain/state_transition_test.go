@@ -18,8 +18,8 @@ package blockchain
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/vm"
 	"testing"
 )
 

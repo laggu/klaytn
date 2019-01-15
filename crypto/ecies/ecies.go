@@ -40,7 +40,7 @@ import (
 	"crypto/hmac"
 	"crypto/subtle"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"hash"
 	"io"
 	"math/big"

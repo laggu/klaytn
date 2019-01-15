@@ -21,7 +21,7 @@
 package accounts
 
 import (
-	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/klaytn/event"
 	"reflect"
 	"sort"
 	"sync"

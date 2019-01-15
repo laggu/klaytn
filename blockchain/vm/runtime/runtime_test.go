@@ -25,11 +25,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/accounts/abi"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/vm"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 func TestDefaults(t *testing.T) {

@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/klaytn/common/math"
 )
 
 // Memory implements a simple memory model for the gxplatform virtual machine.

@@ -22,11 +22,11 @@ package downloader
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/storage/database"
+	"github.com/ground-x/klaytn/storage/statedb"
 	"hash"
 	"sync"
 	"time"

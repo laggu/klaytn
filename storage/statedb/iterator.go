@@ -24,8 +24,8 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/ser/rlp"
 )
 
 // Iterator is a key-value trie iterator that traverses a Trie.

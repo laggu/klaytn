@@ -21,18 +21,18 @@
 package node
 
 import (
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"net"
 	"sync"
 
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/api/debug"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/api/debug"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/storage/database"
 	"github.com/prometheus/prometheus/util/flock"
 	"os"
 	"path/filepath"

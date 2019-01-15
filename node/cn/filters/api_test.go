@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/networks/rpc"
 )
 
 func TestUnmarshalJSONNewFilterArgs(t *testing.T) {

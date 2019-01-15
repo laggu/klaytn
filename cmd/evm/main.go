@@ -25,7 +25,7 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/klaytn/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -117,7 +117,7 @@ var (
 
 func init() {
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018 The go-gxplatform Authors"
+	app.Copyright = "Copyright 2018 The klaytn Authors"
 
 	app.Flags = []cli.Flag{
 		CreateFlag,

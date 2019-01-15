@@ -21,9 +21,9 @@
 package keystore
 
 import (
-	"github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/klaytn"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"math/big"
 )
 

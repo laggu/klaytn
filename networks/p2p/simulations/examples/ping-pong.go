@@ -31,13 +31,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/adapters"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/p2p/simulations"
+	"github.com/ground-x/klaytn/networks/p2p/simulations/adapters"
+	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/node"
 )
 
 var adapterType = flag.String("adapter", "sim", `node adapter to use (one of "sim", "exec" or "docker")`)

@@ -24,8 +24,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.

@@ -26,7 +26,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 )
 
 func TestHexOrDecimal256(t *testing.T) {

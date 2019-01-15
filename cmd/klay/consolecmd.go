@@ -22,10 +22,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
-	"github.com/ground-x/go-gxplatform/console"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/console"
+	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
 	"path/filepath"
 	"strings"

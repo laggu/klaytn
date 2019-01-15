@@ -27,7 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/klaytn/log"
 	"net"
 	"net/url"
 	"os"

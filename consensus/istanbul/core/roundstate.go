@@ -21,9 +21,9 @@
 package core
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"math/big"
 	"sync"

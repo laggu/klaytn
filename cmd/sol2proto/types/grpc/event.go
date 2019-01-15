@@ -1,8 +1,8 @@
 package grpc
 
 import (
-	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/klaytn/accounts/abi"
+	"github.com/ground-x/klaytn/cmd/utils"
 )
 
 // Parse gRPC methods and required message types from events in an Ethereum contract ABI.

@@ -23,7 +23,7 @@ package keystore
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"os"
 	"path/filepath"
 )

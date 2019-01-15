@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/klaytn/event"
 )
 
 // This example demonstrates how SubscriptionScope can be used to control the lifetime of

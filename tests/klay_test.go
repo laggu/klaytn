@@ -18,10 +18,10 @@ package tests
 
 import (
 	"flag"
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common/profile"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"math/big"
 	"math/rand"
 	"os"

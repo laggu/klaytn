@@ -23,8 +23,8 @@ package console
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"io"
 	"strings"
 	"time"

@@ -32,8 +32,8 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/common"
 )
 
 var (

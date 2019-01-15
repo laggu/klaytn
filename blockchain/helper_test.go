@@ -23,9 +23,9 @@ package blockchain
 import (
 	"container/list"
 
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 // Implement our EthTest Manager

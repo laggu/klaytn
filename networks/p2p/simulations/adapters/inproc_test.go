@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/pipes"
+	"github.com/ground-x/klaytn/networks/p2p/simulations/pipes"
 )
 
 func TestTCPPipe(t *testing.T) {

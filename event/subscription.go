@@ -22,7 +22,7 @@ package event
 
 import (
 	"context"
-	"github.com/ground-x/go-gxplatform/common/mclock"
+	"github.com/ground-x/klaytn/common/mclock"
 	"sync"
 	"time"
 )

@@ -20,7 +20,7 @@
 
 package bind
 
-import "github.com/ground-x/go-gxplatform/accounts/abi"
+import "github.com/ground-x/klaytn/accounts/abi"
 
 // tmplData is the data structure required to fill the binding template.
 type tmplData struct {
@@ -71,12 +71,12 @@ package {{.Package}}
 
 import (
 
-	gxplatform "github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/event"
+	gxplatform "github.com/ground-x/klaytn"
+	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/accounts/abi"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/event"
 )
 
 {{range $contract := .Contracts}}

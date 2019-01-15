@@ -17,8 +17,8 @@
 package blockchain
 
 import (
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/storage/statedb"
 )
 
 func InitDeriveSha(deriveShaImpl int) {

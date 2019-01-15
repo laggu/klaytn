@@ -18,7 +18,7 @@ package benchmarks
 
 import (
 	"bytes"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"math/big"

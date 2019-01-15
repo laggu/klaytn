@@ -46,7 +46,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "github.com/ground-x/go-gxplatform/crypto"
+	ethcrypto "github.com/ground-x/klaytn/crypto"
 )
 
 var (

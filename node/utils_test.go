@@ -26,8 +26,8 @@ package node
 import (
 	"reflect"
 
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/rpc"
 )
 
 // NoopService is a trivial implementation of the Service interface.

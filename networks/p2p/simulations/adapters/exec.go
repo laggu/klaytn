@@ -39,11 +39,11 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/node"
 	"golang.org/x/net/websocket"
 )
 

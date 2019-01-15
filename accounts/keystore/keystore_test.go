@@ -30,9 +30,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/event"
 )
 
 var testSigData = make([]byte, 32)

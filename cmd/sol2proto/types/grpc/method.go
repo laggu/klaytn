@@ -1,6 +1,6 @@
 package grpc
 
-import "github.com/ground-x/go-gxplatform/accounts/abi"
+import "github.com/ground-x/klaytn/accounts/abi"
 
 // Parse gRPC methods and required message types from methods in an Ethereum contract ABI.
 func ParseMethods(abiMethods map[string]abi.Method) (methods Methods, msgs []Message) {

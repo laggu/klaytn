@@ -26,7 +26,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/klaytn/blockchain/vm"
 )
 
 func TestState(t *testing.T) {

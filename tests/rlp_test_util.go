@@ -28,7 +28,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/ser/rlp"
 )
 
 // RLPTest is the JSON structure of a single RLP test.

@@ -23,9 +23,9 @@ package bind
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/accounts/abi"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"math/big"
 	"reflect"
 )

@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/datasync/downloader"
+	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/consensus/gxhash"
+	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/datasync/downloader"
 )
 
 var _ = (*configMarshaling)(nil)

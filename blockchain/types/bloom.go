@@ -22,8 +22,8 @@ package types
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/crypto"
 	"math/big"
 )
 

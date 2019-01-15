@@ -31,8 +31,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/metrics"
 )
 
 var OpenFileLimit = 64

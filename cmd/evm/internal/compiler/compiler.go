@@ -24,7 +24,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ground-x/go-gxplatform/blockchain/asm"
+	"github.com/ground-x/klaytn/blockchain/asm"
 )
 
 func Compile(fn string, src []byte, debug bool) (string, error) {

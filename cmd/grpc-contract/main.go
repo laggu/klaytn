@@ -23,7 +23,7 @@ package main
 import (
 	"fmt"
 	"github.com/getamis/sirius/util"
-	"github.com/ground-x/go-gxplatform/cmd/grpc-contract/internal/impl"
+	"github.com/ground-x/klaytn/cmd/grpc-contract/internal/impl"
 	"io/ioutil"
 	"os"
 	"path"

@@ -24,8 +24,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/crypto"
 )
 
 // Tests that transactions can be added to strict lists and list contents and

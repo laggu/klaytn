@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 )
 
 const testSectionSize = 4096

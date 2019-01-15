@@ -18,9 +18,9 @@ package tests
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common/profile"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/storage/statedb"
 	"testing"
 	"time"
 )

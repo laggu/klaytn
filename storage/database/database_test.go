@@ -23,7 +23,7 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"io/ioutil"
 	"math/big"
 	"os"

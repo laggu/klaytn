@@ -25,10 +25,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.

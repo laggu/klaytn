@@ -22,11 +22,11 @@ package backend
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/node"
 	"github.com/hashicorp/golang-lru"
 )
 

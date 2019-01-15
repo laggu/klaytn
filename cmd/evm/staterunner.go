@@ -27,10 +27,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/tests"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/vm"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/tests"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -56,7 +56,7 @@ func stateTestCmd(ctx *cli.Context) error {
 	if len(ctx.Args().First()) == 0 {
 		return errors.New("path-to-test argument required")
 	}
-	// Configure the go-gxplatform logger
+	// Configure the klaytn logger
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
 	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(VerbosityFlag.Name)))
 	log.Root().SetHandler(glogger)

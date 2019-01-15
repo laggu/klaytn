@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/adapters"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/p2p/simulations/adapters"
 )
 
 //a map of mocker names to its function

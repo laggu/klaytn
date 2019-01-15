@@ -23,7 +23,7 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/params"
 )
 
 // List execution errors

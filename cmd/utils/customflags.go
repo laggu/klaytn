@@ -25,7 +25,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/klaytn/common/math"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 	"os"

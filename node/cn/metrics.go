@@ -21,8 +21,8 @@
 package cn
 
 import (
-	"github.com/ground-x/go-gxplatform/metrics"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/klaytn/metrics"
+	"github.com/ground-x/klaytn/networks/p2p"
 )
 
 var (

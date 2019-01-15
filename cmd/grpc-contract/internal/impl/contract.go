@@ -28,7 +28,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/klaytn/cmd/utils"
 	"text/template"
 )
 
@@ -68,9 +68,9 @@ package {{ .Package }};
 
 import (
 
-	"github.com/ground-x/go-gxplatform/cmd/grpc-contract/grpc"
-	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/cmd/grpc-contract/grpc"
+	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/common"
 )
 
 type {{ .StructName }} struct {

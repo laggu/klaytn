@@ -27,12 +27,12 @@ import (
 	"net"
 	"sync"
 
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/pipes"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/p2p/simulations/pipes"
+	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/node"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and

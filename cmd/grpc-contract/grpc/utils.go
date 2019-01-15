@@ -20,10 +20,10 @@
 package grpc
 
 import (
-	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/cmd/sol2proto/protobuf"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/cmd/sol2proto/protobuf"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"math/big"
 	"os"
 )

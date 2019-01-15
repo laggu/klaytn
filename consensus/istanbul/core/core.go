@@ -22,12 +22,12 @@ package core
 
 import (
 	"bytes"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math"
 	"math/big"

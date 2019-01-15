@@ -26,12 +26,12 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	// TODO-GX-FIX Uncomment after enabling failed tests
-	// "github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	// "github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/params"
+	// "github.com/ground-x/klaytn/consensus/gxhash"
+	"github.com/ground-x/klaytn/storage/database"
+	// "github.com/ground-x/klaytn/blockchain/vm"
+	"github.com/ground-x/klaytn/params"
 )
 
 // TODO-GX-FIX Failed test

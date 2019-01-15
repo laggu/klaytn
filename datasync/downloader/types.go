@@ -22,7 +22,7 @@ package downloader
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

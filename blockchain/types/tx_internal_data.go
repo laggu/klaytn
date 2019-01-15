@@ -18,9 +18,9 @@ package types
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/kerrors"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/kerrors"
+	"github.com/ground-x/klaytn/params"
 	"math"
 	"math/big"
 )

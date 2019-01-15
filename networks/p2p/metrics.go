@@ -25,7 +25,7 @@ package p2p
 import (
 	"net"
 
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/metrics"
 )
 
 var (

@@ -11,10 +11,10 @@ fi
 workspace="$PWD/build/_workspace"
 root="$PWD"
 gxpdir="$workspace/src/github.com/ground-x"
-if [ ! -L "$gxpdir/go-gxplatform" ]; then
+if [ ! -L "$gxpdir/klaytn" ]; then
     mkdir -p "$gxpdir"
     cd "$gxpdir"
-    ln -s ../../../../../. go-gxplatform
+    ln -s ../../../../../. klaytn
     cd "$root"
 fi
 
@@ -23,8 +23,8 @@ GOPATH="$workspace"
 export GOPATH
 
 # Run the command inside the workspace.
-cd "$gxpdir/go-gxplatform"
-PWD="$gxpdir/go-gxplatform"
+cd "$gxpdir/klaytn"
+PWD="$gxpdir/klaytn"
 
 # Launch the arguments with the configured environment.
 exec "$@"

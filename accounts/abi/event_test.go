@@ -29,8 +29,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

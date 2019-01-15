@@ -23,9 +23,9 @@ package downloader
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/log"
 	"math"
 	"math/big"
 	"sort"

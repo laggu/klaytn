@@ -17,12 +17,12 @@
 package tests
 
 import (
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/compiler"
-	"github.com/ground-x/go-gxplatform/common/profile"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/log/term"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/compiler"
+	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/log/term"
 	"github.com/mattn/go-colorable"
 	"io"
 	"math/big"

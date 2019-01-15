@@ -25,9 +25,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/storage/database"
 	checker "gopkg.in/check.v1"
 )
 

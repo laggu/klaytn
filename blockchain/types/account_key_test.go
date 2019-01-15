@@ -18,8 +18,8 @@ package types
 
 import (
 	"encoding/json"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"testing"
 )
 

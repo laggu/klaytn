@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"gopkg.in/fatih/set.v0"
 	"math"
 	"strings"

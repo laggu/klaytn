@@ -23,7 +23,7 @@ package event_test
 import (
 	"fmt"
 
-	"github.com/ground-x/go-gxplatform/event"
+	"github.com/ground-x/klaytn/event"
 )
 
 func ExampleFeed_acknowledgedEvents() {

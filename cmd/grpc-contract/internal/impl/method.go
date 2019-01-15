@@ -23,7 +23,7 @@ package impl
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/klaytn/cmd/utils"
 	"strings"
 
 	parser "github.com/zpatrick/go-parser"

@@ -22,9 +22,9 @@ package downloader
 
 import (
 	"context"
-	"github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"sync"
 )
 

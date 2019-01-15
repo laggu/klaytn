@@ -28,10 +28,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/adapters"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/p2p/simulations/adapters"
 	"strings"
 )
 

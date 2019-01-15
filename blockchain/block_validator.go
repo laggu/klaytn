@@ -22,10 +22,10 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/params"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and

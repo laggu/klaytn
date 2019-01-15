@@ -20,7 +20,7 @@
 
 package istanbul
 
-import "github.com/ground-x/go-gxplatform/common"
+import "github.com/ground-x/klaytn/common"
 
 // RequestEvent is posted to propose a proposal
 type RequestEvent struct {

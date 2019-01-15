@@ -23,9 +23,9 @@ package bind
 import (
 	"context"
 	"errors"
-	"github.com/ground-x/go-gxplatform"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
 

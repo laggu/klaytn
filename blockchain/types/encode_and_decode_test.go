@@ -17,8 +17,8 @@
 package types
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"

@@ -23,7 +23,7 @@ package nat
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/klaytn/log"
 	"github.com/jackpal/go-nat-pmp"
 	"net"
 	"strings"

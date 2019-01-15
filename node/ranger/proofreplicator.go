@@ -2,10 +2,10 @@ package ranger
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
 	"math/big"
 )
 

@@ -22,7 +22,7 @@ package abi
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/crypto"
 	"strings"
 )
 

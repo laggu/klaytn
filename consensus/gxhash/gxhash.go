@@ -23,10 +23,10 @@ package gxhash
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/metrics"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/metrics"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/hashicorp/golang-lru/simplelru"
 	"math"
 	"math/big"
@@ -41,7 +41,7 @@ import (
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")

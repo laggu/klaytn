@@ -26,8 +26,8 @@ import (
 	"runtime"
 
 	"github.com/fjl/memsize/memsizeui"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/log/term"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/log/term"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
 	"io"

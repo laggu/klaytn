@@ -18,11 +18,11 @@ package cn
 
 import (
 	"context"
-	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/client"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
+	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/client"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"math/big"
 )
 

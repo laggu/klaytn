@@ -19,7 +19,7 @@ package impl
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
+	"github.com/ground-x/klaytn/cmd/utils"
 	"os"
 	"text/template"
 )
@@ -38,10 +38,10 @@ import "math/big"
 import "net"
 import "os"
 
-import "github.com/ground-x/go-gxplatform/accounts/abi/bind"
-import "github.com/ground-x/go-gxplatform/common"
-import "github.com/ground-x/go-gxplatform/crypto"
-import "github.com/ground-x/go-gxplatform/client"
+import "github.com/ground-x/klaytn/accounts/abi/bind"
+import "github.com/ground-x/klaytn/common"
+import "github.com/ground-x/klaytn/crypto"
+import "github.com/ground-x/klaytn/client"
 import {{ .ContractName }} "{{ .ProjectPackage }}"
 import flag "github.com/spf13/pflag"
 import "github.com/spf13/viper"

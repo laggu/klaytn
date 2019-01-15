@@ -24,8 +24,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/params"
 )
 
 type twoOperandTest struct {

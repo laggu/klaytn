@@ -31,8 +31,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 )
 
 func tmpKeyStoreIface(t *testing.T, encrypted bool) (dir string, ks keyStore) {

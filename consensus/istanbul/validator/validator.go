@@ -21,9 +21,9 @@
 package validator
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
-	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/log"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulValidator)

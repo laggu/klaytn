@@ -6,7 +6,7 @@ import (
 	uurl "net/url"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/metrics"
 	"github.com/influxdata/influxdb/client"
 )
 

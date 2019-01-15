@@ -34,9 +34,9 @@ import (
 
 	check "gopkg.in/check.v1"
 
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 // Updating a state statedb without commit must not affect persistent DB.

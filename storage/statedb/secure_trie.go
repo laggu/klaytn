@@ -21,7 +21,7 @@
 package statedb
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

@@ -26,7 +26,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/ground-x/go-gxplatform/blockchain/asm"
+	"github.com/ground-x/klaytn/blockchain/asm"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

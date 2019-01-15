@@ -28,8 +28,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 )

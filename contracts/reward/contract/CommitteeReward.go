@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ground-x/go-gxplatform/accounts/abi"
-	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/accounts/abi"
+	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
 )
 
 // CommitteeRewardABI is the input ABI used to generate the binding from.

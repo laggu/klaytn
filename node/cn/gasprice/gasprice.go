@@ -22,11 +22,11 @@ package gasprice
 
 import (
 	"context"
-	"github.com/ground-x/go-gxplatform/api"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/api"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 	"sort"
 	"sync"

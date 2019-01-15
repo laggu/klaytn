@@ -23,7 +23,7 @@ package abi
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"math/big"
 	"reflect"
 )

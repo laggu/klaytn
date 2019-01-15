@@ -31,7 +31,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
 )
 
 func TestMocker(t *testing.T) {

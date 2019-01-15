@@ -21,11 +21,11 @@
 package istanbul
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/ser/rlp"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbul)

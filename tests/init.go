@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/params"
 )
 
 // Forks table defines supported forks and their chain config.

@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/common/math"
 )
 
 var _ = (*structLogMarshaling)(nil)

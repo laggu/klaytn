@@ -23,18 +23,18 @@ package cn
 import (
 	"errors"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/datasync/downloader"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/datasync/downloader"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/node"
 )
 
 var (

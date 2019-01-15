@@ -27,12 +27,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/metrics"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/metrics"
+	"github.com/ground-x/klaytn/params"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"sort"
 )

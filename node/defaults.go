@@ -21,8 +21,8 @@
 package node
 
 import (
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/nat"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/nat"
 	"os"
 	"os/user"
 	"path/filepath"

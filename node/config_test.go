@@ -28,8 +28,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/networks/p2p"
 )
 
 // Tests that datadirs can be successfully created, be them manually configured

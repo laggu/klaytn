@@ -22,7 +22,7 @@ package rpc
 
 import (
 	"context"
-	"github.com/ground-x/go-gxplatform/networks/p2p/netutil"
+	"github.com/ground-x/klaytn/networks/p2p/netutil"
 	"net"
 )
 

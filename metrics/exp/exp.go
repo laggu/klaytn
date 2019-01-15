@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/metrics"
 )
 
 type exp struct {

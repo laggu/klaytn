@@ -30,7 +30,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"github.com/stretchr/testify/require"
 )
 

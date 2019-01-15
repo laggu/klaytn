@@ -24,9 +24,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/metrics"
 )
 
 var (

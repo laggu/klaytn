@@ -33,7 +33,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/params"
 )
 
 var (

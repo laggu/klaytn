@@ -41,12 +41,12 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/crypto/ecies"
-	"github.com/ground-x/go-gxplatform/crypto/secp256k1"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/crypto/ecies"
+	"github.com/ground-x/klaytn/crypto/secp256k1"
+	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/ser/rlp"
 )
 
 const (

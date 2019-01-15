@@ -29,14 +29,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/blockchain"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/gxhash"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/params"
-	"github.com/ground-x/go-gxplatform/storage/database"
-	"github.com/ground-x/go-gxplatform/storage/statedb"
+	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/gxhash"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
+	"github.com/ground-x/klaytn/storage/statedb"
 )
 
 // Reduce some of the parameters to make the tester faster.

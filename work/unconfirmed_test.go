@@ -23,8 +23,8 @@ package work
 import (
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
 )
 
 // noopChainRetriever is an implementation of headerRetriever that always

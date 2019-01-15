@@ -22,7 +22,7 @@ package bloombits
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types"
 )
 
 // errSectionOutOfBounds is returned if the user tried to add more bloom filters

@@ -22,11 +22,11 @@ package statedb
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/metrics"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/metrics"
+	"github.com/ground-x/klaytn/ser/rlp"
+	"github.com/ground-x/klaytn/storage/database"
 	"io"
 	"sync"
 	"time"

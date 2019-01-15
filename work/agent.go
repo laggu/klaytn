@@ -21,9 +21,9 @@
 package work
 
 import (
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/node"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/node"
 	"sync"
 	"sync/atomic"
 )

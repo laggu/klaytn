@@ -22,10 +22,10 @@ package blockchain
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/kerrors"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/vm"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/kerrors"
 	"math/big"
 )
 

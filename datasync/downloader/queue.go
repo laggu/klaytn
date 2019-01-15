@@ -24,9 +24,9 @@ import (
 	"fmt"
 
 	"errors"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"sync"
 	"time"

@@ -25,7 +25,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types"
 )
 
 // Tests that batched bloom bits are correctly rotated from the input bloom

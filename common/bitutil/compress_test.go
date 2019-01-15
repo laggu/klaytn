@@ -25,7 +25,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/klaytn/common/hexutil"
 )
 
 // Tests that data bitset encoding and decoding works and is bijective.

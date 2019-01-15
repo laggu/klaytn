@@ -21,7 +21,7 @@
 package tests
 
 import (
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/params"
 	"testing"
 )
 

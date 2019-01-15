@@ -22,7 +22,7 @@ package console
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"io"
 	"io/ioutil"
 	"os"
@@ -33,8 +33,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ground-x/go-gxplatform/console/jsre"
-	"github.com/ground-x/go-gxplatform/console/web3ext"
+	"github.com/ground-x/klaytn/console/jsre"
+	"github.com/ground-x/klaytn/console/web3ext"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"

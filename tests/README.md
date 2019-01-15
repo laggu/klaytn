@@ -24,10 +24,10 @@ $ git clone git@github.com:ground-x/klaytn-tests.git
 ## 2. Create a symbolic link
 
 We assume Klaytn source tree is located in
-`$HOME/workspace/go/src/github.com/ground-x/go-gxplatform`.
+`$HOME/workspace/go/src/github.com/ground-x/klaytn`.
 
 ```
-$ cd $HOME/workspace/go/src/github.com/ground-x/go-gxplatform/tests
+$ cd $HOME/workspace/go/src/github.com/ground-x/klaytn/tests
 $ ln -s $HOME/workspace/klaytn-tests testdata
 ```
 

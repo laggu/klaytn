@@ -18,7 +18,7 @@ package common
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/klaytn/log"
 	"github.com/hashicorp/golang-lru"
 	"math"
 )

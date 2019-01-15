@@ -31,9 +31,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

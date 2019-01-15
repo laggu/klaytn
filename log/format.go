@@ -29,7 +29,7 @@ const (
 
 // locationTrims are trimmed for display to avoid unwieldy log lines.
 var locationTrims = []string{
-	"github.com/ground-x/go-gxplatform/",
+	"github.com/ground-x/klaytn/",
 }
 
 // PrintOrigins sets or unsets log location (file:line) printing for terminal

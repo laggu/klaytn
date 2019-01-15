@@ -23,7 +23,7 @@ package bind
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/accounts/abi"
+	"github.com/ground-x/klaytn/accounts/abi"
 	"golang.org/x/tools/imports"
 	"regexp"
 	"strings"

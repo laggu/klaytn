@@ -1,8 +1,8 @@
 package ranger
 
 import (
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/crypto"
 )
 
 // PrivateAdminAPI is the collection of administrative API methods exposed only

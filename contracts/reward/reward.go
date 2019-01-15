@@ -23,9 +23,9 @@
 package reward
 
 import (
-	"github.com/ground-x/go-gxplatform/accounts/abi/bind"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/contracts/reward/contract"
+	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/contracts/reward/contract"
 )
 
 type Reward struct {

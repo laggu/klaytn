@@ -21,13 +21,13 @@
 package blockchain
 
 import (
-	"github.com/ground-x/go-gxplatform/blockchain/state"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/vm"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning

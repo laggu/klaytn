@@ -16,7 +16,7 @@
 
 package ranger
 
-import "github.com/ground-x/go-gxplatform/common"
+import "github.com/ground-x/klaytn/common"
 
 // PublicGXPAPI provides an API to access GXPlatform full node-related
 // information.

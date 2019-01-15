@@ -23,10 +23,10 @@ package statedb
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/ser/rlp"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 // TODO-GX Below Prove is only used in tests, not in core codes.

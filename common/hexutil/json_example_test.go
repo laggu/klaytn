@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ground-x/go-gxplatform/common/hexutil"
+	"github.com/ground-x/klaytn/common/hexutil"
 )
 
 type MyType [5]byte

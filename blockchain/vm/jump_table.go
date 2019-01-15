@@ -22,7 +22,7 @@ package vm
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
 

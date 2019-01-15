@@ -18,11 +18,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/accounts/keystore"
-	"github.com/ground-x/go-gxplatform/cmd/utils"
-	"github.com/ground-x/go-gxplatform/console"
-	"github.com/ground-x/go-gxplatform/crypto"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/accounts/keystore"
+	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/console"
+	"github.com/ground-x/klaytn/crypto"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 )

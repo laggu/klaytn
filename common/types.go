@@ -23,8 +23,8 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/crypto/sha3"
+	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/crypto/sha3"
 	"math/big"
 	"math/rand"
 	"reflect"

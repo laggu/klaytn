@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/ground-x/go-gxplatform/tree/master.svg?style=svg&circle-token=28de86a436dbe6af811bff7079606433baa43344)](https://circleci.com/gh/ground-x/go-gxplatform/tree/master)
+[![CircleCI](https://circleci.com/gh/ground-x/klaytn/tree/master.svg?style=svg&circle-token=28de86a436dbe6af811bff7079606433baa43344)](https://circleci.com/gh/ground-x/klaytn/tree/master)
 
 # Table of Contents
 <!-- vim-markdown-toc GFM -->

@@ -22,11 +22,11 @@ package node
 
 import (
 	"crypto/ecdsa"
-	"github.com/ground-x/go-gxplatform/accounts"
-	"github.com/ground-x/go-gxplatform/event"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
-	"github.com/ground-x/go-gxplatform/storage/database"
+	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/storage/database"
 	"reflect"
 )
 

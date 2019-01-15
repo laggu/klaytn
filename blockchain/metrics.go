@@ -21,7 +21,7 @@
 package blockchain
 
 import (
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/metrics"
 )
 
 var (

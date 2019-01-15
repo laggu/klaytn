@@ -26,7 +26,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/networks/rpc"
 )
 
 // In this example, our client whishes to track the latest 'block number'

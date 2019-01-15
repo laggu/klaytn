@@ -29,12 +29,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/networks/p2p"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations"
-	"github.com/ground-x/go-gxplatform/networks/p2p/simulations/adapters"
-	"github.com/ground-x/go-gxplatform/networks/rpc"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	"github.com/ground-x/klaytn/networks/p2p/simulations"
+	"github.com/ground-x/klaytn/networks/p2p/simulations/adapters"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

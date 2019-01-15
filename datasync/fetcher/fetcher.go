@@ -22,10 +22,10 @@ package fetcher
 
 import (
 	"errors"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus"
-	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math/rand"
 	"time"

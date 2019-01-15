@@ -22,7 +22,7 @@ package vm
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/params"
 )
 
 func makeStackFunc(pop, push int) stackValidationFunc {

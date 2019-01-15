@@ -19,7 +19,7 @@ package database
 import (
 	"fmt"
 	"github.com/dgraph-io/badger"
-	"github.com/ground-x/go-gxplatform/log"
+	"github.com/ground-x/klaytn/log"
 	"os"
 )
 

@@ -19,7 +19,7 @@ package benchmarks
 import (
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 )
 
 func TestInterpreterMload100000(t *testing.T) {

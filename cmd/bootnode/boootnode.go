@@ -27,13 +27,13 @@ import (
 	"net"
 	"os"
 
-	"github.com/ground-x/go-gxplatform/cmd/utils"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/log"
-	"github.com/ground-x/go-gxplatform/networks/p2p/discover"
-	//"github.com/ground-x/go-gxplatform/networks/p2p/discv5"
-	"github.com/ground-x/go-gxplatform/networks/p2p/nat"
-	"github.com/ground-x/go-gxplatform/networks/p2p/netutil"
+	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/networks/p2p/discover"
+	//"github.com/ground-x/klaytn/networks/p2p/discv5"
+	"github.com/ground-x/klaytn/networks/p2p/nat"
+	"github.com/ground-x/klaytn/networks/p2p/netutil"
 )
 
 func main() {

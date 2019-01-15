@@ -20,7 +20,7 @@
 
 package blockchain
 
-import "github.com/ground-x/go-gxplatform/common"
+import "github.com/ground-x/klaytn/common"
 
 // BadHashes represent a set of manually tracked bad hashes (usually hard forks)
 var BadHashes = map[common.Hash]bool{

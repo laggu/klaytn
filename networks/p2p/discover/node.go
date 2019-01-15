@@ -35,9 +35,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/crypto/secp256k1"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/crypto/secp256k1"
 )
 
 const NodeIDBits = 512

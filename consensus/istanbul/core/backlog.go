@@ -21,8 +21,8 @@
 package core
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/consensus/istanbul"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/istanbul"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 

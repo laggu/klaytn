@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/go-stack/stack"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
 

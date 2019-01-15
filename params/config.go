@@ -22,7 +22,7 @@ package params
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
 

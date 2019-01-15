@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ground-x/go-gxplatform/common/math"
+	"github.com/ground-x/klaytn/common/math"
 )
 
 func TestBlockNumberJSONUnmarshal(t *testing.T) {

@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.11.2
-    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - run:
@@ -20,7 +20,7 @@ jobs:
   coverage:
     docker:
       - image: circleci/golang:1.11.2
-    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - run:
@@ -37,7 +37,7 @@ jobs:
   linters:
     docker:
       - image: circleci/golang:1.11.2
-    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - run:
@@ -52,7 +52,7 @@ jobs:
   dockernize:
     docker:
       - image: circleci/golang:1.11.2
-    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - setup_remote_docker:
@@ -76,7 +76,7 @@ jobs:
 
   packaging:
     machine: true
-    working_directory: ~/go/src/github.com/ground-x/go-gxplatform
+    working_directory: ~/go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - run:
@@ -136,7 +136,7 @@ jobs:
   rpm-untagged:
     docker:
       - image: bitaholic/circleci-rpmbuild:latest
-    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - add_ssh_keys:
@@ -149,7 +149,7 @@ jobs:
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
             go run build/rpm/main.go gen_spec --devel --build_num $CIRCLE_BUILD_NUM > /rpmbuild/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
             cd ..
-            mv go-gxplatform klaytn-devel-$KLAYTN_VERSION
+            mv klaytn klaytn-devel-$KLAYTN_VERSION
             tar czf klaytn-devel-$KLAYTN_VERSION.tar.gz klaytn-devel-$KLAYTN_VERSION
             mv klaytn-devel-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
             rpmbuild -ba /rpmbuild/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
@@ -159,7 +159,7 @@ jobs:
   rpm-tagged:
     docker:
       - image: bitaholic/circleci-rpmbuild:latest
-    working_directory: /go/src/github.com/ground-x/go-gxplatform
+    working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - add_ssh_keys:
@@ -173,7 +173,7 @@ jobs:
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
             go run build/rpm/main.go gen_spec > /rpmbuild/SPECS/klaytn-$KLAYTN_VERSION.spec
             cd ..
-            mv go-gxplatform klaytn-$KLAYTN_VERSION
+            mv klaytn klaytn-$KLAYTN_VERSION
             tar czf klaytn-$KLAYTN_VERSION.tar.gz klaytn-$KLAYTN_VERSION
             mv klaytn-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
             rpmbuild -ba /rpmbuild/SPECS/klaytn-$KLAYTN_VERSION.spec

@@ -7,7 +7,7 @@ package prometheusmetrics
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/metrics"
+	"github.com/ground-x/klaytn/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 	"time"

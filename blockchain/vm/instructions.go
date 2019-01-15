@@ -22,11 +22,11 @@ package vm
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/blockchain/types"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/math"
-	"github.com/ground-x/go-gxplatform/crypto"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/math"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
 

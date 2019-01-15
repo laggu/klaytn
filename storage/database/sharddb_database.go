@@ -17,7 +17,7 @@
 package database
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
+	"github.com/ground-x/klaytn/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"strconv"
 	"strings"

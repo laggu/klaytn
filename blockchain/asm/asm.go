@@ -24,7 +24,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/ground-x/go-gxplatform/blockchain/vm"
+	"github.com/ground-x/klaytn/blockchain/vm"
 )
 
 // Iterator for disassembled EVM instructions

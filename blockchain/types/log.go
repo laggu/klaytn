@@ -22,9 +22,9 @@ package types
 
 import (
 	"fmt"
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/common/hexutil"
-	"github.com/ground-x/go-gxplatform/ser/rlp"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 )
 

@@ -21,8 +21,8 @@
 package vm
 
 import (
-	"github.com/ground-x/go-gxplatform/common"
-	"github.com/ground-x/go-gxplatform/params"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 	"testing"
 )
