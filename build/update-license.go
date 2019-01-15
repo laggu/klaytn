@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 // Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -16,7 +16,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from build/update-license.go (2018/06/04).
-// Modified and improved for the go-klaytn development.
+// Modified and improved for the klaytn development.
 
 // +build none
 
@@ -92,9 +92,9 @@ var (
 	// this regexp must match the entire license comment at the
 	// beginning of each file.
 	ethereumLicenseCommentRE   = regexp.MustCompile(`//\s*(Copyright .* (The go-ethereum|AMIS Technologies)).*?\n(?://.*?\n)*//.*>\.`)
-	klaytnLicenseCommentRE     = regexp.MustCompile(`//\s*(Copyright .* The go-klaytn).*?\n(?://.*?\n)?// This file is part of the go-klaytn library.*\n(?://.*?\n)*//.*>\.`)
-	mixedLicenseCommentRE      = regexp.MustCompile(`//\s*(Copyright .* The go-klaytn).*?\n//\s*(Copyright .* (The go-ethereum|AMIS Technologies)).*?\n(?://.*?\n)*//.*go-klaytn development\.`)
-	externalLicenceCommentRE   = regexp.MustCompile(`//\s*(Copyright .* The go-klaytn).*?\n(?://.*?\n)*//.*See LICENSE in the top directory for the original copyright and license\.`)
+	klaytnLicenseCommentRE     = regexp.MustCompile(`//\s*(Copyright .* The klaytn).*?\n(?://.*?\n)?// This file is part of the klaytn library.*\n(?://.*?\n)*//.*>\.`)
+	mixedLicenseCommentRE      = regexp.MustCompile(`//\s*(Copyright .* The klaytn).*?\n//\s*(Copyright .* (The go-ethereum|AMIS Technologies)).*?\n(?://.*?\n)*//.*klaytn development\.`)
+	externalLicenceCommentRE   = regexp.MustCompile(`//\s*(Copyright .* The klaytn).*?\n(?://.*?\n)*//.*See LICENSE in the top directory for the original copyright and license\.`)
 	externalGoLicenceCommentRE = regexp.MustCompile(`//\s*(Copyright .* The Go Authors).*?\n(?://.*?\n)*//.*license that can be found in the LICENSE file\.`)
 
 	// this text appears at the start of AUTHORS
@@ -695,35 +695,35 @@ var (
 // this template generates the license comment.
 // its input is an info structure.
 var klaytnLicenseT = template.Must(template.New("").Parse(`
-// Copyright {{.Year}} The go-klaytn Authors
-// This file is part of the go-klaytn library.
+// Copyright {{.Year}} The klaytn Authors
+// This file is part of the klaytn library.
 //
-// The go-klaytn library is free software: you can redistribute it and/or modify
+// The klaytn library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-klaytn library is distributed in the hope that it will be useful,
+// The klaytn library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-klaytn library. If not, see <http://www.gnu.org/licenses/>.`[1:]))
+// along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.`[1:]))
 
 // this template generates the license comment.
 // its input is an info structure.
 var mixedLicenseT = template.Must(template.New("").Parse(`
-// Copyright {{.Year}} The go-klaytn Authors
+// Copyright {{.Year}} The klaytn Authors
 {{.OtherLicence}}
 //
 // This file is derived from {{.File}} (2018/06/04).
-// Modified and improved for the go-klaytn development.`[1:]))
+// Modified and improved for the klaytn development.`[1:]))
 
 // this template generates the license comment.
 // its input is an info structure.
 var externalLicenseT = template.Must(template.New("").Parse(`
-// Copyright {{.Year}} The go-klaytn Authors
+// Copyright {{.Year}} The klaytn Authors
 //
 // This file is derived from {{.File}} (2018/06/04).
 // See LICENSE in the top directory for the original copyright and license.`[1:]))
