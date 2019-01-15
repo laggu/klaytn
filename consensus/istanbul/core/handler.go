@@ -25,7 +25,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul"
 )
 
-// Start implements blockchain.Engine.Start
+// Start implements core.Engine.Start
 func (c *core) Start() error {
 	// Start a new round from last sequence + 1
 	c.startNewRound(common.Big0)
@@ -38,7 +38,7 @@ func (c *core) Start() error {
 	return nil
 }
 
-// Stop implements blockchain.Engine.Stop
+// Stop implements core.Engine.Stop
 func (c *core) Stop() error {
 	c.stopTimer()
 	c.unsubscribeEvents()
