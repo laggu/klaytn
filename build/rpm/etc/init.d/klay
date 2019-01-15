@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# klay         Startup script for the go-klaytn
+# klay         Startup script for the klaytn
 #
 # chkconifg: - 85 15
 # description : klay is the Klaytn blockchain node.
