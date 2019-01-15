@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -16,7 +16,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from accounts/abi/bind/base.go (2018/06/04).
-// Modified and improved for the go-klaytn development.
+// Modified and improved for the klaytn development.
 
 package bind
 
