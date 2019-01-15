@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
@@ -16,7 +16,7 @@
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from cmd/geth/config.go (2018/06/04).
-// Modified and improved for the go-klaytn development.
+// Modified and improved for the klaytn development.
 
 package main
 

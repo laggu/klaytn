@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
@@ -16,7 +16,7 @@
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from cmd/geth/main.go (2018/06/04).
-// Modified and improved for the go-klaytn development.
+// Modified and improved for the klaytn development.
 
 package main
 
@@ -57,7 +57,7 @@ var (
 	// Git tag (set via linker flags if exists)
 	gitTag = ""
 	// The app that holds all commands and flags.
-	app = utils.NewApp(gitCommit, "the go-klaytn command line interface")
+	app = utils.NewApp(gitCommit, "the klaytn command line interface")
 
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
@@ -160,7 +160,7 @@ func init() {
 	// Initialize the CLI app and start Klay
 	app.Action = klaytn
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2018 The go-klaytn Authors"
+	app.Copyright = "Copyright 2013-2018 The klaytn Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,

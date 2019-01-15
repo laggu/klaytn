@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
@@ -16,7 +16,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from node/utils_test.go (2018/06/04).
-// Modified and improved for the go-klaytn development.
+// Modified and improved for the klaytn development.
 
 // Contains a batch of utility type declarations used by the tests. As the node
 // operates on unique types, a lot of them are needed to check various features.

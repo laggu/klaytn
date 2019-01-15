@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
@@ -16,7 +16,7 @@
 // along with go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from ethclient/ethclient.go (2018/06/04).
-// Modified and improved for the go-klaytn development.
+// Modified and improved for the klaytn development.
 
 // Package client provides a client for the Klaytn RPC API.
 package client

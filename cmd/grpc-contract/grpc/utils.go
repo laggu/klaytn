@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 // Copyright 2018 AMIS Technologies
 // This file is part of the sol2proto
 //
