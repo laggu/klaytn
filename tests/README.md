@@ -6,7 +6,7 @@ later.
 
 In order to use Klaytn tests, you would need to clone it as `testdata`; or
 clone it somewhere and make a symbolic link to it.  This document assumes
-Klaytn tests is cloned outside the go-klaytn source tree, and the following
+Klaytn tests is cloned outside the klaytn source tree, and the following
 instructions describe how to use Klaytn tests with `go test`.
 
 

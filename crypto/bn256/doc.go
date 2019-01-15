@@ -1,4 +1,4 @@
-// Copyright 2018 The go-klaytn Authors
+// Copyright 2018 The klaytn Authors
 //
 // This file is derived from crypto/bn256 package (2018/06/04).
 // See LICENSE in the crypto/bn256 directory for the original copyright and license.

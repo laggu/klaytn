@@ -1,4 +1,4 @@
-// Copyright (c) 2018 The go-klaytn Authors.
+// Copyright (c) 2018 The klaytn Authors.
 // Copyright (c) 2013 Kyle Isom <kyle@tyrfingr.is>
 // Copyright (c) 2012 The Go Authors. All rights reserved.
 //
@@ -29,7 +29,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // This file is derived from crypto/ecies/params.go (2018/06/04).
-// Modified and improved for the go-klaytn development.
+// Modified and improved for the klaytn development.
 
 package ecies
 

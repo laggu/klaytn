@@ -3,7 +3,7 @@
 # Table of Contents
 <!-- vim-markdown-toc GFM -->
 
-* [Go Klaytn](#go-klaytn)
+* [Klaytn](#klaytn)
 * [Building the source](#building-the-source)
 * [Executables](#executables)
 * [Running klay](#running-klay)
@@ -20,7 +20,7 @@
 
 <!-- vim-markdown-toc -->
 
-## Go Klaytn
+## Klaytn
 
 Official golang implementation of the Klaytn protocol.
 
@@ -34,7 +34,7 @@ Once the dependencies are installed, run
 
 ## Executables
 
-The go-klaytn project comes with several wrappers/executables found in the `cmd` directory.
+The klaytn project comes with several wrappers/executables found in the `cmd` directory.
 
 | Command    | Description |
 |:----------:|-------------|
@@ -243,10 +243,10 @@ grpc-contract --types $(filename) --path ./protobuf --pb-path ./protobuf
 
 ## License
 
-The go-klaytn library (i.e. all code outside of the `cmd` directory) is licensed under the
+The klaytn library (i.e. all code outside of the `cmd` directory) is licensed under the
 [GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html), also
 included in our repository in the `COPYING.LESSER` file.
 
-The go-klaytn binaries (i.e. all code inside of the `cmd` directory) is licensed under the
+The klaytn binaries (i.e. all code inside of the `cmd` directory) is licensed under the
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also included
 in our repository in the `COPYING` file.
