@@ -37,6 +37,8 @@ func TestAccountSerialization(t *testing.T) {
 		{"LegacyAccount", genLegacyAccount()},
 		{"EOA", genEOA()},
 		{"EOAWithPublic", genEOAWithPublicKey()},
+		{"SCA", genSCA()},
+		{"SCAWithPublic", genSCAWithPublicKey()},
 	}
 	var testcases = []struct {
 		Name string
@@ -123,5 +125,37 @@ func genEOAWithPublicKey() *ExternallyOwnedAccount {
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
 		AccountValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&k.PublicKey),
+	})
+}
+
+func genSCA() *SmartContractAccount {
+	humanReadable := false
+	if rand.Int63n(10) >= 5 {
+		humanReadable = true
+	}
+	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{
+		AccountValueKeyNonce:         rand.Uint64(),
+		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
+		AccountValueKeyHumanReadable: humanReadable,
+		AccountValueKeyAccountKey:    types.NewAccountKeyNil(),
+		AccountValueKeyStorageRoot:   genRandomHash(),
+		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
+	})
+}
+
+func genSCAWithPublicKey() *SmartContractAccount {
+	humanReadable := false
+	if rand.Int63n(10) >= 5 {
+		humanReadable = true
+	}
+	k, _ := crypto.GenerateKey()
+
+	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{
+		AccountValueKeyNonce:         rand.Uint64(),
+		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
+		AccountValueKeyHumanReadable: humanReadable,
+		AccountValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&k.PublicKey),
+		AccountValueKeyStorageRoot:   genRandomHash(),
+		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
 	})
 }
