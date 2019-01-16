@@ -31,6 +31,7 @@ func TestTransactionSerialization(t *testing.T) {
 		tx   TxInternalData
 	}{
 		{"OriginalTx", genLegacyTransaction()},
+		{"ValueTransfer", genValueTransferTransaction()},
 	}
 
 	var testcases = []struct {
@@ -100,4 +101,22 @@ func genLegacyTransaction() TxInternalData {
 	})
 
 	return txdata
+}
+
+func genValueTransferTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeValueTransfer, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:    uint64(1234),
+		TxValueKeyTo:       common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyAmount:   new(big.Int).SetUint64(10),
+		TxValueKeyGasLimit: uint64(9999999999),
+		TxValueKeyGasPrice: new(big.Int).SetUint64(25),
+		TxValueKeyFrom:     common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
 }

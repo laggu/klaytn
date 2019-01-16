@@ -150,6 +150,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 	switch t {
 	case TxTypeLegacyTransaction:
 		return newTxdata(), nil
+	case TxTypeValueTransfer:
+		return newTxInternalDataValueTransfer(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -159,6 +161,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	switch t {
 	case TxTypeLegacyTransaction:
 		return newTxdataWithMap(values), nil
+	case TxTypeValueTransfer:
+		return newTxInternalDataValueTransferWithMap(values), nil
 	}
 
 	return nil, errUndefinedTxType
