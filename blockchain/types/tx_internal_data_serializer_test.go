@@ -32,6 +32,7 @@ func TestTransactionSerialization(t *testing.T) {
 	}{
 		{"OriginalTx", genLegacyTransaction()},
 		{"ValueTransfer", genValueTransferTransaction()},
+		{"ChainDataTx", genChainDataTransaction()},
 	}
 
 	var testcases = []struct {
@@ -119,4 +120,29 @@ func genValueTransferTransaction() TxInternalData {
 	}
 
 	return d
+}
+
+func genChainDataTransaction() TxInternalData {
+	blockTxData := &ChildChainTxData{
+		common.HexToHash("0"),
+		common.HexToHash("1"),
+		common.HexToHash("2"),
+		common.HexToHash("3"),
+		common.HexToHash("4"),
+		big.NewInt(5)}
+
+	peggedData, err := rlp.EncodeToBytes(blockTxData)
+	if err != nil {
+		panic(err)
+	}
+
+	txdata, _ := NewTxInternalDataWithMap(TxTypeChainDataPegging, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:      uint64(1234),
+		TxValueKeyTo:         common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyAmount:     new(big.Int).SetUint64(10),
+		TxValueKeyGasLimit:   uint64(9999999999),
+		TxValueKeyGasPrice:   new(big.Int).SetUint64(25),
+		TxValueKeyPeggedData: peggedData,
+	})
+	return txdata
 }

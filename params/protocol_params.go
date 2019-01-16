@@ -56,6 +56,12 @@ const (
 	LogTopicGas           uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
 	TxDataNonZeroGas      uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. // G_txdatanonzero
 
+	// Fee for Service Chain
+	// TODO-GX-ServiceChain The following parameters should be fixed.
+	// TODO-GX-Governance The following parameters should be able to be modified by governance.
+	TxChainDataPeggingGas uint64 = 50000 // Per transaction pegging chain data. NOTE: Not payable on data of calls between transactions. // G_transactionchaindatapegging
+	ChainDataPeggingGas   uint64 = 100   // Per byte of pegging chain data NOTE: Not payable on data of calls between transactions. // G_chaindatapegging
+
 	// Precompiled contract gas prices
 
 	EcrecoverGas            uint64 = 3000   // Elliptic curve sender recovery gas price
