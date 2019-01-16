@@ -17,12 +17,12 @@ import (
 const ProposerRewardABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"totalAmount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"receiver\",\"type\":\"address\"}],\"name\":\"reward\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"safeWithdrawal\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"}]"
 
 // ProposerRewardBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ProposerRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a7230582012439e6e3258a1af6d8e24672a37d4391b32cbdcc445aea62442b2f96048aa4d0029`
+const ProposerRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820d58b808eb6822507b5e1d6ea3a84dcccd09be3d3055db154e0ddbd8f096fd8770029`
 
 // ProposerRewardBin is the compiled bytecode used for deploying new contracts.
-const ProposerRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a7230582012439e6e3258a1af6d8e24672a37d4391b32cbdcc445aea62442b2f96048aa4d0029`
+const ProposerRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820d58b808eb6822507b5e1d6ea3a84dcccd09be3d3055db154e0ddbd8f096fd8770029`
 
-// DeployProposerReward deploys a new GXP contract, binding an instance of ProposerReward to it.
+// DeployProposerReward deploys a new klaytn contract, binding an instance of ProposerReward to it.
 func DeployProposerReward(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ProposerReward, error) {
 	parsed, err := abi.JSON(strings.NewReader(ProposerRewardABI))
 	if err != nil {
@@ -35,29 +35,29 @@ func DeployProposerReward(auth *bind.TransactOpts, backend bind.ContractBackend)
 	return address, tx, &ProposerReward{ProposerRewardCaller: ProposerRewardCaller{contract: contract}, ProposerRewardTransactor: ProposerRewardTransactor{contract: contract}, ProposerRewardFilterer: ProposerRewardFilterer{contract: contract}}, nil
 }
 
-// ProposerReward is an auto generated Go binding around an GXP contract.
+// ProposerReward is an auto generated Go binding around a klaytn contract.
 type ProposerReward struct {
 	ProposerRewardCaller     // Read-only binding to the contract
 	ProposerRewardTransactor // Write-only binding to the contract
 	ProposerRewardFilterer   // Log filterer for contract events
 }
 
-// ProposerRewardCaller is an auto generated read-only Go binding around an GXP contract.
+// ProposerRewardCaller is an auto generated read-only Go binding around a klaytn contract.
 type ProposerRewardCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ProposerRewardTransactor is an auto generated write-only Go binding around an GXP contract.
+// ProposerRewardTransactor is an auto generated write-only Go binding around a klaytn contract.
 type ProposerRewardTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ProposerRewardFilterer is an auto generated log filtering Go binding around an GXP contract events.
+// ProposerRewardFilterer is an auto generated log filtering Go binding around a klaytn contract events.
 type ProposerRewardFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ProposerRewardSession is an auto generated Go binding around an GXP contract,
+// ProposerRewardSession is an auto generated Go binding around a klaytn contract,
 // with pre-set call and transact options.
 type ProposerRewardSession struct {
 	Contract     *ProposerReward   // Generic contract binding to set the session for
@@ -65,31 +65,31 @@ type ProposerRewardSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ProposerRewardCallerSession is an auto generated read-only Go binding around an GXP contract,
+// ProposerRewardCallerSession is an auto generated read-only Go binding around a klaytn contract,
 // with pre-set call options.
 type ProposerRewardCallerSession struct {
 	Contract *ProposerRewardCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts         // Call options to use throughout this session
 }
 
-// ProposerRewardTransactorSession is an auto generated write-only Go binding around an GXP contract,
+// ProposerRewardTransactorSession is an auto generated write-only Go binding around a klaytn contract,
 // with pre-set transact options.
 type ProposerRewardTransactorSession struct {
 	Contract     *ProposerRewardTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
 }
 
-// ProposerRewardRaw is an auto generated low-level Go binding around an GXP contract.
+// ProposerRewardRaw is an auto generated low-level Go binding around a klaytn contract.
 type ProposerRewardRaw struct {
 	Contract *ProposerReward // Generic contract binding to access the raw methods on
 }
 
-// ProposerRewardCallerRaw is an auto generated low-level read-only Go binding around an GXP contract.
+// ProposerRewardCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
 type ProposerRewardCallerRaw struct {
 	Contract *ProposerRewardCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ProposerRewardTransactorRaw is an auto generated low-level write-only Go binding around an GXP contract.
+// ProposerRewardTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
 type ProposerRewardTransactorRaw struct {
 	Contract *ProposerRewardTransactor // Generic write-only contract binding to access the raw methods on
 }

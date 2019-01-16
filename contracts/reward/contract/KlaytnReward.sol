@@ -17,12 +17,12 @@
 
 pragma solidity ^0.4.24;
 
-contract GXPReward {
+contract KlaytnReward {
 
     uint public totalAmount;
     mapping(address => uint256) public balanceOf;
 
-    function GXPReward() public {
+    function KlaytnReward() public {
     }
 
     function () payable public {

@@ -28,7 +28,7 @@ import (
 )
 
 // Forks table defines supported forks and their chain config.
-// TODO-GX: Remove fork configs that are not meaningful for GXP
+// TODO-GX: Remove fork configs that are not meaningful for klaytn
 var Forks = map[string]*params.ChainConfig{
 	"Frontier": {
 		ChainID: big.NewInt(1),

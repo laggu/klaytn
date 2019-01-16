@@ -307,8 +307,8 @@ func BenchmarkSmartContractExecute(b *testing.B) {
 	prof := profile.NewProfiler()
 
 	benches := []ContractExecutionOption{
-		{"GXPReward:reward", "../contracts/reward/contract/GXPReward.sol", makeRewardTransactions, executeRewardTransactions},
-		{"GXPReward:balanceOf", "../contracts/reward/contract/GXPReward.sol", makeBalanceOf, executeBalanceOf},
+		{"KlaytnReward:reward", "../contracts/reward/contract/KlaytnReward.sol", makeRewardTransactions, executeRewardTransactions},
+		{"KlaytnReward:balanceOf", "../contracts/reward/contract/KlaytnReward.sol", makeBalanceOf, executeBalanceOf},
 		{"QuickSort:sort", "./testdata/contracts/sort/QuickSort.sol", makeQuickSortTransactions, executeQuickSortTransactions},
 	}
 

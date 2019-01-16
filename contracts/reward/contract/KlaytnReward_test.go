@@ -41,7 +41,7 @@ func TestSmartContract(t *testing.T) {
 	sim := backends.NewSimulatedBackend(alloc)
 
 	// Deploy a token contract on the simulated blockchain
-	_, _, reward, err := DeployGXPReward(auth, sim)
+	_, _, reward, err := DeployKlaytnReward(auth, sim)
 	if err != nil {
 		log.Fatalf("Failed to deploy new token contract: %v", err)
 	}

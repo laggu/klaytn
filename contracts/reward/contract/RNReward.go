@@ -17,12 +17,12 @@ import (
 const RNRewardABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"totalAmount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"receiver\",\"type\":\"address\"}],\"name\":\"reward\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"safeWithdrawal\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"}]"
 
 // RNRewardBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const RNRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a723058208578a13dea9684c89b98bed72f7f8471753d3fc504f5b6de851cf09fb001fdfc0029`
+const RNRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820834867d73039873ae7049d3eaba35c78d64244c20958db836aa8a28ac62940e20029`
 
 // RNRewardBin is the compiled bytecode used for deploying new contracts.
-const RNRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a723058208578a13dea9684c89b98bed72f7f8471753d3fc504f5b6de851cf09fb001fdfc0029`
+const RNRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820834867d73039873ae7049d3eaba35c78d64244c20958db836aa8a28ac62940e20029`
 
-// DeployRNReward deploys a new GXP contract, binding an instance of RNReward to it.
+// DeployRNReward deploys a new klaytn contract, binding an instance of RNReward to it.
 func DeployRNReward(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RNReward, error) {
 	parsed, err := abi.JSON(strings.NewReader(RNRewardABI))
 	if err != nil {
@@ -35,29 +35,29 @@ func DeployRNReward(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &RNReward{RNRewardCaller: RNRewardCaller{contract: contract}, RNRewardTransactor: RNRewardTransactor{contract: contract}, RNRewardFilterer: RNRewardFilterer{contract: contract}}, nil
 }
 
-// RNReward is an auto generated Go binding around an GXP contract.
+// RNReward is an auto generated Go binding around a klaytn contract.
 type RNReward struct {
 	RNRewardCaller     // Read-only binding to the contract
 	RNRewardTransactor // Write-only binding to the contract
 	RNRewardFilterer   // Log filterer for contract events
 }
 
-// RNRewardCaller is an auto generated read-only Go binding around an GXP contract.
+// RNRewardCaller is an auto generated read-only Go binding around a klaytn contract.
 type RNRewardCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RNRewardTransactor is an auto generated write-only Go binding around an GXP contract.
+// RNRewardTransactor is an auto generated write-only Go binding around a klaytn contract.
 type RNRewardTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RNRewardFilterer is an auto generated log filtering Go binding around an GXP contract events.
+// RNRewardFilterer is an auto generated log filtering Go binding around a klaytn contract events.
 type RNRewardFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RNRewardSession is an auto generated Go binding around an GXP contract,
+// RNRewardSession is an auto generated Go binding around a klaytn contract,
 // with pre-set call and transact options.
 type RNRewardSession struct {
 	Contract     *RNReward         // Generic contract binding to set the session for
@@ -65,31 +65,31 @@ type RNRewardSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// RNRewardCallerSession is an auto generated read-only Go binding around an GXP contract,
+// RNRewardCallerSession is an auto generated read-only Go binding around a klaytn contract,
 // with pre-set call options.
 type RNRewardCallerSession struct {
 	Contract *RNRewardCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// RNRewardTransactorSession is an auto generated write-only Go binding around an GXP contract,
+// RNRewardTransactorSession is an auto generated write-only Go binding around a klaytn contract,
 // with pre-set transact options.
 type RNRewardTransactorSession struct {
 	Contract     *RNRewardTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// RNRewardRaw is an auto generated low-level Go binding around an GXP contract.
+// RNRewardRaw is an auto generated low-level Go binding around a klaytn contract.
 type RNRewardRaw struct {
 	Contract *RNReward // Generic contract binding to access the raw methods on
 }
 
-// RNRewardCallerRaw is an auto generated low-level read-only Go binding around an GXP contract.
+// RNRewardCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
 type RNRewardCallerRaw struct {
 	Contract *RNRewardCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// RNRewardTransactorRaw is an auto generated low-level write-only Go binding around an GXP contract.
+// RNRewardTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
 type RNRewardTransactorRaw struct {
 	Contract *RNRewardTransactor // Generic write-only contract binding to access the raw methods on
 }

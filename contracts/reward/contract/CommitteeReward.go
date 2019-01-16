@@ -17,12 +17,12 @@ import (
 const CommitteeRewardABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"totalAmount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"receiver\",\"type\":\"address\"}],\"name\":\"reward\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"safeWithdrawal\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"}]"
 
 // CommitteeRewardBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const CommitteeRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820938a7476ba3d648a301aa0f94c1a1173b649c5325a0e0433c22e50d86a38d7990029`
+const CommitteeRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a7230582034139481749783d763aa3cac5823574722572f25bcf133cfe6411b904f70d9b20029`
 
 // CommitteeRewardBin is the compiled bytecode used for deploying new contracts.
-const CommitteeRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820938a7476ba3d648a301aa0f94c1a1173b649c5325a0e0433c22e50d86a38d7990029`
+const CommitteeRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a7230582034139481749783d763aa3cac5823574722572f25bcf133cfe6411b904f70d9b20029`
 
-// DeployCommitteeReward deploys a new GXP contract, binding an instance of CommitteeReward to it.
+// DeployCommitteeReward deploys a new klaytn contract, binding an instance of CommitteeReward to it.
 func DeployCommitteeReward(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CommitteeReward, error) {
 	parsed, err := abi.JSON(strings.NewReader(CommitteeRewardABI))
 	if err != nil {
@@ -35,29 +35,29 @@ func DeployCommitteeReward(auth *bind.TransactOpts, backend bind.ContractBackend
 	return address, tx, &CommitteeReward{CommitteeRewardCaller: CommitteeRewardCaller{contract: contract}, CommitteeRewardTransactor: CommitteeRewardTransactor{contract: contract}, CommitteeRewardFilterer: CommitteeRewardFilterer{contract: contract}}, nil
 }
 
-// CommitteeReward is an auto generated Go binding around an GXP contract.
+// CommitteeReward is an auto generated Go binding around a klaytn contract.
 type CommitteeReward struct {
 	CommitteeRewardCaller     // Read-only binding to the contract
 	CommitteeRewardTransactor // Write-only binding to the contract
 	CommitteeRewardFilterer   // Log filterer for contract events
 }
 
-// CommitteeRewardCaller is an auto generated read-only Go binding around an GXP contract.
+// CommitteeRewardCaller is an auto generated read-only Go binding around a klaytn contract.
 type CommitteeRewardCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CommitteeRewardTransactor is an auto generated write-only Go binding around an GXP contract.
+// CommitteeRewardTransactor is an auto generated write-only Go binding around a klaytn contract.
 type CommitteeRewardTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CommitteeRewardFilterer is an auto generated log filtering Go binding around an GXP contract events.
+// CommitteeRewardFilterer is an auto generated log filtering Go binding around a klaytn contract events.
 type CommitteeRewardFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CommitteeRewardSession is an auto generated Go binding around an GXP contract,
+// CommitteeRewardSession is an auto generated Go binding around a klaytn contract,
 // with pre-set call and transact options.
 type CommitteeRewardSession struct {
 	Contract     *CommitteeReward  // Generic contract binding to set the session for
@@ -65,31 +65,31 @@ type CommitteeRewardSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// CommitteeRewardCallerSession is an auto generated read-only Go binding around an GXP contract,
+// CommitteeRewardCallerSession is an auto generated read-only Go binding around a klaytn contract,
 // with pre-set call options.
 type CommitteeRewardCallerSession struct {
 	Contract *CommitteeRewardCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// CommitteeRewardTransactorSession is an auto generated write-only Go binding around an GXP contract,
+// CommitteeRewardTransactorSession is an auto generated write-only Go binding around a klaytn contract,
 // with pre-set transact options.
 type CommitteeRewardTransactorSession struct {
 	Contract     *CommitteeRewardTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// CommitteeRewardRaw is an auto generated low-level Go binding around an GXP contract.
+// CommitteeRewardRaw is an auto generated low-level Go binding around a klaytn contract.
 type CommitteeRewardRaw struct {
 	Contract *CommitteeReward // Generic contract binding to access the raw methods on
 }
 
-// CommitteeRewardCallerRaw is an auto generated low-level read-only Go binding around an GXP contract.
+// CommitteeRewardCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
 type CommitteeRewardCallerRaw struct {
 	Contract *CommitteeRewardCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// CommitteeRewardTransactorRaw is an auto generated low-level write-only Go binding around an GXP contract.
+// CommitteeRewardTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
 type CommitteeRewardTransactorRaw struct {
 	Contract *CommitteeRewardTransactor // Generic write-only contract binding to access the raw methods on
 }

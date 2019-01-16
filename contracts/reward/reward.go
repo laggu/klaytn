@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-//go:generate abigen --sol contract/GXPReward.sol --pkg contract --out contract/GXPReward.go
+//go:generate abigen --sol contract/KlaytnReward.sol --pkg contract --out contract/KlaytnReward.go
 //go:generate abigen --sol contract/CommitteeReward.sol --pkg contract --out contract/CommitteeReward.go
 //go:generate abigen --sol contract/RNReward.sol --pkg contract --out contract/RNReward.go
 //go:generate abigen --sol contract/ProposerReward.sol --pkg contract --out contract/ProposerReward.go
@@ -29,19 +29,19 @@ import (
 )
 
 type Reward struct {
-	*contract.GXPRewardSession
+	*contract.KlaytnRewardSession
 	contractBackend bind.ContractBackend
 }
 
 func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, contractBackend bind.ContractBackend) (*Reward, error) {
-	gxpreward, err := contract.NewGXPReward(contractAddr, contractBackend)
+	klaytnReward, err := contract.NewKlaytnReward(contractAddr, contractBackend)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Reward{
-		&contract.GXPRewardSession{
-			Contract:     gxpreward,
+		&contract.KlaytnRewardSession{
+			Contract:     klaytnReward,
 			TransactOpts: *transactOpts,
 		},
 		contractBackend,
@@ -50,7 +50,7 @@ func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, con
 
 func DeployReward(transactOpts *bind.TransactOpts, contractBackend bind.ContractBackend) (common.Address, *Reward, error) {
 
-	rewardAddr, _, _, err := contract.DeployGXPReward(transactOpts, contractBackend)
+	rewardAddr, _, _, err := contract.DeployKlaytnReward(transactOpts, contractBackend)
 	if err != nil {
 		return rewardAddr, nil, err
 	}

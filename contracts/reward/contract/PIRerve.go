@@ -17,12 +17,12 @@ import (
 const PIRRewardABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"totalAmount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"receiver\",\"type\":\"address\"}],\"name\":\"reward\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"safeWithdrawal\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"}]"
 
 // PIRRewardBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const PIRRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a723058201307c3756f4e627009187dcdbc0b3e286c13b98ba9279a25bfcc18dd8bcd73e40029`
+const PIRRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820575412d7319e2bb0364c6797f55189d84417a393edaf311cf4f247df0ebd28bb0029`
 
 // PIRRewardBin is the compiled bytecode used for deploying new contracts.
-const PIRRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a723058201307c3756f4e627009187dcdbc0b3e286c13b98ba9279a25bfcc18dd8bcd73e40029`
+const PIRRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820575412d7319e2bb0364c6797f55189d84417a393edaf311cf4f247df0ebd28bb0029`
 
-// DeployPIRReward deploys a new GXP contract, binding an instance of PIRReward to it.
+// DeployPIRReward deploys a new klaytn contract, binding an instance of PIRReward to it.
 func DeployPIRReward(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *PIRReward, error) {
 	parsed, err := abi.JSON(strings.NewReader(PIRRewardABI))
 	if err != nil {
@@ -35,29 +35,29 @@ func DeployPIRReward(auth *bind.TransactOpts, backend bind.ContractBackend) (com
 	return address, tx, &PIRReward{PIRRewardCaller: PIRRewardCaller{contract: contract}, PIRRewardTransactor: PIRRewardTransactor{contract: contract}, PIRRewardFilterer: PIRRewardFilterer{contract: contract}}, nil
 }
 
-// PIRReward is an auto generated Go binding around an GXP contract.
+// PIRReward is an auto generated Go binding around a klaytn contract.
 type PIRReward struct {
 	PIRRewardCaller     // Read-only binding to the contract
 	PIRRewardTransactor // Write-only binding to the contract
 	PIRRewardFilterer   // Log filterer for contract events
 }
 
-// PIRRewardCaller is an auto generated read-only Go binding around an GXP contract.
+// PIRRewardCaller is an auto generated read-only Go binding around a klaytn contract.
 type PIRRewardCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// PIRRewardTransactor is an auto generated write-only Go binding around an GXP contract.
+// PIRRewardTransactor is an auto generated write-only Go binding around a klaytn contract.
 type PIRRewardTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// PIRRewardFilterer is an auto generated log filtering Go binding around an GXP contract events.
+// PIRRewardFilterer is an auto generated log filtering Go binding around a klaytn contract events.
 type PIRRewardFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// PIRRewardSession is an auto generated Go binding around an GXP contract,
+// PIRRewardSession is an auto generated Go binding around a klaytn contract,
 // with pre-set call and transact options.
 type PIRRewardSession struct {
 	Contract     *PIRReward        // Generic contract binding to set the session for
@@ -65,31 +65,31 @@ type PIRRewardSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// PIRRewardCallerSession is an auto generated read-only Go binding around an GXP contract,
+// PIRRewardCallerSession is an auto generated read-only Go binding around a klaytn contract,
 // with pre-set call options.
 type PIRRewardCallerSession struct {
 	Contract *PIRRewardCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts    // Call options to use throughout this session
 }
 
-// PIRRewardTransactorSession is an auto generated write-only Go binding around an GXP contract,
+// PIRRewardTransactorSession is an auto generated write-only Go binding around a klaytn contract,
 // with pre-set transact options.
 type PIRRewardTransactorSession struct {
 	Contract     *PIRRewardTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// PIRRewardRaw is an auto generated low-level Go binding around an GXP contract.
+// PIRRewardRaw is an auto generated low-level Go binding around a klaytn contract.
 type PIRRewardRaw struct {
 	Contract *PIRReward // Generic contract binding to access the raw methods on
 }
 
-// PIRRewardCallerRaw is an auto generated low-level read-only Go binding around an GXP contract.
+// PIRRewardCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
 type PIRRewardCallerRaw struct {
 	Contract *PIRRewardCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// PIRRewardTransactorRaw is an auto generated low-level write-only Go binding around an GXP contract.
+// PIRRewardTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
 type PIRRewardTransactorRaw struct {
 	Contract *PIRRewardTransactor // Generic write-only contract binding to access the raw methods on
 }
