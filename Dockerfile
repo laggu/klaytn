@@ -7,7 +7,7 @@ RUN apk add --no-cache make gcc musl-dev linux-headers
 ADD . /klaytn
 RUN cd /klaytn && make klay
 
-# Container Stage (run gxp)
+# Container Stage (run klay)
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates

@@ -10,10 +10,10 @@ fi
 # Create fake Go workspace if it doesn't exist yet.
 workspace="$PWD/build/_workspace"
 root="$PWD"
-gxpdir="$workspace/src/github.com/ground-x"
-if [ ! -L "$gxpdir/klaytn" ]; then
-    mkdir -p "$gxpdir"
-    cd "$gxpdir"
+orgdir="$workspace/src/github.com/ground-x"
+if [ ! -L "$orgdir/klaytn" ]; then
+    mkdir -p "$orgdir"
+    cd "$orgdir"
     ln -s ../../../../../. klaytn
     cd "$root"
 fi
@@ -23,8 +23,8 @@ GOPATH="$workspace"
 export GOPATH
 
 # Run the command inside the workspace.
-cd "$gxpdir/klaytn"
-PWD="$gxpdir/klaytn"
+cd "$orgdir/klaytn"
+PWD="$orgdir/klaytn"
 
 # Launch the arguments with the configured environment.
 exec "$@"

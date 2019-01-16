@@ -388,17 +388,17 @@ func doArchive(cmdline []string) {
 	var (
 		env      = build.Env()
 		base     = archiveBasename(*arch, env)
-		gxp      = "klay-" + base + ext
+		klaybin  = "klay-" + base + ext
 		alltools = "klay-alltools-" + base + ext
 	)
 	maybeSkipArchive(env)
-	if err := build.WriteArchive(gxp, gethArchiveFiles); err != nil {
+	if err := build.WriteArchive(klaybin, gethArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
 	if err := build.WriteArchive(alltools, allToolsArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
-	for _, archive := range []string{gxp, alltools} {
+	for _, archive := range []string{klaybin, alltools} {
 		if err := archiveUpload(archive, *upload, *signer); err != nil {
 			log.Fatal(err)
 		}
@@ -465,7 +465,7 @@ func maybeSkipArchive(env build.Environment) {
 func doDebianSource(cmdline []string) {
 	var (
 		signer  = flag.String("signer", "", `Signing key name, also used as package author`)
-		upload  = flag.String("upload", "", `Where to upload the source package (usually "ppa:gxplatform/gxplatform")`)
+		upload  = flag.String("upload", "", `Where to upload the source package (usually "ppa:klaytn/klaytn")`)
 		workdir = flag.String("workdir", "", `Output directory for packages (uses temp dir if unset)`)
 		now     = time.Now()
 	)
@@ -658,7 +658,7 @@ func doWindowsInstaller(cmdline []string) {
 	var (
 		devTools []string
 		allTools []string
-		gxpTool  string
+		klayTool string
 	)
 	for _, file := range allToolsArchiveFiles {
 		if file == "COPYING" { // license, copied later
@@ -666,7 +666,7 @@ func doWindowsInstaller(cmdline []string) {
 		}
 		allTools = append(allTools, filepath.Base(file))
 		if filepath.Base(file) == "geth.exe" {
-			gxpTool = file
+			klayTool = file
 		} else {
 			devTools = append(devTools, file)
 		}
@@ -676,7 +676,7 @@ func doWindowsInstaller(cmdline []string) {
 	// first section contains the geth binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"Klay":     gxpTool,
+		"Klay":     klayTool,
 		"DevTools": devTools,
 	}
 	build.Render("build/nsis.klay.nsi", filepath.Join(*workdir, "klay.nsi"), 0644, nil)
@@ -732,7 +732,7 @@ func doAndroidArchive(cmdline []string) {
 	// Build the Android archive and Maven resources
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
 	build.MustRun(gomobileTool("init", "--ndk", os.Getenv("ANDROID_NDK")))
-	build.MustRun(gomobileTool("bind", "-ldflags", "-s -w", "--target", "android", "--javapkg", "org.gxplatform", "-v", "github.com/ground-x/klaytn/mobile"))
+	build.MustRun(gomobileTool("bind", "-ldflags", "-s -w", "--target", "android", "--javapkg", "org.klaytn", "-v", "github.com/ground-x/klaytn/mobile"))
 
 	if *local {
 		// If we're building locally, copy bundle to build dir and skip Maven
