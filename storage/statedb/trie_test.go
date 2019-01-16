@@ -599,7 +599,8 @@ func tempDB() (string, *Database) {
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary directory: %v", err))
 	}
-	diskdb, err := database.NewDBManager(dir, database.LEVELDB, false, 256, 0)
+	dbc := &database.DBConfig{Dir: dir, DBType: database.LEVELDB, LevelDBCacheSize: 256, LevelDBHandles: 0, ChildChainIndexing: false}
+	diskdb, err := database.NewDBManager(dbc)
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary database: %v", err))
 	}

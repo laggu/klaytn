@@ -74,7 +74,7 @@ func NewLDBDatabase(file string, ldbCacheSize, numHandles int) (*levelDB, error)
 	if numHandles < 16 {
 		numHandles = 16
 	}
-	localLogger.Info("Allocated LevelDB with write buffer and file handles", "writeBufferSize", ldbCacheSize, "numHandles", numHandles)
+	localLogger.Info("Allocated LevelDB with write buffer and file LevelDBHandles", "writeBufferSize", ldbCacheSize, "numHandles", numHandles)
 
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(file, getLDBOptions(ldbCacheSize, numHandles))

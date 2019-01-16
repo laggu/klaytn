@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"os"
 )
@@ -70,7 +71,9 @@ func initGenesis(ctx *cli.Context) error {
 	// Open an initialise both full and light databases
 	stack := makeFullNode(ctx)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		chaindb, err := stack.OpenDatabase(name, false, 0, 0)
+		dbc := &database.DBConfig{Dir: name, DBType: database.LEVELDB,
+			LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
+		chaindb, err := stack.OpenDatabase(dbc)
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}

@@ -632,11 +632,12 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, childChainIndexing bool, ldbCacheSize, handles int) (database.DBManager, error) {
+func (n *Node) OpenDatabase(dbc *database.DBConfig) (database.DBManager, error) {
 	if n.config.DataDir == "" {
 		return database.NewMemoryDBManager(), nil
 	}
-	return database.NewDBManager(n.config.ResolvePath(name), database.LEVELDB, childChainIndexing, ldbCacheSize, handles)
+	dbc.Dir = n.config.ResolvePath(dbc.Dir)
+	return database.NewDBManager(dbc)
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.

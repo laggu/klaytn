@@ -174,21 +174,35 @@ func NewMemoryDBManager() DBManager {
 	return &dbm
 }
 
-func NewDBManager(dir string, dbType string, childChainIndexing bool, ldbCacheSize, handles int) (DBManager, error) {
-	dbm := databaseManager{make([]Database, databaseEntryTypeSize, databaseEntryTypeSize), false, childChainIndexing}
+// DBConfig handles database related configurations.
+type DBConfig struct {
+	// General configurations for all types of DB.
+	Dir    string
+	DBType string
+
+	// LevelDB related configurations.
+	LevelDBCacheSize int
+	LevelDBHandles   int
+
+	// Service chain related configurations.
+	ChildChainIndexing bool
+}
+
+func NewDBManager(dbc *DBConfig) (DBManager, error) {
+	dbm := databaseManager{make([]Database, databaseEntryTypeSize, databaseEntryTypeSize), false, dbc.ChildChainIndexing}
 
 	// TODO-GX Should be replaced by initialization function with mapping information.
 	var db Database
 	var err error
-	switch dbType {
+	switch dbc.DBType {
 	case LEVELDB:
-		db, err = NewLDBDatabase(dir, ldbCacheSize, handles)
+		db, err = NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
 	case BADGER:
-		db, err = NewBGDatabase(dir)
+		db, err = NewBGDatabase(dbc.Dir)
 	case MEMDB:
 		db = NewMemDatabase()
 	default:
-		db, err = NewLDBDatabase(dir, ldbCacheSize, handles)
+		db, err = NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
 		logger.Info("database type is not set, fall back to default LevelDB")
 	}
 

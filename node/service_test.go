@@ -22,6 +22,7 @@ package node
 
 import (
 	"fmt"
+	"github.com/ground-x/klaytn/storage/database"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -43,7 +44,9 @@ func TestContextDatabases(t *testing.T) {
 	}
 	// Request the opening/creation of a database and ensure it persists to disk
 	ctx := &ServiceContext{config: &Config{Name: "unit-test", DataDir: dir}}
-	db, err := ctx.OpenDatabase("persistent", false, 0, 0)
+	dbc := &database.DBConfig{Dir: "persistent", DBType: database.LEVELDB,
+		LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
+	db, err := ctx.OpenDatabase(dbc)
 	if err != nil {
 		t.Fatalf("failed to open persistent database: %v", err)
 	}
@@ -54,7 +57,9 @@ func TestContextDatabases(t *testing.T) {
 	}
 	// Request th opening/creation of an ephemeral database and ensure it's not persisted
 	ctx = &ServiceContext{config: &Config{DataDir: ""}}
-	db, err = ctx.OpenDatabase("ephemeral", false, 0, 0)
+	dbc = &database.DBConfig{Dir: "ephemeral", DBType: database.LEVELDB,
+		LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
+	db, err = ctx.OpenDatabase(dbc)
 	if err != nil {
 		t.Fatalf("failed to open ephemeral database: %v", err)
 	}
