@@ -100,16 +100,6 @@ func (s *stateObject) empty() bool {
 	return s.account.Empty()
 }
 
-// LegacyAccount is the Klaytn consensus representation of legacy accounts.
-// These objects are stored in the main account trie.
-// TODO-GX: To reduce diff, LegacyAccount remains here. It should be moved to legacy_account.go
-type LegacyAccount struct {
-	Nonce    uint64
-	Balance  *big.Int
-	Root     common.Hash // merkle root of the storage trie
-	CodeHash []byte
-}
-
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	return &stateObject{

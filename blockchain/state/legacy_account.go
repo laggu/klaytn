@@ -24,6 +24,15 @@ import (
 	"math/big"
 )
 
+// LegacyAccount is the Klaytn consensus representation of legacy accounts.
+// These objects are stored in the main account trie.
+type LegacyAccount struct {
+	Nonce    uint64
+	Balance  *big.Int
+	Root     common.Hash // merkle root of the storage trie
+	CodeHash []byte
+}
+
 // newEmptyLegacyAccount returns an empty legacy account.
 // This object will be used for RLP-decoding.
 func newEmptyLegacyAccount() *LegacyAccount {
