@@ -27,7 +27,7 @@ import (
 
 // TestPublicKeyRLP tests RLP encoding/decoding of PublicKeySerializable.
 func TestPublicKeyRLP(t *testing.T) {
-	k := newEmptyPublicKeySerializable()
+	k := newPublicKeySerializable()
 	k.X.SetUint64(10)
 	k.Y.SetUint64(20)
 
@@ -41,7 +41,7 @@ func TestPublicKeyRLP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dec := newEmptyPublicKeySerializable()
+	dec := newPublicKeySerializable()
 
 	if err := rlp.DecodeBytes(b, &dec); err != nil {
 		t.Fatal(err)
@@ -55,7 +55,7 @@ func TestPublicKeyRLP(t *testing.T) {
 
 // TestPublicKeyRLP tests JSON encoding/decoding of PublicKeySerializable.
 func TestPublicKeyJSON(t *testing.T) {
-	k := newEmptyPublicKeySerializable()
+	k := newPublicKeySerializable()
 	k.X.SetUint64(10)
 	k.Y.SetUint64(20)
 
@@ -69,7 +69,7 @@ func TestPublicKeyJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dec := newEmptyPublicKeySerializable()
+	dec := newPublicKeySerializable()
 
 	if err := json.Unmarshal(b, &dec); err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestPublicKeyJSON(t *testing.T) {
 
 // TestPublicKeyRLP tests DeepCopy() of PublicKeySerializable.
 func TestPublicKeyDeepCopy(t *testing.T) {
-	k := newEmptyPublicKeySerializable()
+	k := newPublicKeySerializable()
 	k.X.SetUint64(10)
 	k.Y.SetUint64(20)
 

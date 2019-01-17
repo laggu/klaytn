@@ -34,7 +34,7 @@ func NewAccountKeyPublicWithValue(pk *ecdsa.PublicKey) *AccountKeyPublic {
 }
 
 func NewAccountKeyPublic() *AccountKeyPublic {
-	return &AccountKeyPublic{newEmptyPublicKeySerializable()}
+	return &AccountKeyPublic{newPublicKeySerializable()}
 }
 
 func (a *AccountKeyPublic) Type() AccountKeyType {

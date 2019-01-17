@@ -40,12 +40,12 @@ type publicKeySerializableInternal struct {
 	X, Y *big.Int
 }
 
-// newEmptyPublicKeySerializable creates a PublicKeySerializable object.
+// newPublicKeySerializable creates a PublicKeySerializable object.
 // The object is initialized with default values.
 // Curve = S256 curve
 // X = 0
 // Y = 0
-func newEmptyPublicKeySerializable() *PublicKeySerializable {
+func newPublicKeySerializable() *PublicKeySerializable {
 	return &PublicKeySerializable{
 		Curve: crypto.S256(),
 		X:     new(big.Int),
@@ -109,7 +109,7 @@ func (p *PublicKeySerializable) UnmarshalJSON(b []byte) error {
 // DeepCopy creates a new PublicKeySerializable object and newly allocates memory for all its attributes.
 // Then, the values of the original object are copied to those of the new object.
 func (p *PublicKeySerializable) DeepCopy() *PublicKeySerializable {
-	pk := newEmptyPublicKeySerializable()
+	pk := newPublicKeySerializable()
 	pk.X = new(big.Int).Set(p.X)
 	pk.Y = new(big.Int).Set(p.Y)
 
