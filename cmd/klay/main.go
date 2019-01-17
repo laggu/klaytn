@@ -103,6 +103,8 @@ var (
 		utils.CacheScaleFlag,
 		utils.ChildChainIndexingFlag,
 		utils.ListenPortFlag,
+		utils.SubListenPortFlag,
+		utils.MultiChannelUseFlag,
 		utils.NodeTypeFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,

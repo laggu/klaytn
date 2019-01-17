@@ -73,6 +73,8 @@ var (
 		utils.CacheScaleFlag,
 		utils.ChildChainIndexingFlag,
 		utils.ListenPortFlag,
+		utils.SubListenPortFlag,
+		utils.MultiChannelUseFlag,
 		utils.CoinbaseFlag,
 		utils.GasPriceFlag,
 		utils.MinerThreadsFlag,

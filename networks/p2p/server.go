@@ -131,6 +131,12 @@ type Config struct {
 	// the server is started.
 	ListenAddr string
 
+	// SubListenAddr is the list of the secondary listen address used for peer-to-peer connections.
+	SubListenAddr []string
+
+	// If EnableMultiChannelServer is true, multichannel can communicate with other nodes
+	EnableMultiChannelServer bool
+
 	// If set to a non-nil value, the given NAT port mapper
 	// is used to make the listening port available to the
 	// Internet.

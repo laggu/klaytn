@@ -455,6 +455,15 @@ var (
 		Usage: "Network listening port",
 		Value: 30303,
 	}
+	SubListenPortFlag = cli.IntFlag{
+		Name:  "subport",
+		Usage: "Network sub listening port",
+		Value: 30304,
+	}
+	MultiChannelUseFlag = cli.BoolFlag{
+		Name:  "multichannel",
+		Usage: "Create a dedicated channel for block propagation",
+	}
 	BootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
 		Usage: "Comma separated enode URLs for P2P discovery bootstrap (set v4+v5 instead for light servers)",
@@ -597,6 +606,15 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(ListenPortFlag.Name) {
 		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name))
+	}
+
+	if ctx.GlobalBool(MultiChannelUseFlag.Name) {
+		cfg.EnableMultiChannelServer = true
+		if ctx.GlobalIsSet(SubListenPortFlag.Name) {
+			cfg.SubListenAddr = nil
+			SubListenAddr := fmt.Sprintf(":%d", ctx.GlobalInt(SubListenPortFlag.Name))
+			cfg.SubListenAddr = append(cfg.SubListenAddr, SubListenAddr)
+		}
 	}
 }
 
