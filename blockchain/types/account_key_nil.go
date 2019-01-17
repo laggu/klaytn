@@ -16,6 +16,8 @@
 
 package types
 
+import "github.com/ground-x/klaytn/params"
+
 // AccountKeyNil is used for accounts having no keys.
 // In this case, verifying the signature of a transaction uses the legacy scheme.
 // 1. The address comes from the public key which is derived from txhash and the tx's signature.
@@ -49,4 +51,14 @@ func (a *AccountKeyNil) String() string {
 
 func (a *AccountKeyNil) DeepCopy() AccountKey {
 	return NewAccountKeyNil()
+}
+
+func (a *AccountKeyNil) AccountCreationGas() uint64 {
+	// No gas required to make an account with a nil key.
+	return params.TxAccountCreationGasDefault
+}
+
+func (a *AccountKeyNil) SigValidationGas() uint64 {
+	// No gas required to make an account with a nil key.
+	return params.TxValidationGasDefault
 }

@@ -93,6 +93,13 @@ const (
 
 	// istanbul BFT
 	BFTMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.
+
+	// AccountKey
+	// TODO-GX: Need to fix below values.
+	TxAccountCreationGasDefault uint64 = 0
+	TxValidationGasDefault      uint64 = 0
+	TxAccountCreationGasPerKey  uint64 = 20000
+	TxValidationGasPerKey       uint64 = 5000
 )
 
 var (

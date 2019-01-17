@@ -16,6 +16,8 @@
 
 package types
 
+import "github.com/ground-x/klaytn/params"
+
 // AccountKeyFail is used to prevent smart contract accounts from withdrawing tokens
 // from themselves with a public key recovery mechanism.
 // Klaytn assumes that the only way to take tokens from smart contract account is using
@@ -44,4 +46,14 @@ func (a *AccountKeyFail) String() string {
 
 func (a *AccountKeyFail) DeepCopy() AccountKey {
 	return NewAccountKeyFail()
+}
+
+func (a *AccountKeyFail) AccountCreationGas() uint64 {
+	// No gas required to make an account with a failed key.
+	return params.TxAccountCreationGasDefault
+}
+
+func (a *AccountKeyFail) SigValidationGas() uint64 {
+	// No gas required to make an account with a failed key.
+	return params.TxValidationGasDefault
 }

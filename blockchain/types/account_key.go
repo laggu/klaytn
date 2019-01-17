@@ -46,6 +46,12 @@ type AccountKey interface {
 
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey
+
+	// AccountCreationGas returns gas required to create an account with the corresponding key.
+	AccountCreationGas() uint64
+
+	// SigValidationGas returns gas required to validate a tx with the account.
+	SigValidationGas() uint64
 }
 
 func NewAccountKey(t AccountKeyType) (AccountKey, error) {

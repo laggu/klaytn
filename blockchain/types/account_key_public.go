@@ -19,7 +19,10 @@ package types
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ground-x/klaytn/params"
 )
+
+const numKeys = 1
 
 // AccountKeyPublic is used for accounts having one public key.
 // In this case, verifying the signature of a transaction is performed as following:
@@ -56,4 +59,12 @@ func (a *AccountKeyPublic) Equal(b AccountKey) bool {
 
 func (a *AccountKeyPublic) String() string {
 	return fmt.Sprintf("AccountKeyPublic: %s", a.PublicKeySerializable.String())
+}
+
+func (a *AccountKeyPublic) AccountCreationGas() uint64 {
+	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey
+}
+
+func (a *AccountKeyPublic) SigValidationGas() uint64 {
+	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey
 }
