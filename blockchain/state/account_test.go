@@ -17,6 +17,7 @@
 package state
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -45,6 +46,7 @@ func TestAccountSerialization(t *testing.T) {
 		fn   func(t *testing.T, acc Account)
 	}{
 		{"RLP", testAccountRLP},
+		{"JSON", testAccountJSON},
 	}
 	for _, test := range testcases {
 		for _, acc := range accs {
@@ -67,6 +69,29 @@ func testAccountRLP(t *testing.T, acc Account) {
 	dec := NewAccountSerializer()
 
 	if err := rlp.DecodeBytes(b, &dec); err != nil {
+		panic(err)
+	}
+
+	if !acc.Equal(dec.account) {
+		fmt.Println("acc")
+		fmt.Println(acc)
+		fmt.Println("dec.account")
+		fmt.Println(dec.account)
+		t.Errorf("acc != dec.account")
+	}
+}
+
+func testAccountJSON(t *testing.T, acc Account) {
+	enc := NewAccountSerializerWithAccount(acc)
+
+	b, err := json.Marshal(enc)
+	if err != nil {
+		panic(err)
+	}
+
+	dec := NewAccountSerializer()
+
+	if err := json.Unmarshal(b, &dec); err != nil {
 		panic(err)
 	}
 

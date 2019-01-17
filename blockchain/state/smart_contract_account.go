@@ -69,7 +69,7 @@ func newSmartContractAccountWithMap(values map[AccountValueKeyType]interface{}) 
 
 func newSmartContractAccountSerializable() *smartContractAccountSerializable {
 	return &smartContractAccountSerializable{
-		CommonSerializable: &accountCommonSerializable{},
+		CommonSerializable: newAccountCommonSerializable(),
 	}
 }
 
@@ -93,7 +93,7 @@ func (sca *SmartContractAccount) EncodeRLP(w io.Writer) error {
 
 func (sca *SmartContractAccount) DecodeRLP(s *rlp.Stream) error {
 	serialized := &smartContractAccountSerializable{
-		&accountCommonSerializable{},
+		newAccountCommonSerializable(),
 		common.Hash{},
 		[]byte{},
 	}

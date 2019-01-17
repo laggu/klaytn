@@ -17,6 +17,7 @@
 package state
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -75,6 +76,13 @@ func newAccountCommonWithMap(values map[AccountValueKeyType]interface{}) *Accoun
 	return acc
 }
 
+func newAccountCommonSerializable() *accountCommonSerializable {
+	return &accountCommonSerializable{
+		Balance: new(big.Int),
+		Key:     types.NewAccountKeySerializer(),
+	}
+}
+
 // toSerializable converts an AccountCommon object to an accountCommonSerializable object.
 func (e *AccountCommon) toSerializable() *accountCommonSerializable {
 	return &accountCommonSerializable{
@@ -98,12 +106,28 @@ func (e *AccountCommon) EncodeRLP(w io.Writer) error {
 }
 
 func (e *AccountCommon) DecodeRLP(s *rlp.Stream) error {
-	serialized := &accountCommonSerializable{}
+	serialized := newAccountCommonSerializable()
 
 	if err := s.Decode(serialized); err != nil {
 		return err
 	}
 	e.fromSerializable(serialized)
+	return nil
+}
+
+func (e *AccountCommon) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.toSerializable())
+}
+
+func (e *AccountCommon) UnmarshalJSON(b []byte) error {
+	serialized := newAccountCommonSerializable()
+
+	if err := json.Unmarshal(b, serialized); err != nil {
+		return err
+	}
+
+	e.fromSerializable(serialized)
+
 	return nil
 }
 
@@ -141,12 +165,6 @@ func (e *AccountCommon) SetKey(k types.AccountKey) {
 
 func (e *AccountCommon) Empty() bool {
 	return e.nonce == 0 && e.balance.Sign() == 0
-}
-
-func (e *AccountCommon) Init() {
-	if e.balance == nil {
-		e.balance = new(big.Int)
-	}
 }
 
 func (e *AccountCommon) DeepCopy() *AccountCommon {

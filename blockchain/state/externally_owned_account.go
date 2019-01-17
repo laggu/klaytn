@@ -43,10 +43,6 @@ func (e *ExternallyOwnedAccount) Type() AccountType {
 	return ExternallyOwnedAccountType
 }
 
-func (e *ExternallyOwnedAccount) Init() {
-	e.AccountCommon.Init()
-}
-
 func (e *ExternallyOwnedAccount) Dump() {
 	fmt.Println(e.String())
 }
