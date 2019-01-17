@@ -34,13 +34,13 @@ type txInternalDataJSON struct {
 	Tx     json.RawMessage
 }
 
-// newTxInternalDataSerializer creates a new TxInternalDataSerializer object with the given TxInternalData object.
-func newTxInternalDataSerializer(t TxInternalData) *TxInternalDataSerializer {
+// newTxInternalDataSerializerWithValues creates a new TxInternalDataSerializer object with the given TxInternalData object.
+func newTxInternalDataSerializerWithValues(t TxInternalData) *TxInternalDataSerializer {
 	return &TxInternalDataSerializer{t.Type(), t}
 }
 
-// newEmptyTxInternalDataSerializer creates an empty TxInternalDataSerializer object for decoding.
-func newEmptyTxInternalDataSerializer() *TxInternalDataSerializer {
+// newTxInternalDataSerializer creates an empty TxInternalDataSerializer object for decoding.
+func newTxInternalDataSerializer() *TxInternalDataSerializer {
 	return &TxInternalDataSerializer{}
 }
 

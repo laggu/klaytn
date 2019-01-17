@@ -59,7 +59,7 @@ func (t *TxInternalDataChainDataPegging) Equal(b TxInternalData) bool {
 }
 
 func (t *TxInternalDataChainDataPegging) String() string {
-	ser := newTxInternalDataSerializer(t)
+	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
 	dataPeggedRLP, _ := rlp.EncodeToBytes(t.PeggedData)
 

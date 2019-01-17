@@ -50,7 +50,7 @@ func (t *TxInternalDataValueTransfer) Equal(b TxInternalData) bool {
 }
 
 func (t *TxInternalDataValueTransfer) String() string {
-	ser := newTxInternalDataSerializer(t)
+	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
 	return fmt.Sprintf(`%s
 	Hex:      %x

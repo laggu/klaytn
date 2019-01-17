@@ -143,14 +143,14 @@ func isProtectedV(V *big.Int) bool {
 
 // EncodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
-	serializer := newTxInternalDataSerializer(tx.data)
+	serializer := newTxInternalDataSerializerWithValues(tx.data)
 	return rlp.Encode(w, serializer)
 }
 
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	_, size, _ := s.Kind()
-	serializer := newEmptyTxInternalDataSerializer()
+	serializer := newTxInternalDataSerializer()
 	err := s.Decode(serializer)
 	tx.data = serializer.tx
 	if err == nil {
@@ -165,13 +165,13 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
 	data := tx.data
 	data.SetHash(&hash)
-	serializer := newTxInternalDataSerializer(tx.data)
+	serializer := newTxInternalDataSerializerWithValues(tx.data)
 	return json.Marshal(serializer)
 }
 
 // UnmarshalJSON decodes the web3 RPC transaction format.
 func (tx *Transaction) UnmarshalJSON(input []byte) error {
-	serializer := newEmptyTxInternalDataSerializer()
+	serializer := newTxInternalDataSerializer()
 	if err := json.Unmarshal(input, serializer); err != nil {
 		return err
 	}

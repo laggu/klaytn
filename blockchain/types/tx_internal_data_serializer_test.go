@@ -54,14 +54,14 @@ func TestTransactionSerialization(t *testing.T) {
 }
 
 func testTransactionRLP(t *testing.T, tx TxInternalData) {
-	enc := newTxInternalDataSerializer(tx)
+	enc := newTxInternalDataSerializerWithValues(tx)
 
 	b, err := rlp.EncodeToBytes(enc)
 	if err != nil {
 		panic(err)
 	}
 
-	dec := newEmptyTxInternalDataSerializer()
+	dec := newTxInternalDataSerializer()
 
 	if err := rlp.DecodeBytes(b, &dec); err != nil {
 		panic(err)
@@ -73,14 +73,14 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 }
 
 func testTransactionJSON(t *testing.T, tx TxInternalData) {
-	enc := newTxInternalDataSerializer(tx)
+	enc := newTxInternalDataSerializerWithValues(tx)
 
 	b, err := json.Marshal(enc)
 	if err != nil {
 		panic(err)
 	}
 
-	dec := newEmptyTxInternalDataSerializer()
+	dec := newTxInternalDataSerializer()
 
 	if err := json.Unmarshal(b, &dec); err != nil {
 		panic(err)
