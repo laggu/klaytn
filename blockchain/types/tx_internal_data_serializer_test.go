@@ -19,6 +19,7 @@ package types
 import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 	"testing"
@@ -33,6 +34,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"OriginalTx", genLegacyTransaction()},
 		{"ValueTransfer", genValueTransferTransaction()},
 		{"ChainDataTx", genChainDataTransaction()},
+		{"AccountCreation", genAccountCreationTransaction()},
 	}
 
 	var testcases = []struct {
@@ -145,4 +147,25 @@ func genChainDataTransaction() TxInternalData {
 		TxValueKeyPeggedData: peggedData,
 	})
 	return txdata
+}
+
+func genAccountCreationTransaction() TxInternalData {
+	k, _ := crypto.GenerateKey()
+	d, err := NewTxInternalDataWithMap(TxTypeAccountCreation, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:         uint64(1234),
+		TxValueKeyTo:            common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyAmount:        new(big.Int).SetUint64(10),
+		TxValueKeyGasLimit:      uint64(9999999999),
+		TxValueKeyGasPrice:      new(big.Int).SetUint64(25),
+		TxValueKeyFrom:          common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyHumanReadable: true,
+		TxValueKeyAccountKey:    NewAccountKeyPublicWithValue(&k.PublicKey),
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
 }

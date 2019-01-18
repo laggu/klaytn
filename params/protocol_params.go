@@ -106,6 +106,10 @@ const (
 	rewardContractIncentiveInSton int64 = 3200000000 // 3.2 KLAY for Reward contract (Unit: ston)
 	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
 	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
+
+	// Fee for new tx types
+	// TODO-GX: Need to fix values
+	TxGasAccountCreation uint64 = 10000
 )
 
 var (

@@ -55,6 +55,8 @@ const (
 	TxValueKeyData
 	TxValueKeyFrom
 	TxValueKeyPeggedData
+	TxValueKeyHumanReadable
+	TxValueKeyAccountKey
 )
 
 var (
@@ -162,6 +164,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxdata(), nil
 	case TxTypeValueTransfer:
 		return newTxInternalDataValueTransfer(), nil
+	case TxTypeAccountCreation:
+		return newTxInternalDataAccountCreation(), nil
 	case TxTypeChainDataPegging:
 		return newTxInternalDataChainDataPegging(), nil
 	}
@@ -175,6 +179,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxdataWithMap(values), nil
 	case TxTypeValueTransfer:
 		return newTxInternalDataValueTransferWithMap(values), nil
+	case TxTypeAccountCreation:
+		return newTxInternalDataAccountCreationWithMap(values), nil
 	case TxTypeChainDataPegging:
 		return newTxInternalDataChainDataPeggingWithMap(values), nil
 	}
