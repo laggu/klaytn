@@ -33,9 +33,11 @@ import (
 )
 
 var (
-	ErrInvalidSig                 = errors.New("invalid transaction v, r, s values")
-	errNoSigner                   = errors.New("missing signing methods")
-	ErrInvalidTxTypeForPeggedData = errors.New("invalid transaction type for pegged data")
+	ErrInvalidSig                     = errors.New("invalid transaction v, r, s values")
+	errNoSigner                       = errors.New("missing signing methods")
+	ErrInvalidTxTypeForPeggedData     = errors.New("invalid transaction type for pegged data")
+	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
+	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -194,6 +196,22 @@ func (tx *Transaction) To() *common.Address {
 	}
 	to := *tx.data.GetRecipient()
 	return &to
+}
+
+// From returns the from address of the transaction.
+// Since a legacy transaction (txdata) does not have the field `from`,
+// calling From() is failed for `txdata`.
+func (tx *Transaction) From() (common.Address, error) {
+	if tx.IsLegacyTransaction() {
+		return common.Address{}, errLegacyTransaction
+	}
+
+	tf, ok := tx.data.(TxInternalDataFrom)
+	if !ok {
+		return common.Address{}, errNotImplementTxInternalDataFrom
+	}
+
+	return tf.GetFrom(), nil
 }
 
 // Hash hashes the RLP encoding of tx.
