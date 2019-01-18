@@ -24,7 +24,6 @@ import (
 	"container/heap"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -249,56 +248,7 @@ func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
 }
 
 func (tx *Transaction) String() string {
-	var from, to string
-	v, r, s := tx.data.GetVRS()
-	if v != nil {
-		// make a best guess about the signer and use that to derive
-		// the sender.
-		signer := deriveSigner(v)
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	if tx.data.GetRecipient() == nil {
-		to = "[contract creation]"
-	} else {
-		to = fmt.Sprintf("%x", tx.data.GetRecipient().Bytes())
-	}
-	enc, _ := rlp.EncodeToBytes(&tx.data)
-	return fmt.Sprintf(`
-	TX(%x)
-	Contract: %v
-	From:     %s
-	To:       %s
-	Nonce:    %v
-	GasPrice: %#x
-	GasLimit  %#x
-	Value:    %#x
-	Data:     0x%x
-	V:        %#x
-	R:        %#x
-	S:        %#x
-	Hex:      %x
-`,
-		tx.Hash(),
-		tx.data.GetRecipient() == nil,
-		from,
-		to,
-		tx.data.GetAccountNonce(),
-		tx.data.GetPrice(),
-		tx.data.GetGasLimit(),
-		tx.data.GetAmount(),
-		tx.data.GetPayload(),
-		v,
-		r,
-		s,
-		enc,
-	)
+	return tx.data.String()
 }
 
 // GetChildChainAddr returns the pointer of sender address if a tx is a

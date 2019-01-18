@@ -143,6 +143,9 @@ type TxInternalData interface {
 
 	// IsLegacyTransaction returns true if the tx type is a legacy transaction (txdata) object.
 	IsLegacyTransaction() bool
+
+	// String returns a string containing information about the fields of the object.
+	String() string
 }
 
 // TxInternalDataFrom has a function `GetFrom()`.

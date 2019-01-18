@@ -189,6 +189,7 @@ func (t *TxInternalDataCommon) IsLegacyTransaction() bool {
 }
 
 func (t *TxInternalDataCommon) String() string {
+	// TODO-GX: make String() to string() to force implementing String() for a new transaction type.
 	return fmt.Sprintf(`
 	TX(%x)
 	From:     %s

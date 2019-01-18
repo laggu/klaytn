@@ -18,8 +18,10 @@ package types
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 )
 
@@ -249,4 +251,59 @@ func (t *txdata) Equal(a TxInternalData) bool {
 		t.V.Cmp(ta.V) == 0 &&
 		t.R.Cmp(ta.R) == 0 &&
 		t.S.Cmp(ta.S) == 0
+}
+
+func (t *txdata) String() string {
+	var from, to string
+	tx := &Transaction{data: t}
+
+	v, r, s := t.GetVRS()
+	if v != nil {
+		// make a best guess about the signer and use that to derive
+		// the sender.
+		signer := deriveSigner(v)
+		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
+			from = "[invalid sender: invalid sig]"
+		} else {
+			from = fmt.Sprintf("%x", f[:])
+		}
+	} else {
+		from = "[invalid sender: nil V field]"
+	}
+
+	if t.GetRecipient() == nil {
+		to = "[contract creation]"
+	} else {
+		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
+	}
+	enc, _ := rlp.EncodeToBytes(t)
+	return fmt.Sprintf(`
+	TX(%x)
+	Contract: %v
+	From:     %s
+	To:       %s
+	Nonce:    %v
+	GasPrice: %#x
+	GasLimit  %#x
+	Value:    %#x
+	Data:     0x%x
+	V:        %#x
+	R:        %#x
+	S:        %#x
+	Hex:      %x
+`,
+		tx.Hash(),
+		t.GetRecipient() == nil,
+		from,
+		to,
+		t.GetAccountNonce(),
+		t.GetPrice(),
+		t.GetGasLimit(),
+		t.GetAmount(),
+		t.GetPayload(),
+		v,
+		r,
+		s,
+		enc,
+	)
 }
