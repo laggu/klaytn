@@ -22,6 +22,7 @@ package common
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/crypto/sha3"
@@ -38,6 +39,11 @@ const (
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
+)
+
+var (
+	errStringTooLong = errors.New("string too long")
+	errEmptyString   = errors.New("empty string")
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -163,6 +169,32 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 // If s is larger than len(h), s will be cropped from the left.
 func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 
+// IsHumanReadableAddress returns an error if the string cannot be a human-readable address.
+// Otherwise, it returns nil.
+func IsHumanReadableAddress(s string) error {
+	if len(s) > AddressLength {
+		return errStringTooLong
+	}
+	if len(s) == 0 {
+		return errEmptyString
+	}
+
+	// TODO-GX: Need to check the characters are allowed to be used for human-readable address.
+	return nil
+}
+
+// FromHumanReadableAddress returns an Address object if the string s can be converted to a Klaytn address.
+// Otherwise, it returns an error.
+func FromHumanReadableAddress(s string) (Address, error) {
+	if err := IsHumanReadableAddress(s); err != nil {
+		return Address{}, err
+	}
+
+	var a Address
+	a.SetBytesFromFront([]byte(s))
+	return a, nil
+}
+
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
 // GXPlatform address or not.
 func IsHexAddress(s string) bool {
@@ -221,6 +253,15 @@ func (a *Address) SetBytes(b []byte) {
 		b = b[len(b)-AddressLength:]
 	}
 	copy(a[AddressLength-len(b):], b)
+}
+
+// SetBytesFromFront sets the address to the value of b.
+// If len(b) is larger, take AddressLength bytes from front.
+func (a *Address) SetBytesFromFront(b []byte) {
+	if len(b) > AddressLength {
+		b = b[:AddressLength]
+	}
+	copy(a[:], b)
 }
 
 // MarshalText returns the hex representation of a.

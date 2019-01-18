@@ -22,6 +22,7 @@ package common
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 
 	"math/big"
 	"strings"
@@ -146,6 +147,29 @@ func TestAddressHexChecksum(t *testing.T) {
 			t.Errorf("test #%d: failed to match when it should (%s != %s)", i, output, test.Output)
 		}
 	}
+}
+
+func TestHumanReadableAddress(t *testing.T) {
+	var err error
+
+	string19 := "1234567890123456789"
+	_, err = FromHumanReadableAddress(string19)
+	assert.Equal(t, nil, err)
+
+	string20 := "12345678901234567890"
+	_, err = FromHumanReadableAddress(string20)
+	assert.Equal(t, nil, err)
+
+	string21 := "123456789012345678901"
+	_, err = FromHumanReadableAddress(string21)
+	assert.Equal(t, errStringTooLong, err)
+
+	colin := "colin"
+	_, err = FromHumanReadableAddress(colin)
+	assert.Equal(t, nil, err)
+
+	_, err = FromHumanReadableAddress("")
+	assert.Equal(t, errEmptyString, err)
 }
 
 func BenchmarkAddressHex(b *testing.B) {
