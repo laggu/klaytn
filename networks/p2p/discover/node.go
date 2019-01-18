@@ -105,7 +105,7 @@ func (n *Node) validateComplete() error {
 // The string representation of a Node is a URL.
 // Please see ParseNode for a description of the format.
 func (n *Node) String() string {
-	u := url.URL{Scheme: "enode"}
+	u := url.URL{Scheme: "kni"}
 	if n.Incomplete() {
 		u.Host = fmt.Sprintf("%x", n.ID[:])
 	} else {
@@ -119,7 +119,8 @@ func (n *Node) String() string {
 	return u.String()
 }
 
-var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")
+// TODO-GX: Deprecate supporting "enode"
+var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
 
 // ParseNode parses a node designator.
 //
@@ -129,7 +130,7 @@ var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")
 //
 // For incomplete nodes, the designator must look like one of these
 //
-//    enode://<hex node id>
+//    kni://<hex node id> or enode://<hex node id>
 //    <hex node id>
 //
 // For complete nodes, the node ID is encoded in the username portion
@@ -139,10 +140,11 @@ var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")
 // TCP and UDP (discovery) ports differ, the UDP port is specified as
 // query parameter "discport".
 //
-// In the following example, the node URL describes
+// In the following examples, the node URL describes
 // a node with IP address 10.3.58.6, TCP listening port 30303
 // and UDP discovery port 30301.
 //
+//    kni://<hex node id>@10.3.58.6:30303?discport=30301
 //    enode://<hex node id>@10.3.58.6:30303?discport=30301
 func ParseNode(rawurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
@@ -165,8 +167,8 @@ func parseComplete(rawurl string) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if u.Scheme != "enode" {
-		return nil, errors.New("invalid URL scheme, want \"enode\"")
+	if u.Scheme != "kni" && u.Scheme != "enode" {
+		return nil, errors.New("invalid URL scheme, want \"kni\"")
 	}
 	// Parse the Node ID from the user portion.
 	if u.User == nil {

@@ -55,7 +55,7 @@ func addPeerInternal(api *PrivateAdminAPI, url string, onParentChain bool) (*dis
 	// Try to add the url as a static peer and return
 	node, err := discover.ParseNode(url)
 	if err != nil {
-		return nil, fmt.Errorf("invalid enode: %v", err)
+		return nil, fmt.Errorf("invalid kni: %v", err)
 	}
 	server.AddPeer(node, onParentChain)
 	return node, nil
@@ -93,7 +93,7 @@ func (api *PrivateAdminAPI) RemovePeer(url string) (bool, error) {
 	// Try to remove the url as a static peer and return
 	node, err := discover.ParseNode(url)
 	if err != nil {
-		return false, fmt.Errorf("invalid enode: %v", err)
+		return false, fmt.Errorf("invalid kni: %v", err)
 	}
 	server.RemovePeer(node)
 	return true, nil
