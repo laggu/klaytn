@@ -321,6 +321,15 @@ func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) Pe
 	return newPeer(pv, p, newMeteredMsgWriter(rw))
 }
 
+// newPeerWithRWs creates a new Peer object with a slice of p2p.MsgReadWriter.
+func (pm *ProtocolManager) newPeerWithRWs(pv int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, error) {
+	meteredRWs := make([]p2p.MsgReadWriter, 0, len(rws))
+	for _, rw := range rws {
+		meteredRWs = append(meteredRWs, newMeteredMsgWriter(rw))
+	}
+	return newPeerWithRWs(pv, p, meteredRWs)
+}
+
 // handle is the callback invoked to manage the life cycle of an Klaytn peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p Peer) error {

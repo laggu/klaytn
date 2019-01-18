@@ -221,7 +221,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 	id := p.ID()
 
 	return &singleChannelPeer{
-		basePeer: basePeer{
+		basePeer: &basePeer{
 			Peer:        p,
 			rw:          rw,
 			version:     version,
@@ -233,6 +233,53 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 			queuedAnns:  make(chan *types.Block, maxQueuedAnns),
 			term:        make(chan struct{}),
 		},
+	}
+}
+
+// ChannelOfMessage is a map with the index of the channel per message
+var ChannelOfMessage = map[uint64]int{
+	StatusMsg:          p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
+	NewBlockHashesMsg:  p2p.ConnDefault,
+	TxMsg:              p2p.ConnDefault,
+	GetBlockHeadersMsg: p2p.ConnDefault,
+	BlockHeadersMsg:    p2p.ConnDefault,
+	GetBlockBodiesMsg:  p2p.ConnDefault,
+	BlockBodiesMsg:     p2p.ConnDefault,
+	NewBlockMsg:        p2p.ConnDefault,
+
+	// Protocol messages belonging to klay/63
+	GetNodeDataMsg: p2p.ConnDefault,
+	NodeDataMsg:    p2p.ConnDefault,
+	GetReceiptsMsg: p2p.ConnDefault,
+	ReceiptsMsg:    p2p.ConnDefault,
+}
+
+// newPeerWithRWs creates a new Peer object with a slice of p2p.MsgReadWriter.
+func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, error) {
+	id := p.ID()
+
+	lenRWs := len(rws)
+	if lenRWs == 1 {
+		return newPeer(version, p, rws[p2p.ConnDefault]), nil
+	} else if lenRWs > 1 {
+		bPeer := &basePeer{
+			Peer:        p,
+			rw:          rws[p2p.ConnDefault],
+			version:     version,
+			id:          fmt.Sprintf("%x", id[:8]),
+			knownTxs:    set.New(),
+			knownBlocks: set.New(),
+			queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
+			queuedProps: make(chan *propEvent, maxQueuedProps),
+			queuedAnns:  make(chan *types.Block, maxQueuedAnns),
+			term:        make(chan struct{}),
+		}
+		return &multiChannelPeer{
+			basePeer: bPeer,
+			rws:      rws,
+		}, nil
+	} else {
+		return nil, errors.New("len(rws) should be greater than zero.")
 	}
 }
 
@@ -596,7 +643,167 @@ func (p *basePeer) GetRW() p2p.MsgReadWriter {
 
 // singleChannelPeer is a peer that uses a single channel.
 type singleChannelPeer struct {
-	basePeer
+	*basePeer
+}
+
+// multiChannelPeer is a peer that uses a multi channel.
+type multiChannelPeer struct {
+	*basePeer                     // basePeer is a set of data structures that the peer implementation has in common
+	rws       []p2p.MsgReadWriter // rws is a slice of p2p.MsgReadWriter for peer-to-peer transmission and reception
+}
+
+// Broadcast is a write loop that multiplexes block propagations, announcements
+// and transaction broadcasts into the remote peer. The goal is to have an async
+// writer that does not lock up node internals.
+func (p *multiChannelPeer) Broadcast() {
+	for {
+		select {
+		case txs := <-p.queuedTxs:
+			if err := p.SendTransactions(txs); err != nil {
+				logger.Error("fail to SendTransactions", "err", err)
+				continue
+				//return
+			}
+			p.Log().Trace("Broadcast transactions", "count", len(txs))
+
+		case prop := <-p.queuedProps:
+			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
+				logger.Error("fail to SendNewBlock", "err", err)
+				continue
+				//return
+			}
+			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
+
+		case block := <-p.queuedAnns:
+			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
+				logger.Error("fail to SendNewBlockHashes", "err", err)
+				continue
+				//return
+			}
+			p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
+
+		case <-p.term:
+			p.Log().Debug("Peer broadcast loop end")
+			return
+		}
+	}
+}
+
+// SendTransactions sends transactions to the peer and includes the hashes
+// in its transaction hash set for future reference.
+func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
+	for _, tx := range txs {
+		p.AddToKnownTxs(tx.Hash())
+	}
+	return p.msgSender(TxMsg, txs)
+}
+
+// ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
+func (p *multiChannelPeer) ReSendTransactions(txs types.Transactions) error {
+	return p.msgSender(TxMsg, txs)
+}
+
+// SendNewBlockHashes announces the availability of a number of blocks through
+// a hash notification.
+func (p *multiChannelPeer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) error {
+	for _, hash := range hashes {
+		p.knownBlocks.Add(hash)
+	}
+	request := make(newBlockHashesData, len(hashes))
+	for i := 0; i < len(hashes); i++ {
+		request[i].Hash = hashes[i]
+		request[i].Number = numbers[i]
+	}
+	return p.msgSender(NewBlockHashesMsg, request)
+}
+
+// SendNewBlock propagates an entire block to a remote peer.
+func (p *multiChannelPeer) SendNewBlock(block *types.Block, td *big.Int) error {
+	p.knownBlocks.Add(block.Hash())
+	return p.msgSender(NewBlockMsg, []interface{}{block, td})
+}
+
+// SendBlockHeaders sends a batch of block headers to the remote peer.
+func (p *multiChannelPeer) SendBlockHeaders(headers []*types.Header) error {
+	return p.msgSender(BlockHeadersMsg, headers)
+}
+
+// SendBlockBodies sends a batch of block contents to the remote peer.
+func (p *multiChannelPeer) SendBlockBodies(bodies []*blockBody) error {
+	return p.msgSender(BlockBodiesMsg, blockBodiesData(bodies))
+}
+
+// SendBlockBodiesRLP sends a batch of block contents to the remote peer from
+// an already RLP encoded format.
+func (p *multiChannelPeer) SendBlockBodiesRLP(bodies []rlp.RawValue) error {
+	return p.msgSender(BlockBodiesMsg, bodies)
+}
+
+// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
+// hashes requested.
+func (p *multiChannelPeer) SendNodeData(data [][]byte) error {
+	return p.msgSender(NodeDataMsg, data)
+}
+
+// SendReceiptsRLP sends a batch of transaction receipts, corresponding to the
+// ones requested from an already RLP encoded format.
+func (p *multiChannelPeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
+	return p.msgSender(ReceiptsMsg, receipts)
+}
+
+// RequestOneHeader is a wrapper around the header query functions to fetch a
+// single header. It is used solely by the fetcher.
+func (p *multiChannelPeer) RequestOneHeader(hash common.Hash) error {
+	p.Log().Debug("Fetching single header", "hash", hash)
+	return p.msgSender(GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+}
+
+// RequestHeadersByHash fetches a batch of blocks' headers corresponding to the
+// specified header query, based on the hash of an origin block.
+func (p *multiChannelPeer) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error {
+	p.Log().Debug("Fetching batch of headers", "count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
+	return p.msgSender(GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+}
+
+// RequestHeadersByNumber fetches a batch of blocks' headers corresponding to the
+// specified header query, based on the number of an origin block.
+func (p *multiChannelPeer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
+	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
+	return p.msgSender(GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+}
+
+// RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
+// specified.
+func (p *multiChannelPeer) RequestBodies(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
+	return p.msgSender(GetBlockBodiesMsg, hashes)
+}
+
+// RequestNodeData fetches a batch of arbitrary data from a node's known state
+// data, corresponding to the specified hashes.
+func (p *multiChannelPeer) RequestNodeData(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of state data", "count", len(hashes))
+	return p.msgSender(GetNodeDataMsg, hashes)
+}
+
+// RequestReceipts fetches a batch of transaction receipts from a remote node.
+func (p *multiChannelPeer) RequestReceipts(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
+	return p.msgSender(GetReceiptsMsg, hashes)
+}
+
+// msgSender sends data to the peer.
+func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
+	if ch, ok := ChannelOfMessage[msgcode]; ok && len(p.rws) > ch {
+		return p2p.Send(p.rws[ch], msgcode, data)
+	} else {
+		return errors.New("RW not found for message")
+	}
+}
+
+// GetRW returns the MsgReadWriter of the peer.
+func (p *multiChannelPeer) GetRW() p2p.MsgReadWriter {
+	return p.rw //TODO-GXP check this function usage
 }
 
 type ByPassValidator struct{}
