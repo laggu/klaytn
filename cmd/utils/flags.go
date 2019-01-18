@@ -41,7 +41,6 @@ import (
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
 	"github.com/ground-x/klaytn/node/cn/gasprice"
-	"github.com/ground-x/klaytn/node/ranger"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
@@ -747,18 +746,6 @@ func setGxbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	}
 }
 
-// setGxbaseRanger retrieves the coinbase either from the directly specified
-// command line flags or from the keystore if CLI indexed.
-func setGxbaseRanger(ctx *cli.Context, ks *keystore.KeyStore, cfg *ranger.Config) {
-	if ctx.GlobalIsSet(CoinbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(CoinbaseFlag.Name))
-		if err != nil {
-			Fatalf("Option %q: %v", CoinbaseFlag.Name, err)
-		}
-		cfg.Gxbase = account.Address
-	}
-}
-
 // setRewardbase retrieves the rewardbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
 func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
@@ -1003,99 +990,6 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
-func SetRnConfig(ctx *cli.Context, stack *node.Node, cfg *ranger.Config) {
-
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setGxbaseRanger(ctx, ks, cfg)
-
-	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
-		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
-	}
-
-	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
-		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
-	}
-	cfg.DatabaseHandles = makeDatabaseHandles()
-
-	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
-		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
-	}
-	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
-
-	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
-		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
-	}
-	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
-		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
-	}
-	if ctx.GlobalIsSet(TrieBlockIntervalFlag.Name) {
-		cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
-	}
-	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
-		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
-	}
-	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
-		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
-	}
-	if ctx.GlobalIsSet(DocRootFlag.Name) {
-		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
-	}
-	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
-		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
-	}
-	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-GX-issue136 gasPrice
-	}
-	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
-		// TODO(fjl): force-enable this in --dev mode
-		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
-	}
-	if ctx.GlobalIsSet(VMLogTargetFlag.Name) {
-		if _, err := debug.Handler.SetVMLogTarget(ctx.GlobalInt(VMLogTargetFlag.Name)); err != nil {
-			logger.Warn("Incorrect vmlog value", "err", err)
-		}
-	}
-	if ctx.GlobalIsSet(ChildChainIndexingFlag.Name) {
-		cfg.ChildChainIndexing = true
-	}
-
-	// Override any default configs for hard coded network.
-	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
-		}
-		cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(DeveloperFlag.Name):
-		// Create new developer account or reuse existing one
-		var (
-			developer accounts.Account
-			err       error
-		)
-		if accs := ks.Accounts(); len(accs) > 0 {
-			developer = ks.Accounts()[0]
-		} else {
-			developer, err = ks.NewAccount("")
-			if err != nil {
-				Fatalf("Failed to create developer account: %v", err)
-			}
-		}
-		if err := ks.Unlock(developer, ""); err != nil {
-			Fatalf("Failed to unlock developer account: %v", err)
-		}
-		logger.Info("Using developer account", "address", developer.Address)
-
-		cfg.Genesis = blockchain.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
-		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
-			cfg.GasPrice = big.NewInt(1)
-		}
-	}
-	// TODO(fjl): move trie cache generations into config
-	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
-		state.MaxTrieCacheGen = uint16(gen)
-	}
-}
-
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// Avoid conflicting network flags
@@ -1214,16 +1108,6 @@ func RegisterKlaytnService(stack *node.Node, cfg *cn.Config) {
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
 		fullNode, err := cn.New(ctx, cfg)
-		return fullNode, err
-	})
-	if err != nil {
-		Fatalf("Failed to register the Klaytn service: %v", err)
-	}
-}
-
-func RegisterRanagerService(stack *node.Node, cfg *ranger.Config) {
-	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		fullNode, err := ranger.New(ctx, cfg)
 		return fullNode, err
 	})
 	if err != nil {

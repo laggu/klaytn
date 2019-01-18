@@ -61,7 +61,7 @@ const (
 	BlockchainState
 	BlockchainTypes
 	CmdKlay
-	CmdRanger
+	_
 	CmdUtils
 
 	// 11~20
@@ -89,7 +89,7 @@ const (
 	NodeCNFilters
 
 	// 31~40
-	NodeRanger
+	_
 	StorageDatabase
 	StorageStateDB
 	VM
@@ -112,7 +112,7 @@ var moduleNames = [ModuleNameLen]string{
 	"blockchain/state",
 	"blockchain/types",
 	"cmd/klay",
-	"cmd/ranger",
+	"",
 	"cmd/utils",
 
 	// 11~20
@@ -140,7 +140,7 @@ var moduleNames = [ModuleNameLen]string{
 	"node/cn/filters",
 
 	// 31~40
-	"node/ranger",
+	"",
 	"storage/database",
 	"storage/statedb",
 	"vm",
