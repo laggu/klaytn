@@ -74,6 +74,12 @@ func (t *TxInternalDataChainDataPegging) String() string {
 		dataPeggedRLP)
 }
 
+func (t *TxInternalDataChainDataPegging) SerializeForSign() []interface{} {
+	return append(t.TxInternalDataCommon.serializeForSign(),
+		t.Type(),
+		t.PeggedData)
+}
+
 func (t *TxInternalDataChainDataPegging) IntrinsicGas() (uint64, error) {
 	nByte := (uint64)(len(t.PeggedData))
 

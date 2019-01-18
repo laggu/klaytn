@@ -157,7 +157,7 @@ func (t *TxInternalDataCommon) SetS(s *big.Int) {
 	t.S.Set(s)
 }
 
-func (t *TxInternalDataCommon) SerializeForSign() []interface{} {
+func (t *TxInternalDataCommon) serializeForSign() []interface{} {
 	return []interface{}{
 		t.AccountNonce,
 		t.Price,
