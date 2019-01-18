@@ -22,6 +22,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
@@ -156,7 +157,8 @@ var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if !tx.IsLegacyTransaction() {
-		logger.Warn("No need to execute Sender!", "tx", tx.String())
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute Sender!", "tx", string(b))
 	}
 
 	if !tx.Protected() {
@@ -173,7 +175,8 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 
 func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
-		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
 	}
 
 	if !tx.Protected() {
@@ -228,7 +231,8 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 	if !tx.IsLegacyTransaction() {
-		logger.Warn("No need to execute Sender!", "tx", tx.String())
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute Sender!", "tx", string(b))
 	}
 
 	v, r, s := tx.data.GetVRS()
@@ -237,7 +241,8 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 
 func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
-		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
 	}
 
 	v, r, s := tx.data.GetVRS()
@@ -271,7 +276,8 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 	if !tx.IsLegacyTransaction() {
-		logger.Warn("No need to execute Sender!", "tx", tx.String())
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute Sender!", "tx", string(b))
 	}
 
 	v, r, s := tx.data.GetVRS()
@@ -280,7 +286,8 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 
 func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
-		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
 	}
 
 	v, r, s := tx.data.GetVRS()
