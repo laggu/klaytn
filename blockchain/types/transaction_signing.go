@@ -88,6 +88,14 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
 
+	// Special treatment for AccountKeyNil.
+	if accKey.Type() == AccountKeyTypeNil {
+		if crypto.PubkeyToAddress(*pubkey) != from {
+			return common.Address{}, ErrInvalidSig
+		}
+		return from, nil
+	}
+
 	if !accKey.Equal(NewAccountKeyPublicWithValue(pubkey)) {
 		return common.Address{}, ErrInvalidSig
 	}
