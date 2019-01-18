@@ -180,7 +180,7 @@ func (t *TxInternalDataCommon) Equal(b *TxInternalDataCommon) bool {
 		t.S.Cmp(b.S) == 0
 }
 
-func (t *TxInternalDataCommon) IntrinsicGas() (uint64, error) {
+func (t *TxInternalDataCommon) intrinsicGas() (uint64, error) {
 	return IntrinsicGas([]byte{}, false, true)
 }
 
