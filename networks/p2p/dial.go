@@ -197,7 +197,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	// Compute number of dynamic dials necessary at this point.
 	needDynDials := s.maxDynDials
 	for _, p := range peers {
-		if p.rw.is(dynDialedConn) {
+		if p.rws[ConnDefault].is(dynDialedConn) {
 			needDynDials--
 		}
 	}

@@ -831,7 +831,11 @@ running:
 			err := srv.protoHandshakeChecks(peers, inboundCount, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
-				p := newPeer(c, srv.Protocols)
+				p, e := newPeer([]*conn{c}, srv.Protocols)
+				if e != nil {
+					srv.logger.Error("Fail make a new peer", "err", e)
+					continue running
+				}
 				// If message events are enabled, pass the peerFeed
 				// to the peer
 				if srv.EnableMsgEvents {

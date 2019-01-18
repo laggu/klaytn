@@ -56,7 +56,7 @@ func testPeer(protos []Protocol) (func(), *conn, *Peer, <-chan error) {
 		c2.caps = append(c2.caps, p.cap())
 	}
 
-	peer := newPeer(c1, protos)
+	peer, _ := newPeer([]*conn{c1}, protos)
 	errc := make(chan error, 1)
 	go func() {
 		_, err := peer.run()
@@ -294,14 +294,14 @@ func TestMatchProtocols(t *testing.T) {
 				t.Errorf("test %d, protobuf '%s': negotiated but shouldn't have", i, name)
 				continue
 			}
-			if proto.Name != match.Name {
-				t.Errorf("test %d, protobuf '%s': name mismatch: have %v, want %v", i, name, proto.Name, match.Name)
+			if proto[ConnDefault].Name != match.Name {
+				t.Errorf("test %d, protobuf '%s': name mismatch: have %v, want %v", i, name, proto[ConnDefault].Name, match.Name)
 			}
-			if proto.Version != match.Version {
-				t.Errorf("test %d, protobuf '%s': version mismatch: have %v, want %v", i, name, proto.Version, match.Version)
+			if proto[ConnDefault].Version != match.Version {
+				t.Errorf("test %d, protobuf '%s': version mismatch: have %v, want %v", i, name, proto[ConnDefault].Version, match.Version)
 			}
-			if proto.offset-baseProtocolLength != match.offset {
-				t.Errorf("test %d, protobuf '%s': offset mismatch: have %v, want %v", i, name, proto.offset-baseProtocolLength, match.offset)
+			if proto[ConnDefault].offset-baseProtocolLength != match.offset {
+				t.Errorf("test %d, protobuf '%s': offset mismatch: have %v, want %v", i, name, proto[ConnDefault].offset-baseProtocolLength, match.offset)
 			}
 		}
 		// Make sure no protocols missed negotiation

@@ -21,6 +21,7 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -55,6 +56,8 @@ const (
 	pingMsg      = 0x02
 	pongMsg      = 0x03
 )
+
+const ConnDefault = 0
 
 // protoHandshake is the RLP structure of the protocol handshake.
 type protoHandshake struct {
@@ -102,8 +105,8 @@ type PeerEvent struct {
 
 // Peer represents a connected remote node.
 type Peer struct {
-	rw      *conn
-	running map[string]*protoRW
+	rws     []*conn
+	running map[string][]*protoRW
 	logger  log.Logger
 	created mclock.AbsTime
 
@@ -119,41 +122,41 @@ type Peer struct {
 // NewPeer returns a peer for testing purposes.
 func NewPeer(id discover.NodeID, name string, caps []Cap) *Peer {
 	pipe, _ := net.Pipe()
-	conn := &conn{fd: pipe, transport: nil, id: id, caps: caps, name: name}
-	peer := newPeer(conn, nil)
+	conn := []*conn{{fd: pipe, transport: nil, id: id, caps: caps, name: name}}
+	peer, _ := newPeer(conn, nil)
 	close(peer.closed) // ensures Disconnect doesn't block
 	return peer
 }
 
 // ID returns the node's public key.
 func (p *Peer) ID() discover.NodeID {
-	return p.rw.id
+	return p.rws[ConnDefault].id
 }
 
 // Name returns the node name that the remote node advertised.
 func (p *Peer) Name() string {
-	return p.rw.name
+	return p.rws[ConnDefault].name
 }
 
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
 func (p *Peer) Caps() []Cap {
 	// TODO: maybe return copy
-	return p.rw.caps
+	return p.rws[ConnDefault].caps
 }
 
 // RemoteAddr returns the remote address of the network connection.
 func (p *Peer) RemoteAddr() net.Addr {
-	return p.rw.fd.RemoteAddr()
+	return p.rws[ConnDefault].fd.RemoteAddr()
 }
 
 // LocalAddr returns the local address of the network connection.
 func (p *Peer) LocalAddr() net.Addr {
-	return p.rw.fd.LocalAddr()
+	return p.rws[ConnDefault].fd.LocalAddr()
 }
 
 // OnParentChain returns if the peer is on the parent chain or not.
 func (p *Peer) OnParentChain() bool {
-	return p.rw.onParentChain
+	return p.rws[ConnDefault].onParentChain
 }
 
 // Disconnect terminates the peer connection with the given reason.
@@ -167,26 +170,34 @@ func (p *Peer) Disconnect(reason DiscReason) {
 
 // String implements fmt.Stringer.
 func (p *Peer) String() string {
-	return fmt.Sprintf("Peer %x %v", p.rw.id[:8], p.RemoteAddr())
+	return fmt.Sprintf("Peer %x %v", p.rws[ConnDefault].id[:8], p.RemoteAddr())
 }
 
 // Inbound returns true if the peer is an inbound connection
 func (p *Peer) Inbound() bool {
-	return p.rw.flags&inboundConn != 0
+	return p.rws[ConnDefault].flags&inboundConn != 0
 }
 
-func newPeer(conn *conn, protocols []Protocol) *Peer {
-	protomap := matchProtocols(protocols, conn.caps, conn)
+// newPeer should be called to create a peer.
+func newPeer(conn []*conn, protocols []Protocol) (*Peer, error) {
+	if conn == nil || len(conn) < 1 || conn[ConnDefault] == nil {
+		return nil, errors.New("conn is invalid")
+	}
+	msgReadWriters := make([]MsgReadWriter, len(conn))
+	for i, c := range conn {
+		msgReadWriters[i] = c
+	}
+	protomap := matchProtocols(protocols, conn[ConnDefault].caps, msgReadWriters)
 	p := &Peer{
-		rw:       conn,
+		rws:      conn,
 		running:  protomap,
 		created:  mclock.Now(),
 		disc:     make(chan DiscReason),
 		protoErr: make(chan error, len(protomap)+1), // protocols + pingLoop
 		closed:   make(chan struct{}),
-		logger:   logger.NewWith("id", conn.id, "conn", conn.flags),
+		logger:   logger.NewWith("id", conn[ConnDefault].id, "conn", conn[ConnDefault].flags),
 	}
-	return p
+	return p, nil
 }
 
 func (p *Peer) Log() log.Logger {
@@ -200,9 +211,12 @@ func (p *Peer) run() (remoteRequested bool, err error) {
 		readErr    = make(chan error, 1)
 		reason     DiscReason // sent to the peer
 	)
+	if len(p.rws) != 1 {
+		return false, errors.New("The size of rws should be 1")
+	}
 	p.wg.Add(2)
-	go p.readLoop(readErr)
-	go p.pingLoop()
+	go p.readLoop(p.rws[ConnDefault], readErr)
+	go p.pingLoop(p.rws[ConnDefault])
 
 	// Start all protocol handlers.
 	writeStart <- struct{}{}
@@ -238,20 +252,22 @@ loop:
 	}
 
 	close(p.closed)
-	p.rw.close(reason)
+	for _, rw := range p.rws {
+		rw.close(reason)
+	}
 	p.wg.Wait()
 	logger.Debug(fmt.Sprintf("peer(%p) run stopped", p))
 	return remoteRequested, err
 }
 
-func (p *Peer) pingLoop() {
+func (p *Peer) pingLoop(rw *conn) {
 	ping := time.NewTimer(pingInterval)
 	defer p.wg.Done()
 	defer ping.Stop()
 	for {
 		select {
 		case <-ping.C:
-			if err := SendItems(p.rw, pingMsg); err != nil {
+			if err := SendItems(rw, pingMsg); err != nil {
 				p.protoErr <- err
 				logger.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
 				return
@@ -264,17 +280,17 @@ func (p *Peer) pingLoop() {
 	}
 }
 
-func (p *Peer) readLoop(errc chan<- error) {
+func (p *Peer) readLoop(rw *conn, errc chan<- error) {
 	defer p.wg.Done()
 	for {
-		msg, err := p.rw.ReadMsg()
+		msg, err := rw.ReadMsg()
 		if err != nil {
 			errc <- err
 			logger.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
 			return
 		}
 		msg.ReceivedAt = time.Now()
-		if err = p.handle(msg); err != nil {
+		if err = p.handle(rw, msg); err != nil {
 			errc <- err
 			logger.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
 			return
@@ -282,11 +298,11 @@ func (p *Peer) readLoop(errc chan<- error) {
 	}
 }
 
-func (p *Peer) handle(msg Msg) error {
+func (p *Peer) handle(rw *conn, msg Msg) error {
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
-		go SendItems(p.rw, pongMsg)
+		go SendItems(rw, pongMsg)
 	case msg.Code == discMsg:
 		var reason [1]DiscReason
 		// This is the last message. We don't need to discard or
@@ -325,10 +341,10 @@ func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 }
 
 // matchProtocols creates structures for matching named subprotocols.
-func matchProtocols(protocols []Protocol, caps []Cap, rw MsgReadWriter) map[string]*protoRW {
+func matchProtocols(protocols []Protocol, caps []Cap, rws []MsgReadWriter) map[string][]*protoRW {
 	sort.Sort(capsByNameAndVersion(caps))
 	offset := baseProtocolLength
-	result := make(map[string]*protoRW)
+	result := make(map[string][]*protoRW)
 
 outer:
 	for _, cap := range caps {
@@ -336,10 +352,18 @@ outer:
 			if proto.Name == cap.Name && proto.Version == cap.Version {
 				// If an old protocol version matched, revert it
 				if old := result[cap.Name]; old != nil {
-					offset -= old.Length
+					offset -= old[ConnDefault].Length
 				}
 				// Assign the new match
-				result[cap.Name] = &protoRW{Protocol: proto, offset: offset, in: make(chan Msg), w: rw}
+				protoRWs := make([]*protoRW, 0, len(rws))
+				if rws == nil || len(rws) == 0 {
+					protoRWs = []*protoRW{{Protocol: proto, offset: offset, in: make(chan Msg), w: nil}}
+				} else {
+					for _, rw := range rws {
+						protoRWs = append(protoRWs, &protoRW{Protocol: proto, offset: offset, in: make(chan Msg), w: rw})
+					}
+				}
+				result[cap.Name] = protoRWs
 				offset += proto.Length
 
 				continue outer
@@ -351,8 +375,13 @@ outer:
 
 func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error) {
 	p.wg.Add(len(p.running))
-	for _, proto := range p.running {
-		proto := proto
+	for _, protos := range p.running {
+		if len(protos) != 1 {
+			p.logger.Error("The size of protos should be 1", "size", len(protos))
+			p.protoErr <- errProtocolReturned
+			return
+		}
+		proto := protos[ConnDefault]
 		proto.closed = p.closed
 		proto.wstart = writeStart
 		proto.werr = writeErr
@@ -369,7 +398,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 				p.logger.Trace(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
 			} else if err != io.EOF {
-				p.logger.Trace(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
+				p.logger.Error(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
 			}
 			p.protoErr <- err
 			p.logger.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))
@@ -382,8 +411,8 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 // the given message code.
 func (p *Peer) getProto(code uint64) (*protoRW, error) {
 	for _, proto := range p.running {
-		if code >= proto.offset && code < proto.offset+proto.Length {
-			return proto, nil
+		if code >= proto[ConnDefault].offset && code < proto[ConnDefault].offset+proto[ConnDefault].Length {
+			return proto[ConnDefault], nil
 		}
 	}
 	return nil, newPeerError(errInvalidMsgCode, "%d", code)
@@ -461,27 +490,27 @@ func (p *Peer) Info() *PeerInfo {
 	}
 	info.Network.LocalAddress = p.LocalAddr().String()
 	info.Network.RemoteAddress = p.RemoteAddr().String()
-	info.Network.Inbound = p.rw.is(inboundConn)
-	info.Network.Trusted = p.rw.is(trustedConn)
-	info.Network.Static = p.rw.is(staticDialedConn)
+	info.Network.Inbound = p.rws[ConnDefault].is(inboundConn)
+	info.Network.Trusted = p.rws[ConnDefault].is(trustedConn)
+	info.Network.Static = p.rws[ConnDefault].is(staticDialedConn)
 
 	// Gather all the running protocol infos
 	for _, proto := range p.running {
 		protoInfo := interface{}("unknown")
-		if query := proto.Protocol.PeerInfo; query != nil {
+		if query := proto[ConnDefault].Protocol.PeerInfo; query != nil {
 			if metadata := query(p.ID()); metadata != nil {
 				protoInfo = metadata
 			} else {
 				protoInfo = "handshake"
 			}
 		}
-		info.Protocols[proto.Name] = protoInfo
+		info.Protocols[proto[ConnDefault].Name] = protoInfo
 	}
 	return info
 }
 
 func (p *Peer) ConnType() ConnType {
-	return p.rw.conntype
+	return p.rws[ConnDefault].conntype
 }
 
 type PeerTypeValidator interface {
