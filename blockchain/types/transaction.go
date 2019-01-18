@@ -33,8 +33,9 @@ import (
 )
 
 var (
-	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
-	errNoSigner   = errors.New("missing signing methods")
+	ErrInvalidSig                 = errors.New("invalid transaction v, r, s values")
+	errNoSigner                   = errors.New("missing signing methods")
+	ErrInvalidTxTypeForPeggedData = errors.New("invalid transaction type for pegged data")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -174,6 +175,16 @@ func (tx *Transaction) CheckNonce() bool              { return true }
 func (tx *Transaction) Type() TxType                  { return tx.data.Type() }
 func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
 func (tx *Transaction) IsLegacyTransaction() bool     { return tx.data.IsLegacyTransaction() }
+
+// PeggedData returns the pegged data of the chain data pegging transaction.
+// if the tx is not chain data pegging transaction, it will return error.
+func (tx *Transaction) PeggedData() ([]byte, error) {
+	txData, ok := tx.data.(*TxInternalDataChainDataPegging)
+	if ok {
+		return txData.PeggedData, nil
+	}
+	return []byte{}, ErrInvalidTxTypeForPeggedData
+}
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
