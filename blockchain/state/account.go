@@ -18,6 +18,7 @@ package state
 
 import (
 	"errors"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
@@ -98,6 +99,13 @@ type ProgramAccount interface {
 
 	SetStorageRoot(h common.Hash)
 	SetCodeHash(h []byte)
+}
+
+type AccountWithKey interface {
+	Account
+
+	GetKey() types.AccountKey
+	SetKey(key types.AccountKey)
 }
 
 // NewAccountWithType creates an Account object with the given type.

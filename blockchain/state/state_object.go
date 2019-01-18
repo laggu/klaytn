@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -186,6 +187,13 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 		prevalue: self.GetState(db, key),
 	})
 	self.setState(key, value)
+}
+
+func (self *stateObject) GetKey() types.AccountKey {
+	if ak, ok := self.account.(AccountWithKey); ok {
+		return ak.GetKey()
+	}
+	return types.NewAccountKeyNil()
 }
 
 func (self *stateObject) setState(key, value common.Hash) {

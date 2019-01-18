@@ -32,7 +32,8 @@ import (
 )
 
 var (
-	ErrInvalidChainId = errors.New("invalid chain id for signer")
+	ErrInvalidChainId        = errors.New("invalid chain id for signer")
+	errNotTxInternalDataFrom = errors.New("not an TxInternalDataFrom")
 )
 
 // sigCache is used to cache the derived sender and contains
@@ -63,6 +64,35 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 		return nil, err
 	}
 	return tx.WithSignature(s, sig)
+}
+
+// AccountKeyPicker has a function GetKey() to retrieve an account key from statedb.
+type AccountKeyPicker interface {
+	GetKey(address common.Address) AccountKey
+}
+
+// ValidateSender finds a sender from both legacy and new types of transactions.
+func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.Address, error) {
+	if tx.IsLegacyTransaction() {
+		return Sender(signer, tx)
+	}
+
+	pubkey, err := SenderPubkey(signer, tx)
+	if err != nil {
+		return common.Address{}, err
+	}
+	txfrom, ok := tx.data.(TxInternalDataFrom)
+	if !ok {
+		return common.Address{}, errNotTxInternalDataFrom
+	}
+	from := txfrom.GetFrom()
+	accKey := p.GetKey(from)
+
+	if !accKey.Equal(NewAccountKeyPublicWithValue(pubkey)) {
+		return common.Address{}, ErrInvalidSig
+	}
+
+	return from, nil
 }
 
 // Sender returns the address derived from the signature (V, R, S) using secp256k1
