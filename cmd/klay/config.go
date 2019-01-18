@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/node"
-	gxplatform "github.com/ground-x/klaytn/node/cn"
+	"github.com/ground-x/klaytn/node/cn"
 	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"os"
@@ -71,12 +71,12 @@ var tomlSettings = toml.Config{
 	},
 }
 
-type gxpConfig struct {
-	Gxp  gxplatform.Config
+type klayConfig struct {
+	klay cn.Config
 	Node node.Config
 }
 
-func loadConfig(file string, cfg *gxpConfig) error {
+func loadConfig(file string, cfg *klayConfig) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -101,11 +101,11 @@ func defaultNodeConfig() node.Config {
 	return cfg
 }
 
-func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
+func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	// TODO-GX-issue136 gasPrice
 	// Load defaults.
-	cfg := gxpConfig{
-		Gxp:  gxplatform.DefaultConfig,
+	cfg := klayConfig{
+		klay: cn.DefaultConfig,
 		Node: defaultNodeConfig(),
 	}
 
@@ -122,7 +122,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetKlayConfig(ctx, stack, &cfg.Gxp)
+	utils.SetKlayConfig(ctx, stack, &cfg.klay)
 
 	//utils.SetShhConfig(ctx, stack, &cfg.Shh)
 	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
@@ -133,7 +133,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterKlaytnService(stack, &cfg.Gxp)
+	utils.RegisterKlaytnService(stack, &cfg.klay)
 
 	return stack
 }
@@ -142,8 +142,8 @@ func dumpConfig(ctx *cli.Context) error {
 	_, cfg := makeConfigNode(ctx)
 	comment := ""
 
-	if cfg.Gxp.Genesis != nil {
-		cfg.Gxp.Genesis = nil
+	if cfg.klay.Genesis != nil {
+		cfg.klay.Genesis = nil
 		comment += "# Note: this config doesn't contain the genesis block.\n\n"
 	}
 

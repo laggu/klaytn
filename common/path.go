@@ -27,7 +27,7 @@ import (
 	"runtime"
 )
 
-// MakeName creates a node name that follows the gxplatform convention
+// MakeName creates a node name that follows the Klaytn convention
 // for such names. It adds the operation system name and Go runtime version
 // the name.
 func MakeName(name, version string) string {

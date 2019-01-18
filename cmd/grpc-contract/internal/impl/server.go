@@ -48,7 +48,7 @@ import "github.com/spf13/viper"
 import "google.golang.org/grpc"
 
 const (
-	gxpName             = "gxplatform"
+	gxpName             = "klaytn"
 	portName            = "port"
 	privateKeyName      = "private_key"
 	contractAddressName = "contract_address"

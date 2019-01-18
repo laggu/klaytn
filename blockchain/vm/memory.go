@@ -27,7 +27,7 @@ import (
 	"github.com/ground-x/klaytn/common/math"
 )
 
-// Memory implements a simple memory model for the gxplatform virtual machine.
+// Memory implements a simple memory model for the Klaytn virtual machine.
 type Memory struct {
 	store       []byte
 	lastGasCost uint64
