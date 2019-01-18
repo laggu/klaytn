@@ -54,6 +54,14 @@ type Transaction struct {
 	from atomic.Value
 }
 
+func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (*Transaction, error) {
+	txdata, err := NewTxInternalDataWithMap(t, values)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{data: txdata}, nil
+}
+
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
@@ -163,6 +171,7 @@ func (tx *Transaction) GasPrice() *big.Int            { return new(big.Int).Set(
 func (tx *Transaction) Value() *big.Int               { return new(big.Int).Set(tx.data.GetAmount()) }
 func (tx *Transaction) Nonce() uint64                 { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool              { return true }
+func (tx *Transaction) Type() TxType                  { return tx.data.Type() }
 func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
 func (tx *Transaction) IsLegacyTransaction() bool     { return tx.data.IsLegacyTransaction() }
 
