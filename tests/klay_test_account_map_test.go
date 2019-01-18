@@ -21,6 +21,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
@@ -84,7 +85,14 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 		return err
 	}
 
-	for _, addr := range bcdata.addrs {
+	// NOTE-GX-issue973 Developing Klaytn token economy
+	// Add predefined accounts related to reward mechanism
+	rewardContractAddr := common.HexToAddress(contract.RewardContractAddress)
+	kirContractAddr := common.HexToAddress(contract.KIRContractAddress)
+	pocContractAddr := common.HexToAddress(contract.PoCContractAddress)
+	addrs := append(bcdata.addrs, &rewardContractAddr, &kirContractAddr, &pocContractAddr)
+
+	for _, addr := range addrs {
 		a.Set(*addr, statedb.GetBalance(*addr), statedb.GetNonce(*addr))
 	}
 

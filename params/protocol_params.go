@@ -100,6 +100,12 @@ const (
 	TxValidationGasDefault      uint64 = 0
 	TxAccountCreationGasPerKey  uint64 = 20000
 	TxValidationGasPerKey       uint64 = 5000
+
+	// TODO-GX-issue973 Developing Klaytn token economy
+	// Because uint64 can hold up to about 9*10^18 in golang, let's use ston instead of peb to define these constants.
+	rewardContractIncentiveInSton int64 = 3200000000 // 3.2 KLAY for Reward contract (Unit: ston)
+	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
+	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
 )
 
 var (
@@ -107,6 +113,11 @@ var (
 	GenesisDifficulty      = big.NewInt(131072) // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+
+	// TODO-GX-issue973 Developing Klaytn token economy
+	RewardContractIncentive = big.NewInt(0).Mul(big.NewInt(rewardContractIncentiveInSton), big.NewInt(Ston))
+	KIRContractIncentive    = big.NewInt(0).Mul(big.NewInt(kirContractIncentiveInSton), big.NewInt(Ston))
+	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))
 )
 
 // Parameters for execution time limit

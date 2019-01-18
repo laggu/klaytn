@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/node"
@@ -306,8 +307,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Apply reward
 	start = time.Now()
-	rewardAddr := *bcdata.rewardBase
-	accountMap.AddBalance(rewardAddr, big.NewInt(params.KLAY))
+	reward.MintKLAY(accountMap)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -353,8 +353,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Apply reward
 	start = time.Now()
-	rewardAddr := *bcdata.rewardBase
-	accountMap.AddBalance(rewardAddr, big.NewInt(params.KLAY))
+	reward.MintKLAY(accountMap)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap

@@ -31,10 +31,9 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	istanbulCore "github.com/ground-x/klaytn/consensus/istanbul/core"
 	"github.com/ground-x/klaytn/consensus/istanbul/validator"
-	"github.com/ground-x/klaytn/contracts/reward/contract"
+	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/networks/rpc"
-	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/hashicorp/golang-lru"
 	"math/big"
@@ -393,14 +392,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	// TODO-GX developing klay reward mechanism
-	var reward = big.NewInt(params.KLAY)               // 1 KLAY
-	var rewardcontract = big.NewInt(0.1 * params.KLAY) // 0.1 KLAY
-	state.AddBalance(header.Rewardbase, reward)
-
-	state.AddBalance(common.HexToAddress(contract.RNRewardAddr), rewardcontract)
-	state.AddBalance(common.HexToAddress(contract.CommitteeRewardAddr), rewardcontract)
-	state.AddBalance(common.HexToAddress(contract.PIReserveAddr), rewardcontract)
+	// TODO-GX-issue973 Developing Klaytn token economy
+	reward.MintKLAY(state)
 
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(true)

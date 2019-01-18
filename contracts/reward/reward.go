@@ -26,6 +26,8 @@ import (
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
+	"github.com/ground-x/klaytn/params"
+	"math/big"
 )
 
 type Reward struct {
@@ -61,4 +63,16 @@ func DeployReward(transactOpts *bind.TransactOpts, contractBackend bind.Contract
 	}
 
 	return rewardAddr, reward, nil
+}
+
+type BalanceAdder interface {
+	AddBalance(addr common.Address, v *big.Int)
+}
+
+// MintKLAY mints KLAY and deposits newly minted KLAY to three predefined accounts, i.e. Reward contract, KIR contract, PoC contract.
+func MintKLAY(b BalanceAdder) {
+	// TODO-GX-issue973 Developing Klaytn token economy
+	b.AddBalance(common.HexToAddress(contract.RewardContractAddress), params.RewardContractIncentive)
+	b.AddBalance(common.HexToAddress(contract.KIRContractAddress), params.KIRContractIncentive)
+	b.AddBalance(common.HexToAddress(contract.PoCContractAddress), params.PoCContractIncentive)
 }
