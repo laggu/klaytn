@@ -24,6 +24,8 @@ import (
 	"io"
 )
 
+var emptyByte = []byte{}
+
 // TxInternalDataAccountCreation represents a transaction creating an account.
 type TxInternalDataAccountCreation struct {
 	*TxInternalDataCommon
@@ -163,5 +165,5 @@ func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
 }
 
 func (t *TxInternalDataAccountCreation) GetPayload() []byte {
-	return []byte{}
+	return emptyByte
 }
