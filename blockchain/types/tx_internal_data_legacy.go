@@ -206,6 +206,10 @@ func (t *txdata) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *txdata) IsLegacyTransaction() bool {
+	return true
+}
+
 func (t *txdata) equalHash(a *txdata) bool {
 	if t.GetHash() == nil && a.GetHash() == nil {
 		return true

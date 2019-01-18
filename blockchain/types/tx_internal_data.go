@@ -140,6 +140,9 @@ type TxInternalData interface {
 
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
+
+	// IsLegacyTransaction returns true if the tx type is a legacy transaction (txdata) object.
+	IsLegacyTransaction() bool
 }
 
 // TxInternalDataFrom has a function `GetFrom()`.

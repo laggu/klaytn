@@ -165,6 +165,7 @@ func (tx *Transaction) Value() *big.Int               { return new(big.Int).Set(
 func (tx *Transaction) Nonce() uint64                 { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool              { return true }
 func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
+func (tx *Transaction) IsLegacyTransaction() bool     { return tx.data.IsLegacyTransaction() }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.

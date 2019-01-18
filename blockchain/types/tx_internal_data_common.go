@@ -184,6 +184,10 @@ func (t *TxInternalDataCommon) IntrinsicGas() (uint64, error) {
 	return IntrinsicGas([]byte{}, false, true)
 }
 
+func (t *TxInternalDataCommon) IsLegacyTransaction() bool {
+	return false
+}
+
 func (t *TxInternalDataCommon) String() string {
 	return fmt.Sprintf(`
 	TX(%x)

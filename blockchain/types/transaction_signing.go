@@ -155,8 +155,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
-	if tx.data.Type() != TxTypeLegacyTransaction {
+	if !tx.IsLegacyTransaction() {
 		logger.Warn("No need to execute Sender!", "tx", tx.String())
 	}
 
@@ -173,8 +172,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
-	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
-	if tx.data.Type() == TxTypeLegacyTransaction {
+	if tx.IsLegacyTransaction() {
 		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
 	}
 
@@ -229,8 +227,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
-	if tx.data.Type() != TxTypeLegacyTransaction {
+	if !tx.IsLegacyTransaction() {
 		logger.Warn("No need to execute Sender!", "tx", tx.String())
 	}
 
@@ -239,8 +236,7 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
-	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
-	if tx.data.Type() == TxTypeLegacyTransaction {
+	if tx.IsLegacyTransaction() {
 		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
 	}
 
@@ -274,8 +270,7 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
-	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
-	if tx.data.Type() != TxTypeLegacyTransaction {
+	if !tx.IsLegacyTransaction() {
 		logger.Warn("No need to execute Sender!", "tx", tx.String())
 	}
 
@@ -284,8 +279,7 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
-	// TODO-GX: make an interface IsLegacyTransaction() in TxInternalData.
-	if tx.data.Type() == TxTypeLegacyTransaction {
+	if tx.IsLegacyTransaction() {
 		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
 	}
 
