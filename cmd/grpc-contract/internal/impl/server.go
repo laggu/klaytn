@@ -48,14 +48,14 @@ import "github.com/spf13/viper"
 import "google.golang.org/grpc"
 
 const (
-	gxpName             = "klaytn"
+	klayName            = "klay"
 	portName            = "port"
 	privateKeyName      = "private_key"
 	contractAddressName = "contract_address"
 )
 
 var (
-	gxplatformFlag      = flag.String(gxpName, "ws://127.0.0.1:8546", "the klay client address")
+	klayFlag            = flag.String(klayName, "ws://127.0.0.1:8546", "the klay client address")
 	portFlag            = flag.String(portName, "127.0.0.1:5555", "server port")
 	privateKeyFlag      = flag.String(privateKeyName, "", "deployer's private key")
 	contractAddressFlag = flag.String(contractAddressName, "", "contract address")
@@ -67,7 +67,7 @@ func main() {
 	viper.BindPFlags(flag.CommandLine)
 	viper.AutomaticEnv() // read in environment variables that match
 
-	klay := viper.GetString(gxpName)
+	klay := viper.GetString(klayName)
 	if klay == "" {
 		fmt.Printf("No klay client specified\n")
 		os.Exit(-1)

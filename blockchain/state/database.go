@@ -66,7 +66,7 @@ type Database interface {
 	TrieDB() *statedb.Database
 }
 
-// Trie is a GXPlatform Merkle Trie.
+// Trie is a Klaytn Merkle Trie.
 type Trie interface {
 	TryGet(key []byte) ([]byte, error)
 	TryUpdate(key, value []byte) error

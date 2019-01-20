@@ -104,7 +104,7 @@ var (
 	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
 )
 
-// Author retrieves the GXP address of the account that minted the given
+// Author retrieves the Klaytn address of the account that minted the given
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
@@ -656,7 +656,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// ecrecover extracts the GXP account address from a signed header.
+// ecrecover extracts the Klaytn account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	hash := header.Hash()
 	if addr, ok := recentAddresses.Get(hash); ok {

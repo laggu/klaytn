@@ -167,7 +167,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
 	for i, version := range protocol.Versions {
 		// Skip protocol version if incompatible with the mode of operation
-		if mode == downloader.FastSync && version < gxp63 {
+		if mode == downloader.FastSync && version < klay63 {
 			continue
 		}
 		// Compatible; initialise the sub-protocol
@@ -264,7 +264,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 	logger.Debug("Removing klaytn peer", "peer", id)
 
-	// Unregister the peer from the downloader and GXP peer set
+	// Unregister the peer from the downloader and peer set
 	pm.downloader.UnregisterPeer(id)
 	if err := pm.peers.Unregister(id); err != nil {
 		logger.Error("Peer removal failed", "peer", id, "err", err)
@@ -339,7 +339,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	}
 	p.GetP2PPeer().Log().Debug("klaytn peer connected", "name", p.GetP2PPeer().Name())
 
-	// Execute the GXP handshake
+	// Execute the handshake
 	var (
 		genesis = pm.blockchain.Genesis()
 		head    = pm.blockchain.CurrentHeader()
@@ -615,7 +615,7 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			}
 		}
 
-	case p.GetVersion() >= gxp63 && msg.Code == GetNodeDataMsg:
+	case p.GetVersion() >= klay63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -642,7 +642,7 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		}
 		return p.SendNodeData(data)
 
-	case p.GetVersion() >= gxp63 && msg.Code == NodeDataMsg:
+	case p.GetVersion() >= klay63 && msg.Code == NodeDataMsg:
 		// A batch of node state data arrived to one of our previous requests
 		var data [][]byte
 		if err := msg.Decode(&data); err != nil {
@@ -653,7 +653,7 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			logger.Debug("Failed to deliver node state data", "err", err)
 		}
 
-	case p.GetVersion() >= gxp63 && msg.Code == GetReceiptsMsg:
+	case p.GetVersion() >= klay63 && msg.Code == GetReceiptsMsg:
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -689,7 +689,7 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		}
 		return p.SendReceiptsRLP(receipts)
 
-	case p.GetVersion() >= gxp63 && msg.Code == ReceiptsMsg:
+	case p.GetVersion() >= klay63 && msg.Code == ReceiptsMsg:
 		// A batch of receipts arrived to one of our previous requests
 		var receipts [][]*types.Receipt
 		if err := msg.Decode(&receipts); err != nil {

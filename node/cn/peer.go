@@ -803,7 +803,7 @@ func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
 
 // GetRW returns the MsgReadWriter of the peer.
 func (p *multiChannelPeer) GetRW() p2p.MsgReadWriter {
-	return p.rw //TODO-GXP check this function usage
+	return p.rw //TODO-GX check this function usage
 }
 
 type ByPassValidator struct{}

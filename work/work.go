@@ -56,23 +56,23 @@ type Miner struct {
 
 	coinbase common.Address
 	mining   int32
-	gxp      Backend
+	backend  Backend
 	engine   consensus.Engine
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(gxp Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype p2p.ConnType) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype p2p.ConnType) *Miner {
 	miner := &Miner{
-		gxp:      gxp,
+		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, gxp, mux, nodetype),
+		worker:   newWorker(config, engine, common.Address{}, backend, mux, nodetype),
 		canStart: 1,
 	}
 	// TODO-KLAYTN drop or missing tx
-	miner.Register(NewCpuAgent(gxp.BlockChain(), engine, nodetype))
+	miner.Register(NewCpuAgent(backend.BlockChain(), engine, nodetype))
 	go miner.update()
 
 	return miner

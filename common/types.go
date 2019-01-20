@@ -149,7 +149,7 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 
 /////////// Address
 
-// Address represents the 20 byte address of an GXPlatform account.
+// Address represents the 20 byte address of a Klaytn account.
 type Address [AddressLength]byte
 
 // BytesToAddress returns Address with value b.
@@ -196,7 +196,7 @@ func FromHumanReadableAddress(s string) (Address, error) {
 }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
-// GXPlatform address or not.
+// Klaytn address or not.
 func IsHexAddress(s string) bool {
 	if hasHexPrefix(s) {
 		s = s[2:]

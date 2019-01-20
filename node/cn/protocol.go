@@ -33,15 +33,15 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	gxp62 = 62
-	gxp63 = 63
+	klay62 = 62
+	klay63 = 63
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
 var ProtocolName = "klay"
 
 // ProtocolVersions are the upported versions of the klay protocol (first is primary).
-var ProtocolVersions = []uint{gxp63, gxp62}
+var ProtocolVersions = []uint{klay63, klay62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
 var ProtocolLengths = []uint64{17, 8}

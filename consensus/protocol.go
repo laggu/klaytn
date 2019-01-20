@@ -28,8 +28,8 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	Gxp62 = 62
-	Gxp63 = 63
+	Klay62 = 62
+	Klay63 = 63
 
 	// istanbul msg-code for ranger node
 	PoRMsg     = 0x12
@@ -37,9 +37,9 @@ const (
 )
 
 var (
-	GxpProtocol = Protocol{
+	KlayProtocol = Protocol{
 		Name:     "klay",
-		Versions: []uint{Gxp63, Gxp62},
+		Versions: []uint{Klay63, Klay62},
 		Lengths:  []uint64{17, 8},
 	}
 )

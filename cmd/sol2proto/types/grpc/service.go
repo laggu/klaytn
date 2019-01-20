@@ -9,7 +9,7 @@ import (
 	"sort"
 )
 
-// Generate a renderable object and required message types from an GXP contract ABI
+// Generate a renderable object and required message types from a Klaytn contract ABI
 func GenerateServiceProtoFile(srvName, pkgName string, contractABI abi.ABI, version string) (protoFile ProtoFile, msgs []Message) {
 	protoFile = ProtoFile{
 		GeneratorVersion: version,

@@ -32,12 +32,12 @@ import (
 )
 
 var (
-	abiFlag         = flag.String("abi", "", "Path to the GXP contract ABI json to bind")
-	binFlag         = flag.String("bin", "", "Path to the GXP contract bytecode (generate deploy method")
-	binruntimesFlag = flag.String("bin-runtime", "", "Path to the GXP contract runtime-bytecode")
+	abiFlag         = flag.String("abi", "", "Path to the Klaytn contract ABI json to bind")
+	binFlag         = flag.String("bin", "", "Path to the Klaytn contract bytecode (generate deploy method")
+	binruntimesFlag = flag.String("bin-runtime", "", "Path to the Klaytn contract runtime-bytecode")
 	typFlag         = flag.String("type", "", "Struct name for the binding (default = package name)")
 
-	solFlag  = flag.String("sol", "", "Path to the GXP contract Solidity source to build and bind")
+	solFlag  = flag.String("sol", "", "Path to the Klaytn contract Solidity source to build and bind")
 	solcFlag = flag.String("solc", "", "Solidity compiler to use if source builds are requested")
 	excFlag  = flag.String("exc", "", "Comma separated types to exclude from binding")
 

@@ -119,7 +119,7 @@ type worker struct {
 	agents map[Agent]struct{}
 	recv   chan *Result
 
-	gxp     Backend
+	backend Backend
 	chain   *blockchain.BlockChain
 	proc    blockchain.Validator
 	chainDB database.DBManager
@@ -146,33 +146,33 @@ type worker struct {
 	nodetype p2p.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, gxp Backend, mux *event.TypeMux, nodetype p2p.ConnType) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, backend Backend, mux *event.TypeMux, nodetype p2p.ConnType) *worker {
 	worker := &worker{
 		config:         config,
 		engine:         engine,
-		gxp:            gxp,
+		backend:        backend,
 		mux:            mux,
 		txsCh:          make(chan blockchain.NewTxsEvent, txChanSize),
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDB:        gxp.ChainDB(),
+		chainDB:        backend.ChainDB(),
 		recv:           make(chan *Result, resultQueueSize),
-		chain:          gxp.BlockChain(),
-		proc:           gxp.BlockChain().Validator(),
+		chain:          backend.BlockChain(),
+		proc:           backend.BlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
-		unconfirmed:    newUnconfirmedBlocks(gxp.BlockChain(), miningLogAtDepth),
+		unconfirmed:    newUnconfirmedBlocks(backend.BlockChain(), miningLogAtDepth),
 		nodetype:       nodetype,
 	}
 
 	// istanbul BFT
 	if _, ok := engine.(consensus.Istanbul); ok || !config.IsBFT {
 		// Subscribe NewTxsEvent for tx pool
-		worker.txsSub = gxp.TxPool().SubscribeNewTxsEvent(worker.txsCh)
+		worker.txsSub = backend.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 		// Subscribe events for blockchain
-		worker.chainHeadSub = gxp.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-		worker.chainSideSub = gxp.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+		worker.chainHeadSub = backend.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+		worker.chainSideSub = backend.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 		go worker.update()
 
 		go worker.wait()
@@ -366,7 +366,7 @@ func (self *worker) wait() {
 
 			// TODO-KLAYTN drop or missing tx
 			if self.nodetype != node.CONSENSUSNODE {
-				pending, err := self.gxp.TxPool().Pending()
+				pending, err := self.backend.TxPool().Pending()
 				if err != nil {
 					logger.Error("Failed to fetch pending transactions", "err", err)
 					continue
@@ -387,7 +387,7 @@ func (self *worker) wait() {
 						}
 					}
 					if resendTxs != nil {
-						self.gxp.ReBroadcastTxs(resendTxs)
+						self.backend.ReBroadcastTxs(resendTxs)
 					}
 				}
 				continue
@@ -489,7 +489,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 
 func (self *worker) commitNewWork() {
 	// Check any fork transitions needed
-	pending, err := self.gxp.TxPool().Pending()
+	pending, err := self.backend.TxPool().Pending()
 	if err != nil {
 		logger.Error("Failed to fetch pending transactions", "err", err)
 		return

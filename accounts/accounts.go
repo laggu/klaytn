@@ -28,10 +28,10 @@ import (
 	"math/big"
 )
 
-// Account represents an GXPlatform account located at a specific location defined
+// Account represents a Klaytn account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.Address `json:"address"` // GXPlatform account address derived from the key
+	Address common.Address `json:"address"` // Klaytn account address derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 

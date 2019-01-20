@@ -585,5 +585,5 @@ func SeedHash(block uint64) []byte {
 
 // Protocol implements consensus.Engine.Protocol
 func (ethash *Gxhash) Protocol() consensus.Protocol {
-	return consensus.GxpProtocol
+	return consensus.KlayProtocol
 }
