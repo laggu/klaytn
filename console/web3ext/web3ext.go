@@ -23,7 +23,7 @@ package web3ext
 var Modules = map[string]string{
 	"admin":    Admin_JS,
 	"debug":    Debug_JS,
-	"klay":     Gxp_JS,
+	"klay":     Klay_JS,
 	"miner":    Miner_JS,
 	"net":      Net_JS,
 	"personal": Personal_JS,
@@ -349,7 +349,7 @@ web3._extend({
 });
 `
 
-const Gxp_JS = `
+const Klay_JS = `
 var blockWithConsensusInfoCall = function (args) {
     return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "klay_getBlockWithConsensusInfoByHash" : "klay_getBlockWithConsensusInfoByNumber";
 };
@@ -419,7 +419,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getRawTransactionFromBlock',
 			call: function(args) {
-				return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'gxp_getRawTransactionByBlockHashAndIndex' : 'gxp_getRawTransactionByBlockNumberAndIndex';
+				return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getRawTransactionByBlockHashAndIndex' : 'klay_getRawTransactionByBlockNumberAndIndex';
 			},
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
@@ -447,7 +447,7 @@ web3._extend({
 	properties: [
 		new web3._extend.Property({
 			name: 'pendingTransactions',
-			getter: 'gxp_pendingTransactions',
+			getter: 'klay_pendingTransactions',
 			outputFormatter: function(txs) {
 				var formatted = [];
 				for (var i = 0; i < txs.length; i++) {

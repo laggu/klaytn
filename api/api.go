@@ -54,24 +54,24 @@ const (
 
 var logger = log.NewModuleLogger(log.API)
 
-// PublicGXPAPI provides an API to access GXP related information.
+// PublicKlayAPI provides an API to access Klaytn related information.
 // It offers only methods that operate on public data that is freely available to anyone.
-type PublicGXPAPI struct {
+type PublicKlayAPI struct {
 	b Backend
 }
 
-// NewPublicGXPAPI creates a new GXP protocol API.
-func NewPublicGXPAPI(b Backend) *PublicGXPAPI {
-	return &PublicGXPAPI{b}
+// NewPublicKlayAPI creates a new Klaytn protocol API.
+func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
+	return &PublicKlayAPI{b}
 }
 
 // GasPrice returns a suggestion for a gas price.
-func (s *PublicGXPAPI) GasPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
+func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
 	return s.b.SuggestPrice(ctx)
 }
 
-// ProtocolVersion returns the current GXP protocol version this node supports
-func (s *PublicGXPAPI) ProtocolVersion() hexutil.Uint {
+// ProtocolVersion returns the current Klaytn protocol version this node supports
+func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
 
@@ -82,7 +82,7 @@ func (s *PublicGXPAPI) ProtocolVersion() hexutil.Uint {
 // - highestBlock:  block number of the highest block header this node has received from peers
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
-func (s *PublicGXPAPI) Syncing() (interface{}, error) {
+func (s *PublicKlayAPI) Syncing() (interface{}, error) {
 	progress := s.b.Downloader().Progress()
 
 	// Return not syncing if the synchronisation already completed
@@ -411,7 +411,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 //
 // This gives context to the signed message and prevents signing of transactions.
 func signHash(data []byte) []byte {
-	msg := fmt.Sprintf("\x19GXP Signed Message:\n%d%s", len(data), data)
+	msg := fmt.Sprintf("\x19Klaytn Signed Message:\n%d%s", len(data), data)
 	return crypto.Keccak256([]byte(msg))
 }
 
@@ -1426,7 +1426,7 @@ type PublicDebugAPI struct {
 }
 
 // NewPublicDebugAPI creates a new API definition for the public debug methods
-// of the GXP service.
+// of the Klaytn service.
 func NewPublicDebugAPI(b Backend) *PublicDebugAPI {
 	return &PublicDebugAPI{b: b}
 }
