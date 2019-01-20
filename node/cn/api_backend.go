@@ -40,71 +40,71 @@ import (
 	"math/big"
 )
 
-// GxpAPIBackend implements gxpapi.Backend for full nodes
-type GxpAPIBackend struct {
-	gxp *GXP
+// CNAPIBackend implements api.Backend for full nodes
+type CNAPIBackend struct {
+	cn  *CN
 	gpo *gasprice.Oracle
 }
 
-func (b *GxpAPIBackend) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
-	return b.gxp.blockchain.GetTransactionInCache(hash)
+func (b *CNAPIBackend) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	return b.cn.blockchain.GetTransactionInCache(hash)
 }
 
-func (b *GxpAPIBackend) GetReceiptsInCache(blockHash common.Hash) types.Receipts {
-	return b.gxp.blockchain.GetReceiptsInCache(blockHash)
+func (b *CNAPIBackend) GetReceiptsInCache(blockHash common.Hash) types.Receipts {
+	return b.cn.blockchain.GetReceiptsInCache(blockHash)
 }
 
-func (b *GxpAPIBackend) ChainConfig() *params.ChainConfig {
-	return b.gxp.chainConfig
+func (b *CNAPIBackend) ChainConfig() *params.ChainConfig {
+	return b.cn.chainConfig
 }
 
-func (b *GxpAPIBackend) CurrentBlock() *types.Block {
-	return b.gxp.blockchain.CurrentBlock()
+func (b *CNAPIBackend) CurrentBlock() *types.Block {
+	return b.cn.blockchain.CurrentBlock()
 }
 
-func (b *GxpAPIBackend) SetHead(number uint64) {
-	//b.gxp.protocolManager.downloader.Cancel()
-	b.gxp.blockchain.SetHead(number)
+func (b *CNAPIBackend) SetHead(number uint64) {
+	//b.cn.protocolManager.downloader.Cancel()
+	b.cn.blockchain.SetHead(number)
 }
 
-func (b *GxpAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
+func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.gxp.miner.PendingBlock()
+		block := b.cn.miner.PendingBlock()
 		return block.Header(), nil
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
-		return b.gxp.blockchain.CurrentBlock().Header(), nil
+		return b.cn.blockchain.CurrentBlock().Header(), nil
 	}
-	header := b.gxp.blockchain.GetHeaderByNumber(uint64(blockNr))
+	header := b.cn.blockchain.GetHeaderByNumber(uint64(blockNr))
 	if header == nil {
 		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNr)
 	}
 	return header, nil
 }
 
-func (b *GxpAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
+func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.gxp.miner.PendingBlock()
+		block := b.cn.miner.PendingBlock()
 		return block, nil
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
-		return b.gxp.blockchain.CurrentBlock(), nil
+		return b.cn.blockchain.CurrentBlock(), nil
 	}
-	block := b.gxp.blockchain.GetBlockByNumber(uint64(blockNr))
+	block := b.cn.blockchain.GetBlockByNumber(uint64(blockNr))
 	if block == nil {
 		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNr)
 	}
 	return block, nil
 }
 
-func (b *GxpAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
+func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.gxp.miner.Pending()
+		block, state := b.cn.miner.Pending()
 		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state
@@ -112,64 +112,64 @@ func (b *GxpAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.
 	if header == nil || err != nil {
 		return nil, nil, err
 	}
-	stateDb, err := b.gxp.BlockChain().StateAt(header.Root)
+	stateDb, err := b.cn.BlockChain().StateAt(header.Root)
 	return stateDb, header, err
 }
 
-func (b *GxpAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	block := b.gxp.blockchain.GetBlockByHash(hash)
+func (b *CNAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	block := b.cn.blockchain.GetBlockByHash(hash)
 	if block == nil {
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", hash.String())
 	}
 	return block, nil
 }
 
-func (b *GxpAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) types.Receipts {
-	return b.gxp.blockchain.GetReceiptsByBlockHash(hash)
+func (b *CNAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) types.Receipts {
+	return b.cn.blockchain.GetReceiptsByBlockHash(hash)
 }
 
-func (b *GxpAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
-	return b.gxp.blockchain.GetLogsByHash(hash), nil
+func (b *CNAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
+	return b.cn.blockchain.GetLogsByHash(hash), nil
 }
 
-func (b *GxpAPIBackend) GetTd(blockHash common.Hash) *big.Int {
-	return b.gxp.blockchain.GetTdByHash(blockHash)
+func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
+	return b.cn.blockchain.GetTdByHash(blockHash)
 }
 
-func (b *GxpAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
+func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 
-	context := blockchain.NewEVMContext(msg, header, b.gxp.BlockChain(), nil)
-	return vm.NewEVM(context, state, b.gxp.chainConfig, &vmCfg), vmError, nil
+	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
+	return vm.NewEVM(context, state, b.cn.chainConfig, &vmCfg), vmError, nil
 }
 
-func (b *GxpAPIBackend) SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription {
-	return b.gxp.BlockChain().SubscribeRemovedLogsEvent(ch)
+func (b *CNAPIBackend) SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription {
+	return b.cn.BlockChain().SubscribeRemovedLogsEvent(ch)
 }
 
-func (b *GxpAPIBackend) SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription {
-	return b.gxp.BlockChain().SubscribeChainEvent(ch)
+func (b *CNAPIBackend) SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription {
+	return b.cn.BlockChain().SubscribeChainEvent(ch)
 }
 
-func (b *GxpAPIBackend) SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription {
-	return b.gxp.BlockChain().SubscribeChainHeadEvent(ch)
+func (b *CNAPIBackend) SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription {
+	return b.cn.BlockChain().SubscribeChainHeadEvent(ch)
 }
 
-func (b *GxpAPIBackend) SubscribeChainSideEvent(ch chan<- blockchain.ChainSideEvent) event.Subscription {
-	return b.gxp.BlockChain().SubscribeChainSideEvent(ch)
+func (b *CNAPIBackend) SubscribeChainSideEvent(ch chan<- blockchain.ChainSideEvent) event.Subscription {
+	return b.cn.BlockChain().SubscribeChainSideEvent(ch)
 }
 
-func (b *GxpAPIBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
-	return b.gxp.BlockChain().SubscribeLogsEvent(ch)
+func (b *CNAPIBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
+	return b.cn.BlockChain().SubscribeLogsEvent(ch)
 }
 
-func (b *GxpAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
-	return b.gxp.txPool.AddLocal(signedTx)
+func (b *CNAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
+	return b.cn.txPool.AddLocal(signedTx)
 }
 
-func (b *GxpAPIBackend) GetPoolTransactions() (types.Transactions, error) {
-	pending, err := b.gxp.txPool.Pending()
+func (b *CNAPIBackend) GetPoolTransactions() (types.Transactions, error) {
+	pending, err := b.cn.txPool.Pending()
 	if err != nil {
 		return nil, err
 	}
@@ -180,73 +180,73 @@ func (b *GxpAPIBackend) GetPoolTransactions() (types.Transactions, error) {
 	return txs, nil
 }
 
-func (b *GxpAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
-	return b.gxp.txPool.Get(hash)
+func (b *CNAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
+	return b.cn.txPool.Get(hash)
 }
 
-func (b *GxpAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) uint64 {
-	return b.gxp.txPool.State().GetNonce(addr)
+func (b *CNAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) uint64 {
+	return b.cn.txPool.State().GetNonce(addr)
 }
 
-func (b *GxpAPIBackend) Stats() (pending int, queued int) {
-	return b.gxp.txPool.Stats()
+func (b *CNAPIBackend) Stats() (pending int, queued int) {
+	return b.cn.txPool.Stats()
 }
 
-func (b *GxpAPIBackend) TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
-	return b.gxp.TxPool().Content()
+func (b *CNAPIBackend) TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
+	return b.cn.TxPool().Content()
 }
 
-func (b *GxpAPIBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) event.Subscription {
-	return b.gxp.TxPool().SubscribeNewTxsEvent(ch)
+func (b *CNAPIBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) event.Subscription {
+	return b.cn.TxPool().SubscribeNewTxsEvent(ch)
 }
 
-func (b *GxpAPIBackend) Downloader() *downloader.Downloader {
-	return b.gxp.Downloader()
+func (b *CNAPIBackend) Downloader() *downloader.Downloader {
+	return b.cn.Downloader()
 }
 
-func (b *GxpAPIBackend) ProtocolVersion() int {
-	return b.gxp.GxpVersion()
+func (b *CNAPIBackend) ProtocolVersion() int {
+	return b.cn.ProtocolVersion()
 }
 
-func (b *GxpAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
+func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
 	return b.gpo.SuggestPrice(ctx)
 }
 
-func (b *GxpAPIBackend) ChainDB() database.DBManager {
-	return b.gxp.ChainDB()
+func (b *CNAPIBackend) ChainDB() database.DBManager {
+	return b.cn.ChainDB()
 }
 
-func (b *GxpAPIBackend) EventMux() *event.TypeMux {
-	return b.gxp.EventMux()
+func (b *CNAPIBackend) EventMux() *event.TypeMux {
+	return b.cn.EventMux()
 }
 
-func (b *GxpAPIBackend) AccountManager() *accounts.Manager {
-	return b.gxp.AccountManager()
+func (b *CNAPIBackend) AccountManager() *accounts.Manager {
+	return b.cn.AccountManager()
 }
 
-func (b *GxpAPIBackend) BloomStatus() (uint64, uint64) {
-	sections, _, _ := b.gxp.bloomIndexer.Sections()
+func (b *CNAPIBackend) BloomStatus() (uint64, uint64) {
+	sections, _, _ := b.cn.bloomIndexer.Sections()
 	return params.BloomBitsBlocks, sections
 }
 
-func (b *GxpAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+func (b *CNAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
 	for i := 0; i < bloomFilterThreads; i++ {
-		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.gxp.bloomRequests)
+		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.cn.bloomRequests)
 	}
 }
 
-func (b *GxpAPIBackend) GetChildChainIndexingEnabled() bool {
-	return b.gxp.blockchain.GetChildChainIndexingEnabled()
+func (b *CNAPIBackend) GetChildChainIndexingEnabled() bool {
+	return b.cn.blockchain.GetChildChainIndexingEnabled()
 }
 
-func (b *GxpAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
-	return b.gxp.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
+func (b *CNAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
+	return b.cn.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 }
 
-func (b *GxpAPIBackend) GetLatestPeggedBlockNumber() uint64 {
-	return b.gxp.blockchain.GetLatestPeggedBlockNumber()
+func (b *CNAPIBackend) GetLatestPeggedBlockNumber() uint64 {
+	return b.cn.blockchain.GetLatestPeggedBlockNumber()
 }
 
-func (b *GxpAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return b.gxp.blockchain.GetReceiptFromParentChain(blockHash)
+func (b *CNAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	return b.cn.blockchain.GetReceiptFromParentChain(blockHash)
 }

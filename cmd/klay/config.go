@@ -72,7 +72,7 @@ var tomlSettings = toml.Config{
 }
 
 type klayConfig struct {
-	klay cn.Config
+	CN   cn.Config
 	Node node.Config
 }
 
@@ -105,7 +105,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	// TODO-GX-issue136 gasPrice
 	// Load defaults.
 	cfg := klayConfig{
-		klay: cn.DefaultConfig,
+		CN:   cn.DefaultConfig,
 		Node: defaultNodeConfig(),
 	}
 
@@ -122,7 +122,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetKlayConfig(ctx, stack, &cfg.klay)
+	utils.SetKlayConfig(ctx, stack, &cfg.CN)
 
 	//utils.SetShhConfig(ctx, stack, &cfg.Shh)
 	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
@@ -133,7 +133,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterKlaytnService(stack, &cfg.klay)
+	utils.RegisterCNService(stack, &cfg.CN)
 
 	return stack
 }
@@ -142,8 +142,8 @@ func dumpConfig(ctx *cli.Context) error {
 	_, cfg := makeConfigNode(ctx)
 	comment := ""
 
-	if cfg.klay.Genesis != nil {
-		cfg.klay.Genesis = nil
+	if cfg.CN.Genesis != nil {
+		cfg.CN.Genesis = nil
 		comment += "# Note: this config doesn't contain the genesis block.\n\n"
 	}
 

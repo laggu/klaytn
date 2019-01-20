@@ -1102,8 +1102,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 }
 
-// RegisterKlaytnService adds an GXP client to the stack.
-func RegisterKlaytnService(stack *node.Node, cfg *cn.Config) {
+// RegisterCNService adds a CN client to the stack.
+func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	// @toDo add syncMode.LightSync func and add LesServer
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
@@ -1111,7 +1111,7 @@ func RegisterKlaytnService(stack *node.Node, cfg *cn.Config) {
 		return fullNode, err
 	})
 	if err != nil {
-		Fatalf("Failed to register the Klaytn service: %v", err)
+		Fatalf("Failed to register the CN service: %v", err)
 	}
 }
 

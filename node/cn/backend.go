@@ -61,12 +61,12 @@ type LesServer interface {
 }
 
 // CN implements the Klaytn consensus node service.
-type GXP struct {
+type CN struct {
 	config      *Config
 	chainConfig *params.ChainConfig
 
 	// Channel for shutting down the service
-	shutdownChan chan bool // Channel for shutting down the GXP
+	shutdownChan chan bool // Channel for shutting down the CN
 
 	// Handlers
 	txPool          *blockchain.TxPool
@@ -84,7 +84,7 @@ type GXP struct {
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *blockchain.ChainIndexer       // Bloom indexer operating during block imports
 
-	APIBackend *GxpAPIBackend
+	APIBackend *CNAPIBackend
 
 	miner    *work.Miner
 	gasPrice *big.Int
@@ -99,16 +99,16 @@ type GXP struct {
 	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
 }
 
-func (s *GXP) AddLesServer(ls LesServer) {
+func (s *CN) AddLesServer(ls LesServer) {
 	s.lesServer = ls
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
 }
 
-// New creates a new GXP object (including the
-// initialisation of the common GXP object)
-func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
+// New creates a new CN object (including the
+// initialisation of the common CN object)
+func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run cn.GXP in light sync mode, use les.LightGXP")
+		return nil, errors.New("can't run cn.CN in light sync mode, use les.LightCN")
 	}
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
@@ -128,7 +128,7 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
-	gxp := &GXP{
+	cn := &CN{
 		config:         config,
 		chainDB:        chainDB,
 		chainConfig:    chainConfig,
@@ -147,10 +147,10 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 
 	// istanbul BFT. force to set the istanbul coinbase to node key address
 	if chainConfig.Istanbul != nil {
-		gxp.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+		cn.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 
-	logger.Info("Initialising Klaytn protocol", "versions", gxp.engine.Protocol().Versions, "network", config.NetworkId)
+	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := chainDB.ReadDatabaseVersion()
@@ -163,43 +163,43 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		vmConfig   = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
 	)
-	gxp.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, gxp.chainConfig, gxp.engine, vmConfig)
+	cn.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		logger.Error("Rewinding chain to upgrade configuration", "err", compat)
-		gxp.blockchain.SetHead(compat.RewindTo)
+		cn.blockchain.SetHead(compat.RewindTo)
 		chainDB.WriteChainConfig(genesisHash, chainConfig)
 	}
-	gxp.bloomIndexer.Start(gxp.blockchain)
+	cn.bloomIndexer.Start(cn.blockchain)
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	gxp.txPool = blockchain.NewTxPool(config.TxPool, gxp.chainConfig, gxp.blockchain)
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 
-	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDB, ctx.NodeType()); err != nil {
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType()); err != nil {
 		return nil, err
 	}
-	gxp.protocolManager.wsendpoint = config.WsEndpoint
+	cn.protocolManager.wsendpoint = config.WsEndpoint
 
-	wallet, err := gxp.RewardbaseWallet()
+	wallet, err := cn.RewardbaseWallet()
 	if err != nil {
 		logger.Error("find err", "err", err)
 	} else {
-		gxp.protocolManager.SetRewardbaseWallet(wallet)
+		cn.protocolManager.SetRewardbaseWallet(wallet)
 	}
-	gxp.protocolManager.SetRewardbase(gxp.rewardbase)
-	gxp.protocolManager.SetRewardContract(gxp.rewardcontract)
+	cn.protocolManager.SetRewardbase(cn.rewardbase)
+	cn.protocolManager.SetRewardContract(cn.rewardcontract)
 
 	// TODO-GX improve to handle drop transaction on network traffic in BN,GN,RN
-	gxp.miner = work.New(gxp, gxp.chainConfig, gxp.EventMux(), gxp.engine, ctx.NodeType())
+	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
 	// istanbul BFT
-	gxp.miner.SetExtra(makeExtraData(config.ExtraData, gxp.chainConfig.IsBFT))
+	cn.miner.SetExtra(makeExtraData(config.ExtraData, cn.chainConfig.IsBFT))
 
-	gxp.APIBackend = &GxpAPIBackend{gxp, nil}
+	cn.APIBackend = &CNAPIBackend{cn, nil}
 
 	gpoParams := config.GPO
 
@@ -207,9 +207,9 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
-	gxp.APIBackend.gpo = gasprice.NewOracle(gxp.APIBackend, gpoParams)
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams)
 
-	return gxp, nil
+	return cn, nil
 }
 
 // istanbul BFT
@@ -282,7 +282,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *GXP) APIs() []rpc.API {
+func (s *CN) APIs() []rpc.API {
 	apis := api.GetAPIs(s.APIBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
@@ -293,7 +293,7 @@ func (s *GXP) APIs() []rpc.API {
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicGXPAPI(s),
+			Service:   NewPublicKlayAPI(s),
 			Public:    true,
 		}, {
 			Namespace: "klay",
@@ -337,11 +337,11 @@ func (s *GXP) APIs() []rpc.API {
 	}...)
 }
 
-func (s *GXP) ResetWithGenesisBlock(gb *types.Block) {
+func (s *CN) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *GXP) Coinbase() (eb common.Address, err error) {
+func (s *CN) Coinbase() (eb common.Address, err error) {
 	s.lock.RLock()
 	coinbase := s.coinbase
 	s.lock.RUnlock()
@@ -364,7 +364,7 @@ func (s *GXP) Coinbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
 }
 
-func (s *GXP) Rewardbase() (eb common.Address, err error) {
+func (s *CN) Rewardbase() (eb common.Address, err error) {
 	s.lock.RLock()
 	rewardbase := s.rewardbase
 	s.lock.RUnlock()
@@ -388,7 +388,7 @@ func (s *GXP) Rewardbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("rewardbase must be explicitly specified")
 }
 
-func (s *GXP) RewardContract() (addr common.Address, err error) {
+func (s *CN) RewardContract() (addr common.Address, err error) {
 	s.lock.RLock()
 	rewardcontract := s.rewardcontract
 	s.lock.RUnlock()
@@ -399,7 +399,7 @@ func (s *GXP) RewardContract() (addr common.Address, err error) {
 	return common.Address{}, nil
 }
 
-func (s *GXP) RewardbaseWallet() (accounts.Wallet, error) {
+func (s *CN) RewardbaseWallet() (accounts.Wallet, error) {
 	coinbase, err := s.Rewardbase()
 	if err != nil {
 		return nil, err
@@ -415,7 +415,7 @@ func (s *GXP) RewardbaseWallet() (accounts.Wallet, error) {
 }
 
 // SetRewardbase sets the mining reward address.
-func (s *GXP) SetCoinbase(coinbase common.Address) {
+func (s *CN) SetCoinbase(coinbase common.Address) {
 	s.lock.Lock()
 	// istanbul BFT
 	if _, ok := s.engine.(consensus.Istanbul); ok {
@@ -428,7 +428,7 @@ func (s *GXP) SetCoinbase(coinbase common.Address) {
 	s.miner.SetCoinbase(coinbase)
 }
 
-func (s *GXP) SetRewardbase(rewardbase common.Address) {
+func (s *CN) SetRewardbase(rewardbase common.Address) {
 	s.lock.Lock()
 	s.rewardbase = rewardbase
 	s.lock.Unlock()
@@ -440,7 +440,7 @@ func (s *GXP) SetRewardbase(rewardbase common.Address) {
 	s.protocolManager.SetRewardbaseWallet(wallet)
 }
 
-func (s *GXP) SetRewardContract(addr common.Address) {
+func (s *CN) SetRewardContract(addr common.Address) {
 	s.lock.Lock()
 	s.rewardcontract = addr
 	s.lock.Unlock()
@@ -450,7 +450,7 @@ func (s *GXP) SetRewardContract(addr common.Address) {
 	//TODO-GX add governance feature
 }
 
-func (s *GXP) StartMining(local bool) error {
+func (s *CN) StartMining(local bool) error {
 	eb, err := s.Coinbase()
 	if err != nil {
 		logger.Error("Cannot start mining without coinbase", "err", err)
@@ -475,27 +475,27 @@ func (s *GXP) StartMining(local bool) error {
 	return nil
 }
 
-func (s *GXP) StopMining()        { s.miner.Stop() }
-func (s *GXP) IsMining() bool     { return s.miner.Mining() }
-func (s *GXP) Miner() *work.Miner { return s.miner }
+func (s *CN) StopMining()        { s.miner.Stop() }
+func (s *CN) IsMining() bool     { return s.miner.Mining() }
+func (s *CN) Miner() *work.Miner { return s.miner }
 
-func (s *GXP) AccountManager() *accounts.Manager  { return s.accountManager }
-func (s *GXP) BlockChain() *blockchain.BlockChain { return s.blockchain }
-func (s *GXP) TxPool() *blockchain.TxPool         { return s.txPool }
-func (s *GXP) EventMux() *event.TypeMux           { return s.eventMux }
-func (s *GXP) Engine() consensus.Engine           { return s.engine }
-func (s *GXP) ChainDB() database.DBManager        { return s.chainDB }
-func (s *GXP) IsListening() bool                  { return true } // Always listening
-func (s *GXP) GxpVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *GXP) NetVersion() uint64                 { return s.networkId }
-func (s *GXP) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-func (s *GXP) ReBroadcastTxs(transactions types.Transactions) {
+func (s *CN) AccountManager() *accounts.Manager  { return s.accountManager }
+func (s *CN) BlockChain() *blockchain.BlockChain { return s.blockchain }
+func (s *CN) TxPool() *blockchain.TxPool         { return s.txPool }
+func (s *CN) EventMux() *event.TypeMux           { return s.eventMux }
+func (s *CN) Engine() consensus.Engine           { return s.engine }
+func (s *CN) ChainDB() database.DBManager        { return s.chainDB }
+func (s *CN) IsListening() bool                  { return true } // Always listening
+func (s *CN) ProtocolVersion() int               { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *CN) NetVersion() uint64                 { return s.networkId }
+func (s *CN) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
 }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *GXP) Protocols() []p2p.Protocol {
+func (s *CN) Protocols() []p2p.Protocol {
 	if s.lesServer == nil {
 		return s.protocolManager.SubProtocols
 	}
@@ -503,8 +503,8 @@ func (s *GXP) Protocols() []p2p.Protocol {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// GXP protocol implementation.
-func (s *GXP) Start(srvr p2p.Server) error {
+// Klaytn protocol implementation.
+func (s *CN) Start(srvr p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
 
@@ -528,8 +528,8 @@ func (s *GXP) Start(srvr p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// GXP protocol.
-func (s *GXP) Stop() error {
+// Klaytn protocol.
+func (s *CN) Stop() error {
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()

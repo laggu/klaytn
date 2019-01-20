@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	// bloomServiceThreads is the number of goroutines used globally by an GXP
+	// bloomServiceThreads is the number of goroutines used globally by a CN
 	// instance to service bloombits lookups for all running filters.
 	bloomServiceThreads = 16
 
@@ -51,20 +51,20 @@ const (
 
 // startBloomHandlers starts a batch of goroutines to accept bloom bit database
 // retrievals from possibly a range of filters and serving the data to satisfy.
-func (gxp *GXP) startBloomHandlers() {
+func (cn *CN) startBloomHandlers() {
 	for i := 0; i < bloomServiceThreads; i++ {
 		go func() {
 			for {
 				select {
-				case <-gxp.shutdownChan:
+				case <-cn.shutdownChan:
 					return
 
-				case request := <-gxp.bloomRequests:
+				case request := <-cn.bloomRequests:
 					task := <-request
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := gxp.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks - 1)
-						if compVector, err := gxp.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head)); err == nil {
+						head := cn.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks - 1)
+						if compVector, err := cn.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head)); err == nil {
 							if blob, err := bitutil.DecompressBytes(compVector, int(params.BloomBitsBlocks)/8); err == nil {
 								task.Bitsets[i] = blob
 							} else {

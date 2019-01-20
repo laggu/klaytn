@@ -79,7 +79,7 @@ func (p *hookedPrompter) SetWordCompleter(completer WordCompleter) {}
 type tester struct {
 	workspace string
 	stack     *node.Node
-	klaytn    *cn.GXP
+	cn        *cn.CN
 	console   *Console
 	input     *hookedPrompter
 	output    *bytes.Buffer
@@ -99,7 +99,7 @@ func newTester(t *testing.T, confOverride func(*cn.Config)) *tester {
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
-	gxpConf := &cn.Config{
+	cnConf := &cn.Config{
 		Genesis: blockchain.DeveloperGenesisBlock(15, common.Address{}),
 		Gxbase:  common.HexToAddress(testAddress),
 		Gxhash: gxhash.Config{
@@ -107,9 +107,9 @@ func newTester(t *testing.T, confOverride func(*cn.Config)) *tester {
 		},
 	}
 	if confOverride != nil {
-		confOverride(gxpConf)
+		confOverride(cnConf)
 	}
-	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, gxpConf) }); err != nil {
+	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
 		t.Fatalf("failed to register Klaytn protocol: %v", err)
 	}
 	// Start the node and assemble the JavaScript console around it
@@ -135,13 +135,13 @@ func newTester(t *testing.T, confOverride func(*cn.Config)) *tester {
 		t.Fatalf("failed to create JavaScript console: %v", err)
 	}
 	// Create the final tester and return
-	var klaytn *cn.GXP
-	stack.Service(&klaytn)
+	var cn *cn.CN
+	stack.Service(&cn)
 
 	return &tester{
 		workspace: workspace,
 		stack:     stack,
-		klaytn:    klaytn,
+		cn:        cn,
 		console:   console,
 		input:     prompter,
 		output:    printer,

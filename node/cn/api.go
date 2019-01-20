@@ -41,46 +41,46 @@ import (
 	"strings"
 )
 
-// PublicGXPAPI provides an API to access GXPlatform full node-related
+// PublicKlayAPI provides an API to access Klaytn CN-related
 // information.
-type PublicGXPAPI struct {
-	gxp *GXP
+type PublicKlayAPI struct {
+	cn *CN
 }
 
-// NewPublicGXPAPI creates a new GXP protocol API for full nodes.
-func NewPublicGXPAPI(e *GXP) *PublicGXPAPI {
-	return &PublicGXPAPI{e}
+// NewPublicKlayAPI creates a new Klaytn protocol API for full nodes.
+func NewPublicKlayAPI(e *CN) *PublicKlayAPI {
+	return &PublicKlayAPI{e}
 }
 
 // Coinbase is the address that mining rewards will be send to
-func (api *PublicGXPAPI) Coinbase() (common.Address, error) {
-	return api.gxp.Coinbase()
+func (api *PublicKlayAPI) Coinbase() (common.Address, error) {
+	return api.cn.Coinbase()
 }
 
 // Rewardbase is the address that consensus rewards will be send to
-func (api *PublicGXPAPI) Rewardbase() (common.Address, error) {
-	return api.gxp.Rewardbase()
+func (api *PublicKlayAPI) Rewardbase() (common.Address, error) {
+	return api.cn.Rewardbase()
 }
 
 // RewardContract returns the address of the reward contract.
-func (api *PublicGXPAPI) RewardContract() (common.Address, error) {
-	return api.gxp.RewardContract()
+func (api *PublicKlayAPI) RewardContract() (common.Address, error) {
+	return api.cn.RewardContract()
 }
 
 // Hashrate returns the POW hashrate
-func (api *PublicGXPAPI) Hashrate() hexutil.Uint64 {
-	return hexutil.Uint64(api.gxp.Miner().HashRate())
+func (api *PublicKlayAPI) Hashrate() hexutil.Uint64 {
+	return hexutil.Uint64(api.cn.Miner().HashRate())
 }
 
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.
 type PublicMinerAPI struct {
-	gxp   *GXP
+	cn    *CN
 	agent *work.RemoteAgent
 }
 
 // NewPublicMinerAPI create a new PublicMinerAPI instance.
-func NewPublicMinerAPI(e *GXP) *PublicMinerAPI {
+func NewPublicMinerAPI(e *CN) *PublicMinerAPI {
 	agent := work.NewRemoteAgent(e.BlockChain(), e.Engine())
 	e.Miner().Register(agent)
 
@@ -89,7 +89,7 @@ func NewPublicMinerAPI(e *GXP) *PublicMinerAPI {
 
 // Mining returns an indication if this node is currently mining.
 func (api *PublicMinerAPI) Mining() bool {
-	return api.gxp.IsMining()
+	return api.cn.IsMining()
 }
 
 // SubmitWork can be used by external miner to submit their POW solution. It returns an indication if the work was
@@ -103,8 +103,8 @@ func (api *PublicMinerAPI) SubmitWork(nonce types.BlockNonce, solution, digest c
 // result[1], 32 bytes hex encoded seed hash used for DAG
 // result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
 func (api *PublicMinerAPI) GetWork() ([3]string, error) {
-	if !api.gxp.IsMining() {
-		if err := api.gxp.StartMining(false); err != nil {
+	if !api.cn.IsMining() {
+		if err := api.cn.StartMining(false); err != nil {
 			return [3]string{}, err
 		}
 	}
@@ -126,11 +126,11 @@ func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Has
 // PrivateMinerAPI provides private RPC methods to control the miner.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
 type PrivateMinerAPI struct {
-	e *GXP
+	e *CN
 }
 
 // NewPrivateMinerAPI create a new RPC service which controls the miner of this node.
-func NewPrivateMinerAPI(e *GXP) *PrivateMinerAPI {
+func NewPrivateMinerAPI(e *CN) *PrivateMinerAPI {
 	return &PrivateMinerAPI{e: e}
 }
 
@@ -227,16 +227,16 @@ func (api *PrivateMinerAPI) GetHashrate() uint64 {
 	return uint64(api.e.miner.HashRate())
 }
 
-// PrivateAdminAPI is the collection of GXP full node-related APIs
+// PrivateAdminAPI is the collection of CN full node-related APIs
 // exposed over the private admin endpoint.
 type PrivateAdminAPI struct {
-	gxp *GXP
+	cn *CN
 }
 
 // NewPrivateAdminAPI creates a new API definition for the full node private
-// admin methods of the GXP service.
-func NewPrivateAdminAPI(gxp *GXP) *PrivateAdminAPI {
-	return &PrivateAdminAPI{gxp: gxp}
+// admin methods of the CN service.
+func NewPrivateAdminAPI(cn *CN) *PrivateAdminAPI {
+	return &PrivateAdminAPI{cn: cn}
 }
 
 // ExportChain exports the current blockchain into a local file.
@@ -255,7 +255,7 @@ func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
 	}
 
 	// Export the blockchain
-	if err := api.gxp.BlockChain().Export(writer); err != nil {
+	if err := api.cn.BlockChain().Export(writer); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -307,12 +307,12 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 			break
 		}
 
-		if hasAllBlocks(api.gxp.BlockChain(), blocks) {
+		if hasAllBlocks(api.cn.BlockChain(), blocks) {
 			blocks = blocks[:0]
 			continue
 		}
 		// Import the batch and reset the buffer
-		if _, err := api.gxp.BlockChain().InsertChain(blocks); err != nil {
+		if _, err := api.cn.BlockChain().InsertChain(blocks); err != nil {
 			return false, fmt.Errorf("batch %d: failed to insert: %v", batch, err)
 		}
 		blocks = blocks[:0]
@@ -323,13 +323,13 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 // PublicDebugAPI is the collection of Ethereum full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
-	gxp *GXP
+	cn *CN
 }
 
 // NewPublicDebugAPI creates a new API definition for the full node-
 // related public debug methods of the Ethereum service.
-func NewPublicDebugAPI(gxp *GXP) *PublicDebugAPI {
-	return &PublicDebugAPI{gxp: gxp}
+func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
+	return &PublicDebugAPI{cn: cn}
 }
 
 // DumpBlock retrieves the entire state of the database at a given block.
@@ -338,41 +338,41 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
 		// the miner and operate on those
-		_, stateDb := api.gxp.miner.Pending()
+		_, stateDb := api.cn.miner.Pending()
 		return stateDb.RawDump(), nil
 	}
 	var block *types.Block
 	if blockNr == rpc.LatestBlockNumber {
-		block = api.gxp.blockchain.CurrentBlock()
+		block = api.cn.blockchain.CurrentBlock()
 	} else {
-		block = api.gxp.blockchain.GetBlockByNumber(uint64(blockNr))
+		block = api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
 	}
 	if block == nil {
 		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
 	}
-	stateDb, err := api.gxp.BlockChain().StateAt(block.Root())
+	stateDb, err := api.cn.BlockChain().StateAt(block.Root())
 	if err != nil {
 		return state.Dump{}, err
 	}
 	return stateDb.RawDump(), nil
 }
 
-// PrivateDebugAPI is the collection of GXP full node APIs exposed over
+// PrivateDebugAPI is the collection of CN full node APIs exposed over
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
 	config *params.ChainConfig
-	gxp    *GXP
+	cn     *CN
 }
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related
-// private debug methods of the GXP service.
-func NewPrivateDebugAPI(config *params.ChainConfig, gxp *GXP) *PrivateDebugAPI {
-	return &PrivateDebugAPI{config: config, gxp: gxp}
+// private debug methods of the CN service.
+func NewPrivateDebugAPI(config *params.ChainConfig, cn *CN) *PrivateDebugAPI {
+	return &PrivateDebugAPI{config: config, cn: cn}
 }
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
 func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	if preimage := api.gxp.ChainDB().ReadPreimage(hash); preimage != nil {
+	if preimage := api.cn.ChainDB().ReadPreimage(hash); preimage != nil {
 		return preimage, nil
 	}
 	return nil, errors.New("unknown preimage")
@@ -381,7 +381,7 @@ func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hex
 // GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
 // and returns them as a JSON list of block-hashes
 func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
-	return api.gxp.BlockChain().BadBlocks()
+	return api.cn.BlockChain().BadBlocks()
 }
 
 // StorageRangeResult is the result of a debug_storageRangeAt API call.
@@ -441,19 +441,19 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(startNum uint64, endNum *uint64) ([]common.Address, error) {
 	var startBlock, endBlock *types.Block
 
-	startBlock = api.gxp.blockchain.GetBlockByNumber(startNum)
+	startBlock = api.cn.blockchain.GetBlockByNumber(startNum)
 	if startBlock == nil {
 		return nil, fmt.Errorf("start block %x not found", startNum)
 	}
 
 	if endNum == nil {
 		endBlock = startBlock
-		startBlock = api.gxp.blockchain.GetBlockByHash(startBlock.ParentHash())
+		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
 		if startBlock == nil {
 			return nil, fmt.Errorf("block %x has no parent", endBlock.Number())
 		}
 	} else {
-		endBlock = api.gxp.blockchain.GetBlockByNumber(*endNum)
+		endBlock = api.cn.blockchain.GetBlockByNumber(*endNum)
 		if endBlock == nil {
 			return nil, fmt.Errorf("end block %d not found", *endNum)
 		}
@@ -468,19 +468,19 @@ func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(startNum uint64, endNum 
 // With one parameter, returns the list of accounts modified in the specified block.
 func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
 	var startBlock, endBlock *types.Block
-	startBlock = api.gxp.blockchain.GetBlockByHash(startHash)
+	startBlock = api.cn.blockchain.GetBlockByHash(startHash)
 	if startBlock == nil {
 		return nil, fmt.Errorf("start block %x not found", startHash)
 	}
 
 	if endHash == nil {
 		endBlock = startBlock
-		startBlock = api.gxp.blockchain.GetBlockByHash(startBlock.ParentHash())
+		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
 		if startBlock == nil {
 			return nil, fmt.Errorf("block %x has no parent", endBlock.Number())
 		}
 	} else {
-		endBlock = api.gxp.blockchain.GetBlockByHash(*endHash)
+		endBlock = api.cn.blockchain.GetBlockByHash(*endHash)
 		if endBlock == nil {
 			return nil, fmt.Errorf("end block %x not found", *endHash)
 		}
@@ -493,11 +493,11 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
 	}
 
-	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), statedb.NewDatabase(api.gxp.chainDB), 0)
+	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), statedb.NewDatabase(api.cn.chainDB), 0)
 	if err != nil {
 		return nil, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), statedb.NewDatabase(api.gxp.chainDB), 0)
+	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), statedb.NewDatabase(api.cn.chainDB), 0)
 	if err != nil {
 		return nil, err
 	}

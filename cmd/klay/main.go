@@ -34,7 +34,7 @@ import (
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/metrics/prometheus"
 	"github.com/ground-x/klaytn/node"
-	gxp2 "github.com/ground-x/klaytn/node/cn"
+	"github.com/ground-x/klaytn/node/cn"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/urfave/cli.v1"
@@ -306,8 +306,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 
-		var gxp *gxp2.GXP
-		if err := stack.Service(&gxp); err != nil {
+		var cn *cn.CN
+		if err := stack.Service(&cn); err != nil {
 			utils.Fatalf("Klaytn service not running: %v", err)
 		}
 		// Use a reduced number of threads if requested
@@ -315,18 +315,18 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			type threaded interface {
 				SetThreads(threads int)
 			}
-			if th, ok := gxp.Engine().(threaded); ok {
+			if th, ok := cn.Engine().(threaded); ok {
 				th.SetThreads(threads)
 			}
 		}
 		// TODO-GX disable accept tx before finishing sync.
-		if err := gxp.StartMining(false); err != nil {
+		if err := cn.StartMining(false); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	} else {
 		// istanbul BFT
-		var gxp *gxp2.GXP
-		if err := stack.Service(&gxp); err != nil {
+		var cn *cn.CN
+		if err := stack.Service(&cn); err != nil {
 			utils.Fatalf("Klaytn service not running: %v", err)
 		}
 	}
