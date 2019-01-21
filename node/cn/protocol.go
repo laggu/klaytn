@@ -48,7 +48,7 @@ var ProtocolLengths = []uint64{17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
-// klay protocol message codes
+// klaytn protocol message codes
 const (
 	// Protocol messages belonging to klay/62
 	StatusMsg          = 0x00
@@ -75,10 +75,10 @@ const (
 	ErrInvalidMsgCode
 	ErrProtocolVersionMismatch
 	ErrNetworkIdMismatch
-	ErrGenesisBlockMismatch
 	ErrNoStatusMsg
 	ErrExtraStatusMsg
 	ErrSuspendedPeer
+	ErrInvalidPeerHierarchy
 )
 
 func (e errCode) String() string {
@@ -92,10 +92,10 @@ var errorToString = map[int]string{
 	ErrInvalidMsgCode:          "Invalid message code",
 	ErrProtocolVersionMismatch: "Protocol version mismatch",
 	ErrNetworkIdMismatch:       "NetworkId mismatch",
-	ErrGenesisBlockMismatch:    "Genesis block mismatch",
 	ErrNoStatusMsg:             "No status message",
 	ErrExtraStatusMsg:          "Extra status message",
 	ErrSuspendedPeer:           "Suspended peer",
+	ErrInvalidPeerHierarchy:    "InvalidPeerHierarchy",
 }
 
 type txPool interface {
@@ -118,6 +118,8 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
+	ChainID         *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
+	OnChildChain    bool     // OnChildChain presents if the peer is on child chain or not(same chain or parent chain).
 }
 
 // newBlockHashesData is the network packet for the block announcements.

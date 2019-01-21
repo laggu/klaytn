@@ -278,6 +278,11 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 }
 
+// getChainID returns the current chain id.
+func (pm *ProtocolManager) getChainID() *big.Int {
+	return pm.blockchain.Config().ChainID
+}
+
 func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.maxPeers = maxPeers
 
@@ -350,31 +355,40 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		number  = head.Number.Uint64()
 		td      = pm.blockchain.GetTd(hash, number)
 	)
-	if err := p.Handshake(pm.networkId, td, hash, genesis.Hash()); err != nil {
-		p.GetP2PPeer().Log().Debug("klaytn handshake failed", "err", err)
+
+	peerIsOnParentChain := p.GetP2PPeer().OnParentChain() // If the peer is on parent chain, this node is on child chain for the peer.
+	onTheSameChain, err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash(), peerIsOnParentChain)
+	if err != nil {
+		p.GetP2PPeer().Log().Debug("klaytn peer handshake failed", "err", err)
 		return err
 	}
 	if rw, ok := p.GetRW().(*meteredMsgReadWriter); ok {
 		rw.Init(p.GetVersion())
 	}
-	// Register the peer locally
-	if err := pm.peers.Register(p); err != nil {
-		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
-		return err
-	}
-	defer pm.removePeer(p.GetID())
 
-	// TODO-GX-ServiceChain : This info log will be replaced by the routine which manages parent/child chain nodes.
-	p.GetP2PPeer().Log().Info("Added Peer", "peerID", p.GetP2PPeerID(), "onParentChain", p.GetP2PPeer().OnParentChain())
+	if onTheSameChain {
+		// Register the peer locally
+		if err := pm.peers.Register(p); err != nil {
+			// if starting node with unlock account, can't register peer until finish unlock
+			p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
+			return err
+		}
+		defer pm.removePeer(p.GetID())
 
-	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
-	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
-		return err
+		// Register the peer in the downloader. If the downloader considers it banned, we disconnect
+		if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
+			return err
+		}
+		// Propagate existing transactions. new transactions appearing
+		// after this will be sent via broadcasts.
+		pm.syncTransactions(p)
+	} else {
+		//TODO-GX-Servicechain service chain peer register code will be added.
+		p.GetP2PPeer().Log().Error("Different chain peer connection is not supported yet.", "OnTheSameChain", onTheSameChain, "OnParentChain", peerIsOnParentChain)
+		return errors.New("Different chain peer connection is not supported yet.")
 	}
-	// Propagate existing transactions. new transactions appearing
-	// after this will be sent via broadcasts.
-	pm.syncTransactions(p)
+
+	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID(), "onTheSameChain", onTheSameChain, "onParentChain", peerIsOnParentChain)
 
 	pubKey, err := p.GetP2PPeerID().Pubkey()
 	if err != nil {

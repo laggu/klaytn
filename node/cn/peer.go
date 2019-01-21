@@ -154,9 +154,10 @@ type Peer interface {
 	// single header. It is used solely by the fetcher.
 	RequestOneHeader(hash common.Hash) error
 
-	// Handshake executes the eth protocol handshake, negotiating version number,
-	// network IDs, difficulties, head and genesis blocks.
-	Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error
+	// Handshake executes the klaytn protocol handshake, negotiating version number,
+	// network IDs, difficulties, head, genesis blocks, and onChildChain(if the node is on child chain for the peer)
+	// and returning if the peer on the same chain or not and error.
+	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash, onChildChain bool) (bool, error)
 
 	// ConnType returns the conntype of the peer.
 	ConnType() p2p.ConnType
@@ -214,6 +215,8 @@ type basePeer struct {
 	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
 	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
 	term        chan struct{}             // Termination channel to stop the broadcaster
+
+	chainID *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
 }
 
 // newPeer returns new Peer interface.
@@ -522,11 +525,12 @@ func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 
-// Handshake executes the eth protocol handshake, negotiating version number,
+// Handshake executes the klaytn protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *basePeer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
+func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash, onChildChain bool) (bool, error) {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
+	onTheSameChain := true
 	var status statusData // safe to read after two values have been received from errc
 
 	go func() {
@@ -536,10 +540,19 @@ func (p *basePeer) Handshake(network uint64, td *big.Int, head common.Hash, gene
 			TD:              td,
 			CurrentBlock:    head,
 			GenesisBlock:    genesis,
+			ChainID:         chainID,
+			OnChildChain:    onChildChain,
 		})
 	}()
 	go func() {
-		errc <- p.readStatus(network, &status, genesis)
+		e := p.readStatus(&status)
+		if e != nil {
+			errc <- e
+			return
+		}
+
+		onTheSameChain, e = p.isOnTheSameChain(&status, network, genesis, chainID)
+		errc <- e
 	}()
 	timeout := time.NewTimer(handshakeTimeout)
 	defer timeout.Stop()
@@ -547,17 +560,23 @@ func (p *basePeer) Handshake(network uint64, td *big.Int, head common.Hash, gene
 		select {
 		case err := <-errc:
 			if err != nil {
-				return err
+				return onTheSameChain, err
 			}
 		case <-timeout.C:
-			return p2p.DiscReadTimeout
+			return onTheSameChain, p2p.DiscReadTimeout
 		}
 	}
-	p.td, p.head = status.TD, status.CurrentBlock
-	return nil
+	p.td, p.head, p.chainID = status.TD, status.CurrentBlock, status.ChainID
+	return onTheSameChain, nil
 }
 
-func (p *basePeer) readStatus(network uint64, status *statusData, genesis common.Hash) (err error) {
+// isSameChainPeer checks if the peer is on the same chain.
+// Being on same chain means that the peer has same genesis hash and chain ID with the node.
+func (p *basePeer) isSameChainPeer(status *statusData, genesis common.Hash, chainID *big.Int) bool {
+	return status.GenesisBlock == genesis && status.ChainID.Cmp(chainID) == 0
+}
+
+func (p *basePeer) readStatus(status *statusData) error {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -572,16 +591,40 @@ func (p *basePeer) readStatus(network uint64, status *statusData, genesis common
 	if err := msg.Decode(&status); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	if status.GenesisBlock != genesis {
-		return errResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
-	}
-	if status.NetworkId != network {
-		return errResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
-	}
-	if int(status.ProtocolVersion) != p.version {
-		return errResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
-	}
 	return nil
+}
+
+// isOnTheSameChain checks if the peer is on the same chain or not and validates peer's status.
+func (p *basePeer) isOnTheSameChain(status *statusData, network uint64, genesis common.Hash, chainID *big.Int) (bool, error) {
+	onTheSameChain := true
+	if p.isSameChainPeer(status, genesis, chainID) {
+		// Handle same chain peer case
+
+		// On the same chain, but have different network id
+		if status.NetworkId != network {
+			return onTheSameChain, errResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
+		}
+
+		// On the same chain, but it's invalid hierarchical connection.
+		if p.OnParentChain() || status.OnChildChain {
+			return onTheSameChain, errResp(ErrInvalidPeerHierarchy, "(PeerIsOnParentChain:%v) || (OnChildChain:%v)", p.OnParentChain(), status.OnChildChain)
+		}
+	} else {
+		// Handle service chain peer case
+		onTheSameChain = false
+
+		// Checking invalid hierarchy
+		if p.OnParentChain() == status.OnChildChain {
+			return onTheSameChain, errResp(ErrInvalidPeerHierarchy, "(PeerIsOnParentChain:%v) == (OnChildChain:%v)", p.OnParentChain(), status.OnChildChain)
+		}
+	}
+
+	if int(status.ProtocolVersion) != p.version {
+		return onTheSameChain, errResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
+	}
+
+	logger.Debug("handshaking with candidate chain peer passed", "peerChainID", status.ChainID, "isOnParentChain", p.OnParentChain())
+	return onTheSameChain, nil
 }
 
 // String implements fmt.Stringer.
@@ -604,6 +647,11 @@ func (p *basePeer) GetID() string {
 // GetP2PPeerID returns the id of the p2p.Peer.
 func (p *basePeer) GetP2PPeerID() discover.NodeID {
 	return p.Peer.ID()
+}
+
+// GetChainID returns the chain id of the peer.
+func (p *basePeer) GetChainID() *big.Int {
+	return p.chainID
 }
 
 // GetAddr returns the address of the peer.
