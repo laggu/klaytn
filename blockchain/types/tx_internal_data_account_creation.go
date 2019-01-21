@@ -129,7 +129,7 @@ func (t *TxInternalDataAccountCreation) Equal(a TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.Equal(ta.TxInternalDataCommon) &&
+	return t.TxInternalDataCommon.equal(ta.TxInternalDataCommon) &&
 		t.HumanReadable == ta.HumanReadable &&
 		t.Key.Equal(ta.Key)
 }
@@ -143,7 +143,7 @@ func (t *TxInternalDataAccountCreation) String() string {
 	Hex:      %x
 	Type:     %s
 `,
-		t.TxInternalDataCommon.String(),
+		t.TxInternalDataCommon.string(),
 		t.HumanReadable,
 		t.Key.String(),
 		enc,

@@ -168,7 +168,7 @@ func (t *TxInternalDataCommon) serializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataCommon) Equal(b *TxInternalDataCommon) bool {
+func (t *TxInternalDataCommon) equal(b *TxInternalDataCommon) bool {
 	return t.AccountNonce == b.AccountNonce &&
 		t.Price.Cmp(b.Price) == 0 &&
 		t.GasLimit == b.GasLimit &&
@@ -188,8 +188,7 @@ func (t *TxInternalDataCommon) IsLegacyTransaction() bool {
 	return false
 }
 
-func (t *TxInternalDataCommon) String() string {
-	// TODO-GX: make String() to string() to force implementing String() for a new transaction type.
+func (t *TxInternalDataCommon) string() string {
 	return fmt.Sprintf(`
 	TX(%x)
 	From:     %s

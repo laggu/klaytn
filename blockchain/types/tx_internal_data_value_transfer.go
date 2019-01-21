@@ -46,7 +46,7 @@ func (t *TxInternalDataValueTransfer) Equal(b TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.Equal(tb.TxInternalDataCommon)
+	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon)
 }
 
 func (t *TxInternalDataValueTransfer) String() string {
@@ -56,7 +56,7 @@ func (t *TxInternalDataValueTransfer) String() string {
 	Hex:      %x
 	Type:     %s
 `,
-		t.TxInternalDataCommon.String(),
+		t.TxInternalDataCommon.string(),
 		enc,
 		t.Type().String())
 }

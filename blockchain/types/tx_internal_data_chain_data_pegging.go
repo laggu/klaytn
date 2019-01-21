@@ -55,7 +55,7 @@ func (t *TxInternalDataChainDataPegging) Equal(b TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.Equal(tb.TxInternalDataCommon) && bytes.Equal(t.PeggedData, tb.PeggedData)
+	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) && bytes.Equal(t.PeggedData, tb.PeggedData)
 }
 
 func (t *TxInternalDataChainDataPegging) String() string {
@@ -68,7 +68,7 @@ func (t *TxInternalDataChainDataPegging) String() string {
 	Type:     %s
 	PeggedData:	%s
 `,
-		t.TxInternalDataCommon.String(),
+		t.TxInternalDataCommon.string(),
 		enc,
 		t.Type().String(),
 		dataPeggedRLP)
