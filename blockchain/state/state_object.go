@@ -114,7 +114,8 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 
 // EncodeRLP implements rlp.Encoder.
 func (c *stateObject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, c.account)
+	serializer := NewAccountSerializerWithAccount(c.account)
+	return rlp.Encode(w, serializer)
 }
 
 // setError remembers the first non-nil error it is called with.

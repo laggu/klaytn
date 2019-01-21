@@ -387,11 +387,12 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 		self.setError(err)
 		return nil
 	}
-	data := newEmptyLegacyAccount()
-	if err := rlp.DecodeBytes(enc, data); err != nil {
+	serializer := NewAccountSerializer()
+	if err := rlp.DecodeBytes(enc, serializer); err != nil {
 		logger.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}
+	data := serializer.account
 	// Insert into the live set.
 	obj := newObject(self, addr, data)
 	self.setStateObject(obj)
@@ -633,16 +634,19 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	}
 	// Write trie changes.
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {
-		account := newEmptyLegacyAccount()
-		if err := rlp.DecodeBytes(leaf, account); err != nil {
+		serializer := NewAccountSerializer()
+		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			return nil
 		}
-		if account.GetStorageRoot() != emptyState {
-			s.db.TrieDB().Reference(account.GetStorageRoot(), parent)
-		}
-		code := common.BytesToHash(account.GetCodeHash())
-		if code != emptyCode {
-			s.db.TrieDB().Reference(code, parent)
+		account := serializer.account
+		if pa, ok := account.(ProgramAccount); ok {
+			if pa.GetStorageRoot() != emptyState {
+				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
+			}
+			code := common.BytesToHash(pa.GetCodeHash())
+			if code != emptyCode {
+				s.db.TrieDB().Reference(code, parent)
+			}
 		}
 		return nil
 	})

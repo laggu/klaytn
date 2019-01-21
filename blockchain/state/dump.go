@@ -51,19 +51,24 @@ func (self *StateDB) RawDump() Dump {
 	it := statedb.NewIterator(self.trie.NodeIterator(nil))
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
-		data := newEmptyLegacyAccount()
-		if err := rlp.DecodeBytes(it.Value, data); err != nil {
+		serializer := NewAccountSerializer()
+		if err := rlp.DecodeBytes(it.Value, serializer); err != nil {
 			panic(err)
 		}
+		data := serializer.account
 
 		obj := newObject(nil, common.BytesToAddress(addr), data)
 		account := DumpAccount{
 			Balance:  data.GetBalance().String(),
 			Nonce:    data.GetNonce(),
-			Root:     common.Bytes2Hex(data.GetStorageRoot().Bytes()),
-			CodeHash: common.Bytes2Hex(data.GetCodeHash()),
+			Root:     common.Bytes2Hex([]byte{}),
+			CodeHash: common.Bytes2Hex([]byte{}),
 			Code:     common.Bytes2Hex(obj.Code(self.db)),
 			Storage:  make(map[string]string),
+		}
+		if pa, ok := data.(ProgramAccount); ok {
+			account.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
+			account.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
 		}
 		storageIt := statedb.NewIterator(obj.getStorageTrie(self.db).NodeIterator(nil))
 		for storageIt.Next() {
