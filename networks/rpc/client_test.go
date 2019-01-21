@@ -202,17 +202,17 @@ func TestClientSubscribeInvalidArg(t *testing.T) {
 		defer func() {
 			err := recover()
 			if shouldPanic && err == nil {
-				t.Errorf("GxpSubscribe should've panicked for %#v", arg)
+				t.Errorf("KlaySubscribe should've panicked for %#v", arg)
 			}
 			if !shouldPanic && err != nil {
-				t.Errorf("GxpSubscribe shouldn't have panicked for %#v", arg)
+				t.Errorf("KlaySubscribe shouldn't have panicked for %#v", arg)
 				buf := make([]byte, 1024*1024)
 				buf = buf[:runtime.Stack(buf, false)]
 				t.Error(err)
 				t.Error(string(buf))
 			}
 		}()
-		client.GxpSubscribe(context.Background(), arg, "foo_bar")
+		client.KlaySubscribe(context.Background(), arg, "foo_bar")
 	}
 	check(true, nil)
 	check(true, 1)
@@ -230,7 +230,7 @@ func TestClientSubscribe(t *testing.T) {
 
 	nc := make(chan int)
 	count := 10
-	sub, err := client.GxpSubscribe(context.Background(), nc, "someSubscription", count, 0)
+	sub, err := client.KlaySubscribe(context.Background(), nc, "someSubscription", count, 0)
 	if err != nil {
 		t.Fatal("can't subscribe:", err)
 	}
@@ -285,7 +285,7 @@ func TestClientSubscribeCustomNamespace(t *testing.T) {
 	}
 }
 
-// In this test, the connection drops while GxpSubscribe is
+// In this test, the connection drops while KlaySubscribe is
 // waiting for a response.
 func TestClientSubscribeClose(t *testing.T) {
 	service := &NotificationTestService{
@@ -304,7 +304,7 @@ func TestClientSubscribeClose(t *testing.T) {
 		err  error
 	)
 	go func() {
-		sub, err = client.GxpSubscribe(context.Background(), nc, "hangSubscription", 999)
+		sub, err = client.KlaySubscribe(context.Background(), nc, "hangSubscription", 999)
 		errc <- err
 	}()
 
@@ -315,13 +315,13 @@ func TestClientSubscribeClose(t *testing.T) {
 	select {
 	case err := <-errc:
 		if err == nil {
-			t.Errorf("GxpSubscribe returned nil error after Close")
+			t.Errorf("KlaySubscribe returned nil error after Close")
 		}
 		if sub != nil {
-			t.Error("GxpSubscribe returned non-nil subscription after Close")
+			t.Error("KlaySubscribe returned non-nil subscription after Close")
 		}
 	case <-time.After(1 * time.Second):
-		t.Fatalf("GxpSubscribe did not return within 1s after Close")
+		t.Fatalf("KlaySubscribe did not return within 1s after Close")
 	}
 }
 
@@ -336,7 +336,7 @@ func TestClientCloseUnsubscribeRace(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		client := DialInProc(server)
 		nc := make(chan int)
-		sub, err := client.GxpSubscribe(context.Background(), nc, "someSubscription", 3, 1)
+		sub, err := client.KlaySubscribe(context.Background(), nc, "someSubscription", 3, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -366,7 +366,7 @@ func TestClientNotificationStorm(t *testing.T) {
 		// Subscribe on the server. It will start sending many notifications
 		// very quickly.
 		nc := make(chan int)
-		sub, err := client.GxpSubscribe(ctx, nc, "someSubscription", count, 0)
+		sub, err := client.KlaySubscribe(ctx, nc, "someSubscription", count, 0)
 		if err != nil {
 			t.Fatal("can't subscribe:", err)
 		}
