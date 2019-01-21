@@ -116,12 +116,14 @@ type ProtocolManager struct {
 	msgCh        chan p2p.Msg
 
 	nodetype p2p.ConnType
+
+	scpm ServiceChainProtocolManager
 }
 
 // Ranger
-func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager) (*ProtocolManager, error) {
+func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, scc *ServiceChainConfig) (*ProtocolManager, error) {
 	txpool := &EmptyTxPool{}
-	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chainDB, node.RANGERNODE)
+	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chainDB, node.RANGERNODE, scc)
 }
 
 func (pm *ProtocolManager) GetTxPool() txPool {
@@ -130,7 +132,7 @@ func (pm *ProtocolManager) GetTxPool() txPool {
 
 // NewProtocolManager returns a new klaytn sub protocol manager. The klaytn sub protocol manages peers capable
 // with the klaytn network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType, scc *ServiceChainConfig) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
@@ -146,6 +148,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		msgCh:       make(chan p2p.Msg, 50),
 		engine:      engine,
 		nodetype:    nodetype,
+		scpm:        NewServiceChainProtocolManager(scc),
 	}
 
 	// istanbul BFT
@@ -1089,4 +1092,23 @@ func (pm *ProtocolManager) GetPeers() []common.Address {
 // Ranger
 func (pm *ProtocolManager) Downloader() *downloader.Downloader {
 	return pm.downloader
+}
+
+// GetChainAddr returns an address of an account used for service chain in string format.
+// If given as a parameter, it will use it. If not given, it will use the address of the public key
+// derived from chainKey.
+func (pm *ProtocolManager) GetChainAddr() string {
+	return pm.scpm.GetChainAddr().String()
+}
+
+// GetChainTxPeriod returns the period (in child chain blocks) of sending service chain transaction
+// from child chain to parent chain.
+func (pm *ProtocolManager) GetChainTxPeriod() uint64 {
+	return pm.scpm.GetChainTxPeriod()
+}
+
+// GetSentChainTxsLimit returns the maximum number of stored  chain transactions
+// in child chain node, which is for resending.
+func (pm *ProtocolManager) GetSentChainTxsLimit() uint64 {
+	return pm.scpm.GetSentChainTxsLimit()
 }

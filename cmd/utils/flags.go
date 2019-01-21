@@ -503,6 +503,20 @@ var (
 		Name:  "netrestrict",
 		Usage: "Restricts network communication to the given IP network (CIDR masks)",
 	}
+	ChainAddrFlag = cli.StringFlag{
+		Name:  "chainaddr",
+		Usage: "A hex account address in parent chain used to sign service chain transaction",
+	}
+	ChainTxPeriodFlag = cli.Uint64Flag{
+		Name:  "chaintxperiod",
+		Usage: "The period to make and send a chain transaction to parent chain",
+		Value: 1,
+	}
+	SentChainTxsLimit = cli.Uint64Flag{
+		Name:  "chaintxlimit",
+		Usage: "Number of service chain transactions stored for resending",
+		Value: 100,
+	}
 
 	// ATM the url is left to the user and deployment to
 	JSpathFlag = cli.StringFlag{
@@ -1023,6 +1037,18 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 	logger.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
+
+	// TODO-GX-ServiceChain Add human-readable address once its implementation is introduced.
+	if ctx.GlobalIsSet(ChainAddrFlag.Name) {
+		tempStr := ctx.GlobalString(ChainAddrFlag.Name)
+		if !common.IsHexAddress(tempStr) {
+			logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
+		}
+		cfg.ChainAddr = common.StringToAddress(tempStr)
+		logger.Info("A chain address is registered.", "chainAddr", cfg.ChainAddr)
+	}
+	cfg.ServiceChainTxPeriod = ctx.GlobalUint64(ChainTxPeriodFlag.Name)
+	cfg.SentServiceChainTxsLimit = ctx.GlobalUint64(SentChainTxsLimit.Name)
 
 	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
 		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)

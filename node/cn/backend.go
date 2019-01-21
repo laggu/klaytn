@@ -180,7 +180,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 
-	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType()); err != nil {
+	scc := &ServiceChainConfig{&config.ChainAddr, ctx.ChainKey(), config.ServiceChainTxPeriod, config.SentServiceChainTxsLimit}
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), scc); err != nil {
 		return nil, err
 	}
 	cn.protocolManager.wsendpoint = config.WsEndpoint

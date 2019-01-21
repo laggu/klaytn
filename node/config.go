@@ -39,6 +39,7 @@ import (
 
 const (
 	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
+	datadirChainKey        = "chainkey"           // Path within the datadir to its chain's private key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
@@ -332,6 +333,30 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		logger.Crit("Failed to persist node key", "err", err)
+	}
+	return key
+}
+
+// ChainKey retrieves the currently configured private key for service chain, checking
+// first any manually set key, falling back to the one found in the configured
+// data folder. If no key can be found, a new one is generated.
+func (c *Config) ChainKey() *ecdsa.PrivateKey {
+	keyFile := c.ResolvePath(datadirChainKey)
+	if key, err := crypto.LoadECDSA(keyFile); err == nil {
+		return key
+	}
+	// No persistent key found, generate and store a new one.
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		logger.Crit("Failed to generate chain key", "err", err)
+	}
+	instanceDir := filepath.Join(c.DataDir, c.name())
+	if err := os.MkdirAll(instanceDir, 0700); err != nil {
+		logger.Crit("Failed to make dir to persist chain key", "err", err)
+	}
+	keyFile = filepath.Join(instanceDir, datadirChainKey)
+	if err := crypto.SaveECDSA(keyFile, key); err != nil {
+		logger.Crit("Failed to persist chain key", "err", err)
 	}
 	return key
 }

@@ -79,6 +79,9 @@ type Backend interface {
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
 	GetLatestPeggedBlockNumber() uint64
 	GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt
+	GetChainAddr() string
+	GetChainTxPeriod() uint64
+	GetSentChainTxsLimit() uint64
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

@@ -443,6 +443,18 @@ web3._extend({
 			call: 'klay_getReceiptFromParentChain',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getChainAddr',
+			call: 'klay_getChainAddr',
+		}),
+		new web3._extend.Method({
+			name: 'getChainTxPeriod',
+			call: 'klay_getChainTxPeriod',
+		}),
+		new web3._extend.Method({
+			name: 'getSentChainTxsLimit',
+			call: 'klay_getSentChainTxsLimit',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

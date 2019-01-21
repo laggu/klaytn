@@ -766,6 +766,23 @@ func (s *PublicBlockChainAPI) GetReceiptFromParentChain(blockHash common.Hash) *
 	return s.b.GetReceiptFromParentChain(blockHash)
 }
 
+// GetChainAddr returns the current chain address setting.
+func (s *PublicBlockChainAPI) GetChainAddr() string {
+	return s.b.GetChainAddr()
+}
+
+// GetChainTxPeriod returns the period (in child chain blocks) of sending chain transaction
+// from child chain to parent chain.
+func (s *PublicBlockChainAPI) GetChainTxPeriod() uint64 {
+	return s.b.GetChainTxPeriod()
+}
+
+// GetSentChainTxsLimit returns the maximum number of stored chain transactions
+// in child chain node, which is for resending.
+func (s *PublicBlockChainAPI) GetSentChainTxsLimit() uint64 {
+	return s.b.GetSentChainTxsLimit()
+}
+
 // ExecutionResult groups all structured logs emitted by the EVM
 // while replaying a transaction in debug mode as well as transaction
 // execution status, the amount of gas used and the return value

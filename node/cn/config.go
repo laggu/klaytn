@@ -94,6 +94,11 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
+	// Service chain options
+	ChainAddr                common.Address // A hex account address in parent chain used to sign service chain transaction.
+	ServiceChainTxPeriod     uint64         // Period when child chain sends a service transaction to parent chain. Default value is 1.
+	SentServiceChainTxsLimit uint64         // Number of service chain transactions stored for resending. Default value is 1000.
+
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
 	LightPeers int `toml:",omitempty"` // Maximum number of LES client peers

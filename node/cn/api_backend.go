@@ -250,3 +250,15 @@ func (b *CNAPIBackend) GetLatestPeggedBlockNumber() uint64 {
 func (b *CNAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
 	return b.cn.blockchain.GetReceiptFromParentChain(blockHash)
 }
+
+func (b *CNAPIBackend) GetChainAddr() string {
+	return b.cn.protocolManager.GetChainAddr()
+}
+
+func (b *CNAPIBackend) GetChainTxPeriod() uint64 {
+	return b.cn.protocolManager.GetChainTxPeriod()
+}
+
+func (b *CNAPIBackend) GetSentChainTxsLimit() uint64 {
+	return b.cn.protocolManager.GetSentChainTxsLimit()
+}
