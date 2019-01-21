@@ -20,35 +20,35 @@ var _ = (*configMarshaling)(nil)
 // MarshalTOML marshals as TOML.
 func (c Config) MarshalTOML() (interface{}, error) {
 	type Config struct {
-		Genesis                  *blockchain.Genesis `toml:",omitempty"`
-		NetworkId                uint64
-		SyncMode                 downloader.SyncMode
-		NoPruning                bool
-		ChainAddr                common.Address
-		ServiceChainTxPeriod     uint64
-		SentServiceChainTxsLimit uint64
-		LightServ                int  `toml:",omitempty"`
-		LightPeers               int  `toml:",omitempty"`
-		SkipBcVersionCheck       bool `toml:"-"`
-		DatabaseHandles          int  `toml:"-"`
-		LevelDBCacheSize         int
-		TrieCacheSize            int
-		TrieTimeout              time.Duration
-		TrieBlockInterval        uint
-		ChildChainIndexing       bool
-		Gxbase                   common.Address `toml:",omitempty"`
-		MinerThreads             int            `toml:",omitempty"`
-		ExtraData                hexutil.Bytes  `toml:",omitempty"`
-		GasPrice                 *big.Int
-		RewardContract           common.Address `toml:",omitempty"`
-		Rewardbase               common.Address `toml:",omitempty"`
-		Gxhash                   gxhash.Config
-		TxPool                   blockchain.TxPoolConfig
-		GPO                      gasprice.Config
-		EnablePreimageRecording  bool
-		Istanbul                 istanbul.Config
-		DocRoot                  string `toml:"-"`
-		WsEndpoint               string `toml:",omitempty"`
+		Genesis                 *blockchain.Genesis `toml:",omitempty"`
+		NetworkId               uint64
+		SyncMode                downloader.SyncMode
+		NoPruning               bool
+		ChainAddr               common.Address
+		ChainTxPeriod           uint64
+		SentChainTxsLimit       uint64
+		LightServ               int  `toml:",omitempty"`
+		LightPeers              int  `toml:",omitempty"`
+		SkipBcVersionCheck      bool `toml:"-"`
+		DatabaseHandles         int  `toml:"-"`
+		LevelDBCacheSize        int
+		TrieCacheSize           int
+		TrieTimeout             time.Duration
+		TrieBlockInterval       uint
+		ChildChainIndexing      bool
+		Gxbase                  common.Address `toml:",omitempty"`
+		MinerThreads            int            `toml:",omitempty"`
+		ExtraData               hexutil.Bytes  `toml:",omitempty"`
+		GasPrice                *big.Int
+		RewardContract          common.Address `toml:",omitempty"`
+		Rewardbase              common.Address `toml:",omitempty"`
+		Gxhash                  gxhash.Config
+		TxPool                  blockchain.TxPoolConfig
+		GPO                     gasprice.Config
+		EnablePreimageRecording bool
+		Istanbul                istanbul.Config
+		DocRoot                 string `toml:"-"`
+		WsEndpoint              string `toml:",omitempty"`
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -56,8 +56,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
 	enc.ChainAddr = c.ChainAddr
-	enc.ServiceChainTxPeriod = c.ServiceChainTxPeriod
-	enc.SentServiceChainTxsLimit = c.SentServiceChainTxsLimit
+	enc.ChainTxPeriod = c.ChainTxPeriod
+	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.LightServ = c.LightServ
 	enc.LightPeers = c.LightPeers
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
@@ -86,35 +86,35 @@ func (c Config) MarshalTOML() (interface{}, error) {
 // UnmarshalTOML unmarshals from TOML.
 func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type Config struct {
-		Genesis                  *blockchain.Genesis `toml:",omitempty"`
-		NetworkId                *uint64
-		SyncMode                 *downloader.SyncMode
-		NoPruning                *bool
-		ChainAddr                *common.Address
-		ServiceChainTxPeriod     *uint64
-		SentServiceChainTxsLimit *uint64
-		LightServ                *int  `toml:",omitempty"`
-		LightPeers               *int  `toml:",omitempty"`
-		SkipBcVersionCheck       *bool `toml:"-"`
-		DatabaseHandles          *int  `toml:"-"`
-		LevelDBCacheSize         *int
-		TrieCacheSize            *int
-		TrieTimeout              *time.Duration
-		TrieBlockInterval        *uint
-		ChildChainIndexing       *bool
-		Gxbase                   *common.Address `toml:",omitempty"`
-		MinerThreads             *int            `toml:",omitempty"`
-		ExtraData                *hexutil.Bytes  `toml:",omitempty"`
-		GasPrice                 *big.Int
-		RewardContract           *common.Address `toml:",omitempty"`
-		Rewardbase               *common.Address `toml:",omitempty"`
-		Gxhash                   *gxhash.Config
-		TxPool                   *blockchain.TxPoolConfig
-		GPO                      *gasprice.Config
-		EnablePreimageRecording  *bool
-		Istanbul                 *istanbul.Config
-		DocRoot                  *string `toml:"-"`
-		WsEndpoint               *string `toml:",omitempty"`
+		Genesis                 *blockchain.Genesis `toml:",omitempty"`
+		NetworkId               *uint64
+		SyncMode                *downloader.SyncMode
+		NoPruning               *bool
+		ChainAddr               *common.Address
+		ChainTxPeriod           *uint64
+		SentChainTxsLimit       *uint64
+		LightServ               *int  `toml:",omitempty"`
+		LightPeers              *int  `toml:",omitempty"`
+		SkipBcVersionCheck      *bool `toml:"-"`
+		DatabaseHandles         *int  `toml:"-"`
+		LevelDBCacheSize        *int
+		TrieCacheSize           *int
+		TrieTimeout             *time.Duration
+		TrieBlockInterval       *uint
+		ChildChainIndexing      *bool
+		Gxbase                  *common.Address `toml:",omitempty"`
+		MinerThreads            *int            `toml:",omitempty"`
+		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
+		GasPrice                *big.Int
+		RewardContract          *common.Address `toml:",omitempty"`
+		Rewardbase              *common.Address `toml:",omitempty"`
+		Gxhash                  *gxhash.Config
+		TxPool                  *blockchain.TxPoolConfig
+		GPO                     *gasprice.Config
+		EnablePreimageRecording *bool
+		Istanbul                *istanbul.Config
+		DocRoot                 *string `toml:"-"`
+		WsEndpoint              *string `toml:",omitempty"`
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -135,11 +135,11 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.ChainAddr != nil {
 		c.ChainAddr = *dec.ChainAddr
 	}
-	if dec.ServiceChainTxPeriod != nil {
-		c.ServiceChainTxPeriod = *dec.ServiceChainTxPeriod
+	if dec.ChainTxPeriod != nil {
+		c.ChainTxPeriod = *dec.ChainTxPeriod
 	}
-	if dec.SentServiceChainTxsLimit != nil {
-		c.SentServiceChainTxsLimit = *dec.SentServiceChainTxsLimit
+	if dec.SentChainTxsLimit != nil {
+		c.SentChainTxsLimit = *dec.SentChainTxsLimit
 	}
 	if dec.LightServ != nil {
 		c.LightServ = *dec.LightServ

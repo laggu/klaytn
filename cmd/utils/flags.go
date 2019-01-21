@@ -1047,8 +1047,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.ChainAddr = common.StringToAddress(tempStr)
 		logger.Info("A chain address is registered.", "chainAddr", cfg.ChainAddr)
 	}
-	cfg.ServiceChainTxPeriod = ctx.GlobalUint64(ChainTxPeriodFlag.Name)
-	cfg.SentServiceChainTxsLimit = ctx.GlobalUint64(SentChainTxsLimit.Name)
+	cfg.ChainTxPeriod = ctx.GlobalUint64(ChainTxPeriodFlag.Name)
+	cfg.SentChainTxsLimit = ctx.GlobalUint64(SentChainTxsLimit.Name)
 
 	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
 		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
