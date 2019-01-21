@@ -48,6 +48,14 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
+// isProgramAccount returns true if the address is one of the following:
+// - an address of precompiled contracts
+// - an address of program accounts
+func isProgramAccount(addr common.Address, db StateDB) bool {
+	_, exists := PrecompiledContractsByzantium[addr]
+	return exists || db.IsProgramAccount(addr)
+}
+
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
@@ -192,6 +200,11 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
+	if !isProgramAccount(addr, evm.StateDB) {
+		logger.Info("Returning since the addr is not a program account", "addr", addr)
+		return ret, gas, nil
+	}
+
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, value, gas)
@@ -242,6 +255,11 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		return nil, gas, ErrInsufficientBalance // TODO-GX-error
 	}
 
+	if !isProgramAccount(addr, evm.StateDB) {
+		logger.Info("Returning since the addr is not a program account", "addr", addr)
+		return nil, gas, nil
+	}
+
 	var (
 		snapshot = evm.StateDB.Snapshot()
 		to       = AccountRef(caller.Address())
@@ -274,6 +292,11 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth // TODO-GX-error
+	}
+
+	if !isProgramAccount(addr, evm.StateDB) {
+		logger.Info("Returning since the addr is not a program account", "addr", addr)
+		return nil, gas, nil
 	}
 
 	var (
@@ -313,6 +336,11 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	if !evm.interpreter.readOnly {
 		evm.interpreter.readOnly = true
 		defer func() { evm.interpreter.readOnly = false }()
+	}
+
+	if !isProgramAccount(addr, evm.StateDB) {
+		logger.Info("Returning since the addr is not a program account", "addr", addr)
+		return nil, gas, nil
 	}
 
 	var (

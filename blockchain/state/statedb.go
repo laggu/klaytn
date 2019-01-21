@@ -247,6 +247,15 @@ func (self *StateDB) GetState(addr common.Address, bhash common.Hash) common.Has
 	return common.Hash{}
 }
 
+// IsProgramAccount returns true if the account corresponding to the given address implements ProgramAccount.
+func (self *StateDB) IsProgramAccount(addr common.Address) bool {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.IsProgramAccount()
+	}
+	return false
+}
+
 func (self *StateDB) GetKey(addr common.Address) types.AccountKey {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {

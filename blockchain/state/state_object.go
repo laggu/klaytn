@@ -190,6 +190,13 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 	self.setState(key, value)
 }
 
+// IsProgramAccount returns true if the account implements ProgramAccount.
+func (self *stateObject) IsProgramAccount() bool {
+	_, ok := self.account.(ProgramAccount)
+
+	return ok
+}
+
 func (self *stateObject) GetKey() types.AccountKey {
 	if ak, ok := self.account.(AccountWithKey); ok {
 		return ak.GetKey()
