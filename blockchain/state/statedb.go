@@ -427,6 +427,30 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 	return newobj, prev
 }
 
+// createObjectWithMap creates a new state object with the given parameters (accountType and values).
+// If there is an existing account with the given address, it is overwritten and
+// returned as the second return value.
+func (self *StateDB) createObjectWithMap(addr common.Address, accountType AccountType,
+	values map[AccountValueKeyType]interface{}) (newobj, prev *stateObject) {
+	prev = self.getStateObject(addr)
+	acc, err := NewAccountWithMap(accountType, values)
+	if err != nil {
+		// falling back to create a legacy account if an error occurs.
+		logger.Warn("falling back to create a legacy account", "accountType", accountType,
+			"values", values, "err", err, "acc", acc.String())
+		acc = newLegacyAccountWithMap(values)
+	}
+	newobj = newObject(self, addr, acc)
+	newobj.setNonce(0) // sets the object to dirty
+	if prev == nil {
+		self.journal.append(createObjectChange{account: &addr})
+	} else {
+		self.journal.append(resetObjectChange{prev: prev})
+	}
+	self.setStateObject(newobj)
+	return newobj, prev
+}
+
 // CreateAccount explicitly creates a state object. If a state object with the address
 // already exists the balance is carried over to the new account.
 //
@@ -439,6 +463,16 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr common.Address) {
 	new, prev := self.createObject(addr)
+	if prev != nil {
+		new.setBalance(prev.account.GetBalance())
+	}
+}
+
+// CreateAccountWithMap explicitly creates a state object with the given parameters (accountType and values).
+// If a state object with the address already exists the balance is carried over to the new account.
+func (self *StateDB) CreateAccountWithMap(addr common.Address, accountType AccountType,
+	values map[AccountValueKeyType]interface{}) {
+	new, prev := self.createObjectWithMap(addr, accountType, values)
 	if prev != nil {
 		new.setBalance(prev.account.GetBalance())
 	}

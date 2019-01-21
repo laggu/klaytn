@@ -248,14 +248,22 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		return Message{}, err
 	}
 	msg := Message{
-		nonce:        tx.data.GetAccountNonce(),
-		gasLimit:     tx.data.GetGasLimit(),
-		gasPrice:     new(big.Int).Set(tx.data.GetPrice()),
-		to:           tx.data.GetRecipient(),
-		amount:       tx.data.GetAmount(),
-		data:         tx.data.GetPayload(),
-		checkNonce:   true,
-		intrinsicGas: intrinsicGas,
+		nonce:         tx.data.GetAccountNonce(),
+		gasLimit:      tx.data.GetGasLimit(),
+		gasPrice:      new(big.Int).Set(tx.data.GetPrice()),
+		to:            tx.data.GetRecipient(),
+		amount:        tx.data.GetAmount(),
+		data:          tx.data.GetPayload(),
+		checkNonce:    true,
+		intrinsicGas:  intrinsicGas,
+		txType:        tx.data.Type(),
+		accountKey:    NewAccountKeyNil(),
+		humanReadable: false,
+	}
+
+	if ta, ok := tx.data.(*TxInternalDataAccountCreation); ok {
+		msg.accountKey = ta.Key
+		msg.humanReadable = ta.HumanReadable
 	}
 
 	msg.from, err = Sender(s, tx)
@@ -447,28 +455,34 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 //
 // NOTE: In a future PR this will be removed.
 type Message struct {
-	to           *common.Address
-	from         common.Address
-	nonce        uint64
-	amount       *big.Int
-	gasLimit     uint64
-	gasPrice     *big.Int
-	data         []byte
-	checkNonce   bool
-	intrinsicGas uint64
+	to            *common.Address
+	from          common.Address
+	nonce         uint64
+	amount        *big.Int
+	gasLimit      uint64
+	gasPrice      *big.Int
+	data          []byte
+	checkNonce    bool
+	intrinsicGas  uint64
+	txType        TxType
+	accountKey    AccountKey
+	humanReadable bool
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) Message {
 	return Message{
-		from:         from,
-		to:           to,
-		nonce:        nonce,
-		amount:       amount,
-		gasLimit:     gasLimit,
-		gasPrice:     gasPrice,
-		data:         data,
-		checkNonce:   checkNonce,
-		intrinsicGas: intrinsicGas,
+		from:          from,
+		to:            to,
+		nonce:         nonce,
+		amount:        amount,
+		gasLimit:      gasLimit,
+		gasPrice:      gasPrice,
+		data:          data,
+		checkNonce:    checkNonce,
+		intrinsicGas:  intrinsicGas,
+		txType:        TxTypeLegacyTransaction,
+		accountKey:    NewAccountKeyNil(),
+		humanReadable: false,
 	}
 }
 
@@ -481,3 +495,6 @@ func (m Message) Nonce() uint64                 { return m.nonce }
 func (m Message) Data() []byte                  { return m.data }
 func (m Message) CheckNonce() bool              { return m.checkNonce }
 func (m Message) IntrinsicGas() (uint64, error) { return m.intrinsicGas, nil }
+func (m Message) TxType() TxType                { return m.txType }
+func (m Message) AccountKey() AccountKey        { return m.accountKey }
+func (m Message) HumanReadable() bool           { return m.humanReadable }

@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"errors"
+	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
@@ -31,6 +32,7 @@ import (
 
 var (
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
+	errNotProgramAccount         = errors.New("not a program account")
 )
 
 /*
@@ -79,6 +81,15 @@ type Message interface {
 	// IntrinsicGas returns `intrinsic gas` based on the tx type.
 	// This value is used to differentiate tx fee based on the tx type.
 	IntrinsicGas() (uint64, error)
+
+	// TxType returns the transaction type of the message.
+	TxType() types.TxType
+
+	// AccountKey returns an AccountKey object belonging to the transaction.
+	AccountKey() types.AccountKey
+
+	// HumanReadable returns true if the account to be created is a human-readable account.
+	HumanReadable() bool
 }
 
 // TODO-GX Later we can merge Err and Status into one uniform error.
@@ -194,6 +205,21 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		// error and total time limit reached error.
 		vmerr error
 	)
+	if msg.TxType() == types.TxTypeAccountCreation {
+		to := msg.To()
+		if to == nil {
+			// This MUST not happen since only legacy transaction types allows that `to` is nil.
+			// But it would be better to explicitly terminate the program if an unintended result happens.
+			logger.Error("msg.To() should not be nil!", msg)
+			kerr.Err = errNotProgramAccount
+			return nil, 0, kerr
+		}
+		evm.StateDB.CreateAccountWithMap(*to, state.ExternallyOwnedAccountType,
+			map[state.AccountValueKeyType]interface{}{
+				state.AccountValueKeyAccountKey:    msg.AccountKey(),
+				state.AccountValueKeyHumanReadable: msg.HumanReadable(),
+			})
+	}
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
 	} else {
