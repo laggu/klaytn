@@ -558,7 +558,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
-	from, err := types.Sender(pool.signer, tx)
+	from, err := types.ValidateSender(pool.signer, tx, pool.currentState)
 	if err != nil {
 		return ErrInvalidSender
 	}

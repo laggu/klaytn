@@ -90,7 +90,7 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 	}
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-	msg, err := tx.AsMessage(signer)
+	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb)
 	if err != nil {
 		return nil, err
 	}

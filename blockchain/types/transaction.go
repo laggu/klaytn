@@ -237,12 +237,12 @@ func (tx *Transaction) Size() common.StorageSize {
 	return common.StorageSize(c)
 }
 
-// AsMessage returns the transaction as a blockchain.Message.
+// AsMessageWithAccountKeyPicker returns the transaction as a blockchain.Message.
 //
-// AsMessage requires a signer to derive the sender.
+// AsMessageWithAccountKeyPicker requires a signer to derive the sender and AccountKeyPicker.
 //
 // XXX Rename message to something less arbitrary?
-func (tx *Transaction) AsMessage(s Signer) (Message, error) {
+func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker) (Message, error) {
 	intrinsicGas, err := tx.IntrinsicGas()
 	if err != nil {
 		return Message{}, err
@@ -266,7 +266,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		msg.humanReadable = ta.HumanReadable
 	}
 
-	msg.from, err = Sender(s, tx)
+	msg.from, err = ValidateSender(s, tx, picker)
 	return msg, err
 }
 
