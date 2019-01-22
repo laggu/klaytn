@@ -151,31 +151,6 @@ func (b *Subject) String() string {
 	return fmt.Sprintf("{View: %v, Digest: %v, ParentHash: %v}", b.View, b.Digest.String(), b.PrevHash.Hex())
 }
 
-type ProofPreprepare struct {
-	View     *View
-	Proposal Proposal
-	Proof    *types.Proof
-}
-
-func (b *ProofPreprepare) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Proposal, b.Proof})
-}
-
-func (b *ProofPreprepare) DecodeRLP(s *rlp.Stream) error {
-	var proofpreprepare struct {
-		View     *View
-		Proposal *types.Block
-		Proof    *types.Proof
-	}
-
-	if err := s.Decode(&proofpreprepare); err != nil {
-		return err
-	}
-	b.View, b.Proposal, b.Proof = proofpreprepare.View, proofpreprepare.Proposal, proofpreprepare.Proof
-
-	return nil
-}
-
 type ConsensusMsg struct {
 	PrevHash common.Hash
 	Payload  []byte

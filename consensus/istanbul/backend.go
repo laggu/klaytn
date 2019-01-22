@@ -21,7 +21,6 @@
 package istanbul
 
 import (
-	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/event"
 	"math/big"
@@ -32,8 +31,6 @@ import (
 type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
-
-	GetPeers() []common.Address
 
 	// Validators returns the validator set
 	Validators(proposal Proposal) ValidatorSet
@@ -48,11 +45,6 @@ type Backend interface {
 	Gossip(valSet ValidatorSet, payload []byte) error
 
 	GossipSubPeer(prevHash common.Hash, valSet ValidatorSet, payload []byte) error
-
-	// ranger node
-	GossipProof(payload types.Proof) error
-
-	CurrentBlock() *types.Block
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.

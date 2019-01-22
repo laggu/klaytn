@@ -55,7 +55,6 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		roundMeter:     metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
 		sequenceMeter:  metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
 		consensusTimer: metrics.NewRegisteredTimer("consensus/istanbul/core/timer", nil),
-		enabledRN:      false,
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -98,8 +97,6 @@ type core struct {
 	sequenceMeter metrics.Meter
 	// the timer to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimer metrics.Timer
-
-	enabledRN bool
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {

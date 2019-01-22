@@ -126,11 +126,6 @@ func (sb *backend) Address() common.Address {
 	return sb.address
 }
 
-// ranger node
-func (sb *backend) GetPeers() []common.Address {
-	return sb.broadcaster.GetPeers()
-}
-
 // Validators implements istanbul.Backend.Validators
 func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
 	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
@@ -224,22 +219,6 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 		}
 	}
 	return nil
-}
-
-// ranger node
-func (sb *backend) GossipProof(proof types.Proof) error {
-
-	if sb.broadcaster != nil {
-		ps := sb.broadcaster.GetRNPeers()
-		for _, p := range ps {
-			go p.Send(consensus.PoRMsg, &proof)
-		}
-	}
-	return nil
-}
-
-func (sb *backend) CurrentBlock() *types.Block {
-	return sb.currentBlock()
 }
 
 // Commit implements istanbul.Backend.Commit

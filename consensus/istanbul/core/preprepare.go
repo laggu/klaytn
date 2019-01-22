@@ -21,7 +21,6 @@
 package core
 
 import (
-	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"time"
@@ -33,111 +32,21 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()
-
-		if c.enabledRN && c.backend.CurrentBlock().NumberU64()%10 == 0 {
-			// ranger node
-			proof := &types.Proof{
-				Solver:      c.backend.Address(),
-				BlockNumber: c.backend.CurrentBlock().Number(),
-				Nonce:       c.backend.CurrentBlock().Nonce(),
-			}
-
-			proofpreprepare, err := Encode(&istanbul.ProofPreprepare{
-				View:     curView,
-				Proposal: request.Proposal,
-				Proof:    proof,
-			})
-			if err != nil {
-				logger.Error("Failed to encode", "view", curView)
-				return
-			}
-
-			c.broadcast(&message{
-				Hash: request.Proposal.ParentHash(),
-				Code: msgProofPreprepare,
-				Msg:  proofpreprepare,
-			})
-
-			// ranger node
-			//targets := make(map[common.Address]bool)
-			//// exclude validator nodes, only send ranger nodes
-			//for _, addr := range c.backend.GetPeers() {
-			//	var notval = true
-			//	for _, val := range c.valSet.List() {
-			//		if addr == val.Address() {
-			//			notval = false
-			//		}
-			//	}
-			//	if notval {
-			//		targets[addr] = true
-			//	}
-			//}
-			go c.backend.GossipProof(*proof)
-
-		} else {
-
-			preprepare, err := Encode(&istanbul.Preprepare{
-				View:     curView,
-				Proposal: request.Proposal,
-			})
-			if err != nil {
-				logger.Error("Failed to encode", "view", curView)
-				return
-			}
-
-			c.broadcast(&message{
-				Hash: request.Proposal.ParentHash(),
-				Code: msgPreprepare,
-				Msg:  preprepare,
-			})
+		preprepare, err := Encode(&istanbul.Preprepare{
+			View:     curView,
+			Proposal: request.Proposal,
+		})
+		if err != nil {
+			logger.Error("Failed to encode", "view", curView)
+			return
 		}
+
+		c.broadcast(&message{
+			Hash: request.Proposal.ParentHash(),
+			Code: msgPreprepare,
+			Msg:  preprepare,
+		})
 	}
-}
-
-func (c *core) handleProofPrepare(msg *message, src istanbul.Validator) error {
-	logger := c.logger.NewWith("from", src, "state", c.state)
-
-	var proofprepare *istanbul.ProofPreprepare
-	err := msg.Decode(&proofprepare)
-	if err != nil {
-		return errFailedDecodePreprepare
-	}
-
-	preprepare, err := Encode(&istanbul.Preprepare{
-		View:     proofprepare.View,
-		Proposal: proofprepare.Proposal,
-	})
-	if err != nil {
-		logger.Error("Failed to encode", "view", proofprepare.View)
-		return err
-	}
-
-	err = c.handlePreprepare(&message{
-		Hash: msg.Hash,
-		Code: msgPreprepare,
-		Msg:  preprepare,
-	}, src)
-	if err != nil {
-		return err
-	}
-
-	// ranger node
-	//targets := make(map[common.Address]bool)
-	//// exclude validator nodes, only send ranger nodes
-	//for _, addr := range c.backend.GetPeers() {
-	//	var notval = true
-	//	for _, val := range c.valSet.List() {
-	//		if addr == val.Address() {
-	//			notval = false
-	//		}
-	//	}
-	//	if notval {
-	//		targets[addr] = true
-	//	}
-	//}
-	go c.backend.GossipProof(*proofprepare.Proof)
-
-	return nil
 }
 
 func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {

@@ -30,10 +30,6 @@ import (
 const (
 	Klay62 = 62
 	Klay63 = 63
-
-	// istanbul msg-code for ranger node
-	PoRMsg     = 0x12
-	PoRSendMsg = 0x13
 )
 
 var (
@@ -67,8 +63,6 @@ type Broadcaster interface {
 	GetCNPeers() map[common.Address]Peer
 
 	GetRNPeers() map[common.Address]Peer
-
-	GetPeers() []common.Address
 
 	RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
 }

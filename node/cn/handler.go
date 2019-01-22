@@ -120,16 +120,6 @@ type ProtocolManager struct {
 	scpm ServiceChainProtocolManager
 }
 
-// Ranger
-func NewRangerPM(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, scc *ServiceChainConfig) (*ProtocolManager, error) {
-	txpool := &EmptyTxPool{}
-	return NewProtocolManager(config, mode, networkId, mux, txpool, engine, blockchain, chainDB, node.RANGERNODE, scc)
-}
-
-func (pm *ProtocolManager) GetTxPool() txPool {
-	return pm.txpool
-}
-
 // NewProtocolManager returns a new klaytn sub protocol manager. The klaytn sub protocol manages peers capable
 // with the klaytn network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType, scc *ServiceChainConfig) (*ProtocolManager, error) {
@@ -787,28 +777,6 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 		//pm.txMsgLock.Unlock()
 
-	// ranger node
-	case msg.Code == consensus.PoRSendMsg:
-		// Look up the rewardwallet containing the requested signer
-		tx := new(types.Transaction)
-		if err := msg.Decode(tx); err != nil {
-			logger.Error("ErrDecode", "msg", msg, "err", err)
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-
-		signer := types.MakeSigner(pm.chainconfig, pm.blockchain.CurrentBlock().Number())
-		from, err := types.Sender(signer, tx)
-		if err != nil {
-			logger.Error("ErrDecode", "msg", msg, "err", err)
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-
-		err = pm.PoRValidate(from, tx)
-		if err != nil {
-			logger.Error("PoRValidate", "msg", msg, "err", err)
-			return errors.New("fail to validate por")
-		}
-
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -1101,11 +1069,6 @@ func (pm *ProtocolManager) GetPeers() []common.Address {
 		addrs = append(addrs, addr)
 	}
 	return addrs
-}
-
-// Ranger
-func (pm *ProtocolManager) Downloader() *downloader.Downloader {
-	return pm.downloader
 }
 
 // GetChainAddr returns an address of an account used for service chain in string format.
