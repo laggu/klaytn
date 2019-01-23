@@ -190,6 +190,30 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 					return p2p.DiscQuitting
 				}
 			},
+			RunWithRWs: func(p *p2p.Peer, rws []p2p.MsgReadWriter) error {
+				peer, err := manager.newPeerWithRWs(int(version), p, rws)
+				if err != nil {
+					return err
+				}
+				pubKey, err := p.ID().Pubkey()
+				if err != nil {
+					if p.ConnType() == node.CONSENSUSNODE {
+						return err
+					}
+					peer.SetAddr(common.Address{})
+				} else {
+					addr := crypto.PubkeyToAddress(*pubKey)
+					peer.SetAddr(addr)
+				}
+				select {
+				case manager.newPeerCh <- peer:
+					manager.wg.Add(1)
+					defer manager.wg.Done()
+					return peer.Handle(manager)
+				case <-manager.quitSync:
+					return p2p.DiscQuitting
+				}
+			},
 			NodeInfo: func() interface{} {
 				return manager.NodeInfo()
 			},
@@ -328,7 +352,7 @@ func (pm *ProtocolManager) newPeerWithRWs(pv int, p *p2p.Peer, rws []p2p.MsgRead
 	return newPeerWithRWs(pv, p, meteredRWs)
 }
 
-// handle is the callback invoked to manage the life cycle of an Klaytn peer. When
+// handle is the callback invoked to manage the life cycle of a Klaytn peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p Peer) error {
 	// Ignore maxPeers if this is a trusted peer

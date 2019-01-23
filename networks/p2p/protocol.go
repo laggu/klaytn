@@ -46,7 +46,16 @@ type Protocol struct {
 	// The peer connection is closed when Start returns. It should return
 	// any protocol-level error (such as an I/O error) that is
 	// encountered.
-	Run func(peer *Peer, rws MsgReadWriter) error
+	Run func(peer *Peer, rw MsgReadWriter) error
+
+	// RunWithRWs is called in a new groutine when the protocol has been
+	// negotiated with a peer. It should read and write messages from
+	// rws. The Payload for each message must be fully consumed.
+	//
+	// The peer connection is closed when Start returns. It should return
+	// any protocol-level error (such as an I/O error) that is
+	// encountered.
+	RunWithRWs func(peer *Peer, rws []MsgReadWriter) error
 
 	// NodeInfo is an optional helper method to retrieve protocol specific metadata
 	// about the host node.

@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
@@ -188,6 +189,13 @@ type Peer interface {
 
 	// GetRW returns the MsgReadWriter of the peer.
 	GetRW() p2p.MsgReadWriter
+
+	// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+	// this function terminates, the Peer is disconnected.
+	Handle(pm *ProtocolManager) error
+
+	// UpdateRWImplementationVersion updates the version of the implementation of RW.
+	UpdateRWImplementationVersion()
 
 	// Peer encapsulates the methods required to synchronise with a remote full peer.
 	downloader.Peer
@@ -689,6 +697,19 @@ func (p *basePeer) GetRW() p2p.MsgReadWriter {
 	return p.rw
 }
 
+// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+// this function terminates, the Peer is disconnected.
+func (p *basePeer) Handle(pm *ProtocolManager) error {
+	return pm.handle(p)
+}
+
+// UpdateRWImplementationVersion updates the version of the implementation of RW.
+func (p *basePeer) UpdateRWImplementationVersion() {
+	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
+		rw.Init(p.GetVersion())
+	}
+}
+
 // singleChannelPeer is a peer that uses a single channel.
 type singleChannelPeer struct {
 	*basePeer
@@ -852,6 +873,116 @@ func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
 // GetRW returns the MsgReadWriter of the peer.
 func (p *multiChannelPeer) GetRW() p2p.MsgReadWriter {
 	return p.rw //TODO-Klaytn check this function usage
+}
+
+// UpdateRWImplementationVersion updates the version of the implementation of RW.
+func (p *multiChannelPeer) UpdateRWImplementationVersion() {
+	for _, rw := range p.rws {
+		if rw, ok := rw.(*meteredMsgReadWriter); ok {
+			rw.Init(p.GetVersion())
+		}
+	}
+	p.basePeer.UpdateRWImplementationVersion()
+}
+
+func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, msgCh chan<- p2p.Msg, errCh chan<- error, wg *sync.WaitGroup, closed <-chan struct{}) {
+	defer wg.Done()
+	for {
+		msg, err := rw.ReadMsg()
+		if err != nil {
+			p.GetP2PPeer().Log().Debug("ProtocolManager failed to read msg", "err", err)
+			errCh <- err
+			return
+		}
+		if msg.Size > ProtocolMaxMsgSize {
+			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+			p.GetP2PPeer().Log().Debug("ProtocolManager over max msg size", "err", err)
+			errCh <- err
+			return
+		}
+
+		select {
+		case msgCh <- msg:
+		case <-closed:
+			return
+		}
+	}
+}
+
+// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+// this function terminates, the Peer is disconnected.
+func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
+	// Ignore maxPeers if this is a trusted peer
+	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Network.Trusted {
+		return p2p.DiscTooManyPeers
+	}
+	p.GetP2PPeer().Log().Debug("klaytn peer connected", "name", p.GetP2PPeer().Name())
+
+	var (
+		genesis = pm.blockchain.Genesis()
+		head    = pm.blockchain.CurrentHeader()
+		hash    = head.Hash()
+		number  = head.Number.Uint64()
+		td      = pm.blockchain.GetTd(hash, number)
+	)
+	if err := p.Handshake(pm.networkId, td, hash, genesis.Hash()); err != nil {
+		p.GetP2PPeer().Log().Debug("klaytn handshake failed", "err", err)
+		return err
+	}
+
+	p.UpdateRWImplementationVersion()
+
+	// Register the peer locally
+	if err := pm.peers.Register(p); err != nil {
+		// if starting node with unlock account, can't register peer until finish unlock
+		p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
+		return err
+	}
+	defer pm.removePeer(p.GetID())
+
+	// TODO-GX-ServiceChain : This info log will be replaced by the routine which manages parent/child chain nodes.
+	p.GetP2PPeer().Log().Info("Added Peer", "peerID", p.GetP2PPeerID(), "onParentChain", p.GetP2PPeer().OnParentChain())
+
+	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
+	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
+		return err
+	}
+	// Propagate existing transactions. new transactions appearing
+	// after this will be sent via broadcasts.
+	pm.syncTransactions(p)
+
+	pubKey, err := p.GetP2PPeerID().Pubkey()
+	if err != nil {
+		return err
+	}
+	addr := crypto.PubkeyToAddress(*pubKey)
+	lenRWs := len(p.rws)
+
+	var wg *sync.WaitGroup
+	// TODO-GX check global worker and peer worker
+	messageChannel := make(chan p2p.Msg, channelSizePerPeer*lenRWs)
+	defer close(messageChannel)
+	errChannel := make(chan error, channelSizePerPeer*lenRWs)
+	closed := make(chan struct{})
+
+	for w := 1; w <= concurrentPerPeer; w++ {
+		go pm.processMsg(messageChannel, p, addr, errChannel)
+	}
+	for _, rw := range p.rws {
+		wg.Add(1)
+		go p.ReadMsg(rw, messageChannel, errChannel, wg, closed)
+	}
+
+	// main loop. handle error.
+	for {
+		select {
+		case err := <-errChannel:
+			close(closed)
+			wg.Wait()
+			return err
+		default:
+		}
+	}
 }
 
 type ByPassValidator struct{}
