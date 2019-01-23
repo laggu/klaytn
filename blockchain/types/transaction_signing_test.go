@@ -64,7 +64,7 @@ func TestEIP155RawSignatureValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, s, v, err := signer.SignatureValues(tx, sig)
+	r, s, v, err := signer.SignatureValues(sig)
 
 	txV, txR, txS := tx.RawSignatureValues()
 

@@ -64,6 +64,6 @@ func (s *senderFromServer) SenderPubkey(tx *types.Transaction) (*ecdsa.PublicKey
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }
-func (s *senderFromServer) SignatureValues(tx *types.Transaction, sig []byte) (R, S, V *big.Int, err error) {
+func (s *senderFromServer) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
 	panic("can't sign with senderFromServer")
 }
