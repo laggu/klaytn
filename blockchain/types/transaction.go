@@ -166,7 +166,6 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Data() []byte                  { return common.CopyBytes(tx.data.GetPayload()) }
 func (tx *Transaction) Gas() uint64                   { return tx.data.GetGasLimit() }
 func (tx *Transaction) GasPrice() *big.Int            { return new(big.Int).Set(tx.data.GetPrice()) }
 func (tx *Transaction) Value() *big.Int               { return new(big.Int).Set(tx.data.GetAmount()) }
@@ -175,6 +174,15 @@ func (tx *Transaction) CheckNonce() bool              { return true }
 func (tx *Transaction) Type() TxType                  { return tx.data.Type() }
 func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
 func (tx *Transaction) IsLegacyTransaction() bool     { return tx.data.IsLegacyTransaction() }
+
+func (tx *Transaction) Data() []byte {
+	tp, ok := tx.data.(TxInternalDataPayload)
+	if !ok {
+		return []byte{}
+	}
+
+	return common.CopyBytes(tp.GetPayload())
+}
 
 // PeggedData returns the pegged data of the chain data pegging transaction.
 // if the tx is not chain data pegging transaction, it will return error.
@@ -251,7 +259,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		gasPrice:      new(big.Int).Set(tx.data.GetPrice()),
 		to:            tx.data.GetRecipient(),
 		amount:        tx.data.GetAmount(),
-		data:          tx.data.GetPayload(),
+		data:          tx.Data(),
 		checkNonce:    true,
 		intrinsicGas:  intrinsicGas,
 		txType:        tx.data.Type(),

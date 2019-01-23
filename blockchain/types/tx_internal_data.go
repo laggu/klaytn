@@ -121,7 +121,6 @@ type TxInternalData interface {
 	GetGasLimit() uint64
 	GetRecipient() *common.Address
 	GetAmount() *big.Int
-	GetPayload() []byte
 	GetHash() *common.Hash
 	GetVRS() (*big.Int, *big.Int, *big.Int)
 	GetV() *big.Int
@@ -162,6 +161,13 @@ type TxInternalData interface {
 // Hence, this function is defined in another interface TxInternalDataFrom.
 type TxInternalDataFrom interface {
 	GetFrom() common.Address
+}
+
+// TxInternalDataPayload has a function `GetPayload()`.
+// Since the payload field is not a common field for all tx types, we provide
+// an interface `TxInternalDataPayload` to obtain the payload.
+type TxInternalDataPayload interface {
+	GetPayload() []byte
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {

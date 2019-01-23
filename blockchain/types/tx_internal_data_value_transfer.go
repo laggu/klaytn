@@ -72,7 +72,3 @@ func (t *TxInternalDataValueTransfer) SerializeForSign() []interface{} {
 	return append(t.TxInternalDataCommon.serializeForSign(),
 		t.Type())
 }
-
-func (t *TxInternalDataValueTransfer) GetPayload() []byte {
-	return []byte{}
-}

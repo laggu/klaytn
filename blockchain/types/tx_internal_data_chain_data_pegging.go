@@ -90,7 +90,3 @@ func (t *TxInternalDataChainDataPegging) IntrinsicGas() (uint64, error) {
 
 	return params.TxChainDataPeggingGas + params.ChainDataPeggingGas*nByte, nil
 }
-
-func (t *TxInternalDataChainDataPegging) GetPayload() []byte {
-	return []byte{}
-}
