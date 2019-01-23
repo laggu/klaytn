@@ -57,7 +57,7 @@ func (self *StateDB) RawDump() Dump {
 		}
 		data := serializer.account
 
-		obj := newObject(nil, common.BytesToAddress(addr), data)
+		obj := self.getStateObject(common.BytesToAddress(addr))
 		account := DumpAccount{
 			Balance:  data.GetBalance().String(),
 			Nonce:    data.GetNonce(),
@@ -70,9 +70,10 @@ func (self *StateDB) RawDump() Dump {
 			account.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
 			account.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
 		}
-		storageIt := statedb.NewIterator(obj.getStorageTrie(self.db).NodeIterator(nil))
+		storageTrie := obj.getStorageTrie(self.db)
+		storageIt := statedb.NewIterator(storageTrie.NodeIterator(nil))
 		for storageIt.Next() {
-			account.Storage[common.Bytes2Hex(self.trie.GetKey(storageIt.Key))] = common.Bytes2Hex(storageIt.Value)
+			account.Storage[common.Bytes2Hex(storageTrie.GetKey(storageIt.Key))] = common.Bytes2Hex(storageIt.Value)
 		}
 		dump.Accounts[common.Bytes2Hex(addr)] = account
 	}
