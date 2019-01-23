@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 	"testing"
@@ -45,25 +46,7 @@ func genTestPeggedData() []byte {
 }
 
 // genTestTxInternalData creates a `txType` transaction internal data derived from `txMap`.
-func genTestTxInternalData(txType types.TxType, txMap txMapData) types.TxInternalData {
-	txData, err := types.NewTxInternalDataWithMap(txType, txMap)
-	if err != nil {
-		panic(err)
-	}
-	return txData
-}
-
-// convertMapToInterfaceList converts txMapData to []interface{} type.
-func convertMapToInterfaceList(txMap txMapData) []interface{} {
-	var list []interface{}
-	for _, field := range txMap {
-		list = append(list, field)
-	}
-	return list
-}
-
-// genTestTxData generates a sample transaction data in map type
-func genTestTxData(t types.TxType) txMapData {
+func genTestTxInternalData(txType types.TxType) types.TxInternalData {
 	txMap := txMapData{
 		types.TxValueKeyNonce:    uint64(1234),
 		types.TxValueKeyTo:       common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
@@ -71,29 +54,35 @@ func genTestTxData(t types.TxType) txMapData {
 		types.TxValueKeyGasLimit: uint64(9999999999),
 		types.TxValueKeyGasPrice: new(big.Int).SetUint64(25),
 	}
-	switch t {
+	switch txType {
 	case types.TxTypeLegacyTransaction:
 		txMap[types.TxValueKeyData] = []byte("1234")
 	case types.TxTypeValueTransfer:
 		txMap[types.TxValueKeyFrom] = common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b")
 	case types.TxTypeChainDataPegging:
 		txMap[types.TxValueKeyPeggedData] = genTestPeggedData()
+	case types.TxTypeAccountCreation:
+		k, _ := crypto.GenerateKey()
+		txMap[types.TxValueKeyHumanReadable] = true
+		txMap[types.TxValueKeyAccountKey] = types.NewAccountKeyPublicWithValue(&k.PublicKey)
 	}
-	return txMap
+	txData, err := types.NewTxInternalDataWithMap(txType, txMap)
+	if err != nil {
+		panic(err)
+	}
+	return txData
 }
 
 // Auxiliary functions for benchmark tests
 
 // benchmarkEncode is an auxiliary function to do encode internal data by `rlp.Encode`.
 func benchmarkEncode(b *testing.B, txType types.TxType) {
-	txData := genTestTxData(txType)
-	testTxData := genTestTxInternalData(txType, txData)
+	testTxData := genTestTxInternalData(txType)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buffer := new(bytes.Buffer)
-		err := rlp.Encode(buffer, testTxData)
-		if err != nil {
-			b.Errorf("%s", err.Error())
+		if err := rlp.Encode(buffer, testTxData); err != nil {
+			b.Error(err)
 		}
 		buffer.Bytes()
 	}
@@ -101,27 +90,25 @@ func benchmarkEncode(b *testing.B, txType types.TxType) {
 
 // benchmarkEncodeToBytes is an auxiliary function to do encode internal data by `rlp.EncodeToBytes`.
 func benchmarkEncodeToBytes(b *testing.B, txType types.TxType) {
-	txData := genTestTxData(txType)
-	testTxData := genTestTxInternalData(txType, txData)
+	testTxData := genTestTxInternalData(txType)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := rlp.EncodeToBytes(testTxData)
-		if err != nil {
-			b.Errorf("%s", err.Error())
+		if _, err := rlp.EncodeToBytes(testTxData); err != nil {
+			b.Error(err)
 		}
 	}
 }
 
 // benchmarkEncodeInterface is an auxiliary function to do encode interface of transaction internal data.
 func benchmarkEncodeInterface(b *testing.B, txType types.TxType) {
-	txData := genTestTxData(txType)
-	txInterfaces := convertMapToInterfaceList(txData)
+	testTxData := genTestTxInternalData(txType)
+	txInterfaces := testTxData.SerializeForSign()
+	txInterfaces = append(txInterfaces, testTxData.GetV(), testTxData.GetR(), testTxData.GetS())
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buffer := new(bytes.Buffer)
-		err := rlp.Encode(buffer, txInterfaces)
-		if err != nil {
-			b.Errorf("%s", err.Error())
+		if err := rlp.Encode(buffer, txInterfaces); err != nil {
+			b.Error(err)
 		}
 		buffer.Bytes()
 	}
@@ -129,22 +116,126 @@ func benchmarkEncodeInterface(b *testing.B, txType types.TxType) {
 
 // benchmarkEncodeInterfaceOverFields is an auxiliary function to do encoding interface list of transaction internal data
 func benchmarkEncodeInterfaceOverFields(b *testing.B, txType types.TxType) {
-	txData := genTestTxData(txType)
-	txInterfaces := convertMapToInterfaceList(txData)
+	testTxData := genTestTxInternalData(txType)
+	txInterfaces := testTxData.SerializeForSign()
+	txInterfaces = append(txInterfaces, testTxData.GetV(), testTxData.GetR(), testTxData.GetS())
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buffer := new(bytes.Buffer)
 		for _, field := range txInterfaces {
-			err := rlp.Encode(buffer, field)
-			if err != nil {
-				b.Errorf("%s", err.Error())
+			if err := rlp.Encode(buffer, field); err != nil {
+				b.Error(err)
 			}
 		}
 		buffer.Bytes()
 	}
 }
 
-// Main benchmark functions
+// genCommonDefaultData generates a common internal transaction data
+func genCommonDefaultData() types.TxInternalDataCommon {
+	return types.TxInternalDataCommon{
+		AccountNonce: uint64(1234),
+		Price:        new(big.Int).SetUint64(25),
+		GasLimit:     uint64(9999999999),
+		Recipient:    common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		Amount:       new(big.Int).SetUint64(10),
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+		Hash:         &common.Hash{},
+	}
+}
+
+// encodeSeparateFieldsLegacy encodes both common data and extra field separately.
+func encodeSeparateFieldsLegacy(b *testing.B) {
+	commonData := genCommonDefaultData()
+	extra := []byte("1234")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buffer := new(bytes.Buffer)
+		if err := rlp.Encode(buffer, commonData); err != nil {
+			b.Error(err)
+		}
+		if err := rlp.Encode(buffer, extra); err != nil {
+			b.Error(err)
+		}
+		buffer.Bytes()
+	}
+}
+
+// encodeSeparateFieldsValueTransfer encodes both common data and extra field separately.
+func encodeSeparateFieldsValueTransfer(b *testing.B) {
+	commonData := genCommonDefaultData()
+	extra := common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buffer := new(bytes.Buffer)
+		if err := rlp.Encode(buffer, commonData); err != nil {
+			b.Error(err)
+		}
+		if err := rlp.Encode(buffer, extra); err != nil {
+			b.Error(err)
+		}
+		buffer.Bytes()
+	}
+}
+
+// encodeSeparateFieldsChainDataPegging encodes both common data and extra field separately.
+func encodeSeparateFieldsChainDataPegging(b *testing.B) {
+	commonData := genCommonDefaultData()
+	extra := genTestPeggedData()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buffer := new(bytes.Buffer)
+		if err := rlp.Encode(buffer, commonData); err != nil {
+			b.Error(err)
+		}
+		if err := rlp.Encode(buffer, extra); err != nil {
+			b.Error(err)
+		}
+		buffer.Bytes()
+	}
+}
+
+// encodeSeparateFieldsAccountCreation encodes both common data and extra field separately.
+func encodeSeparateFieldsAccountCreation(b *testing.B) {
+	commonData := genCommonDefaultData()
+	k, _ := crypto.GenerateKey()
+	extra := struct {
+		HumanReadable bool
+		AccountKey    *types.AccountKeyPublic
+	}{
+		true,
+		types.NewAccountKeyPublicWithValue(&k.PublicKey),
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buffer := new(bytes.Buffer)
+		if err := rlp.Encode(buffer, commonData); err != nil {
+			b.Error(err)
+		}
+		if err := rlp.Encode(buffer, extra); err != nil {
+			b.Error(err)
+		}
+		buffer.Bytes()
+	}
+}
+
+// benchmarkEncodeExtraSeparateFields is an auxiliary function to do encoding a common struct and an extra field separately.
+func benchmarkEncodeExtraSeparateFields(b *testing.B, txType types.TxType) {
+	switch txType {
+	case types.TxTypeLegacyTransaction:
+		encodeSeparateFieldsLegacy(b)
+	case types.TxTypeValueTransfer:
+		encodeSeparateFieldsValueTransfer(b)
+	case types.TxTypeChainDataPegging:
+		encodeSeparateFieldsChainDataPegging(b)
+	case types.TxTypeAccountCreation:
+		encodeSeparateFieldsAccountCreation(b)
+	}
+}
+
+// Main benchmark function
 func BenchmarkRLPEncoding(b *testing.B) {
 	var options = []struct {
 		Name        string
@@ -154,6 +245,7 @@ func BenchmarkRLPEncoding(b *testing.B) {
 		{"EncodeToBytes", benchmarkEncodeToBytes},
 		{"EncodeInterface", benchmarkEncodeInterface},
 		{"EncodeInterfaceList", benchmarkEncodeInterfaceOverFields},
+		{"EncodeExtraSeparateFields", benchmarkEncodeExtraSeparateFields},
 	}
 	var testMaterials = []struct {
 		TypeName string
@@ -162,6 +254,7 @@ func BenchmarkRLPEncoding(b *testing.B) {
 		{"legacyTx", types.TxTypeLegacyTransaction},
 		{"valueTransferTx", types.TxTypeValueTransfer},
 		{"chainDataPeggingTx", types.TxTypeChainDataPegging},
+		{"accountCreationTx", types.TxTypeAccountCreation},
 	}
 	for _, option := range options {
 		for _, data := range testMaterials {
