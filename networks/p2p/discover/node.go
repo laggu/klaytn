@@ -119,7 +119,7 @@ func (n *Node) String() string {
 	return u.String()
 }
 
-// TODO-GX: Deprecate supporting "enode"
+// TODO-Klaytn: Deprecate supporting "enode"
 var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
 
 // ParseNode parses a node designator.

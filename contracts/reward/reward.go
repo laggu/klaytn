@@ -70,7 +70,7 @@ type BalanceAdder interface {
 
 // MintKLAY mints KLAY and deposits newly minted KLAY to three predefined accounts, i.e. Reward contract, KIR contract, PoC contract.
 func MintKLAY(b BalanceAdder) {
-	// TODO-GX-issue973 Developing Klaytn token economy
+	// TODO-Klaytn-Issue973 Developing Klaytn token economy
 	b.AddBalance(common.HexToAddress(contract.RewardContractAddress), params.RewardContractIncentive)
 	b.AddBalance(common.HexToAddress(contract.KIRContractAddress), params.KIRContractIncentive)
 	b.AddBalance(common.HexToAddress(contract.PoCContractAddress), params.PoCContractIncentive)

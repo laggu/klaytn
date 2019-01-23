@@ -86,7 +86,7 @@ var upgrader = fastws.Upgrader{
 
 func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 
-	// TODO-GX handle websocket protocol
+	// TODO-Klaytn handle websocket protocol
 	protocol := ctx.Request.Header.Peek("Sec-WebSocket-Protocol")
 	if protocol != nil {
 		ctx.Response.Header.Set("Sec-WebSocket-Protocol", string(protocol))
@@ -137,7 +137,7 @@ func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
 func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
 	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
 
-	// TODO-GX concurreny default (256 * 1024), goroutine limit (8192)
+	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{Concurrency: 3000, MaxRequestBodySize: maxRequestContentLength, Handler: srv.FastWebsocketHandler}
 }
 

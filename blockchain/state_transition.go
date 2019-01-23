@@ -92,7 +92,7 @@ type Message interface {
 	HumanReadable() bool
 }
 
-// TODO-GX Later we can merge Err and Status into one uniform error.
+// TODO-Klaytn Later we can merge Err and Status into one uniform error.
 //         This might require changing overall error handling mechanism in Klaytn.
 // Klaytn error type
 // - Status: Indicate status of transaction after execution.
@@ -145,7 +145,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice) // TODO-GX-issue136 gasPrice gasLimit
+	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice gasLimit
 	if st.state.GetBalance(st.msg.From()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
@@ -169,7 +169,7 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
-	// TODO-GX-issue136
+	// TODO-Klaytn-Issue136
 	return st.buyGas()
 }
 
@@ -177,7 +177,7 @@ func (st *StateTransition) preCheck() error {
 // returning the result including the used gas. It returns an error if failed.
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerror) {
-	// TODO-GX-issue136
+	// TODO-Klaytn-Issue136
 	if kerr.Err = st.preCheck(); kerr.Err != nil {
 		return
 	}
@@ -185,7 +185,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	sender := vm.AccountRef(msg.From())
 	contractCreation := msg.To() == nil
 
-	// TODO-GX-issue136
+	// TODO-Klaytn-Issue136
 	// Pay intrinsic gas.
 	gas, err := msg.IntrinsicGas()
 	kerr.Err = err
@@ -227,7 +227,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
-	// TODO-GX-issue136
+	// TODO-Klaytn-Issue136
 	if vmerr != nil {
 		logger.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
@@ -243,9 +243,9 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 			return nil, 0, kerr
 		}
 	}
-	// TODO-GX-issue136
+	// TODO-Klaytn-Issue136
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)) // TODO-GX-issue136 gasPrice
+	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)) // TODO-Klaytn-Issue136 gasPrice
 
 	kerr.Status = getReceiptStatusFromVMerr(vmerr)
 	return ret, st.gasUsed(), kerr
@@ -278,7 +278,7 @@ var receiptstatus2vmerr = map[uint]error{
 
 // getReceiptStatusFromVMerr returns corresponding ReceiptStatus for VM error.
 func getReceiptStatusFromVMerr(vmerr error) (status uint) {
-	// TODO-GX Add more VM error to ReceiptStatus
+	// TODO-Klaytn Add more VM error to ReceiptStatus
 	status, ok := vmerr2receiptstatus[vmerr]
 	if !ok {
 		// No corresponding receiptStatus available for vmerr
@@ -307,7 +307,7 @@ func (st *StateTransition) refundGas() {
 	st.gas += refund
 
 	// Return ETH for remaining gas, exchanged at the original rate.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice) // TODO-GX-issue136 gasPrice
+	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice
 	st.state.AddBalance(st.msg.From(), remaining)
 
 	// Also return remaining gas to the block gas counter so it is

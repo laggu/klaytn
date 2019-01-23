@@ -191,7 +191,7 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	hc.WriteTd(hash, number, externTd)
 	hc.chainDB.WriteHeader(header)
 
-	// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
 	// If the total difficulty is higher than our known, add it to the canonical chain

@@ -42,7 +42,7 @@ type GasTable struct {
 
 // Variables containing gas prices for different Klaytn phases.
 var (
-	// TODO-GX Remove GasTableHomestead
+	// TODO-Klaytn Remove GasTableHomestead
 	// GasTableHomestead contain the gas prices for
 	// the homestead phase.
 	//GasTableHomestead = GasTable{
@@ -55,7 +55,7 @@ var (
 	//	ExpByte:     10,
 	//}
 
-	// TODO-GX Remove GasTableEIP150
+	// TODO-Klaytn Remove GasTableEIP150
 	// GasTableHomestead contain the gas re-prices for
 	// the homestead phase.
 	//GasTableEIP150 = GasTable{

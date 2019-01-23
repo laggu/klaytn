@@ -24,5 +24,5 @@ import "github.com/ground-x/klaytn/common"
 
 // BadHashes represent a set of manually tracked bad hashes (usually hard forks)
 var BadHashes = map[common.Hash]bool{
-	// TODO-GX Fill bad hash later for Klaytn if necessary
+	// TODO-Klaytn Fill bad hash later for Klaytn if necessary
 }

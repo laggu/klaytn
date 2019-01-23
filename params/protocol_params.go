@@ -57,8 +57,8 @@ const (
 	TxDataNonZeroGas      uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. // G_txdatanonzero
 
 	// Fee for Service Chain
-	// TODO-GX-ServiceChain The following parameters should be fixed.
-	// TODO-GX-Governance The following parameters should be able to be modified by governance.
+	// TODO-Klaytn-ServiceChain The following parameters should be fixed.
+	// TODO-Klaytn-Governance The following parameters should be able to be modified by governance.
 	TxChainDataPeggingGas uint64 = 50000 // Per transaction pegging chain data. NOTE: Not payable on data of calls between transactions. // G_transactionchaindatapegging
 	ChainDataPeggingGas   uint64 = 100   // Per byte of pegging chain data NOTE: Not payable on data of calls between transactions. // G_chaindatapegging
 
@@ -95,20 +95,20 @@ const (
 	BFTMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.
 
 	// AccountKey
-	// TODO-GX: Need to fix below values.
+	// TODO-Klaytn: Need to fix below values.
 	TxAccountCreationGasDefault uint64 = 0
 	TxValidationGasDefault      uint64 = 0
 	TxAccountCreationGasPerKey  uint64 = 20000
 	TxValidationGasPerKey       uint64 = 5000
 
-	// TODO-GX-issue973 Developing Klaytn token economy
+	// TODO-Klaytn-Issue973 Developing Klaytn token economy
 	// Because uint64 can hold up to about 9*10^18 in golang, let's use ston instead of peb to define these constants.
 	rewardContractIncentiveInSton int64 = 3200000000 // 3.2 KLAY for Reward contract (Unit: ston)
 	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
 	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
 
 	// Fee for new tx types
-	// TODO-GX: Need to fix values
+	// TODO-Klaytn: Need to fix values
 	TxGasAccountCreation uint64 = 10000
 )
 
@@ -118,7 +118,7 @@ var (
 	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 
-	// TODO-GX-issue973 Developing Klaytn token economy
+	// TODO-Klaytn-Issue973 Developing Klaytn token economy
 	RewardContractIncentive = big.NewInt(0).Mul(big.NewInt(rewardContractIncentiveInSton), big.NewInt(Ston))
 	KIRContractIncentive    = big.NewInt(0).Mul(big.NewInt(kirContractIncentiveInSton), big.NewInt(Ston))
 	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))
@@ -126,7 +126,7 @@ var (
 
 // Parameters for execution time limit
 var (
-	// TODO-GX Determine more practical values through actual running experience
+	// TODO-Klaytn Determine more practical values through actual running experience
 	TotalTimeLimit = 250 * time.Millisecond // Execution time limit for all txs in a block
 	OpcodeCntLimit = uint64(3000000)        // Opcode count limit for tx
 )

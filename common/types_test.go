@@ -179,7 +179,7 @@ func BenchmarkAddressHex(b *testing.B) {
 	}
 }
 
-// TODO-GX-FIX Klaytn doesn't have MixedcaseAddress type
+// TODO-Klaytn-FIX Klaytn doesn't have MixedcaseAddress type
 /*
 func TestMixedcaseAccount_Address(t *testing.T) {
 

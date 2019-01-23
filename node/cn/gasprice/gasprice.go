@@ -32,7 +32,7 @@ import (
 	"sync"
 )
 
-var maxPrice = big.NewInt(500 * params.Ston) // TODO-GX-issue136 default max gasPrice
+var maxPrice = big.NewInt(500 * params.Ston) // TODO-Klaytn-Issue136 default max gasPrice
 
 type Config struct {
 	Blocks     int
@@ -77,14 +77,14 @@ func NewOracle(backend api.Backend, params Config) *Oracle {
 }
 
 // SuggestPrice returns the recommended gas price.
-func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice Oracle
+func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-Klaytn-Issue136 gasPrice Oracle
 
 	// NOTE-GX We use invariant ChainConfig.UnitPrice and this value
 	//         will not be changed until ChainConfig.UnitPrice is updated with governance.
-	// TODO-GX We have to update Oracle.lastPrice when UnitPrice is changed.
+	// TODO-Klaytn We have to update Oracle.lastPrice when UnitPrice is changed.
 	return gpo.lastPrice, nil
 	/*
-		// TODO-GX Later remove below obsolete code if we don't need them anymore.
+		// TODO-Klaytn Later remove below obsolete code if we don't need them anymore.
 		gpo.cacheLock.RLock()
 		lastHead := gpo.lastHead
 		lastPrice := gpo.lastPrice

@@ -49,7 +49,7 @@ var ProtocolLengths = []uint64{17, 8}
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
 // klaytn protocol message codes
-// TODO-GX-issue751 Protocol message should be refactored. Present code is not used.
+// TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.
 const (
 	// Protocol messages belonging to klay/62
 	StatusMsg          = 0x00

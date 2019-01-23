@@ -39,7 +39,7 @@ func TestChainIndexerSingle(t *testing.T) {
 	}
 }
 
-// TODO-GX-FIX Failed test.
+// TODO-Klaytn-FIX Failed test.
 /*
 // Runs multiple tests with randomized parameters and different number of
 // chain backends.

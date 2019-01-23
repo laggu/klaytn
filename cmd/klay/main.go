@@ -322,7 +322,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				th.SetThreads(threads)
 			}
 		}
-		// TODO-GX disable accept tx before finishing sync.
+		// TODO-Klaytn disable accept tx before finishing sync.
 		if err := cn.StartMining(false); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}

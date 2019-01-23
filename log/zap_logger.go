@@ -108,9 +108,9 @@ func (zl *zapLogger) register() {
 func genBaseLoggerZap() Logger {
 	ex, err := os.Executable()
 	if err != nil {
-		// TODO-GX Error should be handled.
+		// TODO-Klaytn Error should be handled.
 	}
-	// TODO-GX Output path should be set properly.
+	// TODO-Klaytn Output path should be set properly.
 	zlManager.outputPath = path.Join(filepath.Dir(ex), zlManager.outputPath)
 	return genLoggerZap(BaseLogger, genDefaultConfig())
 }
@@ -119,7 +119,7 @@ func genBaseLoggerZap() Logger {
 func genLoggerZap(mi ModuleID, cfg *zap.Config) Logger {
 	logger, err := cfg.Build()
 	if err != nil {
-		// TODO-GX Error should be handled.
+		// TODO-Klaytn Error should be handled.
 	}
 	newLogger := &zapLogger{mi, cfg, logger.Sugar()}
 	newLogger.register()

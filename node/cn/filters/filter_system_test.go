@@ -362,7 +362,7 @@ func TestInvalidLogFilterCreation(t *testing.T) {
 	}
 }
 
-// TODO-GX-FIX We don't have BlockHash in FilterCriteria type
+// TODO-Klaytn-FIX We don't have BlockHash in FilterCriteria type
 /*
 func TestInvalidGetLogsRequest(t *testing.T) {
 	var (

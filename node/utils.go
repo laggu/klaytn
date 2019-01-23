@@ -64,7 +64,7 @@ func addPeerInternal(api *PrivateAdminAPI, url string, onParentChain bool) (*dis
 // AddPeer requests connecting to a remote node, and also maintaining the new
 // connection at all times, even reconnecting if it is lost.
 func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
-	// TODO-GX Refactoring this to check whether the url is valid or not by dialing and return it.
+	// TODO-Klaytn Refactoring this to check whether the url is valid or not by dialing and return it.
 	if _, err := addPeerInternal(api, url, false); err != nil {
 		return false, err
 	} else {
@@ -75,7 +75,7 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 // AddPeerOnParentChain requests connecting to a remote parent chain node, and also maintaining the new
 // connection at all times, even reconnecting if it is lost.
 func (api *PrivateAdminAPI) AddPeerOnParentChain(url string) (bool, error) {
-	// TODO-GX Refactoring this to check whether the url is valid or not by dialing and return it.
+	// TODO-Klaytn Refactoring this to check whether the url is valid or not by dialing and return it.
 	if _, err := addPeerInternal(api, url, true); err != nil {
 		return false, err
 	} else {

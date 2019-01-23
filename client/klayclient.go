@@ -103,7 +103,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	if err := json.Unmarshal(raw, &body); err != nil {
 		return nil, err
 	}
-	// TODO-GX Enable the below error checks after having a way to get the correct EmptyRootHash
+	// TODO-Klaytn Enable the below error checks after having a way to get the correct EmptyRootHash
 	// Quick-verify transaction lists. This mostly helps with debugging the server.
 	//if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
 	//	return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")
@@ -436,7 +436,7 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 // the current pending state of the backend blockchain. There is no guarantee that this is
 // the true gas limit requirement as other transactions may be added or removed by miners,
 // but it should provide a basis for setting a reasonable default.
-func (ec *Client) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) { // TODO-GX-issue136
+func (ec *Client) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) { // TODO-Klaytn-Issue136
 	var hex hexutil.Uint64
 	err := ec.c.CallContext(ctx, &hex, "klay_estimateGas", toCallArg(msg))
 	if err != nil {

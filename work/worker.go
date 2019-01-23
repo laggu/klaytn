@@ -83,7 +83,7 @@ type Task struct {
 	family    *set.Set            // family set (used for checking uncle invalidity)
 	uncles    *set.Set            // uncle set
 	tcount    int                 // tx count in cycle
-	gasPool   *blockchain.GasPool // available gas used to pack transactions // TODO-GX-issue136
+	gasPool   *blockchain.GasPool // available gas used to pack transactions // TODO-Klaytn-Issue136
 
 	Block *types.Block // the new block
 
@@ -296,7 +296,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 					}
 					txs[acc] = append(txs[acc], tx)
 				}
-				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs) // TODO-GX-issue136 gasPrice
+				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs) // TODO-Klaytn-Issue136 gasPrice
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.updateSnapshot()
 				self.current.stateMu.Unlock()
@@ -332,7 +332,7 @@ func (self *worker) update() {
 			}
 			self.commitNewWork()
 
-			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
@@ -415,7 +415,7 @@ func (self *worker) wait() {
 			}
 			work.stateMu.Unlock()
 
-			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 
 			// check if canon block and write transactions
@@ -442,7 +442,7 @@ func (self *worker) wait() {
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
-			// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			if mustCommitNewWork {
 				self.commitNewWork()
@@ -550,7 +550,7 @@ func (self *worker) commitNewWork() {
 
 	// Create the current work task
 	work := self.current
-	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending) // TODO-GX-issue136 gasPrice
+	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending) // TODO-Klaytn-Issue136 gasPrice
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
@@ -691,7 +691,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
-		// TODO-GX-issue136
+		// TODO-Klaytn-Issue136
 		// If we don't have enough gas for any further transactions then we're done
 		if env.gasPool.Gas() < params.TxGas {
 			logger.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
@@ -709,7 +709,7 @@ CommitTransactionLoop:
 		from, _ := types.Sender(env.signer, tx)
 
 		// NOTE-GX Since Klaytn is always in EIP155, the below replay protection code is not needed.
-		// TODO-GX Remove the code commented below.
+		// TODO-Klaytn Remove the code commented below.
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
@@ -723,7 +723,7 @@ CommitTransactionLoop:
 
 		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool, vmConfig)
 		switch err {
-		// TODO-GX-issue136
+		// TODO-Klaytn-Issue136
 		case blockchain.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)

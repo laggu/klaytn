@@ -191,7 +191,7 @@ type DBConfig struct {
 func NewDBManager(dbc *DBConfig) (DBManager, error) {
 	dbm := databaseManager{make([]Database, databaseEntryTypeSize, databaseEntryTypeSize), false, dbc.ChildChainIndexing}
 
-	// TODO-GX Should be replaced by initialization function with mapping information.
+	// TODO-Klaytn Should be replaced by initialization function with mapping information.
 	var db Database
 	var err error
 	switch dbc.DBType {
@@ -248,13 +248,13 @@ func (dbm *databaseManager) getDatabase(dbEntryType DatabaseEntryType) Database 
 
 func (dbm *databaseManager) Close() {
 	dbm.dbs[0].Close()
-	//TODO-GX should be enabled after individual databases are integrated.
+	//TODO-Klaytn should be enabled after individual databases are integrated.
 	//for _, db := range dbm.dbs {
 	//	db.Close()
 	//}
 }
 
-// TODO-GX Some of below need to be invisible outside database package
+// TODO-Klaytn Some of below need to be invisible outside database package
 // Canonical Hash operations.
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
 func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {

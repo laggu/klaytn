@@ -21,7 +21,7 @@
 package gxhash
 
 import (
-	// TODO-GX-FIX Enable below commented-out packages when enabling TestConcurrentDiskCacheGeneration
+	// TODO-Klaytn-FIX Enable below commented-out packages when enabling TestConcurrentDiskCacheGeneration
 	"bytes"
 	// "io/ioutil"
 	// "math/big"
@@ -690,7 +690,7 @@ func TestHashimoto(t *testing.T) {
 	}
 }
 
-// TODO-GX-FIX This tests fails in Klaytn. Enable or delete this test later.
+// TODO-Klaytn-FIX This tests fails in Klaytn. Enable or delete this test later.
 // Tests that caches generated on disk may be done concurrently.
 /*
 func TestConcurrentDiskCacheGeneration(t *testing.T) {

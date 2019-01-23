@@ -37,7 +37,7 @@ type testData struct {
 	opt  testOption
 }
 
-// TODO-GX: To enable logging in the test code, we can use the following function.
+// TODO-Klaytn: To enable logging in the test code, we can use the following function.
 // This function will be moved to somewhere utility functions are located.
 func enableLog() {
 	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"

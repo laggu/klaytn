@@ -45,7 +45,7 @@ const (
 	// ReceiptStatusSuccessful is the status code of a transaction if execution succeeded.
 	ReceiptStatusSuccessful = uint(1)
 
-	// TODO-GX Enable more error below.
+	// TODO-Klaytn Enable more error below.
 	// Klaytn specific
 	// NOTE-GX Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
 	//         Add a new ReceiptStatusErrXXX before ReceiptStatusLast
@@ -59,13 +59,13 @@ const (
 	ReceiptStatusErrExecutionReverted        = uint(0x09)
 	ReceiptStatusErrOpcodeCntLimitReached    = uint(0x0a)
 	ReceiptStatusLast                        = uint(0x0b) // Last value which is not an actual ReceiptStatus
-//	ReceiptStatusErrInvalidJumpDestination   // TODO-GX
+//	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn
 //	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
 //	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
 //	ReceiptStatusErrStackOverflow            // Default case, because no static message available
 //	ReceiptStatusErrInsufficientBalance      // No receipt available for this error
 //	ReceiptStatusErrTotalTimeLimitReached    // No receipt available for this error
-//	ReceiptStatusErrGasUintOverflow          // TODO-GX
+//	ReceiptStatusErrGasUintOverflow          // TODO-Klaytn
 
 )
 

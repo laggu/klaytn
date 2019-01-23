@@ -273,7 +273,7 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 	}
 }
 
-// TODO-GX: This API functions should be managed with API functions with namespace "klay"
+// TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"
 func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumber) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {

@@ -195,7 +195,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.protocolManager.SetRewardbase(cn.rewardbase)
 	cn.protocolManager.SetRewardContract(cn.rewardcontract)
 
-	// TODO-GX improve to handle drop transaction on network traffic in BN,GN,RN
+	// TODO-Klaytn improve to handle drop transaction on network traffic in BN,GN,RN
 	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
 	// istanbul BFT
 	cn.miner.SetExtra(makeExtraData(config.ExtraData, cn.chainConfig.IsBFT))
@@ -447,8 +447,8 @@ func (s *CN) SetRewardContract(addr common.Address) {
 	s.lock.Unlock()
 
 	s.protocolManager.SetRewardContract(s.rewardcontract)
-	//TODO-GX broadcast another CN with authentication rule
-	//TODO-GX add governance feature
+	//TODO-Klaytn broadcast another CN with authentication rule
+	//TODO-Klaytn add governance feature
 }
 
 func (s *CN) StartMining(local bool) error {

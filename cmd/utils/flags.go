@@ -304,7 +304,7 @@ var (
 		Usage: "Public address for rewards contract",
 		Value: "0",
 	}
-	// TODO-GX-issue136 default gasPrice
+	// TODO-Klaytn-Issue136 default gasPrice
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
@@ -1038,7 +1038,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 	logger.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
 
-	// TODO-GX-ServiceChain Add human-readable address once its implementation is introduced.
+	// TODO-Klaytn-ServiceChain Add human-readable address once its implementation is introduced.
 	if ctx.GlobalIsSet(ChainAddrFlag.Name) {
 		tempStr := ctx.GlobalString(ChainAddrFlag.Name)
 		if !common.IsHexAddress(tempStr) {
@@ -1075,10 +1075,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.ChildChainIndexing = true
 	}
 
-	// TODO-GX Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
+	// TODO-Klaytn Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*
 		if ctx.GlobalIsSet(GasPriceFlag.Name) {
-			cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-GX-issue136 gasPrice
+			cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-Klaytn-Issue136 gasPrice
 		}
 	*/
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {

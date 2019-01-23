@@ -20,7 +20,7 @@
 
 package types
 
-// TODO-GX-FIX Test fails. Analyze and enable it later.
+// TODO-Klaytn-FIX Test fails. Analyze and enable it later.
 /*
 import (
 	"bytes"
@@ -34,7 +34,7 @@ import (
 )
 */
 
-// TODO-GX-FIX Test fails. Analyze and enable it later.
+// TODO-Klaytn-FIX Test fails. Analyze and enable it later.
 /*
 // from bcValidBlockTest.json, "SimpleTx"
 func TestBlockEncoding(t *testing.T) {

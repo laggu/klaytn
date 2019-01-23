@@ -179,7 +179,7 @@ func IsHumanReadableAddress(s string) error {
 		return errEmptyString
 	}
 
-	// TODO-GX: Need to check the characters are allowed to be used for human-readable address.
+	// TODO-Klaytn: Need to check the characters are allowed to be used for human-readable address.
 	return nil
 }
 

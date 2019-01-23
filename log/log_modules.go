@@ -24,7 +24,7 @@ import (
 type ModuleID int
 
 // When printID is true, log prints ModuleID instead of ModuleName.
-// TODO-GX This can be controlled by runtime configuration.
+// TODO-Klaytn This can be controlled by runtime configuration.
 var printID = true
 
 func GetModuleName(mi ModuleID) string {

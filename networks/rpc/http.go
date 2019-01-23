@@ -189,7 +189,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Se
 
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 
-	// TODO-GX concurreny default (256 * 1024), goroutine limit (8192)
+	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{Concurrency: 3000, Handler: fhandler}
 }
 

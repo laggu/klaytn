@@ -49,7 +49,7 @@ import (
 )
 
 const (
-	defaultGasPrice = 50 * params.Ston // TODO-GX-issue136 default gasPrice
+	defaultGasPrice = 50 * params.Ston // TODO-Klaytn-Issue136 default gasPrice
 )
 
 var logger = log.NewModuleLogger(log.API)
@@ -66,7 +66,7 @@ func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
 }
 
 // GasPrice returns a suggestion for a gas price.
-func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*big.Int, error) { // TODO-GX-issue136 gasPrice
+func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*big.Int, error) { // TODO-Klaytn-Issue136 gasPrice
 	return s.b.SuggestPrice(ctx)
 }
 
@@ -630,12 +630,12 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		}
 	}
 	// Set default gas & gas price if none were set
-	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt() // TODO-GX-issue136 gasPrice
+	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt() // TODO-Klaytn-Issue136 gasPrice
 	if gas == 0 {
 		gas = math.MaxUint64 / 2
 	}
 	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice) // TODO-GX-issue136 default gasPrice
+		gasPrice = new(big.Int).SetUint64(defaultGasPrice) // TODO-Klaytn-Issue136 default gasPrice
 	}
 
 	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, true)
@@ -672,7 +672,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
-	gp := new(blockchain.GasPool).AddGas(math.MaxUint64) // TODO-GX-issue136
+	gp := new(blockchain.GasPool).AddGas(math.MaxUint64) // TODO-Klaytn-Issue136
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gp)
 	err = kerr.Err
 	if err := vmError(); err != nil {
@@ -1132,7 +1132,7 @@ func rpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	// TODO-GX tunning cache and io
+	// TODO-Klaytn tunning cache and io
 	tx, blockHash, blockNumber, index := s.b.GetTransactionInCache(hash)
 	if tx == nil {
 		tx, blockHash, blockNumber, index = s.b.ChainDB().ReadTransaction(hash)
@@ -1254,7 +1254,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}
-	// TODO-GX only enable on logging
+	// TODO-Klaytn only enable on logging
 	//if tx.To() == nil {
 	//	signer := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
 	//	from, err := types.Sender(signer, tx)
@@ -1528,7 +1528,7 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 
 // SetHead rewinds the head of the blockchain to a previous block.
 func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) error {
-	// TODO-GX Error is returned until this API is redesigned and implemented again (Issue #655)
+	// TODO-Klaytn-Issue655 Error is returned until this API is redesigned and implemented again
 	return blockchain.ErrNotYetImplementedAPI
 	/*
 		api.b.SetHead(uint64(number))

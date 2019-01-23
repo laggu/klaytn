@@ -183,7 +183,7 @@ func (m cachedTrie) Commit(onleaf statedb.LeafCallback) (common.Hash, error) {
 	return root, err
 }
 
-// TODO-GX Below Prove is only used in tests, not in core codes.
+// TODO-Klaytn Below Prove is only used in tests, not in core codes.
 func (m cachedTrie) Prove(key []byte, fromLevel uint, proofDB database.DBManager) error {
 	return m.SecureTrie.Prove(key, fromLevel, proofDB)
 }

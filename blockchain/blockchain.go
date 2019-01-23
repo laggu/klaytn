@@ -54,14 +54,14 @@ var (
 	logger           = log.NewModuleLogger(log.Blockchain)
 )
 
-// TODO-GX: Below should be handled by ini or other configurations.
+// TODO-Klaytn: Below should be handled by ini or other configurations.
 const (
 	futureBlocksCacheType = common.LRUCacheType
 	badBlocksCacheType    = common.LRUCacheType
 )
 
 // Below is the list of the constants for cache size.
-// TODO-GX: Below should be handled by ini or other configurations.
+// TODO-Klaytn: Below should be handled by ini or other configurations.
 const (
 	maxBodyCache          = 256
 	maxBlockCache         = 256
@@ -842,7 +842,7 @@ func (bc *BlockChain) procFutureBlocks() {
 // WriteStatus status of write
 type WriteStatus byte
 
-// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 //                  Later we may be able to remove SideStatTy.
 const (
 	NonStatTy WriteStatus = iota
@@ -962,7 +962,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		start = time.Now()
 		bytes = 0
 
-		// TODO-GX Needs to roll back if any one of batches fails
+		// TODO-Klaytn Needs to roll back if any one of batches fails
 		bodyBatch            = bc.db.NewBatch(database.BodyDB)
 		receiptsBatch        = bc.db.NewBatch(database.ReceiptsDB)
 		txLookupEntriesBatch = bc.db.NewBatch(database.TxLookUpEntryDB)
@@ -1097,7 +1097,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			nodesSizeLimit           = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
 		)
 		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
-			// TODO-GX Not to change the original behavior, error is not returned.
+			// TODO-Klaytn Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
 			if err := trieDB.Cap(nodesSizeLimit - database.IdealBatchSize); err != nil {
 				logger.Error("Error from trieDB.Cap", "limit", nodesSizeLimit-database.IdealBatchSize)
@@ -1127,7 +1127,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 	bc.db.WriteReceipts(block.Hash(), block.NumberU64(), receipts)
 
-	// TODO-GX-issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
 	// If the total difficulty is higher than our known, add it to the canonical chain
@@ -1152,7 +1152,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		}
 		bc.db.WritePreimages(block.NumberU64(), state.Preimages())
 
-		// TODO-GX goroutine for performance
+		// TODO-Klaytn goroutine for performance
 		bc.recentReceipts.Add(block.Hash(), receipts)
 		status = CanonStatTy
 	} else {
@@ -1883,7 +1883,7 @@ func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
 	txs := block.Transactions()
 	signer := types.MakeSigner(bc.Config(), block.Number())
 	for _, tx := range txs {
-		// TODO-GX-ServiceChain GetChildChainAddr will be removed once new transaction type is introduced.
+		// TODO-Klaytn-ServiceChain GetChildChainAddr will be removed once new transaction type is introduced.
 		if ccAddr := tx.GetChildChainAddr(signer); ccAddr == nil {
 			continue
 		}

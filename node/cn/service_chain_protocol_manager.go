@@ -25,7 +25,7 @@ import (
 )
 
 type ServiceChainProtocolManager interface {
-	// TODO-GX-ServiceChain Please note that ServiceChainProtocolManager is made to separate its implementation
+	// TODO-Klaytn-ServiceChain Please note that ServiceChainProtocolManager is made to separate its implementation
 	// and message handling from pre-existing ProtocolManager. This can be done by pushing implementation into
 	// a new peer type and handling message by a new peer type.
 	// private functions
@@ -65,7 +65,7 @@ type serviceChainPM struct {
 	chainTxPeriod       uint64
 	sentServiceChainTxs map[common.Hash]*types.Transaction
 
-	// TODO-GX-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
+	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
 }
 

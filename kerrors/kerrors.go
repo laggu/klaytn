@@ -18,8 +18,8 @@ package kerrors
 
 import "errors"
 
-// TODO-GX: Use integer for error codes.
-// TODO-GX: Integrate all universally accessible errors into kerrors package.
+// TODO-Klaytn: Use integer for error codes.
+// TODO-Klaytn: Integrate all universally accessible errors into kerrors package.
 var (
 	ErrOutOfGas = errors.New("out of gas")
 )

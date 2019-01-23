@@ -1655,7 +1655,7 @@ func testFakedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	}
 }
 
-// TODO-GX Disabled because this test fails intermittently in CI (Issue #833)
+// TODO-Klaytn-Issue833 Disabled because this test fails intermittently in CI
 /*
 // This test reproduces an issue where unexpected deliveries would
 // block indefinitely if they arrived at the right time.

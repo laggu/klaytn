@@ -16,5 +16,5 @@
 //
 // +build none
 
-// TODO-GX: Write a package document
+// TODO-Klaytn: Write a package document
 package main

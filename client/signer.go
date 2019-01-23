@@ -56,7 +56,7 @@ func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error)
 }
 
 func (s *senderFromServer) SenderPubkey(tx *types.Transaction) (*ecdsa.PublicKey, error) {
-	// TODO-GX: need to check this routine is never called or not.
+	// TODO-Klaytn: need to check this routine is never called or not.
 	// `senderFromServer` is only used in klayclient.go.
 	panic("SenderPubkey should not be called!")
 }

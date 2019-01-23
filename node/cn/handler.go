@@ -373,7 +373,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		// after this will be sent via broadcasts.
 		pm.syncTransactions(p)
 	} else {
-		//TODO-GX-Servicechain service chain peer register code will be added.
+		//TODO-Klaytn-Servicechain service chain peer register code will be added.
 		p.GetP2PPeer().Log().Error("Different chain peer connection is not supported yet.", "OnTheSameChain", onTheSameChain, "OnParentChain", peerIsOnParentChain)
 		return errors.New("Different chain peer connection is not supported yet.")
 	}
@@ -386,7 +386,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	}
 	addr := crypto.PubkeyToAddress(*pubKey)
 
-	// TODO-GX check global worker and peer worker
+	// TODO-Klaytn check global worker and peer worker
 	messageChannel := make(chan p2p.Msg, channelSizePerPeer)
 	defer close(messageChannel)
 	errChannel := make(chan error, channelSizePerPeer)
@@ -805,7 +805,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 			return
 		}
 
-		// TODO-GX only send all validators + sub(peer) except subset for this block
+		// TODO-Klaytn only send all validators + sub(peer) except subset for this block
 		// Send the block to a subset of our peers
 		//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		transfer := pm.subPeers(peers, int(math.Sqrt(float64(len(peers)))))
@@ -853,7 +853,7 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 			continue
 		}
 
-		// TODO-GX Code Check
+		// TODO-Klaytn Code Check
 		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		half := (len(peers) / 2) + 2
 		peers = pm.subPeers(peers, half)
@@ -874,7 +874,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 	var cntxset = make(map[Peer]types.Transactions)
 	var txset = make(map[Peer]types.Transactions)
 	for _, tx := range txs {
-		// TODO-GX drop or missing tx
+		// TODO-Klaytn drop or missing tx
 		if resend {
 			var peers []Peer
 			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
@@ -882,7 +882,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			} else {
 				peers = pm.peers.TypePeers(node.CONSENSUSNODE)
 			}
-			// TODO-GX need to tuning pickSize. currently 3 is for availability and efficiency
+			// TODO-Klaytn need to tuning pickSize. currently 3 is for availability and efficiency
 			peers = pm.subPeers(peers, 3)
 			for _, peer := range peers {
 				txset[peer] = append(txset[peer], tx)
@@ -890,7 +890,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 		} else {
 			peers := pm.peers.CNWithoutTx(tx.Hash())
 			if len(peers) > 0 {
-				// TODO-GX optimize pickSize or propagation way
+				// TODO-Klaytn optimize pickSize or propagation way
 				peers = pm.subPeers(peers, 2)
 				for _, peer := range peers {
 					cntxset[peer] = append(cntxset[peer], tx)
@@ -921,7 +921,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 		}
 	} else {
 		for peer, txs := range cntxset {
-			// TODO-GX Handle network-failed txs
+			// TODO-Klaytn Handle network-failed txs
 			//peer.AsyncSendTransactions(txs)
 			err := peer.SendTransactions(txs)
 			if err != nil {

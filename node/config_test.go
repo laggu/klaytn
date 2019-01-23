@@ -145,7 +145,7 @@ func TestNodeKeyPersistency(t *testing.T) {
 		t.Fatalf("persisted node key mismatch: have %x, want %x", blob2, blob1)
 	}
 
-	// TODO-GX-FIX Test fails
+	// TODO-Klaytn-FIX Test fails
 	/*
 		// Configure ephemeral node and ensure no key is dumped locally
 		config = &Config{Name: "unit-test", DataDir: ""}

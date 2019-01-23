@@ -298,7 +298,7 @@ func (tx *Transaction) String() string {
 // GetChildChainAddr returns the pointer of sender address if a tx is a
 // data pegging tx from child chain. If not, it returns nil.
 func (tx *Transaction) GetChildChainAddr(signer Signer) *common.Address {
-	// TODO-GX-ServiceChain This function will be removed once new transaction type is introduced.
+	// TODO-Klaytn-ServiceChain This function will be removed once new transaction type is introduced.
 	from, err := Sender(signer, tx)
 	if err != nil {
 		logger.Error("failed to decode the address of the sender", "tx", tx.hash)
@@ -398,7 +398,7 @@ func (t *TransactionsByPriceAndNonce) Txs() map[common.Address]Transactions {
 	return t.txs
 }
 
-// TODO-GX-issue136 gasprice
+// TODO-Klaytn-Issue136 gasprice
 // NewTransactionsByPriceAndNonce creates a transaction set that can retrieve
 // price sorted transactions in a nonce-honouring way.
 //

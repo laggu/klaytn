@@ -119,7 +119,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer) error {
 		a.AddBalance(*to, v)
 		a.SubBalance(from, v)
 
-		// TODO-GX: This gas fee calculation is correct only if the transaction is a value transfer transaction.
+		// TODO-Klaytn: This gas fee calculation is correct only if the transaction is a value transfer transaction.
 		// Calculate the correct transaction fee by checking the corresponding receipt.
 		fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(params.TxGas))
 		a.SubBalance(from, fee)

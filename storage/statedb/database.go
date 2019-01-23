@@ -136,7 +136,7 @@ func (n rawShortNode) fstring(ind string) string     { panic("this should never 
 // memory database write layer.
 type cachedNode struct {
 	node node // Cached collapsed trie node, or raw rlp data
-	// TODO-GX: need to change data type of this if we increase the code size limit
+	// TODO-Klaytn: need to change data type of this if we increase the code size limit
 	size uint16 // Byte size of the useful cached data
 
 	parents  uint64                 // Number of live nodes referencing this one
@@ -523,7 +523,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	}
 	// Keep committing nodes from the flush-list until we're below allowance
 	oldest := db.oldest
-	// TODO-GX What kind of batch should be used below?
+	// TODO-Klaytn What kind of batch should be used below?
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
 	for size > limit && oldest != (common.Hash{}) {
 		// Fetch the oldest referenced node and push into the batch
@@ -591,7 +591,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 }
 
 func (db *Database) writeBatchPreimages() error {
-	// TODO-GX What kind of batch should be used below?
+	// TODO-Klaytn What kind of batch should be used below?
 	preimagesBatch := db.diskDB.NewBatch(database.StateTrieDB)
 
 	// Move all of the accumulated preimages into a write batch
@@ -618,7 +618,7 @@ func (db *Database) writeBatchPreimages() error {
 }
 
 func (db *Database) writeBatchNodes(node common.Hash) error {
-	// TODO-GX What kind of batch should be used below?
+	// TODO-Klaytn What kind of batch should be used below?
 	nodesBatch := db.diskDB.NewBatch(database.StateTrieDB)
 
 	if err := db.commit(node, nodesBatch); err != nil {

@@ -8,7 +8,7 @@
 // This file is derived from common/bitutil/bitutil.go (2018/06/04).
 // Modified and improved for the klaytn development.
 //
-// TODO-GX: put the original LICENSE file in the common/bitutil directory
+// TODO-Klaytn: put the original LICENSE file in the common/bitutil directory
 
 // Package bitutil implements fast bitwise operations.
 package bitutil

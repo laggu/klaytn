@@ -182,7 +182,7 @@ func (c *core) commit() {
 			return
 		}
 	} else {
-		// TODO-GX never happen, but if proposal is nil, mining is not working.
+		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
 		c.current.UnlockHash() //Unlock block when insertion fails
 		c.sendNextRoundChange()

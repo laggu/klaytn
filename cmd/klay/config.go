@@ -102,7 +102,7 @@ func defaultNodeConfig() node.Config {
 }
 
 func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
-	// TODO-GX-issue136 gasPrice
+	// TODO-Klaytn-Issue136 gasPrice
 	// Load defaults.
 	cfg := klayConfig{
 		CN:   cn.DefaultConfig,

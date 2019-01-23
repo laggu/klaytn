@@ -392,7 +392,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	// TODO-GX-issue973 Developing Klaytn token economy
+	// TODO-Klaytn-Issue973 Developing Klaytn token economy
 	reward.MintKLAY(state)
 
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped

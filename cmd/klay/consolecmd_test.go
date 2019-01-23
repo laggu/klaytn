@@ -23,7 +23,7 @@ package main
 import (
 	"crypto/rand"
 	"math/big"
-	// TODO-GX-FIX Enable import after updating tests
+	// TODO-Klaytn-FIX Enable import after updating tests
 	// "os"
 	// "path/filepath"
 	"runtime"
@@ -40,7 +40,7 @@ const (
 	httpAPIs = "eth:1.0 net:1.0 rpc:1.0 web3:1.0"
 )
 
-// TODO-GX-FIX Need to update test for Klaytn
+// TODO-Klaytn-FIX Need to update test for Klaytn
 /*
 // Tests that a node embedded within a console can be started up properly and
 // then terminated by closing the input stream.

@@ -17,7 +17,7 @@
 package contract
 
 const (
-	// TODO-GX-issue973 Remove unnecessary accounts after implementation is done
+	// TODO-Klaytn-Issue973 Remove unnecessary accounts after implementation is done
 	PIReserveAddr       = "0x00000000000000000035"
 	CommitteeRewardAddr = "0x00000000000000000036"
 	RNRewardAddr        = "0x00000000000000000037"

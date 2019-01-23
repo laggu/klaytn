@@ -194,7 +194,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Create a transaction set where transactions are sorted by price and nonce
 	start = time.Now()
-	txset := types.NewTransactionsByPriceAndNonce(signer, txs) // TODO-GX-issue136 gasPrice
+	txset := types.NewTransactionsByPriceAndNonce(signer, txs) // TODO-Klaytn-Issue136 gasPrice
 	prof.Profile("mine_NewTransactionsByPriceAndNonce", time.Now().Sub(start))
 
 	// Apply the set of transactions
@@ -252,7 +252,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	if len(pending) == 0 {
 		return errEmptyPending
 	}
-	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending) // TODO-GX-issue136 gasPrice
+	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending) // TODO-Klaytn-Issue136 gasPrice
 
 	// Set the block header
 	start := time.Now()

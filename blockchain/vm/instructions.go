@@ -446,7 +446,7 @@ func opReturnDataCopy(pc *uint64, evm *EVM, contract *Contract, memory *Memory, 
 	defer evm.interpreter.intPool.put(memOffset, dataOffset, length, end)
 
 	if end.BitLen() > 64 || uint64(len(evm.interpreter.returnData)) < end.Uint64() {
-		return nil, ErrReturnDataOutOfBounds // TODO-GX-error
+		return nil, ErrReturnDataOutOfBounds // TODO-Klaytn-error
 	}
 	memory.Set(memOffset.Uint64(), length.Uint64(), evm.interpreter.returnData[dataOffset.Uint64():end.Uint64()])
 
