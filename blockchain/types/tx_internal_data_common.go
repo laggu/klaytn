@@ -86,6 +86,14 @@ func newTxInternalDataCommonWithMap(values map[TxValueKeyType]interface{}) *TxIn
 	return d
 }
 
+func (t *TxInternalDataCommon) ChainId() *big.Int {
+	return deriveChainId(t.V)
+}
+
+func (t *TxInternalDataCommon) Protected() bool {
+	return isProtectedV(t.V)
+}
+
 func (t *TxInternalDataCommon) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }

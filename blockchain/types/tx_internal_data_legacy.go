@@ -127,6 +127,14 @@ func (t *txdata) Type() TxType {
 	return TxTypeLegacyTransaction
 }
 
+func (t *txdata) ChainId() *big.Int {
+	return deriveChainId(t.V)
+}
+
+func (t *txdata) Protected() bool {
+	return isProtectedV(t.V)
+}
+
 func (t *txdata) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }
