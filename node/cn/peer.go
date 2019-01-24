@@ -169,6 +169,9 @@ type Peer interface {
 	// GetP2PPeerID returns the id of the p2p.Peer.
 	GetP2PPeerID() discover.NodeID
 
+	// GetChainID returns the chain id of the peer.
+	GetChainID() *big.Int
+
 	// GetAddr returns the address of the peer.
 	GetAddr() common.Address
 
@@ -196,6 +199,22 @@ type Peer interface {
 
 	// UpdateRWImplementationVersion updates the version of the implementation of RW.
 	UpdateRWImplementationVersion()
+
+	// SendServiceChainTxs sends child chain tx data to from child chain to parent chain.
+	SendServiceChainTxs(txs types.Transactions) error
+
+	// SendServiceChainInfoRequest sends a parentChainInfo request from child chain to parent chain.
+	SendServiceChainInfoRequest(addr *common.Address) error
+
+	// SendServiceChainInfoResponse sends a parentChainInfo from parent chain to child chain.
+	// parentChainInfo includes nonce of an account and gasPrice in the parent chain.
+	SendServiceChainInfoResponse(pcInfo *parentChainInfo) error
+
+	// SendServiceChainReceiptRequest sends a receipt request from child chain to parent chain.
+	SendServiceChainReceiptRequest(txHashes []common.Hash) error
+
+	// SendServiceChainReceiptResponse sends a receipt as a response to request from child chain.
+	SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error
 
 	// Peer encapsulates the methods required to synchronise with a remote full peer.
 	downloader.Peer
@@ -531,6 +550,26 @@ func (p *basePeer) RequestNodeData(hashes []common.Hash) error {
 func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
 	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
+}
+
+func (p *basePeer) SendServiceChainTxs(txs types.Transactions) error {
+	return p2p.Send(p.rw, ServiceChainTxsMsg, txs)
+}
+
+func (p *basePeer) SendServiceChainInfoRequest(addr *common.Address) error {
+	return p2p.Send(p.rw, ServiceChainParentChainInfoRequestMsg, addr)
+}
+
+func (p *basePeer) SendServiceChainInfoResponse(pcInfo *parentChainInfo) error {
+	return p2p.Send(p.rw, ServiceChainParentChainInfoResponseMsg, pcInfo)
+}
+
+func (p *basePeer) SendServiceChainReceiptRequest(txHashes []common.Hash) error {
+	return p2p.Send(p.rw, ServiceChainReceiptRequestMsg, txHashes)
+}
+
+func (p *basePeer) SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error {
+	return p2p.Send(p.rw, ServiceChainReceiptResponseMsg, receipts)
 }
 
 // Handshake executes the klaytn protocol handshake, negotiating version number,

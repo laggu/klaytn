@@ -1044,8 +1044,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		if !common.IsHexAddress(tempStr) {
 			logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
 		}
-		cfg.ChainAddr = common.StringToAddress(tempStr)
-		logger.Info("A chain address is registered.", "chainAddr", cfg.ChainAddr)
+		tempAddr := common.StringToAddress(tempStr)
+		cfg.ChainAddr = &tempAddr
+		logger.Info("A chain address is registered.", "chainAddr", *cfg.ChainAddr)
 	}
 	cfg.ChainTxPeriod = ctx.GlobalUint64(ChainTxPeriodFlag.Name)
 	cfg.SentChainTxsLimit = ctx.GlobalUint64(SentChainTxsLimit.Name)

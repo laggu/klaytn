@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/networks/p2p"
 )
 
+// TODO-Klaytn-ServiceChain Need to add ServiceChainMsg below for metering.
 var (
 	propTxnInPacketsMeter     = metrics.NewRegisteredMeter("klay/prop/txns/in/packets", nil)
 	propTxnInTrafficMeter     = metrics.NewRegisteredMeter("klay/prop/txns/in/traffic", nil)

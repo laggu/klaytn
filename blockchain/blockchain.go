@@ -1888,7 +1888,13 @@ func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
 			continue
 		}
 		ccTxData := new(types.ChildChainTxData)
-		if err := rlp.DecodeBytes(tx.Data(), ccTxData); err != nil {
+		data, err := tx.PeggedData()
+		if err != nil {
+			logger.Error("writeChildChainTxHashFromBlock : failed to get pegging data from the tx", "txHash", tx.Hash())
+			continue
+		}
+		if err := rlp.DecodeBytes(data, ccTxData); err != nil {
+			logger.Error("writeChildChainTxHashFromBlock : failed to decode pegging data")
 			continue
 		}
 		bc.WriteChildChainTxHash(ccTxData.BlockHash, tx.Hash())

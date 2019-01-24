@@ -392,9 +392,18 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		// after this will be sent via broadcasts.
 		pm.syncTransactions(p)
 	} else {
-		//TODO-Klaytn-Servicechain service chain peer register code will be added.
-		p.GetP2PPeer().Log().Error("Different chain peer connection is not supported yet.", "OnTheSameChain", onTheSameChain, "OnParentChain", peerIsOnParentChain)
-		return errors.New("Different chain peer connection is not supported yet.")
+		// Register the peer according to their role.
+		if peerIsOnParentChain {
+			if err := pm.scpm.getParentChainPeers().Register(p); err != nil {
+				return err
+			}
+			defer pm.scpm.removeParentPeer(p.GetID())
+		} else {
+			if err := pm.scpm.getChildChainPeers().Register(p); err != nil {
+				return err
+			}
+			defer pm.scpm.removeChildPeer(p.GetID())
+		}
 	}
 
 	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID(), "onTheSameChain", onTheSameChain, "onParentChain", peerIsOnParentChain)
@@ -796,15 +805,168 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		pm.txpool.AddRemotes(validTxs)
 		return err
 
+	// ServiceChain related messages
+	case msg.Code == ServiceChainTxsMsg:
+		logger.Debug("received ServiceChainTxsMsg")
+		// Transactions arrived, make sure we have a valid and fresh chain to handle them
+		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
+			break
+		}
+		if err := handleServiceChainTxDataMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case msg.Code == ServiceChainParentChainInfoRequestMsg:
+		logger.Debug("received ServiceChainParentChainInfoRequestMsg")
+		if err := handleServiceChainParentChainInfoRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case msg.Code == ServiceChainParentChainInfoResponseMsg:
+		logger.Debug("received ServiceChainParentChainInfoResponseMsg")
+		if err := handleServiceChainParentChainInfoResponseMsg(pm, msg); err != nil {
+			return err
+		}
+
+	case msg.Code == ServiceChainReceiptResponseMsg:
+		logger.Debug("received ServiceChainReceiptResponseMsg")
+		if err := handleServiceChainReceiptResponseMsg(pm, msg); err != nil {
+			return err
+		}
+
+	case msg.Code == ServiceChainReceiptRequestMsg:
+		logger.Debug("received ServiceChainReceiptRequestMsg")
+		if err := handleServiceChainReceiptRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
 	return nil
 }
 
+// handleServiceChainTxDataMsg handles service chain transactions from child chain.
+// It will return an error if given tx is not TxTypeChainDataPegging type.
+func handleServiceChainTxDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	//pm.txMsgLock.Lock()
+	// Transactions can be processed, parse all of them and deliver to the pool
+	var txs []*types.Transaction
+	if err := msg.Decode(&txs); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	// Only valid txs should be pushed into the pool.
+	validTxs := make([]*types.Transaction, 0, len(txs))
+	var err error
+	for i, tx := range txs {
+		if tx == nil {
+			err = errResp(ErrDecode, "tx %d is nil", i)
+			continue
+		}
+		if tx.Type() != types.TxTypeChainDataPegging {
+			err = errResp(ErrUnexpectedTxType, "tx %d should be TxTypeChainDataPegging, but %s", i, tx.Type())
+			continue
+		}
+		p.AddToKnownTxs(tx.Hash())
+		validTxs = append(validTxs, tx)
+	}
+	pm.txpool.AddRemotes(validTxs)
+	return err
+}
+
+// handleServiceChainParentChainInfoRequestMsg handles parent chain info request message from child chain.
+// It will send the nonce of the account and its gas price to the child chain peer who requested.
+func handleServiceChainParentChainInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	var addr common.Address
+	if err := msg.Decode(&addr); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	stateDB, err := pm.blockchain.State()
+	if err != nil {
+		// TODO-Klaytn-ServiceChain This error and inefficient balance error should be transferred.
+		return errResp(ErrFailedToGetStateDB, "failed to get stateDB, err: %v", err)
+	} else {
+		pcInfo := parentChainInfo{stateDB.GetNonce(addr), pm.blockchain.Config().UnitPrice}
+		p.SendServiceChainInfoResponse(&pcInfo)
+		logger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
+	}
+	return nil
+}
+
+// handleServiceChainParentChainInfoResponseMsg handles parent chain info response message from parent chain.
+// It will update the remoteNonce and remoteGasPrice of ServiceChainProtocolManager.
+func handleServiceChainParentChainInfoResponseMsg(pm *ProtocolManager, msg p2p.Msg) error {
+	var pcInfo parentChainInfo
+	if err := msg.Decode(&pcInfo); err != nil {
+		logger.Error("failed to decode", "err", err)
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	if pm.scpm.getRemoteNonce() > pcInfo.Nonce {
+		// If received nonce is bigger than the current one, just leave a log and do nothing.
+		logger.Warn("local nonce is bigger than the parent chain nonce.", "localNonce", pm.scpm.getRemoteNonce(), "remoteNonce", pcInfo.Nonce)
+		return nil
+	}
+	pm.scpm.setRemoteNonce(pcInfo.Nonce)
+	pm.scpm.setNonceSynced(true)
+	pm.scpm.setRemoteGasPrice(pcInfo.GasPrice)
+	logger.Debug("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
+	return nil
+}
+
+// handleServiceChainReceiptResponseMsg handles receipt response message from parent chain.
+// It will store the received receipts and remove corresponding transaction in the resending list.
+func handleServiceChainReceiptResponseMsg(pm *ProtocolManager, msg p2p.Msg) error {
+	// TODO-Klaytn-ServiceChain Need to add an option, not to write receipts.
+	// Decode the retrieval message
+	var receipts []*types.ReceiptForStorage
+	if err := msg.Decode(&receipts); err != nil && err != rlp.EOL {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Stores receipt and remove tx from sentServiceChainTxs only if the tx is successfully executed.
+	pm.scpm.writeServiceChainTxReceipts(pm.blockchain, receipts)
+	return nil
+}
+
+// handleServiceChainReceiptRequestMsg handles receipt request message from child chain.
+// It will find and send corresponding receipts with given transaction hashes.
+func handleServiceChainReceiptRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash               common.Hash
+		receiptsForStorage []*types.ReceiptForStorage
+	)
+	for len(receiptsForStorage) < downloader.MaxReceiptFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		// Retrieve the receipt of requested service chain tx, skip if unknown.
+		receipt := pm.blockchain.GetReceiptByTxHash(hash)
+		if receipt == nil {
+			continue
+		}
+
+		receiptsForStorage = append(receiptsForStorage, (*types.ReceiptForStorage)(receipt))
+	}
+	return p.SendServiceChainReceiptResponse(receiptsForStorage)
+}
+
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
+	// If it is connected to a parent chain, broadcast service chain block.
+	if propagate {
+		pm.scpm.BroadcastServiceChainTxAndReceiptRequest(block)
+	}
+
 	hash := block.Hash()
 	var peers []Peer
 	if pm.nodetype == node.CONSENSUSNODE {

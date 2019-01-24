@@ -24,7 +24,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
-		ChainAddr               common.Address
+		ChainAddr               *common.Address
 		ChainTxPeriod           uint64
 		SentChainTxsLimit       uint64
 		LightServ               int  `toml:",omitempty"`
@@ -133,7 +133,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		c.NoPruning = *dec.NoPruning
 	}
 	if dec.ChainAddr != nil {
-		c.ChainAddr = *dec.ChainAddr
+		c.ChainAddr = dec.ChainAddr
 	}
 	if dec.ChainTxPeriod != nil {
 		c.ChainTxPeriod = *dec.ChainTxPeriod
