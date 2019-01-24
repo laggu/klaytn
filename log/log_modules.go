@@ -89,6 +89,7 @@ const (
 	NodeCNFilters
 
 	// 31~40
+	NodeCNTracers
 	_
 	StorageDatabase
 	StorageStateDB
@@ -140,6 +141,7 @@ var moduleNames = [ModuleNameLen]string{
 	"node/cn/filters",
 
 	// 31~40
+	"node/cn/tracers",
 	"",
 	"storage/database",
 	"storage/statedb",
