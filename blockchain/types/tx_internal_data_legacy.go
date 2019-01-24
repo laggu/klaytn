@@ -167,18 +167,6 @@ func (t *txdata) GetVRS() (*big.Int, *big.Int, *big.Int) {
 	return t.V, t.R, t.S
 }
 
-func (t *txdata) GetV() *big.Int {
-	return t.V
-}
-
-func (t *txdata) GetR() *big.Int {
-	return t.R
-}
-
-func (t *txdata) GetS() *big.Int {
-	return t.S
-}
-
 func (t *txdata) SetHash(h *common.Hash) {
 	t.Hash = h
 }
@@ -189,16 +177,8 @@ func (t *txdata) SetVRS(v *big.Int, r *big.Int, s *big.Int) {
 	t.S.Set(s)
 }
 
-func (t *txdata) SetV(v *big.Int) {
-	t.V.Set(v)
-}
-
-func (t *txdata) SetR(r *big.Int) {
-	t.R.Set(r)
-}
-
-func (t *txdata) SetS(s *big.Int) {
-	t.S.Set(s)
+func (t *txdata) SetSignature(s *TxSignature) {
+	t.SetVRS(s.V, s.R, s.S)
 }
 
 func (t *txdata) IntrinsicGas() (uint64, error) {

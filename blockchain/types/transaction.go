@@ -22,6 +22,7 @@ package types
 
 import (
 	"container/heap"
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"github.com/ground-x/klaytn/common"
@@ -296,6 +297,21 @@ func (tx *Transaction) Cost() *big.Int {
 	total := new(big.Int).Mul(tx.data.GetPrice(), new(big.Int).SetUint64(tx.data.GetGasLimit()))
 	total.Add(total, tx.data.GetAmount())
 	return total
+}
+
+func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
+	h := s.Hash(tx)
+	sig, err := NewTxSignatureWithValues(s, h, prv)
+	if err != nil {
+		return err
+	}
+
+	tx.SetSignature(sig)
+	return nil
+}
+
+func (tx *Transaction) SetSignature(signature *TxSignature) {
+	tx.data.SetSignature(signature)
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {

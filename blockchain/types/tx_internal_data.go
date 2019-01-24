@@ -124,15 +124,10 @@ type TxInternalData interface {
 	GetAmount() *big.Int
 	GetHash() *common.Hash
 	GetVRS() (*big.Int, *big.Int, *big.Int)
-	GetV() *big.Int
-	GetR() *big.Int
-	GetS() *big.Int
 
 	SetHash(*common.Hash)
+	SetSignature(*TxSignature)
 	SetVRS(*big.Int, *big.Int, *big.Int)
-	SetV(*big.Int)
-	SetR(*big.Int)
-	SetS(*big.Int)
 
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int

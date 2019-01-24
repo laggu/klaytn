@@ -103,7 +103,8 @@ func benchmarkEncodeToBytes(b *testing.B, txType types.TxType) {
 func benchmarkEncodeInterface(b *testing.B, txType types.TxType) {
 	testTxData := genTestTxInternalData(txType)
 	txInterfaces := testTxData.SerializeForSign()
-	txInterfaces = append(txInterfaces, testTxData.GetV(), testTxData.GetR(), testTxData.GetS())
+	v, r, s := testTxData.GetVRS()
+	txInterfaces = append(txInterfaces, v, r, s)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buffer := new(bytes.Buffer)
@@ -118,7 +119,8 @@ func benchmarkEncodeInterface(b *testing.B, txType types.TxType) {
 func benchmarkEncodeInterfaceOverFields(b *testing.B, txType types.TxType) {
 	testTxData := genTestTxInternalData(txType)
 	txInterfaces := testTxData.SerializeForSign()
-	txInterfaces = append(txInterfaces, testTxData.GetV(), testTxData.GetR(), testTxData.GetS())
+	v, r, s := testTxData.GetVRS()
+	txInterfaces = append(txInterfaces, v, r, s)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buffer := new(bytes.Buffer)
@@ -139,9 +141,7 @@ func genCommonDefaultData() types.TxInternalDataCommon {
 		GasLimit:     uint64(9999999999),
 		Recipient:    common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
 		Amount:       new(big.Int).SetUint64(10),
-		V:            new(big.Int),
-		R:            new(big.Int),
-		S:            new(big.Int),
+		TxSignature:  types.NewTxSignature(),
 		Hash:         &common.Hash{},
 	}
 }

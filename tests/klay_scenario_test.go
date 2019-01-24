@@ -169,9 +169,10 @@ func TestTransactionScenario(t *testing.T) {
 		amount := new(big.Int).SetUint64(100000000000)
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
-		signedTx, err := types.SignTx(tx, signer, reservoir.Key)
+
+		err := tx.Sign(signer, reservoir.Key)
 		assert.Equal(t, nil, err)
-		txs = append(txs, signedTx)
+		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
@@ -196,10 +197,10 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
-		signedTx, err := types.SignTx(tx, signer, reservoir.Key)
+		err = tx.Sign(signer, reservoir.Key)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, signedTx)
+		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
@@ -252,10 +253,10 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		signedTx, err := types.SignTx(tx, signer, reservoir.Key)
+		err = tx.Sign(signer, reservoir.Key)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, signedTx)
+		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
@@ -279,10 +280,10 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		signedTx, err := types.SignTx(tx, signer, decoupled.Key)
+		err = tx.Sign(signer, decoupled.Key)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, signedTx)
+		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
@@ -307,10 +308,10 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
-		signedTx, err := types.SignTx(tx, signer, reservoir.Key)
+		err = tx.Sign(signer, reservoir.Key)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, signedTx)
+		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
@@ -334,10 +335,10 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		signedTx, err := types.SignTx(tx, signer, colin.Key)
+		err = tx.Sign(signer, colin.Key)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, signedTx)
+		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
@@ -387,10 +388,11 @@ func TestValidateSender(t *testing.T) {
 		amount := new(big.Int).SetUint64(100000000000)
 		tx := types.NewTransaction(anon.Nonce,
 			decoupled.Addr, amount, gasLimit, gasPrice, []byte{})
-		signedTx, err := types.SignTx(tx, signer, anon.Key)
+
+		err := tx.Sign(signer, anon.Key)
 		assert.Equal(t, nil, err)
 
-		actualFrom, err := types.ValidateSender(signer, signedTx, statedb)
+		actualFrom, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -407,10 +409,10 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		signedTx, err := types.SignTx(tx, signer, anon.Key)
+		err = tx.Sign(signer, anon.Key)
 		assert.Equal(t, nil, err)
 
-		actualFrom, err := types.ValidateSender(signer, signedTx, statedb)
+		actualFrom, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -427,10 +429,10 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		signedTx, err := types.SignTx(tx, signer, decoupled.Key)
+		err = tx.Sign(signer, decoupled.Key)
 		assert.Equal(t, nil, err)
 
-		actualFrom, err := types.ValidateSender(signer, signedTx, statedb)
+		actualFrom, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
 	}

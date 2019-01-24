@@ -32,10 +32,7 @@ type TxInternalDataCommon struct {
 	Amount       *big.Int
 	From         common.Address
 
-	// Signature values
-	V *big.Int
-	R *big.Int
-	S *big.Int
+	*TxSignature
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -44,11 +41,9 @@ type TxInternalDataCommon struct {
 // newTxInternalDataCommon creates an empty TxInternalDataCommon object with initializing *big.Int variables.
 func newTxInternalDataCommon() *TxInternalDataCommon {
 	return &TxInternalDataCommon{
-		Price:  new(big.Int),
-		Amount: new(big.Int),
-		V:      new(big.Int),
-		R:      new(big.Int),
-		S:      new(big.Int),
+		Price:       new(big.Int),
+		Amount:      new(big.Int),
+		TxSignature: NewTxSignature(),
 	}
 }
 
@@ -128,41 +123,19 @@ func (t *TxInternalDataCommon) GetHash() *common.Hash {
 }
 
 func (t *TxInternalDataCommon) GetVRS() (*big.Int, *big.Int, *big.Int) {
-	return t.V, t.R, t.S
-}
-
-func (t *TxInternalDataCommon) GetV() *big.Int {
-	return t.V
-}
-
-func (t *TxInternalDataCommon) GetR() *big.Int {
-	return t.R
-}
-
-func (t *TxInternalDataCommon) GetS() *big.Int {
-	return t.S
+	return t.TxSignature.GetVRS()
 }
 
 func (t *TxInternalDataCommon) SetHash(h *common.Hash) {
 	t.Hash = h
 }
 
+func (t *TxInternalDataCommon) SetSignature(s *TxSignature) {
+	t.TxSignature = s
+}
+
 func (t *TxInternalDataCommon) SetVRS(v *big.Int, r *big.Int, s *big.Int) {
-	t.V.Set(v)
-	t.R.Set(r)
-	t.S.Set(s)
-}
-
-func (t *TxInternalDataCommon) SetV(v *big.Int) {
-	t.V.Set(v)
-}
-
-func (t *TxInternalDataCommon) SetR(r *big.Int) {
-	t.R.Set(r)
-}
-
-func (t *TxInternalDataCommon) SetS(s *big.Int) {
-	t.S.Set(s)
+	t.TxSignature.SetVRS(v, r, s)
 }
 
 func (t *TxInternalDataCommon) serializeForSign() []interface{} {
