@@ -57,6 +57,7 @@ const (
 	TxValueKeyPeggedData
 	TxValueKeyHumanReadable
 	TxValueKeyAccountKey
+	TxValueKeyFeePayer
 )
 
 var (

@@ -18,6 +18,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"math/big"
@@ -62,4 +63,16 @@ func (t *TxSignature) SetVRS(v *big.Int, r *big.Int, s *big.Int) {
 	t.V = v
 	t.R = r
 	t.S = s
+}
+
+func (t *TxSignature) equal(tb *TxSignature) bool {
+	return t.V.Cmp(tb.V) == 0 &&
+		t.R.Cmp(tb.R) == 0 &&
+		t.S.Cmp(tb.S) == 0
+}
+
+func (t *TxSignature) string() string {
+	b, _ := json.Marshal(t)
+
+	return string(b)
 }
