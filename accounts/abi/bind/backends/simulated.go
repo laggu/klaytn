@@ -407,7 +407,10 @@ type callmsg struct {
 	klaytn.CallMsg
 }
 
-func (m callmsg) From() common.Address         { return m.CallMsg.From }
+func (m callmsg) From() common.Address { return m.CallMsg.From }
+
+// TODO-Klaytn-FeePayer: Support fee payer feature for the simulated backend.
+func (m callmsg) FeePayer() common.Address     { return m.CallMsg.From }
 func (m callmsg) Nonce() uint64                { return 0 }
 func (m callmsg) CheckNonce() bool             { return false }
 func (m callmsg) To() *common.Address          { return m.CallMsg.To }
