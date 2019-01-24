@@ -207,6 +207,35 @@ func TestTransactionScenario(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
+	// Create the same account decoupled. This should be failed.
+	// TODO-Klaytn: make a test case for this error case.
+	//{
+	//	var txs types.Transactions
+	//
+	//	amount := new(big.Int).SetUint64(100000000)
+	//	values := map[types.TxValueKeyType]interface{}{
+	//		types.TxValueKeyNonce:      reservoir.Nonce,
+	//		types.TxValueKeyFrom:       reservoir.Addr,
+	//		types.TxValueKeyTo:         decoupled.Addr,
+	//		types.TxValueKeyAmount:     amount,
+	//		types.TxValueKeyGasLimit:   gasLimit,
+	//		types.TxValueKeyGasPrice:   gasPrice,
+	//		types.TxValueKeyAccountKey: types.NewAccountKeyPublicWithValue(&decoupled.Key.PublicKey),
+	//	}
+	//	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+	//	assert.Equal(t, nil, err)
+	//
+	//	signedTx, err := types.SignTx(tx, signer, reservoir.Key)
+	//	assert.Equal(t, nil, err)
+	//
+	//	txs = append(txs, signedTx)
+	//
+	//	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	reservoir.Nonce += 1
+	//}
+
 	// 3. Transfer (reservoir -> decoupled) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions

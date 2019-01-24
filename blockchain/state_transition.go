@@ -33,6 +33,7 @@ import (
 var (
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 	errNotProgramAccount         = errors.New("not a program account")
+	errAccountAlreadyExists      = errors.New("account already exists")
 )
 
 /*
@@ -213,6 +214,13 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 			// But it would be better to explicitly terminate the program if an unintended result happens.
 			logger.Error("msg.To() should not be nil!", msg)
 			kerr.Err = errNotProgramAccount
+			kerr.Status = getReceiptStatusFromVMerr(nil)
+			return nil, 0, kerr
+		}
+		// Fail if the address is already created.
+		if evm.StateDB.Exist(*to) {
+			kerr.Err = errAccountAlreadyExists
+			kerr.Status = getReceiptStatusFromVMerr(nil)
 			return nil, 0, kerr
 		}
 		evm.StateDB.CreateAccountWithMap(*to, state.ExternallyOwnedAccountType,
