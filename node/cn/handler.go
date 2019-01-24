@@ -111,10 +111,6 @@ type ProtocolManager struct {
 
 	wsendpoint string
 
-	txMsgLock    sync.RWMutex
-	blockMsgLock sync.RWMutex
-	msgCh        chan p2p.Msg
-
 	nodetype p2p.ConnType
 
 	scpm ServiceChainProtocolManager
@@ -135,7 +131,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
-		msgCh:       make(chan p2p.Msg, 50),
 		engine:      engine,
 		nodetype:    nodetype,
 		scpm:        NewServiceChainProtocolManager(scc),
@@ -462,6 +457,7 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) error {
+	// Below message size checking is done by handle().
 	// Read the next message from the remote peer, and ensure it's fully consumed
 	//msg, err := p.rw.ReadMsg()
 	//if err != nil {
@@ -485,9 +481,6 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			return err
 		}
 	}
-
-	//pm.txMsgLock.Lock()
-	//defer pm.txMsgLock.Unlock()
 
 	// Handle the message depending on its contents
 	switch {
@@ -779,8 +772,6 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		}
 
 	case msg.Code == TxMsg:
-		//pm.txMsgLock.Lock()
-
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
@@ -790,16 +781,20 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		if err := msg.Decode(&txs); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		// Only valid txs should be pushed into the pool.
+		validTxs := make([]*types.Transaction, 0, len(txs))
+		var err error
 		for i, tx := range txs {
 			// Validate and mark the remote transaction
 			if tx == nil {
-				return errResp(ErrDecode, "transaction %d is nil", i)
+				err = errResp(ErrDecode, "transaction %d is nil", i)
+				continue
 			}
 			p.AddToKnownTxs(tx.Hash())
+			validTxs = append(validTxs, tx)
 		}
-		pm.txpool.AddRemotes(txs)
-
-		//pm.txMsgLock.Unlock()
+		pm.txpool.AddRemotes(validTxs)
+		return err
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
