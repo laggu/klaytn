@@ -79,7 +79,7 @@ func NewOracle(backend api.Backend, params Config) *Oracle {
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-Klaytn-Issue136 gasPrice Oracle
 
-	// NOTE-GX We use invariant ChainConfig.UnitPrice and this value
+	// NOTE-Klaytn We use invariant ChainConfig.UnitPrice and this value
 	//         will not be changed until ChainConfig.UnitPrice is updated with governance.
 	// TODO-Klaytn We have to update Oracle.lastPrice when UnitPrice is changed.
 	return gpo.lastPrice, nil

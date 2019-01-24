@@ -85,7 +85,7 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 		return err
 	}
 
-	// NOTE-GX-issue973 Developing Klaytn token economy
+	// NOTE-Klaytn-Issue973 Developing Klaytn token economy
 	// Add predefined accounts related to reward mechanism
 	rewardContractAddr := common.HexToAddress(contract.RewardContractAddress)
 	kirContractAddr := common.HexToAddress(contract.KIRContractAddress)

@@ -165,7 +165,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			logged, pcCopy, gasCopy = false, pc, contract.Gas
 		}
 
-		// NOTE-GX We currently limit tx's execution time using the number of executed opcodes.
+		// NOTE-Klaytn We currently limit tx's execution time using the number of executed opcodes.
 		if in.evm.vmConfig.UseOpcodeCntLimit {
 			in.evm.opcodeCnt++
 			if in.evm.opcodeCnt > params.OpcodeCntLimit {

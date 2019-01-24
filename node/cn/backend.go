@@ -122,7 +122,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, genesisErr
 	}
 
-	// NOTE-GX Now we use ChainConfig.UnitPrice from genesis.json.
+	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json.
 	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
@@ -204,7 +204,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-GX Now we use ChainConfig.UnitPrice from genesis.json and updated config.GasPrice with same value.
+	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json and updated config.GasPrice with same value.
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 

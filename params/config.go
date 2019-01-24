@@ -77,7 +77,7 @@ var (
 		Clique:        nil,
 		Istanbul:      nil,
 		IsBFT:         false,
-		UnitPrice:     1, // NOTE-GX Use UnitPrice 1 for tests
+		UnitPrice:     1, // NOTE-Klaytn Use UnitPrice 1 for tests
 		DeriveShaImpl: 0,
 	}
 	TestRules = TestChainConfig.Rules(new(big.Int))

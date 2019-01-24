@@ -536,7 +536,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
-	// NOTE-GX Drop transactions with unexpected gasPrice
+	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
 		logger.Info("fail to validate unitprice", "klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
 		return ErrInvalidUnitPrice

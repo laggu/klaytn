@@ -47,7 +47,7 @@ const (
 
 	// TODO-Klaytn Enable more error below.
 	// Klaytn specific
-	// NOTE-GX Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
+	// NOTE-Klaytn Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
 	//         Add a new ReceiptStatusErrXXX before ReceiptStatusLast
 	ReceiptStatusErrDefault                  = uint(0x02) // Default
 	ReceiptStatusErrDepth                    = uint(0x03)
@@ -135,7 +135,7 @@ func (r *Receipt) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (r *Receipt) setStatus(postStateOrStatus []byte) error {
-	// NOTE-GX Status use only one byte.
+	// NOTE-Klaytn Status use only one byte.
 	var status uint = ReceiptStatusFailed
 	if len(postStateOrStatus) == 1 {
 		status = uint(postStateOrStatus[0])

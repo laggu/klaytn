@@ -708,7 +708,7 @@ CommitTransactionLoop:
 		// We use the eip155 signer regardless of the current hf.
 		from, _ := types.Sender(env.signer, tx)
 
-		// NOTE-GX Since Klaytn is always in EIP155, the below replay protection code is not needed.
+		// NOTE-Klaytn Since Klaytn is always in EIP155, the below replay protection code is not needed.
 		// TODO-Klaytn Remove the code commented below.
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
@@ -746,7 +746,7 @@ CommitTransactionLoop:
 				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
 				tooLongTxCounter.Inc(1)
 			}
-			// NOTE-GX Exit for loop immediately without checking abort variable again.
+			// NOTE-Klaytn Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
 		case nil:
