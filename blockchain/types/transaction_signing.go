@@ -50,7 +50,7 @@ type sigCachePubkey struct {
 	pubkey *ecdsa.PublicKey
 }
 
-// TODO-Klaytn Remove the second parameter blockNumber
+// TODO-Klaytn-RemoveLater Remove the second parameter blockNumber
 // MakeSigner returns a Signer based on the given chain config and block number.
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	return NewEIP155Signer(config.ChainID)
@@ -264,7 +264,7 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	return rlpHash(infs)
 }
 
-// TODO-Klaytn Remove HomesteadSigner
+// TODO-Klaytn-RemoveLater Remove HomesteadSigner
 // HomesteadTransaction implements TransactionInterface using the
 // homestead rules.
 type HomesteadSigner struct{ FrontierSigner }

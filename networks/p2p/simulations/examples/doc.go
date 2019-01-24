@@ -16,5 +16,5 @@
 //
 // +build none
 
-// TODO-Klaytn: Write a package document
+// TODO-Klaytn-Docs: Write a package document
 package main

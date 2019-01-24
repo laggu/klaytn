@@ -709,7 +709,7 @@ CommitTransactionLoop:
 		from, _ := types.Sender(env.signer, tx)
 
 		// NOTE-Klaytn Since Klaytn is always in EIP155, the below replay protection code is not needed.
-		// TODO-Klaytn Remove the code commented below.
+		// TODO-Klaytn-RemoveLater Remove the code commented below.
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//if tx.Protected() && !env.config.IsEIP155(env.header.Number) {

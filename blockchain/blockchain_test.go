@@ -1163,7 +1163,7 @@ func TestEIP155Transition(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FIX Failed test. Enable this later.
+// TODO-Klaytn-FailedTest Failed test. Enable this later.
 /*
 func TestEIP161AccountRemoval(t *testing.T) {
 	// Configure and generate a sample block chain
@@ -1323,7 +1323,7 @@ func TestTrieForkGC(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FIX Failed test. Enable this later.
+// TODO-Klaytn-FailedTest Failed test. Enable this later.
 /*
 // Tests that doing large reorgs works even if the state associated with the
 // forking point is not available any more.

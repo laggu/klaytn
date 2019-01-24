@@ -325,7 +325,7 @@ func TestClientSubscribeClose(t *testing.T) {
 	}
 }
 
-/* TODO-Klaytn-FIX Test fails
+/* TODO-Klaytn-FailedTest Test fails
 // This test reproduces https://github.com/ethereum/go-ethereum/issues/17837 where the
 // client hangs during shutdown when Unsubscribe races with Client.Close.
 func TestClientCloseUnsubscribeRace(t *testing.T) {

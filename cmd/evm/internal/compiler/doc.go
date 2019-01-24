@@ -14,5 +14,5 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// TODO-Klaytn: Write a package documents
+// TODO-Klaytn-Docs: Write a package documents
 package compiler

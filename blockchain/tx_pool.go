@@ -177,7 +177,7 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 
-	// TODO-Klaytn Remove homestead field
+	// TODO-Klaytn-RemoveLater Remove homestead field
 	homestead bool
 }
 

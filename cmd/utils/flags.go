@@ -1076,7 +1076,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.ChildChainIndexing = true
 	}
 
-	// TODO-Klaytn Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
+	// TODO-Klaytn-RemoveLater Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*
 		if ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-Klaytn-Issue136 gasPrice

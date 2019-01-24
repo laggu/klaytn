@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	//	"strconv" // TODO-Klaytn-FIX Import this when enabling TestUnpack()
 	"strings"
 	"testing"
 
@@ -337,7 +336,7 @@ var unpackTests = []unpackTest{
 	},
 }
 
-// TODO-Klaytn-FIX Enable this test later
+// TODO-Klaytn-FailedTest Enable this test later
 /*
 func TestUnpack(t *testing.T) {
 	for i, test := range unpackTests {

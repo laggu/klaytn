@@ -27,14 +27,11 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ground-x/klaytn/common"
-	// TODO-Klaytn-FIX Uncomment after enabling failed tests
-	// "github.com/ground-x/klaytn/consensus/gxhash"
-	"github.com/ground-x/klaytn/storage/database"
-	// "github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
-// TODO-Klaytn-FIX Failed test
+// TODO-Klaytn-FailedTest Failed test
 /*
 func TestDefaultGenesisBlock(t *testing.T) {
 	block := DefaultGenesisBlock().ToBlock(nil)
@@ -50,7 +47,7 @@ func TestDefaultGenesisBlock(t *testing.T) {
 
 func TestSetupGenesis(t *testing.T) {
 	var (
-		// TODO-Klaytn-FIX Uncomment after enabling failed tests
+		// TODO-Klaytn-FailedTest Uncomment after enabling failed tests
 		// customghash = common.HexToHash("0x89c99d90b79719238d2645c7642f2c9295246e80775b38cfd162b696817fbd50")
 		customg = Genesis{
 			Config: &params.ChainConfig{},
@@ -76,7 +73,7 @@ func TestSetupGenesis(t *testing.T) {
 			wantErr:    errGenesisNoConfig,
 			wantConfig: params.AllGxhashProtocolChanges,
 		},
-		/* TODO-Klaytn-FIX Failed
+		/* TODO-Klaytn-FailedTest Failed
 		{
 			name: "no block in DB, genesis == nil",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {

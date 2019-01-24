@@ -64,7 +64,7 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 			if *contract.CodeAddr == vmLogAddress {
 				return RunVMLogContract(p, input, contract, evm)
 			} else {
-				return RunPrecompiledContract(p, input, contract) // TODO-Klaytn-error
+				return RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
 			}
 		}
 	}
@@ -175,11 +175,11 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-error
+		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
 	// Fail if we're trying to transfer more than the available balance
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-error
+		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
 	}
 
 	var (
@@ -248,11 +248,11 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-error
+		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
 	// Fail if we're trying to transfer more than the available balance
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-error
+		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
 	if !isProgramAccount(addr, evm.StateDB) {
@@ -291,7 +291,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-error
+		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
 
 	if !isProgramAccount(addr, evm.StateDB) {
@@ -328,7 +328,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-error
+		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
 	// Make sure the readonly is only set if we aren't in readonly yet
 	// this makes also sure that the readonly flag isn't removed for
@@ -372,10 +372,10 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-error
+		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-error
+		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
 	}
 	// Ensure there's no existing contract already at the designated address
 	nonce := evm.StateDB.GetNonce(caller.Address())
@@ -384,7 +384,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	contractAddr = crypto.CreateAddress(caller.Address(), nonce)
 	contractHash := evm.StateDB.GetCodeHash(contractAddr)
 	if evm.StateDB.GetNonce(contractAddr) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
-		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-error
+		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
 	}
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
@@ -428,7 +428,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 				err = ErrFailedOnSetCode
 			}
 		} else {
-			err = ErrCodeStoreOutOfGas // TODO-Klaytn-Issue136 // TODO-Klaytn-error
+			err = ErrCodeStoreOutOfGas // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
 		}
 	}
 
@@ -442,7 +442,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	}
 	// Assign err if contract code size exceeds the max while the err is still empty.
 	if maxCodeSizeExceeded && err == nil {
-		err = ErrMaxCodeSizeExceeded // TODO-Klaytn-error
+		err = ErrMaxCodeSizeExceeded // TODO-Klaytn-Issue615
 	}
 	if evm.vmConfig.Debug && evm.depth == 0 {
 		evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)

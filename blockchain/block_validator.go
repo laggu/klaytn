@@ -109,6 +109,6 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 // This is miner strategy, not consensus protocol.
 func CalcGasLimit(parent *types.Block) uint64 {
 	// NOTE-Klaytn We use a constant block gas limit.
-	// TODO-Klaytn Later we may can totally remove this code
+	// TODO-Klaytn-RemoveLater Later we may can totally remove this code
 	return parent.GasLimit()
 }

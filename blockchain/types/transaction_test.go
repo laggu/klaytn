@@ -23,8 +23,6 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
-	// TODO-Klaytn-FIX Enable below package when enabling TestTransactionJSON
-	// "encoding/json"
 	"math/big"
 	"testing"
 
@@ -182,7 +180,7 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FIX This test is failed in Klaytn
+// TODO-Klaytn-FailedTest This test is failed in Klaytn
 /*
 // TestTransactionJSON tests serializing/de-serializing to/from JSON.
 func TestTransactionJSON(t *testing.T) {

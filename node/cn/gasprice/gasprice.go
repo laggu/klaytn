@@ -84,7 +84,7 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO
 	// TODO-Klaytn We have to update Oracle.lastPrice when UnitPrice is changed.
 	return gpo.lastPrice, nil
 	/*
-		// TODO-Klaytn Later remove below obsolete code if we don't need them anymore.
+		// TODO-Klaytn-RemoveLater Later remove below obsolete code if we don't need them anymore.
 		gpo.cacheLock.RLock()
 		lastHead := gpo.lastHead
 		lastPrice := gpo.lastPrice

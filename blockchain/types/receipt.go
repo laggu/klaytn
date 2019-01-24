@@ -59,13 +59,13 @@ const (
 	ReceiptStatusErrExecutionReverted        = uint(0x09)
 	ReceiptStatusErrOpcodeCntLimitReached    = uint(0x0a)
 	ReceiptStatusLast                        = uint(0x0b) // Last value which is not an actual ReceiptStatus
-//	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn
+//	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
 //	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
 //	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
 //	ReceiptStatusErrStackOverflow            // Default case, because no static message available
 //	ReceiptStatusErrInsufficientBalance      // No receipt available for this error
 //	ReceiptStatusErrTotalTimeLimitReached    // No receipt available for this error
-//	ReceiptStatusErrGasUintOverflow          // TODO-Klaytn
+//	ReceiptStatusErrGasUintOverflow          // TODO-Klaytn-Issue615
 
 )
 

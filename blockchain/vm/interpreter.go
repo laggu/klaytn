@@ -178,13 +178,13 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		op = contract.GetOp(pc)
 		operation := in.cfg.JumpTable[op]
 		if !operation.valid {
-			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-Klaytn-error
+			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-Klaytn-Issue615
 		}
-		if err := operation.validateStack(stack); err != nil { // TODO-Klaytn-error
+		if err := operation.validateStack(stack); err != nil { // TODO-Klaytn-Issue615
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
-		if err := in.enforceRestrictions(op, operation, stack); err != nil { // TODO-Klaytn-error
+		if err := in.enforceRestrictions(op, operation, stack); err != nil { // TODO-Klaytn-Issue615
 			return nil, err
 		}
 
@@ -195,12 +195,12 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if operation.memorySize != nil {
 			memSize, overflow := bigUint64(operation.memorySize(stack))
 			if overflow {
-				return nil, errGasUintOverflow // TODO-Klaytn-error
+				return nil, errGasUintOverflow // TODO-Klaytn-Issue615
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
-				return nil, errGasUintOverflow // TODO-Klaytn-error
+				return nil, errGasUintOverflow // TODO-Klaytn-Issue615
 			}
 			if allocatedMemorySize < memorySize {
 				extraSize = memorySize - allocatedMemorySize
@@ -212,7 +212,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
 		// TODO-Klaytn-Issue136
 		if err != nil || !contract.UseGas(cost) {
-			return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue136 TODO-Klaytn-error
+			return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue136 TODO-Klaytn-Issue615
 		}
 		if extraSize > 0 {
 			mem.Increase(extraSize)
@@ -239,9 +239,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 
 		switch {
 		case err != nil:
-			return nil, err // TODO-Klaytn-error
+			return nil, err // TODO-Klaytn-Issue615
 		case operation.reverts:
-			return res, ErrExecutionReverted // TODO-Klaytn-error
+			return res, ErrExecutionReverted // TODO-Klaytn-Issue615
 		case operation.halts:
 			return res, nil
 		case !operation.jumps:
@@ -251,7 +251,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 
 	abort := atomic.LoadInt32(&in.evm.abort)
 	if (abort & CancelByTotalTimeLimit) != 0 {
-		return nil, ErrTotalTimeLimitReached // TODO-Klaytn-error
+		return nil, ErrTotalTimeLimitReached // TODO-Klaytn-Issue615
 	}
 	return nil, nil
 }

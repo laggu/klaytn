@@ -21,18 +21,10 @@
 package gxhash
 
 import (
-	// TODO-Klaytn-FIX Enable below commented-out packages when enabling TestConcurrentDiskCacheGeneration
 	"bytes"
-	// "io/ioutil"
-	// "math/big"
-	// "os"
-	"reflect"
-	// "sync"
-	"testing"
-
-	// "github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	// "github.com/ground-x/klaytn/blockchain/types"
+	"reflect"
+	"testing"
 )
 
 // Tests whether the dataset size calculator works correctly by cross checking the
@@ -690,7 +682,7 @@ func TestHashimoto(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FIX This tests fails in Klaytn. Enable or delete this test later.
+// TODO-Klaytn-FailedTest This tests fails in Klaytn. Enable or delete this test later.
 // Tests that caches generated on disk may be done concurrently.
 /*
 func TestConcurrentDiskCacheGeneration(t *testing.T) {

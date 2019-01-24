@@ -715,7 +715,7 @@ func TestABI_MethodById(t *testing.T) {
 			t.Errorf("Method %v (id %v) not 'findable' by id in ABI", name, common.ToHex(m.Id()))
 		}
 	}
-	// TODO-Klaytn-FIX Enable follow tests after updating abi.go
+	// TODO-Klaytn-FailedTest Enable follow tests after updating abi.go
 	/*
 		// Also test empty
 		if _, err := abi.MethodById([]byte{0x00}); err == nil {

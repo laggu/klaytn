@@ -62,7 +62,7 @@ func (d *diffTest) UnmarshalJSON(b []byte) (err error) {
 	return nil
 }
 
-// TODO-Klaytn-FIX Enable this test later
+// TODO-Klaytn-FailedTest Enable this test later
 /*
 func TestCalcDifficulty(t *testing.T) {
 	file, err := os.Open(filepath.Join("..", "..", "tests", "testdata", "BasicTests", "difficulty.json"))

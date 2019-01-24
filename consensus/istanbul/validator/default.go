@@ -224,7 +224,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
 
-	// TODO-Klaytn: remove this check code if the implementation is stable.
+	// TODO-Klaytn-RemoveLater remove this check code if the implementation is stable.
 	if proposerIdx < 0 || nextproposerIdx < 0 {
 		vals := "["
 		for _, v := range valSet.validators {
