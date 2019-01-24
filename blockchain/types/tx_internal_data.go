@@ -151,6 +151,14 @@ type TxInternalData interface {
 	String() string
 }
 
+// TxInternalDataFeePayer has functions related to fee delegated transactions.
+type TxInternalDataFeePayer interface {
+	GetFeePayer() common.Address
+	GetFeePayerVRS() (*big.Int, *big.Int, *big.Int)
+
+	SetFeePayerSignature(s *TxSignature)
+}
+
 // TxInternalDataFrom has a function `GetFrom()`.
 // All other transactions to be implemented will have `from` field, but
 // `txdata` (a legacy transaction type) does not have the field.
