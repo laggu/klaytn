@@ -109,6 +109,7 @@ func createHumanReadableAccount(humanReadableAddr string) (*TestAccountType, err
 // 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
 // 5. Create an account colin using TxTypeAccountCreation.
 // 6. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+// 7. ChainDataPegging (reservoir -> reservoir) using TxTypeChainDataPegging.
 func TestTransactionScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -346,6 +347,39 @@ func TestTransactionScenario(t *testing.T) {
 		colin.Nonce += 1
 	}
 
+	// 7. ChainDataPegging (reservoir -> reservoir) using TxTypeChainDataPegging.
+	{
+		scData := types.NewChildChainTxData(bcdata.bc.CurrentBlock())
+		dataPeggedRLP, _ := rlp.EncodeToBytes(scData)
+
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(10000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      reservoir.Nonce,
+			types.TxValueKeyFrom:       reservoir.Addr,
+			types.TxValueKeyTo:         reservoir.Addr,
+			types.TxValueKeyAmount:     amount,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyPeggedData: dataPeggedRLP,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataPegging, values)
+		if err != nil {
+			t.Fatal(err)
+		}
+		signedTx, err := types.SignTx(tx, signer, reservoir.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		txs = append(txs, signedTx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
 	}
@@ -435,5 +469,41 @@ func TestValidateSender(t *testing.T) {
 		actualFrom, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
+	}
+
+	// TxTypeChainDataPegging
+	{
+		dummyBlock := types.NewBlock(&types.Header{
+			GasLimit: gasLimit,
+		}, nil, nil, nil)
+
+		scData := types.NewChildChainTxData(dummyBlock)
+		dataPeggedRLP, _ := rlp.EncodeToBytes(scData)
+
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(0)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyTo:         anon.Addr,
+			types.TxValueKeyAmount:     amount,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyPeggedData: dataPeggedRLP,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataPegging, values)
+		if err != nil {
+			t.Fatal(err)
+		}
+		signedTx, err := types.SignTx(tx, signer, anon.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		txs = append(txs, signedTx)
+
+		actualFrom, err := types.ValidateSender(signer, signedTx, statedb)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, anon.Addr, actualFrom)
 	}
 }
