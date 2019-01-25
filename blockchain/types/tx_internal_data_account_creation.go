@@ -134,18 +134,21 @@ func (t *TxInternalDataAccountCreation) Equal(a TxInternalData) bool {
 
 func (t *TxInternalDataAccountCreation) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
+	tx := Transaction{data: t}
 	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`%s
+	return fmt.Sprintf(`
+	TX(%x)
+	Type:          %s%s
 	HumanReadable: %t
-	Key:      %s
-	Hex:      %x
-	Type:     %s
+	Key:           %s
+	Hex:           %x
 `,
+		tx.Hash(),
+		t.Type().String(),
 		t.TxInternalDataCommon.string(),
 		t.HumanReadable,
 		t.Key.String(),
-		enc,
-		t.Type().String())
+		enc)
 }
 
 func (t *TxInternalDataAccountCreation) IntrinsicGas() (uint64, error) {

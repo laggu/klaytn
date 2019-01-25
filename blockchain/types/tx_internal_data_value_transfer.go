@@ -51,14 +51,17 @@ func (t *TxInternalDataValueTransfer) Equal(b TxInternalData) bool {
 
 func (t *TxInternalDataValueTransfer) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
+	tx := Transaction{data: t}
 	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`%s
-	Hex:      %x
-	Type:     %s
+	return fmt.Sprintf(`
+	TX(%x)
+	Type:          %s%s
+	Hex:           %x
 `,
+		tx.Hash(),
+		t.Type().String(),
 		t.TxInternalDataCommon.string(),
-		enc,
-		t.Type().String())
+		enc)
 }
 
 func (t *TxInternalDataValueTransfer) IntrinsicGas() (uint64, error) {

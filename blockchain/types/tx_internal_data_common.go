@@ -171,20 +171,17 @@ func (t *TxInternalDataCommon) IsLegacyTransaction() bool {
 
 func (t *TxInternalDataCommon) string() string {
 	return fmt.Sprintf(`
-	TX(%x)
-	From:     %s
-	To:       %s
-	Nonce:    %v
-	GasPrice: %#x
-	GasLimit  %#x
-	Value:    %#x
-	V:        %#x
-	R:        %#x
-	S:        %#x
-`,
-		t.Hash,
-		t.From,
-		t.Recipient,
+	From:          %s
+	To:            %s
+	Nonce:         %v
+	GasPrice:      %#x
+	GasLimit:      %#x
+	Value:         %#x
+	V:             %#x
+	R:             %#x
+	S:             %#x`,
+		t.From.String(),
+		t.Recipient.String(),
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,

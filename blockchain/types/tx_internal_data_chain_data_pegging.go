@@ -19,6 +19,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
@@ -62,16 +63,19 @@ func (t *TxInternalDataChainDataPegging) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
 	dataPeggedRLP, _ := rlp.EncodeToBytes(t.PeggedData)
+	tx := Transaction{data: t}
 
-	return fmt.Sprintf(`%s
-	Hex:      %x
-	Type:     %s
-	PeggedData:	%s
+	return fmt.Sprintf(`
+	TX(%x)
+	Type:          %s%s
+	Hex:           %x
+	PeggedData:    %s
 `,
+		tx.Hash(),
+		t.Type().String(),
 		t.TxInternalDataCommon.string(),
 		enc,
-		t.Type().String(),
-		dataPeggedRLP)
+		common.Bytes2Hex(dataPeggedRLP))
 }
 
 func (t *TxInternalDataChainDataPegging) SerializeForSign() []interface{} {
