@@ -221,6 +221,19 @@ func (tx *Transaction) From() (common.Address, error) {
 	return tf.GetFrom(), nil
 }
 
+// FeePayer returns the fee payer address.
+// If the tx is a fee-delegated transaction, it returns the specified fee payer.
+// Otherwise, it returns `from` of the tx.
+func (tx *Transaction) FeePayer() (common.Address, error) {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		// if the tx is not a fee-delegated transaction, the fee payer is `from` of the tx.
+		return tx.From()
+	}
+
+	return tf.GetFeePayer(), nil
+}
+
 // Hash hashes the RLP encoding of tx.
 // It uniquely identifies the transaction.
 func (tx *Transaction) Hash() common.Hash {
