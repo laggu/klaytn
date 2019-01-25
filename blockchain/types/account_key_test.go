@@ -31,6 +31,7 @@ func TestAccountKeySerialization(t *testing.T) {
 		{"Nil", genAccountKeyNil()},
 		{"Public", genAccountKeyPublic()},
 		{"Fail", genAccountKeyFail()},
+		{"WeightedMultisig", genAccountKeyWeightedMultisig()},
 	}
 
 	var testcases = []struct {
@@ -113,4 +114,17 @@ func genAccountKeyPublic() AccountKey {
 
 func genAccountKeyFail() AccountKey {
 	return NewAccountKeyFail()
+}
+
+func genAccountKeyWeightedMultisig() AccountKey {
+	threshold := uint(3)
+	numKeys := 4
+	keys := make(WeightedPublicKeys, numKeys)
+
+	for i := 0; i < numKeys; i++ {
+		k, _ := crypto.GenerateKey()
+		keys[i] = NewWeightedPublicKey(1, (*PublicKeySerializable)(&k.PublicKey))
+	}
+
+	return NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
 }
