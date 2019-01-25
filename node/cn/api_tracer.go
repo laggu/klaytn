@@ -195,7 +195,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 
 				// Trace all the transactions contained within
 				for i, tx := range task.block.Transactions() {
-					msg, _ := tx.AsMessage(signer)
+					msg, _ := tx.AsMessageWithAccountKeyPicker(signer, task.statedb)
 					vmctx := blockchain.NewEVMContext(msg, task.block.Header(), api.cn.blockchain, nil)
 
 					res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
@@ -427,7 +427,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 
 			// Fetch and execute the next transaction trace tasks
 			for task := range jobs {
-				msg, _ := txs[task.index].AsMessage(signer)
+				msg, _ := txs[task.index].AsMessageWithAccountKeyPicker(signer, task.statedb)
 				vmctx := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
 				res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
@@ -446,7 +446,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		jobs <- &txTraceTask{statedb: statedb.Copy(), index: i}
 
 		// Generate the next state snapshot fast without tracing
-		msg, _ := tx.AsMessage(signer)
+		msg, _ := tx.AsMessageWithAccountKeyPicker(signer, statedb)
 		vmctx := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
 		vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{})
@@ -635,7 +635,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 
 	for idx, tx := range block.Transactions() {
 		// Assemble the transaction call message and return if the requested offset
-		msg, _ := tx.AsMessage(signer)
+		msg, _ := tx.AsMessageWithAccountKeyPicker(signer, statedb)
 		context := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 		if idx == txIndex {
 			return msg, context, statedb, nil
