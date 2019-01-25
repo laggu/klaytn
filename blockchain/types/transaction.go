@@ -186,6 +186,14 @@ func (tx *Transaction) Data() []byte {
 	return common.CopyBytes(tp.GetPayload())
 }
 
+// IsFeeDelegatedTransaction returns true if the transaction is a fee-delegated transaction.
+// A fee-delegated transaction has an address of the fee payer which can be different from `from` of the tx.
+func (tx *Transaction) IsFeeDelegatedTransaction() bool {
+	_, ok := tx.data.(TxInternalDataFeePayer)
+
+	return ok
+}
+
 // PeggedData returns the pegged data of the chain data pegging transaction.
 // if the tx is not chain data pegging transaction, it will return error.
 func (tx *Transaction) PeggedData() ([]byte, error) {
