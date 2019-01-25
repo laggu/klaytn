@@ -39,6 +39,7 @@ var (
 	ErrInvalidTxTypeForPeggedData     = errors.New("invalid transaction type for pegged data")
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
+	errNotFeePayer                    = errors.New("not implement fee payer interface")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -320,6 +321,32 @@ func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 	}
 
 	tx.SetSignature(sig)
+	return nil
+}
+
+// SignFeePayer signs the tx with the given signer and private key as a fee payer.
+func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
+	h := s.Hash(tx)
+	sig, err := NewTxSignatureWithValues(s, h, prv)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.SetFeePayerSignature(sig); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (tx *Transaction) SetFeePayerSignature(s *TxSignature) error {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return errNotFeePayer
+	}
+
+	tf.SetFeePayerSignature(s)
+
 	return nil
 }
 
