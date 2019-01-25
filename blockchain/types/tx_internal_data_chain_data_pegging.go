@@ -75,8 +75,9 @@ func (t *TxInternalDataChainDataPegging) String() string {
 }
 
 func (t *TxInternalDataChainDataPegging) SerializeForSign() []interface{} {
-	return append(t.TxInternalDataCommon.serializeForSign(),
-		t.Type(),
+	infs := []interface{}{t.Type()}
+	return append(infs,
+		t.TxInternalDataCommon.serializeForSign(),
 		t.PeggedData)
 }
 

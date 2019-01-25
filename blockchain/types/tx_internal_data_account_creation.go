@@ -155,9 +155,13 @@ func (t *TxInternalDataAccountCreation) IntrinsicGas() (uint64, error) {
 }
 
 func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
-	return append(t.TxInternalDataCommon.serializeForSign(),
-		t.Type(),
+	infs := []interface{}{t.Type()}
+	serializer := NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	return append(infs,
+		t.TxInternalDataCommon.serializeForSign(),
 		t.HumanReadable,
-		NewAccountKeySerializerWithAccountKey(t.Key),
+		keyEnc,
 	)
 }
