@@ -203,13 +203,6 @@ workflows:
             branches:
               only:
                 - master
-      - rpm-untagged:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - master
       - rpm-tagged:
           requires:
             - build
