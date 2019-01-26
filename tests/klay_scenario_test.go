@@ -502,7 +502,7 @@ func TestValidateSender(t *testing.T) {
 		}
 		txs = append(txs, signedTx)
 
-		actualFrom, err := types.ValidateSender(signer, signedTx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, signedTx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
