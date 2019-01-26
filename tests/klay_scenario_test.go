@@ -158,7 +158,7 @@ func TestTransactionScenario(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	gasPrice := new(big.Int).SetUint64(0)
+	gasPrice := new(big.Int).SetUint64(25)
 	gasLimit := uint64(2500000)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
@@ -426,7 +426,7 @@ func TestValidateSender(t *testing.T) {
 		err := tx.Sign(signer, anon.Key)
 		assert.Equal(t, nil, err)
 
-		actualFrom, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -446,7 +446,7 @@ func TestValidateSender(t *testing.T) {
 		err = tx.Sign(signer, anon.Key)
 		assert.Equal(t, nil, err)
 
-		actualFrom, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -466,7 +466,7 @@ func TestValidateSender(t *testing.T) {
 		err = tx.Sign(signer, decoupled.Key)
 		assert.Equal(t, nil, err)
 
-		actualFrom, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
 	}

@@ -72,18 +72,20 @@ type AccountKeyPicker interface {
 }
 
 // ValidateSender finds a sender from both legacy and new types of transactions.
-func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.Address, error) {
+// It returns the senders address and gas used for the tx validation.
+func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.Address, uint64, error) {
 	if tx.IsLegacyTransaction() {
-		return Sender(signer, tx)
+		addr, err := Sender(signer, tx)
+		return addr, 0, err
 	}
 
 	pubkey, err := SenderPubkey(signer, tx)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, 0, err
 	}
 	txfrom, ok := tx.data.(TxInternalDataFrom)
 	if !ok {
-		return common.Address{}, errNotTxInternalDataFrom
+		return common.Address{}, 0, errNotTxInternalDataFrom
 	}
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
@@ -91,16 +93,16 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 	// Special treatment for AccountKeyNil.
 	if accKey.Type() == AccountKeyTypeNil {
 		if crypto.PubkeyToAddress(*pubkey) != from {
-			return common.Address{}, ErrInvalidSig
+			return common.Address{}, 0, ErrInvalidSig
 		}
-		return from, nil
+		return from, 0, nil
 	}
 
 	if !accKey.Equal(NewAccountKeyPublicWithValue(pubkey)) {
-		return common.Address{}, ErrInvalidSig
+		return common.Address{}, 0, ErrInvalidSig
 	}
 
-	return from, nil
+	return from, accKey.SigValidationGas(), nil
 }
 
 // Sender returns the address of the transaction.

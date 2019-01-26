@@ -23,7 +23,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/crypto"
-	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
 
@@ -101,12 +100,12 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, signer types.Signer) error {
+func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker types.AccountKeyPicker) error {
 	for _, tx := range txs {
 		to := tx.To()
 		v := tx.Value()
 
-		from, err := types.Sender(signer, tx)
+		from, gasUsed, err := types.ValidateSender(signer, tx, picker)
 		if err != nil {
 			return err
 		}
@@ -121,7 +120,12 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer) error {
 
 		// TODO-Klaytn: This gas fee calculation is correct only if the transaction is a value transfer transaction.
 		// Calculate the correct transaction fee by checking the corresponding receipt.
-		fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(params.TxGas))
+		intrinsicGas, err := tx.IntrinsicGas()
+		if err != nil {
+			return err
+		}
+		intrinsicGas += gasUsed
+		fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(intrinsicGas))
 		a.SubBalance(from, fee)
 		a.AddBalance(a.coinbase, fee)
 

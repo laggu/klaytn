@@ -295,7 +295,9 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		msg.humanReadable = ta.HumanReadable
 	}
 
-	msg.from, err = ValidateSender(s, tx, picker)
+	var gasUsed uint64
+	msg.from, gasUsed, err = ValidateSender(s, tx, picker)
+	msg.intrinsicGas += gasUsed
 
 	// TODO-Klaytn-FeePayer: set feePayer appropriately after feePayer feature is implemented.
 	msg.feePayer = msg.from
