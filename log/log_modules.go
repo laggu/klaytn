@@ -91,6 +91,7 @@ const (
 	// 31~40
 	NodeCNTracers
 	_
+	ServiceChain
 	StorageDatabase
 	StorageStateDB
 	VM
@@ -143,6 +144,7 @@ var moduleNames = [ModuleNameLen]string{
 	// 31~40
 	"node/cn/tracers",
 	"",
+	"servicechain",
 	"storage/database",
 	"storage/statedb",
 	"vm",

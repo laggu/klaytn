@@ -807,7 +807,7 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 	// ServiceChain related messages
 	case msg.Code == ServiceChainTxsMsg:
-		logger.Debug("received ServiceChainTxsMsg")
+		scLogger.Debug("received ServiceChainTxsMsg")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
@@ -817,25 +817,25 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		}
 
 	case msg.Code == ServiceChainParentChainInfoRequestMsg:
-		logger.Debug("received ServiceChainParentChainInfoRequestMsg")
+		scLogger.Debug("received ServiceChainParentChainInfoRequestMsg")
 		if err := handleServiceChainParentChainInfoRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == ServiceChainParentChainInfoResponseMsg:
-		logger.Debug("received ServiceChainParentChainInfoResponseMsg")
+		scLogger.Debug("received ServiceChainParentChainInfoResponseMsg")
 		if err := handleServiceChainParentChainInfoResponseMsg(pm, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == ServiceChainReceiptResponseMsg:
-		logger.Debug("received ServiceChainReceiptResponseMsg")
+		scLogger.Debug("received ServiceChainReceiptResponseMsg")
 		if err := handleServiceChainReceiptResponseMsg(pm, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == ServiceChainReceiptRequestMsg:
-		logger.Debug("received ServiceChainReceiptRequestMsg")
+		scLogger.Debug("received ServiceChainReceiptRequestMsg")
 		if err := handleServiceChainReceiptRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
@@ -889,7 +889,7 @@ func handleServiceChainParentChainInfoRequestMsg(pm *ProtocolManager, p Peer, ms
 	} else {
 		pcInfo := parentChainInfo{stateDB.GetNonce(addr), pm.blockchain.Config().UnitPrice}
 		p.SendServiceChainInfoResponse(&pcInfo)
-		logger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
+		scLogger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
 	}
 	return nil
 }
@@ -899,18 +899,18 @@ func handleServiceChainParentChainInfoRequestMsg(pm *ProtocolManager, p Peer, ms
 func handleServiceChainParentChainInfoResponseMsg(pm *ProtocolManager, msg p2p.Msg) error {
 	var pcInfo parentChainInfo
 	if err := msg.Decode(&pcInfo); err != nil {
-		logger.Error("failed to decode", "err", err)
+		scLogger.Error("failed to decode", "err", err)
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	if pm.scpm.getRemoteNonce() > pcInfo.Nonce {
 		// If received nonce is bigger than the current one, just leave a log and do nothing.
-		logger.Warn("local nonce is bigger than the parent chain nonce.", "localNonce", pm.scpm.getRemoteNonce(), "remoteNonce", pcInfo.Nonce)
+		scLogger.Warn("local nonce is bigger than the parent chain nonce.", "localNonce", pm.scpm.getRemoteNonce(), "remoteNonce", pcInfo.Nonce)
 		return nil
 	}
 	pm.scpm.setRemoteNonce(pcInfo.Nonce)
 	pm.scpm.setNonceSynced(true)
 	pm.scpm.setRemoteGasPrice(pcInfo.GasPrice)
-	logger.Debug("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
+	scLogger.Debug("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
 	return nil
 }
 

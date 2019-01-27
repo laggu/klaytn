@@ -22,10 +22,13 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 )
+
+var scLogger = log.NewModuleLogger(log.ServiceChain)
 
 type ServiceChainProtocolManager interface {
 	// TODO-Klaytn-ServiceChain Please note that ServiceChainProtocolManager is made to separate its implementation
@@ -136,10 +139,10 @@ func (scpm *serviceChainPM) removeParentPeer(id string) {
 	if peer == nil {
 		return
 	}
-	logger.Debug("Removing parent chain peer", "peer", id)
+	scLogger.Debug("Removing parent chain peer", "peer", id)
 	// Unregister the peer from the downloader and parent chain peer set
 	if err := scpm.getParentChainPeers().Unregister(id); err != nil {
-		logger.Error("Parent chain peer removal failed", "peer", id, "err", err)
+		scLogger.Error("Parent chain peer removal failed", "peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer
 	peer.GetP2PPeer().Disconnect(p2p.DiscUselessPeer)
@@ -152,10 +155,10 @@ func (scpm *serviceChainPM) removeChildPeer(id string) {
 	if peer == nil {
 		return
 	}
-	logger.Debug("Removing child chain peer", "peer", id)
+	scLogger.Debug("Removing child chain peer", "peer", id)
 	// Unregister the peer from the downloader and child chain peer set
 	if err := scpm.getChildChainPeers().Unregister(id); err != nil {
-		logger.Error("Child chain peer removal failed", "peer", id, "err", err)
+		scLogger.Error("Child chain peer removal failed", "peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer
 	peer.GetP2PPeer().Disconnect(p2p.DiscUselessPeer)
@@ -214,11 +217,11 @@ func (scpm *serviceChainPM) GetSentChainTxsLimit() uint64 {
 // addToSentServiceChainTxs adds a transaction to SentServiceChainTxs.
 func (scpm *serviceChainPM) addToSentServiceChainTxs(tx *types.Transaction) {
 	if uint64(len(scpm.sentServiceChainTxs)) > scpm.sentServiceChainTxsLimit {
-		logger.Warn("Number of txs in sentServiceChainTxs already exceeds the limit", "sentServiceChainTxsLimit", scpm.sentServiceChainTxsLimit)
+		scLogger.Warn("Number of txs in sentServiceChainTxs already exceeds the limit", "sentServiceChainTxsLimit", scpm.sentServiceChainTxsLimit)
 		return
 	}
 	if _, ok := scpm.sentServiceChainTxs[tx.Hash()]; ok {
-		logger.Error("ServiceChainTx already exists in sentServiceChainTxs", "txHash", tx.Hash())
+		scLogger.Error("ServiceChainTx already exists in sentServiceChainTxs", "txHash", tx.Hash())
 		return
 	}
 	scpm.sentServiceChainTxs[tx.Hash()] = tx
@@ -228,7 +231,7 @@ func (scpm *serviceChainPM) addToSentServiceChainTxs(tx *types.Transaction) {
 // transaction hash.
 func (scpm *serviceChainPM) removeServiceChainTx(txHash common.Hash) {
 	if _, ok := scpm.sentServiceChainTxs[txHash]; !ok {
-		logger.Error("ServiceChainTx does not exists in sentServiceChainTxs", "txHash", txHash)
+		scLogger.Error("ServiceChainTx does not exists in sentServiceChainTxs", "txHash", txHash)
 		return
 	}
 	delete(scpm.sentServiceChainTxs, txHash)
@@ -261,20 +264,20 @@ func (scpm *serviceChainPM) writeServiceChainTxReceipts(bc *blockchain.BlockChai
 			ccTxData := new(types.ChildChainTxData)
 			data, err := tx.PeggedData()
 			if err != nil {
-				logger.Error("failed to get pegging tx type from the tx", "txHash", txHash.String())
+				scLogger.Error("failed to get pegging tx type from the tx", "txHash", txHash.String())
 				return
 			}
 			if err := rlp.DecodeBytes(data, ccTxData); err != nil {
-				logger.Error("failed to RLP decode ChildChainTxData", "txHash", txHash.String())
+				scLogger.Error("failed to RLP decode ChildChainTxData", "txHash", txHash.String())
 				return
 			}
 			bc.WriteReceiptFromParentChain(ccTxData.BlockHash, (*types.Receipt)(receipt))
 			scpm.removeServiceChainTx(txHash)
 		} else {
-			logger.Error("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
+			scLogger.Error("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
 
-		logger.Info("received service chain transaction receipt", "txHash", txHash.String())
+		scLogger.Info("received service chain transaction receipt", "txHash", txHash.String())
 	}
 
 }
@@ -299,7 +302,7 @@ func (scpm *serviceChainPM) BroadcastServiceChainTxAndReceiptRequest(block *type
 	}
 	tx, err := scpm.genUnsignedServiceChainTx(block)
 	if err != nil {
-		logger.Error("Failed to generate service chain transaction", "blockNum", block.NumberU64(), "err", err)
+		scLogger.Error("Failed to generate service chain transaction", "blockNum", block.NumberU64(), "err", err)
 		return
 	}
 	scpm.BroadcastServiceChainTx(tx)
@@ -344,7 +347,7 @@ func (scpm *serviceChainPM) BroadcastServiceChainTx(unsignedTx *types.Transactio
 			// TODO-Klaytn-ServiceChain Change types.NewEIP155Signer to types.MakeSigner using parent chain's chain config and block number
 			signedTx, err := types.SignTx(unsignedTx, types.NewEIP155Signer(parentChainID), scpm.getChainKey())
 			if err != nil {
-				logger.Error("failed signing tx", "err", err)
+				scLogger.Error("failed signing tx", "err", err)
 				return
 			}
 			scpm.addToSentServiceChainTxs(signedTx)
@@ -352,11 +355,11 @@ func (scpm *serviceChainPM) BroadcastServiceChainTx(unsignedTx *types.Transactio
 			scpm.remoteNonce++
 		}
 		if peer.GetChainID() != parentChainID {
-			logger.Debug("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
+			scLogger.Debug("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
 			continue
 		}
 		peer.SendServiceChainTxs(txs)
-		logger.Debug("sent ServiceChainTxData", "peerID", peer.GetID())
+		scLogger.Debug("sent ServiceChainTxData", "peerID", peer.GetID())
 	}
 }
 
@@ -365,7 +368,7 @@ func (scpm *serviceChainPM) broadcastServiceChainReceiptRequest() {
 	hashes := scpm.getSentServiceChainTxsHashes()
 	for _, peer := range scpm.getParentChainPeers().peers {
 		peer.SendServiceChainReceiptRequest(hashes)
-		logger.Debug("sent ServiceChainReceiptRequest", "peerID", peer.GetID(), "numReceiptsRequested", len(hashes))
+		scLogger.Debug("sent ServiceChainReceiptRequest", "peerID", peer.GetID(), "numReceiptsRequested", len(hashes))
 	}
 }
 
