@@ -25,6 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -159,10 +161,26 @@ type Config struct {
 
 // NewServer returns a new Server interface.
 func NewServer(config Config) Server {
-	return &SingleChannelServer{
-		BaseServer{
-			Config:            config,
-			peerOnParentChain: make(map[*discover.Node]bool)},
+	bServer := &BaseServer{
+		Config:            config,
+		peerOnParentChain: make(map[*discover.Node]bool),
+	}
+
+	if config.EnableMultiChannelServer {
+		listeners := make([]net.Listener, 0, len(config.SubListenAddr)+1)
+		listenAddrs := make([]string, 0, len(config.SubListenAddr)+1)
+		listenAddrs = append(listenAddrs, config.ListenAddr)
+		listenAddrs = append(listenAddrs, config.SubListenAddr...)
+		return &MultiChannelServer{
+			BaseServer:     bServer,
+			listeners:      listeners,
+			ListenAddrs:    listenAddrs,
+			CandidateConns: make(map[discover.NodeID][]*conn),
+		}
+	} else {
+		return &SingleChannelServer{
+			BaseServer: bServer,
+		}
 	}
 }
 
@@ -247,9 +265,551 @@ type Server interface {
 	NodeDialer
 }
 
+// MultiChannelServer is a server that uses a multi channel.
+type MultiChannelServer struct {
+	*BaseServer
+	listeners      []net.Listener
+	ListenAddrs    []string
+	CandidateConns map[discover.NodeID][]*conn
+}
+
+// Start starts running the MultiChannelServer.
+// MultiChannelServer can not be re-used after stopping.
+func (srv *MultiChannelServer) Start() (err error) {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	if srv.running {
+		return errors.New("server already running")
+	}
+	srv.running = true
+	srv.logger = srv.Config.Logger
+	if srv.logger == nil {
+		srv.logger = logger.NewWith()
+	}
+	srv.logger.Info("Starting P2P networking")
+
+	// static fields
+	if srv.PrivateKey == nil {
+		return fmt.Errorf("Server.PrivateKey must be set to a non-nil key")
+	}
+
+	if !srv.ConnectionType.Valid() {
+		return fmt.Errorf("Invalid connection type speficied")
+	}
+
+	if srv.newTransport == nil {
+		srv.newTransport = newRLPX
+	}
+	if srv.Dialer == nil {
+		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
+	}
+	srv.quit = make(chan struct{})
+	srv.addpeer = make(chan *conn)
+	srv.delpeer = make(chan peerDrop)
+	srv.posthandshake = make(chan *conn)
+	srv.addstatic = make(chan *discover.Node)
+	srv.removestatic = make(chan *discover.Node)
+	srv.peerOp = make(chan peerOpFunc)
+	srv.peerOpDone = make(chan struct{})
+	srv.discpeer = make(chan discover.NodeID)
+
+	var (
+		conn      *net.UDPConn
+		realaddr  *net.UDPAddr
+		unhandled chan discover.ReadPacket
+	)
+
+	if !srv.NoDiscovery {
+		addr, err := net.ResolveUDPAddr("udp", srv.ListenAddrs[ConnDefault])
+		if err != nil {
+			return err
+		}
+		conn, err = net.ListenUDP("udp", addr)
+		if err != nil {
+			return err
+		}
+		realaddr = conn.LocalAddr().(*net.UDPAddr)
+		if srv.NAT != nil {
+			if !realaddr.IP.IsLoopback() {
+				go nat.Map(srv.NAT, srv.quit, "udp", realaddr.Port, realaddr.Port, "klaytn discovery")
+			}
+			// TODO: react to external IP changes over time.
+			if ext, err := srv.NAT.ExternalIP(); err == nil {
+				realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
+			}
+		}
+	}
+
+	// node table
+	if !srv.NoDiscovery {
+		cfg := discover.Config{
+			PrivateKey:   srv.PrivateKey,
+			AnnounceAddr: realaddr,
+			NodeDBPath:   srv.NodeDatabase,
+			NetRestrict:  srv.NetRestrict,
+			Bootnodes:    srv.BootstrapNodes,
+			Unhandled:    unhandled,
+		}
+		ntab, err := discover.ListenUDP(conn, cfg)
+		if err != nil {
+			return err
+		}
+		srv.ntab = ntab
+	}
+
+	dynPeers := srv.maxDialedConns()
+	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey)
+
+	// handshake
+	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: true}
+	for _, p := range srv.Protocols {
+		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
+	}
+	for _, l := range srv.ListenAddrs {
+		s := strings.Split(l, ":")
+		if len(s) == 2 {
+			if port, err := strconv.Atoi(s[1]); err == nil {
+				srv.ourHandshake.ListenPort = append(srv.ourHandshake.ListenPort, uint64(port))
+			}
+		}
+	}
+	// listen/dial
+	if srv.ListenAddrs != nil && len(srv.ListenAddrs) != 0 && srv.ListenAddrs[ConnDefault] != "" {
+		if err := srv.startListening(); err != nil {
+			return err
+		}
+
+		if srv.NoDial {
+			srv.logger.Error("P2P server will be useless, neither dialing nor listening")
+		}
+	}
+
+	srv.loopWG.Add(1)
+	go srv.run(dialer)
+	srv.running = true
+	return nil
+}
+
+// startListening starts listening on the specified port on the server.
+func (srv *MultiChannelServer) startListening() error {
+	// Launch the TCP listener.
+	for i, listenAddr := range srv.ListenAddrs {
+		listener, err := net.Listen("tcp", listenAddr)
+		if err != nil {
+			return err
+		}
+		laddr := listener.Addr().(*net.TCPAddr)
+		srv.ListenAddrs[i] = laddr.String()
+		srv.listeners = append(srv.listeners, listener)
+		srv.loopWG.Add(1)
+		go srv.listenLoop(listener)
+		// Map the TCP listening port if NAT is configured.
+		if !laddr.IP.IsLoopback() && srv.NAT != nil {
+			srv.loopWG.Add(1)
+			go func() {
+				nat.Map(srv.NAT, srv.quit, "tcp", laddr.Port, laddr.Port, "klaytn p2p")
+				srv.loopWG.Done()
+			}()
+		}
+	}
+	return nil
+}
+
+// listenLoop waits for an external connection and connects it.
+func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
+	defer srv.loopWG.Done()
+	srv.logger.Info("RLPx listener up", "self", srv.makeSelf(listener, srv.ntab))
+
+	tokens := defaultMaxPendingPeers
+	if srv.MaxPendingPeers > 0 {
+		tokens = srv.MaxPendingPeers
+	}
+	slots := make(chan struct{}, tokens)
+	for i := 0; i < tokens; i++ {
+		slots <- struct{}{}
+	}
+
+	for {
+		// Wait for a handshake slot before accepting.
+		<-slots
+
+		var (
+			fd  net.Conn
+			err error
+		)
+		for {
+			fd, err = listener.Accept()
+			if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
+				srv.logger.Debug("Temporary read error", "err", err)
+				continue
+			} else if err != nil {
+				srv.logger.Debug("Read error", "err", err)
+				return
+			}
+			break
+		}
+
+		// Reject connections that do not match NetRestrict.
+		if srv.NetRestrict != nil {
+			if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok && !srv.NetRestrict.Contains(tcp.IP) {
+				srv.logger.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
+				fd.Close()
+				slots <- struct{}{}
+				continue
+			}
+		}
+
+		fd = newMeteredConn(fd, true)
+		srv.logger.Trace("Accepted connection", "addr", fd.RemoteAddr())
+		go func() {
+			srv.SetupConn(fd, inboundConn, nil)
+			slots <- struct{}{}
+		}()
+	}
+}
+
+// SetupConn runs the handshakes and attempts to add the connection
+// as a peer. It returns when the connection has been added as a peer
+// or the handshakes have failed.
+func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
+	self := srv.Self()
+	if self == nil {
+		return errors.New("shutdown")
+	}
+
+	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
+	if dialDest != nil {
+		// Outbound connection, check if dialDest is on the parent chain.
+		c.onParentChain = srv.checkIfNodeIsOnParentChain(dialDest)
+		c.portOrder = PortOrder(dialDest.PortOrder)
+	} else {
+		for i, addr := range srv.ListenAddrs {
+			s1 := strings.Split(addr, ":")                    // string format example, [::]:30303
+			s2 := strings.Split(fd.LocalAddr().String(), ":") // string format example, 123.123.123.123:30303
+			if len(s1) != 4 || len(s2) != 2 {
+				srv.logger.Error("Address format is incorrect", "srv.ListenAddr", addr, "fd.LocalAddr().String()", fd.LocalAddr().String())
+				return errors.New("incorrect Address")
+			}
+			if s1[3] == s2[1] {
+				c.portOrder = PortOrder(i)
+			}
+		}
+	}
+
+	err := srv.setupConn(c, flags, dialDest)
+	if err != nil {
+		c.close(err)
+		srv.logger.Trace("Setting up connection failed", "id", c.id, "err", err)
+	}
+	return err
+}
+
+// setupConn runs the handshakes and attempts to add the connection
+// as a peer. It returns when the connection has been added as a peer
+// or the handshakes have failed.
+func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *discover.Node) error {
+	// Prevent leftover pending conns from entering the handshake.
+	srv.lock.Lock()
+	running := srv.running
+	srv.lock.Unlock()
+	if !running {
+		return errServerStopped
+	}
+
+	var err error
+	// Run the connection type handshake
+	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
+		srv.logger.Error("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
+			"conntype", c.conntype, "err", err)
+		return err
+	}
+	srv.logger.Trace("Connection Type Trace", "addr", c.fd.RemoteAddr(), "conn", c.flags, "ConnType", c.conntype.String())
+
+	// Run the encryption handshake.
+	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
+		srv.logger.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
+		return err
+	}
+
+	clog := srv.logger.NewWith("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
+	// For dialed connections, check that the remote public key matches.
+	if dialDest != nil && c.id != dialDest.ID {
+		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
+		return DiscUnexpectedIdentity
+	}
+	err = srv.checkpoint(c, srv.posthandshake)
+	if err != nil {
+		clog.Trace("Rejected peer before protocol handshake", "err", err)
+		return err
+	}
+	// Run the protocol handshake
+	phs, err := c.doProtoHandshake(srv.ourHandshake)
+	if err != nil {
+		clog.Trace("Failed protobuf handshake", "err", err)
+		return err
+	}
+	if phs.ID != c.id {
+		clog.Trace("Wrong devp2p handshake identity", "err", phs.ID)
+		return DiscUnexpectedIdentity
+	}
+	c.caps, c.name, c.multiChannel = phs.Caps, phs.Name, phs.Multichannel
+
+	if c.multiChannel && dialDest != nil && (dialDest.TCPs == nil || len(dialDest.TCPs) == 0) && len(phs.ListenPort) == 2 {
+		dialDest.TCPs = make([]uint16, 0, len(phs.ListenPort))
+		for _, listenPort := range phs.ListenPort {
+			dialDest.TCPs = append(dialDest.TCPs, uint16(listenPort))
+		}
+		srv.AddPeer(dialDest, false)
+		logger.Error("Update dialDest for multichannel", "TCPs", dialDest.TCPs) // TODO-GXP logger.Error is for debuging, It have to be changed logger.Trace
+		return nil
+	}
+
+	err = srv.checkpoint(c, srv.addpeer)
+	if err != nil {
+		clog.Trace("Rejected peer", "err", err)
+		return err
+	}
+	// If the checks completed successfully, runPeer has now been
+	// launched by run.
+	clog.Trace("connection set up", "inbound", dialDest == nil)
+	return nil
+}
+
+// run is the main loop that the server runs.
+func (srv *MultiChannelServer) run(dialstate dialer) {
+	defer srv.loopWG.Done()
+	var (
+		peers        = make(map[discover.NodeID]*Peer)
+		inboundCount = 0
+		trusted      = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
+		taskdone     = make(chan task, maxActiveDialTasks)
+		runningTasks []task
+		queuedTasks  []task // tasks that can't run yet
+	)
+	// Put trusted nodes into a map to speed up checks.
+	// Trusted peers are loaded on startup and cannot be
+	// modified while the server is running.
+	for _, n := range srv.TrustedNodes {
+		trusted[n.ID] = true
+	}
+
+	// removes t from runningTasks
+	delTask := func(t task) {
+		for i := range runningTasks {
+			if runningTasks[i] == t {
+				runningTasks = append(runningTasks[:i], runningTasks[i+1:]...)
+				break
+			}
+		}
+	}
+	// starts until max number of active tasks is satisfied
+	startTasks := func(ts []task) (rest []task) {
+		i := 0
+		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
+			t := ts[i]
+			srv.logger.Trace("New dial task", "task", t)
+			go func() { t.Do(srv); taskdone <- t }()
+			runningTasks = append(runningTasks, t)
+		}
+		return ts[i:]
+	}
+	scheduleTasks := func() {
+		// Start from queue first.
+		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
+		// Query dialer for new tasks and start as many as possible now.
+		if len(runningTasks) < maxActiveDialTasks {
+			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
+			queuedTasks = append(queuedTasks, startTasks(nt)...)
+		}
+	}
+
+running:
+	for {
+		scheduleTasks()
+
+		select {
+		case <-srv.quit:
+			// The server was stopped. Run the cleanup logic.
+			break running
+		case n := <-srv.addstatic:
+			// This channel is used by AddPeer to add to the
+			// ephemeral static peer list. Add it to the dialer,
+			// it will keep the node connected.
+			srv.logger.Debug("Adding static node", "node", n)
+			dialstate.addStatic(n)
+		case n := <-srv.removestatic:
+			// This channel is used by RemovePeer to send a
+			// disconnect request to a peer and begin the
+			// stop keeping the node connected
+			srv.logger.Debug("Removing static node", "node", n)
+			dialstate.removeStatic(n)
+			if p, ok := peers[n.ID]; ok {
+				p.Disconnect(DiscRequested)
+			}
+		case op := <-srv.peerOp:
+			// This channel is used by Peers and PeerCount.
+			op(peers)
+			srv.peerOpDone <- struct{}{}
+		case t := <-taskdone:
+			// A task got done. Tell dialstate about it so it
+			// can update its state and remove it from the active
+			// tasks list.
+			srv.logger.Trace("Dial task done", "task", t)
+			dialstate.taskDone(t, time.Now())
+			delTask(t)
+		case c := <-srv.posthandshake:
+			// A connection has passed the encryption handshake so
+			// the remote identity is known (but hasn't been verified yet).
+			if trusted[c.id] {
+				// Ensure that the trusted flag is set before checking against MaxPeers.
+				c.flags |= trustedConn
+			}
+			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
+			select {
+			case c.cont <- srv.encHandshakeChecks(peers, inboundCount, c):
+			case <-srv.quit:
+				break running
+			}
+		case c := <-srv.addpeer:
+			var p *Peer
+			var e error
+			// At this point the connection is past the protocol handshake.
+			// Its capabilities are known and the remote identity is verified.
+			err := srv.protoHandshakeChecks(peers, inboundCount, c)
+			if err == nil {
+				if c.multiChannel {
+					connSet := srv.CandidateConns[c.id]
+					if connSet == nil {
+						connSet = make([]*conn, len(srv.ListenAddrs))
+						srv.CandidateConns[c.id] = connSet
+					}
+
+					if int(c.portOrder) < len(connSet) {
+						connSet[c.portOrder] = c
+					}
+
+					count := len(connSet)
+					for _, conn := range connSet {
+						if conn != nil {
+							count--
+						}
+					}
+
+					if count == 0 {
+						p, e = newPeer(connSet, srv.Protocols)
+						srv.CandidateConns[c.id] = nil
+					}
+				} else {
+					// The handshakes are done and it passed all checks.
+					p, e = newPeer([]*conn{c}, srv.Protocols)
+				}
+
+				if e != nil {
+					srv.logger.Error("Fail make a new peer", "err", e)
+				} else if p != nil {
+					// If message events are enabled, pass the peerFeed
+					// to the peer
+					if srv.EnableMsgEvents {
+						p.events = &srv.peerFeed
+					}
+					name := truncateName(c.name)
+					srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
+					go srv.runPeer(p)
+					peers[c.id] = p
+
+					if p.Inbound() {
+						inboundCount++
+					}
+
+					peerCountGauge.Update(int64(len(peers)))
+					peerInCountGauge.Update(int64(inboundCount))
+					peerOutCountGauge.Update(int64(len(peers) - inboundCount))
+				}
+			}
+			// The dialer logic relies on the assumption that
+			// dial tasks complete after the peer has been added or
+			// discarded. Unblock the task last.
+			select {
+			case c.cont <- err:
+			case <-srv.quit:
+				break running
+			}
+		case pd := <-srv.delpeer:
+			// A peer disconnected.
+			d := common.PrettyDuration(mclock.Now() - pd.created)
+			pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
+			delete(peers, pd.ID())
+
+			if pd.Inbound() {
+				inboundCount--
+			}
+
+			peerCountGauge.Update(int64(len(peers)))
+			peerInCountGauge.Update(int64(inboundCount))
+			peerOutCountGauge.Update(int64(len(peers) - inboundCount))
+		case nid := <-srv.discpeer:
+			if p, ok := peers[nid]; ok {
+				p.Disconnect(DiscRequested)
+				p.logger.Debug(fmt.Sprintf("disconnect peer"))
+			}
+		}
+	}
+
+	srv.logger.Trace("P2P networking is spinning down")
+
+	// Terminate discovery. If there is a running lookup it will terminate soon.
+	if srv.ntab != nil {
+		srv.ntab.Close()
+	}
+	//if srv.DiscV5 != nil {
+	//	srv.DiscV5.Close()
+	//}
+	// Disconnect all peers.
+	for _, p := range peers {
+		p.Disconnect(DiscQuitting)
+	}
+	// Wait for peers to shut down. Pending connections and tasks are
+	// not handled here and will terminate soon-ish because srv.quit
+	// is closed.
+	for len(peers) > 0 {
+		p := <-srv.delpeer
+		p.logger.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
+		delete(peers, p.ID())
+	}
+}
+
+// runPeer runs in its own goroutine for each peer.
+// it waits until the Peer logic returns and removes
+// the peer.
+func (srv *MultiChannelServer) runPeer(p *Peer) {
+	if srv.newPeerHook != nil {
+		srv.newPeerHook(p)
+	}
+
+	// broadcast peer add
+	srv.peerFeed.Send(&PeerEvent{
+		Type: PeerEventTypeAdd,
+		Peer: p.ID(),
+	})
+
+	// run the protocol
+	remoteRequested, err := p.runWithRWs()
+
+	// broadcast peer drop
+	srv.peerFeed.Send(&PeerEvent{
+		Type:  PeerEventTypeDrop,
+		Peer:  p.ID(),
+		Error: err.Error(),
+	})
+
+	// Note: run waits for existing peers to be sent on srv.delpeer
+	// before returning, so this send should not select on srv.quit.
+	srv.delpeer <- peerDrop{p, err, remoteRequested}
+}
+
 // SingleChannelServer is a server that uses a single channel.
 type SingleChannelServer struct {
-	BaseServer
+	*BaseServer
 }
 
 // AddLastLookup adds lastLookup to duration.
@@ -265,6 +825,11 @@ func (srv *BaseServer) SetLastLookupToNow() {
 // Dial creates a TCP connection to the node.
 func (srv *BaseServer) Dial(dest *discover.Node) (net.Conn, error) {
 	return srv.Dialer.Dial(dest)
+}
+
+// Dial creates a TCP connection to the node.
+func (srv *BaseServer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
+	return srv.Dialer.DialMulti(dest)
 }
 
 // BaseServer is a common data structure used by implementation of Server.
@@ -327,6 +892,12 @@ const (
 	ConnTypeUndefined ConnType = -1
 )
 
+type PortOrder int
+
+const (
+	PortOrderUndefined PortOrder = -1
+)
+
 // conn wraps a network connection with information gathered
 // during the two handshakes.
 type conn struct {
@@ -339,6 +910,8 @@ type conn struct {
 	caps          []Cap           // valid after the protocol handshake
 	name          string          // valid after the protocol handshake
 	onParentChain bool            // The run loop uses this to check parent/child chain node.
+	portOrder     PortOrder       // portOrder is the order of the ports that should be connected in multi-channel.
+	multiChannel  bool            // multiChannel is whether the peer is using multi-channel.
 }
 
 type transport interface {
@@ -682,7 +1255,7 @@ func (srv *BaseServer) Start() (err error) {
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey)
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
+	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: false}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -828,31 +1401,31 @@ running:
 		case c := <-srv.addpeer:
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
-			err := srv.protoHandshakeChecks(peers, inboundCount, c)
+			var err error
+			err = srv.protoHandshakeChecks(peers, inboundCount, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
-				p, e := newPeer([]*conn{c}, srv.Protocols)
-				if e != nil {
-					srv.logger.Error("Fail make a new peer", "err", e)
-					continue running
-				}
-				// If message events are enabled, pass the peerFeed
-				// to the peer
-				if srv.EnableMsgEvents {
-					p.events = &srv.peerFeed
-				}
-				name := truncateName(c.name)
-				srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
-				go srv.runPeer(p)
-				peers[c.id] = p
+				p, err := newPeer([]*conn{c}, srv.Protocols)
+				if err != nil {
+					srv.logger.Error("Fail make a new peer", "err", err)
+				} else {
+					// If message events are enabled, pass the peerFeed
+					// to the peer
+					if srv.EnableMsgEvents {
+						p.events = &srv.peerFeed
+					}
+					name := truncateName(c.name)
+					srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
+					go srv.runPeer(p)
+					peers[c.id] = p
 
-				if p.Inbound() {
-					inboundCount++
+					if p.Inbound() {
+						inboundCount++
+					}
+					peerCountGauge.Update(int64(len(peers)))
+					peerInCountGauge.Update(int64(inboundCount))
+					peerOutCountGauge.Update(int64(len(peers) - inboundCount))
 				}
-
-				peerCountGauge.Update(int64(len(peers)))
-				peerInCountGauge.Update(int64(inboundCount))
-				peerOutCountGauge.Update(int64(len(peers) - inboundCount))
 			}
 			// The dialer logic relies on the assumption that
 			// dial tasks complete after the peer has been added or
@@ -1013,7 +1586,7 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 		return errors.New("shutdown")
 	}
 
-	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error)}
+	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
 	if dialDest != nil {
 		// Outbound connection, check if dialDest is on the parent chain.
 		c.onParentChain = srv.checkIfNodeIsOnParentChain(dialDest)
@@ -1072,7 +1645,8 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 		clog.Trace("Wrong devp2p handshake identity", "err", phs.ID)
 		return DiscUnexpectedIdentity
 	}
-	c.caps, c.name = phs.Caps, phs.Name
+	c.caps, c.name, c.multiChannel = phs.Caps, phs.Name, phs.Multichannel
+
 	err = srv.checkpoint(c, srv.addpeer)
 	if err != nil {
 		clog.Trace("Rejected peer", "err", err)

@@ -55,18 +55,36 @@ const (
 // an underlying net.Dialer but also using net.Pipe in tests.
 type NodeDialer interface {
 	Dial(*discover.Node) (net.Conn, error)
+	DialMulti(*discover.Node) ([]net.Conn, error)
 }
 
 // TCPDialer implements the NodeDialer interface by using a net.Dialer to
-// create TCP connections to nodes in the network
+// create TCP connections to nodes in the network.
 type TCPDialer struct {
 	*net.Dialer
 }
 
-// Dial creates a TCP connection to the node
+// Dial creates a TCP connection to the node.
 func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
 	return t.Dialer.Dial("tcp", addr.String())
+}
+
+// DialMulti creates TCP connections to the node.
+func (t TCPDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
+	var conns []net.Conn
+	if dest.TCPs != nil || len(dest.TCPs) != 0 {
+		conns = make([]net.Conn, 0, len(dest.TCPs))
+		for _, tcp := range dest.TCPs {
+			addr := &net.TCPAddr{IP: dest.IP, Port: int(tcp)}
+			conn, err := t.Dialer.Dial("tcp", addr.String())
+			conns = append(conns, conn)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return conns, nil
 }
 
 // dialstate schedules dials and discovery lookups.
@@ -314,13 +332,23 @@ func (t *dialTask) Do(srv Server) {
 			return
 		}
 	}
-	err := t.dial(srv, t.dest)
+	var err error
+	if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
+		err = t.dialMulti(srv, t.dest)
+	} else {
+		err = t.dial(srv, t.dest)
+	}
+
 	if err != nil {
 		logger.Trace("Dial error", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
 		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
 			if t.resolve(srv) {
-				t.dial(srv, t.dest)
+				if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
+					t.dialMulti(srv, t.dest)
+				} else {
+					t.dial(srv, t.dest)
+				}
 			}
 		}
 	}
@@ -376,6 +404,38 @@ func (t *dialTask) dial(srv Server, dest *discover.Node) error {
 	}
 	mfd := newMeteredConn(fd, false)
 	return srv.SetupConn(mfd, t.flags, dest)
+}
+
+// dialMulti performs the actual connection attempt.
+func (t *dialTask) dialMulti(srv Server, dest *discover.Node) error {
+	dialTryCounter.Inc(1)
+	addresses := make([]*net.TCPAddr, 0, len(dest.TCPs))
+	for _, tcp := range dest.TCPs {
+		addresses = append(addresses, &net.TCPAddr{IP: dest.IP, Port: int(tcp)})
+	}
+	logger.Trace("[Dial] Dialing node", "id", dest.ID, "addresses", addresses)
+
+	fds, err := srv.DialMulti(dest)
+	if err != nil {
+		dialFailCounter.Inc(1)
+		return &dialError{err}
+	}
+
+	var errorBackup error
+	for portOrder, fd := range fds {
+		mfd := newMeteredConn(fd, false)
+		dest.PortOrder = uint16(portOrder)
+		err := srv.SetupConn(mfd, t.flags, dest)
+		if err != nil {
+			errorBackup = err
+		}
+	}
+	if errorBackup != nil {
+		for _, fd := range fds {
+			fd.Close()
+		}
+	}
+	return errorBackup
 }
 
 func (t *dialTask) String() string {

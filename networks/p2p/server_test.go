@@ -80,7 +80,7 @@ func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer)) Server {
 		PrivateKey: newkey(),
 	}
 	server := &SingleChannelServer{
-		BaseServer{
+		&BaseServer{
 			Config:      config,
 			newPeerHook: pf,
 			newTransport: func(fd net.Conn) transport {
@@ -225,7 +225,7 @@ func TestServerTaskScheduling(t *testing.T) {
 	// The Server in this test isn't actually running
 	// because we're only interested in what run does.
 	srv := &SingleChannelServer{
-		BaseServer{
+		&BaseServer{
 			Config:  Config{MaxPeers: 10},
 			quit:    make(chan struct{}),
 			ntab:    fakeTable{},
@@ -273,7 +273,7 @@ func TestServerManyTasks(t *testing.T) {
 
 	var (
 		srv = &SingleChannelServer{
-			BaseServer{
+			&BaseServer{
 				quit:    make(chan struct{}),
 				ntab:    fakeTable{},
 				running: true,
@@ -351,7 +351,7 @@ func (t *testTask) Do(srv Server) {
 func TestServerAtCap(t *testing.T) {
 	trustedID := randomID()
 	srv := &SingleChannelServer{
-		BaseServer: BaseServer{
+		BaseServer: &BaseServer{
 			Config: Config{
 				PrivateKey:   newkey(),
 				MaxPeers:     10,
@@ -456,7 +456,7 @@ func TestServerSetupConn(t *testing.T) {
 
 	for i, test := range tests {
 		srv := &SingleChannelServer{
-			BaseServer{
+			&BaseServer{
 				Config: Config{
 					PrivateKey:     srvkey,
 					MaxPeers:       10,

@@ -57,15 +57,19 @@ const (
 	pongMsg      = 0x03
 )
 
-const ConnDefault = 0
+const (
+	ConnDefault = iota
+	ConnBlockMsg
+)
 
 // protoHandshake is the RLP structure of the protocol handshake.
 type protoHandshake struct {
-	Version    uint64
-	Name       string
-	Caps       []Cap
-	ListenPort uint64
-	ID         discover.NodeID
+	Version      uint64
+	Name         string
+	Caps         []Cap
+	ListenPort   []uint64
+	ID           discover.NodeID
+	Multichannel bool
 
 	// Ignore additional fields (for forward compatibility).
 	Rest []rlp.RawValue `rlp:"tail"`
@@ -184,23 +188,23 @@ func (p *Peer) Inbound() bool {
 }
 
 // newPeer should be called to create a peer.
-func newPeer(conn []*conn, protocols []Protocol) (*Peer, error) {
-	if conn == nil || len(conn) < 1 || conn[ConnDefault] == nil {
+func newPeer(conns []*conn, protocols []Protocol) (*Peer, error) {
+	if conns == nil || len(conns) < 1 || conns[ConnDefault] == nil {
 		return nil, errors.New("conn is invalid")
 	}
-	msgReadWriters := make([]MsgReadWriter, len(conn))
-	for i, c := range conn {
+	msgReadWriters := make([]MsgReadWriter, len(conns))
+	for i, c := range conns {
 		msgReadWriters[i] = c
 	}
-	protomap := matchProtocols(protocols, conn[ConnDefault].caps, msgReadWriters)
+	protomap := matchProtocols(protocols, conns[ConnDefault].caps, msgReadWriters)
 	p := &Peer{
-		rws:      conn,
+		rws:      conns,
 		running:  protomap,
 		created:  mclock.Now(),
 		disc:     make(chan DiscReason),
-		protoErr: make(chan error, len(protomap)+1), // protocols + pingLoop
+		protoErr: make(chan error, len(protomap)+len(conns)), // protocols + pingLoop
 		closed:   make(chan struct{}),
-		logger:   logger.NewWith("id", conn[ConnDefault].id, "conn", conn[ConnDefault].flags),
+		logger:   logger.NewWith("id", conns[ConnDefault].id, "conn", conns[ConnDefault].flags),
 	}
 	return p, nil
 }
@@ -263,6 +267,92 @@ loop:
 	p.wg.Wait()
 	logger.Debug(fmt.Sprintf("peer(%p) run stopped", p))
 	return remoteRequested, err
+}
+
+// ErrorPeer is a peer error
+type ErrorPeer struct {
+	remoteRequested bool
+	err             error
+}
+
+// runWithRWs Runs peer
+func (p *Peer) runWithRWs() (remoteRequested bool, err error) {
+	resultErr := make(chan ErrorPeer, len(p.rws))
+	var errs ErrorPeer
+
+	var (
+		writeStarts = make([]chan struct{}, 0, len(p.rws))
+		writeErr    = make([]chan error, 0, 1)
+		readErr     = make([]chan error, 0, 1)
+	)
+
+	for range p.rws {
+		writeStarts = append(writeStarts, make(chan struct{}, 1))
+		writeErr = append(writeErr, make(chan error, 1))
+		readErr = append(readErr, make(chan error, 1))
+	}
+
+	for i, rw := range p.rws {
+		p.wg.Add(2)
+		go p.readLoop(rw, readErr[i])
+		go p.pingLoop(rw)
+		writeStarts[i] <- struct{}{}
+	}
+
+	// Start all protocol handlers.
+	p.startProtocolsWithRWs(writeStarts, writeErr)
+
+	for i, rw := range p.rws {
+		p.wg.Add(1)
+		go p.handleError(rw, resultErr, writeErr[i], writeStarts[i], readErr[i])
+	}
+
+	select {
+	case errs = <-resultErr:
+		close(p.closed)
+	}
+	p.wg.Wait()
+	logger.Debug(fmt.Sprintf("peer(%p) run stopped", p))
+	return errs.remoteRequested, errs.err
+}
+
+//handleError handles read, write, and protocol errors on rw
+func (p *Peer) handleError(rw *conn, errCh chan<- ErrorPeer, writeErr <-chan error, writeStart chan<- struct{}, readErr <-chan error) {
+	defer p.wg.Done()
+	var errRW ErrorPeer
+	var reason DiscReason // sent to the peer
+
+	// Wait for an error or disconnect.
+loop:
+	for {
+		select {
+		case errRW.err = <-writeErr:
+			// A write finished. Allow the next write to start if
+			// there was no error.
+			if errRW.err != nil {
+				reason = DiscNetworkError
+				break loop
+			}
+			writeStart <- struct{}{}
+		case errRW.err = <-readErr:
+			if r, ok := errRW.err.(DiscReason); ok {
+				errRW.remoteRequested = true
+				reason = r
+			} else {
+				reason = DiscNetworkError
+			}
+			break loop
+		case errRW.err = <-p.protoErr:
+			reason = discReasonForError(errRW.err)
+			break loop
+		case errRW.err = <-p.disc:
+			reason = discReasonForError(errRW.err)
+			break loop
+		}
+	}
+
+	rw.close(reason)
+	errCh <- errRW
 }
 
 func (p *Peer) pingLoop(rw *conn) {
@@ -404,6 +494,47 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 				err = errProtocolReturned
 			} else if err != io.EOF {
 				p.logger.Error(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
+			}
+			p.protoErr <- err
+			p.logger.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))
+			//p.wg.Done()
+		}()
+	}
+}
+
+// startProtocolsWithRWs run the protocol using several RWs.
+func (p *Peer) startProtocolsWithRWs(writeStarts []chan struct{}, writeErrs []chan error) {
+	p.wg.Add(len(p.running))
+
+	for _, protos := range p.running {
+		rws := make([]MsgReadWriter, 0, len(protos))
+		protos := protos
+		for i, proto := range protos {
+			proto.closed = p.closed
+			if len(writeStarts) > i {
+				proto.wstart = writeStarts[i]
+			} else {
+				writeErrs[i] <- errors.New("WriteStartsChannelSize")
+			}
+			proto.werr = writeErrs[i]
+
+			var rw MsgReadWriter = proto
+			if p.events != nil {
+				rw = newMsgEventer(rw, p.events, p.ID(), proto.Name)
+			}
+			rws = append(rws, rw)
+		}
+
+		p.logger.Trace(fmt.Sprintf("Starting protocol %s/%d", protos[ConnDefault].Name, protos[ConnDefault].Version))
+		go func() {
+			//p.wg.Add(1)
+			defer p.wg.Done()
+			err := protos[ConnDefault].RunWithRWs(p, rws)
+			if err == nil {
+				p.logger.Trace(fmt.Sprintf("Protocol %s/%d returned", protos[ConnDefault].Name, protos[ConnDefault].Version))
+				err = errProtocolReturned
+			} else if err != io.EOF {
+				p.logger.Error(fmt.Sprintf("Protocol %s/%d failed", protos[ConnDefault].Name, protos[ConnDefault].Version), "err", err)
 			}
 			p.protoErr <- err
 			p.logger.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))

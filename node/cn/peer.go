@@ -269,13 +269,13 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 // ChannelOfMessage is a map with the index of the channel per message
 var ChannelOfMessage = map[uint64]int{
 	StatusMsg:          p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
-	NewBlockHashesMsg:  p2p.ConnDefault,
+	NewBlockHashesMsg:  p2p.ConnBlockMsg,
 	TxMsg:              p2p.ConnDefault,
-	GetBlockHeadersMsg: p2p.ConnDefault,
-	BlockHeadersMsg:    p2p.ConnDefault,
-	GetBlockBodiesMsg:  p2p.ConnDefault,
-	BlockBodiesMsg:     p2p.ConnDefault,
-	NewBlockMsg:        p2p.ConnDefault,
+	GetBlockHeadersMsg: p2p.ConnBlockMsg,
+	BlockHeadersMsg:    p2p.ConnBlockMsg,
+	GetBlockBodiesMsg:  p2p.ConnBlockMsg,
+	BlockBodiesMsg:     p2p.ConnBlockMsg,
+	NewBlockMsg:        p2p.ConnBlockMsg,
 
 	// Protocol messages belonging to klay/63
 	GetNodeDataMsg: p2p.ConnDefault,
@@ -972,9 +972,8 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 		p.GetP2PPeer().Log().Debug("klaytn peer handshake failed", "err", err)
 		return err
 	}
-	if rw, ok := p.GetRW().(*meteredMsgReadWriter); ok {
-		rw.Init(p.GetVersion())
-	}
+
+	p.UpdateRWImplementationVersion()
 
 	if onTheSameChain {
 		// Register the peer locally
@@ -1007,7 +1006,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	addr := crypto.PubkeyToAddress(*pubKey)
 	lenRWs := len(p.rws)
 
-	var wg *sync.WaitGroup
+	var wg sync.WaitGroup
 	// TODO-GX check global worker and peer worker
 	messageChannel := make(chan p2p.Msg, channelSizePerPeer*lenRWs)
 	defer close(messageChannel)
@@ -1019,7 +1018,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	}
 	for _, rw := range p.rws {
 		wg.Add(1)
-		go p.ReadMsg(rw, messageChannel, errChannel, wg, closed)
+		go p.ReadMsg(rw, messageChannel, errChannel, &wg, closed)
 	}
 
 	// main loop. handle error.

@@ -138,6 +138,11 @@ func (s *SimAdapter) Dial(dest *discover.Node) (conn net.Conn, err error) {
 	return pipe2, nil
 }
 
+// DialMulti creates TCP connections to the node
+func (s *SimAdapter) DialMulti(dest *discover.Node) (conn []net.Conn, err error) {
+	return nil, nil
+}
+
 // DialRPC implements the RPCDialer interface by creating an in-memory RPC
 // client of the given node
 func (s *SimAdapter) DialRPC(id discover.NodeID) (*rpc.Client, error) {
