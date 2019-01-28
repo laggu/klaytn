@@ -526,7 +526,9 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 			return nil, err
 		}
 		database.TrieDB().Reference(root, common.Hash{})
-		database.TrieDB().Dereference(proot)
+		if proot != (common.Hash{}) {
+			database.TrieDB().Dereference(proot)
+		}
 		proot = root
 	}
 	nodeSize, preimageSize := database.TrieDB().Size()
