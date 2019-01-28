@@ -34,7 +34,6 @@ import (
 var (
 	ErrInvalidChainId        = errors.New("invalid chain id for signer")
 	errNotTxInternalDataFrom = errors.New("not an TxInternalDataFrom")
-	errNotFeePayer           = errors.New("not implement fee payer interface")
 )
 
 // sigCache is used to cache the derived sender and contains
