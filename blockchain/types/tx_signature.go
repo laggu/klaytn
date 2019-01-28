@@ -55,6 +55,14 @@ func NewTxSignatureWithValues(signer Signer, txhash common.Hash, prv *ecdsa.Priv
 	return txsig, nil
 }
 
+func (t *TxSignature) ChainId() *big.Int {
+	return deriveChainId(t.V)
+}
+
+func (t *TxSignature) Protected() bool {
+	return isProtectedV(t.V)
+}
+
 func (t *TxSignature) GetVRS() (*big.Int, *big.Int, *big.Int) {
 	return t.V, t.R, t.S
 }

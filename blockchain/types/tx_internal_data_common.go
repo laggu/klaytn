@@ -32,8 +32,6 @@ type TxInternalDataCommon struct {
 	Amount       *big.Int
 	From         common.Address
 
-	*TxSignature
-
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
@@ -41,9 +39,8 @@ type TxInternalDataCommon struct {
 // newTxInternalDataCommon creates an empty TxInternalDataCommon object with initializing *big.Int variables.
 func newTxInternalDataCommon() *TxInternalDataCommon {
 	return &TxInternalDataCommon{
-		Price:       new(big.Int),
-		Amount:      new(big.Int),
-		TxSignature: NewTxSignature(),
+		Price:  new(big.Int),
+		Amount: new(big.Int),
 	}
 }
 
@@ -81,14 +78,6 @@ func newTxInternalDataCommonWithMap(values map[TxValueKeyType]interface{}) *TxIn
 	return d
 }
 
-func (t *TxInternalDataCommon) ChainId() *big.Int {
-	return deriveChainId(t.V)
-}
-
-func (t *TxInternalDataCommon) Protected() bool {
-	return isProtectedV(t.V)
-}
-
 func (t *TxInternalDataCommon) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }
@@ -122,20 +111,8 @@ func (t *TxInternalDataCommon) GetHash() *common.Hash {
 	return t.Hash
 }
 
-func (t *TxInternalDataCommon) GetVRS() (*big.Int, *big.Int, *big.Int) {
-	return t.TxSignature.GetVRS()
-}
-
 func (t *TxInternalDataCommon) SetHash(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataCommon) SetSignature(s *TxSignature) {
-	t.TxSignature = s
-}
-
-func (t *TxInternalDataCommon) SetVRS(v *big.Int, r *big.Int, s *big.Int) {
-	t.TxSignature.SetVRS(v, r, s)
 }
 
 func (t *TxInternalDataCommon) serializeForSign() []interface{} {
@@ -155,10 +132,7 @@ func (t *TxInternalDataCommon) equal(b *TxInternalDataCommon) bool {
 		t.GasLimit == b.GasLimit &&
 		t.Recipient == b.Recipient &&
 		t.Amount.Cmp(b.Amount) == 0 &&
-		t.From == b.From &&
-		t.V.Cmp(b.V) == 0 &&
-		t.R.Cmp(b.R) == 0 &&
-		t.S.Cmp(b.S) == 0
+		t.From == b.From
 }
 
 func (t *TxInternalDataCommon) intrinsicGas() (uint64, error) {
@@ -176,18 +150,12 @@ func (t *TxInternalDataCommon) string() string {
 	Nonce:         %v
 	GasPrice:      %#x
 	GasLimit:      %#x
-	Value:         %#x
-	V:             %#x
-	R:             %#x
-	S:             %#x`,
+	Value:         %#x`,
 		t.From.String(),
 		t.Recipient.String(),
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
 		t.Amount,
-		t.V,
-		t.R,
-		t.S,
 	)
 }

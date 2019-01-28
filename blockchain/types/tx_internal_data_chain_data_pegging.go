@@ -31,10 +31,13 @@ type TxInternalDataChainDataPegging struct {
 	*TxInternalDataCommon
 
 	PeggedData []byte
+
+	*TxSignature
 }
 
 func newTxInternalDataChainDataPegging() *TxInternalDataChainDataPegging {
-	return &TxInternalDataChainDataPegging{newTxInternalDataCommon(), []byte{}}
+	return &TxInternalDataChainDataPegging{newTxInternalDataCommon(), []byte{},
+		NewTxSignature()}
 }
 
 func newTxInternalDataChainDataPeggingWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataChainDataPegging {
@@ -43,7 +46,7 @@ func newTxInternalDataChainDataPeggingWithMap(values map[TxValueKeyType]interfac
 		peggedData = v
 	}
 
-	return &TxInternalDataChainDataPegging{newTxInternalDataCommonWithMap(values), peggedData}
+	return &TxInternalDataChainDataPegging{newTxInternalDataCommonWithMap(values), peggedData, NewTxSignature()}
 }
 
 func (t *TxInternalDataChainDataPegging) Type() TxType {
@@ -56,7 +59,9 @@ func (t *TxInternalDataChainDataPegging) Equal(b TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) && bytes.Equal(t.PeggedData, tb.PeggedData)
+	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
+		t.TxSignature.equal(tb.TxSignature) &&
+		bytes.Equal(t.PeggedData, tb.PeggedData)
 }
 
 func (t *TxInternalDataChainDataPegging) String() string {
@@ -68,12 +73,14 @@ func (t *TxInternalDataChainDataPegging) String() string {
 	return fmt.Sprintf(`
 	TX(%x)
 	Type:          %s%s
+	Signature:     %s
 	Hex:           %x
 	PeggedData:    %s
 `,
 		tx.Hash(),
 		t.Type().String(),
 		t.TxInternalDataCommon.string(),
+		t.TxSignature.string(),
 		enc,
 		common.Bytes2Hex(dataPeggedRLP))
 }
@@ -83,6 +90,10 @@ func (t *TxInternalDataChainDataPegging) SerializeForSign() []interface{} {
 	return append(infs,
 		t.TxInternalDataCommon.serializeForSign(),
 		t.PeggedData)
+}
+
+func (t *TxInternalDataChainDataPegging) SetSignature(s *TxSignature) {
+	t.TxSignature = s
 }
 
 func (t *TxInternalDataChainDataPegging) IntrinsicGas() (uint64, error) {

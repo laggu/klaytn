@@ -141,7 +141,6 @@ func genCommonDefaultData() types.TxInternalDataCommon {
 		GasLimit:     uint64(9999999999),
 		Recipient:    common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
 		Amount:       new(big.Int).SetUint64(10),
-		TxSignature:  types.NewTxSignature(),
 		Hash:         &common.Hash{},
 	}
 }

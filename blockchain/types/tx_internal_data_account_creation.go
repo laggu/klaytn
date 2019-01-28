@@ -30,6 +30,8 @@ type TxInternalDataAccountCreation struct {
 
 	HumanReadable bool
 	Key           AccountKey
+
+	*TxSignature
 }
 
 // txInternalDataAccountCreationSerializable for RLP serialization.
@@ -37,7 +39,9 @@ type txInternalDataAccountCreationSerializable struct {
 	*TxInternalDataCommon
 
 	HumanReadable bool
-	Key           *AccountKeySerializer
+	KeyData       []byte
+
+	*TxSignature
 }
 
 func newTxInternalDataAccountCreation() *TxInternalDataAccountCreation {
@@ -53,6 +57,7 @@ func newTxInternalDataAccountCreationWithMap(values map[TxValueKeyType]interface
 		TxInternalDataCommon: newTxInternalDataCommonWithMap(values),
 		HumanReadable:        false,
 		Key:                  NewAccountKeyNil(),
+		TxSignature:          NewTxSignature(),
 	}
 	if v, ok := values[TxValueKeyHumanReadable].(bool); ok {
 		b.HumanReadable = v
@@ -66,24 +71,29 @@ func newTxInternalDataAccountCreationWithMap(values map[TxValueKeyType]interface
 }
 
 func newTxInternalDataAccountCreationSerializable() *txInternalDataAccountCreationSerializable {
-	return &txInternalDataAccountCreationSerializable{
-		TxInternalDataCommon: newTxInternalDataCommon(),
-		Key:                  NewAccountKeySerializer(),
-	}
+	return &txInternalDataAccountCreationSerializable{}
 }
 
 func (t *TxInternalDataAccountCreation) toSerializable() *txInternalDataAccountCreationSerializable {
+	serializer := NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
 	return &txInternalDataAccountCreationSerializable{
 		t.TxInternalDataCommon,
 		t.HumanReadable,
-		NewAccountKeySerializerWithAccountKey(t.Key),
+		keyEnc,
+		t.TxSignature,
 	}
 }
 
 func (t *TxInternalDataAccountCreation) fromSerializable(serialized *txInternalDataAccountCreationSerializable) {
 	t.TxInternalDataCommon = serialized.TxInternalDataCommon
 	t.HumanReadable = serialized.HumanReadable
-	t.Key = serialized.Key.key
+	t.TxSignature = serialized.TxSignature
+
+	serializer := NewAccountKeySerializer()
+	rlp.DecodeBytes(serialized.KeyData, serializer)
+	t.Key = serializer.key
 }
 
 func (t *TxInternalDataAccountCreation) EncodeRLP(w io.Writer) error {
@@ -129,7 +139,8 @@ func (t *TxInternalDataAccountCreation) Equal(a TxInternalData) bool {
 
 	return t.TxInternalDataCommon.equal(ta.TxInternalDataCommon) &&
 		t.HumanReadable == ta.HumanReadable &&
-		t.Key.Equal(ta.Key)
+		t.Key.Equal(ta.Key) &&
+		t.TxSignature.equal(ta.TxSignature)
 }
 
 func (t *TxInternalDataAccountCreation) String() string {
@@ -141,6 +152,7 @@ func (t *TxInternalDataAccountCreation) String() string {
 	Type:          %s%s
 	HumanReadable: %t
 	Key:           %s
+	Signature:     %s
 	Hex:           %x
 `,
 		tx.Hash(),
@@ -148,7 +160,12 @@ func (t *TxInternalDataAccountCreation) String() string {
 		t.TxInternalDataCommon.string(),
 		t.HumanReadable,
 		t.Key.String(),
+		t.TxSignature.string(),
 		enc)
+}
+
+func (t *TxInternalDataAccountCreation) SetSignature(s *TxSignature) {
+	t.TxSignature = s
 }
 
 func (t *TxInternalDataAccountCreation) IntrinsicGas() (uint64, error) {
