@@ -807,11 +807,15 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
 	lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
 
+	var nodeType string
 	if ctx.GlobalIsSet(NodeTypeFlag.Name) {
-		cfg.ConnectionType = convertNodeType(ctx.GlobalString(NodeTypeFlag.Name))
+		nodeType = ctx.GlobalString(NodeTypeFlag.Name)
 	} else {
-		cfg.ConnectionType = convertNodeType("gn")
+		nodeType = NodeTypeFlag.Value
 	}
+	cfg.ConnectionType = convertNodeType(nodeType)
+	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
+
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
 		if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
