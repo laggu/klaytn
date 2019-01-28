@@ -565,10 +565,10 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 	return arg
 }
 
-// BlockNumber can get the lastest block number.
+// BlockNumber can get the latest block number.
 func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "klay_blockNumber")
+	err := ec.c.CallContext(ctx, &result, "servicechain_blockNumber")
 	return (*big.Int)(&result), err
 }
 
@@ -589,14 +589,14 @@ func (ec *Client) RemovePeer(ctx context.Context, url string) (bool, error) {
 // AddPeerOnParentChain can add a static parent peer on klay node for service chain.
 func (ec *Client) AddPeerOnParentChain(ctx context.Context, url string) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "admin_addPeerOnParentChain", url)
+	err := ec.c.CallContext(ctx, &result, "servicechain_addPeerOnParentChain", url)
 	return result, err
 }
 
 // GetChildChainIndexingEnabled can get if child chain indexing is enabled or not.
 func (ec *Client) GetChildChainIndexingEnabled(ctx context.Context) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "klay_getChildChainIndexingEnabled")
+	err := ec.c.CallContext(ctx, &result, "servicechain_getChildChainIndexingEnabled")
 	return result, err
 }
 
@@ -604,34 +604,34 @@ func (ec *Client) GetChildChainIndexingEnabled(ctx context.Context) (bool, error
 // anchoring tx hash which contain anchored data.
 func (ec *Client) ConvertChildChainBlockHashToParentChainTxHash(ctx context.Context, ccBlockHash common.Hash) (common.Hash, error) {
 	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "klay_convertChildChainBlockHashToParentChainTxHash", ccBlockHash)
+	err := ec.c.CallContext(ctx, &txHash, "servicechain_convertChildChainBlockHashToParentChainTxHash", ccBlockHash)
 	return txHash, err
 }
 
 // GetReceiptFromParentChain can get the receipt of child chain tx from parent node.
 func (ec *Client) GetReceiptFromParentChain(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
 	var result types.Receipt
-	err := ec.c.CallContext(ctx, &result, "klay_getReceiptFromParentChain", hash)
+	err := ec.c.CallContext(ctx, &result, "servicechain_getReceiptFromParentChain", hash)
 	return &result, err
 }
 
 // GetChainAddr can get the chain address to sign chain transaction in service chain.
 func (ec *Client) GetChainAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "klay_getChainAddr")
+	err := ec.c.CallContext(ctx, &result, "servicechain_getChainAddr")
 	return result, err
 }
 
 // GetChainTxPeriod can get the block period to peg chain data.
 func (ec *Client) GetChainTxPeriod(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "klay_getChainTxPeriod")
+	err := ec.c.CallContext(ctx, &result, "servicechain_getChainTxPeriod")
 	return result, err
 }
 
 // GetSentChainTxsLimit can get the maximum number of transaction which child peer can send to parent peer once.
 func (ec *Client) GetSentChainTxsLimit(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "klay_getSentChainTxsLimit")
+	err := ec.c.CallContext(ctx, &result, "servicechain_getSentChainTxsLimit")
 	return result, err
 }

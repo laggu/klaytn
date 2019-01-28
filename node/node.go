@@ -670,6 +670,11 @@ func (n *Node) apis() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicWeb3API(n),
 			Public:    true,
+		}, {
+			Namespace: "servicechain",
+			Version:   "1.0",
+			Service:   NewPublicServiceChainAPI(n),
+			Public:    true,
 		},
 	}
 }

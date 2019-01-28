@@ -21,15 +21,16 @@
 package web3ext
 
 var Modules = map[string]string{
-	"admin":    Admin_JS,
-	"debug":    Debug_JS,
-	"klay":     Klay_JS,
-	"miner":    Miner_JS,
-	"net":      Net_JS,
-	"personal": Personal_JS,
-	"rpc":      RPC_JS,
-	"txpool":   TxPool_JS,
-	"istanbul": Istanbul_JS,
+	"admin":        Admin_JS,
+	"debug":        Debug_JS,
+	"klay":         Klay_JS,
+	"miner":        Miner_JS,
+	"net":          Net_JS,
+	"personal":     Personal_JS,
+	"rpc":          RPC_JS,
+	"txpool":       TxPool_JS,
+	"istanbul":     Istanbul_JS,
+	"servicechain": ServiceChain_JS,
 }
 
 const Admin_JS = `
@@ -39,11 +40,6 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'addPeer',
 			call: 'admin_addPeer',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'addPeerOnParentChain',
-			call: 'admin_addPeerOnParentChain',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -424,37 +420,6 @@ web3._extend({
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
 		}),
-		new web3._extend.Method({
-			name: 'getChildChainIndexingEnabled',
-			call: 'klay_getChildChainIndexingEnabled'
-		}),
-		new web3._extend.Method({
-			name: 'convertChildChainBlockHashToParentChainTxHash',
-			call: 'klay_convertChildChainBlockHashToParentChainTxHash',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getLatestPeggedBlockNumber',
-			call: 'klay_getLatestPeggedBlockNumber',
-			params: 0
-		}),
-		new web3._extend.Method({
-			name: 'getReceiptFromParentChain',
-			call: 'klay_getReceiptFromParentChain',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getChainAddr',
-			call: 'klay_getChainAddr',
-		}),
-		new web3._extend.Method({
-			name: 'getChainTxPeriod',
-			call: 'klay_getChainTxPeriod',
-		}),
-		new web3._extend.Method({
-			name: 'getSentChainTxsLimit',
-			call: 'klay_getSentChainTxsLimit',
-		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -679,5 +644,50 @@ web3._extend({
 			getter: 'istanbul_candidates'
 		}),
 	]
+});
+`
+const ServiceChain_JS = `
+web3._extend({
+	property: 'servicechain',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'getChildChainIndexingEnabled',
+			call: 'servicechain_getChildChainIndexingEnabled'
+		}),
+		new web3._extend.Method({
+			name: 'convertChildChainBlockHashToParentChainTxHash',
+			call: 'servicechain_convertChildChainBlockHashToParentChainTxHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getLatestPeggedBlockNumber',
+			call: 'servicechain_getLatestPeggedBlockNumber',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getReceiptFromParentChain',
+			call: 'servicechain_getReceiptFromParentChain',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getChainAddr',
+			call: 'servicechain_getChainAddr',
+		}),
+		new web3._extend.Method({
+			name: 'getChainTxPeriod',
+			call: 'servicechain_getChainTxPeriod',
+		}),
+		new web3._extend.Method({
+			name: 'getSentChainTxsLimit',
+			call: 'servicechain_getSentChainTxsLimit',
+		}),
+		new web3._extend.Method({
+			name: 'addPeerOnParentChain',
+			call: 'servicechain_addPeerOnParentChain',
+			params: 1
+		}),
+	],
+	properties: []
 });
 `
