@@ -524,14 +524,11 @@ func genCommonDefaultData() types.TxInternalDataCommon {
 
 // isSameTxInternalDataCommon returns the two operands are the same internal data common or not.
 func isSameTxInternalDataCommon(original types.TxInternalDataCommon, decoded types.TxInternalDataCommon) bool {
-	v1, r1, s1 := decoded.GetVRS()
-	v2, r2, s2 := original.GetVRS()
 	return decoded.GetAccountNonce() == original.GetAccountNonce() &&
 		decoded.GetPrice().Cmp(original.GetPrice()) == 0 &&
 		decoded.GetGasLimit() == original.GetGasLimit() &&
 		decoded.GetFrom() == original.GetFrom() &&
-		decoded.GetAmount().Cmp(original.GetAmount()) == 0 &&
-		v1.Cmp(v2) == 0 && r1.Cmp(r2) == 0 && s1.Cmp(s2) == 0
+		decoded.GetAmount().Cmp(original.GetAmount()) == 0
 }
 
 // checkDecodingSeparateFieldsLegacy is a subfunction to check the encoding is correctly performed by decoding it
