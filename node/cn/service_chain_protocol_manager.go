@@ -261,17 +261,17 @@ func (scpm *serviceChainPM) writeServiceChainTxReceipts(bc *blockchain.BlockChai
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx, ok := sentServiceChainTxs[txHash]; ok {
-			ccTxData := new(types.ChildChainTxData)
-			data, err := tx.PeggedData()
+			chainHashes := new(types.ChainHashes)
+			data, err := tx.AnchoredData()
 			if err != nil {
-				scLogger.Error("failed to get pegging tx type from the tx", "txHash", txHash.String())
+				scLogger.Error("failed to get anchoring tx type from the tx", "txHash", txHash.String())
 				return
 			}
-			if err := rlp.DecodeBytes(data, ccTxData); err != nil {
-				scLogger.Error("failed to RLP decode ChildChainTxData", "txHash", txHash.String())
+			if err := rlp.DecodeBytes(data, chainHashes); err != nil {
+				scLogger.Error("failed to RLP decode ChainHashes", "txHash", txHash.String())
 				return
 			}
-			bc.WriteReceiptFromParentChain(ccTxData.BlockHash, (*types.Receipt)(receipt))
+			bc.WriteReceiptFromParentChain(chainHashes.BlockHash, (*types.Receipt)(receipt))
 			scpm.removeServiceChainTx(txHash)
 		} else {
 			scLogger.Error("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
@@ -309,26 +309,26 @@ func (scpm *serviceChainPM) BroadcastServiceChainTxAndReceiptRequest(block *type
 	scpm.broadcastServiceChainReceiptRequest()
 }
 
-// genUnsignedServiceChainTx generates an unsigned transaction, which type is TxTypeChainDataPegging.
+// genUnsignedServiceChainTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (scpm *serviceChainPM) genUnsignedServiceChainTx(block *types.Block) (*types.Transaction, error) {
-	ccTxData := types.NewChildChainTxData(block)
-	encodedCCTxData, err := rlp.EncodeToBytes(ccTxData)
+	chainHashes := types.NewChainHashes(block)
+	encodedCCTxData, err := rlp.EncodeToBytes(chainHashes)
 	if err != nil {
 		return nil, err
 	}
 
 	values := map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:      scpm.getRemoteNonce(), // nonce will be increased after the signing.
-		types.TxValueKeyFrom:       *scpm.GetChainAddr(),
-		types.TxValueKeyTo:         *scpm.GetChainAddr(),
-		types.TxValueKeyAmount:     new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit:   uint64(999999999998), // TODO-Klaytn-ServiceChain should define proper gas limit
-		types.TxValueKeyGasPrice:   new(big.Int).SetUint64(scpm.remoteGasPrice),
-		types.TxValueKeyPeggedData: encodedCCTxData,
+		types.TxValueKeyNonce:        scpm.getRemoteNonce(), // nonce will be increased after the signing.
+		types.TxValueKeyFrom:         *scpm.GetChainAddr(),
+		types.TxValueKeyTo:           *scpm.GetChainAddr(),
+		types.TxValueKeyAmount:       new(big.Int).SetUint64(0),
+		types.TxValueKeyGasLimit:     uint64(999999999998), // TODO-Klaytn-ServiceChain should define proper gas limit
+		types.TxValueKeyGasPrice:     new(big.Int).SetUint64(scpm.remoteGasPrice),
+		types.TxValueKeyAnchoredData: encodedCCTxData,
 	}
 
-	if tx, err := types.NewTransactionWithMap(types.TxTypeChainDataPegging, values); err != nil {
+	if tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values); err != nil {
 		return nil, err
 	} else {
 		return tx, nil

@@ -26,48 +26,48 @@ import (
 	"github.com/ground-x/klaytn/ser/rlp"
 )
 
-// TxInternalDataChainDataPegging represents the transaction pegging child chain data.
-type TxInternalDataChainDataPegging struct {
+// TxInternalDataChainDataAnchoring represents the transaction anchoring child chain data.
+type TxInternalDataChainDataAnchoring struct {
 	*TxInternalDataCommon
 
-	PeggedData []byte
+	AnchoredData []byte
 
 	*TxSignature
 }
 
-func newTxInternalDataChainDataPegging() *TxInternalDataChainDataPegging {
-	return &TxInternalDataChainDataPegging{newTxInternalDataCommon(), []byte{},
+func newTxInternalDataChainDataAnchoring() *TxInternalDataChainDataAnchoring {
+	return &TxInternalDataChainDataAnchoring{newTxInternalDataCommon(), []byte{},
 		NewTxSignature()}
 }
 
-func newTxInternalDataChainDataPeggingWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataChainDataPegging {
-	var peggedData []byte
-	if v, ok := values[TxValueKeyPeggedData].([]byte); ok {
-		peggedData = v
+func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataChainDataAnchoring {
+	var anchoredData []byte
+	if v, ok := values[TxValueKeyAnchoredData].([]byte); ok {
+		anchoredData = v
 	}
 
-	return &TxInternalDataChainDataPegging{newTxInternalDataCommonWithMap(values), peggedData, NewTxSignature()}
+	return &TxInternalDataChainDataAnchoring{newTxInternalDataCommonWithMap(values), anchoredData, NewTxSignature()}
 }
 
-func (t *TxInternalDataChainDataPegging) Type() TxType {
-	return TxTypeChainDataPegging
+func (t *TxInternalDataChainDataAnchoring) Type() TxType {
+	return TxTypeChainDataAnchoring
 }
 
-func (t *TxInternalDataChainDataPegging) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataChainDataPegging)
+func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
+	tb, ok := b.(*TxInternalDataChainDataAnchoring)
 	if !ok {
 		return false
 	}
 
 	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
 		t.TxSignature.equal(tb.TxSignature) &&
-		bytes.Equal(t.PeggedData, tb.PeggedData)
+		bytes.Equal(t.AnchoredData, tb.AnchoredData)
 }
 
-func (t *TxInternalDataChainDataPegging) String() string {
+func (t *TxInternalDataChainDataAnchoring) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
-	dataPeggedRLP, _ := rlp.EncodeToBytes(t.PeggedData)
+	dataAnchoredRLP, _ := rlp.EncodeToBytes(t.AnchoredData)
 	tx := Transaction{data: t}
 
 	return fmt.Sprintf(`
@@ -75,34 +75,34 @@ func (t *TxInternalDataChainDataPegging) String() string {
 	Type:          %s%s
 	Signature:     %s
 	Hex:           %x
-	PeggedData:    %s
+	AnchoredData:  %s
 `,
 		tx.Hash(),
 		t.Type().String(),
 		t.TxInternalDataCommon.string(),
 		t.TxSignature.string(),
 		enc,
-		common.Bytes2Hex(dataPeggedRLP))
+		common.Bytes2Hex(dataAnchoredRLP))
 }
 
-func (t *TxInternalDataChainDataPegging) SerializeForSign() []interface{} {
+func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
 	infs := []interface{}{t.Type()}
 	return append(infs,
 		t.TxInternalDataCommon.serializeForSign(),
-		t.PeggedData)
+		t.AnchoredData)
 }
 
-func (t *TxInternalDataChainDataPegging) SetSignature(s *TxSignature) {
+func (t *TxInternalDataChainDataAnchoring) SetSignature(s *TxSignature) {
 	t.TxSignature = s
 }
 
-func (t *TxInternalDataChainDataPegging) IntrinsicGas() (uint64, error) {
-	nByte := (uint64)(len(t.PeggedData))
+func (t *TxInternalDataChainDataAnchoring) IntrinsicGas() (uint64, error) {
+	nByte := (uint64)(len(t.AnchoredData))
 
 	// Make sure we don't exceed uint64 for all data combinations
-	if (math.MaxUint64-params.TxChainDataPeggingGas)/params.ChainDataPeggingGas < nByte {
+	if (math.MaxUint64-params.TxChainDataAnchoringGas)/params.ChainDataAnchoringGas < nByte {
 		return 0, kerrors.ErrOutOfGas
 	}
 
-	return params.TxChainDataPeggingGas + params.ChainDataPeggingGas*nByte, nil
+	return params.TxChainDataAnchoringGas + params.ChainDataAnchoringGas*nByte, nil
 }

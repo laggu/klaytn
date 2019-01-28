@@ -125,7 +125,7 @@ func genValueTransferTransaction() TxInternalData {
 }
 
 func genChainDataTransaction() TxInternalData {
-	blockTxData := &ChildChainTxData{
+	blockTxData := &ChainHashes{
 		common.HexToHash("0"),
 		common.HexToHash("1"),
 		common.HexToHash("2"),
@@ -133,18 +133,18 @@ func genChainDataTransaction() TxInternalData {
 		common.HexToHash("4"),
 		big.NewInt(5)}
 
-	peggedData, err := rlp.EncodeToBytes(blockTxData)
+	anchoredData, err := rlp.EncodeToBytes(blockTxData)
 	if err != nil {
 		panic(err)
 	}
 
-	txdata, _ := NewTxInternalDataWithMap(TxTypeChainDataPegging, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:      uint64(1234),
-		TxValueKeyTo:         common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyAmount:     new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit:   uint64(9999999999),
-		TxValueKeyGasPrice:   new(big.Int).SetUint64(25),
-		TxValueKeyPeggedData: peggedData,
+	txdata, _ := NewTxInternalDataWithMap(TxTypeChainDataAnchoring, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:        uint64(1234),
+		TxValueKeyTo:           common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyAmount:       new(big.Int).SetUint64(10),
+		TxValueKeyGasLimit:     uint64(9999999999),
+		TxValueKeyGasPrice:     new(big.Int).SetUint64(25),
+		TxValueKeyAnchoredData: anchoredData,
 	})
 	return txdata
 }

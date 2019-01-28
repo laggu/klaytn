@@ -36,7 +36,7 @@ import (
 var (
 	ErrInvalidSig                     = errors.New("invalid transaction v, r, s values")
 	errNoSigner                       = errors.New("missing signing methods")
-	ErrInvalidTxTypeForPeggedData     = errors.New("invalid transaction type for pegged data")
+	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeePayer                    = errors.New("not implement fee payer interface")
@@ -194,14 +194,14 @@ func (tx *Transaction) IsFeeDelegatedTransaction() bool {
 	return ok
 }
 
-// PeggedData returns the pegged data of the chain data pegging transaction.
-// if the tx is not chain data pegging transaction, it will return error.
-func (tx *Transaction) PeggedData() ([]byte, error) {
-	txData, ok := tx.data.(*TxInternalDataChainDataPegging)
+// AnchoredData returns the anchored data of the chain data anchoring transaction.
+// if the tx is not chain data anchoring transaction, it will return error.
+func (tx *Transaction) AnchoredData() ([]byte, error) {
+	txData, ok := tx.data.(*TxInternalDataChainDataAnchoring)
 	if ok {
-		return txData.PeggedData, nil
+		return txData.AnchoredData, nil
 	}
-	return []byte{}, ErrInvalidTxTypeForPeggedData
+	return []byte{}, ErrInvalidTxTypeForAnchoredData
 }
 
 // To returns the recipient address of the transaction.
@@ -373,7 +373,7 @@ func (tx *Transaction) String() string {
 }
 
 // GetChildChainAddr returns the pointer of sender address if a tx is a
-// data pegging tx from child chain. If not, it returns nil.
+// data anchoring tx from child chain. If not, it returns nil.
 func (tx *Transaction) GetChildChainAddr(signer Signer) *common.Address {
 	// TODO-Klaytn-ServiceChain This function will be removed once new transaction type is introduced.
 	from, err := Sender(signer, tx)

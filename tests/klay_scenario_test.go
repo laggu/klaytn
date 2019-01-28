@@ -109,7 +109,7 @@ func createHumanReadableAccount(humanReadableAddr string) (*TestAccountType, err
 // 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
 // 5. Create an account colin using TxTypeAccountCreation.
 // 6. Transfer (colin-> reservoir) using TxTypeValueTransfer.
-// 7. ChainDataPegging (reservoir -> reservoir) using TxTypeChainDataPegging.
+// 7. ChainDataAnchoring (reservoir -> reservoir) using TxTypeChainDataAnchoring.
 func TestTransactionScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -347,24 +347,24 @@ func TestTransactionScenario(t *testing.T) {
 		colin.Nonce += 1
 	}
 
-	// 7. ChainDataPegging (reservoir -> reservoir) using TxTypeChainDataPegging.
+	// 7. ChainDataAnchoring (reservoir -> reservoir) using TxTypeChainDataAnchoring.
 	{
-		scData := types.NewChildChainTxData(bcdata.bc.CurrentBlock())
-		dataPeggedRLP, _ := rlp.EncodeToBytes(scData)
+		scData := types.NewChainHashes(bcdata.bc.CurrentBlock())
+		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
 
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(10000000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      reservoir.Nonce,
-			types.TxValueKeyFrom:       reservoir.Addr,
-			types.TxValueKeyTo:         reservoir.Addr,
-			types.TxValueKeyAmount:     amount,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyPeggedData: dataPeggedRLP,
+			types.TxValueKeyNonce:        reservoir.Nonce,
+			types.TxValueKeyFrom:         reservoir.Addr,
+			types.TxValueKeyTo:           reservoir.Addr,
+			types.TxValueKeyAmount:       amount,
+			types.TxValueKeyGasLimit:     gasLimit,
+			types.TxValueKeyGasPrice:     gasPrice,
+			types.TxValueKeyAnchoredData: dataAnchoredRLP,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataPegging, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -471,28 +471,28 @@ func TestValidateSender(t *testing.T) {
 		assert.Equal(t, decoupled.Addr, actualFrom)
 	}
 
-	// TxTypeChainDataPegging
+	// TxTypeChainDataAnchoring
 	{
 		dummyBlock := types.NewBlock(&types.Header{
 			GasLimit: gasLimit,
 		}, nil, nil, nil)
 
-		scData := types.NewChildChainTxData(dummyBlock)
-		dataPeggedRLP, _ := rlp.EncodeToBytes(scData)
+		scData := types.NewChainHashes(dummyBlock)
+		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
 
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(0)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      anon.Nonce,
-			types.TxValueKeyFrom:       anon.Addr,
-			types.TxValueKeyTo:         anon.Addr,
-			types.TxValueKeyAmount:     amount,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyPeggedData: dataPeggedRLP,
+			types.TxValueKeyNonce:        anon.Nonce,
+			types.TxValueKeyFrom:         anon.Addr,
+			types.TxValueKeyTo:           anon.Addr,
+			types.TxValueKeyAmount:       amount,
+			types.TxValueKeyGasLimit:     gasLimit,
+			types.TxValueKeyGasPrice:     gasPrice,
+			types.TxValueKeyAnchoredData: dataAnchoredRLP,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataPegging, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
 		if err != nil {
 			t.Fatal(err)
 		}

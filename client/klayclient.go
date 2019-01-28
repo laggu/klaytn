@@ -622,7 +622,7 @@ func (ec *Client) GetChainAddr(ctx context.Context) (common.Address, error) {
 	return result, err
 }
 
-// GetChainTxPeriod can get the block period to peg chain data.
+// GetChainTxPeriod can get the block period to anchor chain data.
 func (ec *Client) GetChainTxPeriod(ctx context.Context) (uint64, error) {
 	var result uint64
 	err := ec.c.CallContext(ctx, &result, "servicechain_getChainTxPeriod")

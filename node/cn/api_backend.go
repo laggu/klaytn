@@ -243,8 +243,8 @@ func (b *CNAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash
 	return b.cn.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 }
 
-func (b *CNAPIBackend) GetLatestPeggedBlockNumber() uint64 {
-	return b.cn.blockchain.GetLatestPeggedBlockNumber()
+func (b *CNAPIBackend) GetLatestAnchoredBlockNumber() uint64 {
+	return b.cn.blockchain.GetLatestAnchoredBlockNumber()
 }
 
 func (b *CNAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {

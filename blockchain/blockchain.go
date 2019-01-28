@@ -1842,27 +1842,27 @@ func (bc *BlockChain) GetChildChainIndexingEnabled() bool {
 }
 
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
-// ChildChainTxData, with the key made with given child chain block hash.
+// ChainHashes, with the key made with given child chain block hash.
 // Index is built when child chain indexing is enabled.
 func (bc *BlockChain) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	return bc.db.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 }
 
 // WriteChildChainTxHash stores a transaction hash of a transaction which contains
-// ChildChainTxData, with the key made with given child chain block hash.
+// ChainHashes, with the key made with given child chain block hash.
 // Index is built when child chain indexing is enabled.
 func (bc *BlockChain) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
 	bc.db.WriteChildChainTxHash(ccBlockHash, ccTxHash)
 }
 
-// GetLatestPeggedBlockNumber returns the latest block number whose data has been pegged to the parent chain.
-func (bc *BlockChain) GetLatestPeggedBlockNumber() uint64 {
-	return bc.db.ReadPeggedBlockNumber()
+// GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
+func (bc *BlockChain) GetLatestAnchoredBlockNumber() uint64 {
+	return bc.db.ReadAnchoredBlockNumber()
 }
 
-// WritePeggedBlockNumber writes the block number whose data has been pegged to the parent chain.
-func (bc *BlockChain) WritePeggedBlockNumber(blockNum uint64) {
-	bc.db.WritePeggedBlockNumber(blockNum)
+// WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
+func (bc *BlockChain) WriteAnchoredBlockNumber(blockNum uint64) {
+	bc.db.WriteAnchoredBlockNumber(blockNum)
 }
 
 // WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
@@ -1878,7 +1878,7 @@ func (bc *BlockChain) GetReceiptFromParentChain(blockHash common.Hash) *types.Re
 }
 
 // writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
-// ChildChainTxData.
+// ChainHashes.
 func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
 	txs := block.Transactions()
 	signer := types.MakeSigner(bc.Config(), block.Number())
@@ -1887,16 +1887,16 @@ func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
 		if ccAddr := tx.GetChildChainAddr(signer); ccAddr == nil {
 			continue
 		}
-		ccTxData := new(types.ChildChainTxData)
-		data, err := tx.PeggedData()
+		chainHashes := new(types.ChainHashes)
+		data, err := tx.AnchoredData()
 		if err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to get pegging data from the tx", "txHash", tx.Hash())
+			logger.Error("writeChildChainTxHashFromBlock : failed to get anchoring data from the tx", "txHash", tx.Hash())
 			continue
 		}
-		if err := rlp.DecodeBytes(data, ccTxData); err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to decode pegging data")
+		if err := rlp.DecodeBytes(data, chainHashes); err != nil {
+			logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
 			continue
 		}
-		bc.WriteChildChainTxHash(ccTxData.BlockHash, tx.Hash())
+		bc.WriteChildChainTxHash(chainHashes.BlockHash, tx.Hash())
 	}
 }

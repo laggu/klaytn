@@ -28,9 +28,9 @@ import (
 
 type txMapData map[types.TxValueKeyType]interface{}
 
-// getTestPeggedData returns a sample pegged data.
-func genTestPeggedData() []byte {
-	blockTxData := &types.ChildChainTxData{
+// getTestAnchoredData returns a sample anchored data.
+func genTestAnchoredData() []byte {
+	blockTxData := &types.ChainHashes{
 		BlockHash:     common.HexToHash("0"),
 		TxHash:        common.HexToHash("1"),
 		ParentHash:    common.HexToHash("2"),
@@ -38,11 +38,11 @@ func genTestPeggedData() []byte {
 		StateRootHash: common.HexToHash("4"),
 		BlockNumber:   big.NewInt(5),
 	}
-	peggedData, err := rlp.EncodeToBytes(blockTxData)
+	anchoredData, err := rlp.EncodeToBytes(blockTxData)
 	if err != nil {
 		panic(err)
 	}
-	return peggedData
+	return anchoredData
 }
 
 // genTestTxInternalData creates a `txType` transaction internal data derived from `txMap`.
@@ -58,8 +58,8 @@ func genTestTxInternalData(txType types.TxType) types.TxInternalData {
 		txMap[types.TxValueKeyData] = []byte("1234")
 		to := common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b")
 		txMap[types.TxValueKeyTo] = &to
-	case types.TxTypeChainDataPegging:
-		txMap[types.TxValueKeyPeggedData] = genTestPeggedData()
+	case types.TxTypeChainDataAnchoring:
+		txMap[types.TxValueKeyAnchoredData] = genTestAnchoredData()
 	case types.TxTypeAccountCreation:
 		k, _ := crypto.GenerateKey()
 		txMap[types.TxValueKeyHumanReadable] = true
@@ -208,15 +208,15 @@ func checkDecodingChainDataPeggingTxInterface(b *testing.B, encoded []byte, orig
 	if err := rlp.DecodeBytes(encoded, &container); err != nil {
 		b.Error(err)
 	}
-	decoded, err := types.NewTxInternalDataWithMap(types.TxTypeChainDataPegging,
+	decoded, err := types.NewTxInternalDataWithMap(types.TxTypeChainDataAnchoring,
 		txMapData{
-			types.TxValueKeyNonce:      container.AccountNonce,
-			types.TxValueKeyAmount:     container.Amount,
-			types.TxValueKeyGasLimit:   container.GasLimit,
-			types.TxValueKeyGasPrice:   container.Price,
-			types.TxValueKeyFrom:       container.From,
-			types.TxValueKeyTo:         container.Recipient,
-			types.TxValueKeyPeggedData: container.PeggedData,
+			types.TxValueKeyNonce:        container.AccountNonce,
+			types.TxValueKeyAmount:       container.Amount,
+			types.TxValueKeyGasLimit:     container.GasLimit,
+			types.TxValueKeyGasPrice:     container.Price,
+			types.TxValueKeyFrom:         container.From,
+			types.TxValueKeyTo:           container.Recipient,
+			types.TxValueKeyAnchoredData: container.PeggedData,
 		})
 	if err != nil {
 		b.Error(err)
@@ -273,7 +273,7 @@ func checkInterfaceDecoding(b *testing.B, txType types.TxType, encoded []byte, o
 		decoded, isSuccessful = checkDecodingLegacyTxInterface(b, encoded, original)
 	case types.TxTypeValueTransfer:
 		decoded, isSuccessful = checkDecodingValueTransferTxInterface(b, encoded, original)
-	case types.TxTypeChainDataPegging:
+	case types.TxTypeChainDataAnchoring:
 		decoded, isSuccessful = checkDecodingChainDataPeggingTxInterface(b, encoded, original)
 	case types.TxTypeAccountCreation:
 		decoded, isSuccessful = checkDecodingAccountCreationTxInterface(b, encoded, original)
@@ -406,14 +406,14 @@ func checkDecodingChainDataPeggingInterfaceOverFields(b *testing.B, encoded []by
 	_ = rlp.Decode(reader, &v)
 	_ = rlp.Decode(reader, &r)
 	_ = rlp.Decode(reader, &s)
-	decoded, err := types.NewTxInternalDataWithMap(types.TxTypeChainDataPegging, txMapData{
-		types.TxValueKeyNonce:      accountNonce,
-		types.TxValueKeyAmount:     amount,
-		types.TxValueKeyGasLimit:   gasLimit,
-		types.TxValueKeyGasPrice:   price,
-		types.TxValueKeyTo:         recipient,
-		types.TxValueKeyFrom:       from,
-		types.TxValueKeyPeggedData: peggedData,
+	decoded, err := types.NewTxInternalDataWithMap(types.TxTypeChainDataAnchoring, txMapData{
+		types.TxValueKeyNonce:        accountNonce,
+		types.TxValueKeyAmount:       amount,
+		types.TxValueKeyGasLimit:     gasLimit,
+		types.TxValueKeyGasPrice:     price,
+		types.TxValueKeyTo:           recipient,
+		types.TxValueKeyFrom:         from,
+		types.TxValueKeyAnchoredData: peggedData,
 	})
 	if err != nil {
 		b.Error(err)
@@ -477,7 +477,7 @@ func checkInterfaceOverFieldsDecoding(b *testing.B, txType types.TxType, encoded
 		decoded, isSuccessful = checkDecodingLegacyInterfaceOverFields(b, encoded, original)
 	case types.TxTypeValueTransfer:
 		decoded, isSuccessful = checkDecodingValueTransferInterfaceOverFields(b, encoded, original)
-	case types.TxTypeChainDataPegging:
+	case types.TxTypeChainDataAnchoring:
 		decoded, isSuccessful = checkDecodingChainDataPeggingInterfaceOverFields(b, encoded, original)
 	case types.TxTypeAccountCreation:
 		decoded, isSuccessful = checkDecodingAccountCreationInterfaceOverFields(b, encoded, original)
@@ -618,10 +618,10 @@ func checkDecodingSeparateFieldsChainDataPegging(b *testing.B, encoded []byte, o
 	}
 }
 
-// encodeSeparateFieldsChainDataPegging encodes both common data and extra field separately.
-func encodeSeparateFieldsChainDataPegging(b *testing.B) {
+// encodeSeparateFieldsChainDataAnchoring encodes both common data and extra field separately.
+func encodeSeparateFieldsChainDataAnchoring(b *testing.B) {
 	commonData := genCommonDefaultData()
-	extra := genTestPeggedData()
+	extra := genTestAnchoredData()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buffer := new(bytes.Buffer)
@@ -691,8 +691,8 @@ func benchmarkEncodeExtraSeparateFields(b *testing.B, txType types.TxType) {
 		encodeSeparateFieldsLegacy(b)
 	case types.TxTypeValueTransfer:
 		encodeSeparateFieldsValueTransfer(b)
-	case types.TxTypeChainDataPegging:
-		encodeSeparateFieldsChainDataPegging(b)
+	case types.TxTypeChainDataAnchoring:
+		encodeSeparateFieldsChainDataAnchoring(b)
 	case types.TxTypeAccountCreation:
 		encodeSeparateFieldsAccountCreation(b)
 	}
@@ -716,7 +716,7 @@ func BenchmarkRLPEncoding(b *testing.B) {
 	}{
 		{"legacyTx", types.TxTypeLegacyTransaction},
 		{"valueTransferTx", types.TxTypeValueTransfer},
-		{"chainDataPeggingTx", types.TxTypeChainDataPegging},
+		{"chainDataAnchoringTx", types.TxTypeChainDataAnchoring},
 		{"accountCreationTx", types.TxTypeAccountCreation},
 	}
 	for _, option := range options {

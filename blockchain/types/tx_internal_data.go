@@ -41,7 +41,7 @@ const (
 	TxTypeSmartContractExecution, TxTypeFeeDelegatedSmartContractExecution, TxTypeFeeDelegatedSmartContractExecutionWithRatio
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
-	TxTypeChainDataPegging, _, _
+	TxTypeChainDataAnchoring, _, _
 )
 
 type TxValueKeyType uint
@@ -54,7 +54,7 @@ const (
 	TxValueKeyGasPrice
 	TxValueKeyData
 	TxValueKeyFrom
-	TxValueKeyPeggedData
+	TxValueKeyAnchoredData
 	TxValueKeyHumanReadable
 	TxValueKeyAccountKey
 	TxValueKeyFeePayer
@@ -106,8 +106,8 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedCancelWithRatio"
 	case TxTypeBatch:
 		return "TxTypeBatch"
-	case TxTypeChainDataPegging:
-		return "TxTypeChainDataPegging"
+	case TxTypeChainDataAnchoring:
+		return "TxTypeChainDataAnchoring"
 	}
 
 	return "UndefinedTxType"
@@ -196,8 +196,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataValueTransfer(), nil
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreation(), nil
-	case TxTypeChainDataPegging:
-		return newTxInternalDataChainDataPegging(), nil
+	case TxTypeChainDataAnchoring:
+		return newTxInternalDataChainDataAnchoring(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -211,8 +211,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataValueTransferWithMap(values), nil
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreationWithMap(values), nil
-	case TxTypeChainDataPegging:
-		return newTxInternalDataChainDataPeggingWithMap(values), nil
+	case TxTypeChainDataAnchoring:
+		return newTxInternalDataChainDataAnchoringWithMap(values), nil
 	}
 
 	return nil, errUndefinedTxType

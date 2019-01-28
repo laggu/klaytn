@@ -59,7 +59,7 @@ func TestChildChainData_ReadAndWrite_ChildChainTxHash(t *testing.T) {
 	assert.Equal(t, common.Hash{}, ccTxHashFromDB)
 }
 
-func TestChildChainData_ReadAndWrite_PeggedBlockNumber(t *testing.T) {
+func TestChildChainData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory: %v", err)
@@ -75,16 +75,16 @@ func TestChildChainData_ReadAndWrite_PeggedBlockNumber(t *testing.T) {
 
 	blockNum := uint64(123)
 
-	blockNumFromDB := dbm.ReadPeggedBlockNumber()
+	blockNumFromDB := dbm.ReadAnchoredBlockNumber()
 	assert.Equal(t, uint64(0), blockNumFromDB)
 
-	dbm.WritePeggedBlockNumber(blockNum)
-	blockNumFromDB = dbm.ReadPeggedBlockNumber()
+	dbm.WriteAnchoredBlockNumber(blockNum)
+	blockNumFromDB = dbm.ReadAnchoredBlockNumber()
 	assert.Equal(t, blockNum, blockNumFromDB)
 
 	newBlockNum := uint64(321)
-	dbm.WritePeggedBlockNumber(newBlockNum)
-	blockNumFromDB = dbm.ReadPeggedBlockNumber()
+	dbm.WriteAnchoredBlockNumber(newBlockNum)
+	blockNumFromDB = dbm.ReadAnchoredBlockNumber()
 	assert.Equal(t, newBlockNum, blockNumFromDB)
 
 }

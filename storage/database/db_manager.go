@@ -130,8 +130,8 @@ type DBManager interface {
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
 
 	// below two operations are used in child chain side, not parent chain side.
-	WritePeggedBlockNumber(blockNum uint64)
-	ReadPeggedBlockNumber() uint64
+	WriteAnchoredBlockNumber(blockNum uint64)
+	ReadAnchoredBlockNumber() uint64
 
 	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
 	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
@@ -901,7 +901,7 @@ func (dbm *databaseManager) ChildChainIndexingEnabled() bool {
 }
 
 // WriteChildChainTxHash writes stores a transaction hash of a transaction which contains
-// ChildChainTxData, with the key made with given child chain block hash.
+// ChainHashes, with the key made with given child chain block hash.
 func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
 	key := childChainTxHashKey(ccBlockHash)
 	db := dbm.getDatabase(childChainDB)
@@ -911,7 +911,7 @@ func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxH
 }
 
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
-// ChildChainTxData, with the key made with given child chain block hash.
+// ChainHashes, with the key made with given child chain block hash.
 func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	key := childChainTxHashKey(ccBlockHash)
 	db := dbm.getDatabase(childChainDB)
@@ -922,8 +922,8 @@ func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBloc
 	return common.BytesToHash(data)
 }
 
-// WritePeggedBlockNumber writes the block number whose data has been pegged to the parent chain.
-func (dbm *databaseManager) WritePeggedBlockNumber(blockNum uint64) {
+// WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
+func (dbm *databaseManager) WriteAnchoredBlockNumber(blockNum uint64) {
 	key := lastServiceChainTxReceiptKey
 	db := dbm.getDatabase(childChainDB)
 	if err := db.Put(key, encodeBlockNumber(blockNum)); err != nil {
@@ -931,8 +931,8 @@ func (dbm *databaseManager) WritePeggedBlockNumber(blockNum uint64) {
 	}
 }
 
-// ReadPeggedBlockNumber returns the latest block number whose data has been pegged to the parent chain.
-func (dbm *databaseManager) ReadPeggedBlockNumber() uint64 {
+// ReadAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
+func (dbm *databaseManager) ReadAnchoredBlockNumber() uint64 {
 	key := lastServiceChainTxReceiptKey
 	db := dbm.getDatabase(childChainDB)
 	data, _ := db.Get(key)

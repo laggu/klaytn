@@ -77,7 +77,7 @@ type Backend interface {
 
 	GetChildChainIndexingEnabled() bool
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
-	GetLatestPeggedBlockNumber() uint64
+	GetLatestAnchoredBlockNumber() uint64
 	GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt
 	GetChainAddr() string
 	GetChainTxPeriod() uint64

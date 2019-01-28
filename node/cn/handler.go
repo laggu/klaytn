@@ -847,7 +847,7 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 }
 
 // handleServiceChainTxDataMsg handles service chain transactions from child chain.
-// It will return an error if given tx is not TxTypeChainDataPegging type.
+// It will return an error if given tx is not TxTypeChainDataAnchoring type.
 func handleServiceChainTxDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	//pm.txMsgLock.Lock()
 	// Transactions can be processed, parse all of them and deliver to the pool
@@ -864,8 +864,8 @@ func handleServiceChainTxDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 			err = errResp(ErrDecode, "tx %d is nil", i)
 			continue
 		}
-		if tx.Type() != types.TxTypeChainDataPegging {
-			err = errResp(ErrUnexpectedTxType, "tx %d should be TxTypeChainDataPegging, but %s", i, tx.Type())
+		if tx.Type() != types.TxTypeChainDataAnchoring {
+			err = errResp(ErrUnexpectedTxType, "tx %d should be TxTypeChainDataAnchoring, but %s", i, tx.Type())
 			continue
 		}
 		p.AddToKnownTxs(tx.Hash())

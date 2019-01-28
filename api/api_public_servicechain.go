@@ -41,14 +41,14 @@ func (s *PublicServiceChainAPI) GetChildChainIndexingEnabled() bool {
 }
 
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
-// ChildChainTxData, with the key made with given child chain block hash.
+// ChainHashes, with the key made with given child chain block hash.
 func (s *PublicServiceChainAPI) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	return s.b.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 }
 
-// GetLatestPeggedBlockNumber returns the latest block number whose data has been pegged to the parent chain.
-func (s *PublicServiceChainAPI) GetLatestPeggedBlockNumber() uint64 {
-	return s.b.GetLatestPeggedBlockNumber()
+// GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
+func (s *PublicServiceChainAPI) GetLatestAnchoredBlockNumber() uint64 {
+	return s.b.GetLatestAnchoredBlockNumber()
 }
 
 // GetReceiptFromParentChain returns saved receipt received from parent chain.

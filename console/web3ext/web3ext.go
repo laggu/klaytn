@@ -661,8 +661,8 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getLatestPeggedBlockNumber',
-			call: 'servicechain_getLatestPeggedBlockNumber',
+			name: 'getLatestAnchoredBlockNumber',
+			call: 'servicechain_getLatestAnchoredBlockNumber',
 			params: 0
 		}),
 		new web3._extend.Method({

@@ -59,8 +59,8 @@ const (
 	// Fee for Service Chain
 	// TODO-Klaytn-ServiceChain The following parameters should be fixed.
 	// TODO-Klaytn-Governance The following parameters should be able to be modified by governance.
-	TxChainDataPeggingGas uint64 = 50000 // Per transaction pegging chain data. NOTE: Not payable on data of calls between transactions. // G_transactionchaindatapegging
-	ChainDataPeggingGas   uint64 = 100   // Per byte of pegging chain data NOTE: Not payable on data of calls between transactions. // G_chaindatapegging
+	TxChainDataAnchoringGas uint64 = 50000 // Per transaction anchoring chain data. NOTE: Not payable on data of calls between transactions. // G_transactionchaindataanchoring
+	ChainDataAnchoringGas   uint64 = 100   // Per byte of anchoring chain data NOTE: Not payable on data of calls between transactions. // G_chaindataanchoring
 
 	// Precompiled contract gas prices
 
