@@ -61,6 +61,12 @@ func (s *senderFromServer) SenderPubkey(tx *types.Transaction) (*ecdsa.PublicKey
 	panic("SenderPubkey should not be called!")
 }
 
+func (s *senderFromServer) SenderFeePayer(tx *types.Transaction) (*ecdsa.PublicKey, error) {
+	// TODO-Klaytn: need to check this routine is never called or not.
+	// `senderFromServer` is only used in klayclient.go.
+	panic("SenderFeePayer should not be called!")
+}
+
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }

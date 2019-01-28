@@ -34,6 +34,7 @@ import (
 var (
 	ErrInvalidChainId        = errors.New("invalid chain id for signer")
 	errNotTxInternalDataFrom = errors.New("not an TxInternalDataFrom")
+	errNotFeePayer           = errors.New("not implement fee payer interface")
 )
 
 // sigCache is used to cache the derived sender and contains
@@ -118,6 +119,17 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	return tx.From()
 }
 
+// SenderFeePayer returns the fee payer address of the transaction.
+// If the transaction is not a fee-delegated transaction, the fee payer is set to
+// the address of the `from` of the transaction.
+func SenderFeePayer(signer Signer, tx *Transaction) (common.Address, error) {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return Sender(signer, tx)
+	}
+	return tf.GetFeePayer(), nil
+}
+
 // SenderFrom returns the address derived from the signature (V, R, S) using secp256k1
 // elliptic curve and an error if it failed deriving or upon an incorrect
 // signature.
@@ -177,6 +189,8 @@ type Signer interface {
 	Sender(tx *Transaction) (common.Address, error)
 	// SenderPubkey returns the public key derived from tx signature and txhash.
 	SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error)
+	// SenderFeePayer returns the public key derived from tx signature and txhash.
+	SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
 	SignatureValues(sig []byte) (r, s, v *big.Int, err error)
@@ -244,6 +258,31 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
 	return recoverPlainPubkey(s.Hash(tx), txR, txS, V, true)
 }
 
+func (s EIP155Signer) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
+	if tx.IsLegacyTransaction() {
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
+	}
+
+	if !tx.Protected() {
+		return HomesteadSigner{}.SenderPubkey(tx)
+	}
+
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return nil, ErrInvalidChainId
+	}
+
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return nil, errNotFeePayer
+	}
+
+	txV, txR, txS := tf.GetFeePayerVRS()
+	V := new(big.Int).Sub(txV, s.chainIdMul)
+	V.Sub(V, big8)
+	return recoverPlainPubkey(s.Hash(tx), txR, txS, V, true)
+}
+
 // WithSignature returns a new transaction with the given signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
@@ -302,6 +341,21 @@ func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error
 	return recoverPlainPubkey(hs.Hash(tx), r, s, v, true)
 }
 
+func (hs HomesteadSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
+	if tx.IsLegacyTransaction() {
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
+	}
+
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return nil, errNotFeePayer
+	}
+
+	v, r, s := tf.GetFeePayerVRS()
+	return recoverPlainPubkey(hs.Hash(tx), r, s, v, true)
+}
+
 type FrontierSigner struct{}
 
 func (s FrontierSigner) Equal(s2 Signer) bool {
@@ -344,6 +398,21 @@ func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error)
 	}
 
 	v, r, s := tx.data.GetVRS()
+	return recoverPlainPubkey(fs.Hash(tx), r, s, v, false)
+}
+
+func (fs FrontierSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
+	if tx.IsLegacyTransaction() {
+		b, _ := json.Marshal(tx)
+		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
+	}
+
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return nil, errNotFeePayer
+	}
+
+	v, r, s := tf.GetFeePayerVRS()
 	return recoverPlainPubkey(fs.Hash(tx), r, s, v, false)
 }
 
