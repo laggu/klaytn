@@ -185,7 +185,15 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	}
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
-	contractCreation := msg.To() == nil
+	txType := msg.TxType()
+
+	// IsContractCreation returns true if one of the following conditions is met:
+	// - ContractDeploy transaction type
+	// - legacy transaction type && msg.To() == nil
+	contractCreation := txType.IsContractDeploy() || (txType.IsLegacyTransaction() && msg.To() == nil)
+
+	// IsAccountCreation returns true if the transaction is an account creation transaction.
+	accountCreation := txType.IsAccountCreation()
 
 	// TODO-Klaytn-Issue136
 	// Pay intrinsic gas.
@@ -207,7 +215,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		// error and total time limit reached error.
 		vmerr error
 	)
-	if msg.TxType() == types.TxTypeAccountCreation {
+	if accountCreation {
 		to := msg.To()
 		if to == nil {
 			// This MUST not happen since only legacy transaction types allows that `to` is nil.

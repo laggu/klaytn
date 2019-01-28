@@ -113,6 +113,20 @@ func (t TxType) String() string {
 	return "UndefinedTxType"
 }
 
+func (t TxType) IsAccountCreation() bool {
+	return t == TxTypeAccountCreation
+}
+
+func (t TxType) IsContractDeploy() bool {
+	return t == TxTypeSmartContractDeploy ||
+		t == TxTypeFeeDelegatedSmartContractDeploy ||
+		t == TxTypeFeeDelegatedSmartContractDeployWithRatio
+}
+
+func (t TxType) IsLegacyTransaction() bool {
+	return t == TxTypeLegacyTransaction
+}
+
 // TxInternalData is an interface for an internal data structure of a Transaction
 type TxInternalData interface {
 	Type() TxType
