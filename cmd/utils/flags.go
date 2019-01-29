@@ -536,6 +536,24 @@ var (
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
 		Value: cn.DefaultConfig.GPO.Percentile,
 	}
+
+	// Bootnode's settings
+	AddrFlag = cli.StringFlag{
+		Name:  "addr",
+		Usage: `udp listen port`,
+		Value: "32323",
+	}
+	GenKeyFlag = cli.StringFlag{
+		Name:  "genkey",
+		Usage: "generate a node private key and write to given filename",
+	}
+	WriteAddressFlag = cli.BoolFlag{
+		Name:  "writeaddress",
+		Usage: `write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"`,
+	}
+
+	// TODO-Klaytn: Add bootnode's metric options
+	// TODO-Klaytn: Implements bootnode's RPC
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating

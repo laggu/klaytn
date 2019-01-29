@@ -40,7 +40,7 @@ const (
 	importBatchSize = 2500
 )
 
-var logger = log.NewModuleLogger(log.CmdUtils)
+var logger = log.NewModuleLogger(log.CMDUtils)
 
 // Fatalf formats a message to standard error and exits the program.
 // The message is also printed to standard output if standard error

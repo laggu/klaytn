@@ -50,7 +50,7 @@ const (
 )
 
 var (
-	logger = log.NewModuleLogger(log.CmdKlay)
+	logger = log.NewModuleLogger(log.CMDKlay)
 
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""

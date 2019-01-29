@@ -60,9 +60,9 @@ const (
 	Blockchain
 	BlockchainState
 	BlockchainTypes
-	CmdKlay
+	CMDKlay
 	_
-	CmdUtils
+	CMDUtils
 
 	// 11~20
 	Common
@@ -96,6 +96,7 @@ const (
 	StorageStateDB
 	VM
 	Work
+	CMDBootnode
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -149,4 +150,5 @@ var moduleNames = [ModuleNameLen]string{
 	"storage/statedb",
 	"vm",
 	"work",
+	"cmd/bootnode",
 }

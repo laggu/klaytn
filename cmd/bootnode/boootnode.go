@@ -22,118 +22,230 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"flag"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 
+	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
-	//"github.com/ground-x/klaytn/networks/p2p/discv5"
 	"github.com/ground-x/klaytn/networks/p2p/nat"
 	"github.com/ground-x/klaytn/networks/p2p/netutil"
+	"gopkg.in/urfave/cli.v1"
 )
 
-func main() {
+type bootnodeConfig struct {
+	// Parameter variables
+	addr         string
+	genKeyPath   string
+	nodeKeyFile  string
+	nodeKeyHex   string
+	natFlag      string
+	netrestrict  string
+	writeAddress bool
+
+	// Context
+	restrictList *netutil.Netlist
+	nodeKey      *ecdsa.PrivateKey
+	natm         nat.Interface
+	listenAddr   string
+}
+
+var (
+	logger = log.NewModuleLogger(log.CMDBootnode)
+)
+
+const (
+	generateNodeKeySpecified = iota
+	noPrivateKeyPathSpecified
+	nodeKeyDuplicated
+	writeOutAddress
+	goodToGo
+)
+
+func checkCMDState(ctx bootnodeConfig) int {
+	if ctx.genKeyPath != "" {
+		return generateNodeKeySpecified
+	}
+	if ctx.nodeKeyFile == "" && ctx.nodeKeyHex == "" {
+		return noPrivateKeyPathSpecified
+	}
+	if ctx.nodeKeyFile != "" && ctx.nodeKeyHex != "" {
+		return nodeKeyDuplicated
+	}
+	if ctx.writeAddress {
+		return writeOutAddress
+	}
+	return goodToGo
+}
+
+func generateNodeKey(path string) {
+	nodeKey, err := crypto.GenerateKey()
+	if err != nil {
+		utils.Fatalf("could not generate key: %v", err)
+	}
+	if err = crypto.SaveECDSA(path, nodeKey); err != nil {
+		utils.Fatalf("%v", err)
+	}
+	os.Exit(0)
+}
+
+func doWriteOutAddress(ctx *bootnodeConfig) {
+	err := readNodeKey(ctx)
+	if err != nil {
+		utils.Fatalf("Failed to read node key: %v", err)
+	}
+	fmt.Printf("%v\n", discover.PubkeyID(&(ctx.nodeKey).PublicKey))
+	os.Exit(0)
+}
+
+func readNodeKey(ctx *bootnodeConfig) error {
+	var err error
+	if ctx.nodeKeyFile != "" {
+		ctx.nodeKey, err = crypto.LoadECDSA(ctx.nodeKeyFile)
+		return err
+	}
+	if ctx.nodeKeyHex != "" {
+		ctx.nodeKey, err = crypto.LoadECDSA(ctx.nodeKeyHex)
+		return err
+	}
+	return nil
+}
+
+func validateNetworkParameter(ctx *bootnodeConfig) error {
+	var err error
+	if ctx.natFlag != "" {
+		ctx.natm, err = nat.Parse(ctx.natFlag)
+		if err != nil {
+			return err
+		}
+	}
+
+	if ctx.netrestrict != "" {
+		ctx.restrictList, err = netutil.ParseNetlist(ctx.netrestrict)
+		if err != nil {
+			return err
+		}
+	}
+
+	if ctx.addr[0] != ':' {
+		ctx.listenAddr = ":" + ctx.addr
+	} else {
+		ctx.listenAddr = ctx.addr
+	}
+
+	return nil
+}
+
+func bootnode(c *cli.Context) error {
 	var (
-		listenAddr  = flag.String("addr", ":30301", "listen address")
-		genKey      = flag.String("genkey", "", "generate a node key")
-		writeAddr   = flag.Bool("writeaddress", false, "write out the node's pubkey hash and quit")
-		nodeKeyFile = flag.String("nodekey", "", "private key filename")
-		nodeKeyHex  = flag.String("nodekeyhex", "", "private key as hex (for testing)")
-		natdesc     = flag.String("nat", "none", "port mapping mechanism (any|none|upnp|pmp|extip:<IP>)")
-		netrestrict = flag.String("netrestrict", "", "restrict network communication to the given IP networks (CIDR masks)")
-		//runv5       = flag.Bool("v5", false, "run a v5 topic discovery bootnode")
-		verbosity = flag.Int("verbosity", int(log.LvlInfo), "log verbosity (0-9)")
-		vmodule   = flag.String("vmodule", "", "log verbosity pattern")
-
-		nodeKey *ecdsa.PrivateKey
-		err     error
+		// Local variables
+		err error
+		ctx = bootnodeConfig{
+			// Config variables
+			addr:         c.GlobalString(utils.AddrFlag.Name),
+			genKeyPath:   c.GlobalString(utils.GenKeyFlag.Name),
+			nodeKeyFile:  c.GlobalString(utils.NodeKeyFileFlag.Name),
+			nodeKeyHex:   c.GlobalString(utils.NodeKeyHexFlag.Name),
+			natFlag:      c.GlobalString(utils.NATFlag.Name),
+			netrestrict:  c.GlobalString(utils.NetrestrictFlag.Name),
+			writeAddress: c.GlobalBool(utils.WriteAddressFlag.Name),
+		}
 	)
-	flag.Parse()
 
-	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(*verbosity))
-	glogger.Vmodule(*vmodule)
-	log.Root().SetHandler(glogger)
-
-	natm, err := nat.Parse(*natdesc)
-	if err != nil {
-		utils.Fatalf("-nat: %v", err)
-	}
-	switch {
-	case *genKey != "":
-		nodeKey, err = crypto.GenerateKey()
+	// Check exit condition
+	switch checkCMDState(ctx) {
+	case generateNodeKeySpecified:
+		generateNodeKey(ctx.genKeyPath)
+	case noPrivateKeyPathSpecified:
+		return errors.New("Use --nodekey or --nodekeyhex to specify a private key")
+	case nodeKeyDuplicated:
+		return errors.New("Options --nodekey and --nodekeyhex are mutually exclusive")
+	case writeOutAddress:
+		doWriteOutAddress(&ctx)
+	default:
+		err = readNodeKey(&ctx)
 		if err != nil {
-			utils.Fatalf("could not generate key: %v", err)
-		}
-		if err = crypto.SaveECDSA(*genKey, nodeKey); err != nil {
-			utils.Fatalf("%v", err)
-		}
-		return
-	case *nodeKeyFile == "" && *nodeKeyHex == "":
-		utils.Fatalf("Use -nodekey or -nodekeyhex to specify a private key")
-	case *nodeKeyFile != "" && *nodeKeyHex != "":
-		utils.Fatalf("Options -nodekey and -nodekeyhex are mutually exclusive")
-	case *nodeKeyFile != "":
-		if nodeKey, err = crypto.LoadECDSA(*nodeKeyFile); err != nil {
-			utils.Fatalf("-nodekey: %v", err)
-		}
-	case *nodeKeyHex != "":
-		if nodeKey, err = crypto.HexToECDSA(*nodeKeyHex); err != nil {
-			utils.Fatalf("-nodekeyhex: %v", err)
+			return err
 		}
 	}
 
-	if *writeAddr {
-		fmt.Printf("%v\n", discover.PubkeyID(&nodeKey.PublicKey))
-		os.Exit(0)
-	}
-
-	var restrictList *netutil.Netlist
-	if *netrestrict != "" {
-		restrictList, err = netutil.ParseNetlist(*netrestrict)
-		if err != nil {
-			utils.Fatalf("-netrestrict: %v", err)
-		}
-	}
-
-	addr, err := net.ResolveUDPAddr("udp", *listenAddr)
+	err = validateNetworkParameter(&ctx)
 	if err != nil {
-		utils.Fatalf("-ResolveUDPAddr: %v", err)
+		return err
 	}
+
+	addr, err := net.ResolveUDPAddr("udp", ctx.listenAddr)
+	if err != nil {
+		utils.Fatalf("Failed to ResolveUDPAddr: %v", err)
+	}
+
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		utils.Fatalf("-ListenUDP: %v", err)
+		utils.Fatalf("Failed to ListenUDP: %v", err)
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	if natm != nil {
+	if ctx.natm != nil {
 		if !realaddr.IP.IsLoopback() {
-			go nat.Map(natm, nil, "udp", realaddr.Port, realaddr.Port, "ethereum discovery")
+			go nat.Map(ctx.natm, nil, "udp", realaddr.Port, realaddr.Port, "Klaytn node discovery")
 		}
 		// TODO: react to external IP changes over time.
-		if ext, err := natm.ExternalIP(); err == nil {
+		if ext, err := ctx.natm.ExternalIP(); err == nil {
 			realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
 		}
 	}
 
-	//if *runv5 {
-	//	if _, err := discv5.ListenUDP(nodeKey, conn, realaddr, "", restrictList); err != nil {
-	//		utils.Fatalf("%v", err)
-	//	}
-	//} else {
 	cfg := discover.Config{
-		PrivateKey:   nodeKey,
+		PrivateKey:   ctx.nodeKey,
 		AnnounceAddr: realaddr,
-		NetRestrict:  restrictList,
+		NetRestrict:  ctx.restrictList,
 	}
 	if _, err := discover.ListenUDP(conn, cfg); err != nil {
 		utils.Fatalf("%v", err)
 	}
-	//}
 
 	select {}
+}
+
+func main() {
+	var (
+		cliFlags = []cli.Flag{
+			utils.GenKeyFlag,
+			utils.NodeKeyFileFlag,
+			utils.NodeKeyHexFlag,
+			utils.WriteAddressFlag,
+			utils.AddrFlag,
+			utils.NATFlag,
+			utils.NetrestrictFlag,
+		}
+	)
+	// TODO-Klaytn: remove `help` command
+	app := utils.NewApp("", "the klaytn's bootnode command line interface")
+	app.Name = "bootnode"
+	app.Copyright = "Copyright 2018 The klaytn Authors"
+	app.UsageText = app.Name + " [global options] [commands]"
+	app.Flags = append(app.Flags, cliFlags...)
+	app.Flags = append(app.Flags, debug.Flags...)
+
+	app.Action = bootnode
+	app.Before = func(c *cli.Context) error {
+		if err := debug.Setup(c); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	app.After = func(c *cli.Context) error {
+		debug.Exit()
+		return nil
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
