@@ -1,6 +1,6 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-BENCHNAME="ValueTransfer"
+BENCHNAME="BenchmarkValueTransfer"
 
 BENCHTIME=${BENCHTIME:-"5s"}
 BENCHCOUNT=${BENCHCOUNT:-5}

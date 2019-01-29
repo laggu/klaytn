@@ -167,6 +167,60 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 	return txs, nil
 }
 
+// makeTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of KLAY
+// from accounts in `AccountMap` to a randomly generated account.
+// It returns the generated transactions if successful, or it returns an error if failed.
+func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
+	amount *big.Int, data []byte) (types.Transactions, error) {
+	numAddrs := len(bcdata.addrs)
+	fromAddrs := bcdata.addrs
+
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range fromAddrs {
+		fromNonces[i] = accountMap.GetNonce(*addr)
+	}
+
+	txs := make(types.Transactions, 0, numTransactions)
+
+	for i := 0; i < numTransactions; i++ {
+		idx := i % numAddrs
+
+		txamount := amount
+		if txamount == nil {
+			txamount = big.NewInt(rand.Int63n(10))
+			txamount = txamount.Add(txamount, big.NewInt(1))
+		}
+		var gasLimit uint64 = 1000000
+		gasPrice := new(big.Int).SetInt64(0)
+
+		// generate a new address
+		k, err := crypto.GenerateKey()
+		if err != nil {
+			return nil, err
+		}
+		to := crypto.PubkeyToAddress(k.PublicKey)
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    fromNonces[idx],
+			types.TxValueKeyTo:       to,
+			types.TxValueKeyAmount:   txamount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyFrom:     *bcdata.addrs[idx],
+		})
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, signedTx)
+
+		fromNonces[idx]++
+	}
+
+	return txs, nil
+}
+
 func TestValueTransfer(t *testing.T) {
 	var nBlocks int = 3
 	var txPerBlock int = 10
@@ -231,7 +285,7 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 	}
 }
 
-// BenchmarkValueTransfer measures TPS without txpool operations and network traffics
+// BenchmarkValueTransfer measures TPS without network traffics
 // while creating a block. As a disclaimer, this function does not tell that Klaytn
 // can perform this amount of TPS in real environment.
 func BenchmarkValueTransfer(t *testing.B) {
@@ -239,7 +293,69 @@ func BenchmarkValueTransfer(t *testing.B) {
 		enableLog()
 	}
 	prof := profile.NewProfiler()
-	opt := testOption{t.N, 2000, 4, 1, []byte{}, makeIndependentTransactions}
+	opt := testOption{t.N, 2000, 4, 1, []byte{}, makeTransactionsToRandom}
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// make txpool
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.AccountSlots = uint64(t.N)
+	txpoolconfig.AccountQueue = uint64(t.N)
+	txpoolconfig.GlobalSlots = 2 * uint64(t.N)
+	txpoolconfig.GlobalQueue = 2 * uint64(t.N)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	// make t.N transactions
+	txs, err := makeIndependentTransactions(bcdata, accountMap, signer, t.N, nil, []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.ResetTimer()
+
+	txpool.AddRemotes(txs)
+
+	for {
+		if err := bcdata.GenABlockWithTxpool(accountMap, txpool, prof); err != nil {
+			if err == errEmptyPending {
+				break
+			}
+			t.Fatal(err)
+		}
+	}
+	t.StopTimer()
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// BenchmarkNewValueTransfer measures TPS without network traffics
+// while creating a block. As a disclaimer, this function does not tell that Klaytn
+// can perform this amount of TPS in real environment.
+func BenchmarkNewValueTransfer(t *testing.B) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+	opt := testOption{t.N, 2000, 4, 1, []byte{}, makeNewTransactionsToRandom}
 
 	// Initialize blockchain
 	start := time.Now()
