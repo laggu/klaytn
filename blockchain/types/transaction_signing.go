@@ -110,6 +110,43 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 	return from, gasKey, nil
 }
 
+// ValidateFeePayer finds a fee payer from a transaction.
+// If the transaction is not a fee-delegated transaction, it returns `from`.
+func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (common.Address, uint64, error) {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		addr, _, err := ValidateSender(signer, tx, p)
+		// Do not consume gas if the tx is not a fee delegated transaction.
+		return addr, 0, err
+	}
+
+	pubkey, err := SenderFeePayerPubkey(signer, tx)
+	if err != nil {
+		return common.Address{}, 0, err
+	}
+	feePayer := tf.GetFeePayer()
+	accKey := p.GetKey(feePayer)
+
+	gasKey, err := accKey.SigValidationGas()
+	if err != nil {
+		return common.Address{}, 0, err
+	}
+
+	// Special treatment for AccountKeyNil.
+	if accKey.Type() == AccountKeyTypeNil {
+		if crypto.PubkeyToAddress(*pubkey) != feePayer {
+			return common.Address{}, 0, ErrInvalidSig
+		}
+		return feePayer, gasKey, nil
+	}
+
+	if !accKey.Equal(NewAccountKeyPublicWithValue(pubkey)) {
+		return common.Address{}, 0, ErrInvalidSig
+	}
+
+	return feePayer, gasKey, nil
+}
+
 // Sender returns the address of the transaction.
 // If a legacy transaction, it calls SenderFrom().
 // Otherwise, it just returns tx.From() because the other transaction types have the field `from`.
@@ -132,6 +169,33 @@ func SenderFeePayer(signer Signer, tx *Transaction) (common.Address, error) {
 		return Sender(signer, tx)
 	}
 	return tf.GetFeePayer(), nil
+}
+
+// SenderFeePayerPubkey returns the public key derived from the signature (V, R, S) using secp256k1
+// elliptic curve and an error if it failed deriving or upon an incorrect
+// signature.
+//
+// SenderFeePayerPubkey may cache the public key, allowing it to be used regardless of
+// signing method. The cache is invalidated if the cached signer does
+// not match the signer used in the current call.
+func SenderFeePayerPubkey(signer Signer, tx *Transaction) (*ecdsa.PublicKey, error) {
+	if sc := tx.feePayer.Load(); sc != nil {
+		sigCache := sc.(sigCachePubkey)
+		// If the signer used to derive from in a previous
+		// call is not the same as used current, invalidate
+		// the cache.
+		if sigCache.signer.Equal(signer) {
+			return sigCache.pubkey, nil
+		}
+	}
+
+	pubkey, err := signer.SenderFeePayer(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.feePayer.Store(sigCachePubkey{signer: signer, pubkey: pubkey})
+	return pubkey, nil
 }
 
 // SenderFrom returns the address derived from the signature (V, R, S) using secp256k1

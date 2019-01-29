@@ -54,9 +54,10 @@ func deriveSigner(V *big.Int) Signer {
 type Transaction struct {
 	data TxInternalData
 	// caches
-	hash atomic.Value
-	size atomic.Value
-	from atomic.Value
+	hash     atomic.Value
+	size     atomic.Value
+	from     atomic.Value
+	feePayer atomic.Value
 }
 
 func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (*Transaction, error) {
