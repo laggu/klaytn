@@ -32,6 +32,7 @@ func TestTransactionSerialization(t *testing.T) {
 		tx   TxInternalData
 	}{
 		{"OriginalTx", genLegacyTransaction()},
+		{"SmartContractDeploy", genSmartContractDeployTransaction()},
 		{"ValueTransfer", genValueTransferTransaction()},
 		{"ChainDataTx", genChainDataTransaction()},
 		{"AccountCreation", genAccountCreationTransaction()},
@@ -114,6 +115,25 @@ func genValueTransferTransaction() TxInternalData {
 		TxValueKeyGasLimit: uint64(9999999999),
 		TxValueKeyGasPrice: new(big.Int).SetUint64(25),
 		TxValueKeyFrom:     common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
+}
+
+func genSmartContractDeployTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeValueTransfer, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:         uint64(1234),
+		TxValueKeyAmount:        new(big.Int).SetUint64(10),
+		TxValueKeyGasLimit:      uint64(9999999999),
+		TxValueKeyGasPrice:      new(big.Int).SetUint64(25),
+		TxValueKeyHumanReadable: true,
+		TxValueKeyTo:            common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyFrom:          common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
 	})
 
 	if err != nil {

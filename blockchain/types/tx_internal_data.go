@@ -218,15 +218,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	return nil, errUndefinedTxType
 }
 
-// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
-	// Set the starting gas for the raw transaction
-	var gas uint64
-	if contractCreation && homestead {
-		gas = params.TxGasContractCreation
-	} else {
-		gas = params.TxGas
-	}
+func intrinsicGasPayload(data []byte) (uint64, error) {
+	gas := uint64(0)
 	// Bump the required gas by the amount of transactional data
 	if len(data) > 0 {
 		// Zero and non-zero bytes are priced differently
@@ -248,5 +241,23 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 		}
 		gas += z * params.TxDataZeroGas
 	}
+
 	return gas, nil
+}
+
+// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
+	// Set the starting gas for the raw transaction
+	var gas uint64
+	if contractCreation && homestead {
+		gas = params.TxGasContractCreation
+	} else {
+		gas = params.TxGas
+	}
+	gasPayload, err := intrinsicGasPayload(data)
+	if err != nil {
+		return 0, err
+	}
+
+	return gas + gasPayload, nil
 }
