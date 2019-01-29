@@ -593,20 +593,23 @@ func (rw *protoRW) ReadMsg() (Msg, error) {
 	}
 }
 
+// NetworkInfo represents the connection information with the peer.
+type NetworkInfo struct {
+	LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
+	RemoteAddress string `json:"remoteAddress"` // Remote endpoint of the TCP data connection
+	Inbound       bool   `json:"inbound"`
+	Trusted       bool   `json:"trusted"`
+	Static        bool   `json:"static"`
+}
+
 // PeerInfo represents a short summary of the information known about a connected
 // peer. Sub-protocol independent fields are contained and initialized here, with
 // protocol specifics delegated to all connected sub-protocols.
 type PeerInfo struct {
-	ID      string   `json:"id"`   // Unique node identifier (also the encryption key)
-	Name    string   `json:"name"` // Name of the node, including client type, version, OS, custom data
-	Caps    []string `json:"caps"` // Sum-protocols advertised by this particular peer
-	Network struct {
-		LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
-		RemoteAddress string `json:"remoteAddress"` // Remote endpoint of the TCP data connection
-		Inbound       bool   `json:"inbound"`
-		Trusted       bool   `json:"trusted"`
-		Static        bool   `json:"static"`
-	} `json:"network"`
+	ID        string                 `json:"id"`        // Unique node identifier (also the encryption key)
+	Name      string                 `json:"name"`      // Name of the node, including client type, version, OS, custom data
+	Caps      []string               `json:"caps"`      // Sum-protocols advertised by this particular peer
+	Networks  []NetworkInfo          `json:"networks"`  // Networks is all the NetworkInfo associated with the peer
 	Protocols map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
 }
 
@@ -624,11 +627,16 @@ func (p *Peer) Info() *PeerInfo {
 		Caps:      caps,
 		Protocols: make(map[string]interface{}),
 	}
-	info.Network.LocalAddress = p.LocalAddr().String()
-	info.Network.RemoteAddress = p.RemoteAddr().String()
-	info.Network.Inbound = p.rws[ConnDefault].is(inboundConn)
-	info.Network.Trusted = p.rws[ConnDefault].is(trustedConn)
-	info.Network.Static = p.rws[ConnDefault].is(staticDialedConn)
+
+	for _, rw := range p.rws {
+		var network NetworkInfo
+		network.LocalAddress = rw.fd.LocalAddr().String()
+		network.RemoteAddress = rw.fd.RemoteAddr().String()
+		network.Inbound = rw.is(inboundConn)
+		network.Trusted = rw.is(trustedConn)
+		network.Static = rw.is(staticDialedConn)
+		info.Networks = append(info.Networks, network)
+	}
 
 	// Gather all the running protocol infos
 	for _, proto := range p.running {

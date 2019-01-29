@@ -351,7 +351,7 @@ func (pm *ProtocolManager) newPeerWithRWs(pv int, p *p2p.Peer, rws []p2p.MsgRead
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p Peer) error {
 	// Ignore maxPeers if this is a trusted peer
-	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Network.Trusted {
+	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.GetP2PPeer().Log().Debug("klaytn peer connected", "name", p.GetP2PPeer().Name())

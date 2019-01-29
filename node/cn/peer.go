@@ -952,7 +952,7 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, msgCh chan<- p2p.Msg, e
 // this function terminates, the Peer is disconnected.
 func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	// Ignore maxPeers if this is a trusted peer
-	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Network.Trusted {
+	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.GetP2PPeer().Log().Debug("klaytn peer connected", "name", p.GetP2PPeer().Name())
