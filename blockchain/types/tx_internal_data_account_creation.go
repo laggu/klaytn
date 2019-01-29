@@ -169,9 +169,12 @@ func (t *TxInternalDataAccountCreation) SetSignature(s *TxSignature) {
 }
 
 func (t *TxInternalDataAccountCreation) IntrinsicGas() (uint64, error) {
-	gas := params.TxGasAccountCreation + t.Key.AccountCreationGas()
+	gasKey, err := t.Key.AccountCreationGas()
+	if err != nil {
+		return 0, err
+	}
 
-	return gas, nil
+	return params.TxGasAccountCreation + gasKey, nil
 }
 
 func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {

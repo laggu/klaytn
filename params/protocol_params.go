@@ -98,8 +98,8 @@ const (
 	// TODO-Klaytn: Need to fix below values.
 	TxAccountCreationGasDefault uint64 = 0
 	TxValidationGasDefault      uint64 = 0
-	TxAccountCreationGasPerKey  uint64 = 20000
-	TxValidationGasPerKey       uint64 = 5000
+	TxAccountCreationGasPerKey  uint64 = 20000 // WARNING: With integer overflow in mind before changing this value.
+	TxValidationGasPerKey       uint64 = 5000  // WARNING: With integer overflow in mind before changing this value.
 
 	// TODO-Klaytn-Issue973 Developing Klaytn token economy
 	// Because uint64 can hold up to about 9*10^18 in golang, let's use ston instead of peb to define these constants.

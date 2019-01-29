@@ -49,10 +49,10 @@ type AccountKey interface {
 	DeepCopy() AccountKey
 
 	// AccountCreationGas returns gas required to create an account with the corresponding key.
-	AccountCreationGas() uint64
+	AccountCreationGas() (uint64, error)
 
 	// SigValidationGas returns gas required to validate a tx with the account.
-	SigValidationGas() uint64
+	SigValidationGas() (uint64, error)
 }
 
 func NewAccountKey(t AccountKeyType) (AccountKey, error) {

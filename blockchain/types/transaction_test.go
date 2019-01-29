@@ -23,6 +23,8 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/params"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 
@@ -178,6 +180,27 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestGasOverflow(t *testing.T) {
+	// AccountCreation
+	// calculate gas for account creation
+	numKeys := new(big.Int).SetUint64(MaxNumKeysForMultiSig)
+	gasPerKey := new(big.Int).SetUint64(params.TxAccountCreationGasPerKey)
+	defaultGas := new(big.Int).SetUint64(params.TxAccountCreationGasDefault)
+	txGas := new(big.Int).SetUint64(params.TxGasAccountCreation)
+	totalGas := new(big.Int).Add(txGas, new(big.Int).Add(defaultGas, new(big.Int).Mul(numKeys, gasPerKey)))
+	assert.Equal(t, true, totalGas.BitLen() <= 64)
+
+	// ValueTransfer
+	// calculate gas for validation of multisig accounts.
+	gasPerKey = new(big.Int).SetUint64(params.TxValidationGasPerKey)
+	defaultGas = new(big.Int).SetUint64(params.TxValidationGasDefault)
+	txGas = new(big.Int).SetUint64(params.TxGas)
+	totalGas = new(big.Int).Add(txGas, new(big.Int).Add(defaultGas, new(big.Int).Mul(numKeys, gasPerKey)))
+	assert.Equal(t, true, totalGas.BitLen() <= 64)
+
+	// TODO-Klaytn-Gas: Need to find a way of checking integer overflow for smart contract execution.
 }
 
 // TODO-Klaytn-FailedTest This test is failed in Klaytn

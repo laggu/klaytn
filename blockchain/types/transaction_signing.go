@@ -102,7 +102,12 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 		return common.Address{}, 0, ErrInvalidSig
 	}
 
-	return from, accKey.SigValidationGas(), nil
+	gasKey, err := accKey.SigValidationGas()
+	if err != nil {
+		return common.Address{}, 0, err
+	}
+
+	return from, gasKey, nil
 }
 
 // Sender returns the address of the transaction.

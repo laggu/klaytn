@@ -19,8 +19,16 @@ package types
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
+)
+
+const (
+	// TODO-Klaytn-MultiSig: Need to fix the maximum number of keys allowed for an account.
+	// NOTE-Klaytn-MultiSig: This value should not be reduced. If it is reduced, there is a case:
+	// - the tx validation will be failed if the sender has larger keys.
+	MaxNumKeysForMultiSig = uint64(10)
 )
 
 // AccountKeyWeightedMultiSig is an account key type containing a threshold and `WeightedPublicKeys`.
@@ -104,14 +112,22 @@ func (a *AccountKeyWeightedMultiSig) String() string {
 	return string(b)
 }
 
-func (a *AccountKeyWeightedMultiSig) AccountCreationGas() uint64 {
+func (a *AccountKeyWeightedMultiSig) AccountCreationGas() (uint64, error) {
 	numKeys := uint64(len(a.Keys))
-	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey
+	if numKeys > MaxNumKeysForMultiSig {
+		return 0, kerrors.ErrMaxKeysExceed
+	}
+	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey, nil
 }
 
-func (a *AccountKeyWeightedMultiSig) SigValidationGas() uint64 {
+func (a *AccountKeyWeightedMultiSig) SigValidationGas() (uint64, error) {
 	numKeys := uint64(len(a.Keys))
-	return params.TxValidationGasDefault + numKeys*params.TxValidationGasDefault
+	if numKeys > MaxNumKeysForMultiSig {
+		logger.Warn("validation failed due to the number of keys in the account is larger than the limit.",
+			"account", a.String())
+		return 0, kerrors.ErrMaxKeysExceedInValidation
+	}
+	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
 }
 
 // WeightedPublicKey contains a public key and its weight.
