@@ -394,7 +394,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	} else {
 		// Register the peer according to their role.
 		if peerIsOnParentChain {
-			if err := pm.scpm.getParentChainPeers().Register(p); err != nil {
+			if err := pm.scpm.registerParentChainPeer(p); err != nil {
 				return err
 			}
 			defer pm.scpm.removeParentPeer(p.GetID())

@@ -18,6 +18,7 @@ package cn
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -35,10 +36,11 @@ type ServiceChainProtocolManager interface {
 	// and message handling from pre-existing ProtocolManager. This can be done by pushing implementation into
 	// a new peer type and handling message by a new peer type.
 	// private functions
-	getParentChainPeers() *peerSet // getParentChainPeers returns peers on the parent chain.
-	getChildChainPeers() *peerSet  // getChildChainPeers returns peers on the child chain.
-	removeParentPeer(id string)    // removeParentPeer removes a parent peer with given id.
-	removeChildPeer(id string)     // removeChildPeer removes a child peer with given id.
+	getParentChainPeers() *peerSet        // getParentChainPeers returns peers on the parent chain.
+	getChildChainPeers() *peerSet         // getChildChainPeers returns peers on the child chain.
+	removeParentPeer(id string)           // removeParentPeer removes a parent peer with given id.
+	removeChildPeer(id string)            // removeChildPeer removes a child peer with given id.
+	registerParentChainPeer(p Peer) error // registerParentChainPeer registers a peer on the parent chain.
 
 	getRemoteNonce() uint64            // getRemoteNonce returns the nonce of address used for service chain tx.
 	setRemoteNonce(newNonce uint64)    // setRemoteNonce sets the nonce of address used for service chain tx.
@@ -71,6 +73,10 @@ type serviceChainPM struct {
 	chainKey *ecdsa.PrivateKey
 	// ChainAddr is a hex account address used for chain identification from parent chain.
 	ChainAddr *common.Address
+
+	// parentChainID is the first received chainID from parent chain peer.
+	// It will be reset to nil if there's no parent peer.
+	parentChainID *big.Int
 
 	// remoteGasPrice means gas price of parent chain, used to make a service chain transaction.
 	// Therefore, for now, it is only used by child chain side.
@@ -146,6 +152,10 @@ func (scpm *serviceChainPM) removeParentPeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	peer.GetP2PPeer().Disconnect(p2p.DiscUselessPeer)
+	// Reset parentChainID to nil if there's no parent chain peer
+	if scpm.parentChainPeers.Len() == 0 {
+		scpm.parentChainID = nil
+	}
 }
 
 // removeChildPeer removes a child peer with given id.
@@ -162,6 +172,20 @@ func (scpm *serviceChainPM) removeChildPeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	peer.GetP2PPeer().Disconnect(p2p.DiscUselessPeer)
+}
+
+func (scpm *serviceChainPM) registerParentChainPeer(p Peer) error {
+	if err := scpm.parentChainPeers.Register(p); err != nil {
+		return err
+	}
+	if scpm.parentChainID == nil {
+		scpm.parentChainID = p.GetChainID()
+		return nil
+	}
+	if scpm.parentChainID.Cmp(p.GetChainID()) != 0 {
+		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", scpm.parentChainID, p.GetChainID())
+	}
+	return nil
 }
 
 // getRemoteNonce returns the nonce of address used for service chain tx.
@@ -289,6 +313,7 @@ func (scpm *serviceChainPM) BroadcastServiceChainTxAndReceiptRequest(block *type
 	// check connection and nonceSynced.
 	if scpm.getParentChainPeers().Len() == 0 {
 		scpm.setNonceSynced(false)
+		scpm.parentChainID = nil
 		return
 	}
 	if !scpm.getNonceSynced() {
@@ -339,21 +364,21 @@ func (scpm *serviceChainPM) genUnsignedServiceChainTx(block *types.Block) (*type
 // It signs the given unsigned transaction with parent chain ID and then send it to its
 // parent chain peers.
 func (scpm *serviceChainPM) BroadcastServiceChainTx(unsignedTx *types.Transaction) {
-	var parentChainID *big.Int
-	var txs types.Transactions
+	parentChainID := scpm.parentChainID
+	if parentChainID == nil {
+		scLogger.Error("unexpected nil parentChainID while BroadcastServiceChainTx")
+		return
+	}
+	// TODO-Klaytn-ServiceChain Change types.NewEIP155Signer to types.MakeSigner using parent chain's chain config and block number
+	signedTx, err := types.SignTx(unsignedTx, types.NewEIP155Signer(scpm.parentChainID), scpm.getChainKey())
+	if err != nil {
+		scLogger.Error("failed signing tx", "err", err)
+		return
+	}
+	scpm.remoteNonce++
+	scpm.addToSentServiceChainTxs(signedTx)
+	txs := scpm.getSentServiceChainTxsSlice()
 	for _, peer := range scpm.getParentChainPeers().peers {
-		if parentChainID == nil {
-			parentChainID = peer.GetChainID()
-			// TODO-Klaytn-ServiceChain Change types.NewEIP155Signer to types.MakeSigner using parent chain's chain config and block number
-			signedTx, err := types.SignTx(unsignedTx, types.NewEIP155Signer(parentChainID), scpm.getChainKey())
-			if err != nil {
-				scLogger.Error("failed signing tx", "err", err)
-				return
-			}
-			scpm.addToSentServiceChainTxs(signedTx)
-			txs = scpm.getSentServiceChainTxsSlice()
-			scpm.remoteNonce++
-		}
 		if peer.GetChainID() != parentChainID {
 			scLogger.Debug("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
 			continue
