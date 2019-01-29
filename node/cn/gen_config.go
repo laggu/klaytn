@@ -24,8 +24,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
-		ChainAddr               *common.Address
-		ChainTxPeriod           uint64
+		ChainAccountAddr        *common.Address
+		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		LightServ               int  `toml:",omitempty"`
 		LightPeers              int  `toml:",omitempty"`
@@ -55,8 +55,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
-	enc.ChainAddr = c.ChainAddr
-	enc.ChainTxPeriod = c.ChainTxPeriod
+	enc.ChainAccountAddr = c.ChainAccountAddr
+	enc.AnchoringPeriod = c.AnchoringPeriod
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.LightServ = c.LightServ
 	enc.LightPeers = c.LightPeers
@@ -90,8 +90,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
-		ChainAddr               *common.Address
-		ChainTxPeriod           *uint64
+		ChainAccountAddr        *common.Address
+		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		LightServ               *int  `toml:",omitempty"`
 		LightPeers              *int  `toml:",omitempty"`
@@ -132,11 +132,11 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.NoPruning != nil {
 		c.NoPruning = *dec.NoPruning
 	}
-	if dec.ChainAddr != nil {
-		c.ChainAddr = dec.ChainAddr
+	if dec.ChainAccountAddr != nil {
+		c.ChainAccountAddr = dec.ChainAccountAddr
 	}
-	if dec.ChainTxPeriod != nil {
-		c.ChainTxPeriod = *dec.ChainTxPeriod
+	if dec.AnchoringPeriod != nil {
+		c.AnchoringPeriod = *dec.AnchoringPeriod
 	}
 	if dec.SentChainTxsLimit != nil {
 		c.SentChainTxsLimit = *dec.SentChainTxsLimit

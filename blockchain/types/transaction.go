@@ -373,9 +373,9 @@ func (tx *Transaction) String() string {
 	return tx.data.String()
 }
 
-// GetChildChainAddr returns the pointer of sender address if a tx is a
+// GetChildChainAccountAddr returns the pointer of sender address if a tx is a
 // data anchoring tx from child chain. If not, it returns nil.
-func (tx *Transaction) GetChildChainAddr(signer Signer) *common.Address {
+func (tx *Transaction) GetChildChainAccountAddr(signer Signer) *common.Address {
 	// TODO-Klaytn-ServiceChain This function will be removed once new transaction type is introduced.
 	from, err := Sender(signer, tx)
 	if err != nil {

@@ -615,17 +615,17 @@ func (ec *Client) GetReceiptFromParentChain(ctx context.Context, hash common.Has
 	return &result, err
 }
 
-// GetChainAddr can get the chain address to sign chain transaction in service chain.
-func (ec *Client) GetChainAddr(ctx context.Context) (common.Address, error) {
+// GetChainAccountAddr can get the chain address to sign chain transaction in service chain.
+func (ec *Client) GetChainAccountAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "servicechain_getChainAddr")
+	err := ec.c.CallContext(ctx, &result, "servicechain_getChainAccountAddr")
 	return result, err
 }
 
-// GetChainTxPeriod can get the block period to anchor chain data.
-func (ec *Client) GetChainTxPeriod(ctx context.Context) (uint64, error) {
+// GetAnchoringPeriod can get the block period to anchor chain data.
+func (ec *Client) GetAnchoringPeriod(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "servicechain_getChainTxPeriod")
+	err := ec.c.CallContext(ctx, &result, "servicechain_getAnchoringPeriod")
 	return result, err
 }
 

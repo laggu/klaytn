@@ -97,7 +97,7 @@ func TestReuse(t *testing.T) {
 	}
 }
 
-func TestRemoteNonceChange(t *testing.T) {
+func TestChainAccountNonceChange(t *testing.T) {
 	ms, account := create()
 	nn := make([]bool, 10)
 	for i := range nn {

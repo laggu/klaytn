@@ -671,12 +671,12 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getChainAddr',
-			call: 'servicechain_getChainAddr',
+			name: 'getChainAccountAddr',
+			call: 'servicechain_getChainAccountAddr',
 		}),
 		new web3._extend.Method({
-			name: 'getChainTxPeriod',
-			call: 'servicechain_getChainTxPeriod',
+			name: 'getAnchoringPeriod',
+			call: 'servicechain_getAnchoringPeriod',
 		}),
 		new web3._extend.Method({
 			name: 'getSentChainTxsLimit',

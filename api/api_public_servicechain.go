@@ -58,15 +58,15 @@ func (s *PublicServiceChainAPI) GetReceiptFromParentChain(blockHash common.Hash)
 	return s.b.GetReceiptFromParentChain(blockHash)
 }
 
-// GetChainAddr returns the current chain address setting.
-func (s *PublicServiceChainAPI) GetChainAddr() string {
-	return s.b.GetChainAddr()
+// GetChainAccountAddr returns the current chain address setting.
+func (s *PublicServiceChainAPI) GetChainAccountAddr() string {
+	return s.b.GetChainAccountAddr()
 }
 
-// GetChainTxPeriod returns the period (in child chain blocks) of sending chain transaction
+// GetAnchoringPeriod returns the period (in child chain blocks) of sending chain transaction
 // from child chain to parent chain.
-func (s *PublicServiceChainAPI) GetChainTxPeriod() uint64 {
-	return s.b.GetChainTxPeriod()
+func (s *PublicServiceChainAPI) GetAnchoringPeriod() uint64 {
+	return s.b.GetAnchoringPeriod()
 }
 
 // GetSentChainTxsLimit returns the maximum number of stored chain transactions

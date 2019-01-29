@@ -140,8 +140,8 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		utils.SrvTypeFlag,
-		utils.ChainAddrFlag,
-		utils.ChainTxPeriodFlag,
+		utils.ChainAccountAddrFlag,
+		utils.AnchoringPeriodFlag,
 		utils.SentChainTxsLimit,
 		configFileFlag,
 	}

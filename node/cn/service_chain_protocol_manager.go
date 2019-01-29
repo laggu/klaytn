@@ -42,12 +42,12 @@ type ServiceChainProtocolManager interface {
 	removeChildPeer(id string)            // removeChildPeer removes a child peer with given id.
 	registerParentChainPeer(p Peer) error // registerParentChainPeer registers a peer on the parent chain.
 
-	getRemoteNonce() uint64            // getRemoteNonce returns the nonce of address used for service chain tx.
-	setRemoteNonce(newNonce uint64)    // setRemoteNonce sets the nonce of address used for service chain tx.
-	getNonceSynced() bool              // getNonceSynced returns whether the nonce is synced or not.
-	setNonceSynced(synced bool)        // setNonceSynced sets whether the nonce is synced or not.
-	getRemoteGasPrice() uint64         // getRemoteGasPrice returns the gas price of parent chain.
-	setRemoteGasPrice(gasPrice uint64) // setRemoteGasPrice sets the gas price of parent chain.
+	getChainAccountNonce() uint64           // getChainAccountNonce returns the chain account nonce of chain account address.
+	setChainAccountNonce(newNonce uint64)   // setChainAccountNonce sets the chain account nonce of chain account address.
+	getChainAccountNonceSynced() bool       // getChainAccountNonceSynced returns whether the chain account nonce is synced or not.
+	setChainAccountNonceSynced(synced bool) // setChainAccountNonceSynced sets whether the chain account nonce is synced or not.
+	getRemoteGasPrice() uint64              // getRemoteGasPrice returns the gas price of parent chain.
+	setRemoteGasPrice(gasPrice uint64)      // setRemoteGasPrice sets the gas price of parent chain.
 
 	getChainKey() *ecdsa.PrivateKey                                                             // getChainKey returns the private key used for signing service chain tx.
 	addToSentServiceChainTxs(tx *types.Transaction)                                             // addToSentServiceChainTxs adds a transaction to SentServiceChainTxs.
@@ -55,8 +55,8 @@ type ServiceChainProtocolManager interface {
 	writeServiceChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) // writeServiceChainTxReceipt writes the received receipts of service chain transactions.
 
 	// public functions
-	GetChainAddr() *common.Address                               // GetChainAddr returns a pointer of a hex address of an account used for service chain.
-	GetChainTxPeriod() uint64                                    // GetChainTxPeriod returns the period (in child chain blocks) of sending chain transactions.
+	GetChainAccountAddr() *common.Address                        // GetChainAccountAddr returns a pointer of a hex address of an account used for service chain.
+	GetAnchoringPeriod() uint64                                  // GetAnchoringPeriod returns the period (in child chain blocks) of sending chain transactions.
 	GetSentChainTxsLimit() uint64                                // GetSentChainTxsLimit returns the maximum number of stored chain transactions for resending.
 	BroadcastServiceChainTxAndReceiptRequest(block *types.Block) // BroadcastServiceChainTxAndReceiptRequest broadcasts service chain transactions and request receipts to parent chain peers.
 	BroadcastServiceChainTx(unsignedTx *types.Transaction)       // BroadcastServiceChainTx broadcasts service chain transactions to parent chain peers.
@@ -71,8 +71,8 @@ type serviceChainPM struct {
 	// chainKey is a private key for account in parent chain, owned by service chain admin.
 	// Used for signing transaction executed on the parent chain.
 	chainKey *ecdsa.PrivateKey
-	// ChainAddr is a hex account address used for chain identification from parent chain.
-	ChainAddr *common.Address
+	// ChainAccountAddr is a hex account address used for chain identification from parent chain.
+	ChainAccountAddr *common.Address
 
 	// parentChainID is the first received chainID from parent chain peer.
 	// It will be reset to nil if there's no parent peer.
@@ -81,7 +81,7 @@ type serviceChainPM struct {
 	// remoteGasPrice means gas price of parent chain, used to make a service chain transaction.
 	// Therefore, for now, it is only used by child chain side.
 	remoteGasPrice      uint64
-	remoteNonce         uint64
+	chainAccountNonce   uint64
 	nonceSynced         bool
 	chainTxPeriod       uint64
 	sentServiceChainTxs map[common.Hash]*types.Transaction
@@ -92,10 +92,10 @@ type serviceChainPM struct {
 
 // ServiceChainConfig handles service chain configurations.
 type ServiceChainConfig struct {
-	ChainAddr   *common.Address
-	ChainKey    *ecdsa.PrivateKey
-	TxPeriod    uint64
-	SentTxLimit uint64
+	ChainAccountAddr *common.Address
+	ChainKey         *ecdsa.PrivateKey
+	TxPeriod         uint64
+	SentTxLimit      uint64
 }
 
 // parentChainInfo handles the information of parent chain, which is needed from child chain.
@@ -107,20 +107,20 @@ type parentChainInfo struct {
 // NewServiceChainProtocolManager generates a new ServiceChainProtocolManager with
 // the given ServiceChainConfig.
 func NewServiceChainProtocolManager(scc *ServiceChainConfig) ServiceChainProtocolManager {
-	var chainAddr *common.Address
-	if scc.ChainAddr != nil {
-		chainAddr = scc.ChainAddr
+	var chainAccountAddr *common.Address
+	if scc.ChainAccountAddr != nil {
+		chainAccountAddr = scc.ChainAccountAddr
 	} else {
 		chainKeyAddr := crypto.PubkeyToAddress(scc.ChainKey.PublicKey)
-		chainAddr = &chainKeyAddr
+		chainAccountAddr = &chainKeyAddr
 	}
 	return &serviceChainPM{
 		parentChainPeers:         newPeerSet(),
 		childChainPeers:          newPeerSet(),
-		ChainAddr:                chainAddr,
+		ChainAccountAddr:         chainAccountAddr,
 		chainKey:                 scc.ChainKey,
 		remoteGasPrice:           uint64(0),
-		remoteNonce:              uint64(0),
+		chainAccountNonce:        uint64(0),
 		nonceSynced:              false,
 		chainTxPeriod:            scc.TxPeriod,
 		sentServiceChainTxs:      make(map[common.Hash]*types.Transaction),
@@ -174,6 +174,7 @@ func (scpm *serviceChainPM) removeChildPeer(id string) {
 	peer.GetP2PPeer().Disconnect(p2p.DiscUselessPeer)
 }
 
+// registerParentChainPeer registers a peer on the parent chain.
 func (scpm *serviceChainPM) registerParentChainPeer(p Peer) error {
 	if err := scpm.parentChainPeers.Register(p); err != nil {
 		return err
@@ -188,23 +189,23 @@ func (scpm *serviceChainPM) registerParentChainPeer(p Peer) error {
 	return nil
 }
 
-// getRemoteNonce returns the nonce of address used for service chain tx.
-func (scpm *serviceChainPM) getRemoteNonce() uint64 {
-	return scpm.remoteNonce
+// getChainAccountNonce returns the chain account nonce of chain account address.
+func (scpm *serviceChainPM) getChainAccountNonce() uint64 {
+	return scpm.chainAccountNonce
 }
 
-// setRemoteNonce sets the nonce of address used for service chain tx.
-func (scpm *serviceChainPM) setRemoteNonce(newNonce uint64) {
-	scpm.remoteNonce = newNonce
+// setChainAccountNonce sets the chain account nonce of chain account address.
+func (scpm *serviceChainPM) setChainAccountNonce(newNonce uint64) {
+	scpm.chainAccountNonce = newNonce
 }
 
-// getNonceSynced returns whether the nonce is synced or not.
-func (scpm *serviceChainPM) getNonceSynced() bool {
+// getChainAccountNonceSynced returns whether the chain account nonce is synced or not.
+func (scpm *serviceChainPM) getChainAccountNonceSynced() bool {
 	return scpm.nonceSynced
 }
 
-// setNonceSynced sets whether the nonce is synced or not.
-func (scpm *serviceChainPM) setNonceSynced(synced bool) {
+// setChainAccountNonceSynced sets whether the chain account nonce is synced or not.
+func (scpm *serviceChainPM) setChainAccountNonceSynced(synced bool) {
 	scpm.nonceSynced = synced
 }
 
@@ -216,11 +217,11 @@ func (scpm *serviceChainPM) setRemoteGasPrice(gasPrice uint64) {
 	scpm.remoteGasPrice = gasPrice
 }
 
-// GetChainAddr returns a pointer of a hex address of an account used for service chain.
+// GetChainAccountAddr returns a pointer of a hex address of an account used for service chain.
 // If given as a parameter, it will use it. If not given, it will use the address of the public key
 // derived from chainKey.
-func (scpm *serviceChainPM) GetChainAddr() *common.Address {
-	return scpm.ChainAddr
+func (scpm *serviceChainPM) GetChainAccountAddr() *common.Address {
+	return scpm.ChainAccountAddr
 }
 
 // getChainKey returns the private key used for signing service chain tx.
@@ -228,8 +229,8 @@ func (scpm *serviceChainPM) getChainKey() *ecdsa.PrivateKey {
 	return scpm.chainKey
 }
 
-// GetChainTxPeriod returns the period to make and send a chain transaction to parent chain.
-func (scpm *serviceChainPM) GetChainTxPeriod() uint64 {
+// GetAnchoringPeriod returns the period to make and send a chain transaction to parent chain.
+func (scpm *serviceChainPM) GetAnchoringPeriod() uint64 {
 	return scpm.chainTxPeriod
 }
 
@@ -312,11 +313,11 @@ func (scpm *serviceChainPM) BroadcastServiceChainTxAndReceiptRequest(block *type
 	// Before broadcasting service chain transactions and receipt requests,
 	// check connection and nonceSynced.
 	if scpm.getParentChainPeers().Len() == 0 {
-		scpm.setNonceSynced(false)
+		scpm.setChainAccountNonceSynced(false)
 		scpm.parentChainID = nil
 		return
 	}
-	if !scpm.getNonceSynced() {
+	if !scpm.getChainAccountNonceSynced() {
 		scpm.SyncNonceAndGasPrice()
 		// If nonce is not synced, clear sent service chain txs.
 		scpm.sentServiceChainTxs = make(map[common.Hash]*types.Transaction)
@@ -344,9 +345,9 @@ func (scpm *serviceChainPM) genUnsignedServiceChainTx(block *types.Block) (*type
 	}
 
 	values := map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:        scpm.getRemoteNonce(), // nonce will be increased after the signing.
-		types.TxValueKeyFrom:         *scpm.GetChainAddr(),
-		types.TxValueKeyTo:           *scpm.GetChainAddr(),
+		types.TxValueKeyNonce:        scpm.getChainAccountNonce(), // chain account nonce will be increased after signing a transaction.
+		types.TxValueKeyFrom:         *scpm.GetChainAccountAddr(),
+		types.TxValueKeyTo:           *scpm.GetChainAccountAddr(),
 		types.TxValueKeyAmount:       new(big.Int).SetUint64(0),
 		types.TxValueKeyGasLimit:     uint64(999999999998), // TODO-Klaytn-ServiceChain should define proper gas limit
 		types.TxValueKeyGasPrice:     new(big.Int).SetUint64(scpm.remoteGasPrice),
@@ -375,7 +376,7 @@ func (scpm *serviceChainPM) BroadcastServiceChainTx(unsignedTx *types.Transactio
 		scLogger.Error("failed signing tx", "err", err)
 		return
 	}
-	scpm.remoteNonce++
+	scpm.chainAccountNonce++
 	scpm.addToSentServiceChainTxs(signedTx)
 	txs := scpm.getSentServiceChainTxsSlice()
 	for _, peer := range scpm.getParentChainPeers().peers {
@@ -399,7 +400,7 @@ func (scpm *serviceChainPM) broadcastServiceChainReceiptRequest() {
 
 // SyncNonceAndGasPrice requests the nonce of address used for service chain tx to parent chain peers.
 func (scpm *serviceChainPM) SyncNonceAndGasPrice() {
-	addr := scpm.GetChainAddr()
+	addr := scpm.GetChainAccountAddr()
 	for _, peer := range scpm.getParentChainPeers().peers {
 		peer.SendServiceChainInfoRequest(addr)
 	}

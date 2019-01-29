@@ -895,20 +895,20 @@ func handleServiceChainParentChainInfoRequestMsg(pm *ProtocolManager, p Peer, ms
 }
 
 // handleServiceChainParentChainInfoResponseMsg handles parent chain info response message from parent chain.
-// It will update the remoteNonce and remoteGasPrice of ServiceChainProtocolManager.
+// It will update the chainAccountNonce and remoteGasPrice of ServiceChainProtocolManager.
 func handleServiceChainParentChainInfoResponseMsg(pm *ProtocolManager, msg p2p.Msg) error {
 	var pcInfo parentChainInfo
 	if err := msg.Decode(&pcInfo); err != nil {
 		scLogger.Error("failed to decode", "err", err)
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	if pm.scpm.getRemoteNonce() > pcInfo.Nonce {
+	if pm.scpm.getChainAccountNonce() > pcInfo.Nonce {
 		// If received nonce is bigger than the current one, just leave a log and do nothing.
-		scLogger.Warn("local nonce is bigger than the parent chain nonce.", "localNonce", pm.scpm.getRemoteNonce(), "remoteNonce", pcInfo.Nonce)
+		scLogger.Warn("chain account nonce is bigger than the parent chain nonce.", "chainAccountNonce", pm.scpm.getChainAccountNonce(), "parentChainNonce", pcInfo.Nonce)
 		return nil
 	}
-	pm.scpm.setRemoteNonce(pcInfo.Nonce)
-	pm.scpm.setNonceSynced(true)
+	pm.scpm.setChainAccountNonce(pcInfo.Nonce)
+	pm.scpm.setChainAccountNonceSynced(true)
 	pm.scpm.setRemoteGasPrice(pcInfo.GasPrice)
 	scLogger.Debug("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
 	return nil
@@ -1252,17 +1252,17 @@ func (pm *ProtocolManager) GetPeers() []common.Address {
 	return addrs
 }
 
-// GetChainAddr returns an address of an account used for service chain in string format.
+// GetChainAccountAddr returns an address of an account used for service chain in string format.
 // If given as a parameter, it will use it. If not given, it will use the address of the public key
 // derived from chainKey.
-func (pm *ProtocolManager) GetChainAddr() string {
-	return pm.scpm.GetChainAddr().String()
+func (pm *ProtocolManager) GetChainAccountAddr() string {
+	return pm.scpm.GetChainAccountAddr().String()
 }
 
-// GetChainTxPeriod returns the period (in child chain blocks) of sending service chain transaction
+// GetAnchoringPeriod returns the period (in child chain blocks) of sending an anchoring transaction
 // from child chain to parent chain.
-func (pm *ProtocolManager) GetChainTxPeriod() uint64 {
-	return pm.scpm.GetChainTxPeriod()
+func (pm *ProtocolManager) GetAnchoringPeriod() uint64 {
+	return pm.scpm.GetAnchoringPeriod()
 }
 
 // GetSentChainTxsLimit returns the maximum number of stored  chain transactions

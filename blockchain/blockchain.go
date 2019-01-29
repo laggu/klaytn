@@ -1883,8 +1883,8 @@ func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
 	txs := block.Transactions()
 	signer := types.MakeSigner(bc.Config(), block.Number())
 	for _, tx := range txs {
-		// TODO-Klaytn-ServiceChain GetChildChainAddr will be removed once new transaction type is introduced.
-		if ccAddr := tx.GetChildChainAddr(signer); ccAddr == nil {
+		// TODO-Klaytn-ServiceChain GetChildChainAccountAddr will be removed once new transaction type is introduced.
+		if ccAddr := tx.GetChildChainAccountAddr(signer); ccAddr == nil {
 			continue
 		}
 		chainHashes := new(types.ChainHashes)
