@@ -60,12 +60,29 @@ func newTxSenderCacher(threads int) *txSenderCacher {
 	return cacher
 }
 
+// cacheSender calls SenderXXX functions based on the tx types.
+// If a legacy transaction, it calls SenderFrom() to cache an address into `Transaction.from`.
+// Otherwise, it calls SenderPubkey() to cache a pubkey into `Transaction.from`.
+// In addition, if a transaction is a fee-delegated transaction, it also caches a pubkey into `Transaction.feePayer`.
+func cacheSender(signer types.Signer, tx *types.Transaction) {
+	if tx.IsLegacyTransaction() {
+		types.SenderFrom(signer, tx)
+		return
+	}
+
+	types.SenderPubkey(signer, tx)
+
+	if tx.IsFeeDelegatedTransaction() {
+		types.SenderFeePayerPubkey(signer, tx)
+	}
+}
+
 // cache is an infinite loop, caching transaction senders from various forms of
 // data structures.
 func (cacher *txSenderCacher) cache() {
 	for task := range cacher.tasks {
 		for i := 0; i < len(task.txs); i += task.inc {
-			types.Sender(task.signer, task.txs[i])
+			cacheSender(task.signer, task.txs[i])
 		}
 	}
 }
