@@ -90,21 +90,21 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
 
+	gasKey, err := accKey.SigValidationGas()
+	if err != nil {
+		return common.Address{}, 0, err
+	}
+
 	// Special treatment for AccountKeyNil.
 	if accKey.Type() == AccountKeyTypeNil {
 		if crypto.PubkeyToAddress(*pubkey) != from {
 			return common.Address{}, 0, ErrInvalidSig
 		}
-		return from, 0, nil
+		return from, gasKey, nil
 	}
 
 	if !accKey.Equal(NewAccountKeyPublicWithValue(pubkey)) {
 		return common.Address{}, 0, ErrInvalidSig
-	}
-
-	gasKey, err := accKey.SigValidationGas()
-	if err != nil {
-		return common.Address{}, 0, err
 	}
 
 	return from, gasKey, nil
