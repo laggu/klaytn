@@ -194,6 +194,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxdata(), nil
 	case TxTypeValueTransfer:
 		return newTxInternalDataValueTransfer(), nil
+	case TxTypeFeeDelegatedValueTransfer:
+		return NewTxInternalDataFeeDelegatedValueTransfer(), nil
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreation(), nil
 	case TxTypeChainDataAnchoring:
@@ -209,6 +211,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxdataWithMap(values), nil
 	case TxTypeValueTransfer:
 		return newTxInternalDataValueTransferWithMap(values), nil
+	case TxTypeFeeDelegatedValueTransfer:
+		return NewTxInternalDataFeeDelegatedValueTransferWithMap(values), nil
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreationWithMap(values), nil
 	case TxTypeChainDataAnchoring:

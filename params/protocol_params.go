@@ -110,6 +110,7 @@ const (
 	// Fee for new tx types
 	// TODO-Klaytn: Need to fix values
 	TxGasAccountCreation uint64 = 10000
+	TxGasFeeDelegated    uint64 = 1000
 )
 
 var (

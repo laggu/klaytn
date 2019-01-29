@@ -17,6 +17,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
@@ -24,7 +25,7 @@ import (
 // TxInternalDataFeePayerCommon is a common data structure for fee delegated transactions.
 // This structure will be embedded into all fee delegated transaction types.
 type TxInternalDataFeePayerCommon struct {
-	feePayer common.Address
+	FeePayer common.Address
 	*TxSignature
 }
 
@@ -36,17 +37,20 @@ func newTxInternalDataFeePayerCommon() *TxInternalDataFeePayerCommon {
 }
 
 func newTxInternalDataFeePayerCommonWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataFeePayerCommon {
-	t := &TxInternalDataFeePayerCommon{}
+	t := &TxInternalDataFeePayerCommon{
+		common.Address{},
+		NewTxSignature(),
+	}
 
 	if v, ok := values[TxValueKeyFeePayer].(common.Address); ok {
-		t.feePayer = v
+		t.FeePayer = v
 	}
 
 	return t
 }
 
 func (t *TxInternalDataFeePayerCommon) GetFeePayer() common.Address {
-	return t.feePayer
+	return t.FeePayer
 }
 
 func (t *TxInternalDataFeePayerCommon) SetFeePayerSignature(s *TxSignature) {
@@ -58,14 +62,14 @@ func (t *TxInternalDataFeePayerCommon) GetFeePayerVRS() (*big.Int, *big.Int, *bi
 }
 
 func (t *TxInternalDataFeePayerCommon) serializeForSign() []interface{} {
-	return []interface{}{t.feePayer}
+	return []interface{}{t.FeePayer}
 }
 
 func (t *TxInternalDataFeePayerCommon) equal(tb *TxInternalDataFeePayerCommon) bool {
-	return t.feePayer == tb.feePayer &&
+	return t.FeePayer == tb.FeePayer &&
 		t.TxSignature.equal(tb.TxSignature)
 }
 
 func (t *TxInternalDataFeePayerCommon) string() string {
-	return t.TxSignature.string()
+	return fmt.Sprintf("%s %s", t.FeePayer.String(), t.TxSignature.string())
 }
