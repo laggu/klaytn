@@ -87,9 +87,9 @@ func (t *TxInternalDataChainDataAnchoring) String() string {
 
 func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
 	infs := []interface{}{t.Type()}
-	return append(infs,
-		t.TxInternalDataCommon.serializeForSign(),
-		t.AnchoredData)
+	infs = append(infs, t.TxInternalDataCommon.serializeForSign()...)
+
+	return append(infs, t.AnchoredData)
 }
 
 func (t *TxInternalDataChainDataAnchoring) SetSignature(s *TxSignature) {

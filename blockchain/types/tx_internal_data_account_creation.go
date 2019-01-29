@@ -182,9 +182,7 @@ func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
 	serializer := NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
-	return append(infs,
-		t.TxInternalDataCommon.serializeForSign(),
-		t.HumanReadable,
-		keyEnc,
-	)
+	infs = append(infs, t.TxInternalDataCommon.serializeForSign()...)
+
+	return append(infs, t.HumanReadable, keyEnc)
 }

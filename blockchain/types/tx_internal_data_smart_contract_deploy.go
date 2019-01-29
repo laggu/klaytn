@@ -119,6 +119,7 @@ func (t *TxInternalDataSmartContractDeploy) IntrinsicGas() (uint64, error) {
 
 func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 	infs := []interface{}{t.Type()}
-	return append(infs, t.TxInternalDataCommon.serializeForSign(),
-		t.Payload)
+	infs = append(infs, t.TxInternalDataCommon.serializeForSign()...)
+
+	return append(infs, t.Payload)
 }

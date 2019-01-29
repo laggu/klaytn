@@ -91,5 +91,5 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas() (uint64, error)
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSign() []interface{} {
 	infs := []interface{}{t.Type()}
-	return append(infs, t.TxInternalDataCommon.serializeForSign())
+	return append(infs, t.TxInternalDataCommon.serializeForSign()...)
 }
