@@ -506,4 +506,32 @@ func TestValidateSender(t *testing.T) {
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
+
+	// TxTypeFeeDelegatedValueTransfer
+	{
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    0,
+			types.TxValueKeyFrom:     decoupled.Addr,
+			types.TxValueKeyFeePayer: anon.Addr,
+			types.TxValueKeyTo:       decoupled.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.Sign(signer, decoupled.Key)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayer(signer, anon.Key)
+		assert.Equal(t, nil, err)
+
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, decoupled.Addr, actualFrom)
+
+		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, anon.Addr, actualFeePayer)
+	}
 }
