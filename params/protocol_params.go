@@ -102,7 +102,9 @@ const (
 	TxValidationGasPerKey       uint64 = 5000  // WARNING: With integer overflow in mind before changing this value.
 
 	// TODO-Klaytn-Issue973 Developing Klaytn token economy
-	// Because uint64 can hold up to about 9*10^18 in golang, let's use ston instead of peb to define these constants.
+	// Because we need int64 type to allocate big.Int, define this parameter as int64 type.
+	// In addition, let's define these constants in ston instead of peb, because int64 can hold
+	// up to about 9*10^18 in golang.
 	rewardContractIncentiveInSton int64 = 3200000000 // 3.2 KLAY for Reward contract (Unit: ston)
 	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
 	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
