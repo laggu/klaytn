@@ -201,7 +201,12 @@ func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privK
 
 	txs := make(types.Transactions, 0, len(toAddrs))
 	for i, from := range fromAddrs {
-		nonce := accountMap.GetNonce(*from) + uint64(additionalNonce)
+		nonce, err := accountMap.GetNonce(*from)
+		if err != nil {
+			return nil, err
+		}
+
+		nonce += uint64(additionalNonce)
 
 		txamount := amount
 		if txamount == nil {

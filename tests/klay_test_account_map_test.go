@@ -45,27 +45,31 @@ func NewAccountMap() *AccountMap {
 	}
 }
 
-func (a *AccountMap) Get(addr common.Address) *AccountInfo {
-	if acc, ok := a.m[addr]; ok {
-		return &AccountInfo{new(big.Int).Set(acc.balance), acc.nonce}
-	}
-	return &AccountInfo{big.NewInt(0), 0}
-}
-
 func (a *AccountMap) AddBalance(addr common.Address, v *big.Int) {
 	if acc, ok := a.m[addr]; ok {
 		acc.balance.Add(acc.balance, v)
+	} else {
+		// create an account
+		a.Set(addr, v, 0)
 	}
 }
 
-func (a *AccountMap) SubBalance(addr common.Address, v *big.Int) {
+func (a *AccountMap) SubBalance(addr common.Address, v *big.Int) error {
 	if acc, ok := a.m[addr]; ok {
 		acc.balance.Sub(acc.balance, v)
+	} else {
+		return fmt.Errorf("trying to subtract balance from an uninitiailzed address (%s)", addr.Hex())
 	}
+
+	return nil
 }
 
-func (a *AccountMap) GetNonce(addr common.Address) uint64 {
-	return a.m[addr].nonce
+func (a *AccountMap) GetNonce(addr common.Address) (uint64, error) {
+	if acc, ok := a.m[addr]; ok {
+		return acc.nonce, nil
+	}
+
+	return 0, fmt.Errorf("trying to get nonce from an uninitialized address (%s)", addr.Hex())
 }
 
 func (a *AccountMap) IncNonce(addr common.Address) {
@@ -116,7 +120,11 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		}
 
 		if to == nil {
-			addr := crypto.CreateAddress(from, a.Get(from).nonce)
+			nonce, err := a.GetNonce(from)
+			if err != nil {
+				return err
+			}
+			addr := crypto.CreateAddress(from, nonce)
 			to = &addr
 		}
 

@@ -57,7 +57,10 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	numAddrs := len(toAddrs)
 
 	txs := make(types.Transactions, 0, numTransactions)
-	nonce := accountMap.GetNonce(from)
+	nonce, err := accountMap.GetNonce(from)
+	if err != nil {
+		return nil, err
+	}
 	for i := 0; i < numTransactions; i++ {
 		a := toAddrs[i%numAddrs]
 		txamount := amount
@@ -88,9 +91,13 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 	fromAddrs := bcdata.addrs[:numAddrs]
 	toAddrs := bcdata.addrs[numAddrs:]
 
+	var err error
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i] = accountMap.GetNonce(*addr)
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)
@@ -128,9 +135,13 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
+	var err error
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i] = accountMap.GetNonce(*addr)
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)
@@ -175,9 +186,13 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
+	var err error
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i] = accountMap.GetNonce(*addr)
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)

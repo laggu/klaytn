@@ -59,9 +59,13 @@ func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, si
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
+	var err error
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i] = accountMap.GetNonce(*addr)
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)

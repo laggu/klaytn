@@ -58,10 +58,14 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 		}
 
 		userAddr := bcdata.addrs[0]
-		contractAddr := crypto.CreateAddress(*userAddr, accountMap.GetNonce(*userAddr))
+		nonce, err := accountMap.GetNonce(*userAddr)
+		if err != nil {
+			return nil, err
+		}
+		contractAddr := crypto.CreateAddress(*userAddr, nonce)
 
 		signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-		tx := types.NewContractCreation(accountMap.GetNonce(*userAddr),
+		tx := types.NewContractCreation(nonce,
 			big.NewInt(0), 50000000, big.NewInt(0), common.FromHex(contract.Code))
 		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[0])
 		if err != nil {
@@ -122,7 +126,10 @@ func makeRewardTransactions(c *deployedContract, accountMap *AccountMap, bcdata 
 	numAddrs := len(bcdata.addrs)
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range bcdata.addrs {
-		fromNonces[i] = accountMap.GetNonce(*addr)
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for i := 0; i < numTransactions; i++ {
 		idx := i % numAddrs
@@ -165,7 +172,10 @@ func makeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
 	numAddrs := len(bcdata.addrs)
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range bcdata.addrs {
-		fromNonces[i] = accountMap.GetNonce(*addr)
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for i := 0; i < numTransactions; i++ {
 		idx := i % numAddrs
@@ -225,7 +235,10 @@ func makeQuickSortTransactions(c *deployedContract, accountMap *AccountMap, bcda
 	numAddrs := len(bcdata.addrs)
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range bcdata.addrs {
-		fromNonces[i] = accountMap.GetNonce(*addr)
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for i := 0; i < numTransactions; i++ {
 		idx := i % numAddrs
