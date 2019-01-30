@@ -21,6 +21,8 @@
 package vm
 
 import (
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
@@ -408,6 +410,96 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	start := time.Now()
 
 	ret, err = run(evm, contract, nil)
+
+	// check whether the max code size has been exceeded
+	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize
+	// if the contract creation ran successfully and no errors were returned
+	// calculate the gas required to store the code. If the code could not
+	// be stored due to not enough gas set an error and let it be handled
+	// by the error checking condition below.
+	if err == nil && !maxCodeSizeExceeded {
+		createDataGas := uint64(len(ret)) * params.CreateDataGas
+		if contract.UseGas(createDataGas) {
+			if evm.StateDB.SetCode(contractAddr, ret) != nil {
+				// `err` is returned to `vmerr` in `StateTransition.TransitionDb()`.
+				// Then, `vmerr` will be used to make a receipt status using `getReceiptStatusFromVMerr()`.
+				// Since `getReceiptStatusFromVMerr()` uses a map to determine the receipt status,
+				// this `err` should be an error variable declared in vm/errors.go.
+				// TODO-Klaytn: Make a package of error variables containing all exported error variables.
+				// After the above TODO-Klaytn is resolved, we can return the error returned by `SetCode()` directly.
+				err = ErrFailedOnSetCode
+			}
+		} else {
+			err = ErrCodeStoreOutOfGas // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
+		}
+	}
+
+	// When an error was returned by the EVM or when setting the creation code
+	// above we revert to the snapshot and consume any gas remaining.
+	if maxCodeSizeExceeded || err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
+		if err != ErrExecutionReverted {
+			contract.UseGas(contract.Gas)
+		}
+	}
+	// Assign err if contract code size exceeds the max while the err is still empty.
+	if maxCodeSizeExceeded && err == nil {
+		err = ErrMaxCodeSizeExceeded // TODO-Klaytn-Issue615
+	}
+	if evm.vmConfig.Debug && evm.depth == 0 {
+		evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
+	}
+	return ret, contractAddr, contract.Gas, err
+}
+
+// Create creates a new contract using code as deployment code with given address and humanReadable.
+func (evm *EVM) CreateWithAddress(caller ContractRef, code []byte, gas uint64, value *big.Int,
+	contractAddr common.Address, humanReadable bool) ([]byte, common.Address, uint64, error) {
+
+	// Depth check execution. Fail if we're trying to execute above the
+	// limit.
+	if evm.depth > int(params.CallCreateDepth) {
+		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-Issue615
+	}
+	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
+	}
+	// Ensure there's no existing contract already at the designated address
+	nonce := evm.StateDB.GetNonce(caller.Address())
+	evm.StateDB.SetNonce(caller.Address(), nonce+1)
+
+	contractHash := evm.StateDB.GetCodeHash(contractAddr)
+	if evm.StateDB.GetNonce(contractAddr) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
+	}
+	// Create a new account on the state
+	snapshot := evm.StateDB.Snapshot()
+	evm.StateDB.CreateAccountWithMap(contractAddr, state.SmartContractAccountType, map[state.AccountValueKeyType]interface{}{
+		state.AccountValueKeyNonce:         1,
+		state.AccountValueKeyHumanReadable: humanReadable,
+		// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
+		//   because the account key is set to AccountKeyFail by default.
+		//   Need to make a decision of the key type.
+		state.AccountValueKeyAccountKey: types.NewAccountKeyFail(),
+	})
+	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
+
+	// initialise a new contract and set the code that is to be used by the
+	// EVM. The contract is a scoped environment for this execution context
+	// only.
+	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
+	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
+
+	if evm.vmConfig.NoRecursion && evm.depth > 0 {
+		return nil, contractAddr, gas, nil
+	}
+
+	if evm.vmConfig.Debug && evm.depth == 0 {
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), contractAddr, true, code, gas, value)
+	}
+	start := time.Now()
+
+	ret, err := run(evm, contract, nil)
 
 	// check whether the max code size has been exceeded
 	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize

@@ -34,6 +34,7 @@ var (
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 	errNotProgramAccount         = errors.New("not a program account")
 	errAccountAlreadyExists      = errors.New("account already exists")
+	errMsgToNil                  = errors.New("msg.To() is nil")
 )
 
 /*
@@ -190,7 +191,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	// IsContractCreation returns true if one of the following conditions is met:
 	// - ContractDeploy transaction type
 	// - legacy transaction type && msg.To() == nil
-	contractCreation := txType.IsContractDeploy() || (txType.IsLegacyTransaction() && msg.To() == nil)
+	contractCreation := txType.IsLegacyTransaction() && msg.To() == nil
+	newContractCreation := txType.IsContractDeploy()
 
 	// IsAccountCreation returns true if the transaction is an account creation transaction.
 	accountCreation := txType.IsAccountCreation()
@@ -221,7 +223,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 			// This MUST not happen since only legacy transaction types allows that `to` is nil.
 			// But it would be better to explicitly terminate the program if an unintended result happens.
 			logger.Error("msg.To() should not be nil!", msg)
-			kerr.Err = errNotProgramAccount
+			kerr.Err = errMsgToNil
 			kerr.Status = getReceiptStatusFromVMerr(nil)
 			return nil, 0, kerr
 		}
@@ -239,6 +241,17 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	}
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
+	} else if newContractCreation {
+		to := msg.To()
+		if to == nil {
+			// This MUST not happen since only legacy transaction types allows that `to` is nil.
+			// But it would be better to explicitly terminate the program if an unintended result happens.
+			logger.Error("msg.To() should not be nil!", msg)
+			kerr.Err = errMsgToNil
+			kerr.Status = getReceiptStatusFromVMerr(nil)
+			return nil, 0, kerr
+		}
+		ret, _, st.gas, vmerr = evm.CreateWithAddress(sender, st.data, st.gas, st.value, *to, msg.HumanReadable())
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
