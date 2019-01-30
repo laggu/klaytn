@@ -26,8 +26,6 @@ const (
 	LEVELDB = "leveldb"
 	BADGER  = "badger"
 	MEMDB   = "memdb"
-	CACHEDB = "cachedb"
-	SHARDDB = "sharddb"
 
 	IdealBatchSize = 100 * 1024
 )
