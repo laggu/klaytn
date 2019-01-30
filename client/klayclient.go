@@ -84,6 +84,7 @@ func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Bl
 type rpcBlock struct {
 	Hash         common.Hash      `json:"hash"`
 	Transactions []rpcTransaction `json:"transactions"`
+	UncleHashes  []common.Hash    `json:"uncles"`
 }
 
 func (ec *Client) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
@@ -568,7 +569,7 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 // BlockNumber can get the latest block number.
 func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "servicechain_blockNumber")
+	err := ec.c.CallContext(ctx, &result, "klay_blockNumber")
 	return (*big.Int)(&result), err
 }
 
