@@ -127,6 +127,22 @@ func (sca *SmartContractAccount) Type() AccountType {
 	return SmartContractAccountType
 }
 
+func (sca *SmartContractAccount) GetStorageRoot() common.Hash {
+	return sca.storageRoot
+}
+
+func (sca *SmartContractAccount) GetCodeHash() []byte {
+	return sca.codeHash
+}
+
+func (sca *SmartContractAccount) SetStorageRoot(h common.Hash) {
+	sca.storageRoot = h
+}
+
+func (sca *SmartContractAccount) SetCodeHash(h []byte) {
+	sca.codeHash = h
+}
+
 func (sca *SmartContractAccount) Empty() bool {
 	return sca.AccountCommon.Empty() && bytes.Equal(sca.codeHash, emptyCodeHash)
 }
