@@ -45,7 +45,7 @@ func newTxInternalDataSmartContractDeploy() *TxInternalDataSmartContractDeploy {
 
 func newTxInternalDataSmartContractDeployWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataSmartContractDeploy {
 	t := &TxInternalDataSmartContractDeploy{
-		newTxInternalDataCommon(),
+		newTxInternalDataCommonWithMap(values),
 		[]byte{},
 		false,
 		NewTxSignature(),

@@ -127,7 +127,7 @@ func genValueTransferTransaction() TxInternalData {
 }
 
 func genSmartContractDeployTransaction() TxInternalData {
-	d, err := NewTxInternalDataWithMap(TxTypeValueTransfer, map[TxValueKeyType]interface{}{
+	d, err := NewTxInternalDataWithMap(TxTypeSmartContractDeploy, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:         uint64(1234),
 		TxValueKeyAmount:        new(big.Int).SetUint64(10),
 		TxValueKeyGasLimit:      uint64(9999999999),
