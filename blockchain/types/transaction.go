@@ -296,12 +296,13 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		msg.humanReadable = ta.HumanReadable
 	}
 
-	var gasUsed uint64
-	msg.from, gasUsed, err = ValidateSender(s, tx, picker)
-	msg.intrinsicGas += gasUsed
+	gasFrom := uint64(0)
+	msg.from, gasFrom, err = ValidateSender(s, tx, picker)
 
-	// TODO-Klaytn-FeePayer: set feePayer appropriately after feePayer feature is implemented.
-	msg.feePayer = msg.from
+	gasFeePayer := uint64(0)
+	msg.feePayer, gasFeePayer, err = ValidateFeePayer(s, tx, picker)
+
+	msg.intrinsicGas += gasFrom + gasFeePayer
 	return msg, err
 }
 
@@ -319,9 +320,13 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
-	total := new(big.Int).Mul(tx.data.GetPrice(), new(big.Int).SetUint64(tx.data.GetGasLimit()))
+	total := tx.Fee()
 	total.Add(total, tx.data.GetAmount())
 	return total
+}
+
+func (tx *Transaction) Fee() *big.Int {
+	return new(big.Int).Mul(tx.data.GetPrice(), new(big.Int).SetUint64(tx.data.GetGasLimit()))
 }
 
 func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {

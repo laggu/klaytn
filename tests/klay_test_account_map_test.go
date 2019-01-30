@@ -105,7 +105,12 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		to := tx.To()
 		v := tx.Value()
 
-		from, gasUsed, err := types.ValidateSender(signer, tx, picker)
+		from, gasFrom, err := types.ValidateSender(signer, tx, picker)
+		if err != nil {
+			return err
+		}
+
+		feePayer, gasFeePayer, err := types.ValidateFeePayer(signer, tx, picker)
 		if err != nil {
 			return err
 		}
@@ -124,9 +129,11 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		if err != nil {
 			return err
 		}
-		intrinsicGas += gasUsed
+
+		intrinsicGas += gasFrom + gasFeePayer
+
 		fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(intrinsicGas))
-		a.SubBalance(from, fee)
+		a.SubBalance(feePayer, fee)
 		a.AddBalance(a.coinbase, fee)
 
 		a.IncNonce(from)

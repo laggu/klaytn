@@ -558,9 +558,14 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
-	from, gasUsed, err := types.ValidateSender(pool.signer, tx, pool.currentState)
+	from, gasFrom, err := types.ValidateSender(pool.signer, tx, pool.currentState)
 	if err != nil {
 		return ErrInvalidSender
+	}
+
+	feePayer, gasFeePayer, err := types.ValidateFeePayer(pool.signer, tx, pool.currentState)
+	if err != nil {
+		return ErrInvalidFeePayer
 	}
 	// TODO-Klaytn-Issue136
 	// 원격 트랜잭션이 drop 되어 버리는 문제를 해결하기 위해 주석 처리함. Andy
@@ -576,13 +581,24 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// TODO-Klaytn-Issue136
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		logger.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", pool.currentState.GetBalance(from), "cost", tx.Cost())
-		return ErrInsufficientFunds
+	if from == feePayer {
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+			logger.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", pool.currentState.GetBalance(from), "cost", tx.Cost())
+			return ErrInsufficientFunds
+		}
+	} else {
+		if pool.currentState.GetBalance(from).Cmp(tx.Value()) < 0 {
+			logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", pool.currentState.GetBalance(from), "value", tx.Value())
+			return ErrInsufficientFundsFrom
+		}
+		if pool.currentState.GetBalance(feePayer).Cmp(tx.Fee()) < 0 {
+			logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", pool.currentState.GetBalance(from), "fee", tx.Fee())
+			return ErrInsufficientFundsFeePayer
+		}
 	}
 	// TODO-Klaytn-Issue136
 	intrGas, err := tx.IntrinsicGas()
-	intrGas += gasUsed
+	intrGas += gasFrom + gasFeePayer
 	if err != nil {
 		return err
 	}
