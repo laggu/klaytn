@@ -293,7 +293,7 @@ web3._extend({
 			name: 'traceBlockByNumber',
 			call: 'debug_traceBlockByNumber',
 			params: 2,
-			inputFormatter: [null, null]
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'traceBlockByHash',
