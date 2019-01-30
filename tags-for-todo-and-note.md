@@ -47,4 +47,5 @@ Please note that the tag name always
 | MultiSig                                       | Related to MultiSig feature.                              |
 | TestNet                                        | Related to TestNet.                                       |
 | NodeDiscovery                                  | Related to NodeDiscovery.                                 |
+| Accounts                                       | Related to Klaytn Accounts.                               |
 
