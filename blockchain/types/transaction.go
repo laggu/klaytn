@@ -302,6 +302,9 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	gasFeePayer := uint64(0)
 	msg.feePayer, gasFeePayer, err = ValidateFeePayer(s, tx, picker)
 
+	// TODO-Klaytn-FeePayer: Implement this after TxInternalDataFeeRatio is introduced.
+	msg.feeRatio = 100
+
 	msg.intrinsicGas += gasFrom + gasFeePayer
 	return msg, err
 }
@@ -539,6 +542,7 @@ type Message struct {
 	to            *common.Address
 	from          common.Address
 	feePayer      common.Address
+	feeRatio      uint8
 	nonce         uint64
 	amount        *big.Int
 	gasLimit      uint64
@@ -555,6 +559,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 	return Message{
 		from:          from,
 		feePayer:      from,
+		feeRatio:      100,
 		to:            to,
 		nonce:         nonce,
 		amount:        amount,
@@ -571,6 +576,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 
 func (m Message) From() common.Address          { return m.from }
 func (m Message) FeePayer() common.Address      { return m.feePayer }
+func (m Message) FeeRatio() uint8               { return m.feeRatio }
 func (m Message) To() *common.Address           { return m.to }
 func (m Message) GasPrice() *big.Int            { return m.gasPrice }
 func (m Message) Value() *big.Int               { return m.amount }
