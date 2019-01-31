@@ -635,6 +635,28 @@ func TestValidateSender(t *testing.T) {
 		assert.Equal(t, decoupled.Addr, actualFrom)
 	}
 
+	// TxTypeSmartContractDeploy
+	{
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         12,
+			types.TxValueKeyFrom:          decoupled.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          []byte{0x60, 0x00, 0x50, 0x00},
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.Sign(signer, decoupled.Key)
+		assert.Equal(t, nil, err)
+
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, decoupled.Addr, actualFrom)
+	}
+
 	// TxTypeChainDataAnchoring
 	{
 		dummyBlock := types.NewBlock(&types.Header{
