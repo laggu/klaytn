@@ -36,6 +36,9 @@ var DefaultCacheType CacheType = LRUCacheType
 var CacheScale int = 100 // cache size = preset size * CacheScale / 100
 var logger = log.NewModuleLogger(log.Common)
 
+// TODO-Klaytn-ActiveCaching ActiveCaching should be stored to proper place.
+var ActiveCaching = false
+
 type CacheKey interface {
 	getShardIndex(shardMask int) int
 }

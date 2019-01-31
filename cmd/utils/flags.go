@@ -270,6 +270,10 @@ var (
 		Name:  "cache.scale",
 		Usage: "Scale of cache (cache size = preset size * scale of cache(%))",
 	}
+	ActiveCachingFlag = cli.BoolFlag{
+		Name:  "cache.active",
+		Usage: "Enables writing to database and cache at the same time.",
+	}
 	ChildChainIndexingFlag = cli.BoolFlag{
 		Name:  "childchainindexing",
 		Usage: "Enables storing transaction hash of child chain transaction for fast access to child chain data",
@@ -1084,6 +1088,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
+	}
+	if ctx.GlobalIsSet(ActiveCachingFlag.Name) {
+		common.ActiveCaching = ctx.GlobalBool(ActiveCachingFlag.Name)
 	}
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)

@@ -1038,12 +1038,32 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) {
 	defer bc.wg.Done()
 
 	bc.hc.WriteTd(block.Hash(), block.NumberU64(), td)
-	bc.db.WriteBlock(block)
+	bc.writeBlock(block)
 }
 
 type TransactionLookup struct {
 	Tx *types.Transaction
 	*database.TxLookupEntry
+}
+
+// writeBlock writes block to persistent database.
+// If active caching is enabled, it also writes block to the cache.
+func (bc *BlockChain) writeBlock(block *types.Block) {
+	bc.db.WriteBlock(block)
+	if common.ActiveCaching {
+		bc.bodyCache.Add(block.Hash(), block.Body())
+		bc.blockCache.Add(block.Hash(), block)
+	}
+}
+
+// writeReceipts writes receipts to persistent database.
+// If active caching is enabled, it also writes receipts to the cache.
+func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
+	bc.db.WriteReceipts(hash, number, receipts)
+	if common.ActiveCaching {
+		// TODO-Klaytn goroutine for performance
+		bc.recentReceipts.Add(hash, receipts)
+	}
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
@@ -1069,7 +1089,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
 
 	// Write other block data.
-	bc.db.WriteBlock(block)
+	bc.writeBlock(block)
 
 	if bc.GetChildChainIndexingEnabled() {
 		bc.writeChildChainTxHashFromBlock(block)
@@ -1125,7 +1145,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			}
 		}
 	}
-	bc.db.WriteReceipts(block.Hash(), block.NumberU64(), receipts)
+	bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
 
 	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
@@ -1151,9 +1171,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			return NonStatTy, err
 		}
 		bc.db.WritePreimages(block.NumberU64(), state.Preimages())
-
-		// TODO-Klaytn goroutine for performance
-		bc.recentReceipts.Add(block.Hash(), receipts)
 		status = CanonStatTy
 	} else {
 		status = SideStatTy

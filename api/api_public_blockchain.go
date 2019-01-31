@@ -171,6 +171,12 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	return res[:], state.Error()
 }
 
+// ActiveCaching returns if active caching is enabled or not.
+// If enabled, when data write happens, cache write happens at the same time.
+func (s *PublicBlockChainAPI) ActiveCaching() bool {
+	return common.ActiveCaching
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From     common.Address  `json:"from"`
