@@ -303,7 +303,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	msg.feePayer, gasFeePayer, err = ValidateFeePayer(s, tx, picker)
 
 	// TODO-Klaytn-FeePayer: Implement this after TxInternalDataFeeRatio is introduced.
-	msg.feeRatio = 100
+	msg.feeRatio = MaxFeeRatio
 
 	msg.intrinsicGas += gasFrom + gasFeePayer
 	return msg, err
@@ -559,7 +559,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 	return Message{
 		from:          from,
 		feePayer:      from,
-		feeRatio:      100,
+		feeRatio:      MaxFeeRatio,
 		to:            to,
 		nonce:         nonce,
 		amount:        amount,

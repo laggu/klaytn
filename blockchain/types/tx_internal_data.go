@@ -25,6 +25,10 @@ import (
 	"math/big"
 )
 
+// MaxFeeRatio is the maximum value of feeRatio. Since it is represented in percentage,
+// the maximum value is 100.
+const MaxFeeRatio uint8 = 100
+
 type TxType uint
 
 const (
