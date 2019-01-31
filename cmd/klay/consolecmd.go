@@ -110,10 +110,8 @@ func remoteConsole(ctx *cli.Context) error {
 			path = ctx.GlobalString(utils.DataDirFlag.Name)
 		}
 		if path != "" {
-			if ctx.GlobalBool(utils.TestnetFlag.Name) {
-				path = filepath.Join(path, "testnet")
-			} else if ctx.GlobalBool(utils.RinkebyFlag.Name) {
-				path = filepath.Join(path, "rinkeby")
+			if ctx.GlobalBool(utils.BaobabFlag.Name) {
+				path = filepath.Join(path, "baobab")
 			}
 		}
 		endpoint = fmt.Sprintf("%s/klay.ipc", path)

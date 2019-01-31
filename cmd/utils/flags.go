@@ -93,18 +93,11 @@ var (
 		Name:  "nousb",
 		Usage: "Disables monitoring for and managing USB hardware wallets",
 	}
+	// TODO-Klaytn-Bootnode: redefine networkid
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: cn.DefaultConfig.NetworkId,
-	}
-	TestnetFlag = cli.BoolFlag{
-		Name:  "testnet",
-		Usage: "Ropsten network: pre-configured proof-of-work test network",
-	}
-	RinkebyFlag = cli.BoolFlag{
-		Name:  "rinkeby",
-		Usage: "Rinkeby network: pre-configured proof-of-authority test network",
 	}
 	DeveloperFlag = cli.BoolFlag{
 		Name:  "dev",
@@ -477,11 +470,14 @@ var (
 		Usage: "Comma separated kni URLs for P2P v4 discovery bootstrap (light server, full nodes)",
 		Value: "",
 	}
-	BootnodesV5Flag = cli.StringFlag{
-		Name:  "bootnodesv5",
-		Usage: "Comma separated kni URLs for P2P v5 discovery bootstrap (light server, light nodes)",
-		Value: "",
-	}
+	// TODO-Klaytn-Bootnode: decide porting or not ethereum's node discovery V5
+	/*
+		BootnodesV5Flag = cli.StringFlag{
+			Name:  "bootnodesv5",
+			Usage: "Comma separated kni URLs for P2P v5 discovery bootstrap (light server, light nodes)",
+			Value: "",
+		}
+	*/
 	NodeKeyFileFlag = cli.StringFlag{
 		Name:  "nodekey",
 		Usage: "P2P node key file",
@@ -541,6 +537,11 @@ var (
 		Value: cn.DefaultConfig.GPO.Percentile,
 	}
 
+	// Baobab bootnodes setting
+	BaobabFlag = cli.BoolFlag{
+		Name:  "baobab",
+		Usage: "Pre-configured Klaytn baobab network",
+	}
 	// Bootnode's settings
 	AddrFlag = cli.StringFlag{
 		Name:  "addr",
@@ -556,20 +557,17 @@ var (
 		Usage: `write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"`,
 	}
 
-	// TODO-Klaytn: Add bootnode's metric options
-	// TODO-Klaytn: Implements bootnode's RPC
+	// TODO-Klaytn-Bootnode: Add bootnode's metric options
+	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
-// if none (or the empty string) is specified. If the node is starting a testnet,
+// if none (or the empty string) is specified. If the node is starting a baobab,
 // the a subdirectory of the specified datadir will be used.
 func MakeDataDir(ctx *cli.Context) string {
 	if path := ctx.GlobalString(DataDirFlag.Name); path != "" {
-		if ctx.GlobalBool(TestnetFlag.Name) {
-			return filepath.Join(path, "testnet")
-		}
-		if ctx.GlobalBool(RinkebyFlag.Name) {
-			return filepath.Join(path, "rinkeby")
+		if ctx.GlobalBool(BaobabFlag.Name) {
+			return filepath.Join(path, "baobab")
 		}
 		return path
 	}
@@ -621,6 +619,9 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		} else {
 			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
 		}
+	case ctx.GlobalIsSet(BaobabFlag.Name):
+		// set pre-configured bootnodes when 'baobab' option was enabled
+		urls = getBaobabBootnodesByConnectionType(int(cfg.ConnectionType))
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	}
@@ -824,7 +825,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
-	setBootstrapNodes(ctx, cfg)
 
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
 	lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
@@ -835,8 +835,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	} else {
 		nodeType = NodeTypeFlag.Value
 	}
+
 	cfg.ConnectionType = convertNodeType(nodeType)
 	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
+
+	// set bootnodes via this function by check specified parameters
+	setBootstrapNodes(ctx, cfg)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
@@ -891,6 +895,22 @@ func convertNodeType(nodetype string) p2p.ConnType {
 	}
 }
 
+func convertNodeTypeToString(nodetype int) string {
+	switch p2p.ConnType(nodetype) {
+	case node.CONSENSUSNODE:
+		return "CN"
+	case node.RANGERNODE:
+		return "RN"
+	case node.BRIDGENODE:
+		return "BN"
+	case node.GENERALNODE:
+		return "GN"
+	default:
+		logger.Error("failed to convert nodetype as string", "err", "unknown nodetype")
+		return "unknown"
+	}
+}
+
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
@@ -915,10 +935,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		cfg.DataDir = "" // unless explicitly requested, use memory databases
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -992,7 +1008,7 @@ func setGxhash(ctx *cli.Context, cfg *cn.Config) {
 	}
 }
 
-// checkExclusive verifies that only a single isntance of the provided flags was
+// checkExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
 func checkExclusive(ctx *cli.Context, args ...interface{}) {
@@ -1032,8 +1048,8 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
-	// Avoid conflicting network flags
-	checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
+	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
+	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setGxbase(ctx, ks, cfg)
@@ -1123,11 +1139,14 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	// Override any default configs for hard coded network.
 	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
-		}
-		cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
+	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
+	/*
+		case ctx.GlobalBool(TestnetFlag.Name):
+			if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+				cfg.NetworkId = 3
+			}
+			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
+	*/
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		// Create new developer account or reuse existing one
 		var (
@@ -1200,8 +1219,11 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
 	var genesis *blockchain.Genesis
 	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		genesis = blockchain.DefaultTestnetGenesisBlock()
+	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
+	/*
+		case ctx.GlobalBool(TestnetFlag.Name):
+			genesis = blockchain.DefaultTestnetGenesisBlock()
+	*/
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}
@@ -1272,11 +1294,11 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 // This is a temporary function used for migrating old command/flags to the
 // new format.
 //
-// e.g. geth account new --keystore /tmp/mykeystore --lightkdf
+// e.g. klay account new --keystore /tmp/mykeystore --lightkdf
 //
 // is equivalent after calling this method with:
 //
-// geth --keystore /tmp/mykeystore --lightkdf account new
+// klay --keystore /tmp/mykeystore --lightkdf account new
 //
 // This allows the use of the existing configuration functionality.
 // When all flags are migrated this function can be removed and the existing
@@ -1290,4 +1312,12 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 		}
 		return action(ctx)
 	}
+}
+
+func getBaobabBootnodesByConnectionType(cType int) []string {
+	if cType >= int(node.CONSENSUSNODE) && cType <= int(node.BRIDGENODE) {
+		return params.BaobabBootnodes[cType].Addrs
+	}
+	logger.Crit("Does not have any bootnode of given node type", "node_type", convertNodeTypeToString(cType))
+	return []string{}
 }

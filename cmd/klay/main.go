@@ -66,7 +66,6 @@ var (
 		utils.PasswordFileFlag,
 		utils.BootnodesFlag,
 		utils.BootnodesV4Flag,
-		utils.BootnodesV5Flag,
 		utils.DbTypeFlag,
 		utils.DataDirFlag,
 		utils.KeyStoreDirFlag,
@@ -124,8 +123,6 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
-		utils.TestnetFlag,
-		utils.RinkebyFlag,
 		utils.VMEnableDebugFlag,
 		utils.VMLogTargetFlag,
 		utils.NetworkIdFlag,
@@ -144,6 +141,7 @@ var (
 		utils.ChainAccountAddrFlag,
 		utils.AnchoringPeriodFlag,
 		utils.SentChainTxsLimit,
+		utils.BaobabFlag,
 		configFileFlag,
 	}
 

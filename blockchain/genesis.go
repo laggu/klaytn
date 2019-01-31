@@ -318,6 +318,8 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	}
 }
 
+// TODO-Klaytn-TestNet: define baobab network's genesis block.
+
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block. Note, this must
 // be seeded with the
 func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {

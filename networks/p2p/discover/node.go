@@ -123,7 +123,7 @@ func (n *Node) String() string {
 	return u.String()
 }
 
-// TODO-Klaytn: Deprecate supporting "enode"
+// TODO-Klaytn-NodeDiscovery: Deprecate supporting "enode"
 var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
 
 // ParseNode parses a node designator.
@@ -181,13 +181,30 @@ func parseComplete(rawurl string) (*Node, error) {
 	if id, err = HexID(u.User.String()); err != nil {
 		return nil, fmt.Errorf("invalid node ID (%v)", err)
 	}
-	// Parse the IP address.
+	// Parse the host address and port.
 	host, port, err := net.SplitHostPort(u.Host)
 	if err != nil {
 		return nil, fmt.Errorf("invalid host: %v", err)
 	}
-	if ip = net.ParseIP(host); ip == nil {
-		return nil, errors.New("invalid IP address")
+	// TODO-Klaytn-Bootnode: Have to solve following issues
+	//  1. `klay` ignore local hostfile(/etc/hosts) and use nameservers which are received from dhcp server or manually specified in `/etc/resolve.conf`.
+	//  2. Domain may have many CNAME IP address and sometimes changes it, but, we only stored a IP address which was resolved at `klay` started.
+	if (host[0] >= 'a' && host[0] <= 'z') || (host[0] >= 'A' && host[0] <= 'Z') {
+		// in case host contains domain
+		logger.Debug("Try to resolve IP address", "host", host)
+		ipAddrs, err := net.LookupIP(host)
+		if err != nil || len(ipAddrs) == 0 {
+			logger.Error("resolving fail", "err", err)
+			return nil, errors.New("failed to resolve IP address")
+		}
+		// pickup the first IP address
+		ip = ipAddrs[0]
+		logger.Debug("resolved address", "Host", host, "IP", ip.String())
+	} else {
+		// in case host contains IP address
+		if ip = net.ParseIP(host); ip == nil {
+			return nil, errors.New("invalid IP address")
+		}
 	}
 	// Ensure the IP is 4 bytes long for IPv4 addresses.
 	if ipv4 := ip.To4(); ipv4 != nil {
