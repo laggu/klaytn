@@ -268,20 +268,20 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 
 // ChannelOfMessage is a map with the index of the channel per message
 var ChannelOfMessage = map[uint64]int{
-	StatusMsg:          p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
-	NewBlockHashesMsg:  p2p.ConnBlockMsg,
-	TxMsg:              p2p.ConnDefault,
-	GetBlockHeadersMsg: p2p.ConnBlockMsg,
-	BlockHeadersMsg:    p2p.ConnBlockMsg,
-	GetBlockBodiesMsg:  p2p.ConnBlockMsg,
-	BlockBodiesMsg:     p2p.ConnBlockMsg,
-	NewBlockMsg:        p2p.ConnBlockMsg,
+	StatusMsg:              p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
+	NewBlockHashesMsg:      p2p.ConnBlockMsg,
+	TxMsg:                  p2p.ConnDefault,
+	BlockHeadersRequestMsg: p2p.ConnBlockMsg,
+	BlockHeadersMsg:        p2p.ConnBlockMsg,
+	BlockBodiesRequestMsg:  p2p.ConnBlockMsg,
+	BlockBodiesMsg:         p2p.ConnBlockMsg,
+	NewBlockMsg:            p2p.ConnBlockMsg,
 
 	// Protocol messages belonging to klay/63
-	GetNodeDataMsg: p2p.ConnDefault,
-	NodeDataMsg:    p2p.ConnDefault,
-	GetReceiptsMsg: p2p.ConnDefault,
-	ReceiptsMsg:    p2p.ConnDefault,
+	NodeDataRequestMsg: p2p.ConnDefault,
+	NodeDataMsg:        p2p.ConnDefault,
+	ReceiptsRequestMsg: p2p.ConnDefault,
+	ReceiptsMsg:        p2p.ConnDefault,
 }
 
 // newPeerWithRWs creates a new Peer object with a slice of p2p.MsgReadWriter.
@@ -515,41 +515,41 @@ func (p *basePeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 // single header. It is used solely by the fetcher.
 func (p *basePeer) RequestOneHeader(hash common.Hash) error {
 	p.Log().Debug("Fetching single header", "hash", hash)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+	return p2p.Send(p.rw, BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
 }
 
 // RequestHeadersByHash fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the hash of an origin block.
 func (p *basePeer) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error {
 	p.Log().Debug("Fetching batch of headers", "count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+	return p2p.Send(p.rw, BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 
 // RequestHeadersByNumber fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the number of an origin block.
 func (p *basePeer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
 	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+	return p2p.Send(p.rw, BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func (p *basePeer) RequestBodies(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
-	return p2p.Send(p.rw, GetBlockBodiesMsg, hashes)
+	return p2p.Send(p.rw, BlockBodiesRequestMsg, hashes)
 }
 
 // RequestNodeData fetches a batch of arbitrary data from a node's known state
 // data, corresponding to the specified hashes.
 func (p *basePeer) RequestNodeData(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of state data", "count", len(hashes))
-	return p2p.Send(p.rw, GetNodeDataMsg, hashes)
+	return p2p.Send(p.rw, NodeDataRequestMsg, hashes)
 }
 
 // RequestReceipts fetches a batch of transaction receipts from a remote node.
 func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
-	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
+	return p2p.Send(p.rw, ReceiptsRequestMsg, hashes)
 }
 
 func (p *basePeer) SendServiceChainTxs(txs types.Transactions) error {
@@ -863,41 +863,41 @@ func (p *multiChannelPeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 // single header. It is used solely by the fetcher.
 func (p *multiChannelPeer) RequestOneHeader(hash common.Hash) error {
 	p.Log().Debug("Fetching single header", "hash", hash)
-	return p.msgSender(GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+	return p.msgSender(BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
 }
 
 // RequestHeadersByHash fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the hash of an origin block.
 func (p *multiChannelPeer) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error {
 	p.Log().Debug("Fetching batch of headers", "count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
-	return p.msgSender(GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+	return p.msgSender(BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 
 // RequestHeadersByNumber fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the number of an origin block.
 func (p *multiChannelPeer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
 	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
-	return p.msgSender(GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+	return p.msgSender(BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 
 // RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func (p *multiChannelPeer) RequestBodies(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
-	return p.msgSender(GetBlockBodiesMsg, hashes)
+	return p.msgSender(BlockBodiesRequestMsg, hashes)
 }
 
 // RequestNodeData fetches a batch of arbitrary data from a node's known state
 // data, corresponding to the specified hashes.
 func (p *multiChannelPeer) RequestNodeData(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of state data", "count", len(hashes))
-	return p.msgSender(GetNodeDataMsg, hashes)
+	return p.msgSender(NodeDataRequestMsg, hashes)
 }
 
 // RequestReceipts fetches a batch of transaction receipts from a remote node.
 func (p *multiChannelPeer) RequestReceipts(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
-	return p.msgSender(GetReceiptsMsg, hashes)
+	return p.msgSender(ReceiptsRequestMsg, hashes)
 }
 
 // msgSender sends data to the peer.

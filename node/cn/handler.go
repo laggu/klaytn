@@ -498,312 +498,71 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		return errResp(ErrExtraStatusMsg, "uncontrolled status message")
 
 		// Block header query, collect the requested headers and reply
-	case msg.Code == GetBlockHeadersMsg:
-		// Decode the complex header query
-		var query getBlockHeadersData
-		if err := msg.Decode(&query); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
+	case msg.Code == BlockHeadersRequestMsg:
+		logger.Debug("received BlockHeadersRequestMsg")
+		if err := handleBlockHeadersRequestMsg(pm, p, msg); err != nil {
+			return err
 		}
-		hashMode := query.Origin.Hash != (common.Hash{})
-
-		// Gather headers until the fetch or network limits is reached
-		var (
-			bytes   common.StorageSize
-			headers []*types.Header
-			unknown bool
-		)
-		for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
-			// Retrieve the next header satisfying the query
-			var origin *types.Header
-			if hashMode {
-				origin = pm.blockchain.GetHeaderByHash(query.Origin.Hash)
-			} else {
-				origin = pm.blockchain.GetHeaderByNumber(query.Origin.Number)
-			}
-			if origin == nil {
-				break
-			}
-			number := origin.Number.Uint64()
-			headers = append(headers, origin)
-			bytes += estHeaderRlpSize
-
-			// Advance to the next header of the query
-			switch {
-			case query.Origin.Hash != (common.Hash{}) && query.Reverse:
-				// Hash based traversal towards the genesis block
-				for i := 0; i < int(query.Skip)+1; i++ {
-					if header := pm.blockchain.GetHeader(query.Origin.Hash, number); header != nil {
-						query.Origin.Hash = header.ParentHash
-						number--
-					} else {
-						unknown = true
-						break
-					}
-				}
-			case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
-				// Hash based traversal towards the leaf block
-				var (
-					current = origin.Number.Uint64()
-					next    = current + query.Skip + 1
-				)
-				if next <= current {
-					infos, _ := json.MarshalIndent(p.GetP2PPeer().Info(), "", "  ")
-					p.GetP2PPeer().Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
-					unknown = true
-				} else {
-					if header := pm.blockchain.GetHeaderByNumber(next); header != nil {
-						if pm.blockchain.GetBlockHashesFromHash(header.Hash(), query.Skip+1)[query.Skip] == query.Origin.Hash {
-							query.Origin.Hash = header.Hash()
-						} else {
-							unknown = true
-						}
-					} else {
-						unknown = true
-					}
-				}
-			case query.Reverse:
-				// Number based traversal towards the genesis block
-				if query.Origin.Number >= query.Skip+1 {
-					query.Origin.Number -= query.Skip + 1
-				} else {
-					unknown = true
-				}
-
-			case !query.Reverse:
-				// Number based traversal towards the leaf block
-				query.Origin.Number += query.Skip + 1
-			}
-		}
-		return p.SendBlockHeaders(headers)
 
 	case msg.Code == BlockHeadersMsg:
-		// A batch of headers arrived to one of our previous requests
-		var headers []*types.Header
-		if err := msg.Decode(&headers); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		// Filter out any explicitly requested headers, deliver the rest to the downloader
-		filter := len(headers) == 1
-		if filter {
-			// Irrelevant of the fork checks, send the header to the fetcher just in case
-			headers = pm.fetcher.FilterHeaders(p.GetID(), headers, time.Now())
-		}
-		if len(headers) > 0 || !filter {
-			err := pm.downloader.DeliverHeaders(p.GetID(), headers)
-			if err != nil {
-				logger.Debug("Failed to deliver headers", "err", err)
-			}
-		}
-
-	case msg.Code == GetBlockBodiesMsg:
-		// Decode the retrieval message
-		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
-		if _, err := msgStream.List(); err != nil {
+		logger.Debug("received BlockHeadersMsg")
+		if err := handleBlockHeadersMsg(pm, p, msg); err != nil {
 			return err
 		}
-		// Gather blocks until the fetch or network limits is reached
-		var (
-			hash   common.Hash
-			bytes  int
-			bodies []rlp.RawValue
-		)
-		for bytes < softResponseLimit && len(bodies) < downloader.MaxBlockFetch {
-			// Retrieve the hash of the next block
-			if err := msgStream.Decode(&hash); err == rlp.EOL {
-				break
-			} else if err != nil {
-				return errResp(ErrDecode, "msg %v: %v", msg, err)
-			}
-			// Retrieve the requested block body, stopping if enough was found
-			if data := pm.blockchain.GetBodyRLP(hash); len(data) != 0 {
-				bodies = append(bodies, data)
-				bytes += len(data)
-			}
+
+	case msg.Code == BlockBodiesRequestMsg:
+		logger.Debug("received BlockBodiesRequestMsg")
+		if err := handleBlockBodiesRequestMsg(pm, p, msg); err != nil {
+			return err
 		}
-		return p.SendBlockBodiesRLP(bodies)
 
 	case msg.Code == BlockBodiesMsg:
-		// A batch of block bodies arrived to one of our previous requests
-		var request blockBodiesData
-		if err := msg.Decode(&request); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		// Deliver them all to the downloader for queuing
-		transactions := make([][]*types.Transaction, len(request))
-		uncles := make([][]*types.Header, len(request))
-
-		for i, body := range request {
-			transactions[i] = body.Transactions
-			uncles[i] = body.Uncles
-		}
-		// Filter out any explicitly requested bodies, deliver the rest to the downloader
-		filter := len(transactions) > 0 || len(uncles) > 0
-		if filter {
-			transactions, uncles = pm.fetcher.FilterBodies(p.GetID(), transactions, uncles, time.Now())
-		}
-		if len(transactions) > 0 || len(uncles) > 0 || !filter {
-			err := pm.downloader.DeliverBodies(p.GetID(), transactions, uncles)
-			if err != nil {
-				logger.Debug("Failed to deliver bodies", "err", err)
-			}
-		}
-
-	case p.GetVersion() >= klay63 && msg.Code == GetNodeDataMsg:
-		// Decode the retrieval message
-		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
-		if _, err := msgStream.List(); err != nil {
+		logger.Debug("received BlockBodiesMsg")
+		if err := handleBlockBodiesMsg(pm, p, msg); err != nil {
 			return err
 		}
-		// Gather state data until the fetch or network limits is reached
-		var (
-			hash  common.Hash
-			bytes int
-			data  [][]byte
-		)
-		for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch {
-			// Retrieve the hash of the next state entry
-			if err := msgStream.Decode(&hash); err == rlp.EOL {
-				break
-			} else if err != nil {
-				return errResp(ErrDecode, "msg %v: %v", msg, err)
-			}
-			// Retrieve the requested state entry, stopping if enough was found
-			if entry, err := pm.blockchain.TrieNode(hash); err == nil {
-				data = append(data, entry)
-				bytes += len(entry)
-			}
+
+	case p.GetVersion() >= klay63 && msg.Code == NodeDataRequestMsg:
+		logger.Debug("received NodeDataRequestMsg")
+		if err := handleNodeDataRequestMsg(pm, p, msg); err != nil {
+			return err
 		}
-		return p.SendNodeData(data)
 
 	case p.GetVersion() >= klay63 && msg.Code == NodeDataMsg:
-		// A batch of node state data arrived to one of our previous requests
-		var data [][]byte
-		if err := msg.Decode(&data); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		// Deliver all to the downloader
-		if err := pm.downloader.DeliverNodeData(p.GetID(), data); err != nil {
-			logger.Debug("Failed to deliver node state data", "err", err)
-		}
-
-	case p.GetVersion() >= klay63 && msg.Code == GetReceiptsMsg:
-		// Decode the retrieval message
-		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
-		if _, err := msgStream.List(); err != nil {
+		logger.Debug("received NodeDataMsg")
+		if err := handleNodeDataMsg(pm, p, msg); err != nil {
 			return err
 		}
-		// Gather state data until the fetch or network limits is reached
-		var (
-			hash     common.Hash
-			bytes    int
-			receipts []rlp.RawValue
-		)
-		for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch {
-			// Retrieve the hash of the next block
-			if err := msgStream.Decode(&hash); err == rlp.EOL {
-				break
-			} else if err != nil {
-				return errResp(ErrDecode, "msg %v: %v", msg, err)
-			}
-			// Retrieve the requested block's receipts, skipping if unknown to us
-			results := pm.blockchain.GetReceiptsByBlockHash(hash)
-			if results == nil {
-				if header := pm.blockchain.GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
-					continue
-				}
-			}
-			// If known, encode and queue for response packet
-			if encoded, err := rlp.EncodeToBytes(results); err != nil {
-				logger.Error("Failed to encode receipt", "err", err)
-			} else {
-				receipts = append(receipts, encoded)
-				bytes += len(encoded)
-			}
+
+	case p.GetVersion() >= klay63 && msg.Code == ReceiptsRequestMsg:
+		logger.Debug("received ReceiptsRequestMsg")
+		if err := handleReceiptsRequestMsg(pm, p, msg); err != nil {
+			return err
 		}
-		return p.SendReceiptsRLP(receipts)
 
 	case p.GetVersion() >= klay63 && msg.Code == ReceiptsMsg:
-		// A batch of receipts arrived to one of our previous requests
-		var receipts [][]*types.Receipt
-		if err := msg.Decode(&receipts); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		// Deliver all to the downloader
-		if err := pm.downloader.DeliverReceipts(p.GetID(), receipts); err != nil {
-			logger.Debug("Failed to deliver receipts", "err", err)
+		logger.Debug("received ReceiptsMsg")
+		if err := handleReceiptsMsg(pm, p, msg); err != nil {
+			return err
 		}
 
 	case msg.Code == NewBlockHashesMsg:
-		var announces newBlockHashesData
-		if err := msg.Decode(&announces); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-		// Mark the hashes as present at the remote node
-		// Schedule all the unknown hashes for retrieval
-		for _, block := range announces {
-			p.AddToKnownBlocks(block.Hash)
-
-			if !pm.blockchain.HasBlock(block.Hash, block.Number) {
-				pm.fetcher.Notify(p.GetID(), block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
-			}
+		logger.Debug("received NewBlockHashesMsg")
+		if err := handleNewBlockHashesMsg(pm, p, msg); err != nil {
+			return err
 		}
 
 	case msg.Code == NewBlockMsg:
-		// Retrieve and decode the propagated block
-		var request newBlockData
-		if err := msg.Decode(&request); err != nil {
-			return errResp(ErrDecode, "%v: %v", msg, err)
-		}
-		request.Block.ReceivedAt = msg.ReceivedAt
-		request.Block.ReceivedFrom = p
-
-		// Mark the peer as owning the block and schedule it for import
-		p.AddToKnownBlocks(request.Block.Hash())
-		pm.fetcher.Enqueue(p.GetID(), request.Block)
-
-		// Assuming the block is importable by the peer, but possibly not yet done so,
-		// calculate the head hash and TD that the peer truly must have.
-		var (
-			trueHead = request.Block.ParentHash()
-			trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
-		)
-		// Update the peers total difficulty if better than the previous
-		if _, td := p.Head(); trueTD.Cmp(td) > 0 {
-			p.SetHead(trueHead, trueTD)
-
-			// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
-			// a singe block (as the true TD is below the propagated block), however this
-			// scenario should easily be covered by the fetcher.
-			currentBlock := pm.blockchain.CurrentBlock()
-			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
-				go pm.synchronise(p)
-			}
+		logger.Debug("received NewBlockMsg")
+		if err := handleNewBlockMsg(pm, p, msg); err != nil {
+			return err
 		}
 
 	case msg.Code == TxMsg:
-		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
-			break
+		logger.Debug("received TxMsg")
+		if err := handleTxMsg(pm, p, msg); err != nil {
+			return err
 		}
-		// Transactions can be processed, parse all of them and deliver to the pool
-		var txs []*types.Transaction
-		if err := msg.Decode(&txs); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		// Only valid txs should be pushed into the pool.
-		validTxs := make([]*types.Transaction, 0, len(txs))
-		var err error
-		for i, tx := range txs {
-			// Validate and mark the remote transaction
-			if tx == nil {
-				err = errResp(ErrDecode, "transaction %d is nil", i)
-				continue
-			}
-			p.AddToKnownTxs(tx.Hash())
-			validTxs = append(validTxs, tx)
-		}
-		pm.txpool.AddRemotes(validTxs)
-		return err
 
 	// ServiceChain related messages
 	case msg.Code == ServiceChainTxsMsg:
@@ -844,6 +603,341 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
 	return nil
+}
+
+// handleBlockHeadersRequestMsg handles block header request message.
+func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the complex header query
+	var query getBlockHeadersData
+	if err := msg.Decode(&query); err != nil {
+		return errResp(ErrDecode, "%v: %v", msg, err)
+	}
+	hashMode := query.Origin.Hash != (common.Hash{})
+
+	// Gather headers until the fetch or network limits is reached
+	var (
+		bytes   common.StorageSize
+		headers []*types.Header
+		unknown bool
+	)
+	for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
+		// Retrieve the next header satisfying the query
+		var origin *types.Header
+		if hashMode {
+			origin = pm.blockchain.GetHeaderByHash(query.Origin.Hash)
+		} else {
+			origin = pm.blockchain.GetHeaderByNumber(query.Origin.Number)
+		}
+		if origin == nil {
+			break
+		}
+		number := origin.Number.Uint64()
+		headers = append(headers, origin)
+		bytes += estHeaderRlpSize
+
+		// Advance to the next header of the query
+		switch {
+		case query.Origin.Hash != (common.Hash{}) && query.Reverse:
+			// Hash based traversal towards the genesis block
+			for i := 0; i < int(query.Skip)+1; i++ {
+				if header := pm.blockchain.GetHeader(query.Origin.Hash, number); header != nil {
+					query.Origin.Hash = header.ParentHash
+					number--
+				} else {
+					unknown = true
+					break
+				}
+			}
+		case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
+			// Hash based traversal towards the leaf block
+			var (
+				current = origin.Number.Uint64()
+				next    = current + query.Skip + 1
+			)
+			if next <= current {
+				infos, _ := json.MarshalIndent(p.GetP2PPeer().Info(), "", "  ")
+				p.GetP2PPeer().Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
+				unknown = true
+			} else {
+				if header := pm.blockchain.GetHeaderByNumber(next); header != nil {
+					if pm.blockchain.GetBlockHashesFromHash(header.Hash(), query.Skip+1)[query.Skip] == query.Origin.Hash {
+						query.Origin.Hash = header.Hash()
+					} else {
+						unknown = true
+					}
+				} else {
+					unknown = true
+				}
+			}
+		case query.Reverse:
+			// Number based traversal towards the genesis block
+			if query.Origin.Number >= query.Skip+1 {
+				query.Origin.Number -= query.Skip + 1
+			} else {
+				unknown = true
+			}
+
+		case !query.Reverse:
+			// Number based traversal towards the leaf block
+			query.Origin.Number += query.Skip + 1
+		}
+	}
+	return p.SendBlockHeaders(headers)
+}
+
+// handleBlockHeadersMsg handles block header response message.
+func handleBlockHeadersMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of headers arrived to one of our previous requests
+	var headers []*types.Header
+	if err := msg.Decode(&headers); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Filter out any explicitly requested headers, deliver the rest to the downloader
+	filter := len(headers) == 1
+	if filter {
+		// Irrelevant of the fork checks, send the header to the fetcher just in case
+		headers = pm.fetcher.FilterHeaders(p.GetID(), headers, time.Now())
+	}
+	if len(headers) > 0 || !filter {
+		err := pm.downloader.DeliverHeaders(p.GetID(), headers)
+		if err != nil {
+			logger.Debug("Failed to deliver headers", "err", err)
+		}
+	}
+	return nil
+}
+
+// handleBlockBodiesRequestMsg handles block body request message.
+func handleBlockBodiesRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather blocks until the fetch or network limits is reached
+	var (
+		hash   common.Hash
+		bytes  int
+		bodies []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(bodies) < downloader.MaxBlockFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		// Retrieve the requested block body, stopping if enough was found
+		if data := pm.blockchain.GetBodyRLP(hash); len(data) != 0 {
+			bodies = append(bodies, data)
+			bytes += len(data)
+		}
+	}
+	return p.SendBlockBodiesRLP(bodies)
+}
+
+// handleGetBlockBodiesMsg handles block body response message.
+func handleBlockBodiesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of block bodies arrived to one of our previous requests
+	var request blockBodiesData
+	if err := msg.Decode(&request); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver them all to the downloader for queuing
+	transactions := make([][]*types.Transaction, len(request))
+	uncles := make([][]*types.Header, len(request))
+
+	for i, body := range request {
+		transactions[i] = body.Transactions
+		uncles[i] = body.Uncles
+	}
+	// Filter out any explicitly requested bodies, deliver the rest to the downloader
+	filter := len(transactions) > 0 || len(uncles) > 0
+	if filter {
+		transactions, uncles = pm.fetcher.FilterBodies(p.GetID(), transactions, uncles, time.Now())
+	}
+	if len(transactions) > 0 || len(uncles) > 0 || !filter {
+		err := pm.downloader.DeliverBodies(p.GetID(), transactions, uncles)
+		if err != nil {
+			logger.Debug("Failed to deliver bodies", "err", err)
+		}
+	}
+	return nil
+}
+
+// handleNodeDataRequestMsg handles node data request message.
+func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash  common.Hash
+		bytes int
+		data  [][]byte
+	)
+	for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch {
+		// Retrieve the hash of the next state entry
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		// Retrieve the requested state entry, stopping if enough was found
+		if entry, err := pm.blockchain.TrieNode(hash); err == nil {
+			data = append(data, entry)
+			bytes += len(entry)
+		}
+	}
+	return p.SendNodeData(data)
+}
+
+// handleNodeDataMsg handles node data response message.
+func handleNodeDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of node state data arrived to one of our previous requests
+	var data [][]byte
+	if err := msg.Decode(&data); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := pm.downloader.DeliverNodeData(p.GetID(), data); err != nil {
+		logger.Debug("Failed to deliver node state data", "err", err)
+	}
+	return nil
+}
+
+// handleGetReceiptsMsg handles receipt request message.
+func handleReceiptsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash     common.Hash
+		bytes    int
+		receipts []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		// Retrieve the requested block's receipts, skipping if unknown to us
+		results := pm.blockchain.GetReceiptsByBlockHash(hash)
+		if results == nil {
+			if header := pm.blockchain.GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
+				continue
+			}
+		}
+		// If known, encode and queue for response packet
+		if encoded, err := rlp.EncodeToBytes(results); err != nil {
+			logger.Error("Failed to encode receipt", "err", err)
+		} else {
+			receipts = append(receipts, encoded)
+			bytes += len(encoded)
+		}
+	}
+	return p.SendReceiptsRLP(receipts)
+}
+
+// handleReceiptsMsg handles receipt response message.
+func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of receipts arrived to one of our previous requests
+	var receipts [][]*types.Receipt
+	if err := msg.Decode(&receipts); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := pm.downloader.DeliverReceipts(p.GetID(), receipts); err != nil {
+		logger.Debug("Failed to deliver receipts", "err", err)
+	}
+	return nil
+}
+
+// handleNewBlockHashesMsg handles new block hashes message.
+func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	var announces newBlockHashesData
+	if err := msg.Decode(&announces); err != nil {
+		return errResp(ErrDecode, "%v: %v", msg, err)
+	}
+	// Mark the hashes as present at the remote node
+	// Schedule all the unknown hashes for retrieval
+	for _, block := range announces {
+		p.AddToKnownBlocks(block.Hash)
+
+		if !pm.blockchain.HasBlock(block.Hash, block.Number) {
+			pm.fetcher.Notify(p.GetID(), block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
+		}
+	}
+	return nil
+}
+
+// handleNewBlockMsg handles new block message.
+func handleNewBlockMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Retrieve and decode the propagated block
+	var request newBlockData
+	if err := msg.Decode(&request); err != nil {
+		return errResp(ErrDecode, "%v: %v", msg, err)
+	}
+	request.Block.ReceivedAt = msg.ReceivedAt
+	request.Block.ReceivedFrom = p
+
+	// Mark the peer as owning the block and schedule it for import
+	p.AddToKnownBlocks(request.Block.Hash())
+	pm.fetcher.Enqueue(p.GetID(), request.Block)
+
+	// Assuming the block is importable by the peer, but possibly not yet done so,
+	// calculate the head hash and TD that the peer truly must have.
+	var (
+		trueHead = request.Block.ParentHash()
+		trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
+	)
+	// Update the peers total difficulty if better than the previous
+	if _, td := p.Head(); trueTD.Cmp(td) > 0 {
+		p.SetHead(trueHead, trueTD)
+
+		// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
+		// a singe block (as the true TD is below the propagated block), however this
+		// scenario should easily be covered by the fetcher.
+		currentBlock := pm.blockchain.CurrentBlock()
+		if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
+			go pm.synchronise(p)
+		}
+	}
+	return nil
+}
+
+// handleTxMsg handles transaction-propagating message.
+func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Transactions arrived, make sure we have a valid and fresh chain to handle them
+	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
+		return nil
+	}
+	// Transactions can be processed, parse all of them and deliver to the pool
+	var txs []*types.Transaction
+	if err := msg.Decode(&txs); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Only valid txs should be pushed into the pool.
+	validTxs := make([]*types.Transaction, 0, len(txs))
+	var err error
+	for i, tx := range txs {
+		// Validate and mark the remote transaction
+		if tx == nil {
+			err = errResp(ErrDecode, "transaction %d is nil", i)
+			continue
+		}
+		p.AddToKnownTxs(tx.Hash())
+		validTxs = append(validTxs, tx)
+	}
+	pm.txpool.AddRemotes(validTxs)
+	return err
 }
 
 // handleServiceChainTxDataMsg handles service chain transactions from child chain.

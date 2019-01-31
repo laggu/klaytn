@@ -55,9 +55,9 @@ const (
 	StatusMsg                              = 0x00
 	NewBlockHashesMsg                      = 0x01
 	TxMsg                                  = 0x02
-	GetBlockHeadersMsg                     = 0x03
+	BlockHeadersRequestMsg                 = 0x03
 	BlockHeadersMsg                        = 0x04
-	GetBlockBodiesMsg                      = 0x05
+	BlockBodiesRequestMsg                  = 0x05
 	BlockBodiesMsg                         = 0x06
 	NewBlockMsg                            = 0x07
 	ServiceChainTxsMsg                     = 0x08
@@ -67,10 +67,10 @@ const (
 	ServiceChainParentChainInfoRequestMsg  = 0x0c
 
 	// Protocol messages belonging to klay/63
-	GetNodeDataMsg = 0x0d
-	NodeDataMsg    = 0x0e
-	GetReceiptsMsg = 0x0f
-	ReceiptsMsg    = 0x10
+	NodeDataRequestMsg = 0x0d
+	NodeDataMsg        = 0x0e
+	ReceiptsRequestMsg = 0x0f
+	ReceiptsMsg        = 0x10
 )
 
 type errCode int
