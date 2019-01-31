@@ -58,6 +58,7 @@ const (
 	TxValueKeyHumanReadable
 	TxValueKeyAccountKey
 	TxValueKeyFeePayer
+	TxValueKeyFeeRatioOfFeePayer
 )
 
 var (
