@@ -282,3 +282,14 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 
 	return gas + gasPayload, nil
 }
+
+// CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.
+// For example, if fee = 100 and feeRatio = 30, feePayer = 30 and feeSender = 70.
+func CalcFeeWithRatio(feeRatio uint8, fee *big.Int) (*big.Int, *big.Int) {
+	// feePayer = fee * ratio / 100
+	feePayer := new(big.Int).Div(new(big.Int).Mul(fee, new(big.Int).SetUint64(uint64(feeRatio))), common.Big100)
+	// feeSender = fee - feePayer
+	feeSender := new(big.Int).Sub(fee, feePayer)
+
+	return feePayer, feeSender
+}
