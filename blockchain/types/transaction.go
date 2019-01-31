@@ -302,6 +302,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		txType:        tx.data.Type(),
 		accountKey:    NewAccountKeyNil(),
 		humanReadable: false,
+		feeRatio:      tx.FeeRatio(),
 	}
 
 	if ta, ok := tx.data.(*TxInternalDataAccountCreation); ok {
@@ -314,9 +315,6 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 
 	gasFeePayer := uint64(0)
 	msg.feePayer, gasFeePayer, err = ValidateFeePayer(s, tx, picker)
-
-	// TODO-Klaytn-FeePayer: Implement this after TxInternalDataFeeRatio is introduced.
-	msg.feeRatio = MaxFeeRatio
 
 	msg.intrinsicGas += gasFrom + gasFeePayer
 	return msg, err
