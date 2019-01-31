@@ -244,6 +244,19 @@ func (tx *Transaction) FeePayer() (common.Address, error) {
 	return tf.GetFeePayer(), nil
 }
 
+// FeeRatio returns the fee ratio of a transaction.
+// If the transaction does not implement TxInternalDataFeeRatio,
+// it returns MaxFeeRatio which means the fee payer will be paid all tx fee by default.
+func (tx *Transaction) FeeRatio() uint8 {
+	tf, ok := tx.data.(TxInternalDataFeeRatio)
+	if !ok {
+		// default fee ratio is MaxFeeRatio.
+		return MaxFeeRatio
+	}
+
+	return tf.GetFeeRatio()
+}
+
 // Hash hashes the RLP encoding of tx.
 // It uniquely identifies the transaction.
 func (tx *Transaction) Hash() common.Hash {
