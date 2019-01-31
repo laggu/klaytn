@@ -113,6 +113,7 @@ func createHumanReadableAccount(humanReadableAddr string) (*TestAccountType, err
 // 6. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 // 7. ChainDataAnchoring (reservoir -> reservoir) using TxTypeChainDataAnchoring.
 // 8. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir).
+// 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir) and a ratio of 30.
 func TestTransactionScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -398,6 +399,38 @@ func TestTransactionScenario(t *testing.T) {
 			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.Sign(signer, colin.Key)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayer(signer, reservoir.Key)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		colin.Nonce += 1
+	}
+
+	// 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir) and a ratio of 30.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(10000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              colin.Nonce,
+			types.TxValueKeyFrom:               colin.Addr,
+			types.TxValueKeyFeePayer:           reservoir.Addr,
+			types.TxValueKeyTo:                 reservoir.Addr,
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, values)
 		assert.Equal(t, nil, err)
 
 		err = tx.Sign(signer, colin.Key)
@@ -802,6 +835,35 @@ func TestValidateSender(t *testing.T) {
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.Sign(signer, decoupled.Key)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayer(signer, anon.Key)
+		assert.Equal(t, nil, err)
+
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, decoupled.Addr, actualFrom)
+
+		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, anon.Addr, actualFeePayer)
+	}
+
+	// TxTypeFeeDelegatedValueTransferWithRatio
+	{
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              0,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyTo:                 decoupled.Addr,
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyFeeRatioOfFeePayer: uint(30),
 		})
 		assert.Equal(t, nil, err)
 
