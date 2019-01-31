@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
 	"math/big"
 )
 
@@ -141,7 +142,22 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		intrinsicGas += gasFrom + gasFeePayer
 
 		fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(intrinsicGas))
-		a.SubBalance(feePayer, fee)
+
+		feeRatio := tx.FeeRatio()
+		switch {
+		case feeRatio == types.MaxFeeRatio:
+			a.SubBalance(feePayer, fee)
+
+		case feeRatio < types.MaxFeeRatio:
+			feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, fee)
+			a.SubBalance(feePayer, feeByFeePayer)
+			a.SubBalance(from, feeBySender)
+
+		default:
+			// feeRatio > types.MaxFeeRatio
+			return kerrors.ErrMaxFeeRatioExceeded
+		}
+
 		a.AddBalance(a.coinbase, fee)
 
 		a.IncNonce(from)

@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/ground-x/klaytn/kerrors"
 	"math"
 	"math/big"
 	"sync"
@@ -591,9 +592,27 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", pool.currentState.GetBalance(from), "value", tx.Value())
 			return ErrInsufficientFundsFrom
 		}
-		if pool.currentState.GetBalance(feePayer).Cmp(tx.Fee()) < 0 {
-			logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", pool.currentState.GetBalance(from), "fee", tx.Fee())
-			return ErrInsufficientFundsFeePayer
+
+		feeRatio := tx.FeeRatio()
+		switch {
+		case feeRatio == types.MaxFeeRatio:
+			if pool.currentState.GetBalance(feePayer).Cmp(tx.Fee()) < 0 {
+				logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", pool.currentState.GetBalance(feePayer), "fee", tx.Fee())
+				return ErrInsufficientFundsFeePayer
+			}
+		case feeRatio < types.MaxFeeRatio:
+			feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
+			if pool.currentState.GetBalance(feePayer).Cmp(feeByFeePayer) < 0 {
+				logger.Error("[tx_pool] insufficient funds for feeByFeePayer", "feePayer", feePayer, "balance", pool.currentState.GetBalance(feePayer), "feeByFeePayer", feeByFeePayer)
+				return ErrInsufficientFundsFeePayer
+			}
+			if pool.currentState.GetBalance(from).Cmp(feeBySender) < 0 {
+				logger.Error("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", pool.currentState.GetBalance(from), "feeBySender", feeBySender)
+				return ErrInsufficientFundsFeePayer
+			}
+		default:
+			// feeRatio > types.MaxFeeRatio
+			return kerrors.ErrMaxFeeRatioExceeded
 		}
 	}
 	// TODO-Klaytn-Issue136

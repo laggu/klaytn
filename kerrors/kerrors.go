@@ -24,4 +24,5 @@ var (
 	ErrOutOfGas                  = errors.New("out of gas")
 	ErrMaxKeysExceed             = errors.New("the number of keys exceeds the limit")
 	ErrMaxKeysExceedInValidation = errors.New("the number of keys exceeds the limit in the validation check")
+	ErrMaxFeeRatioExceeded       = errors.New("fee ratio exceeded the maximum")
 )

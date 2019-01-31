@@ -31,10 +31,11 @@ import (
 )
 
 var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
-	errNotProgramAccount         = errors.New("not a program account")
-	errAccountAlreadyExists      = errors.New("account already exists")
-	errMsgToNil                  = errors.New("msg.To() is nil")
+	errInsufficientBalanceForGas         = errors.New("insufficient balance of the sender to pay for gas")
+	errInsufficientBalanceForGasFeePayer = errors.New("insufficient balance of the fee payer to pay for gas")
+	errNotProgramAccount                 = errors.New("not a program account")
+	errAccountAlreadyExists              = errors.New("account already exists")
+	errMsgToNil                          = errors.New("msg.To() is nil")
 )
 
 /*
@@ -155,16 +156,41 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice gasLimit
-	if st.state.GetBalance(st.msg.FeePayer()).Cmp(mgval) < 0 {
-		return errInsufficientBalanceForGas
-	}
 	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
 		return err
+	}
+
+	feeRatio := st.msg.FeeRatio()
+	switch {
+	case feeRatio == types.MaxFeeRatio:
+		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
+		if st.state.GetBalance(st.msg.FeePayer()).Cmp(mgval) < 0 {
+			return errInsufficientBalanceForGas
+		}
+
+		st.state.SubBalance(st.msg.FeePayer(), mgval)
+
+	case feeRatio < types.MaxFeeRatio:
+		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, mgval)
+
+		if st.state.GetBalance(st.msg.FeePayer()).Cmp(feePayer) < 0 {
+			return errInsufficientBalanceForGasFeePayer
+		}
+
+		if st.state.GetBalance(st.msg.From()).Cmp(feeSender) < 0 {
+			return errInsufficientBalanceForGas
+		}
+
+		st.state.SubBalance(st.msg.FeePayer(), feePayer)
+		st.state.SubBalance(st.msg.From(), feeSender)
+
+	default:
+		// feeRatio > types.MaxFeeRatio
+		return kerrors.ErrMaxFeeRatioExceeded
 	}
 	st.gas += st.msg.Gas()
 
 	st.initialGas = st.msg.Gas()
-	st.state.SubBalance(st.msg.FeePayer(), mgval)
 	return nil
 }
 
@@ -344,7 +370,24 @@ func (st *StateTransition) refundGas() {
 
 	// Return KLAY for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice
-	st.state.AddBalance(st.msg.FeePayer(), remaining)
+
+	feeRatio := st.msg.FeeRatio()
+	switch {
+	case feeRatio == types.MaxFeeRatio:
+		// To make a short circuit, the below routine processes when feeRatio == 100.
+		st.state.AddBalance(st.msg.FeePayer(), remaining)
+
+	case feeRatio < types.MaxFeeRatio:
+		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, remaining)
+
+		st.state.AddBalance(st.msg.FeePayer(), feePayer)
+		st.state.AddBalance(st.msg.From(), feeSender)
+
+	default:
+		// feeRatio > types.MaxFeeRatio
+		// This will not happen because it is already checked in buyGas(), but to make sure, we add a log here.
+		logger.Error("FeeRatio exceeds the maximum", "feeRatio", feeRatio, "msg", st.msg)
+	}
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
