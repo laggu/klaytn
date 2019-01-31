@@ -48,4 +48,4 @@ Please note that the tag name always
 | TestNet                                        | Related to TestNet.                                       |
 | NodeDiscovery                                  | Related to NodeDiscovery.                                 |
 | Accounts                                       | Related to Klaytn Accounts.                               |
-
+| Downloader                                     | Related to Downloader.                                    |
