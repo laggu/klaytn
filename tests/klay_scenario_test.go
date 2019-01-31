@@ -19,6 +19,7 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -31,6 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 )
@@ -420,6 +422,8 @@ func TestTransactionScenario(t *testing.T) {
 // TestSmartContractScenario tests the following scenario:
 // 1. Deploy smart contract (reservoir -> contract)
 // 2. Check the the smart contract is deployed well.
+// 3. Execute "reward" function with amountToSend
+// 4. Validate "reward" function is executed correctly by executing "balanceOf".
 func TestSmartContractScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -542,6 +546,80 @@ func TestSmartContractScenario(t *testing.T) {
 		}
 		code := statedb.GetCode(contract.Addr)
 		assert.Equal(t, 478, len(code))
+	}
+
+	// 3. Execute "reward" function with amountToSend
+	amountToSend := new(big.Int).SetUint64(10)
+	{
+		var txs types.Transactions
+
+		abiStr := `[{"constant":true,"inputs":[],"name":"totalAmount","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"receiver","type":"address"}],"name":"reward","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"safeWithdrawal","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"}]`
+		abii, err := abi.JSON(strings.NewReader(string(abiStr)))
+		assert.Equal(t, nil, err)
+
+		data, err := abii.Pack("reward", reservoir.Addr)
+		assert.Equal(t, nil, err)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyAmount:        amountToSend,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          data,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.Sign(signer, reservoir.Key)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 4. Validate "reward" function is executed correctly by executing "balanceOf".
+	{
+		amount := new(big.Int).SetUint64(0)
+
+		abiStr := `[{"constant":true,"inputs":[],"name":"totalAmount","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"receiver","type":"address"}],"name":"reward","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"safeWithdrawal","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"}]`
+		abii, err := abi.JSON(strings.NewReader(string(abiStr)))
+		assert.Equal(t, nil, err)
+
+		data, err := abii.Pack("balanceOf", reservoir.Addr)
+		assert.Equal(t, nil, err)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          data,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.Sign(signer, reservoir.Key)
+		assert.Equal(t, nil, err)
+
+		ret, err := callContract(bcdata, tx)
+		assert.Equal(t, nil, err)
+
+		balance := new(big.Int)
+		abii.Unpack(&balance, "balanceOf", ret)
+		fmt.Println("balance", balance)
+
+		assert.Equal(t, amountToSend, balance)
+		reservoir.Nonce += 1
 	}
 
 	if testing.Verbose() {
