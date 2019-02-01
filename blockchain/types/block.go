@@ -70,9 +70,29 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
 // Header represents a block header in the Klaytn blockchain.
+// TODO-Klaytn Header will be replaced by HeaderWithoutUncle.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	UncleHash   common.Hash    `json:"sha3Uncles,omitempty"`
+	Coinbase    common.Address `json:"miner"            gencodec:"required"`
+	Rewardbase  common.Address `json:"reward"           gencodec:"required"`
+	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
+	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
+	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
+	Number      *big.Int       `json:"number"           gencodec:"required"`
+	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
+	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
+	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
+	Extra       []byte         `json:"extraData"        gencodec:"required"`
+	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
+	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
+}
+
+// HeaderWithoutUncle represents a block header without UncleHash.
+type HeaderWithoutUncle struct {
+	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Rewardbase  common.Address `json:"reward"           gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
@@ -108,14 +128,56 @@ func (h *Header) Hash() common.Hash {
 	if h.MixDigest == IstanbulDigest {
 		// Seal is reserved in extra-data. To prove block is signed by the proposer.
 		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
-			return rlpHash(istanbulHeader)
+			// TODO-Klaytn Revert below code after replacement of Header by HeaderWithoutUncle.
+			return rlpHash(istanbulHeader.ToHeaderWithoutUncle()) //rlpHash(istanbulHeader)
 		}
 	}
-	return rlpHash(h)
+	// TODO-Klaytn Revert below code after replacement of Header by HeaderWithoutUncle.
+	return rlpHash(h.ToHeaderWithoutUncle()) //rlpHash(h)
 }
 
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.
 func (h *Header) HashNoNonce() common.Hash {
+	return rlpHash([]interface{}{
+		h.ParentHash,
+		h.Coinbase,
+		h.Rewardbase,
+		h.Root,
+		h.TxHash,
+		h.ReceiptHash,
+		h.Bloom,
+		h.Difficulty,
+		h.Number,
+		h.GasLimit,
+		h.GasUsed,
+		h.Time,
+		h.Extra,
+	})
+}
+
+// HashNoUncle returns the hash without uncle which will be used commonly before the time when uncle feature is deleted.
+func (h *Header) HashNoUncle() common.Hash {
+	return rlpHash([]interface{}{
+		h.ParentHash,
+		h.Coinbase,
+		h.Rewardbase,
+		h.Root,
+		h.TxHash,
+		h.ReceiptHash,
+		h.Bloom,
+		h.Difficulty,
+		h.Number,
+		h.GasLimit,
+		h.GasUsed,
+		h.Time,
+		h.Extra,
+		h.MixDigest,
+		h.Nonce,
+	})
+}
+
+// HashWithUncle returns the hash which will be used a test for comparing rlpHash and this way.
+func (h *Header) HashWithUncle() common.Hash {
 	return rlpHash([]interface{}{
 		h.ParentHash,
 		h.UncleHash,
@@ -131,7 +193,32 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.GasUsed,
 		h.Time,
 		h.Extra,
+		h.MixDigest,
+		h.Nonce,
 	})
+}
+
+// ToHeaderWithoutUncle returns copied HeaderWithoutUncle from the Header.
+// TODO-Klaytn Remove below code after replacement of Header by HeaderWithoutUncle.
+func (h *Header) ToHeaderWithoutUncle() *HeaderWithoutUncle {
+	header := HeaderWithoutUncle{
+		h.ParentHash,
+		h.Coinbase,
+		h.Rewardbase,
+		h.Root,
+		h.TxHash,
+		h.ReceiptHash,
+		h.Bloom,
+		h.Difficulty,
+		h.Number,
+		h.GasLimit,
+		h.GasUsed,
+		h.Time,
+		h.Extra,
+		h.MixDigest,
+		h.Nonce,
+	}
+	return &header
 }
 
 // Size returns the approximate memory used by all internal contents. It is used
