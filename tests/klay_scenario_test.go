@@ -37,6 +37,17 @@ import (
 	"time"
 )
 
+var (
+	to       = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
+	feePayer = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
+	nonce    = uint64(1234)
+	amount   = big.NewInt(10)
+	gasLimit = uint64(999999999)
+
+	// TODO-Klaytn-Gas: When we have a configuration of Baobab or something, use gasPrice in that configuration.
+	gasPrice = big.NewInt(25)
+)
+
 type TestAccountType struct {
 	Addr  common.Address
 	Key   *ecdsa.PrivateKey
@@ -54,8 +65,8 @@ func genRandomHash() (h common.Hash) {
 }
 
 // createAnonymousAccount creates an account whose address is derived from the private key.
-func createAnonymousAccount() (*TestAccountType, error) {
-	key, err := crypto.GenerateKey()
+func createAnonymousAccount(prvKeyHex string) (*TestAccountType, error) {
+	key, err := crypto.HexToECDSA(prvKeyHex)
 	if err != nil {
 		return nil, err
 	}
@@ -70,14 +81,11 @@ func createAnonymousAccount() (*TestAccountType, error) {
 }
 
 // createDecoupledAccount creates an account whose address is decoupled with its private key.
-func createDecoupledAccount() (*TestAccountType, error) {
-	key, err := crypto.GenerateKey()
+func createDecoupledAccount(prvKeyHex string, addr common.Address) (*TestAccountType, error) {
+	key, err := crypto.HexToECDSA(prvKeyHex)
 	if err != nil {
 		return nil, err
 	}
-
-	b := genRandomHash().Bytes()[:common.AddressLength]
-	addr := common.BytesToAddress(b)
 
 	return &TestAccountType{
 		Addr:  addr,
@@ -86,8 +94,8 @@ func createDecoupledAccount() (*TestAccountType, error) {
 	}, nil
 }
 
-func createHumanReadableAccount(humanReadableAddr string) (*TestAccountType, error) {
-	key, err := crypto.GenerateKey()
+func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*TestAccountType, error) {
+	key, err := crypto.HexToECDSA(prvKeyHex)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +121,7 @@ func createHumanReadableAccount(humanReadableAddr string) (*TestAccountType, err
 // 6. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 // 7. ChainDataAnchoring (reservoir -> reservoir) using TxTypeChainDataAnchoring.
 // 8. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir).
-// 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir) and a ratio of 30.
+// 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransferWithRatio with a fee payer (reservoir) and a ratio of 30.
 func TestTransactionScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -145,14 +153,15 @@ func TestTransactionScenario(t *testing.T) {
 	}
 
 	// anonymous account
-	anon, err := createAnonymousAccount()
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	assert.Equal(t, nil, err)
 
 	// decoupled account
-	decoupled, err := createDecoupledAccount()
+	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
 	assert.Equal(t, nil, err)
 
-	colin, err := createHumanReadableAccount("colin")
+	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
 	assert.Equal(t, nil, err)
 
 	if testing.Verbose() {
@@ -161,9 +170,6 @@ func TestTransactionScenario(t *testing.T) {
 		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
-
-	gasPrice := new(big.Int).SetUint64(25)
-	gasLimit := uint64(2500000)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 
@@ -189,15 +195,16 @@ func TestTransactionScenario(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(100000000)
+		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      reservoir.Nonce,
-			types.TxValueKeyFrom:       reservoir.Addr,
-			types.TxValueKeyTo:         decoupled.Addr,
-			types.TxValueKeyAmount:     amount,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: types.NewAccountKeyPublicWithValue(&decoupled.Key.PublicKey),
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            decoupled.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&decoupled.Key.PublicKey),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
@@ -273,7 +280,7 @@ func TestTransactionScenario(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(10000)
+		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    decoupled.Nonce,
 			types.TxValueKeyFrom:     decoupled.Addr,
@@ -300,15 +307,16 @@ func TestTransactionScenario(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(100000000)
+		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      reservoir.Nonce,
-			types.TxValueKeyFrom:       reservoir.Addr,
-			types.TxValueKeyTo:         colin.Addr,
-			types.TxValueKeyAmount:     amount,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: types.NewAccountKeyPublicWithValue(&colin.Key.PublicKey),
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            colin.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&colin.Key.PublicKey),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
@@ -415,7 +423,7 @@ func TestTransactionScenario(t *testing.T) {
 		colin.Nonce += 1
 	}
 
-	// 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir) and a ratio of 30.
+	// 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransferWithRatio with a fee payer (reservoir) and a ratio of 30.
 	{
 		var txs types.Transactions
 
@@ -491,7 +499,8 @@ func TestSmartContractScenario(t *testing.T) {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 	}
 
-	contract, err := createHumanReadableAccount("contract")
+	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
+		"contract")
 	assert.Equal(t, nil, err)
 
 	gasPrice := new(big.Int).SetUint64(0)
@@ -663,18 +672,21 @@ func TestSmartContractScenario(t *testing.T) {
 // TestValidateSender tests ValidateSender with all transaction types.
 func TestValidateSender(t *testing.T) {
 	// anonymous account
-	anon, err := createAnonymousAccount()
+	anon, err := createAnonymousAccount("1da6dfcb52128060cdd2108edb786ca0aff4ef1fa537574286eeabe5c2ebd5ca")
 	assert.Equal(t, nil, err)
 
 	// decoupled account
-	decoupled, err := createDecoupledAccount()
+	decoupled, err := createDecoupledAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab",
+		common.HexToAddress("0x5104711f7faa9e2dadf593e43db1577a2887636f"))
 	assert.Equal(t, nil, err)
+
+	initialBalance := big.NewInt(1000000)
 
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	statedb.CreateAccountWithMap(anon.Addr, state.ExternallyOwnedAccountType,
 		map[state.AccountValueKeyType]interface{}{
-			state.AccountValueKeyNonce:         rand.Uint64(),
-			state.AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
+			state.AccountValueKeyNonce:         nonce,
+			state.AccountValueKeyBalance:       initialBalance,
 			state.AccountValueKeyHumanReadable: false,
 			state.AccountValueKeyAccountKey:    types.NewAccountKeyNil(),
 		})
@@ -682,7 +694,7 @@ func TestValidateSender(t *testing.T) {
 	statedb.CreateAccountWithMap(decoupled.Addr, state.ExternallyOwnedAccountType,
 		map[state.AccountValueKeyType]interface{}{
 			state.AccountValueKeyNonce:         rand.Uint64(),
-			state.AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
+			state.AccountValueKeyBalance:       initialBalance,
 			state.AccountValueKeyHumanReadable: false,
 			state.AccountValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&decoupled.Key.PublicKey),
 		})
@@ -756,7 +768,8 @@ func TestValidateSender(t *testing.T) {
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          []byte{0x60, 0x00, 0x50, 0x00},
+			// The binary below is a compiled binary of contracts/reward/contract/KlaytnReward.sol.
+			types.TxValueKeyData: common.Hex2Bytes("608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"),
 		})
 		assert.Equal(t, nil, err)
 
@@ -777,7 +790,8 @@ func TestValidateSender(t *testing.T) {
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyData:     []byte{0x60, 0x00, 0x50, 0x00},
+			// A abi-packed bytes calling "reward" of contracts/reward/contract/KlaytnReward.sol with an address "bc5951f055a85f41a3b62fd6f68ab7de76d299b2".
+			types.TxValueKeyData: common.Hex2Bytes("6353586b000000000000000000000000bc5951f055a85f41a3b62fd6f68ab7de76d299b2"),
 		})
 		assert.Equal(t, nil, err)
 

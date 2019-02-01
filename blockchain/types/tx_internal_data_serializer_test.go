@@ -19,10 +19,21 @@ package types
 import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+)
+
+var (
+	to        = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
+	key, from = defaultTestKey()
+	feePayer  = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
+	nonce     = uint64(1234)
+	amount    = big.NewInt(10)
+	gasLimit  = uint64(999999999)
+	gasPrice  = big.NewInt(25)
 )
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData
@@ -37,7 +48,8 @@ func TestTransactionSerialization(t *testing.T) {
 		{"ChainDataTx", genChainDataTransaction()},
 		{"AccountCreation", genAccountCreationTransaction()},
 		{"FeeDelegatedValueTransfer", genFeeDelegatedValueTransferTransaction()},
-		{"SmartContractExecution", genSmartContractDeployTransaction()},
+		{"SmartContractExecution", genSmartContractExecutionTransaction()},
+		{"FeeDelegatedValueTransferWithRatio", genFeeDelegatedValueTransferWithRatioTransaction()},
 	}
 
 	var testcases = []struct {
@@ -61,6 +73,13 @@ func TestTransactionSerialization(t *testing.T) {
 func testTransactionRLP(t *testing.T, tx TxInternalData) {
 	enc := newTxInternalDataSerializerWithValues(tx)
 
+	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	h := signer.Hash(&Transaction{data: tx})
+	sig, err := NewTxSignatureWithValues(signer, h, key)
+	assert.Equal(t, nil, err)
+
+	tx.SetSignature(sig)
+
 	b, err := rlp.EncodeToBytes(enc)
 	if err != nil {
 		panic(err)
@@ -80,6 +99,13 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 func testTransactionJSON(t *testing.T, tx TxInternalData) {
 	enc := newTxInternalDataSerializerWithValues(tx)
 
+	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	h := signer.Hash(&Transaction{data: tx})
+	sig, err := NewTxSignatureWithValues(signer, h, key)
+	assert.Equal(t, nil, err)
+
+	tx.SetSignature(sig)
+
 	b, err := json.Marshal(enc)
 	if err != nil {
 		panic(err)
@@ -97,26 +123,31 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 }
 
 func genLegacyTransaction() TxInternalData {
-	txdata, _ := NewTxInternalDataWithMap(TxTypeLegacyTransaction, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:    uint64(1234),
-		TxValueKeyTo:       common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyAmount:   new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit: uint64(9999999999),
-		TxValueKeyGasPrice: new(big.Int).SetUint64(25),
+	txdata, err := NewTxInternalDataWithMap(TxTypeLegacyTransaction, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:    nonce,
+		TxValueKeyTo:       to,
+		TxValueKeyAmount:   amount,
+		TxValueKeyGasLimit: gasLimit,
+		TxValueKeyGasPrice: gasPrice,
 		TxValueKeyData:     []byte("1234"),
 	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
 
 	return txdata
 }
 
 func genValueTransferTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeValueTransfer, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:    uint64(1234),
-		TxValueKeyTo:       common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyAmount:   new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit: uint64(9999999999),
-		TxValueKeyGasPrice: new(big.Int).SetUint64(25),
-		TxValueKeyFrom:     common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyNonce:    nonce,
+		TxValueKeyTo:       to,
+		TxValueKeyAmount:   amount,
+		TxValueKeyGasLimit: gasLimit,
+		TxValueKeyGasPrice: gasPrice,
+		TxValueKeyFrom:     from,
 	})
 
 	if err != nil {
@@ -129,13 +160,15 @@ func genValueTransferTransaction() TxInternalData {
 
 func genSmartContractDeployTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeSmartContractDeploy, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:         uint64(1234),
-		TxValueKeyAmount:        new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit:      uint64(9999999999),
-		TxValueKeyGasPrice:      new(big.Int).SetUint64(25),
+		TxValueKeyNonce:         nonce,
+		TxValueKeyAmount:        amount,
+		TxValueKeyGasLimit:      gasLimit,
+		TxValueKeyGasPrice:      gasPrice,
 		TxValueKeyHumanReadable: true,
-		TxValueKeyTo:            common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyFrom:          common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		TxValueKeyTo:            to,
+		TxValueKeyFrom:          from,
+		// The binary below is a compiled binary of contracts/reward/contract/KlaytnReward.sol.
+		TxValueKeyData: common.Hex2Bytes("608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"),
 	})
 
 	if err != nil {
@@ -160,28 +193,34 @@ func genChainDataTransaction() TxInternalData {
 		panic(err)
 	}
 
-	txdata, _ := NewTxInternalDataWithMap(TxTypeChainDataAnchoring, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:        uint64(1234),
-		TxValueKeyTo:           common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyAmount:       new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit:     uint64(9999999999),
-		TxValueKeyGasPrice:     new(big.Int).SetUint64(25),
+	txdata, err := NewTxInternalDataWithMap(TxTypeChainDataAnchoring, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:        nonce,
+		TxValueKeyTo:           to,
+		TxValueKeyFrom:         from,
+		TxValueKeyAmount:       amount,
+		TxValueKeyGasLimit:     gasLimit,
+		TxValueKeyGasPrice:     gasPrice,
 		TxValueKeyAnchoredData: anchoredData,
 	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
 	return txdata
 }
 
 func genAccountCreationTransaction() TxInternalData {
-	k, _ := crypto.GenerateKey()
 	d, err := NewTxInternalDataWithMap(TxTypeAccountCreation, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:         uint64(1234),
-		TxValueKeyTo:            common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyAmount:        new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit:      uint64(9999999999),
-		TxValueKeyGasPrice:      new(big.Int).SetUint64(25),
-		TxValueKeyFrom:          common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyHumanReadable: true,
-		TxValueKeyAccountKey:    NewAccountKeyPublicWithValue(&k.PublicKey),
+		TxValueKeyNonce:         nonce,
+		TxValueKeyTo:            to,
+		TxValueKeyAmount:        amount,
+		TxValueKeyGasLimit:      gasLimit,
+		TxValueKeyGasPrice:      gasPrice,
+		TxValueKeyFrom:          from,
+		TxValueKeyHumanReadable: false,
+		TxValueKeyAccountKey:    NewAccountKeyPublicWithValue(&key.PublicKey),
 	})
 
 	if err != nil {
@@ -194,13 +233,33 @@ func genAccountCreationTransaction() TxInternalData {
 
 func genFeeDelegatedValueTransferTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedValueTransfer, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:    uint64(1234),
-		TxValueKeyTo:       common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyAmount:   new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit: uint64(9999999999),
-		TxValueKeyGasPrice: new(big.Int).SetUint64(25),
-		TxValueKeyFrom:     common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyFeePayer: common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f"),
+		TxValueKeyNonce:    nonce,
+		TxValueKeyTo:       to,
+		TxValueKeyAmount:   amount,
+		TxValueKeyGasLimit: gasLimit,
+		TxValueKeyGasPrice: gasPrice,
+		TxValueKeyFrom:     from,
+		TxValueKeyFeePayer: feePayer,
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
+}
+
+func genFeeDelegatedValueTransferWithRatioTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedValueTransferWithRatio, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:              nonce,
+		TxValueKeyTo:                 to,
+		TxValueKeyAmount:             amount,
+		TxValueKeyGasLimit:           gasLimit,
+		TxValueKeyGasPrice:           gasPrice,
+		TxValueKeyFrom:               from,
+		TxValueKeyFeePayer:           feePayer,
+		TxValueKeyFeeRatioOfFeePayer: uint8(30),
 	})
 
 	if err != nil {
@@ -213,13 +272,14 @@ func genFeeDelegatedValueTransferTransaction() TxInternalData {
 
 func genSmartContractExecutionTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeSmartContractExecution, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:    uint64(1234),
-		TxValueKeyTo:       common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyAmount:   new(big.Int).SetUint64(10),
-		TxValueKeyGasLimit: uint64(9999999999),
-		TxValueKeyGasPrice: new(big.Int).SetUint64(25),
-		TxValueKeyFrom:     common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-		TxValueKeyData:     []byte{0x1, 0x2},
+		TxValueKeyNonce:    nonce,
+		TxValueKeyTo:       to,
+		TxValueKeyAmount:   amount,
+		TxValueKeyGasLimit: gasLimit,
+		TxValueKeyGasPrice: gasPrice,
+		TxValueKeyFrom:     from,
+		// A abi-packed bytes calling "reward" of contracts/reward/contract/KlaytnReward.sol with an address "bc5951f055a85f41a3b62fd6f68ab7de76d299b2".
+		TxValueKeyData: common.Hex2Bytes("6353586b000000000000000000000000bc5951f055a85f41a3b62fd6f68ab7de76d299b2"),
 	})
 
 	if err != nil {
