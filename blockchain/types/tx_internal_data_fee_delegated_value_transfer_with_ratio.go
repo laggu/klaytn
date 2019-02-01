@@ -43,19 +43,22 @@ func NewTxInternalDataFeeDelegatedValueTransferWithRatio() *TxInternalDataFeeDel
 	}
 }
 
-func NewTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataFeeDelegatedValueTransferWithRatio {
-	t := &TxInternalDataFeeDelegatedValueTransferWithRatio{
-		newTxInternalDataCommonWithMap(values),
-		0,
-		NewTxSignature(),
-		newTxInternalDataFeePayerCommonWithMap(values),
+func NewTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataFeeDelegatedValueTransferWithRatio, error) {
+	c, err := newTxInternalDataCommonWithMap(values)
+	if err != nil {
+		return nil, err
 	}
+	f, err := newTxInternalDataFeePayerCommonWithMap(values)
+	if err != nil {
+		return nil, err
+	}
+	t := &TxInternalDataFeeDelegatedValueTransferWithRatio{c, 0, NewTxSignature(), f}
 
 	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(uint8); ok {
 		t.FeeRatio = v
 	}
 
-	return t
+	return t, nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Type() TxType {

@@ -41,18 +41,23 @@ func newTxInternalDataSmartContractExecution() *TxInternalDataSmartContractExecu
 	}
 }
 
-func newTxInternalDataSmartContractExecutionWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataSmartContractExecution {
+func newTxInternalDataSmartContractExecutionWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataSmartContractExecution, error) {
+	c, err := newTxInternalDataCommonWithMap(values)
+	if err != nil {
+		return nil, err
+	}
+
 	t := &TxInternalDataSmartContractExecution{
-		newTxInternalDataCommonWithMap(values),
-		[]byte{},
-		NewTxSignature(),
+		c, []byte{}, NewTxSignature(),
 	}
 
 	if v, ok := values[TxValueKeyData].([]byte); ok {
 		t.Payload = v
+	} else {
+		return nil, errValueKeyDataMustByteSlice
 	}
 
-	return t
+	return t, nil
 }
 
 func (t *TxInternalDataSmartContractExecution) Type() TxType {

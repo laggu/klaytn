@@ -40,13 +40,21 @@ func newTxInternalDataChainDataAnchoring() *TxInternalDataChainDataAnchoring {
 		NewTxSignature()}
 }
 
-func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataChainDataAnchoring {
-	var anchoredData []byte
-	if v, ok := values[TxValueKeyAnchoredData].([]byte); ok {
-		anchoredData = v
+func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataChainDataAnchoring, error) {
+	c, err := newTxInternalDataCommonWithMap(values)
+	if err != nil {
+		return nil, err
 	}
 
-	return &TxInternalDataChainDataAnchoring{newTxInternalDataCommonWithMap(values), anchoredData, NewTxSignature()}
+	d := &TxInternalDataChainDataAnchoring{c, []byte{}, NewTxSignature()}
+
+	if v, ok := values[TxValueKeyAnchoredData].([]byte); ok {
+		d.AnchoredData = v
+	} else {
+		return nil, errValueKeyAnchoredDataMustByteSlice
+	}
+
+	return d, nil
 }
 
 func (t *TxInternalDataChainDataAnchoring) Type() TxType {

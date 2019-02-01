@@ -721,7 +721,7 @@ func TestValidateSender(t *testing.T) {
 	// TxTypeValueTransfer
 	{
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    0,
+			types.TxValueKeyNonce:    nonce,
 			types.TxValueKeyFrom:     anon.Addr,
 			types.TxValueKeyTo:       decoupled.Addr,
 			types.TxValueKeyAmount:   amount,
@@ -741,7 +741,7 @@ func TestValidateSender(t *testing.T) {
 	// TxTypeValueTransfer
 	{
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    0,
+			types.TxValueKeyNonce:    nonce,
 			types.TxValueKeyFrom:     decoupled.Addr,
 			types.TxValueKeyTo:       decoupled.Addr,
 			types.TxValueKeyAmount:   amount,
@@ -761,7 +761,7 @@ func TestValidateSender(t *testing.T) {
 	// TxTypeSmartContractDeploy
 	{
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         12,
+			types.TxValueKeyNonce:         nonce,
 			types.TxValueKeyFrom:          decoupled.Addr,
 			types.TxValueKeyTo:            anon.Addr,
 			types.TxValueKeyAmount:        amount,
@@ -784,7 +784,7 @@ func TestValidateSender(t *testing.T) {
 	// TxTypeSmartContractExecution
 	{
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    12,
+			types.TxValueKeyNonce:    nonce,
 			types.TxValueKeyFrom:     decoupled.Addr,
 			types.TxValueKeyTo:       anon.Addr,
 			types.TxValueKeyAmount:   amount,
@@ -842,7 +842,7 @@ func TestValidateSender(t *testing.T) {
 	// TxTypeFeeDelegatedValueTransfer
 	{
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    0,
+			types.TxValueKeyNonce:    nonce,
 			types.TxValueKeyFrom:     decoupled.Addr,
 			types.TxValueKeyFeePayer: anon.Addr,
 			types.TxValueKeyTo:       decoupled.Addr,
@@ -870,7 +870,7 @@ func TestValidateSender(t *testing.T) {
 	// TxTypeFeeDelegatedValueTransferWithRatio
 	{
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:              0,
+			types.TxValueKeyNonce:              nonce,
 			types.TxValueKeyFrom:               decoupled.Addr,
 			types.TxValueKeyFeePayer:           anon.Addr,
 			types.TxValueKeyTo:                 decoupled.Addr,

@@ -43,23 +43,29 @@ func newTxInternalDataSmartContractDeploy() *TxInternalDataSmartContractDeploy {
 	}
 }
 
-func newTxInternalDataSmartContractDeployWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataSmartContractDeploy {
+func newTxInternalDataSmartContractDeployWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataSmartContractDeploy, error) {
+	c, err := newTxInternalDataCommonWithMap(values)
+	if err != nil {
+		return nil, err
+	}
+
 	t := &TxInternalDataSmartContractDeploy{
-		newTxInternalDataCommonWithMap(values),
-		[]byte{},
-		false,
-		NewTxSignature(),
+		c, []byte{}, false, NewTxSignature(),
 	}
 
 	if v, ok := values[TxValueKeyData].([]byte); ok {
 		t.Payload = v
+	} else {
+		return nil, errValueKeyDataMustByteSlice
 	}
 
 	if v, ok := values[TxValueKeyHumanReadable].(bool); ok {
 		t.HumanReadable = v
+	} else {
+		return nil, errValueKeyHumanReadableMustBool
 	}
 
-	return t
+	return t, nil
 }
 
 func (t *TxInternalDataSmartContractDeploy) Type() TxType {

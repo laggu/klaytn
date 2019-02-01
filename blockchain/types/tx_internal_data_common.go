@@ -45,37 +45,49 @@ func newTxInternalDataCommon() *TxInternalDataCommon {
 }
 
 // newTxInternalDataCommonWithMap creates an TxInternalDataCommon object and initializes it with given attributes in the map.
-func newTxInternalDataCommonWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataCommon {
+func newTxInternalDataCommonWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataCommon, error) {
 	d := newTxInternalDataCommon()
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		d.AccountNonce = v
+	} else {
+		return nil, errValueKeyNonceMustUint64
 	}
 
 	if v, ok := values[TxValueKeyTo].(common.Address); ok {
 		d.Recipient = v
+	} else {
+		return nil, errValueKeyToMustAddress
 	}
 
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
 		d.Amount.Set(v)
+	} else {
+		return nil, errValueKeyAmountMustBigInt
 	}
 
 	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
 		d.GasLimit = v
+	} else {
+		return nil, errValueKeyGasLimitMustUint64
 	}
 
 	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
 		d.Price.Set(v)
+	} else {
+		return nil, errValueKeyGasPriceMustBigInt
 	}
 
 	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
 		d.From = v
+	} else {
+		return nil, errValueKeyFromMustAddress
 	}
 
 	h := common.Hash{}
 	d.Hash = &h
 
-	return d
+	return d, nil
 }
 
 func (t *TxInternalDataCommon) GetAccountNonce() uint64 {

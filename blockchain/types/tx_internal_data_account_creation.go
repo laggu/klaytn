@@ -49,25 +49,31 @@ func newTxInternalDataAccountCreation() *TxInternalDataAccountCreation {
 		TxInternalDataCommon: newTxInternalDataCommon(),
 		HumanReadable:        false,
 		Key:                  NewAccountKeyNil(),
+		TxSignature:          NewTxSignature(),
 	}
 }
 
-func newTxInternalDataAccountCreationWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataAccountCreation {
-	b := &TxInternalDataAccountCreation{
-		TxInternalDataCommon: newTxInternalDataCommonWithMap(values),
-		HumanReadable:        false,
-		Key:                  NewAccountKeyNil(),
-		TxSignature:          NewTxSignature(),
+func newTxInternalDataAccountCreationWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataAccountCreation, error) {
+	c, err := newTxInternalDataCommonWithMap(values)
+	if err != nil {
+		return nil, err
 	}
+
+	b := &TxInternalDataAccountCreation{c, false, NewAccountKeyNil(), NewTxSignature()}
+
 	if v, ok := values[TxValueKeyHumanReadable].(bool); ok {
 		b.HumanReadable = v
+	} else {
+		return nil, errValueKeyHumanReadableMustBool
 	}
 
 	if v, ok := values[TxValueKeyAccountKey].(AccountKey); ok {
 		b.Key = v
+	} else {
+		return nil, errValueKeyAccountKeyMustAccountKey
 	}
 
-	return b
+	return b, nil
 }
 
 func newTxInternalDataAccountCreationSerializable() *txInternalDataAccountCreationSerializable {

@@ -93,34 +93,46 @@ func newTxdataWithValues(nonce uint64, to *common.Address, amount *big.Int, gasL
 	return d
 }
 
-func newTxdataWithMap(values map[TxValueKeyType]interface{}) *txdata {
+func newTxdataWithMap(values map[TxValueKeyType]interface{}) (*txdata, error) {
 	d := newTxdata()
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		d.AccountNonce = v
+	} else {
+		return nil, errValueKeyNonceMustUint64
 	}
 
-	if v, ok := values[TxValueKeyTo].(*common.Address); ok {
-		d.Recipient = v
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
+		d.Recipient = &v
+	} else {
+		return nil, errValueKeyToMustAddress
 	}
 
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
 		d.Amount.Set(v)
+	} else {
+		return nil, errValueKeyAmountMustBigInt
 	}
 
 	if v, ok := values[TxValueKeyData].([]byte); ok {
 		d.Payload = common.CopyBytes(v)
+	} else {
+		return nil, errValueKeyDataMustByteSlice
 	}
 
 	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
 		d.GasLimit = v
+	} else {
+		return nil, errValueKeyGasLimitMustUint64
 	}
 
 	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
 		d.Price.Set(v)
+	} else {
+		return nil, errValueKeyGasPriceMustBigInt
 	}
 
-	return d
+	return d, nil
 }
 
 func (t *txdata) Type() TxType {

@@ -36,7 +36,7 @@ func newTxInternalDataFeePayerCommon() *TxInternalDataFeePayerCommon {
 	}
 }
 
-func newTxInternalDataFeePayerCommonWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataFeePayerCommon {
+func newTxInternalDataFeePayerCommonWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataFeePayerCommon, error) {
 	t := &TxInternalDataFeePayerCommon{
 		common.Address{},
 		NewTxSignature(),
@@ -44,9 +44,11 @@ func newTxInternalDataFeePayerCommonWithMap(values map[TxValueKeyType]interface{
 
 	if v, ok := values[TxValueKeyFeePayer].(common.Address); ok {
 		t.FeePayer = v
+	} else {
+		return nil, errValueKeyFeePayerMustAddress
 	}
 
-	return t
+	return t, nil
 }
 
 func (t *TxInternalDataFeePayerCommon) GetFeePayer() common.Address {

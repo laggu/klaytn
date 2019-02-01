@@ -71,6 +71,18 @@ var (
 	errNotTxTypeAccountCreation               = errors.New("not account creation transaction type")
 	errUndefinedTxType                        = errors.New("undefined tx type")
 	errCannotBeSignedByFeeDelegator           = errors.New("this transaction type cannot be signed by a fee delegator")
+
+	errValueKeyHumanReadableMustBool     = errors.New("HumanReadable must be a type of bool")
+	errValueKeyAccountKeyMustAccountKey  = errors.New("AccountKey must be a type of AccountKey")
+	errValueKeyAnchoredDataMustByteSlice = errors.New("AnchoredData must be a slice of bytes")
+	errValueKeyNonceMustUint64           = errors.New("Nonce must be a type of uint64")
+	errValueKeyToMustAddress             = errors.New("To must be a type of common.Address")
+	errValueKeyAmountMustBigInt          = errors.New("Amount must be a type of *big.Int")
+	errValueKeyGasLimitMustUint64        = errors.New("GasLimit must be a type of uint64")
+	errValueKeyGasPriceMustBigInt        = errors.New("GasPrice must be a type of *big.Int")
+	errValueKeyFromMustAddress           = errors.New("From must be a type of common.Address")
+	errValueKeyFeePayerMustAddress       = errors.New("FeePayer must be a type of common.Address")
+	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
 )
 
 func (t TxType) String() string {
@@ -227,21 +239,21 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (TxInternalData, error) {
 	switch t {
 	case TxTypeLegacyTransaction:
-		return newTxdataWithMap(values), nil
+		return newTxdataWithMap(values)
 	case TxTypeValueTransfer:
-		return newTxInternalDataValueTransferWithMap(values), nil
+		return newTxInternalDataValueTransferWithMap(values)
 	case TxTypeFeeDelegatedValueTransfer:
-		return NewTxInternalDataFeeDelegatedValueTransferWithMap(values), nil
+		return NewTxInternalDataFeeDelegatedValueTransferWithMap(values)
 	case TxTypeFeeDelegatedValueTransferWithRatio:
-		return NewTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values), nil
+		return NewTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values)
 	case TxTypeAccountCreation:
-		return newTxInternalDataAccountCreationWithMap(values), nil
+		return newTxInternalDataAccountCreationWithMap(values)
 	case TxTypeSmartContractDeploy:
-		return newTxInternalDataSmartContractDeployWithMap(values), nil
+		return newTxInternalDataSmartContractDeployWithMap(values)
 	case TxTypeSmartContractExecution:
-		return newTxInternalDataSmartContractExecutionWithMap(values), nil
+		return newTxInternalDataSmartContractExecutionWithMap(values)
 	case TxTypeChainDataAnchoring:
-		return newTxInternalDataChainDataAnchoringWithMap(values), nil
+		return newTxInternalDataChainDataAnchoringWithMap(values)
 	}
 
 	return nil, errUndefinedTxType

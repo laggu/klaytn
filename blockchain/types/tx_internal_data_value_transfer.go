@@ -33,8 +33,12 @@ func newTxInternalDataValueTransfer() *TxInternalDataValueTransfer {
 	return &TxInternalDataValueTransfer{newTxInternalDataCommon(), NewTxSignature()}
 }
 
-func newTxInternalDataValueTransferWithMap(values map[TxValueKeyType]interface{}) *TxInternalDataValueTransfer {
-	return &TxInternalDataValueTransfer{newTxInternalDataCommonWithMap(values), NewTxSignature()}
+func newTxInternalDataValueTransferWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataValueTransfer, error) {
+	c, err := newTxInternalDataCommonWithMap(values)
+	if err != nil {
+		return nil, err
+	}
+	return &TxInternalDataValueTransfer{c, NewTxSignature()}, nil
 }
 
 func (t *TxInternalDataValueTransfer) Type() TxType {
