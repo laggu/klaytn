@@ -49,9 +49,10 @@ var (
 )
 
 type TestAccountType struct {
-	Addr  common.Address
-	Key   *ecdsa.PrivateKey
-	Nonce uint64
+	Addr   common.Address
+	Key    *ecdsa.PrivateKey
+	Nonce  uint64
+	AccKey types.AccountKey
 }
 
 func genRandomHash() (h common.Hash) {
@@ -74,9 +75,10 @@ func createAnonymousAccount(prvKeyHex string) (*TestAccountType, error) {
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	return &TestAccountType{
-		Addr:  addr,
-		Key:   key,
-		Nonce: uint64(0),
+		Addr:   addr,
+		Key:    key,
+		Nonce:  uint64(0),
+		AccKey: types.NewAccountKeyNil(),
 	}, nil
 }
 
@@ -88,9 +90,10 @@ func createDecoupledAccount(prvKeyHex string, addr common.Address) (*TestAccount
 	}
 
 	return &TestAccountType{
-		Addr:  addr,
-		Key:   key,
-		Nonce: uint64(0),
+		Addr:   addr,
+		Key:    key,
+		Nonce:  uint64(0),
+		AccKey: types.NewAccountKeyPublicWithValue(&key.PublicKey),
 	}, nil
 }
 
@@ -106,9 +109,10 @@ func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*Te
 	}
 
 	return &TestAccountType{
-		Addr:  addr,
-		Key:   key,
-		Nonce: uint64(0),
+		Addr:   addr,
+		Key:    key,
+		Nonce:  uint64(0),
+		AccKey: types.NewAccountKeyPublicWithValue(&key.PublicKey),
 	}, nil
 }
 
@@ -204,7 +208,7 @@ func TestTransactionScenario(t *testing.T) {
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&decoupled.Key.PublicKey),
+			types.TxValueKeyAccountKey:    decoupled.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
@@ -233,7 +237,7 @@ func TestTransactionScenario(t *testing.T) {
 	//		types.TxValueKeyAmount:     amount,
 	//		types.TxValueKeyGasLimit:   gasLimit,
 	//		types.TxValueKeyGasPrice:   gasPrice,
-	//		types.TxValueKeyAccountKey: types.NewAccountKeyPublicWithValue(&decoupled.Key.PublicKey),
+	//		types.TxValueKeyAccountKey: decoupled.AccKey
 	//	}
 	//	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 	//	assert.Equal(t, nil, err)
@@ -316,7 +320,7 @@ func TestTransactionScenario(t *testing.T) {
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&colin.Key.PublicKey),
+			types.TxValueKeyAccountKey:    colin.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
@@ -688,7 +692,7 @@ func TestValidateSender(t *testing.T) {
 			state.AccountValueKeyNonce:         nonce,
 			state.AccountValueKeyBalance:       initialBalance,
 			state.AccountValueKeyHumanReadable: false,
-			state.AccountValueKeyAccountKey:    types.NewAccountKeyNil(),
+			state.AccountValueKeyAccountKey:    anon.AccKey,
 		})
 
 	statedb.CreateAccountWithMap(decoupled.Addr, state.ExternallyOwnedAccountType,
@@ -696,7 +700,7 @@ func TestValidateSender(t *testing.T) {
 			state.AccountValueKeyNonce:         rand.Uint64(),
 			state.AccountValueKeyBalance:       initialBalance,
 			state.AccountValueKeyHumanReadable: false,
-			state.AccountValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&decoupled.Key.PublicKey),
+			state.AccountValueKeyAccountKey:    decoupled.AccKey,
 		})
 
 	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(32))
