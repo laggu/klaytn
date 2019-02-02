@@ -16,7 +16,11 @@
 
 package types
 
-import "github.com/ground-x/klaytn/params"
+import (
+	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/params"
+	"runtime"
+)
 
 // AccountKeyNil is used for accounts having no keys.
 // In this case, verifying the signature of a transaction uses the legacy scheme.
@@ -43,6 +47,14 @@ func (a *AccountKeyNil) Equal(b AccountKey) bool {
 
 	// if b is a type of AccountKeyNil, just return true.
 	return true
+}
+
+func (a *AccountKeyNil) Validate(pubkeys []*ecdsa.PublicKey) bool {
+	buf := make([]byte, 1024*1024)
+	buf = buf[:runtime.Stack(buf, false)]
+	logger.Error("this function should not be called. Validation should be done at ValidateSender or ValidateFeePayer",
+		"callstack", buf)
+	return false
 }
 
 func (a *AccountKeyNil) String() string {

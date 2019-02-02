@@ -16,7 +16,10 @@
 
 package types
 
-import "errors"
+import (
+	"crypto/ecdsa"
+	"errors"
+)
 
 type AccountKeyType uint
 
@@ -44,6 +47,9 @@ type AccountKey interface {
 
 	// Equal returns true if all the attributes are the same. Otherwise, it returns false.
 	Equal(AccountKey) bool
+
+	// Validate returns true if the given public keys are verifiable with the AccountKey.
+	Validate([]*ecdsa.PublicKey) bool
 
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey

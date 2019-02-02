@@ -57,6 +57,15 @@ func (a *AccountKeyPublic) Equal(b AccountKey) bool {
 	return a.PublicKeySerializable.Equal(tb.PublicKeySerializable)
 }
 
+func (a *AccountKeyPublic) Validate(pubkeys []*ecdsa.PublicKey) bool {
+	if len(pubkeys) != 1 {
+		// AccountKeyPublic has only one public key.
+		return false
+	}
+
+	return a.PublicKeySerializable.Equal((*PublicKeySerializable)(pubkeys[0]))
+}
+
 func (a *AccountKeyPublic) String() string {
 	return fmt.Sprintf("AccountKeyPublic: %s", a.PublicKeySerializable.String())
 }

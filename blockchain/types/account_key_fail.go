@@ -16,7 +16,10 @@
 
 package types
 
-import "github.com/ground-x/klaytn/params"
+import (
+	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/params"
+)
 
 // AccountKeyFail is used to prevent smart contract accounts from withdrawing tokens
 // from themselves with a public key recovery mechanism.
@@ -37,6 +40,11 @@ func (a *AccountKeyFail) Type() AccountKeyType {
 
 func (a *AccountKeyFail) Equal(b AccountKey) bool {
 	// This type of account key always returns false.
+	return false
+}
+
+func (a *AccountKeyFail) Validate(pubkeys []*ecdsa.PublicKey) bool {
+	// This type of account key always fails to validate.
 	return false
 }
 
