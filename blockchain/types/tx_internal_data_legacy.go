@@ -18,6 +18,7 @@ package types
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
@@ -191,6 +192,25 @@ func (t *txdata) SetVRS(v *big.Int, r *big.Int, s *big.Int) {
 
 func (t *txdata) SetSignature(s *TxSignature) {
 	t.SetVRS(s.V, s.R, s.S)
+}
+
+func (t *txdata) RawSignatureValues() []*big.Int {
+	return []*big.Int{t.V, t.R, t.S}
+}
+
+func (t *txdata) ValidateSignature() bool {
+	return validateSignature(t.V, t.R, t.S)
+}
+
+func (t *txdata) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
+	V := vfunc(t.V)
+	return recoverPlain(txhash, t.R, t.S, V, homestead)
+}
+
+func (t *txdata) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error) {
+	V := vfunc(t.V)
+
+	return recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
 }
 
 func (t *txdata) IntrinsicGas() (uint64, error) {

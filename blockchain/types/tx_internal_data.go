@@ -17,6 +17,7 @@
 package types
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/kerrors"
@@ -160,6 +161,22 @@ type TxInternalData interface {
 	SetSignature(*TxSignature)
 	SetVRS(*big.Int, *big.Int, *big.Int)
 
+	// RawSignatureValues returns signatures as a slice of `*big.Int`.
+	// Due to multi signatures, it is not good to return three values of `*big.Int`.
+	// The format would be something like [v, r, s, v, r, s].
+	RawSignatureValues() []*big.Int
+
+	// ValidateSignature returns true if the signature is valid.
+	ValidateSignature() bool
+
+	// RecoverAddress returns address derived from txhash and signatures(r, s, v).
+	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
+	RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error)
+
+	// RecoverPubkey returns a public key derived from txhash and signatures(r, s, v).
+	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
+	RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error)
+
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int
 
@@ -186,6 +203,14 @@ type TxInternalData interface {
 type TxInternalDataFeePayer interface {
 	GetFeePayer() common.Address
 	GetFeePayerVRS() (*big.Int, *big.Int, *big.Int)
+
+	// GetFeePayerRawSignatureValues returns fee payer's signatures as a slice of `*big.Int`.
+	// Due to multi signatures, it is not good to return three values of `*big.Int`.
+	// The format would be something like [v, r, s, v, r, s].
+	GetFeePayerRawSignatureValues() []*big.Int
+
+	// RecoverFeePayerPubkey returns the fee payer's public key derived from txhash and signatures(r, s, v).
+	RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error)
 
 	SetFeePayerSignature(s *TxSignature)
 }

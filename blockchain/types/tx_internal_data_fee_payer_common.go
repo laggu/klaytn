@@ -17,6 +17,7 @@
 package types
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
@@ -61,6 +62,14 @@ func (t *TxInternalDataFeePayerCommon) SetFeePayerSignature(s *TxSignature) {
 
 func (t *TxInternalDataFeePayerCommon) GetFeePayerVRS() (*big.Int, *big.Int, *big.Int) {
 	return t.TxSignature.GetVRS()
+}
+
+func (t *TxInternalDataFeePayerCommon) GetFeePayerRawSignatureValues() []*big.Int {
+	return t.TxSignature.RawSignatureValues()
+}
+
+func (t *TxInternalDataFeePayerCommon) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error) {
+	return t.TxSignature.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeePayerCommon) serializeForSign() []interface{} {

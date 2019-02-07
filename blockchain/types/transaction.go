@@ -120,6 +120,20 @@ func isProtectedV(V *big.Int) bool {
 	return true
 }
 
+func validateSignature(v, r, s *big.Int) bool {
+	// TODO-Klaytn: Need to consider the case v.BitLen() > 64.
+	// Since ValidateSignatureValues receives v as type of byte, leave it as a future work.
+	var V byte
+	if isProtectedV(v) {
+		chainID := deriveChainId(v).Uint64()
+		V = byte(v.Uint64() - 35 - 2*chainID)
+	} else {
+		V = byte(v.Uint64() - 27)
+	}
+
+	return crypto.ValidateSignatureValues(V, r, s, false)
+}
+
 // EncodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	serializer := newTxInternalDataSerializerWithValues(tx.data)
