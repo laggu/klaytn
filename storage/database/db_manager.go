@@ -191,13 +191,13 @@ func NewMemoryDBManager() DBManager {
 // DBConfig handles database related configurations.
 type DBConfig struct {
 	// General configurations for all types of DB.
-	Dir    string
-	DBType string
+	Dir         string
+	DBType      string
+	Partitioned bool
 
 	// LevelDB related configurations.
-	LevelDBCacheSize   int
-	LevelDBHandles     int
-	LevelDBPartitioned bool
+	LevelDBCacheSize int
+	LevelDBHandles   int
 
 	// Service chain related configurations.
 	ChildChainIndexing bool
@@ -270,14 +270,14 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 }
 
 // NewDBManager returns DBManager interface.
-// If LevelDBPartitioned is true, each Database will have its own LevelDB.
+// If Partitioned is true, each Database will have its own LevelDB.
 // If not, each Database will share one common LevelDB.
 func NewDBManager(dbc *DBConfig) (DBManager, error) {
 	// TODO-Klaytn-Storage Need to decide how to initialize this value
 	// TODO-Klaytn-Storage Remove unnecessary error from return value
-	dbc.LevelDBPartitioned = false
+	dbc.Partitioned = false
 
-	if !dbc.LevelDBPartitioned {
+	if !dbc.Partitioned {
 		return singleDatabaseDBManager(dbc)
 	} else {
 		return partitionedDatabaseDBManager(dbc)
