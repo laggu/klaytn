@@ -49,3 +49,4 @@ Please note that the tag name always
 | NodeDiscovery                                  | Related to NodeDiscovery.                                 |
 | Accounts                                       | Related to Klaytn Accounts.                               |
 | Downloader                                     | Related to Downloader.                                    |
+| NodeCmd                                        | Related to cmd/utils/nodecmd.                             |

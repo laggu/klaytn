@@ -18,19 +18,22 @@
 // This file is derived from cmd/geth/chaincmd.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package main
+package nodecmd
 
 import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"os"
 )
 
+var logger = log.NewModuleLogger(log.CMDUtilsNodeCMD)
+
 var (
-	initCommand = cli.Command{
+	InitCommand = cli.Command{
 		Action:    utils.MigrateFlags(initGenesis),
 		Name:      "init",
 		Usage:     "Bootstrap and initialize a new genesis block",
@@ -69,7 +72,7 @@ func initGenesis(ctx *cli.Context) error {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
 	// Open an initialise both full and light databases
-	stack := makeFullNode(ctx)
+	stack := MakeFullNode(ctx)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		dbc := &database.DBConfig{Dir: name, DBType: database.LEVELDB,
 			LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}

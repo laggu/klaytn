@@ -15,37 +15,52 @@
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from cmd/geth/main.go (2018/06/04).
+// This file is derived from cmd/geth/run_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package main
+package nodecmd
 
 import (
 	"fmt"
-	"os"
-
+	"github.com/docker/docker/pkg/reexec"
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/cmd/utils"
-	"github.com/ground-x/klaytn/cmd/utils/nodecmd"
 	"github.com/ground-x/klaytn/console"
-	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/metrics/prometheus"
 	"github.com/ground-x/klaytn/node"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/urfave/cli.v1"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"runtime"
 	"sort"
+	"testing"
 	"time"
 )
 
-var (
-	logger = log.NewModuleLogger(log.CMDKlay)
+func tmpdir(t *testing.T) string {
+	dir, err := ioutil.TempDir("", "klay-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
 
+type testklay struct {
+	*utils.TestCmd
+
+	// template variables for expect
+	Datadir   string
+	Etherbase string
+}
+
+// TODO-Klaytn-NodeCmd Refactor the management of flags
+var (
 	// The app that holds all commands and flags.
-	app = utils.NewApp(nodecmd.GetGitCommit(), "the klaytn command line interface")
+	app = utils.NewApp(GetGitCommit(), "the klaytn command line interface")
 
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
@@ -130,7 +145,7 @@ var (
 		utils.AnchoringPeriodFlag,
 		utils.SentChainTxsLimit,
 		utils.BaobabFlag,
-		nodecmd.ConfigFileFlag,
+		ConfigFileFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -150,32 +165,32 @@ var (
 
 func init() {
 	// Initialize the CLI app and start Klay
-	app.Action = nodecmd.RunKlaytnNode
+	app.Action = RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2018 The klaytn Authors"
 	app.Commands = []cli.Command{
-		// See utils/nodecmd/chaincmd.go:
-		nodecmd.InitCommand,
+		// See chaincmd.go:
+		InitCommand,
 
-		// See utils/nodecmd/accountcmd.go
-		nodecmd.AccountCommand,
-		nodecmd.WalletCommand,
+		// See accountcmd.go
+		AccountCommand,
+		WalletCommand,
 
-		// See utils/nodecmd/consolecmd.go:
-		nodecmd.GetConsoleCommand(nodeFlags, rpcFlags),
-		nodecmd.AttachCommand,
+		// See consolecmd.go:
+		GetConsoleCommand(nodeFlags, rpcFlags),
+		AttachCommand,
 
-		// See utils/nodecmd/versioncmd.go:
-		nodecmd.VersionCommand,
+		// See versioncmd.go:
+		VersionCommand,
 
-		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
+		// See dumpconfigcmd.go:
+		GetDumpConfigCommand(nodeFlags, rpcFlags),
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
 	app.Flags = append(app.Flags, nodeFlags...)
 	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
+	app.Flags = append(app.Flags, ConsoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 
 	app.Before = func(ctx *cli.Context) error {
@@ -218,11 +233,57 @@ func init() {
 		console.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
+
+	// Run the app if we've been exec'd as "klay-test" in runKlay.
+	reexec.Register("klay-test", func() {
+		if err := app.Run(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	})
 }
 
-func main() {
-	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+func TestMain(m *testing.M) {
+	// check if we have been reexec'd
+	if reexec.Init() {
+		return
 	}
+	os.Exit(m.Run())
+}
+
+// spawns klay with the given command line args. If the args don't set --datadir, the
+// child g gets a temporary data directory.
+func runKlay(t *testing.T, args ...string) *testklay {
+	tt := &testklay{}
+	tt.TestCmd = utils.NewTestCmd(t, tt)
+	for i, arg := range args {
+		switch {
+		case arg == "-datadir" || arg == "--datadir":
+			if i < len(args)-1 {
+				tt.Datadir = args[i+1]
+			}
+		case arg == "-etherbase" || arg == "--etherbase":
+			if i < len(args)-1 {
+				tt.Etherbase = args[i+1]
+			}
+		}
+	}
+	if tt.Datadir == "" {
+		tt.Datadir = tmpdir(t)
+		tt.Cleanup = func() { os.RemoveAll(tt.Datadir) }
+		args = append([]string{"-datadir", tt.Datadir}, args...)
+		// Remove the temporary datadir if something fails below.
+		defer func() {
+			if t.Failed() {
+				tt.Cleanup()
+			}
+		}()
+	}
+
+	// Boot "klay". This actually runs the test binary but the TestMain
+	// function will prevent any tests from running.
+	tt.Run("klay-test", args...)
+
+	return tt
 }

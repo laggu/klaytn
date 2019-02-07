@@ -18,7 +18,7 @@
 // This file is derived from cmd/geth/accountcmd.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package main
+package nodecmd
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	walletCommand = cli.Command{
+	WalletCommand = cli.Command{
 		Name:      "wallet",
 		Usage:     "Manage Klaytn presale wallets",
 		ArgsUsage: "",
@@ -68,7 +68,7 @@ passwordfile as argument containing the wallet password in plaintext.`,
 		},
 	}
 
-	accountCommand = cli.Command{
+	AccountCommand = cli.Command{
 		Name:     "account",
 		Usage:    "Manage accounts",
 		Category: "ACCOUNT COMMANDS",
@@ -212,7 +212,7 @@ func accountList(ctx *cli.Context) error {
 }
 
 // tries unlocking the specified account a few times.
-func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
+func UnlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
 	account, err := utils.MakeAddress(ks, address)
 	if err != nil {
 		utils.Fatalf("Could not list accounts: %v", err)
@@ -300,7 +300,7 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 func accountCreate(ctx *cli.Context) error {
 	cfg := klayConfig{Node: defaultNodeConfig()}
 	// Load config file.
-	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
+	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			utils.Fatalf("%v", err)
 		}
@@ -333,7 +333,7 @@ func accountUpdate(ctx *cli.Context) error {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
 	for _, addr := range ctx.Args() {
-		account, oldPassword := unlockAccount(ctx, ks, addr, 0, nil)
+		account, oldPassword := UnlockAccount(ctx, ks, addr, 0, nil)
 		newPassword := getPassPhrase("Please give a new password. Do not forget this password.", true, 0, nil)
 		if err := ks.Update(account, oldPassword, newPassword); err != nil {
 			utils.Fatalf("Could not update the account: %v", err)

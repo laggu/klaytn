@@ -18,7 +18,7 @@
 // This file is derived from cmd/geth/config.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package main
+package nodecmd
 
 import (
 	"bufio"
@@ -38,17 +38,7 @@ import (
 )
 
 var (
-	dumpConfigCommand = cli.Command{
-		Action:      utils.MigrateFlags(dumpConfig),
-		Name:        "dumpconfig",
-		Usage:       "Show configuration values",
-		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...)),
-		Category:    "MISCELLANEOUS COMMANDS",
-		Description: `The dumpconfig command shows configuration values.`,
-	}
-
-	configFileFlag = cli.StringFlag{
+	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
 		Usage: "TOML configuration file",
 	}
@@ -74,6 +64,19 @@ var tomlSettings = toml.Config{
 type klayConfig struct {
 	CN   cn.Config
 	Node node.Config
+}
+
+// GetDumpConfigCommand returns cli.Command `dumpconfig` whose flags are initialized with nodeFlags and rpcFlags.
+func GetDumpConfigCommand(nodeFlags, rpcFlags []cli.Flag) cli.Command {
+	return cli.Command{
+		Action:      utils.MigrateFlags(dumpConfig),
+		Name:        "dumpconfig",
+		Usage:       "Show configuration values",
+		ArgsUsage:   "",
+		Flags:       append(append(nodeFlags, rpcFlags...)),
+		Category:    "MISCELLANEOUS COMMANDS",
+		Description: `The dumpconfig command shows configuration values.`,
+	}
 }
 
 func loadConfig(file string, cfg *klayConfig) error {
@@ -110,7 +113,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 
 	// Load config file.
-	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
+	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			utils.Fatalf("%v", err)
 		}
@@ -130,7 +133,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	return stack, cfg
 }
 
-func makeFullNode(ctx *cli.Context) *node.Node {
+func MakeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
 	utils.RegisterCNService(stack, &cfg.CN)

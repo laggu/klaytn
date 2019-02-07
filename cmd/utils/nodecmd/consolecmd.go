@@ -18,7 +18,7 @@
 // This file is derived from cmd/geth/consolecmd.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package main
+package nodecmd
 
 import (
 	"fmt"
@@ -32,26 +32,14 @@ import (
 )
 
 var (
-	consoleFlags = []cli.Flag{utils.JSpathFlag, utils.ExecFlag, utils.PreloadJSFlag}
+	ConsoleFlags = []cli.Flag{utils.JSpathFlag, utils.ExecFlag, utils.PreloadJSFlag}
 
-	consoleCommand = cli.Command{
-		Action:   utils.MigrateFlags(localConsole),
-		Name:     "console",
-		Usage:    "Start an interactive JavaScript environment",
-		Flags:    append(append(nodeFlags, rpcFlags...), consoleFlags...),
-		Category: "CONSOLE COMMANDS",
-		Description: `
-The Klaytn console is an interactive shell for the JavaScript runtime environment
-which exposes a node admin interface as well as the Ðapp JavaScript API.
-See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.`,
-	}
-
-	attachCommand = cli.Command{
+	AttachCommand = cli.Command{
 		Action:    utils.MigrateFlags(remoteConsole),
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",
-		Flags:     append(consoleFlags, utils.DbTypeFlag, utils.DataDirFlag),
+		Flags:     append(ConsoleFlags, utils.DbTypeFlag, utils.DataDirFlag),
 		Category:  "CONSOLE COMMANDS",
 		Description: `
 The Klaytn console is an interactive shell for the JavaScript runtime environment
@@ -61,11 +49,26 @@ This command allows to open a console on a running klay node.`,
 	}
 )
 
+// GetConsoleCommand returns cli.Command `console` whose flags are initialized with nodeFlags, rpcFlags, and ConsoleFlags.
+func GetConsoleCommand(nodeFlags, rpcFlags []cli.Flag) cli.Command {
+	return cli.Command{
+		Action:   utils.MigrateFlags(localConsole),
+		Name:     "console",
+		Usage:    "Start an interactive JavaScript environment",
+		Flags:    append(append(nodeFlags, rpcFlags...), ConsoleFlags...),
+		Category: "CONSOLE COMMANDS",
+		Description: `
+The Klaytn console is an interactive shell for the JavaScript runtime environment
+which exposes a node admin interface as well as the Ðapp JavaScript API.
+See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.`,
+	}
+}
+
 // localConsole starts a new klay node, attaching a JavaScript console to it at the
 // same time.
 func localConsole(ctx *cli.Context) error {
 	// Create and start the node based on the CLI flags
-	node := makeFullNode(ctx)
+	node := MakeFullNode(ctx)
 	startNode(ctx, node)
 	defer node.Stop()
 

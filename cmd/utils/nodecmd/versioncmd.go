@@ -18,7 +18,7 @@
 // This file is derived from cmd/geth/misccmd.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package main
+package nodecmd
 
 import (
 	"fmt"
@@ -27,7 +27,15 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var versionCommand = cli.Command{
+var (
+	// Git SHA1 commit hash of the release (set via linker flags)
+	gitCommit = ""
+
+	// Git tag (set via linker flags if exists)
+	gitTag = ""
+)
+
+var VersionCommand = cli.Command{
 	Action:    utils.MigrateFlags(version),
 	Name:      "version",
 	Usage:     "Show version number",
@@ -45,4 +53,9 @@ func version(ctx *cli.Context) error {
 		fmt.Println(params.VersionWithCommit(gitCommit))
 	}
 	return nil
+}
+
+// GetGitCommit returns gitCommit set by linker flags.
+func GetGitCommit() string {
+	return gitCommit
 }

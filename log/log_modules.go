@@ -97,6 +97,7 @@ const (
 	VM
 	Work
 	CMDBootnode
+	CMDUtilsNodeCMD
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -151,4 +152,5 @@ var moduleNames = [ModuleNameLen]string{
 	"vm",
 	"work",
 	"cmd/bootnode",
+	"cmd/utils/nodecmd",
 }

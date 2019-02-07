@@ -18,7 +18,7 @@
 // This file is derived from cmd/geth/genesis_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package main
+package nodecmd
 
 import (
 	"io/ioutil"
