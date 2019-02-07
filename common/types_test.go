@@ -154,11 +154,11 @@ func TestHumanReadableAddress(t *testing.T) {
 
 	string19 := "1234567890123456789"
 	_, err = FromHumanReadableAddress(string19)
-	assert.Equal(t, nil, err)
+	assert.Equal(t, errNotHumanReadableAddress, err)
 
 	string20 := "12345678901234567890"
 	_, err = FromHumanReadableAddress(string20)
-	assert.Equal(t, nil, err)
+	assert.Equal(t, errNotHumanReadableAddress, err)
 
 	string21 := "123456789012345678901"
 	_, err = FromHumanReadableAddress(string21)
@@ -167,6 +167,30 @@ func TestHumanReadableAddress(t *testing.T) {
 	colin := "colin"
 	_, err = FromHumanReadableAddress(colin)
 	assert.Equal(t, nil, err)
+
+	colin2 := "COLIN"
+	_, err = FromHumanReadableAddress(colin2)
+	assert.Equal(t, nil, err)
+
+	firstNum := "1colin"
+	_, err = FromHumanReadableAddress(firstNum)
+	assert.Equal(t, errNotHumanReadableAddress, err)
+
+	imti := "( ͡° ͜ʖ ͡°)"
+	_, err = FromHumanReadableAddress(imti)
+	assert.Equal(t, errNotHumanReadableAddress, err)
+
+	korean := "김정현"
+	_, err = FromHumanReadableAddress(korean)
+	assert.Equal(t, errNotHumanReadableAddress, err)
+
+	specialChars := "!@#$%^&*()_"
+	_, err = FromHumanReadableAddress(specialChars)
+	assert.Equal(t, errNotHumanReadableAddress, err)
+
+	space := "co lin"
+	_, err = FromHumanReadableAddress(space)
+	assert.Equal(t, errNotHumanReadableAddress, err)
 
 	_, err = FromHumanReadableAddress("")
 	assert.Equal(t, errEmptyString, err)

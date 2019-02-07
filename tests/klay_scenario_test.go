@@ -116,6 +116,84 @@ func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*Te
 	}, nil
 }
 
+// TODO-Klaytn-Account: Need to find a test mechanism to check failed transactions.
+// Below code failed since it is trying to create an account with a human-readable address "1colin".
+//func TestHumanReadableAddress(t *testing.T) {
+//	if testing.Verbose() {
+//		enableLog()
+//	}
+//	prof := profile.NewProfiler()
+//
+//	// Initialize blockchain
+//	start := time.Now()
+//	bcdata, err := NewBCData(6, 4)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+//	defer bcdata.Shutdown()
+//
+//	// Initialize address-balance map for verification
+//	start = time.Now()
+//	accountMap := NewAccountMap()
+//	if err := accountMap.Initialize(bcdata); err != nil {
+//		t.Fatal(err)
+//	}
+//	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+//
+//	// reservoir account
+//	reservoir := &TestAccountType{
+//		Addr:  *bcdata.addrs[0],
+//		Key:   bcdata.privKeys[0],
+//		Nonce: uint64(0),
+//	}
+//	var colinAddr common.Address
+//	colinAddr.SetBytesFromFront([]byte("1colin"))
+//
+//	colin, err := createDecoupledAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", colinAddr)
+//	assert.Equal(t, nil, err)
+//
+//	if testing.Verbose() {
+//		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+//		fmt.Println("colinAddr = ", colin.Addr.String())
+//	}
+//
+//	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+//
+//	// Create an account "1colin" using TxTypeAccountCreation.
+//	{
+//		var txs types.Transactions
+//
+//		amount := new(big.Int).SetUint64(1000000000000)
+//		values := map[types.TxValueKeyType]interface{}{
+//			types.TxValueKeyNonce:         reservoir.Nonce,
+//			types.TxValueKeyFrom:          reservoir.Addr,
+//			types.TxValueKeyTo:            colin.Addr,
+//			types.TxValueKeyAmount:        amount,
+//			types.TxValueKeyGasLimit:      gasLimit,
+//			types.TxValueKeyGasPrice:      gasPrice,
+//			types.TxValueKeyHumanReadable: true,
+//			types.TxValueKeyAccountKey:    colin.AccKey,
+//		}
+//		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+//		assert.Equal(t, nil, err)
+//
+//		err = tx.Sign(signer, reservoir.Key)
+//		assert.Equal(t, nil, err)
+//
+//		txs = append(txs, tx)
+//
+//		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+//			t.Fatal(err)
+//		}
+//		reservoir.Nonce += 1
+//	}
+//
+//	if testing.Verbose() {
+//		prof.PrintProfileInfo()
+//	}
+//}
+
 // TestTransactionScenario tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
 // 2. Create an account decoupled using TxTypeAccountCreation.

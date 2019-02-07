@@ -615,6 +615,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			return kerrors.ErrMaxFeeRatioExceeded
 		}
 	}
+
+	// TODO-Klaytn-Accounts: Need to add validation code for new tx types.
+	// The below can be implemented in a tx itself, or here.
+	// If the tx is account creation, need to check the below:
+	// 1. Is it valid for human-readable address?
+	// 2. Is the account already created?
+
 	// TODO-Klaytn-Issue136
 	intrGas, err := tx.IntrinsicGas()
 	intrGas += gasFrom + gasFeePayer

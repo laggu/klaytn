@@ -21,6 +21,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
@@ -258,6 +259,19 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 			kerr.Err = errMsgToNil
 			kerr.Status = getReceiptStatusFromVMerr(nil)
 			return nil, 0, kerr
+		}
+		if msg.HumanReadable() {
+			addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
+				if r == rune(0x0) {
+					return true
+				}
+				return false
+			}))
+			if err := common.IsHumanReadableAddress(addrString); err != nil {
+				kerr.Err = err
+				kerr.Status = getReceiptStatusFromVMerr(nil)
+				return nil, 0, kerr
+			}
 		}
 		// Fail if the address is already created.
 		if evm.StateDB.Exist(*to) {

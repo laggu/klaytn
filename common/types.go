@@ -29,6 +29,7 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"regexp"
 )
 
 const (
@@ -37,13 +38,15 @@ const (
 )
 
 var (
-	hashT    = reflect.TypeOf(Hash{})
-	addressT = reflect.TypeOf(Address{})
+	hashT                           = reflect.TypeOf(Hash{})
+	addressT                        = reflect.TypeOf(Address{})
+	isAlphaNumericWithFirstAlphabet = regexp.MustCompile(`^[A-Za-z]+[0-9A-Za-z]+$`).MatchString
 )
 
 var (
-	errStringTooLong = errors.New("string too long")
-	errEmptyString   = errors.New("empty string")
+	errStringTooLong           = errors.New("string too long")
+	errEmptyString             = errors.New("empty string")
+	errNotHumanReadableAddress = errors.New("not a human readable address")
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -179,7 +182,12 @@ func IsHumanReadableAddress(s string) error {
 		return errEmptyString
 	}
 
-	// TODO-Klaytn: Need to check the characters are allowed to be used for human-readable address.
+	if !isAlphaNumericWithFirstAlphabet(s) {
+		// NOTE-Klaytn-Accounts: For now, only alphanumeric characters are allowed for human-readable addresses.
+		// The first character should be an alphabet. Numeric is not allowed for the first character.
+		return errNotHumanReadableAddress
+	}
+
 	return nil
 }
 
