@@ -1066,45 +1066,20 @@ func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts ty
 	}
 }
 
-// WriteBlockWithState writes the block and all associated state to the database.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
-	start := time.Now()
-	bc.wg.Add(1)
-	defer bc.wg.Done()
-
-	// Calculate the total difficulty of the block
-	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
-	if ptd == nil {
-		return NonStatTy, consensus.ErrUnknownAncestor
-	}
-	// Make sure no inconsistent state is leaked during insertion
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-
-	currentBlock := bc.CurrentBlock()
-	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
-	externTd := new(big.Int).Add(block.Difficulty(), ptd)
-
-	// Irrelevant of the canonical status, write the block itself to the database
-	bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
-
-	// Write other block data.
-	bc.writeBlock(block)
-
-	if bc.GetChildChainIndexingEnabled() {
-		bc.writeChildChainTxHashFromBlock(block)
-	}
-
+// writeStateTrie writes state trie to database if possible.
+// If an archiving node is running, it always flushes state trie to DB.
+// If not, it flushes state trie to DB periodically. (period = bc.trieConfig.BlockInterval)
+func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) error {
 	root, err := state.Commit(true)
 	if err != nil {
-		return NonStatTy, err
+		return err
 	}
 	trieDB := bc.stateCache.TrieDB()
 
 	// If we're running an archive node, always flush
 	if bc.isArchiveMode() {
 		if err := trieDB.Commit(root, false); err != nil {
-			return NonStatTy, err
+			return err
 		}
 	} else {
 		// Full but not archive node, do proper garbage collection
@@ -1117,7 +1092,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			nodesSizeLimit           = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
 		)
 		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
-			// TODO-Klaytn Not to change the original behavior, error is not returned.
+			// NOTE-Klaytn Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
 			if err := trieDB.Cap(nodesSizeLimit - database.IdealBatchSize); err != nil {
 				logger.Error("Error from trieDB.Cap", "limit", nodesSizeLimit-database.IdealBatchSize)
@@ -1145,6 +1120,52 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			}
 		}
 	}
+	return nil
+}
+
+// isReorganizationRequired returns if reorganization is required or not based on total difficulty.
+func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *types.Block) bool {
+	reorg := externTd.Cmp(localTd) > 0
+	if !reorg && externTd.Cmp(localTd) == 0 {
+		// Split same-difficulty blocks by number, then at random
+		reorg = block.NumberU64() < currentBlock.NumberU64() || (block.NumberU64() == currentBlock.NumberU64() && mrand.Float64() < 0.5)
+	}
+	return reorg
+}
+
+// WriteBlockWithState writes the block and all associated state to the database.
+func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+	start := time.Now()
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	// Calculate the total difficulty of the block
+	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
+	if ptd == nil {
+		return NonStatTy, consensus.ErrUnknownAncestor
+	}
+	// Make sure no inconsistent state is leaked during insertion
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	currentBlock := bc.CurrentBlock()
+	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
+	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+
+	// TODO-Klaytn-Storage parallel write starts from here
+	// Irrelevant of the canonical status, write the block itself to the database
+	bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
+
+	// Write other block data.
+	bc.writeBlock(block)
+	if bc.GetChildChainIndexingEnabled() {
+		bc.writeChildChainTxHashFromBlock(block)
+	}
+
+	if err := bc.writeStateTrie(block, state); err != nil {
+		return NonStatTy, err
+	}
+
 	bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
 
 	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
@@ -1153,12 +1174,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	reorg := externTd.Cmp(localTd) > 0
 	currentBlock = bc.CurrentBlock()
-	if !reorg && externTd.Cmp(localTd) == 0 {
-		// Split same-difficulty blocks by number, then at random
-		reorg = block.NumberU64() < currentBlock.NumberU64() || (block.NumberU64() == currentBlock.NumberU64() && mrand.Float64() < 0.5)
-	}
+
+	reorg := isReorganizationRequired(localTd, externTd, currentBlock, block)
 	if reorg {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != currentBlock.Hash() {
@@ -1175,6 +1193,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		status = SideStatTy
 	}
+	// TODO-Klaytn-Storage END parallel write ends here
 
 	// Set new head.
 	if status == CanonStatTy {
@@ -1186,7 +1205,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.futureBlocks.Remove(block.Hash())
 
 	elapsed := time.Since(start)
-	logger.Debug("blockchain.writeblockwithstate", "num", block.Number(), "parenthash", block.Header().ParentHash, "txs", len(block.Transactions()), "elapsed", elapsed)
+	logger.Debug("WriteBlockWithState", "blockNum", block.Number(), "parentHash", block.Header().ParentHash, "txs", len(block.Transactions()), "elapsed", elapsed)
 
 	return status, nil
 }
