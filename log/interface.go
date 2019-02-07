@@ -33,7 +33,9 @@ type Logger interface {
 	Info(msg string, keysAndValues ...interface{})
 	Warn(msg string, keysAndValues ...interface{})
 	Error(msg string, keysAndValues ...interface{})
+	ErrorWithStack(msg string, keysAndValues ...interface{})
 	Crit(msg string, keysAndValues ...interface{})
+	CritWithStack(msg string, keysAndValues ...interface{})
 
 	// GetHandler gets the handler associated with the logger.
 	GetHandler() Handler

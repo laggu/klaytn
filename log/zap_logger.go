@@ -84,7 +84,19 @@ func (zl *zapLogger) Error(msg string, keysAndValues ...interface{}) {
 	zl.sl.Errorw(msg, keysAndValues...)
 }
 
+func (zl *zapLogger) ErrorWithStack(msg string, keysAndValues ...interface{}) {
+	// TODO-Klaytn: First check stack trace is printed by default.
+	// If not, print stack trace here.
+	zl.sl.Errorw(msg, keysAndValues...)
+}
+
 func (zl *zapLogger) Crit(msg string, keysAndValues ...interface{}) {
+	zl.sl.Fatalw(msg, keysAndValues...)
+}
+
+func (zl *zapLogger) CritWithStack(msg string, keysAndValues ...interface{}) {
+	// TODO-Klaytn: First check stack trace is printed by default.
+	// If not, print stack trace here.
 	zl.sl.Fatalw(msg, keysAndValues...)
 }
 

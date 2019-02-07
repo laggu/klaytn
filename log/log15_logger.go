@@ -6,6 +6,7 @@
 package log
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/go-stack/stack"
@@ -153,7 +154,22 @@ func (l *log15Logger) Error(msg string, ctx ...interface{}) {
 	l.write(msg, LvlError, ctx)
 }
 
+func (l *log15Logger) ErrorWithStack(msg string, ctx ...interface{}) {
+	buf := make([]byte, 1024*1024)
+	buf = buf[:runtime.Stack(buf, true)]
+	msg = string(buf) + "\n\n" + msg
+	l.write(msg, LvlError, ctx)
+}
+
 func (l *log15Logger) Crit(msg string, ctx ...interface{}) {
+	l.write(msg, LvlCrit, ctx)
+	os.Exit(1)
+}
+
+func (l *log15Logger) CritWithStack(msg string, ctx ...interface{}) {
+	buf := make([]byte, 1024*1024)
+	buf = buf[:runtime.Stack(buf, true)]
+	msg = string(buf) + "\n\n" + msg
 	l.write(msg, LvlCrit, ctx)
 	os.Exit(1)
 }
