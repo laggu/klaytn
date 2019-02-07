@@ -26,6 +26,7 @@ import (
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
+	"path/filepath"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -161,6 +162,19 @@ const (
 	databaseEntryTypeSize
 )
 
+var databaseDirs = [databaseEntryTypeSize]string{
+	"header",
+	"body",
+	"td",
+	"receipts",
+	"istanbul",
+	"statetrie",
+	"txlookup",
+	"misc",
+	"indexsections",
+	"childchain",
+}
+
 type databaseManager struct {
 	dbs                []Database
 	isMemoryDB         bool
@@ -181,31 +195,19 @@ type DBConfig struct {
 	DBType string
 
 	// LevelDB related configurations.
-	LevelDBCacheSize int
-	LevelDBHandles   int
+	LevelDBCacheSize   int
+	LevelDBHandles     int
+	LevelDBPartitioned bool
 
 	// Service chain related configurations.
 	ChildChainIndexing bool
 }
 
-func NewDBManager(dbc *DBConfig) (DBManager, error) {
-	dbm := databaseManager{make([]Database, databaseEntryTypeSize, databaseEntryTypeSize), false, dbc.ChildChainIndexing}
-
-	// TODO-Klaytn Should be replaced by initialization function with mapping information.
-	var db Database
-	var err error
-	switch dbc.DBType {
-	case LEVELDB:
-		db, err = NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
-	case BADGER:
-		db, err = NewBGDatabase(dbc.Dir)
-	case MEMDB:
-		db = NewMemDatabase()
-	default:
-		db, err = NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
-		logger.Info("database type is not set, fall back to default LevelDB")
-	}
-
+// singleDatabaseDBManager returns DBManager which handles one single Database.
+// Each Database will share one common Database.
+func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
+	dbm := newDatabaseManager(dbc)
+	db, err := newDatabase(dbc)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +220,68 @@ func NewDBManager(dbc *DBConfig) (DBManager, error) {
 			dbm.dbs[i] = db
 		}
 	}
-	return &dbm, nil
+	return dbm, nil
+}
+
+// partitionedDatabaseDBManager returns DBManager which handles partitioned Database.
+// Each Database will have its own separated Database.
+func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
+	dbm := newDatabaseManager(dbc)
+	baseDir := dbc.Dir
+	// TODO-Klaytn-Storage Need to properly assign cacheSize and numHandles to each database
+	dbc.LevelDBCacheSize = dbc.LevelDBCacheSize / int(databaseEntryTypeSize)
+	dbc.LevelDBHandles = dbc.LevelDBHandles / int(databaseEntryTypeSize)
+	for i := 0; i < int(databaseEntryTypeSize); i++ {
+		if i == int(indexSectionsDB) {
+			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
+		} else {
+			// update dbc.Dir with baseDir and each Database specific directory.
+			dbc.Dir = filepath.Join(baseDir, databaseDirs[i])
+			db, err := newDatabase(dbc)
+			if err != nil {
+				logger.Crit("Failed while generating a partition of LevelDB", "partition", databaseDirs[i], "err", err)
+			}
+			dbm.dbs[i] = db
+			// TODO-Klaytn-Storage Need to decide how to collect LevelDB statistics
+			db.Meter("klay/db/chaindata/")
+		}
+	}
+	return dbm, nil
+}
+
+// newDatabase returns Database interface with given DBConfig.
+func newDatabase(dbc *DBConfig) (Database, error) {
+	switch dbc.DBType {
+	case LEVELDB:
+		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
+	case BADGER:
+		return NewBGDatabase(dbc.Dir)
+	case MEMDB:
+		return NewMemDatabase(), nil
+	default:
+		logger.Info("database type is not set, fall back to default LevelDB")
+		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
+	}
+}
+
+// newDatabaseManager returns the pointer of databaseManager with default configuration.
+func newDatabaseManager(dbc *DBConfig) *databaseManager {
+	return &databaseManager{make([]Database, databaseEntryTypeSize), false, dbc.ChildChainIndexing}
+}
+
+// NewDBManager returns DBManager interface.
+// If LevelDBPartitioned is true, each Database will have its own LevelDB.
+// If not, each Database will share one common LevelDB.
+func NewDBManager(dbc *DBConfig) (DBManager, error) {
+	// TODO-Klaytn-Storage Need to decide how to initialize this value
+	// TODO-Klaytn-Storage Remove unnecessary error from return value
+	dbc.LevelDBPartitioned = false
+
+	if !dbc.LevelDBPartitioned {
+		return singleDatabaseDBManager(dbc)
+	} else {
+		return partitionedDatabaseDBManager(dbc)
+	}
 }
 
 func (dbm *databaseManager) NewBatch(dbEntryType DatabaseEntryType) Batch {
