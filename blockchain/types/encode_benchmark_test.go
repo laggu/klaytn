@@ -195,24 +195,24 @@ func checkDecodingChainDataPeggingTxInterface(b *testing.B, encoded []byte, orig
 // of account creation type. It is called when the benchmark is verbose mode.
 func checkDecodingAccountCreationTxInterface(b *testing.B, encoded []byte, original TxInternalData) (TxInternalData, bool) {
 	var container struct {
-		Type          TxType
-		AccountNonce  uint64
-		Price         *big.Int
-		GasLimit      uint64
-		Recipient     common.Address
-		Amount        *big.Int
-		From          common.Address
-		HumalReadable bool
-		AccountKey    []byte
-		V             *big.Int
-		R             *big.Int
-		S             *big.Int
+		Type              TxType
+		AccountNonce      uint64
+		Price             *big.Int
+		GasLimit          uint64
+		Recipient         common.Address
+		Amount            *big.Int
+		From              common.Address
+		HumalReadable     bool
+		V                 *big.Int
+		R                 *big.Int
+		S                 *big.Int
+		EncodedAccountKey []byte
 	}
 	if err := rlp.DecodeBytes(encoded, &container); err != nil {
 		b.Error(err)
 	}
 	var serializer *AccountKeySerializer
-	if err := rlp.DecodeBytes(container.AccountKey, &serializer); err != nil {
+	if err := rlp.DecodeBytes(container.EncodedAccountKey, &serializer); err != nil {
 		b.Error(err)
 	}
 	decoded, err := NewTxInternalDataWithMap(TxTypeAccountCreation,
@@ -255,8 +255,37 @@ func checkInterfaceDecoding(b *testing.B, txType TxType, encoded []byte, origina
 	}
 }
 
+// benchmarkEncodeInterfaceAccountCreation is an auxiliary function to do encoding for AccountCreation type transaction
+func benchmarkEncodeInterfaceAccountCreation(b *testing.B, testTxData *TxInternalDataAccountCreation) {
+	txInterfaces := testTxData.SerializeForSign()
+	txInterfaces = txInterfaces[:len(txInterfaces)-1]
+	v, r, s := testTxData.GetVRS()
+	txInterfaces = append(txInterfaces, v, r, s)
+	var keyEnc []byte
+	txInterfaces = append(txInterfaces, keyEnc)
+	size := len(txInterfaces)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		serializer := NewAccountKeySerializerWithAccountKey(testTxData.Key)
+		keyEnc, _ = rlp.EncodeToBytes(serializer)
+		txInterfaces[size-1] = keyEnc
+		buffer := new(bytes.Buffer)
+		if err := rlp.Encode(buffer, txInterfaces); err != nil {
+			b.Error(err)
+		}
+		bs := buffer.Bytes()
+		if testing.Verbose() {
+			checkInterfaceDecoding(b, testTxData.Type(), bs, testTxData)
+		}
+	}
+}
+
 // benchmarkEncodeInterface is an auxiliary function to do encode interface of transaction internal data.
 func benchmarkEncodeInterface(b *testing.B, testTxData TxInternalData) {
+	if data, ok := testTxData.(*TxInternalDataAccountCreation); ok {
+		benchmarkEncodeInterfaceAccountCreation(b, data)
+		return
+	}
 	txInterfaces := testTxData.SerializeForSign()
 	v, r, s := testTxData.GetVRS()
 	txInterfaces = append(txInterfaces, v, r, s)
@@ -416,10 +445,10 @@ func checkDecodingAccountCreationInterfaceOverFields(b *testing.B, encoded []byt
 	_ = rlp.Decode(reader, &amount)
 	_ = rlp.Decode(reader, &from)
 	_ = rlp.Decode(reader, &humanReadable)
-	_ = rlp.Decode(reader, &encodedKeySerializer)
 	_ = rlp.Decode(reader, &v)
 	_ = rlp.Decode(reader, &r)
 	_ = rlp.Decode(reader, &s)
+	_ = rlp.Decode(reader, &encodedKeySerializer)
 	_ = rlp.DecodeBytes(encodedKeySerializer, &accountKeySerializer)
 	decoded, err := NewTxInternalDataWithMap(TxTypeAccountCreation, txMapData{
 		TxValueKeyNonce:         accountNonce,
@@ -460,8 +489,39 @@ func checkInterfaceOverFieldsDecoding(b *testing.B, txType TxType, encoded []byt
 	}
 }
 
+// benchmarkEncodeInterfaceOverFields is an auxiliary function to do encoding interface list of account creation transaction data
+func benchmarkEncodeInterfaceOverFieldsAccountCreation(b *testing.B, testTxData *TxInternalDataAccountCreation) {
+	txInterfaces := testTxData.SerializeForSign()
+	txInterfaces = txInterfaces[:len(txInterfaces)-1]
+	v, r, s := testTxData.GetVRS()
+	txInterfaces = append(txInterfaces, v, r, s)
+	var keyEnc []byte
+	txInterfaces = append(txInterfaces, keyEnc)
+	size := len(txInterfaces)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		serializer := NewAccountKeySerializerWithAccountKey(testTxData.Key)
+		keyEnc, _ = rlp.EncodeToBytes(serializer)
+		txInterfaces[size-1] = keyEnc
+		buffer := new(bytes.Buffer)
+		for _, field := range txInterfaces {
+			if err := rlp.Encode(buffer, field); err != nil {
+				b.Error(err)
+			}
+		}
+		bs := buffer.Bytes()
+		if testing.Verbose() {
+			checkInterfaceOverFieldsDecoding(b, testTxData.Type(), bs, testTxData)
+		}
+	}
+}
+
 // benchmarkEncodeInterfaceOverFields is an auxiliary function to do encoding interface list of transaction internal data
 func benchmarkEncodeInterfaceOverFields(b *testing.B, testTxData TxInternalData) {
+	if data, ok := testTxData.(*TxInternalDataAccountCreation); ok {
+		benchmarkEncodeInterfaceOverFieldsAccountCreation(b, data)
+		return
+	}
 	txInterfaces := testTxData.SerializeForSign()
 	v, r, s := testTxData.GetVRS()
 	txInterfaces = append(txInterfaces, v, r, s)
@@ -638,12 +698,12 @@ func checkDecodingSeparateFieldsAccountCreation(b *testing.B, encoded []byte, or
 func encodeSeparateFieldsAccountCreation(b *testing.B) {
 	commonData := genCommonDefaultData()
 	k, _ := crypto.GenerateKey()
-	accountKey := NewAccountKeyPublicWithValue(&k.PublicKey)
-	accountKeySerializer := NewAccountKeySerializerWithAccountKey(accountKey)
 	humanReadable := true
 	signature := NewTxSignature()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		accountKey := NewAccountKeyPublicWithValue(&k.PublicKey)
+		accountKeySerializer := NewAccountKeySerializerWithAccountKey(accountKey)
 		buffer := new(bytes.Buffer)
 		if err := rlp.Encode(buffer, commonData); err != nil {
 			b.Error(err)
