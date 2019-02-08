@@ -327,6 +327,8 @@ func (pm *ProtocolManager) Stop() {
 	// sessions which are already established but not added to pm.peers yet
 	// will exit when they try to register.
 	pm.peers.Close()
+	pm.scpm.getParentChainPeers().Close()
+	pm.scpm.getChildChainPeers().Close()
 
 	// Wait for all peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
