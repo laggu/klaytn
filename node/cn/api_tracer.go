@@ -383,7 +383,7 @@ func (api *PrivateDebugAPI) TraceBlockFromFile(ctx context.Context, file string,
 	if err != nil {
 		return nil, fmt.Errorf("could not read file: %v", err)
 	}
-	return api.TraceBlock(ctx, blob, config)
+	return api.TraceBlock(ctx, common.Hex2Bytes(string(blob)), config)
 }
 
 // traceBlock configures a new tracer according to the provided configuration, and
