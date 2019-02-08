@@ -247,6 +247,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return NewTxInternalDataFeeDelegatedValueTransferWithRatio(), nil
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreation(), nil
+	case TxTypeAccountUpdate:
+		return newTxInternalDataAccountUpdate(), nil
 	case TxTypeSmartContractDeploy:
 		return newTxInternalDataSmartContractDeploy(), nil
 	case TxTypeSmartContractExecution:
@@ -270,6 +272,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return NewTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values)
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreationWithMap(values)
+	case TxTypeAccountUpdate:
+		return newTxInternalDataAccountUpdateWithMap(values)
 	case TxTypeSmartContractDeploy:
 		return newTxInternalDataSmartContractDeployWithMap(values)
 	case TxTypeSmartContractExecution:

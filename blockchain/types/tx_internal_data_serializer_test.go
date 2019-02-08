@@ -47,6 +47,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"ValueTransfer", genValueTransferTransaction()},
 		{"ChainDataTx", genChainDataTransaction()},
 		{"AccountCreation", genAccountCreationTransaction()},
+		{"AccountUpdate", genAccountUpdateTransaction()},
 		{"FeeDelegatedValueTransfer", genFeeDelegatedValueTransferTransaction()},
 		{"SmartContractExecution", genSmartContractExecutionTransaction()},
 		{"FeeDelegatedValueTransferWithRatio", genFeeDelegatedValueTransferWithRatioTransaction()},
@@ -280,6 +281,24 @@ func genSmartContractExecutionTransaction() TxInternalData {
 		TxValueKeyFrom:     from,
 		// A abi-packed bytes calling "reward" of contracts/reward/contract/KlaytnReward.sol with an address "bc5951f055a85f41a3b62fd6f68ab7de76d299b2".
 		TxValueKeyData: common.Hex2Bytes("6353586b000000000000000000000000bc5951f055a85f41a3b62fd6f68ab7de76d299b2"),
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
+}
+
+func genAccountUpdateTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeAccountUpdate, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:      nonce,
+		TxValueKeyAmount:     amount,
+		TxValueKeyGasLimit:   gasLimit,
+		TxValueKeyGasPrice:   gasPrice,
+		TxValueKeyFrom:       from,
+		TxValueKeyAccountKey: NewAccountKeyPublicWithValue(&key.PublicKey),
 	})
 
 	if err != nil {
