@@ -37,54 +37,6 @@ import (
 	"time"
 )
 
-const (
-	headerCacheLimit = 512
-	tdCacheLimit     = 1024
-	numberCacheLimit = 2048
-)
-
-const (
-	numShardsHeaderCache = 4096
-	numShardsTdCache     = 4096
-	numShardsNumberCache = 4096
-)
-
-type headerChainCacheKey int
-
-const (
-	hedearCacheIndex headerChainCacheKey = iota
-	tdCacheIndex
-	numberCacheIndex
-
-	headerChainCacheKeySize
-)
-
-var headerLRUCacheConfig = [headerChainCacheKeySize]common.CacheConfiger{
-	hedearCacheIndex: common.LRUConfig{CacheSize: headerCacheLimit},
-	tdCacheIndex:     common.LRUConfig{CacheSize: tdCacheLimit},
-	numberCacheIndex: common.LRUConfig{CacheSize: numberCacheLimit},
-}
-
-var headerLRUShardCacheConfig = [headerChainCacheKeySize]common.CacheConfiger{
-	hedearCacheIndex: common.LRUShardConfig{CacheSize: headerCacheLimit, NumShards: numShardsHeaderCache},
-	tdCacheIndex:     common.LRUShardConfig{CacheSize: tdCacheLimit, NumShards: numShardsTdCache},
-	numberCacheIndex: common.LRUShardConfig{CacheSize: numberCacheLimit, NumShards: numShardsNumberCache},
-}
-
-func newHeaderChainCache(cacheNameKey headerChainCacheKey, cacheType common.CacheType) common.Cache {
-	var cache common.Cache
-
-	switch cacheType {
-	case common.LRUCacheType:
-		cache, _ = common.NewCache(headerLRUCacheConfig[cacheNameKey])
-	case common.LRUShardCacheType:
-		cache, _ = common.NewCache(headerLRUShardCacheConfig[cacheNameKey])
-	default:
-		cache, _ = common.NewCache(headerLRUCacheConfig[cacheNameKey])
-	}
-	return cache
-}
-
 // HeaderChain implements the basic block header chain logic that is shared by
 // blockchain.BlockChain and light.LightChain. It is not usable in itself, only as
 // a part of either structure.
@@ -98,10 +50,6 @@ type HeaderChain struct {
 
 	currentHeader     atomic.Value
 	currentHeaderHash common.Hash
-
-	headerCache common.Cache
-	tdCache     common.Cache
-	numberCache common.Cache
 
 	procInterrupt func() bool
 
@@ -124,9 +72,6 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 	hc := &HeaderChain{
 		config:        config,
 		chainDB:       chainDB,
-		headerCache:   newHeaderChainCache(hedearCacheIndex, common.DefaultCacheType),
-		tdCache:       newHeaderChainCache(tdCacheIndex, common.DefaultCacheType),
-		numberCache:   newHeaderChainCache(numberCacheIndex, common.DefaultCacheType),
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
 		engine:        engine,
@@ -151,17 +96,7 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 // GetBlockNumber retrieves the block number belonging to the given hash
 // from the cache or database
 func (hc *HeaderChain) GetBlockNumber(hash common.Hash) *uint64 {
-	if cached, ok := hc.numberCache.Get(hash); ok {
-		cacheGetBlockNumberHitMeter.Mark(1)
-		number := cached.(uint64)
-		return &number
-	}
-	cacheGetBlockNumberMissMeter.Mark(1)
-	number := hc.chainDB.ReadHeaderNumber(hash)
-	if number != nil {
-		hc.numberCache.Add(hash, *number)
-	}
-	return number
+	return hc.chainDB.ReadHeaderNumber(hash)
 }
 
 // WriteHeader writes a header into the local chain, given that its parent is
@@ -230,10 +165,6 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	} else {
 		status = SideStatTy
 	}
-
-	hc.headerCache.Add(hash, header)
-	hc.numberCache.Add(hash, number)
-
 	return
 }
 
@@ -353,19 +284,7 @@ func (hc *HeaderChain) GetBlockHashesFromHash(hash common.Hash, max uint64) []co
 // GetTd retrieves a block's total difficulty in the canonical chain from the
 // database by hash and number, caching it if found.
 func (hc *HeaderChain) GetTd(hash common.Hash, number uint64) *big.Int {
-	// Short circuit if the td's already in the cache, retrieve otherwise
-	if cached, ok := hc.tdCache.Get(hash); ok {
-		cacheGetTDHitMeter.Mark(1)
-		return cached.(*big.Int)
-	}
-	cacheGetTDMissMeter.Mark(1)
-	td := hc.chainDB.ReadTd(hash, number)
-	if td == nil {
-		return nil
-	}
-	// Cache the found body for next time and return
-	hc.tdCache.Add(hash, td)
-	return td
+	return hc.chainDB.ReadTd(hash, number)
 }
 
 // GetTdByHash retrieves a block's total difficulty in the canonical chain from the
@@ -382,25 +301,12 @@ func (hc *HeaderChain) GetTdByHash(hash common.Hash) *big.Int {
 // along the way.
 func (hc *HeaderChain) WriteTd(hash common.Hash, number uint64, td *big.Int) {
 	hc.chainDB.WriteTd(hash, number, td)
-	hc.tdCache.Add(hash, new(big.Int).Set(td))
 }
 
 // GetHeader retrieves a block header from the database by hash and number,
 // caching it if found.
 func (hc *HeaderChain) GetHeader(hash common.Hash, number uint64) *types.Header {
-	// Short circuit if the header's already in the cache, retrieve otherwise
-	if header, ok := hc.headerCache.Get(hash); ok {
-		cacheGetHeaderHitMeter.Mark(1)
-		return header.(*types.Header)
-	}
-	cacheGetHeaderMissMeter.Mark(1)
-	header := hc.chainDB.ReadHeader(hash, number)
-	if header == nil {
-		return nil
-	}
-	// Cache the found header for next time and return
-	hc.headerCache.Add(hash, header)
-	return header
+	return hc.chainDB.ReadHeader(hash, number)
 }
 
 // GetHeaderByHash retrieves a block header from the database by hash, caching it if
@@ -415,9 +321,6 @@ func (hc *HeaderChain) GetHeaderByHash(hash common.Hash) *types.Header {
 
 // HasHeader checks if a block header is present in the database or not.
 func (hc *HeaderChain) HasHeader(hash common.Hash, number uint64) bool {
-	if hc.numberCache.Contains(hash) || hc.headerCache.Contains(hash) {
-		return true
-	}
 	return hc.chainDB.HasHeader(hash, number)
 }
 
@@ -474,9 +377,7 @@ func (hc *HeaderChain) SetHead(head uint64, delFn DeleteCallback) {
 		hc.chainDB.DeleteCanonicalHash(i)
 	}
 	// Clear out any stale content from the caches
-	hc.headerCache.Purge()
-	hc.tdCache.Purge()
-	hc.numberCache.Purge()
+	hc.chainDB.ClearHeaderCache()
 
 	if hc.CurrentHeader() == nil {
 		hc.currentHeader.Store(hc.genesisHeader)

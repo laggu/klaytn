@@ -49,15 +49,6 @@ var (
 	cacheGetRecentTxReceiptMissMeter = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/miss", nil)
 	cacheGetRecentTxReceiptHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/hit", nil)
 
-	cacheGetHeaderMissMeter = metrics.NewRegisteredMeter("klay/cache/get/header/miss", nil)
-	cacheGetHeaderHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/header/hit", nil)
-
-	cacheGetTDMissMeter = metrics.NewRegisteredMeter("klay/cache/get/td/miss", nil)
-	cacheGetTDHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/td/hit", nil)
-
-	cacheGetBlockNumberMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blocknumber/miss", nil)
-	cacheGetBlockNumberHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blocknumber/hit", nil)
-
 	headBlockNumberGauge = metrics.NewRegisteredGauge("blockchain/head/blocknumber", nil)
 	blockTxCountsMeter   = metrics.NewRegisteredMeter("blockchain/block/tx/rate", nil)
 	blockTxCountsCounter = metrics.NewRegisteredCounter("blockchain/block/tx/counter", nil)

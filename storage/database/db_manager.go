@@ -136,6 +136,9 @@ type DBManager interface {
 
 	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
 	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
+
+	// cacheManager related functions.
+	ClearHeaderCache()
 }
 
 type DatabaseEntryType uint8
@@ -177,12 +180,18 @@ var databaseDirs = [databaseEntryTypeSize]string{
 
 type databaseManager struct {
 	dbs                []Database
+	cm                 *cacheManager
 	isMemoryDB         bool
 	childChainIndexing bool
 }
 
 func NewMemoryDBManager() DBManager {
-	dbm := databaseManager{make([]Database, 1, 1), true, false}
+	dbm := databaseManager{
+		dbs:                make([]Database, 1, 1),
+		cm:                 newCacheManager(),
+		isMemoryDB:         true,
+		childChainIndexing: false,
+	}
 	dbm.dbs[0] = NewMemDatabase()
 
 	return &dbm
@@ -266,7 +275,12 @@ func newDatabase(dbc *DBConfig) (Database, error) {
 
 // newDatabaseManager returns the pointer of databaseManager with default configuration.
 func newDatabaseManager(dbc *DBConfig) *databaseManager {
-	return &databaseManager{make([]Database, databaseEntryTypeSize), false, dbc.ChildChainIndexing}
+	return &databaseManager{
+		dbs:                make([]Database, databaseEntryTypeSize),
+		cm:                 newCacheManager(),
+		isMemoryDB:         false,
+		childChainIndexing: dbc.ChildChainIndexing,
+	}
 }
 
 // NewDBManager returns DBManager interface.
@@ -348,12 +362,19 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 // Head Number operations.
 // ReadHeaderNumber returns the header number assigned to a hash.
 func (dbm *databaseManager) ReadHeaderNumber(hash common.Hash) *uint64 {
+	if cachedHeaderNumber := dbm.cm.readBlockNumberCache(hash); cachedHeaderNumber != nil {
+		return cachedHeaderNumber
+	}
+
 	db := dbm.getDatabase(headerDB)
 	data, _ := db.Get(headerNumberKey(hash))
 	if len(data) != 8 {
 		return nil
 	}
 	number := binary.BigEndian.Uint64(data)
+
+	// Write to cache before returning found value.
+	dbm.cm.writeBlockNumberCache(hash, number)
 	return &number
 }
 
@@ -437,6 +458,10 @@ func (dbm *databaseManager) WriteFastTrieProgress(count uint64) {
 // (Block)Header operations.
 // HasHeader verifies the existence of a block header corresponding to the hash.
 func (dbm *databaseManager) HasHeader(hash common.Hash, number uint64) bool {
+	if dbm.cm.hasHeaderInCache(hash) {
+		return true
+	}
+
 	db := dbm.getDatabase(headerDB)
 	if has, err := db.Has(headerKey(number, hash)); !has || err != nil {
 		return false
@@ -446,6 +471,10 @@ func (dbm *databaseManager) HasHeader(hash common.Hash, number uint64) bool {
 
 // ReadHeader retrieves the block header corresponding to the hash.
 func (dbm *databaseManager) ReadHeader(hash common.Hash, number uint64) *types.Header {
+	if cachedHeader := dbm.cm.readHeaderCache(hash); cachedHeader != nil {
+		return cachedHeader
+	}
+
 	data := dbm.ReadHeaderRLP(hash, number)
 	if len(data) == 0 {
 		return nil
@@ -455,6 +484,9 @@ func (dbm *databaseManager) ReadHeader(hash common.Hash, number uint64) *types.H
 		logger.Error("Invalid block header RLP", "hash", hash, "err", err)
 		return nil
 	}
+
+	// Write to cache before returning found value.
+	dbm.cm.writeHeaderCache(hash, header)
 	return header
 }
 
@@ -488,6 +520,10 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) {
 	if err := db.Put(key, data); err != nil {
 		logger.Crit("Failed to store header", "err", err)
 	}
+
+	// Write to cache at the end of successful write.
+	dbm.cm.writeHeaderCache(hash, header)
+	dbm.cm.writeBlockNumberCache(hash, number)
 }
 
 // DeleteHeader removes all block header data associated with a hash.
@@ -571,6 +607,10 @@ func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 // TotalDifficulty operations.
 // ReadTd retrieves a block's total difficulty corresponding to the hash.
 func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
+	if cachedTd := dbm.cm.readTdCache(hash); cachedTd != nil {
+		return cachedTd
+	}
+
 	db := dbm.getDatabase(tdDB)
 	data, _ := db.Get(headerTDKey(number, hash))
 	if len(data) == 0 {
@@ -581,6 +621,9 @@ func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
 		logger.Error("Invalid block total difficulty RLP", "hash", hash, "err", err)
 		return nil
 	}
+
+	// Write to cache before returning found value.
+	dbm.cm.writeTdCache(hash, td)
 	return td
 }
 
@@ -594,6 +637,9 @@ func (dbm *databaseManager) WriteTd(hash common.Hash, number uint64, td *big.Int
 	if err := db.Put(headerTDKey(number, hash), data); err != nil {
 		logger.Crit("Failed to store block total difficulty", "err", err)
 	}
+
+	// Write to cache at the end of successful write.
+	dbm.cm.writeTdCache(hash, td)
 }
 
 // DeleteTd removes all block total difficulty data associated with a hash.
@@ -1035,6 +1081,11 @@ func (dbm *databaseManager) ReadReceiptFromParentChain(blockHash common.Hash) *t
 		return nil
 	}
 	return (*types.Receipt)(serviceChainTxReceipt)
+}
+
+// ClearHeaderCache calls cacheManager.clearHeaderCache to flushes out caches of headerChain.
+func (dbm *databaseManager) ClearHeaderCache() {
+	dbm.cm.clearHeaderCache()
 }
 
 // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
