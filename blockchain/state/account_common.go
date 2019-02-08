@@ -175,6 +175,11 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 		key:           e.key.DeepCopy()}
 }
 
+func (e *AccountCommon) UpdateKey(key types.AccountKey) error {
+	e.key = key
+	return nil
+}
+
 func (e *AccountCommon) Equal(ta *AccountCommon) bool {
 	return e.nonce == ta.nonce &&
 		e.balance.Cmp(ta.balance) == 0 &&

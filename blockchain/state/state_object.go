@@ -35,7 +35,8 @@ import (
 var emptyCodeHash = crypto.Keccak256(nil)
 
 var (
-	errNotProgramAccount = errors.New("not a program account")
+	errNotProgramAccount   = errors.New("not a program account")
+	errAccountDoesNotExist = errors.New("account does not exist")
 )
 
 type Code []byte
@@ -207,6 +208,10 @@ func (self *stateObject) GetKey() types.AccountKey {
 func (self *stateObject) setState(key, value common.Hash) {
 	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
+}
+
+func (self *stateObject) UpdateKey(key types.AccountKey) error {
+	return self.account.UpdateKey(key)
 }
 
 // updateTrie writes cached storage modifications into the object's storage trie.

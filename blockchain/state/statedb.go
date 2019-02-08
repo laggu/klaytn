@@ -338,6 +338,16 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 	}
 }
 
+// UpdateKey updates the account's key with the given key.
+func (self *StateDB) UpdateKey(addr common.Address, key types.AccountKey) error {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.UpdateKey(key)
+	}
+
+	return errAccountDoesNotExist
+}
+
 // Suicide marks the given account as suicided.
 // This clears the account balance.
 //

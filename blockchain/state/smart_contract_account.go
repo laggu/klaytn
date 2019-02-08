@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -145,6 +146,10 @@ func (sca *SmartContractAccount) SetCodeHash(h []byte) {
 
 func (sca *SmartContractAccount) Empty() bool {
 	return sca.AccountCommon.Empty() && bytes.Equal(sca.codeHash, emptyCodeHash)
+}
+
+func (sca *SmartContractAccount) UpdateKey(key types.AccountKey) error {
+	return ErrAccountKeyNotModifiable
 }
 
 func (sca *SmartContractAccount) Equal(a Account) bool {

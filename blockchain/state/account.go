@@ -55,7 +55,8 @@ func (a AccountType) String() string {
 }
 
 var (
-	ErrUndefinedAccountType = errors.New("undefined account type")
+	ErrUndefinedAccountType    = errors.New("undefined account type")
+	ErrAccountKeyNotModifiable = errors.New("account key is not modifiable")
 )
 
 // Account is the Klaytn consensus representation of accounts.
@@ -70,6 +71,9 @@ type Account interface {
 	SetNonce(n uint64)
 	SetBalance(b *big.Int)
 	SetHumanReadable(b bool)
+
+	// UpdateKey updates the account's key with the given key.
+	UpdateKey(key types.AccountKey) error
 
 	// Empty returns whether the account is considered empty.
 	// The "empty" account may be defined differently depending on the actual account type.

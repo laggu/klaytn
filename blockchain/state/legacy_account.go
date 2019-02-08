@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/go-stack/stack"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
@@ -120,6 +121,10 @@ func (a *LegacyAccount) SetCodeHash(h []byte) {
 
 func (a *LegacyAccount) Empty() bool {
 	return a.GetNonce() == 0 && a.GetBalance().Sign() == 0 && bytes.Equal(a.GetCodeHash(), emptyCodeHash)
+}
+
+func (a *LegacyAccount) UpdateKey(key types.AccountKey) error {
+	return ErrAccountKeyNotModifiable
 }
 
 func (a *LegacyAccount) DeepCopy() Account {
