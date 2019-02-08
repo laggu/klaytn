@@ -46,12 +46,24 @@ type CNAPIBackend struct {
 	gpo *gasprice.Oracle
 }
 
-func (b *CNAPIBackend) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
-	return b.cn.blockchain.GetTransactionInCache(hash)
+// GetTxLookupInfoAndReceipt retrieves a tx and lookup info and receipt for a given transaction hash.
+func (b *CNAPIBackend) GetTxLookupInfoAndReceipt(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
+	return b.cn.blockchain.GetTxLookupInfoAndReceipt(txHash)
 }
 
-func (b *CNAPIBackend) GetReceiptsInCache(blockHash common.Hash) types.Receipts {
-	return b.cn.blockchain.GetReceiptsInCache(blockHash)
+// GetTxAndLookupInfoInCache retrieves a tx and lookup info for a given transaction hash in cache.
+func (b *CNAPIBackend) GetTxAndLookupInfoInCache(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	return b.cn.blockchain.GetTxAndLookupInfoInCache(txHash)
+}
+
+// GetBlockReceiptsInCache retrieves receipts for a given block hash in cache.
+func (b *CNAPIBackend) GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts {
+	return b.cn.blockchain.GetBlockReceiptsInCache(blockHash)
+}
+
+// GetTxLookupInfoAndReceiptInCache retrieves a tx and lookup info and receipt for a given transaction hash in cache.
+func (b *CNAPIBackend) GetTxLookupInfoAndReceiptInCache(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
+	return b.cn.blockchain.GetTxLookupInfoAndReceiptInCache(txHash)
 }
 
 func (b *CNAPIBackend) ChainConfig() *params.ChainConfig {
@@ -124,7 +136,13 @@ func (b *CNAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.B
 	return block, nil
 }
 
-func (b *CNAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) types.Receipts {
+// GetTxAndLookupInfo retrieves a tx and lookup info for a given transaction hash.
+func (b *CNAPIBackend) GetTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	return b.cn.blockchain.GetTxAndLookupInfo(hash)
+}
+
+// GetBlockReceipts retrieves the receipts for all transactions with given block hash.
+func (b *CNAPIBackend) GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts {
 	return b.cn.blockchain.GetReceiptsByBlockHash(hash)
 }
 

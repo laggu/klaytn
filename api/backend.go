@@ -53,7 +53,9 @@ type Backend interface {
 	BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error)
 	StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error)
 	GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error)
-	GetReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
+	GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
+	GetTxLookupInfoAndReceipt(ctx context.Context, hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
+	GetTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetTd(blockHash common.Hash) *big.Int
 	GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error)
 	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
@@ -72,8 +74,9 @@ type Backend interface {
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
 
-	GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
-	GetReceiptsInCache(blockHash common.Hash) types.Receipts
+	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
+	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 
 	GetChildChainIndexingEnabled() bool
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash

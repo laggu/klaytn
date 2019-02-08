@@ -60,10 +60,7 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 
 // GetBlockReceipts returns all the transaction receipts for the given block hash.
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
-	receipts := s.b.GetReceiptsInCache(blockHash)
-	if receipts == nil {
-		receipts = s.b.GetReceipts(ctx, blockHash)
-	}
+	receipts := s.b.GetBlockReceipts(ctx, blockHash)
 	block, err := s.b.GetBlock(ctx, blockHash)
 	if err != nil {
 		return nil, err

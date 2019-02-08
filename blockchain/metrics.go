@@ -43,8 +43,11 @@ var (
 	cacheGetRecentTransactionsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/transactions/miss", nil)
 	cacheGetRecentTransactionsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/transactions/hit", nil)
 
-	cacheGetRecentReceiptsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/receipts/miss", nil)
-	cacheGetRecentReceiptsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/receipts/hit", nil)
+	cacheGetRecentBlockReceiptsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/miss", nil)
+	cacheGetRecentBlockReceiptsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/hit", nil)
+
+	cacheGetRecentTxReceiptMissMeter = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/miss", nil)
+	cacheGetRecentTxReceiptHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/hit", nil)
 
 	cacheGetHeaderMissMeter = metrics.NewRegisteredMeter("klay/cache/get/header/miss", nil)
 	cacheGetHeaderHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/header/hit", nil)

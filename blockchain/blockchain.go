@@ -63,20 +63,22 @@ const (
 // Below is the list of the constants for cache size.
 // TODO-Klaytn: Below should be handled by ini or other configurations.
 const (
-	maxBodyCache          = 256
-	maxBlockCache         = 256
-	maxFutureBlocks       = 256
-	maxTimeFutureBlocks   = 30
-	maxBadBlocks          = 10
-	maxRecentTransactions = 30000
-	maxRecentReceipts     = 30
+	maxBodyCache           = 256
+	maxBlockCache          = 256
+	maxFutureBlocks        = 256
+	maxTimeFutureBlocks    = 30
+	maxBadBlocks           = 10
+	maxRecentTransactions  = 30000
+	maxRecentBlockReceipts = 30
+	maxRecentTxReceipt     = 30000
 )
 
 const (
-	numShardsBodyCache          = 4096
-	numShardsBlockCache         = 4096
-	numShardsRecentTransactions = 4096
-	numShardsRecentReceipts     = 4096
+	numShardsBodyCache           = 4096
+	numShardsBlockCache          = 4096
+	numShardsRecentTransactions  = 4096
+	numShardsRecentBlockReceipts = 4096
+	numShardsRecentTxReceipt     = 4096
 )
 
 const (
@@ -92,26 +94,29 @@ const (
 	bodyCacheIndex blockChainCacheKey = iota
 	bodyRLPCacheIndex
 	blockCacheIndex
-	recentTransactionsIndex
-	recentReceiptsIndex
+	recentTxAndLookupInfoIndex
+	recentBlockReceiptsIndex
+	recentTxReceiptIndex
 
 	blockCacheKeySize
 )
 
 var blockLRUCacheConfig = [blockCacheKeySize]common.CacheConfiger{
-	bodyCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache},
-	bodyRLPCacheIndex:       common.LRUConfig{CacheSize: maxBodyCache},
-	blockCacheIndex:         common.LRUConfig{CacheSize: maxBlockCache},
-	recentTransactionsIndex: common.LRUConfig{CacheSize: maxRecentTransactions},
-	recentReceiptsIndex:     common.LRUConfig{CacheSize: maxRecentReceipts},
+	bodyCacheIndex:             common.LRUConfig{CacheSize: maxBodyCache},
+	bodyRLPCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache},
+	blockCacheIndex:            common.LRUConfig{CacheSize: maxBlockCache},
+	recentTxAndLookupInfoIndex: common.LRUConfig{CacheSize: maxRecentTransactions},
+	recentBlockReceiptsIndex:   common.LRUConfig{CacheSize: maxRecentBlockReceipts},
+	recentTxReceiptIndex:       common.LRUConfig{CacheSize: maxRecentTxReceipt},
 }
 
 var blockLRUShardCacheConfig = [blockCacheKeySize]common.CacheConfiger{
-	bodyCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	bodyRLPCacheIndex:       common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	blockCacheIndex:         common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
-	recentTransactionsIndex: common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
-	recentReceiptsIndex:     common.LRUShardConfig{CacheSize: maxRecentReceipts, NumShards: numShardsRecentReceipts},
+	bodyCacheIndex:             common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
+	bodyRLPCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
+	blockCacheIndex:            common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
+	recentTxAndLookupInfoIndex: common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
+	recentBlockReceiptsIndex:   common.LRUShardConfig{CacheSize: maxRecentBlockReceipts, NumShards: numShardsRecentBlockReceipts},
+	recentTxReceiptIndex:       common.LRUShardConfig{CacheSize: maxRecentTxReceipt, NumShards: numShardsRecentTxReceipt},
 }
 
 func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheType) common.Cache {
@@ -193,9 +198,9 @@ type BlockChain struct {
 
 	badBlocks *lru.Cache // Bad block cache
 
-	recentTransactions common.Cache // recent insertblock
-	recentReceipts     common.Cache // recent receipts
-
+	recentTxAndLookupInfo common.Cache // recent TX and LookupInfo cache
+	recentBlockReceipts   common.Cache // recent block receipts cache
+	recentTxReceipt       common.Cache // recent TX receipt cache
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -230,8 +235,9 @@ func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *p
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 		// tx, receipt cache
-		recentTransactions: newBlockChainCache(recentTransactionsIndex, common.DefaultCacheType),
-		recentReceipts:     newBlockChainCache(recentReceiptsIndex, common.DefaultCacheType),
+		recentTxAndLookupInfo: newBlockChainCache(recentTxAndLookupInfoIndex, common.DefaultCacheType),
+		recentBlockReceipts:   newBlockChainCache(recentBlockReceiptsIndex, common.DefaultCacheType),
+		recentTxReceipt:       newBlockChainCache(recentTxReceiptIndex, common.DefaultCacheType),
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -352,8 +358,9 @@ func (bc *BlockChain) SetHead(head uint64) error {
 	bc.bodyRLPCache.Purge()
 	bc.blockCache.Purge()
 	bc.futureBlocks.Purge()
-	bc.recentTransactions.Purge()
-	bc.recentReceipts.Purge()
+	bc.recentTxAndLookupInfo.Purge()
+	bc.recentBlockReceipts.Purge()
+	bc.recentTxReceipt.Purge()
 
 	// Rewind the block chain, ensuring we don't end up with a stateless head block
 	if currentBlock := bc.CurrentBlock(); currentBlock != nil && currentHeader.Number.Uint64() < currentBlock.NumberU64() {
@@ -688,19 +695,17 @@ func (bc *BlockChain) GetBlockByNumber(number uint64) *types.Block {
 
 // GetReceiptByTxHash retrieves a receipt for a given transaction hash.
 func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
-	tx, blockHash, _, index := bc.GetTransactionInCache(txHash)
+	receipt := bc.GetTxReceiptInCache(txHash)
+	if receipt != nil {
+		return receipt
+	}
+
+	tx, blockHash, _, index := bc.GetTxAndLookupInfo(txHash)
 	if tx == nil {
-		tx, blockHash, _, index = bc.db.ReadTransaction(txHash)
-		if tx == nil {
-			return nil
-		}
+		return nil
 	}
 
-	receipts := bc.GetReceiptsInCache(blockHash)
-	if receipts == nil {
-		receipts = bc.GetReceiptsByBlockHash(blockHash)
-	}
-
+	receipts := bc.GetReceiptsByBlockHash(blockHash)
 	if len(receipts) <= int(index) {
 		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts))
 		return nil
@@ -708,8 +713,51 @@ func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
 	return receipts[index]
 }
 
+// GetTxAndLookupInfo retrieves a tx and lookup info for a given transaction hash.
+func (bc *BlockChain) GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	tx, blockHash, blockNumber, index := bc.GetTxAndLookupInfoInCache(txHash)
+	if tx == nil {
+		tx, blockHash, blockNumber, index = bc.db.ReadTxAndLookupInfo(txHash)
+	}
+	return tx, blockHash, blockNumber, index
+}
+
+// GetTxLookupInfoAndReceipt retrieves a tx and lookup info and receipt for a given transaction hash.
+func (bc *BlockChain) GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
+	tx, blockHash, blockNumber, index := bc.GetTxAndLookupInfo(txHash)
+	if tx == nil {
+		return nil, common.Hash{}, 0, 0, nil
+	}
+
+	receipt := bc.GetReceiptByTxHash(txHash)
+	if receipt == nil {
+		return nil, common.Hash{}, 0, 0, nil
+	}
+
+	return tx, blockHash, blockNumber, index, receipt
+}
+
+// GetTxLookupInfoAndReceiptInCache retrieves a tx and lookup info and receipt for a given transaction hash in cache.
+func (bc *BlockChain) GetTxLookupInfoAndReceiptInCache(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
+	tx, blockHash, blockNumber, index := bc.GetTxAndLookupInfoInCache(txHash)
+	if tx == nil {
+		return nil, common.Hash{}, 0, 0, nil
+	}
+
+	receipt := bc.GetTxReceiptInCache(txHash)
+	if receipt == nil {
+		return nil, common.Hash{}, 0, 0, nil
+	}
+
+	return tx, blockHash, blockNumber, index, receipt
+}
+
 // GetReceiptsByBlockHash retrieves the receipts for all transactions with given block hash.
 func (bc *BlockChain) GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts {
+	receipts := bc.GetBlockReceiptsInCache(blockHash)
+	if receipts != nil {
+		return receipts
+	}
 	number := bc.GetBlockNumber(blockHash)
 	if number == nil {
 		return nil
@@ -1060,9 +1108,12 @@ func (bc *BlockChain) writeBlock(block *types.Block) {
 // If active caching is enabled, it also writes receipts to the cache.
 func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
 	bc.db.WriteReceipts(hash, number, receipts)
+	for _, receipt := range receipts {
+		bc.recentTxReceipt.Add(receipt.TxHash, receipt)
+	}
 	if common.ActiveCaching {
 		// TODO-Klaytn goroutine for performance
-		bc.recentReceipts.Add(hash, receipts)
+		bc.recentBlockReceipts.Add(hash, receipts)
 	}
 }
 
@@ -1225,7 +1276,7 @@ func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
 		if err := batch.Put(database.TxLookupKey(tx.Hash()), data); err != nil {
 			logger.Crit("Failed to store transaction lookup entry", "err", err)
 		}
-		bc.recentTransactions.Add(tx.Hash(), &TransactionLookup{tx, &entry})
+		bc.recentTxAndLookupInfo.Add(tx.Hash(), &TransactionLookup{tx, &entry})
 	}
 	if err := batch.Write(); err != nil {
 		logger.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
@@ -1234,8 +1285,9 @@ func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
 	return nil
 }
 
-func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
-	value, ok := bc.recentTransactions.Get(hash)
+// GetTxAndLookupInfoInCache retrieves a tx and lookup info for a given transaction hash in cache.
+func (bc *BlockChain) GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	value, ok := bc.recentTxAndLookupInfo.Get(hash)
 	if !ok {
 		cacheGetRecentTransactionsMissMeter.Mark(1)
 		return nil, common.Hash{}, 0, 0
@@ -1243,25 +1295,38 @@ func (bc *BlockChain) GetTransactionInCache(hash common.Hash) (*types.Transactio
 	cacheGetRecentTransactionsHitMeter.Mark(1)
 	txLookup, ok := value.(*TransactionLookup)
 	if !ok {
-		logger.Error("invalid type in recentTransactions. expected=*TransactionLookup", "actual=", reflect.TypeOf(value))
+		logger.Error("invalid type in recentTxAndLookupInfo. expected=*TransactionLookup", "actual=", reflect.TypeOf(value))
 		return nil, common.Hash{}, 0, 0
 	}
 	return txLookup.Tx, txLookup.BlockHash, txLookup.BlockIndex, txLookup.Index
 }
 
-func (bc *BlockChain) GetReceiptsInCache(blockHash common.Hash) types.Receipts {
-	value, ok := bc.recentReceipts.Get(blockHash)
+// GetBlockReceiptsInCache returns receipt of txHash in cache.
+func (bc *BlockChain) GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts {
+	value, ok := bc.recentBlockReceipts.Get(blockHash)
 	if !ok {
-		cacheGetRecentReceiptsMissMeter.Mark(1)
+		cacheGetRecentBlockReceiptsMissMeter.Mark(1)
 		return nil
 	}
-	cacheGetRecentReceiptsHitMeter.Mark(1)
+	cacheGetRecentBlockReceiptsHitMeter.Mark(1)
 	items := value.([]*types.Receipt)
 	receipts := make(types.Receipts, len(items))
 	for i, receipt := range items {
 		receipts[i] = receipt
 	}
 	return receipts
+}
+
+// GetTxReceiptInCache returns receipt of txHash in cache.
+func (bc *BlockChain) GetTxReceiptInCache(txHash common.Hash) *types.Receipt {
+	value, ok := bc.recentTxReceipt.Get(txHash)
+	if !ok {
+		cacheGetRecentTxReceiptMissMeter.Mark(1)
+		return nil
+	}
+	cacheGetRecentTxReceiptHitMeter.Mark(1)
+	receipt := value.(*types.Receipt)
+	return receipt
 }
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical

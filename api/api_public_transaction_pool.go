@@ -114,7 +114,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 // GetTransactionByHash returns the transaction for the given hash
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) *RPCTransaction {
 	// Try to return an already finalized transaction
-	if tx, blockHash, blockNumber, index := s.b.ChainDB().ReadTransaction(hash); tx != nil {
+	if tx, blockHash, blockNumber, index := s.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
 		return newRPCTransaction(tx, blockHash, blockNumber, index)
 	}
 	// No finalized transaction, try to retrieve it from the pool
@@ -130,7 +130,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 	var tx *types.Transaction
 
 	// Retrieve a finalized transaction, or a pooled otherwise
-	if tx, _, _, _ = s.b.ChainDB().ReadTransaction(hash); tx == nil {
+	if tx, _, _, _ = s.b.ChainDB().ReadTxAndLookupInfo(hash); tx == nil {
 		if tx = s.b.GetPoolTransaction(hash); tx == nil {
 			// Transaction not found anywhere, abort
 			return nil, nil
@@ -144,6 +144,9 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 // rpcOutputReceipt converts a receipt to the RPC output with the associated information regarding to the
 // block in which the receipt is included, the transaction that outputs the receipt, and the receipt itself.
 func rpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
+	if tx == nil || receipt == nil {
+		return nil
+	}
 	var signer types.Signer = types.FrontierSigner{}
 	if tx.Protected() {
 		signer = types.NewEIP155Signer(tx.ChainId())
@@ -188,39 +191,12 @@ func rpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	// TODO-Klaytn tunning cache and io
-	tx, blockHash, blockNumber, index := s.b.GetTransactionInCache(hash)
-	if tx == nil {
-		tx, blockHash, blockNumber, index = s.b.ChainDB().ReadTransaction(hash)
-		if tx == nil {
-			return nil, nil
-		}
-	}
-	receipts := s.b.GetReceiptsInCache(blockHash)
-	if receipts == nil {
-		receipts = s.b.GetReceipts(ctx, blockHash)
-	}
-	if len(receipts) <= int(index) {
-		return nil, nil
-	}
-	receipt := receipts[index]
-	fields := rpcOutputReceipt(tx, blockHash, blockNumber, index, receipt)
-	return fields, nil
+	return rpcOutputReceipt(s.b.GetTxLookupInfoAndReceipt(ctx, hash)), nil
 }
 
 // GetTransactionReceiptInCache returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	tx, blockHash, blockNumber, index := s.b.GetTransactionInCache(hash)
-	if tx == nil {
-		return nil, nil
-	}
-	receipts := s.b.GetReceiptsInCache(blockHash)
-	if len(receipts) <= int(index) {
-		return nil, nil
-	}
-	receipt := receipts[index]
-	fields := rpcOutputReceipt(tx, blockHash, blockNumber, index, receipt)
-	return fields, nil
+	return rpcOutputReceipt(s.b.GetTxLookupInfoAndReceiptInCache(hash)), nil
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.

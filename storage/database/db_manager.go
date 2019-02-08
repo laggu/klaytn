@@ -101,7 +101,7 @@ type DBManager interface {
 	PutTxLookupEntriesToBatch(batch Batch, block *types.Block)
 	DeleteTxLookupEntry(hash common.Hash)
 
-	ReadTransaction(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+	ReadTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
 	ReadReceipt(hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
 
@@ -814,9 +814,9 @@ func (dbm *databaseManager) DeleteTxLookupEntry(hash common.Hash) {
 	db.Delete(TxLookupKey(hash))
 }
 
-// ReadTransaction retrieves a specific transaction from the database, along with
+// ReadTxAndLookupInfo retrieves a specific transaction from the database, along with
 // its added positional metadata.
-func (dbm *databaseManager) ReadTransaction(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+func (dbm *databaseManager) ReadTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
 	blockHash, blockNumber, txIndex := dbm.ReadTxLookupEntry(hash)
 	if blockHash == (common.Hash{}) {
 		return nil, common.Hash{}, 0, 0
