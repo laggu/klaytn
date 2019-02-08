@@ -456,7 +456,9 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		signer = types.NewEIP155Signer(tx.ChainId())
 	}
 	from, _ := types.Sender(signer, tx)
-	v, r, s := tx.RawSignatureValues()
+	sigs := tx.RawSignatureValues()
+	// TODO-Klaytn-Multisig: this interpretation will be changed to []*big.Int after multisig implementation is done.
+	v, r, s := sigs[0], sigs[1], sigs[2]
 
 	result := &RPCTransaction{
 		From:     from,

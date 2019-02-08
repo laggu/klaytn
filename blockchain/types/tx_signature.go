@@ -63,16 +63,6 @@ func (t *TxSignature) Protected() bool {
 	return isProtectedV(t.V)
 }
 
-func (t *TxSignature) GetVRS() (*big.Int, *big.Int, *big.Int) {
-	return t.V, t.R, t.S
-}
-
-func (t *TxSignature) SetVRS(v *big.Int, r *big.Int, s *big.Int) {
-	t.V = v
-	t.R = r
-	t.S = s
-}
-
 func (t *TxSignature) RawSignatureValues() []*big.Int {
 	return []*big.Int{t.V, t.R, t.S}
 }

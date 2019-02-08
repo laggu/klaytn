@@ -155,11 +155,9 @@ type TxInternalData interface {
 	GetRecipient() *common.Address
 	GetAmount() *big.Int
 	GetHash() *common.Hash
-	GetVRS() (*big.Int, *big.Int, *big.Int)
 
 	SetHash(*common.Hash)
 	SetSignature(*TxSignature)
-	SetVRS(*big.Int, *big.Int, *big.Int)
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.
 	// Due to multi signatures, it is not good to return three values of `*big.Int`.
@@ -202,7 +200,6 @@ type TxInternalData interface {
 // TxInternalDataFeePayer has functions related to fee delegated transactions.
 type TxInternalDataFeePayer interface {
 	GetFeePayer() common.Address
-	GetFeePayerVRS() (*big.Int, *big.Int, *big.Int)
 
 	// GetFeePayerRawSignatureValues returns fee payer's signatures as a slice of `*big.Int`.
 	// Due to multi signatures, it is not good to return three values of `*big.Int`.

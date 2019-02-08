@@ -176,22 +176,14 @@ func (t *txdata) GetPayload() []byte {
 	return t.Payload
 }
 
-func (t *txdata) GetVRS() (*big.Int, *big.Int, *big.Int) {
-	return t.V, t.R, t.S
-}
-
 func (t *txdata) SetHash(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *txdata) SetVRS(v *big.Int, r *big.Int, s *big.Int) {
-	t.V.Set(v)
-	t.R.Set(r)
-	t.S.Set(s)
-}
-
 func (t *txdata) SetSignature(s *TxSignature) {
-	t.SetVRS(s.V, s.R, s.S)
+	t.V = s.V
+	t.R = s.R
+	t.S = s.S
 }
 
 func (t *txdata) RawSignatureValues() []*big.Int {
@@ -277,7 +269,7 @@ func (t *txdata) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
 
-	v, r, s := t.GetVRS()
+	v, r, s := t.V, t.R, t.S
 	if v != nil {
 		// make a best guess about the signer and use that to derive
 		// the sender.

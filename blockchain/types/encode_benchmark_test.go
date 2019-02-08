@@ -116,7 +116,7 @@ func checkDecodingLegacyTxInterface(b *testing.B, encoded []byte, original TxInt
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(container.V, container.R, container.S)
+	decoded.SetSignature(&TxSignature{container.V, container.R, container.S})
 	return decoded, original.Equal(decoded)
 }
 
@@ -151,7 +151,7 @@ func checkDecodingValueTransferTxInterface(b *testing.B, encoded []byte, origina
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(container.V, container.R, container.S)
+	decoded.SetSignature(&TxSignature{container.V, container.R, container.S})
 	return decoded, original.Equal(decoded)
 }
 
@@ -187,7 +187,7 @@ func checkDecodingChainDataPeggingTxInterface(b *testing.B, encoded []byte, orig
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(container.V, container.R, container.S)
+	decoded.SetSignature(&TxSignature{container.V, container.R, container.S})
 	return decoded, original.Equal(decoded)
 }
 
@@ -229,7 +229,7 @@ func checkDecodingAccountCreationTxInterface(b *testing.B, encoded []byte, origi
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(container.V, container.R, container.S)
+	decoded.SetSignature(&TxSignature{container.V, container.R, container.S})
 	return decoded, original.Equal(decoded)
 }
 
@@ -259,7 +259,8 @@ func checkInterfaceDecoding(b *testing.B, txType TxType, encoded []byte, origina
 func benchmarkEncodeInterfaceAccountCreation(b *testing.B, testTxData *TxInternalDataAccountCreation) {
 	txInterfaces := testTxData.SerializeForSign()
 	txInterfaces = txInterfaces[:len(txInterfaces)-1]
-	v, r, s := testTxData.GetVRS()
+	sigs := testTxData.RawSignatureValues()
+	v, r, s := sigs[0], sigs[1], sigs[2]
 	txInterfaces = append(txInterfaces, v, r, s)
 	var keyEnc []byte
 	txInterfaces = append(txInterfaces, keyEnc)
@@ -287,7 +288,8 @@ func benchmarkEncodeInterface(b *testing.B, testTxData TxInternalData) {
 		return
 	}
 	txInterfaces := testTxData.SerializeForSign()
-	v, r, s := testTxData.GetVRS()
+	sigs := testTxData.RawSignatureValues()
+	v, r, s := sigs[0], sigs[1], sigs[2]
 	txInterfaces = append(txInterfaces, v, r, s)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -335,7 +337,7 @@ func checkDecodingLegacyInterfaceOverFields(b *testing.B, encoded []byte, origin
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(v, r, s)
+	decoded.SetSignature(&TxSignature{v, r, s})
 	return decoded, original.Equal(decoded)
 }
 
@@ -374,7 +376,7 @@ func checkDecodingValueTransferInterfaceOverFields(b *testing.B, encoded []byte,
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(v, r, s)
+	decoded.SetSignature(&TxSignature{v, r, s})
 	return decoded, original.Equal(decoded)
 }
 
@@ -416,7 +418,7 @@ func checkDecodingChainDataPeggingInterfaceOverFields(b *testing.B, encoded []by
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(v, r, s)
+	decoded.SetSignature(&TxSignature{v, r, s})
 	return decoded, original.Equal(decoded)
 }
 
@@ -463,7 +465,7 @@ func checkDecodingAccountCreationInterfaceOverFields(b *testing.B, encoded []byt
 	if err != nil {
 		b.Error(err)
 	}
-	decoded.SetVRS(v, r, s)
+	decoded.SetSignature(&TxSignature{v, r, s})
 	return decoded, original.Equal(decoded)
 }
 
@@ -493,7 +495,8 @@ func checkInterfaceOverFieldsDecoding(b *testing.B, txType TxType, encoded []byt
 func benchmarkEncodeInterfaceOverFieldsAccountCreation(b *testing.B, testTxData *TxInternalDataAccountCreation) {
 	txInterfaces := testTxData.SerializeForSign()
 	txInterfaces = txInterfaces[:len(txInterfaces)-1]
-	v, r, s := testTxData.GetVRS()
+	sigs := testTxData.RawSignatureValues()
+	v, r, s := sigs[0], sigs[1], sigs[2]
 	txInterfaces = append(txInterfaces, v, r, s)
 	var keyEnc []byte
 	txInterfaces = append(txInterfaces, keyEnc)
@@ -523,7 +526,8 @@ func benchmarkEncodeInterfaceOverFields(b *testing.B, testTxData TxInternalData)
 		return
 	}
 	txInterfaces := testTxData.SerializeForSign()
-	v, r, s := testTxData.GetVRS()
+	sigs := testTxData.RawSignatureValues()
+	v, r, s := sigs[0], sigs[1], sigs[2]
 	txInterfaces = append(txInterfaces, v, r, s)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -168,15 +168,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if err := json.Unmarshal(input, serializer); err != nil {
 		return err
 	}
-	var V byte
-	v, r, s := serializer.tx.GetVRS()
-	if isProtectedV(v) {
-		chainID := deriveChainId(v).Uint64()
-		V = byte(v.Uint64() - 35 - 2*chainID)
-	} else {
-		V = byte(v.Uint64() - 27)
-	}
-	if !crypto.ValidateSignatureValues(V, r, s, false) {
+	if !serializer.tx.ValidateSignature() {
 		return ErrInvalidSig
 	}
 	*tx = Transaction{data: serializer.tx}
@@ -342,7 +334,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		return nil, err
 	}
 	cpy := &Transaction{data: tx.data}
-	cpy.data.SetVRS(v, r, s)
+	cpy.data.SetSignature(&TxSignature{v, r, s})
 	return cpy, nil
 }
 
@@ -398,8 +390,8 @@ func (tx *Transaction) SetSignature(signature *TxSignature) {
 	tx.data.SetSignature(signature)
 }
 
-func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
-	return tx.data.GetVRS()
+func (tx *Transaction) RawSignatureValues() []*big.Int {
+	return tx.data.RawSignatureValues()
 }
 
 func (tx *Transaction) String() string {

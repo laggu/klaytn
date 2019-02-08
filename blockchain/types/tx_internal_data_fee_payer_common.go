@@ -60,10 +60,6 @@ func (t *TxInternalDataFeePayerCommon) SetFeePayerSignature(s *TxSignature) {
 	t.TxSignature = s
 }
 
-func (t *TxInternalDataFeePayerCommon) GetFeePayerVRS() (*big.Int, *big.Int, *big.Int) {
-	return t.TxSignature.GetVRS()
-}
-
 func (t *TxInternalDataFeePayerCommon) GetFeePayerRawSignatureValues() []*big.Int {
 	return t.TxSignature.RawSignatureValues()
 }

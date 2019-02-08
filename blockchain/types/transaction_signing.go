@@ -302,10 +302,10 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	txV, txR, txS := tx.data.GetVRS()
-	V := new(big.Int).Sub(txV, s.chainIdMul)
-	V.Sub(V, big8)
-	return recoverPlain(s.Hash(tx), txR, txS, V, true)
+	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+		V := new(big.Int).Sub(v, s.chainIdMul)
+		return V.Sub(V, big8)
+	})
 }
 
 func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
@@ -320,10 +320,10 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return nil, ErrInvalidChainId
 	}
-	txV, txR, txS := tx.data.GetVRS()
-	V := new(big.Int).Sub(txV, s.chainIdMul)
-	V.Sub(V, big8)
-	return recoverPlainPubkey(s.Hash(tx), txR, txS, V, true)
+	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+		V := new(big.Int).Sub(v, s.chainIdMul)
+		return V.Sub(V, big8)
+	})
 }
 
 func (s EIP155Signer) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
@@ -345,10 +345,10 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) 
 		return nil, errNotFeePayer
 	}
 
-	txV, txR, txS := tf.GetFeePayerVRS()
-	V := new(big.Int).Sub(txV, s.chainIdMul)
-	V.Sub(V, big8)
-	return recoverPlainPubkey(s.Hash(tx), txR, txS, V, true)
+	return tf.RecoverFeePayerPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+		V := new(big.Int).Sub(v, s.chainIdMul)
+		return V.Sub(V, big8)
+	})
 }
 
 // WithSignature returns a new transaction with the given signature. This signature
@@ -389,14 +389,17 @@ func (hs HomesteadSigner) SignatureValues(sig []byte) (r, s, v *big.Int, err err
 	return hs.FrontierSigner.SignatureValues(sig)
 }
 
+func identityV(v *big.Int) *big.Int {
+	return v
+}
+
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 	if !tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute Sender!", "tx", string(b))
 	}
 
-	v, r, s := tx.data.GetVRS()
-	return recoverPlain(hs.Hash(tx), r, s, v, true)
+	return tx.data.RecoverAddress(hs.Hash(tx), true, identityV)
 }
 
 func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
@@ -405,8 +408,7 @@ func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error
 		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
 	}
 
-	v, r, s := tx.data.GetVRS()
-	return recoverPlainPubkey(hs.Hash(tx), r, s, v, true)
+	return tx.data.RecoverPubkey(hs.Hash(tx), true, identityV)
 }
 
 func (hs HomesteadSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
@@ -420,8 +422,7 @@ func (hs HomesteadSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, err
 		return nil, errNotFeePayer
 	}
 
-	v, r, s := tf.GetFeePayerVRS()
-	return recoverPlainPubkey(hs.Hash(tx), r, s, v, true)
+	return tf.RecoverFeePayerPubkey(hs.Hash(tx), true, identityV)
 }
 
 type FrontierSigner struct{}
@@ -455,8 +456,7 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 		logger.Warn("No need to execute Sender!", "tx", string(b))
 	}
 
-	v, r, s := tx.data.GetVRS()
-	return recoverPlain(fs.Hash(tx), r, s, v, false)
+	return tx.data.RecoverAddress(fs.Hash(tx), false, identityV)
 }
 
 func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
@@ -465,8 +465,7 @@ func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error)
 		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
 	}
 
-	v, r, s := tx.data.GetVRS()
-	return recoverPlainPubkey(fs.Hash(tx), r, s, v, false)
+	return tx.data.RecoverPubkey(fs.Hash(tx), false, identityV)
 }
 
 func (fs FrontierSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
@@ -480,8 +479,7 @@ func (fs FrontierSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, erro
 		return nil, errNotFeePayer
 	}
 
-	v, r, s := tf.GetFeePayerVRS()
-	return recoverPlainPubkey(fs.Hash(tx), r, s, v, false)
+	return tf.RecoverFeePayerPubkey(fs.Hash(tx), false, identityV)
 }
 
 func recoverPlainCommon(sighash common.Hash, R, S, Vb *big.Int, homestead bool) ([]byte, error) {
