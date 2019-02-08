@@ -40,7 +40,7 @@ const (
 var (
 	hashT                           = reflect.TypeOf(Hash{})
 	addressT                        = reflect.TypeOf(Address{})
-	isAlphaNumericWithFirstAlphabet = regexp.MustCompile(`^[A-Za-z]+[0-9A-Za-z]+$`).MatchString
+	isAlphaNumericWithFirstAlphabet = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z]+$`).MatchString
 )
 
 var (
