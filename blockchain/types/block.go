@@ -155,49 +155,6 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
-// HashNoUncle returns the hash without uncle which will be used commonly before the time when uncle feature is deleted.
-func (h *Header) HashNoUncle() common.Hash {
-	return rlpHash([]interface{}{
-		h.ParentHash,
-		h.Coinbase,
-		h.Rewardbase,
-		h.Root,
-		h.TxHash,
-		h.ReceiptHash,
-		h.Bloom,
-		h.Difficulty,
-		h.Number,
-		h.GasLimit,
-		h.GasUsed,
-		h.Time,
-		h.Extra,
-		h.MixDigest,
-		h.Nonce,
-	})
-}
-
-// HashWithUncle returns the hash which will be used a test for comparing rlpHash and this way.
-func (h *Header) HashWithUncle() common.Hash {
-	return rlpHash([]interface{}{
-		h.ParentHash,
-		h.UncleHash,
-		h.Coinbase,
-		h.Rewardbase,
-		h.Root,
-		h.TxHash,
-		h.ReceiptHash,
-		h.Bloom,
-		h.Difficulty,
-		h.Number,
-		h.GasLimit,
-		h.GasUsed,
-		h.Time,
-		h.Extra,
-		h.MixDigest,
-		h.Nonce,
-	})
-}
-
 // ToHeaderWithoutUncle returns copied HeaderWithoutUncle from the Header.
 // TODO-Klaytn Remove below code after replacement of Header by HeaderWithoutUncle.
 func (h *Header) ToHeaderWithoutUncle() *HeaderWithoutUncle {

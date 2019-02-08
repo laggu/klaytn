@@ -47,13 +47,7 @@ func TestBlockEncoding(t *testing.T) {
 
 	// TODO-Klaytn Update some test code after replacement of Header by HeaderWithoutUncle.
 	{
-		// Comparing the hash from rlpHash() and HashWithUncle()
-		resHashWithUncle := header.HashWithUncle()
-		resRlpHash := rlpHash(header)
-
-		check("rlp", resHashWithUncle, resRlpHash)
-
-		// Comparing the hash from  HeaderWithoutUncle and HashNoUncle()
+		// Comparing the hash from  HeaderWithoutUncle and ToHeaderWithoutUncle()
 		fHeader := HeaderWithoutUncle{
 			header.ParentHash,
 			header.Coinbase,
@@ -74,7 +68,6 @@ func TestBlockEncoding(t *testing.T) {
 
 		resHashWithoutUncle := rlpHash(fHeader)
 		resCopiedBlockHeader := rlpHash(header.ToHeaderWithoutUncle())
-		check("Hash", resHashWithoutUncle, block.header.HashNoUncle())
 		check("Hash", resHashWithoutUncle, resCopiedBlockHeader)
 	}
 
@@ -110,7 +103,7 @@ func TestBlockEncoding(t *testing.T) {
 	}
 }
 
-func BenchmarkBlockEncodingHashWithUncle(b *testing.B) {
+func BenchmarkBlockEncodingHashWithInterface(b *testing.B) {
 	blockEnc := common.FromHex("0xf902d1f902cca033210b99543e4068b9f9825c052ccc493cf52fd3af9c53d0fefa8676e3548432a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347940000000000000000000000000000000000000000940000000000000000000000000000000000000000a0f412a15cb6477bd1b0e48e8fc2d101292a5c1bb9c0b78f7a1129fea4f865fb97a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010185e8d4a50fff80845c540a2bb8c0d8820404846b6c617988676f312e31312e328664617277696e00000000000000f89ed594563e21ec3280cb0025be9ee9d7204443835132e2b841a493a8f4bc723d303cb80320b3f0736026fd22765aa15384c5b21479be48f7c6308de35a493181ac79aec32a19c2e299ea4028b73d1dc0f7fd906bfbf977aecd01f843b84143a272dadc1a9b1ce3744c23e2c2c4ac8f1b3e58911c097bc40e75fb93620c583acbf6546ac02baa0ac752051006eab4cdf310a5b6100027b023b15ac2017ee201a063746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365880000000000000000c0c0")
 	var block Block
 	if err := rlp.DecodeBytes(blockEnc, &block); err != nil {
@@ -119,7 +112,7 @@ func BenchmarkBlockEncodingHashWithUncle(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		block.header.HashWithUncle()
+		block.header.HashNoNonce()
 	}
 }
 
