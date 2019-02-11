@@ -78,6 +78,7 @@ const (
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 	VMLogBaseGas            uint64 = 100    // Base price for a VMLOG operation
 	VMLogPerByteGas         uint64 = 20     // Per-byte price for a VMLOG operation
+	FeePayerGas             uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
 
 	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.

@@ -48,6 +48,9 @@ type PrecompiledContract interface {
 // vmLogAddress is the address of precompiled contract vmLog.
 var vmLogAddress = common.BytesToAddress([]byte{9})
 
+// feePayerAddress is the address of precompiled contract feePayer.
+var feePayerAddress = common.BytesToAddress([]byte{10})
+
 // PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
 // contracts used in the Byzantium release.
 var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
@@ -60,6 +63,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 	vmLogAddress:                     &vmLog{},
+	feePayerAddress:                  &feePayer{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -391,6 +395,26 @@ func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, e
 				"caller", contract.CallerAddress.String(), "msg", string(input))
 		}
 		return nil, nil
+	}
+	return nil, kerrors.ErrOutOfGas
+}
+
+type feePayer struct{}
+
+func (c *feePayer) RequiredGas(input []byte) uint64 {
+	return params.FeePayerGas
+}
+
+func (c *feePayer) Run(input []byte) ([]byte, error) {
+	// Run function should not be called. Instead of this function, RunFeePayerContract should be called.
+	logger.Error("should not be reached here")
+	return nil, nil
+}
+
+func RunFeePayerContract(p PrecompiledContract, input []byte, contract *Contract) ([]byte, error) {
+	gas := p.RequiredGas(input)
+	if contract.UseGas(gas) {
+		return contract.FeePayerAddress.Bytes(), nil
 	}
 	return nil, kerrors.ErrOutOfGas
 }
