@@ -48,9 +48,10 @@ type Contract struct {
 	// CallerAddress is the result of the caller which initialised this
 	// contract. However when the "call method" is delegated this value
 	// needs to be initialised to that of the caller's caller.
-	CallerAddress common.Address
-	caller        ContractRef
-	self          ContractRef
+	CallerAddress   common.Address
+	FeePayerAddress common.Address
+	caller          ContractRef
+	self            ContractRef
 
 	jumpdests destinations // result of JUMPDEST analysis.
 
@@ -69,7 +70,12 @@ type Contract struct {
 
 // NewContract returns a new contract environment for the execution of EVM.
 func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
-	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
+	return NewContractWithFeePayer(caller, caller.Address(), object, value, gas)
+}
+
+// NewContractWithFeePayer returns a new contract environment with the given fee payer for the execution of EVM.
+func NewContractWithFeePayer(caller ContractRef, feePayer common.Address, object ContractRef, value *big.Int, gas uint64) *Contract {
+	c := &Contract{CallerAddress: caller.Address(), FeePayerAddress: feePayer, caller: caller, self: object, Args: nil}
 
 	if parent, ok := caller.(*Contract); ok {
 		// Reuse JUMPDEST analysis from parent context if available.
