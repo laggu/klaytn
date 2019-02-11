@@ -421,8 +421,8 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
 		}),
 		new web3._extend.Method({
-			name: 'activeCaching',
-			call: 'klay_activeCaching',
+			name: 'writeThroughCaching',
+			call: 'klay_writeThroughCaching',
 		}),
 	],
 	properties: [

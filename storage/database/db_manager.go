@@ -752,7 +752,7 @@ func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, recei
 	db := dbm.getDatabase(ReceiptsDB)
 	// When putReceiptsToPutter is called from WriteReceipts, txReceipt is cached.
 	dbm.putReceiptsToPutter(db, hash, number, receipts, true)
-	if common.ActiveCaching {
+	if common.WriteThroughCaching {
 		// TODO-Klaytn goroutine for performance
 		dbm.cm.writeBlockReceiptsCache(hash, receipts)
 	}
@@ -839,7 +839,7 @@ func (dbm *databaseManager) WriteBlock(block *types.Block) {
 	dbm.WriteBody(block.Hash(), block.NumberU64(), block.Body())
 	dbm.WriteHeader(block.Header())
 
-	if common.ActiveCaching {
+	if common.WriteThroughCaching {
 		dbm.cm.writeBodyCache(block.Hash(), block.Body())
 		dbm.cm.blockCache.Add(block.Hash(), block)
 	}

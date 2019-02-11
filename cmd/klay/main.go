@@ -89,7 +89,7 @@ var (
 		utils.CacheTypeFlag,
 		utils.CacheScaleFlag,
 		utils.ChildChainIndexingFlag,
-		utils.ActiveCachingFlag,
+		utils.CacheWriteThroughFlag,
 		utils.ListenPortFlag,
 		utils.SubListenPortFlag,
 		utils.MultiChannelUseFlag,

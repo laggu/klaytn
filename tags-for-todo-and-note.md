@@ -50,3 +50,4 @@ Please note that the tag name always
 | Accounts                                       | Related to Klaytn Accounts.                               |
 | Downloader                                     | Related to Downloader.                                    |
 | NodeCmd                                        | Related to cmd/utils/nodecmd.                             |
+| Storage                                        | Related to storage.                                       |

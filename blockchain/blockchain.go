@@ -1046,13 +1046,13 @@ type TransactionLookup struct {
 }
 
 // writeBlock writes block to persistent database.
-// If active caching is enabled, it also writes block to the cache.
+// If write through caching is enabled, it also writes block to the cache.
 func (bc *BlockChain) writeBlock(block *types.Block) {
 	bc.db.WriteBlock(block)
 }
 
 // writeReceipts writes receipts to persistent database.
-// If active caching is enabled, it also writes receipts to the cache.
+// If write through caching is enabled, it also writes blockReceipts to the cache.
 func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
 	bc.db.WriteReceipts(hash, number, receipts)
 }

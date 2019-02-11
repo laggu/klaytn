@@ -263,9 +263,9 @@ var (
 		Name:  "cache.scale",
 		Usage: "Scale of cache (cache size = preset size * scale of cache(%))",
 	}
-	ActiveCachingFlag = cli.BoolFlag{
-		Name:  "cache.active",
-		Usage: "Enables writing to database and cache at the same time.",
+	CacheWriteThroughFlag = cli.BoolFlag{
+		Name:  "cache.writethrough",
+		Usage: "Enables write-through writing to database and cache for certain types of cache.",
 	}
 	ChildChainIndexingFlag = cli.BoolFlag{
 		Name:  "childchainindexing",
@@ -1105,8 +1105,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
 	}
-	if ctx.GlobalIsSet(ActiveCachingFlag.Name) {
-		common.ActiveCaching = ctx.GlobalBool(ActiveCachingFlag.Name)
+	if ctx.GlobalIsSet(CacheWriteThroughFlag.Name) {
+		common.WriteThroughCaching = ctx.GlobalBool(CacheWriteThroughFlag.Name)
 	}
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
