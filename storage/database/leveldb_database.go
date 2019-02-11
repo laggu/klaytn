@@ -112,8 +112,8 @@ func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*levelDB, error) 
 
 }
 
-func (db *levelDB) Type() string {
-	return LEVELDB
+func (db *levelDB) Type() DBType {
+	return LevelDB
 }
 
 // Path returns the path to the database directory.
@@ -323,7 +323,7 @@ type table struct {
 	prefix string
 }
 
-func (dt *table) Type() string {
+func (dt *table) Type() DBType {
 	return dt.db.Type()
 }
 

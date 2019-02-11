@@ -22,13 +22,31 @@ package database
 
 // Code using batches should try to add this much data to the batch.
 // The value was determined empirically.
-const (
-	LEVELDB = "leveldb"
-	BADGER  = "badger"
-	MEMDB   = "memdb"
 
-	IdealBatchSize = 100 * 1024
+type DBType uint8
+
+const (
+	_ DBType = iota
+	LevelDB
+	BadgerDB
+	MemoryDB
 )
+
+func (dbType DBType) String() string {
+	switch dbType {
+	case LevelDB:
+		return "LevelDB"
+	case BadgerDB:
+		return "BadgerDB"
+	case MemoryDB:
+		return "MemoryDB"
+	default:
+		logger.Error("Undefined DBType entered.", "entered DBType", dbType)
+		return "undefined"
+	}
+}
+
+const IdealBatchSize = 100 * 1024
 
 // Putter wraps the database write operation supported by both batches and regular databases.
 type Putter interface {
@@ -43,7 +61,7 @@ type Database interface {
 	Delete(key []byte) error
 	Close()
 	NewBatch() Batch
-	Type() string
+	Type() DBType
 	Meter(prefix string)
 }
 
@@ -60,14 +78,13 @@ type Batch interface {
 // NewTable returns a Database object that prefixes all keys with a given
 // string.
 func NewTable(db Database, prefix string) Database {
-
 	switch db.Type() {
-	case LEVELDB:
+	case LevelDB:
 		return &table{
 			db:     db,
 			prefix: prefix,
 		}
-	case BADGER:
+	case BadgerDB:
 		return &bdtable{
 			db:     db,
 			prefix: prefix,
@@ -79,11 +96,10 @@ func NewTable(db Database, prefix string) Database {
 
 // NewTableBatch returns a Batch object which prefixes all keys with a given string.
 func NewTableBatch(db Database, prefix string) Batch {
-
 	switch db.Type() {
-	case LEVELDB:
+	case LevelDB:
 		return &tableBatch{db.NewBatch(), prefix}
-	case BADGER:
+	case BadgerDB:
 		return &bdtableBatch{db.NewBatch(), prefix}
 	default:
 		return nil

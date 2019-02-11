@@ -252,7 +252,7 @@ func NewMemoryDBManager() DBManager {
 type DBConfig struct {
 	// General configurations for all types of DB.
 	Dir         string
-	DBType      string
+	DBType      DBType
 	Partitioned bool
 
 	// LevelDB related configurations.
@@ -307,11 +307,11 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 // newDatabase returns Database interface with given DBConfig.
 func newDatabase(dbc *DBConfig) (Database, error) {
 	switch dbc.DBType {
-	case LEVELDB:
+	case LevelDB:
 		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
-	case BADGER:
+	case BadgerDB:
 		return NewBGDatabase(dbc.Dir)
-	case MEMDB:
+	case MemoryDB:
 		return NewMemDatabase(), nil
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")

@@ -39,63 +39,63 @@ import (
 )
 
 func BenchmarkInsertChain_empty_memDB(b *testing.B) {
-	benchInsertChain(b, database.MEMDB, nil)
+	benchInsertChain(b, database.MemoryDB, nil)
 }
 func BenchmarkInsertChain_empty_levelDB(b *testing.B) {
-	benchInsertChain(b, database.LEVELDB, nil)
+	benchInsertChain(b, database.LevelDB, nil)
 }
 func BenchmarkInsertChain_empty_badgerDB(b *testing.B) {
-	benchInsertChain(b, database.BADGER, nil)
+	benchInsertChain(b, database.BadgerDB, nil)
 }
 
 func BenchmarkInsertChain_valueTx_memDB(b *testing.B) {
-	benchInsertChain(b, database.MEMDB, genValueTx(0))
+	benchInsertChain(b, database.MemoryDB, genValueTx(0))
 }
 func BenchmarkInsertChain_valueTx_levelDB(b *testing.B) {
-	benchInsertChain(b, database.LEVELDB, genValueTx(0))
+	benchInsertChain(b, database.LevelDB, genValueTx(0))
 }
 func BenchmarkInsertChain_valueTx_badgerDB(b *testing.B) {
-	benchInsertChain(b, database.BADGER, genValueTx(0))
+	benchInsertChain(b, database.BadgerDB, genValueTx(0))
 }
 
 func BenchmarkInsertChain_valueTx_10kB_memDB(b *testing.B) {
-	benchInsertChain(b, database.MEMDB, genValueTx(100*1024))
+	benchInsertChain(b, database.MemoryDB, genValueTx(100*1024))
 }
 func BenchmarkInsertChain_valueTx_10kB_levelDB(b *testing.B) {
-	benchInsertChain(b, database.LEVELDB, genValueTx(100*1024))
+	benchInsertChain(b, database.LevelDB, genValueTx(100*1024))
 }
 func BenchmarkInsertChain_valueTx_10kB_badgerDB(b *testing.B) {
-	benchInsertChain(b, database.BADGER, genValueTx(100*1024))
+	benchInsertChain(b, database.BadgerDB, genValueTx(100*1024))
 }
 
 func BenchmarkInsertChain_uncles_memDB(b *testing.B) {
-	benchInsertChain(b, database.MEMDB, genUncles)
+	benchInsertChain(b, database.MemoryDB, genUncles)
 }
 func BenchmarkInsertChain_uncles_levelDB(b *testing.B) {
-	benchInsertChain(b, database.LEVELDB, genUncles)
+	benchInsertChain(b, database.LevelDB, genUncles)
 }
 func BenchmarkInsertChain_uncles_badgerDB(b *testing.B) {
-	benchInsertChain(b, database.BADGER, genUncles)
+	benchInsertChain(b, database.BadgerDB, genUncles)
 }
 
 func BenchmarkInsertChain_ring200_memDB(b *testing.B) {
-	benchInsertChain(b, database.MEMDB, genTxRing(200))
+	benchInsertChain(b, database.MemoryDB, genTxRing(200))
 }
 func BenchmarkInsertChain_ring200_levelDB(b *testing.B) {
-	benchInsertChain(b, database.LEVELDB, genTxRing(200))
+	benchInsertChain(b, database.LevelDB, genTxRing(200))
 }
 func BenchmarkInsertChain_ring200_badgerDB(b *testing.B) {
-	benchInsertChain(b, database.BADGER, genTxRing(200))
+	benchInsertChain(b, database.BadgerDB, genTxRing(200))
 }
 
 func BenchmarkInsertChain_ring1000_memDB(b *testing.B) {
-	benchInsertChain(b, database.MEMDB, genTxRing(1000))
+	benchInsertChain(b, database.MemoryDB, genTxRing(1000))
 }
 func BenchmarkInsertChain_ring1000_levelDB(b *testing.B) {
-	benchInsertChain(b, database.LEVELDB, genTxRing(1000))
+	benchInsertChain(b, database.LevelDB, genTxRing(1000))
 }
 func BenchmarkInsertChain_ring1000_badgerDB(b *testing.B) {
-	benchInsertChain(b, database.BADGER, genTxRing(1000))
+	benchInsertChain(b, database.BadgerDB, genTxRing(1000))
 }
 
 var (
@@ -171,12 +171,12 @@ func genUncles(i int, gen *BlockGen) {
 	}
 }
 
-func benchInsertChain(b *testing.B, databaseType string, gen func(int, *BlockGen)) {
+func benchInsertChain(b *testing.B, dbType database.DBType, gen func(int, *BlockGen)) {
 	// 1. Create the database
 	dir := genTempDirForDB(b)
 	defer os.RemoveAll(dir)
 
-	db := genDBManagerForTest(b, dir, databaseType)
+	db := genDBManagerForTest(b, dir, dbType)
 	defer db.Close()
 
 	// 2. Generate a chain of b.N blocks using the supplied block generator function.
@@ -200,90 +200,90 @@ func benchInsertChain(b *testing.B, databaseType string, gen func(int, *BlockGen
 
 // BenchmarkChainRead Series
 func BenchmarkChainRead_header_10k_levelDB(b *testing.B) {
-	benchReadChain(b, false, database.LEVELDB, 10000)
+	benchReadChain(b, false, database.LevelDB, 10000)
 }
 func BenchmarkChainRead_header_10k_badgerDB(b *testing.B) {
-	benchReadChain(b, false, database.BADGER, 10000)
+	benchReadChain(b, false, database.BadgerDB, 10000)
 }
 
 func BenchmarkChainRead_full_10k_levelDB(b *testing.B) {
-	benchReadChain(b, true, database.LEVELDB, 10000)
+	benchReadChain(b, true, database.LevelDB, 10000)
 }
 func BenchmarkChainRead_full_10k_badgerDB(b *testing.B) {
-	benchReadChain(b, true, database.BADGER, 10000)
+	benchReadChain(b, true, database.BadgerDB, 10000)
 }
 
 func BenchmarkChainRead_header_100k_levelDB(b *testing.B) {
-	benchReadChain(b, false, database.LEVELDB, 100000)
+	benchReadChain(b, false, database.LevelDB, 100000)
 }
 func BenchmarkChainRead_header_100k_badgerDB(b *testing.B) {
-	benchReadChain(b, false, database.BADGER, 100000)
+	benchReadChain(b, false, database.BadgerDB, 100000)
 }
 
 func BenchmarkChainRead_full_100k_levelDB(b *testing.B) {
-	benchReadChain(b, true, database.LEVELDB, 100000)
+	benchReadChain(b, true, database.LevelDB, 100000)
 }
 func BenchmarkChainRead_full_100k_badgerDB(b *testing.B) {
-	benchReadChain(b, true, database.BADGER, 100000)
+	benchReadChain(b, true, database.BadgerDB, 100000)
 }
 
 // Disabled because of too long test time
 //func BenchmarkChainRead_header_500k_levelDB(b *testing.B) {
-//	benchReadChain(b, false, database.LEVELDB,500000)
+//	benchReadChain(b, false, database.LevelDB,500000)
 //}
 //func BenchmarkChainRead_header_500k_badgerDB(b *testing.B) {
-//	benchReadChain(b, false, database.BADGER, 500000)
+//	benchReadChain(b, false, database.BadgerDB, 500000)
 //}
 //
 //func BenchmarkChainRead_full_500k_levelDB(b *testing.B) {
-//	benchReadChain(b, true, database.LEVELDB,500000)
+//	benchReadChain(b, true, database.LevelDB,500000)
 //}
 //func BenchmarkChainRead_full_500k_badgerDB(b *testing.B) {
-//	benchReadChain(b, true, database.BADGER,500000)
+//	benchReadChain(b, true, database.BadgerDB,500000)
 //}
 
 // BenchmarkChainWrite Series
 func BenchmarkChainWrite_header_10k_levelDB(b *testing.B) {
-	benchWriteChain(b, false, database.LEVELDB, 10000)
+	benchWriteChain(b, false, database.LevelDB, 10000)
 }
 func BenchmarkChainWrite_header_10k_badgerDB(b *testing.B) {
-	benchWriteChain(b, false, database.BADGER, 10000)
+	benchWriteChain(b, false, database.BadgerDB, 10000)
 }
 
 func BenchmarkChainWrite_full_10k_levelDB(b *testing.B) {
-	benchWriteChain(b, true, database.LEVELDB, 10000)
+	benchWriteChain(b, true, database.LevelDB, 10000)
 }
 func BenchmarkChainWrite_full_10k_badgerDB(b *testing.B) {
-	benchWriteChain(b, true, database.BADGER, 10000)
+	benchWriteChain(b, true, database.BadgerDB, 10000)
 }
 
 func BenchmarkChainWrite_header_100k_levelDB(b *testing.B) {
-	benchWriteChain(b, false, database.LEVELDB, 100000)
+	benchWriteChain(b, false, database.LevelDB, 100000)
 }
 func BenchmarkChainWrite_header_100k_badgerDB(b *testing.B) {
-	benchWriteChain(b, false, database.BADGER, 100000)
+	benchWriteChain(b, false, database.BadgerDB, 100000)
 }
 
 func BenchmarkChainWrite_full_100k_levelDB(b *testing.B) {
-	benchWriteChain(b, true, database.LEVELDB, 100000)
+	benchWriteChain(b, true, database.LevelDB, 100000)
 }
 func BenchmarkChainWrite_full_100k_badgerDB(b *testing.B) {
-	benchWriteChain(b, true, database.BADGER, 100000)
+	benchWriteChain(b, true, database.BadgerDB, 100000)
 }
 
 // Disabled because of too long test time
 //func BenchmarkChainWrite_header_500k_levelDB(b *testing.B) {
-//	benchWriteChain(b, false, database.LEVELDB,500000)
+//	benchWriteChain(b, false, database.LevelDB,500000)
 //}
 //func BenchmarkChainWrite_header_500k_badgerDB(b *testing.B) {
-//	benchWriteChain(b, false, database.BADGER, 500000)
+//	benchWriteChain(b, false, database.BadgerDB, 500000)
 //}
 //
 //func BenchmarkChainWrite_full_500k_levelDB(b *testing.B) {
-//	benchWriteChain(b, true, database.LEVELDB,500000)
+//	benchWriteChain(b, true, database.LevelDB,500000)
 //}
 //func BenchmarkChainWrite_full_500k_badgerDB(b *testing.B) {
-//	benchWriteChain(b, true, database.BADGER,500000)
+//	benchWriteChain(b, true, database.BadgerDB,500000)
 //}
 
 // makeChainForBench writes a given number of headers or empty blocks/receipts
@@ -316,7 +316,7 @@ func makeChainForBench(db database.DBManager, full bool, count uint64) {
 }
 
 // write 'count' blocks to database 'b.N' times
-func benchWriteChain(b *testing.B, full bool, databaseType string, count uint64) {
+func benchWriteChain(b *testing.B, full bool, databaseType database.DBType, count uint64) {
 	for i := 0; i < b.N; i++ {
 		dir := genTempDirForDB(b)
 
@@ -329,7 +329,7 @@ func benchWriteChain(b *testing.B, full bool, databaseType string, count uint64)
 }
 
 // write 'count' blocks to database and then read 'count' blocks
-func benchReadChain(b *testing.B, full bool, databaseType string, count uint64) {
+func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count uint64) {
 	dir := genTempDirForDB(b)
 	defer os.RemoveAll(dir)
 
@@ -372,8 +372,8 @@ func genTempDirForDB(b *testing.B) string {
 }
 
 // genDBManagerForTest returns database.Database according to entered databaseType
-func genDBManagerForTest(b *testing.B, dir string, dbType string) database.DBManager {
-	if dbType == database.MEMDB {
+func genDBManagerForTest(b *testing.B, dir string, dbType database.DBType) database.DBManager {
+	if dbType == database.MemoryDB {
 		db := database.NewMemoryDBManager()
 		return db
 	} else {

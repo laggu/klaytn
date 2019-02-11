@@ -1207,7 +1207,7 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	dbc := &database.DBConfig{Dir: name, DBType: database.LEVELDB,
+	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB,
 		LevelDBCacheSize: ldbCacheSize, LevelDBHandles: numHandles, ChildChainIndexing: childChainIndexing}
 	chainDB, err := stack.OpenDatabase(dbc)
 	if err != nil {

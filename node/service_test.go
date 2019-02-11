@@ -44,7 +44,7 @@ func TestContextDatabases(t *testing.T) {
 	}
 	// Request the opening/creation of a database and ensure it persists to disk
 	ctx := &ServiceContext{config: &Config{Name: "unit-test", DataDir: dir}}
-	dbc := &database.DBConfig{Dir: "persistent", DBType: database.LEVELDB,
+	dbc := &database.DBConfig{Dir: "persistent", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
 	db, err := ctx.OpenDatabase(dbc)
 	if err != nil {
@@ -57,7 +57,7 @@ func TestContextDatabases(t *testing.T) {
 	}
 	// Request th opening/creation of an ephemeral database and ensure it's not persisted
 	ctx = &ServiceContext{config: &Config{DataDir: ""}}
-	dbc = &database.DBConfig{Dir: "ephemeral", DBType: database.LEVELDB,
+	dbc = &database.DBConfig{Dir: "ephemeral", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
 	db, err = ctx.OpenDatabase(dbc)
 	if err != nil {

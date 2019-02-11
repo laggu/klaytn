@@ -71,8 +71,8 @@ func NewBGDatabase(path string) (*badgerDB, error) {
 	}, nil
 }
 
-func (db *badgerDB) Type() string {
-	return BADGER
+func (db *badgerDB) Type() DBType {
+	return BadgerDB
 }
 
 // Path returns the path to the database directory.
@@ -197,7 +197,7 @@ type bdtable struct {
 	prefix string
 }
 
-func (dt *bdtable) Type() string {
+func (dt *bdtable) Type() DBType {
 	return dt.db.Type()
 }
 

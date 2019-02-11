@@ -33,7 +33,7 @@ func TestChildChainData_ReadAndWrite_ChildChainTxHash(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LEVELDB, LevelDBCacheSize: 32, LevelDBHandles: 32, ChildChainIndexing: true}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, LevelDBHandles: 32, ChildChainIndexing: true}
 	dbm, err := NewDBManager(dbc)
 	if err != nil {
 		t.Fatalf("cannot create DBManager: %v", err)
@@ -66,7 +66,7 @@ func TestChildChainData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LEVELDB, LevelDBCacheSize: 32, LevelDBHandles: 32, ChildChainIndexing: false}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, LevelDBHandles: 32, ChildChainIndexing: false}
 	dbm, err := NewDBManager(dbc)
 	if err != nil {
 		t.Fatalf("cannot create DBManager: %v", err)
@@ -96,7 +96,7 @@ func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LEVELDB, LevelDBCacheSize: 32, LevelDBHandles: 32, ChildChainIndexing: false}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, LevelDBHandles: 32, ChildChainIndexing: false}
 	dbm, err := NewDBManager(dbc)
 	if err != nil {
 		t.Fatalf("cannot create DBManager: %v", err)

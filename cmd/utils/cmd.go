@@ -236,7 +236,7 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 
 // TODO-Klaytn Commented out due to mismatched interface.
 //// ImportPreimages imports a batch of exported hash preimages into the database.
-//func ImportPreimages(db *database.levelDB, fn string) error {
+//func ImportPreimages(db *database.LevelDB, fn string) error {
 //	logger.Info("Importing preimages", "file", fn)
 //
 //	// Open the file handle and potentially unwrap the gzip stream
@@ -283,7 +283,7 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 //
 //// ExportPreimages exports all known hash preimages into the specified file,
 //// truncating any data already present in the file.
-//func ExportPreimages(db *database.levelDB, fn string) error {
+//func ExportPreimages(db *database.LevelDB, fn string) error {
 //	logger.Info("Exporting preimages", "file", fn)
 //
 //	// Open the file handle and potentially wrap with a gzip stream

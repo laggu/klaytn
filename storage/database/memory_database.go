@@ -46,8 +46,8 @@ func NewMemDatabaseWithCap(size int) *MemDatabase {
 	}
 }
 
-func (db *MemDatabase) Type() string {
-	return MEMDB
+func (db *MemDatabase) Type() DBType {
+	return MemoryDB
 }
 
 func (db *MemDatabase) Put(key []byte, value []byte) error {
