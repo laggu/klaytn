@@ -98,6 +98,7 @@ const (
 	Work
 	CMDBootnode
 	CMDUtilsNodeCMD
+	CMDKCN
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -153,4 +154,5 @@ var moduleNames = [ModuleNameLen]string{
 	"work",
 	"cmd/bootnode",
 	"cmd/utils/nodecmd",
+	"cmd/kcn",
 }
