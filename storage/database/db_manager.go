@@ -535,6 +535,9 @@ func (dbm *databaseManager) DeleteHeader(hash common.Hash, number uint64) {
 	if err := db.Delete(headerNumberKey(hash)); err != nil {
 		logger.Crit("Failed to delete hash to number mapping", "err", err)
 	}
+
+	// Delete cache at the end of successful delete.
+	dbm.cm.deleteHeaderCache(hash)
 }
 
 // (Block)Body operations.
@@ -648,6 +651,8 @@ func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
 	if err := db.Delete(headerTDKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete block total difficulty", "err", err)
 	}
+	// Delete cache at the end of successful delete.
+	dbm.cm.deleteTdCache(hash)
 }
 
 // Receipts operations.

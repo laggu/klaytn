@@ -193,7 +193,7 @@ func (cm *cacheManager) clearHeaderCache() {
 // readHeaderCache looks for cached header in headerCache.
 // It returns nil if not found.
 func (cm *cacheManager) readHeaderCache(hash common.Hash) *types.Header {
-	if header, ok := cm.headerCache.Get(hash); ok {
+	if header, ok := cm.headerCache.Get(hash); ok && header != nil {
 		cacheGetHeaderHitMeter.Mark(1)
 		return header.(*types.Header)
 	}
@@ -209,6 +209,12 @@ func (cm *cacheManager) writeHeaderCache(hash common.Hash, header *types.Header)
 	cm.headerCache.Add(hash, header)
 }
 
+// deleteHeaderCache writes nil as a value, headerHash as a key, to indicate given
+// headerHash is deleted in headerCache.
+func (cm *cacheManager) deleteHeaderCache(hash common.Hash) {
+	cm.headerCache.Add(hash, nil)
+}
+
 // hasHeaderInCache returns if a cachedHeader exists with given headerHash.
 func (cm *cacheManager) hasHeaderInCache(hash common.Hash) bool {
 	if cm.blockNumberCache.Contains(hash) || cm.headerCache.Contains(hash) {
@@ -220,7 +226,7 @@ func (cm *cacheManager) hasHeaderInCache(hash common.Hash) bool {
 // readTdCache looks for cached total difficulty in tdCache.
 // It returns nil if not found.
 func (cm *cacheManager) readTdCache(hash common.Hash) *big.Int {
-	if cached, ok := cm.tdCache.Get(hash); ok {
+	if cached, ok := cm.tdCache.Get(hash); ok && cached != nil {
 		cacheGetTDHitMeter.Mark(1)
 		return cached.(*big.Int)
 	}
@@ -234,6 +240,12 @@ func (cm *cacheManager) writeTdCache(hash common.Hash, td *big.Int) {
 		return
 	}
 	cm.tdCache.Add(hash, td)
+}
+
+// deleteTdCache writes nil as a value, headerHash as a key, to indicate given
+// headerHash is deleted in TdCache.
+func (cm *cacheManager) deleteTdCache(hash common.Hash) {
+	cm.tdCache.Add(hash, nil)
 }
 
 // readBlockNumberCache looks for cached headerNumber in blockNumberCache.
