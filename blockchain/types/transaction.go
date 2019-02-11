@@ -315,6 +315,9 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		msg.accountKey = ta.Key
 		msg.humanReadable = ta.HumanReadable
 	}
+	if ta, ok := tx.data.(*TxInternalDataAccountUpdate); ok {
+		msg.accountKey = ta.Key
+	}
 
 	gasFrom := uint64(0)
 	msg.from, gasFrom, err = ValidateSender(s, tx, picker)

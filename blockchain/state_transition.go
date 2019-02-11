@@ -250,6 +250,15 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		// error and total time limit reached error.
 		vmerr error
 	)
+	if txType.IsAccountUpdate() {
+		// Update key
+		err := evm.StateDB.UpdateKey(msg.From(), msg.AccountKey())
+		if err != nil {
+			kerr.Err = err
+			kerr.Status = getReceiptStatusFromVMerr(nil)
+			return nil, 0, kerr
+		}
+	}
 	if accountCreation {
 		to := msg.To()
 		if to == nil {

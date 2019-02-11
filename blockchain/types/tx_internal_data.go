@@ -135,6 +135,10 @@ func (t TxType) IsAccountCreation() bool {
 	return t == TxTypeAccountCreation
 }
 
+func (t TxType) IsAccountUpdate() bool {
+	return t == TxTypeAccountUpdate
+}
+
 func (t TxType) IsContractDeploy() bool {
 	return t == TxTypeSmartContractDeploy ||
 		t == TxTypeFeeDelegatedSmartContractDeploy ||
