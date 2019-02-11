@@ -888,7 +888,7 @@ func convertNodeType(nodetype string) p2p.ConnType {
 		return node.CONSENSUSNODE
 	case "rn":
 		return node.RANGERNODE
-	case "bn":
+	case "bn", "pn":
 		return node.BRIDGENODE
 	default:
 		return node.GENERALNODE
