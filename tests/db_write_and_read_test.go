@@ -200,12 +200,7 @@ func testWriteAndReadBody(t *testing.T, dbManager database.DBManager) {
 	dbManager.WriteBody(hash, blockNum, body)
 	assert.Equal(t, body.Transactions[0].Hash(), dbManager.ReadBody(hash, blockNum).Transactions[0].Hash())
 
-	// 3. After overwrite, overwritten body should be returned.
-	prevTx := body.Transactions[0]
-	body.Transactions[0] = generateTx(t)
-	dbManager.WriteBody(hash, blockNum, body)
-	assert.Equal(t, body.Transactions[0].Hash(), dbManager.ReadBody(hash, blockNum).Transactions[0].Hash())
-	assert.NotEqual(t, prevTx.Hash(), dbManager.ReadBody(hash, blockNum).Transactions[0].Hash())
+	// 3. Overwriting body with identical hash and blockNumber is not possible.
 
 	// 4. After delete, nil should be returned.
 	dbManager.DeleteBody(hash, blockNum)

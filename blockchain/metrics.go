@@ -25,29 +25,11 @@ import (
 )
 
 var (
-	cacheGetBlockBodyMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbody/miss", nil)
-	cacheGetBlockBodyHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockbody/hit", nil)
-
-	cacheGetBlockBodyRLPMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/miss", nil)
-	cacheGetBlockBodyRLPHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/hit", nil)
-
-	cacheGetBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/block/miss", nil)
-	cacheGetBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/block/hit", nil)
-
 	cacheGetFutureBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/futureblock/miss", nil)
 	cacheGetFutureBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/futureblock/hit", nil)
 
 	cacheGetBadBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/badblock/miss", nil)
 	cacheGetBadBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/badblock/hit", nil)
-
-	cacheGetRecentTransactionsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/transactions/miss", nil)
-	cacheGetRecentTransactionsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/transactions/hit", nil)
-
-	cacheGetRecentBlockReceiptsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/miss", nil)
-	cacheGetRecentBlockReceiptsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/hit", nil)
-
-	cacheGetRecentTxReceiptMissMeter = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/miss", nil)
-	cacheGetRecentTxReceiptHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/hit", nil)
 
 	headBlockNumberGauge = metrics.NewRegisteredGauge("blockchain/head/blocknumber", nil)
 	blockTxCountsMeter   = metrics.NewRegisteredMeter("blockchain/block/tx/rate", nil)

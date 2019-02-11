@@ -21,30 +21,23 @@ import (
 )
 
 var (
-	//TODO-Klaytn-Storage Below commented out metrics will be enabled in the next PR
-	//cacheGetBlockBodyMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbody/miss", nil)
-	//cacheGetBlockBodyHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockbody/hit", nil)
-	//
-	//cacheGetBlockBodyRLPMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/miss", nil)
-	//cacheGetBlockBodyRLPHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/hit", nil)
-	//
-	//cacheGetBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/block/miss", nil)
-	//cacheGetBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/block/hit", nil)
-	//
-	//cacheGetFutureBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/futureblock/miss", nil)
-	//cacheGetFutureBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/futureblock/hit", nil)
-	//
-	//cacheGetBadBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/badblock/miss", nil)
-	//cacheGetBadBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/badblock/hit", nil)
-	//
-	//cacheGetRecentTransactionsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/transactions/miss", nil)
-	//cacheGetRecentTransactionsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/transactions/hit", nil)
-	//
-	//cacheGetRecentBlockReceiptsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/miss", nil)
-	//cacheGetRecentBlockReceiptsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/hit", nil)
-	//
-	//cacheGetRecentTxReceiptMissMeter = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/miss", nil)
-	//cacheGetRecentTxReceiptHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/hit", nil)
+	cacheGetBlockBodyMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbody/miss", nil)
+	cacheGetBlockBodyHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockbody/hit", nil)
+
+	cacheGetBlockBodyRLPMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/miss", nil)
+	cacheGetBlockBodyRLPHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockbodyrlp/hit", nil)
+
+	cacheGetBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/block/miss", nil)
+	cacheGetBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/block/hit", nil)
+
+	cacheGetRecentTransactionsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/transactions/miss", nil)
+	cacheGetRecentTransactionsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/transactions/hit", nil)
+
+	cacheGetRecentBlockReceiptsMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/miss", nil)
+	cacheGetRecentBlockReceiptsHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blockreceipts/hit", nil)
+
+	cacheGetRecentTxReceiptMissMeter = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/miss", nil)
+	cacheGetRecentTxReceiptHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/txreceipt/hit", nil)
 
 	cacheGetHeaderMissMeter = metrics.NewRegisteredMeter("klay/cache/get/header/miss", nil)
 	cacheGetHeaderHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/header/hit", nil)

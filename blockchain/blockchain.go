@@ -180,9 +180,6 @@ type BlockChain struct {
 	currentFastBlock atomic.Value // Current head of the fast-sync chain (may be above the block chain!)
 
 	stateCache   state.Database // State database to reuse between imports (contains state cache)
-	bodyCache    common.Cache   // Cache for the most recent block bodies
-	bodyRLPCache common.Cache   // Cache for the most recent block bodies in RLP encoded format
-	blockCache   common.Cache   // Cache for the most recent entire blocks
 	futureBlocks *lru.Cache     // future blocks are blocks added for later processing
 
 	quit    chan struct{} // blockchain quit channel
@@ -197,10 +194,6 @@ type BlockChain struct {
 	vmConfig  vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
-
-	recentTxAndLookupInfo common.Cache // recent TX and LookupInfo cache
-	recentBlockReceipts   common.Cache // recent block receipts cache
-	recentTxReceipt       common.Cache // recent TX receipt cache
 
 	parallelWrite bool // TODO-Klaytn-Storage This is a temp variable to control parallel/serial write.
 }
@@ -223,24 +216,17 @@ func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *p
 	badBlocks, _ := lru.New(maxBadBlocks)
 
 	bc := &BlockChain{
-		chainConfig:  chainConfig,
-		trieConfig:   trieConfig,
-		db:           db,
-		triegc:       prque.New(),
-		stateCache:   state.NewDatabase(db),
-		quit:         make(chan struct{}),
-		bodyCache:    newBlockChainCache(bodyCacheIndex, common.DefaultCacheType),
-		bodyRLPCache: newBlockChainCache(bodyRLPCacheIndex, common.DefaultCacheType),
-		blockCache:   newBlockChainCache(blockCacheIndex, common.DefaultCacheType),
-		futureBlocks: futureBlocks,
-		engine:       engine,
-		vmConfig:     vmConfig,
-		badBlocks:    badBlocks,
-		// tx, receipt cache
-		recentTxAndLookupInfo: newBlockChainCache(recentTxAndLookupInfoIndex, common.DefaultCacheType),
-		recentBlockReceipts:   newBlockChainCache(recentBlockReceiptsIndex, common.DefaultCacheType),
-		recentTxReceipt:       newBlockChainCache(recentTxReceiptIndex, common.DefaultCacheType),
-		parallelWrite:         false,
+		chainConfig:   chainConfig,
+		trieConfig:    trieConfig,
+		db:            db,
+		triegc:        prque.New(),
+		stateCache:    state.NewDatabase(db),
+		quit:          make(chan struct{}),
+		futureBlocks:  futureBlocks,
+		engine:        engine,
+		vmConfig:      vmConfig,
+		badBlocks:     badBlocks,
+		parallelWrite: false,
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -357,13 +343,8 @@ func (bc *BlockChain) SetHead(head uint64) error {
 	currentHeader := bc.CurrentHeader()
 
 	// Clear out any stale content from the caches
-	bc.bodyCache.Purge()
-	bc.bodyRLPCache.Purge()
-	bc.blockCache.Purge()
 	bc.futureBlocks.Purge()
-	bc.recentTxAndLookupInfo.Purge()
-	bc.recentBlockReceipts.Purge()
-	bc.recentTxReceipt.Purge()
+	bc.db.ClearBlockChainCache()
 
 	// Rewind the block chain, ensuring we don't end up with a stateless head block
 	if currentBlock := bc.CurrentBlock(); currentBlock != nil && currentHeader.Number.Uint64() < currentBlock.NumberU64() {
@@ -587,54 +568,33 @@ func (bc *BlockChain) Genesis() *types.Block {
 // hash, caching it if found.
 func (bc *BlockChain) GetBody(hash common.Hash) *types.Body {
 	// Short circuit if the body's already in the cache, retrieve otherwise
-	if cached, ok := bc.bodyCache.Get(hash); ok {
-		cacheGetBlockBodyHitMeter.Mark(1)
-		body := cached.(*types.Body)
-		return body
+	if cachedBody := bc.db.ReadBodyInCache(hash); cachedBody != nil {
+		return cachedBody
 	}
-	cacheGetBlockBodyMissMeter.Mark(1)
 	number := bc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
 	}
-	body := bc.db.ReadBody(hash, *number)
-	if body == nil {
-		return nil
-	}
-	// Cache the found body for next time and return
-	bc.bodyCache.Add(hash, body)
-	return body
+	return bc.db.ReadBody(hash, *number)
 }
 
 // GetBodyRLP retrieves a block body in RLP encoding from the database by hash,
 // caching it if found.
 func (bc *BlockChain) GetBodyRLP(hash common.Hash) rlp.RawValue {
 	// Short circuit if the body's already in the cache, retrieve otherwise
-	if cached, ok := bc.bodyRLPCache.Get(hash); ok {
-		cacheGetBlockBodyRLPHitMeter.Mark(1)
-		return cached.(rlp.RawValue)
+	if cachedBodyRLP := bc.db.ReadBodyRLPInCache(hash); cachedBodyRLP != nil {
+		return cachedBodyRLP
 	}
-	cacheGetBlockBodyRLPMissMeter.Mark(1)
 	number := bc.GetBlockNumber(hash)
 	if number == nil {
 		return nil
 	}
-	body := bc.db.ReadBodyRLP(hash, *number)
-	if len(body) == 0 {
-		return nil
-	}
-	// Cache the found body for next time and return
-	bc.bodyRLPCache.Add(hash, body)
-	return body
+	return bc.db.ReadBodyRLP(hash, *number)
 }
 
 // HasBlock checks if a block is fully present in the database or not.
 func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
-
-	if bc.blockCache.Contains(hash) {
-		return true
-	}
-	return bc.db.HasBody(hash, number)
+	return bc.db.HasBlock(hash, number)
 }
 
 // HasState checks if state trie is fully present in the database or not.
@@ -657,19 +617,7 @@ func (bc *BlockChain) HasBlockAndState(hash common.Hash, number uint64) bool {
 // GetBlock retrieves a block from the database by hash and number,
 // caching it if found.
 func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
-	// Short circuit if the block's already in the cache, retrieve otherwise
-	if block, ok := bc.blockCache.Get(hash); ok {
-		cacheGetBlockHitMeter.Mark(1)
-		return block.(*types.Block)
-	}
-	cacheGetBlockMissMeter.Mark(1)
-	block := bc.db.ReadBlock(hash, number)
-	if block == nil {
-		return nil
-	}
-	// Cache the found block for next time and return
-	bc.blockCache.Add(block.Hash(), block)
-	return block
+	return bc.db.ReadBlock(hash, number)
 }
 
 // GetBlockByHash retrieves a block from the database by hash, caching it if found.
@@ -1101,23 +1049,12 @@ type TransactionLookup struct {
 // If active caching is enabled, it also writes block to the cache.
 func (bc *BlockChain) writeBlock(block *types.Block) {
 	bc.db.WriteBlock(block)
-	if common.ActiveCaching {
-		bc.bodyCache.Add(block.Hash(), block.Body())
-		bc.blockCache.Add(block.Hash(), block)
-	}
 }
 
 // writeReceipts writes receipts to persistent database.
 // If active caching is enabled, it also writes receipts to the cache.
 func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
 	bc.db.WriteReceipts(hash, number, receipts)
-	for _, receipt := range receipts {
-		bc.recentTxReceipt.Add(receipt.TxHash, receipt)
-	}
-	if common.ActiveCaching {
-		// TODO-Klaytn goroutine for performance
-		bc.recentBlockReceipts.Add(hash, receipts)
-	}
 }
 
 // writeStateTrie writes state trie to database if possible.
@@ -1382,71 +1319,22 @@ func (bc *BlockChain) finalizeWriteBlockWithState(block *types.Block, status Wri
 }
 
 func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
-	batch := bc.db.NewBatch(database.TxLookUpEntryDB)
-	for i, tx := range block.Transactions() {
-		entry := database.TxLookupEntry{
-			BlockHash:  block.Hash(),
-			BlockIndex: block.NumberU64(),
-			Index:      uint64(i),
-		}
-		data, err := rlp.EncodeToBytes(entry)
-		if err != nil {
-			logger.Crit("Failed to encode transaction lookup entry", "err", err)
-		}
-		if err := batch.Put(database.TxLookupKey(tx.Hash()), data); err != nil {
-			logger.Crit("Failed to store transaction lookup entry", "err", err)
-		}
-		bc.recentTxAndLookupInfo.Add(tx.Hash(), &TransactionLookup{tx, &entry})
-	}
-	if err := batch.Write(); err != nil {
-		logger.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
-		return err
-	}
-	return nil
+	return bc.db.WriteAndCacheTxLookupEntries(block)
 }
 
 // GetTxAndLookupInfoInCache retrieves a tx and lookup info for a given transaction hash in cache.
 func (bc *BlockChain) GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
-	value, ok := bc.recentTxAndLookupInfo.Get(hash)
-	if !ok {
-		cacheGetRecentTransactionsMissMeter.Mark(1)
-		return nil, common.Hash{}, 0, 0
-	}
-	cacheGetRecentTransactionsHitMeter.Mark(1)
-	txLookup, ok := value.(*TransactionLookup)
-	if !ok {
-		logger.Error("invalid type in recentTxAndLookupInfo. expected=*TransactionLookup", "actual=", reflect.TypeOf(value))
-		return nil, common.Hash{}, 0, 0
-	}
-	return txLookup.Tx, txLookup.BlockHash, txLookup.BlockIndex, txLookup.Index
+	return bc.db.ReadTxAndLookupInfoInCache(hash)
 }
 
 // GetBlockReceiptsInCache returns receipt of txHash in cache.
 func (bc *BlockChain) GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts {
-	value, ok := bc.recentBlockReceipts.Get(blockHash)
-	if !ok {
-		cacheGetRecentBlockReceiptsMissMeter.Mark(1)
-		return nil
-	}
-	cacheGetRecentBlockReceiptsHitMeter.Mark(1)
-	items := value.([]*types.Receipt)
-	receipts := make(types.Receipts, len(items))
-	for i, receipt := range items {
-		receipts[i] = receipt
-	}
-	return receipts
+	return bc.db.ReadBlockReceiptsInCache(blockHash)
 }
 
 // GetTxReceiptInCache returns receipt of txHash in cache.
 func (bc *BlockChain) GetTxReceiptInCache(txHash common.Hash) *types.Receipt {
-	value, ok := bc.recentTxReceipt.Get(txHash)
-	if !ok {
-		cacheGetRecentTxReceiptMissMeter.Mark(1)
-		return nil
-	}
-	cacheGetRecentTxReceiptHitMeter.Mark(1)
-	receipt := value.(*types.Receipt)
-	return receipt
+	return bc.db.ReadTxReceiptInCache(txHash)
 }
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical

@@ -63,7 +63,9 @@ type DBManager interface {
 
 	HasBody(hash common.Hash, number uint64) bool
 	ReadBody(hash common.Hash, number uint64) *types.Body
+	ReadBodyInCache(hash common.Hash) *types.Body
 	ReadBodyRLP(hash common.Hash, number uint64) rlp.RawValue
+	ReadBodyRLPInCache(hash common.Hash) rlp.RawValue
 	WriteBody(hash common.Hash, number uint64, body *types.Body)
 	PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body)
 	WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue)
@@ -79,6 +81,7 @@ type DBManager interface {
 	DeleteReceipts(hash common.Hash, number uint64)
 
 	ReadBlock(hash common.Hash, number uint64) *types.Block
+	HasBlock(hash common.Hash, number uint64) bool
 	WriteBlock(block *types.Block)
 	DeleteBlock(hash common.Hash, number uint64)
 
@@ -98,6 +101,7 @@ type DBManager interface {
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
 	WriteTxLookupEntries(block *types.Block)
+	WriteAndCacheTxLookupEntries(block *types.Block) error
 	PutTxLookupEntriesToBatch(batch Batch, block *types.Block)
 	DeleteTxLookupEntry(hash common.Hash)
 
@@ -138,7 +142,11 @@ type DBManager interface {
 	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
 
 	// cacheManager related functions.
-	ClearHeaderCache()
+	ClearHeaderChainCache()
+	ClearBlockChainCache()
+	ReadTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+	ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts
+	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
 }
 
 type DBEntryType uint8
@@ -591,6 +599,10 @@ func (dbm *databaseManager) HasBody(hash common.Hash, number uint64) bool {
 
 // ReadBody retrieves the block body corresponding to the hash.
 func (dbm *databaseManager) ReadBody(hash common.Hash, number uint64) *types.Body {
+	if cachedBody := dbm.cm.readBodyCache(hash); cachedBody != nil {
+		return cachedBody
+	}
+
 	data := dbm.ReadBodyRLP(hash, number)
 	if len(data) == 0 {
 		return nil
@@ -600,14 +612,32 @@ func (dbm *databaseManager) ReadBody(hash common.Hash, number uint64) *types.Bod
 		logger.Error("Invalid block body RLP", "hash", hash, "err", err)
 		return nil
 	}
+
+	// Write to cache at the end of successful write.
+	dbm.cm.writeBodyCache(hash, body)
 	return body
+}
+
+// ReadBodyInCache retrieves the block body in bodyCache.
+// It only searches cache.
+func (dbm *databaseManager) ReadBodyInCache(hash common.Hash) *types.Body {
+	return dbm.cm.readBodyCache(hash)
 }
 
 // ReadBodyRLP retrieves the block body (transactions and uncles) in RLP encoding.
 func (dbm *databaseManager) ReadBodyRLP(hash common.Hash, number uint64) rlp.RawValue {
 	db := dbm.getDatabase(BodyDB)
 	data, _ := db.Get(blockBodyKey(number, hash))
+
+	// Write to cache at the end of successful write.
+	dbm.cm.writeBodyRLPCache(hash, data)
 	return data
+}
+
+// ReadBodyRLPInCache retrieves the block body (transactions and uncles) in RLP encoding
+// in bodyRLPCache. It only searches cache.
+func (dbm *databaseManager) ReadBodyRLPInCache(hash common.Hash) rlp.RawValue {
+	return dbm.cm.readBodyRLPCache(hash)
 }
 
 // WriteBody storea a block body into the database.
@@ -644,6 +674,7 @@ func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 	if err := db.Delete(blockBodyKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete block body", "err", err)
 	}
+	dbm.cm.deleteBodyCache(hash)
 }
 
 // TotalDifficulty operations.
@@ -719,18 +750,28 @@ func (dbm *databaseManager) ReadReceipts(hash common.Hash, number uint64) types.
 // WriteReceipts stores all the transaction receipts belonging to a block.
 func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
 	db := dbm.getDatabase(ReceiptsDB)
-	putReceiptsToPutter(db, hash, number, receipts)
+	// When putReceiptsToPutter is called from WriteReceipts, txReceipt is cached.
+	dbm.putReceiptsToPutter(db, hash, number, receipts, true)
+	if common.ActiveCaching {
+		// TODO-Klaytn goroutine for performance
+		dbm.cm.writeBlockReceiptsCache(hash, receipts)
+	}
 }
 
 func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) {
-	putReceiptsToPutter(batch, hash, number, receipts)
+	// When putReceiptsToPutter is called from PutReceiptsToBatch, txReceipt is not cached.
+	dbm.putReceiptsToPutter(batch, hash, number, receipts, false)
 }
 
-func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipts types.Receipts) {
+func (dbm *databaseManager) putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipts types.Receipts, addToCache bool) {
 	// Convert the receipts into their database form and serialize them
 	storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
 	for i, receipt := range receipts {
 		storageReceipts[i] = (*types.ReceiptForStorage)(receipt)
+
+		if addToCache {
+			dbm.cm.writeTxReceiptCache(receipt.TxHash, receipt)
+		}
 	}
 	bytes, err := rlp.EncodeToBytes(storageReceipts)
 	if err != nil {
@@ -744,9 +785,19 @@ func putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipt
 
 // DeleteReceipts removes all receipt data associated with a block hash.
 func (dbm *databaseManager) DeleteReceipts(hash common.Hash, number uint64) {
+	receipts := dbm.ReadReceipts(hash, number)
+
 	db := dbm.getDatabase(ReceiptsDB)
 	if err := db.Delete(blockReceiptsKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete block receipts", "err", err)
+	}
+
+	// Delete blockReceiptsCache and txReceiptCache.
+	dbm.cm.deleteBlockReceiptsCache(hash)
+	if receipts != nil {
+		for _, receipt := range receipts {
+			dbm.cm.deleteTxReceiptCache(receipt.TxHash)
+		}
 	}
 }
 
@@ -758,6 +809,10 @@ func (dbm *databaseManager) DeleteReceipts(hash common.Hash, number uint64) {
 // Note, due to concurrent download of header and block body the header and thus
 // canonical hash can be stored in the database but the body data not (yet).
 func (dbm *databaseManager) ReadBlock(hash common.Hash, number uint64) *types.Block {
+	if cachedBlock := dbm.cm.readBlockCache(hash); cachedBlock != nil {
+		return cachedBlock
+	}
+
 	header := dbm.ReadHeader(hash, number)
 	if header == nil {
 		return nil
@@ -766,12 +821,28 @@ func (dbm *databaseManager) ReadBlock(hash common.Hash, number uint64) *types.Bl
 	if body == nil {
 		return nil
 	}
-	return types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
+	block := types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
+
+	// Write to cache at the end of successful write.
+	dbm.cm.writeBlockCache(hash, block)
+	return block
+}
+
+func (dbm *databaseManager) HasBlock(hash common.Hash, number uint64) bool {
+	if dbm.cm.hasBlockInCache(hash) {
+		return true
+	}
+	return dbm.HasBody(hash, number)
 }
 
 func (dbm *databaseManager) WriteBlock(block *types.Block) {
 	dbm.WriteBody(block.Hash(), block.NumberU64(), block.Body())
 	dbm.WriteHeader(block.Header())
+
+	if common.ActiveCaching {
+		dbm.cm.writeBodyCache(block.Hash(), block.Body())
+		dbm.cm.blockCache.Add(block.Hash(), block)
+	}
 }
 
 func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {
@@ -779,6 +850,7 @@ func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {
 	dbm.DeleteHeader(hash, number)
 	dbm.DeleteBody(hash, number)
 	dbm.DeleteTd(hash, number)
+	dbm.cm.deleteBlockCache(hash)
 }
 
 // Find Common Ancestor operation
@@ -875,6 +947,32 @@ func (dbm *databaseManager) ReadTxLookupEntry(hash common.Hash) (common.Hash, ui
 func (dbm *databaseManager) WriteTxLookupEntries(block *types.Block) {
 	db := dbm.getDatabase(TxLookUpEntryDB)
 	putTxLookupEntriesToPutter(db, block)
+}
+
+func (dbm *databaseManager) WriteAndCacheTxLookupEntries(block *types.Block) error {
+	batch := dbm.NewBatch(TxLookUpEntryDB)
+	for i, tx := range block.Transactions() {
+		entry := TxLookupEntry{
+			BlockHash:  block.Hash(),
+			BlockIndex: block.NumberU64(),
+			Index:      uint64(i),
+		}
+		data, err := rlp.EncodeToBytes(entry)
+		if err != nil {
+			logger.Crit("Failed to encode transaction lookup entry", "err", err)
+		}
+		if err := batch.Put(TxLookupKey(tx.Hash()), data); err != nil {
+			logger.Crit("Failed to store transaction lookup entry", "err", err)
+		}
+
+		// Write to cache at the end of successful Put.
+		dbm.cm.writeTxAndLookupInfoCache(tx.Hash(), &TransactionLookup{tx, &entry})
+	}
+	if err := batch.Write(); err != nil {
+		logger.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
+		return err
+	}
+	return nil
 }
 
 func (dbm *databaseManager) PutTxLookupEntriesToBatch(batch Batch, block *types.Block) {
@@ -1127,9 +1225,26 @@ func (dbm *databaseManager) ReadReceiptFromParentChain(blockHash common.Hash) *t
 	return (*types.Receipt)(serviceChainTxReceipt)
 }
 
-// ClearHeaderCache calls cacheManager.clearHeaderCache to flushes out caches of headerChain.
-func (dbm *databaseManager) ClearHeaderCache() {
-	dbm.cm.clearHeaderCache()
+// ClearHeaderChainCache calls cacheManager.clearHeaderChainCache to flush out caches of HeaderChain.
+func (dbm *databaseManager) ClearHeaderChainCache() {
+	dbm.cm.clearHeaderChainCache()
+}
+
+// ClearBlockChainCache calls cacheManager.clearBlockChainCache to flush out caches of BlockChain.
+func (dbm *databaseManager) ClearBlockChainCache() {
+	dbm.cm.clearBlockChainCache()
+}
+
+func (dbm *databaseManager) ReadTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	return dbm.cm.readTxAndLookupInfoInCache(hash)
+}
+
+func (dbm *databaseManager) ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts {
+	return dbm.cm.readBlockReceiptsInCache(blockHash)
+}
+
+func (dbm *databaseManager) ReadTxReceiptInCache(txHash common.Hash) *types.Receipt {
+	return dbm.cm.readTxReceiptInCache(txHash)
 }
 
 // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits

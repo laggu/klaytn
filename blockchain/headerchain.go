@@ -377,7 +377,7 @@ func (hc *HeaderChain) SetHead(head uint64, delFn DeleteCallback) {
 		hc.chainDB.DeleteCanonicalHash(i)
 	}
 	// Clear out any stale content from the caches
-	hc.chainDB.ClearHeaderCache()
+	hc.chainDB.ClearHeaderChainCache()
 
 	if hc.CurrentHeader() == nil {
 		hc.currentHeader.Store(hc.genesisHeader)
