@@ -201,6 +201,8 @@ type BlockChain struct {
 	recentTxAndLookupInfo common.Cache // recent TX and LookupInfo cache
 	recentBlockReceipts   common.Cache // recent block receipts cache
 	recentTxReceipt       common.Cache // recent TX receipt cache
+
+	parallelWrite bool // TODO-Klaytn-Storage This is a temp variable to control parallel/serial write.
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -238,6 +240,7 @@ func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *p
 		recentTxAndLookupInfo: newBlockChainCache(recentTxAndLookupInfoIndex, common.DefaultCacheType),
 		recentBlockReceipts:   newBlockChainCache(recentBlockReceiptsIndex, common.DefaultCacheType),
 		recentTxReceipt:       newBlockChainCache(recentTxReceiptIndex, common.DefaultCacheType),
+		parallelWrite:         false,
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -1185,11 +1188,22 @@ func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *t
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+// If BlockChain.parallelWrite is true, it calls writeBlockWithStateParallel.
+// If not, it calls writeBlockWithStateSerial.
+func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteStatus, error) {
+	if bc.parallelWrite {
+		return bc.writeBlockWithStateParallel(block, receipts, state)
+	}
+	return bc.writeBlockWithStateSerial(block, receipts, state)
+}
+
+// writeBlockWithStateSerial writes the block and all associated state to the database in serial manner.
+func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteStatus, error) {
 	start := time.Now()
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
+	var status WriteStatus
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
@@ -1203,7 +1217,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
-	// TODO-Klaytn-Storage parallel write starts from here
 	// Irrelevant of the canonical status, write the block itself to the database
 	bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
 
@@ -1226,7 +1239,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	currentBlock = bc.CurrentBlock()
-
 	reorg := isReorganizationRequired(localTd, externTd, currentBlock, block)
 	if reorg {
 		// Reorganise the chain if the parent is not the head block
@@ -1244,8 +1256,116 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		status = SideStatTy
 	}
-	// TODO-Klaytn-Storage END parallel write ends here
 
+	return bc.finalizeWriteBlockWithState(block, status, start)
+}
+
+// writeBlockWithStateParallel writes the block and all associated state to the database using goroutines.
+func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteStatus, error) {
+	start := time.Now()
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	var status WriteStatus
+	// Calculate the total difficulty of the block
+	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
+	if ptd == nil {
+		return NonStatTy, consensus.ErrUnknownAncestor
+	}
+	// Make sure no inconsistent state is leaked during insertion
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	currentBlock := bc.CurrentBlock()
+	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
+	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+
+	reorg := isReorganizationRequired(localTd, externTd, currentBlock, block)
+	if reorg {
+		// Reorganise the chain if the parent is not the head block
+		if block.ParentHash() != currentBlock.Hash() {
+			if err := bc.reorg(currentBlock, block); err != nil {
+				return NonStatTy, err
+			}
+		}
+	}
+
+	parallelWriteWG := sync.WaitGroup{}
+	parallelWriteErrCh := make(chan error, 2)
+	// Irrelevant of the canonical status, write the block itself to the database
+	// TODO-Klaytn-Storage Implementing worker pool pattern instead of generating goroutines every time.
+	parallelWriteWG.Add(4)
+	go func() {
+		defer parallelWriteWG.Done()
+		bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
+	}()
+
+	// Write other block data.
+	go func() {
+		defer parallelWriteWG.Done()
+		bc.writeBlock(block)
+	}()
+	if bc.GetChildChainIndexingEnabled() {
+		parallelWriteWG.Add(1)
+		go func() {
+			defer parallelWriteWG.Done()
+			bc.writeChildChainTxHashFromBlock(block)
+		}()
+	}
+
+	go func() {
+		defer parallelWriteWG.Done()
+		if err := bc.writeStateTrie(block, state); err != nil {
+			parallelWriteErrCh <- err
+		}
+	}()
+
+	go func() {
+		defer parallelWriteWG.Done()
+		bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
+	}()
+
+	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	//         Later we may be able to refine below code.
+
+	// If the total difficulty is higher than our known, add it to the canonical chain
+	// Second clause in the if statement reduces the vulnerability to selfish mining.
+	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
+	currentBlock = bc.CurrentBlock()
+	if reorg {
+		parallelWriteWG.Add(2)
+
+		go func() {
+			defer parallelWriteWG.Done()
+			// Write the positional metadata for transaction/receipt lookups
+			if err := bc.writeTxLookupEntries(block); err != nil {
+				parallelWriteErrCh <- err
+			}
+		}()
+
+		go func() {
+			defer parallelWriteWG.Done()
+			bc.db.WritePreimages(block.NumberU64(), state.Preimages())
+		}()
+		status = CanonStatTy
+	} else {
+		status = SideStatTy
+	}
+
+	// Wait until all writing goroutines are terminated.
+	parallelWriteWG.Wait()
+	select {
+	case err := <-parallelWriteErrCh:
+		return NonStatTy, err
+	default:
+		break
+	}
+
+	return bc.finalizeWriteBlockWithState(block, status, start)
+}
+
+// finalizeWriteBlockWithState updates metrics and inserts block when status is CanonStatTy.
+func (bc *BlockChain) finalizeWriteBlockWithState(block *types.Block, status WriteStatus, startTime time.Time) (WriteStatus, error) {
 	// Set new head.
 	if status == CanonStatTy {
 		bc.insert(block)
@@ -1255,7 +1375,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 	bc.futureBlocks.Remove(block.Hash())
 
-	elapsed := time.Since(start)
+	elapsed := time.Since(startTime)
 	logger.Debug("WriteBlockWithState", "blockNum", block.Number(), "parentHash", block.Header().ParentHash, "txs", len(block.Transactions()), "elapsed", elapsed)
 
 	return status, nil
