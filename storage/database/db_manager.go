@@ -33,7 +33,7 @@ var logger = log.NewModuleLogger(log.StorageDatabase)
 
 type DBManager interface {
 	Close()
-	NewBatch(dbType DatabaseEntryType) Batch
+	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDatabase
 
 	// from accessors_chain.go
@@ -141,10 +141,10 @@ type DBManager interface {
 	ClearHeaderCache()
 }
 
-type DatabaseEntryType uint8
+type DBEntryType uint8
 
 const (
-	_ DatabaseEntryType = iota
+	_ DBEntryType = iota
 
 	headerDB
 	BodyDB
@@ -165,7 +165,7 @@ const (
 	databaseEntryTypeSize
 )
 
-var databaseDirs = [databaseEntryTypeSize]string{
+var dbDirs = [databaseEntryTypeSize]string{
 	"header",
 	"body",
 	"td",
@@ -176,6 +176,49 @@ var databaseDirs = [databaseEntryTypeSize]string{
 	"misc",
 	"indexsections",
 	"childchain",
+}
+
+// Sum of dbConfigRatio should be 100.
+// Otherwise, logger.Crit will be called at checkDBEntryConfigRatio.
+var dbConfigRatio = [databaseEntryTypeSize]int{
+	6,  // headerDB
+	21, // BodyDB
+	1,  // tdDB
+	21, // ReceiptsDB
+	1,  // istanbulSnapshotDB
+	21, // StateTrieDB
+	21, // TXLookUpEntryDB
+	2,  // MiscDB
+	// indexSectionsDB is not a DB, it is a table.
+	0, // indexSectionsDB
+	6, // childChainDB
+}
+
+// checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
+// If it isn't, logger.Crit is called.
+func checkDBEntryConfigRatio() {
+	entryConfigRatioSum := 0
+	for i := 0; i < int(databaseEntryTypeSize); i++ {
+		entryConfigRatioSum += dbConfigRatio[i]
+	}
+	if entryConfigRatioSum != 100 {
+		logger.Crit("Sum of dbConfigRatio elements should be 100", "actual", entryConfigRatioSum)
+	}
+}
+
+// getDBEntryConfig returns a new DBConfig with original DBConfig and DBEntryType.
+// It adjusts configuration according to the ratio specified in dbConfigRatio and dbDirs.
+func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType) *DBConfig {
+	newDBC := &*originalDBC
+	ratio := dbConfigRatio[i]
+
+	newDBC.LevelDBCacheSize = originalDBC.LevelDBCacheSize * ratio / 100
+	newDBC.LevelDBHandles = originalDBC.LevelDBHandles * ratio / 100
+
+	// Update dir to each Database specific directory.
+	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDirs[i])
+
+	return newDBC
 }
 
 type databaseManager struct {
@@ -236,19 +279,14 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 // Each Database will have its own separated Database.
 func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	dbm := newDatabaseManager(dbc)
-	baseDir := dbc.Dir
-	// TODO-Klaytn-Storage Need to properly assign cacheSize and numHandles to each database
-	dbc.LevelDBCacheSize = dbc.LevelDBCacheSize / int(databaseEntryTypeSize)
-	dbc.LevelDBHandles = dbc.LevelDBHandles / int(databaseEntryTypeSize)
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
 		if i == int(indexSectionsDB) {
 			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
 		} else {
-			// update dbc.Dir with baseDir and each Database specific directory.
-			dbc.Dir = filepath.Join(baseDir, databaseDirs[i])
-			db, err := newDatabase(dbc)
+			newDBC := getDBEntryConfig(dbc, DBEntryType(i))
+			db, err := newDatabase(newDBC)
 			if err != nil {
-				logger.Crit("Failed while generating a partition of LevelDB", "partition", databaseDirs[i], "err", err)
+				logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[i], "err", err)
 			}
 			dbm.dbs[i] = db
 			// TODO-Klaytn-Storage Need to decide how to collect LevelDB statistics
@@ -294,11 +332,12 @@ func NewDBManager(dbc *DBConfig) (DBManager, error) {
 	if !dbc.Partitioned {
 		return singleDatabaseDBManager(dbc)
 	} else {
+		checkDBEntryConfigRatio()
 		return partitionedDatabaseDBManager(dbc)
 	}
 }
 
-func (dbm *databaseManager) NewBatch(dbEntryType DatabaseEntryType) Batch {
+func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 	return dbm.getDatabase(dbEntryType).NewBatch()
 }
 
@@ -315,7 +354,7 @@ func (dbm *databaseManager) GetMemDB() *MemDatabase {
 	return nil
 }
 
-func (dbm *databaseManager) getDatabase(dbEntryType DatabaseEntryType) Database {
+func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 	if dbm.isMemoryDB {
 		return dbm.dbs[0]
 	} else {
