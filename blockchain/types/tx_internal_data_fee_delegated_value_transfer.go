@@ -27,14 +27,14 @@ import (
 // FeePayer should be RLP-encoded after the signature of the sender.
 type TxInternalDataFeeDelegatedValueTransfer struct {
 	*TxInternalDataCommon
-	*TxSignature
+	TxSignatures
 	*TxInternalDataFeePayerCommon
 }
 
 func NewTxInternalDataFeeDelegatedValueTransfer() *TxInternalDataFeeDelegatedValueTransfer {
 	return &TxInternalDataFeeDelegatedValueTransfer{
 		newTxInternalDataCommon(),
-		NewTxSignature(),
+		NewTxSignatures(),
 		newTxInternalDataFeePayerCommon(),
 	}
 }
@@ -50,7 +50,7 @@ func NewTxInternalDataFeeDelegatedValueTransferWithMap(values map[TxValueKeyType
 		return nil, err
 	}
 
-	return &TxInternalDataFeeDelegatedValueTransfer{c, NewTxSignature(), f}, nil
+	return &TxInternalDataFeeDelegatedValueTransfer{c, NewTxSignatures(), f}, nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) Type() TxType {
@@ -64,12 +64,12 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) Equal(b TxInternalData) bool {
 	}
 
 	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
-		t.TxSignature.equal(tb.TxSignature) &&
+		t.TxSignatures.equal(tb.TxSignatures) &&
 		t.TxInternalDataFeePayerCommon.equal(tb.TxInternalDataFeePayerCommon)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) SetSignature(s *TxSignature) {
-	t.TxSignature = s
+func (t *TxInternalDataFeeDelegatedValueTransfer) SetSignature(s TxSignatures) {
+	t.TxSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
@@ -86,7 +86,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
 		tx.Hash(),
 		t.Type().String(),
 		t.TxInternalDataCommon.string(),
-		t.TxSignature.string(),
+		t.TxSignatures.string(),
 		t.TxInternalDataFeePayerCommon.string(),
 		enc)
 }

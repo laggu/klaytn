@@ -37,7 +37,7 @@ type TxInternalDataAccountUpdate struct {
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 
-	*TxSignature
+	TxSignatures
 }
 
 type txInternalDataAccountUpdateSerializable struct {
@@ -47,14 +47,14 @@ type txInternalDataAccountUpdateSerializable struct {
 	From         common.Address
 	Key          []byte
 
-	*TxSignature
+	TxSignatures
 }
 
 func newTxInternalDataAccountUpdate() *TxInternalDataAccountUpdate {
 	return &TxInternalDataAccountUpdate{
-		Price:       new(big.Int),
-		Key:         NewAccountKeyNil(),
-		TxSignature: NewTxSignature(),
+		Price:        new(big.Int),
+		Key:          NewAccountKeyNil(),
+		TxSignatures: NewTxSignatures(),
 	}
 }
 
@@ -108,7 +108,7 @@ func (t *TxInternalDataAccountUpdate) toSerializable() *txInternalDataAccountUpd
 		t.GasLimit,
 		t.From,
 		keyEnc,
-		t.TxSignature,
+		t.TxSignatures,
 	}
 }
 
@@ -117,7 +117,7 @@ func (t *TxInternalDataAccountUpdate) fromSerializable(serialized *txInternalDat
 	t.Price = serialized.Price
 	t.GasLimit = serialized.GasLimit
 	t.From = serialized.From
-	t.TxSignature = serialized.TxSignature
+	t.TxSignatures = serialized.TxSignatures
 
 	serializer := NewAccountKeySerializer()
 	rlp.DecodeBytes(serialized.Key, serializer)
@@ -206,7 +206,7 @@ func (t *TxInternalDataAccountUpdate) Equal(a TxInternalData) bool {
 		t.GasLimit == ta.GasLimit &&
 		t.From == ta.From &&
 		t.Key.Equal(ta.Key) &&
-		t.TxSignature.equal(ta.TxSignature)
+		t.TxSignatures.equal(ta.TxSignatures)
 }
 
 func (t *TxInternalDataAccountUpdate) String() string {
@@ -231,12 +231,12 @@ func (t *TxInternalDataAccountUpdate) String() string {
 		t.Price,
 		t.GasLimit,
 		t.Key.String(),
-		t.TxSignature.string(),
+		t.TxSignatures.string(),
 		enc)
 }
 
-func (t *TxInternalDataAccountUpdate) SetSignature(s *TxSignature) {
-	t.TxSignature = s
+func (t *TxInternalDataAccountUpdate) SetSignature(s TxSignatures) {
+	t.TxSignatures = s
 }
 
 func (t *TxInternalDataAccountUpdate) IntrinsicGas() (uint64, error) {

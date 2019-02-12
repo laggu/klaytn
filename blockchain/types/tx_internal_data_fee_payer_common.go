@@ -27,20 +27,20 @@ import (
 // This structure will be embedded into all fee delegated transaction types.
 type TxInternalDataFeePayerCommon struct {
 	FeePayer common.Address
-	*TxSignature
+	TxSignatures
 }
 
 func newTxInternalDataFeePayerCommon() *TxInternalDataFeePayerCommon {
 	return &TxInternalDataFeePayerCommon{
 		common.Address{},
-		NewTxSignature(),
+		NewTxSignatures(),
 	}
 }
 
 func newTxInternalDataFeePayerCommonWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataFeePayerCommon, error) {
 	t := &TxInternalDataFeePayerCommon{
 		common.Address{},
-		NewTxSignature(),
+		NewTxSignatures(),
 	}
 
 	if v, ok := values[TxValueKeyFeePayer].(common.Address); ok {
@@ -56,16 +56,16 @@ func (t *TxInternalDataFeePayerCommon) GetFeePayer() common.Address {
 	return t.FeePayer
 }
 
-func (t *TxInternalDataFeePayerCommon) SetFeePayerSignature(s *TxSignature) {
-	t.TxSignature = s
+func (t *TxInternalDataFeePayerCommon) SetFeePayerSignature(s TxSignatures) {
+	t.TxSignatures = s
 }
 
 func (t *TxInternalDataFeePayerCommon) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.TxSignature.RawSignatureValues()
+	return t.TxSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeePayerCommon) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error) {
-	return t.TxSignature.RecoverPubkey(txhash, homestead, vfunc)
+func (t *TxInternalDataFeePayerCommon) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
+	return t.TxSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeePayerCommon) serializeForSign() []interface{} {
@@ -74,9 +74,9 @@ func (t *TxInternalDataFeePayerCommon) serializeForSign() []interface{} {
 
 func (t *TxInternalDataFeePayerCommon) equal(tb *TxInternalDataFeePayerCommon) bool {
 	return t.FeePayer == tb.FeePayer &&
-		t.TxSignature.equal(tb.TxSignature)
+		t.TxSignatures.equal(tb.TxSignatures)
 }
 
 func (t *TxInternalDataFeePayerCommon) string() string {
-	return fmt.Sprintf("%s %s", t.FeePayer.String(), t.TxSignature.string())
+	return fmt.Sprintf("%s %s", t.FeePayer.String(), t.TxSignatures.string())
 }

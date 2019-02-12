@@ -55,13 +55,13 @@ func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error)
 	return s.addr, nil
 }
 
-func (s *senderFromServer) SenderPubkey(tx *types.Transaction) (*ecdsa.PublicKey, error) {
+func (s *senderFromServer) SenderPubkey(tx *types.Transaction) ([]*ecdsa.PublicKey, error) {
 	// TODO-Klaytn: need to check this routine is never called or not.
 	// `senderFromServer` is only used in klayclient.go.
 	panic("SenderPubkey should not be called!")
 }
 
-func (s *senderFromServer) SenderFeePayer(tx *types.Transaction) (*ecdsa.PublicKey, error) {
+func (s *senderFromServer) SenderFeePayer(tx *types.Transaction) ([]*ecdsa.PublicKey, error) {
 	// TODO-Klaytn: need to check this routine is never called or not.
 	// `senderFromServer` is only used in klayclient.go.
 	panic("SenderFeePayer should not be called!")

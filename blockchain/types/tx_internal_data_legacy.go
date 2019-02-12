@@ -180,10 +180,14 @@ func (t *txdata) SetHash(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *txdata) SetSignature(s *TxSignature) {
-	t.V = s.V
-	t.R = s.R
-	t.S = s.S
+func (t *txdata) SetSignature(s TxSignatures) {
+	if len(s) != 1 {
+		logger.Crit("LegacyTransaction receives a single signature only!")
+	}
+
+	t.V = s[0].V
+	t.R = s[0].R
+	t.S = s[0].S
 }
 
 func (t *txdata) RawSignatureValues() []*big.Int {
@@ -199,10 +203,15 @@ func (t *txdata) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*
 	return recoverPlain(txhash, t.R, t.S, V, homestead)
 }
 
-func (t *txdata) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error) {
+func (t *txdata) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
 	V := vfunc(t.V)
 
-	return recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
+	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
+	if err != nil {
+		return nil, err
+	}
+
+	return []*ecdsa.PublicKey{pk}, nil
 }
 
 func (t *txdata) IntrinsicGas() (uint64, error) {

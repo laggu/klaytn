@@ -30,7 +30,7 @@ import (
 type TxInternalDataFeeDelegatedValueTransferWithRatio struct {
 	*TxInternalDataCommon
 	FeeRatio uint8
-	*TxSignature
+	TxSignatures
 	*TxInternalDataFeePayerCommon
 }
 
@@ -38,7 +38,7 @@ func NewTxInternalDataFeeDelegatedValueTransferWithRatio() *TxInternalDataFeeDel
 	return &TxInternalDataFeeDelegatedValueTransferWithRatio{
 		newTxInternalDataCommon(),
 		0,
-		NewTxSignature(),
+		NewTxSignatures(),
 		newTxInternalDataFeePayerCommon(),
 	}
 }
@@ -52,7 +52,7 @@ func NewTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values map[TxVal
 	if err != nil {
 		return nil, err
 	}
-	t := &TxInternalDataFeeDelegatedValueTransferWithRatio{c, 0, NewTxSignature(), f}
+	t := &TxInternalDataFeeDelegatedValueTransferWithRatio{c, 0, NewTxSignatures(), f}
 
 	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(uint8); ok {
 		t.FeeRatio = v
@@ -77,12 +77,12 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Equal(a TxInternalDat
 
 	return t.TxInternalDataCommon.equal(ta.TxInternalDataCommon) &&
 		t.FeeRatio == ta.FeeRatio &&
-		t.TxSignature.equal(ta.TxSignature) &&
+		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.TxInternalDataFeePayerCommon.equal(ta.TxInternalDataFeePayerCommon)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SetSignature(s *TxSignature) {
-	t.TxSignature = s
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SetSignature(s TxSignatures) {
+	t.TxSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) String() string {
@@ -100,7 +100,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) String() string {
 		tx.Hash(),
 		t.Type().String(),
 		t.TxInternalDataCommon.string(),
-		t.TxSignature.string(),
+		t.TxSignatures.string(),
 		t.TxInternalDataFeePayerCommon.string(),
 		t.FeeRatio,
 		enc)

@@ -31,7 +31,7 @@ type TxInternalDataSmartContractDeploy struct {
 	Payload       []byte
 	HumanReadable bool
 
-	*TxSignature
+	TxSignatures
 }
 
 func newTxInternalDataSmartContractDeploy() *TxInternalDataSmartContractDeploy {
@@ -39,7 +39,7 @@ func newTxInternalDataSmartContractDeploy() *TxInternalDataSmartContractDeploy {
 		newTxInternalDataCommon(),
 		[]byte{},
 		false,
-		NewTxSignature(),
+		NewTxSignatures(),
 	}
 }
 
@@ -50,7 +50,7 @@ func newTxInternalDataSmartContractDeployWithMap(values map[TxValueKeyType]inter
 	}
 
 	t := &TxInternalDataSmartContractDeploy{
-		c, []byte{}, false, NewTxSignature(),
+		c, []byte{}, false, NewTxSignatures(),
 	}
 
 	if v, ok := values[TxValueKeyData].([]byte); ok {
@@ -85,11 +85,11 @@ func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
 	return t.TxInternalDataCommon.equal(ta.TxInternalDataCommon) &&
 		bytes.Equal(t.Payload, ta.Payload) &&
 		t.HumanReadable == ta.HumanReadable &&
-		t.TxSignature.equal(ta.TxSignature)
+		t.TxSignatures.equal(ta.TxSignatures)
 }
 
-func (t *TxInternalDataSmartContractDeploy) SetSignature(s *TxSignature) {
-	t.TxSignature = s
+func (t *TxInternalDataSmartContractDeploy) SetSignature(s TxSignatures) {
+	t.TxSignatures = s
 }
 
 func (t *TxInternalDataSmartContractDeploy) String() string {
@@ -106,7 +106,7 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 		tx.Hash(),
 		t.Type().String(),
 		t.TxInternalDataCommon.string(),
-		t.TxSignature.string(),
+		t.TxSignatures.string(),
 		common.Bytes2Hex(t.Payload),
 		enc)
 

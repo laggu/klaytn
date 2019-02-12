@@ -337,7 +337,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		return nil, err
 	}
 	cpy := &Transaction{data: tx.data}
-	cpy.data.SetSignature(&TxSignature{v, r, s})
+	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
 	return cpy, nil
 }
 
@@ -352,9 +352,22 @@ func (tx *Transaction) Fee() *big.Int {
 	return new(big.Int).Mul(tx.data.GetPrice(), new(big.Int).SetUint64(tx.data.GetGasLimit()))
 }
 
+// Sign signs the tx with the given signer and private key.
 func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 	h := s.Hash(tx)
 	sig, err := NewTxSignatureWithValues(s, h, prv)
+	if err != nil {
+		return err
+	}
+
+	tx.SetSignature(TxSignatures{sig})
+	return nil
+}
+
+// SignWithKeys signs the tx with the given signer and a slice of private keys.
+func (tx *Transaction) SignWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
+	h := s.Hash(tx)
+	sig, err := NewTxSignaturesWithValues(s, h, prv)
 	if err != nil {
 		return err
 	}
@@ -371,6 +384,21 @@ func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
 		return err
 	}
 
+	if err := tx.SetFeePayerSignature(TxSignatures{sig}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SignFeePayerWithKeys signs the tx with the given signer and a slice of private keys as a fee payer.
+func (tx *Transaction) SignFeePayerWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
+	h := s.Hash(tx)
+	sig, err := NewTxSignaturesWithValues(s, h, prv)
+	if err != nil {
+		return err
+	}
+
 	if err := tx.SetFeePayerSignature(sig); err != nil {
 		return err
 	}
@@ -378,7 +406,7 @@ func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
 	return nil
 }
 
-func (tx *Transaction) SetFeePayerSignature(s *TxSignature) error {
+func (tx *Transaction) SetFeePayerSignature(s TxSignatures) error {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
 		return errNotFeePayer
@@ -389,7 +417,7 @@ func (tx *Transaction) SetFeePayerSignature(s *TxSignature) error {
 	return nil
 }
 
-func (tx *Transaction) SetSignature(signature *TxSignature) {
+func (tx *Transaction) SetSignature(signature TxSignatures) {
 	tx.data.SetSignature(signature)
 }
 

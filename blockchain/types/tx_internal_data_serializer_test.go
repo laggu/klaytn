@@ -21,7 +21,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 )
@@ -75,11 +74,8 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 	enc := newTxInternalDataSerializerWithValues(tx)
 
 	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	h := signer.Hash(&Transaction{data: tx})
-	sig, err := NewTxSignatureWithValues(signer, h, key)
-	assert.Equal(t, nil, err)
-
-	tx.SetSignature(sig)
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
 
 	b, err := rlp.EncodeToBytes(enc)
 	if err != nil {
@@ -101,11 +97,8 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 	enc := newTxInternalDataSerializerWithValues(tx)
 
 	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	h := signer.Hash(&Transaction{data: tx})
-	sig, err := NewTxSignatureWithValues(signer, h, key)
-	assert.Equal(t, nil, err)
-
-	tx.SetSignature(sig)
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
 
 	b, err := json.Marshal(enc)
 	if err != nil {

@@ -32,12 +32,12 @@ type TxInternalDataChainDataAnchoring struct {
 
 	AnchoredData []byte
 
-	*TxSignature
+	TxSignatures
 }
 
 func newTxInternalDataChainDataAnchoring() *TxInternalDataChainDataAnchoring {
 	return &TxInternalDataChainDataAnchoring{newTxInternalDataCommon(), []byte{},
-		NewTxSignature()}
+		NewTxSignatures()}
 }
 
 func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataChainDataAnchoring, error) {
@@ -46,7 +46,7 @@ func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interf
 		return nil, err
 	}
 
-	d := &TxInternalDataChainDataAnchoring{c, []byte{}, NewTxSignature()}
+	d := &TxInternalDataChainDataAnchoring{c, []byte{}, NewTxSignatures()}
 
 	if v, ok := values[TxValueKeyAnchoredData].([]byte); ok {
 		d.AnchoredData = v
@@ -68,7 +68,7 @@ func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
 	}
 
 	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
-		t.TxSignature.equal(tb.TxSignature) &&
+		t.TxSignatures.equal(tb.TxSignatures) &&
 		bytes.Equal(t.AnchoredData, tb.AnchoredData)
 }
 
@@ -88,7 +88,7 @@ func (t *TxInternalDataChainDataAnchoring) String() string {
 		tx.Hash(),
 		t.Type().String(),
 		t.TxInternalDataCommon.string(),
-		t.TxSignature.string(),
+		t.TxSignatures.string(),
 		enc,
 		common.Bytes2Hex(dataAnchoredRLP))
 }
@@ -100,8 +100,8 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
 	return append(infs, t.AnchoredData)
 }
 
-func (t *TxInternalDataChainDataAnchoring) SetSignature(s *TxSignature) {
-	t.TxSignature = s
+func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
+	t.TxSignatures = s
 }
 
 func (t *TxInternalDataChainDataAnchoring) IntrinsicGas() (uint64, error) {

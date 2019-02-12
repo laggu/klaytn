@@ -26,11 +26,11 @@ import (
 // No more attributes required than attributes in TxInternalDataCommon.
 type TxInternalDataValueTransfer struct {
 	*TxInternalDataCommon
-	*TxSignature
+	TxSignatures
 }
 
 func newTxInternalDataValueTransfer() *TxInternalDataValueTransfer {
-	return &TxInternalDataValueTransfer{newTxInternalDataCommon(), NewTxSignature()}
+	return &TxInternalDataValueTransfer{newTxInternalDataCommon(), NewTxSignatures()}
 }
 
 func newTxInternalDataValueTransferWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataValueTransfer, error) {
@@ -38,7 +38,7 @@ func newTxInternalDataValueTransferWithMap(values map[TxValueKeyType]interface{}
 	if err != nil {
 		return nil, err
 	}
-	return &TxInternalDataValueTransfer{c, NewTxSignature()}, nil
+	return &TxInternalDataValueTransfer{c, NewTxSignatures()}, nil
 }
 
 func (t *TxInternalDataValueTransfer) Type() TxType {
@@ -52,7 +52,7 @@ func (t *TxInternalDataValueTransfer) Equal(b TxInternalData) bool {
 	}
 
 	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
-		t.TxSignature.equal(tb.TxSignature)
+		t.TxSignatures.equal(tb.TxSignatures)
 }
 
 func (t *TxInternalDataValueTransfer) String() string {
@@ -68,12 +68,12 @@ func (t *TxInternalDataValueTransfer) String() string {
 		tx.Hash(),
 		t.Type().String(),
 		t.TxInternalDataCommon.string(),
-		t.TxSignature.string(),
+		t.TxSignatures.string(),
 		enc)
 }
 
-func (t *TxInternalDataValueTransfer) SetSignature(s *TxSignature) {
-	t.TxSignature = s
+func (t *TxInternalDataValueTransfer) SetSignature(s TxSignatures) {
+	t.TxSignatures = s
 }
 
 func (t *TxInternalDataValueTransfer) IntrinsicGas() (uint64, error) {

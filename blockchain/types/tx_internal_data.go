@@ -161,7 +161,7 @@ type TxInternalData interface {
 	GetHash() *common.Hash
 
 	SetHash(*common.Hash)
-	SetSignature(*TxSignature)
+	SetSignature(TxSignatures)
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.
 	// Due to multi signatures, it is not good to return three values of `*big.Int`.
@@ -177,7 +177,7 @@ type TxInternalData interface {
 
 	// RecoverPubkey returns a public key derived from txhash and signatures(r, s, v).
 	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
-	RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error)
+	RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)
 
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int
@@ -211,9 +211,9 @@ type TxInternalDataFeePayer interface {
 	GetFeePayerRawSignatureValues() []*big.Int
 
 	// RecoverFeePayerPubkey returns the fee payer's public key derived from txhash and signatures(r, s, v).
-	RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (*ecdsa.PublicKey, error)
+	RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)
 
-	SetFeePayerSignature(s *TxSignature)
+	SetFeePayerSignature(s TxSignatures)
 }
 
 // TxInternalDataFeeRatio has a function `GetFeeRatio`.

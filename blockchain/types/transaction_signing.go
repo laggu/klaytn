@@ -47,7 +47,7 @@ type sigCache struct {
 // the signer used to derive it.
 type sigCachePubkey struct {
 	signer Signer
-	pubkey *ecdsa.PublicKey
+	pubkey []*ecdsa.PublicKey
 }
 
 // TODO-Klaytn-RemoveLater Remove the second parameter blockNumber
@@ -97,13 +97,16 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 
 	// Special treatment for AccountKeyNil.
 	if accKey.Type() == AccountKeyTypeNil {
-		if crypto.PubkeyToAddress(*pubkey) != from {
+		if len(pubkey) != 1 {
+			return common.Address{}, 0, ErrShouldBeSingleSignature
+		}
+		if crypto.PubkeyToAddress(*pubkey[0]) != from {
 			return common.Address{}, 0, ErrInvalidSig
 		}
 		return from, gasKey, nil
 	}
 
-	if !accKey.Equal(NewAccountKeyPublicWithValue(pubkey)) {
+	if !accKey.Validate(pubkey) {
 		return common.Address{}, 0, ErrInvalidSig
 	}
 
@@ -134,13 +137,16 @@ func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (commo
 
 	// Special treatment for AccountKeyNil.
 	if accKey.Type() == AccountKeyTypeNil {
-		if crypto.PubkeyToAddress(*pubkey) != feePayer {
+		if len(pubkey) != 1 {
+			return common.Address{}, 0, ErrShouldBeSingleSignature
+		}
+		if crypto.PubkeyToAddress(*pubkey[0]) != feePayer {
 			return common.Address{}, 0, ErrInvalidSig
 		}
 		return feePayer, gasKey, nil
 	}
 
-	if !accKey.Equal(NewAccountKeyPublicWithValue(pubkey)) {
+	if !accKey.Validate(pubkey) {
 		return common.Address{}, 0, ErrInvalidSig
 	}
 
@@ -178,7 +184,7 @@ func SenderFeePayer(signer Signer, tx *Transaction) (common.Address, error) {
 // SenderFeePayerPubkey may cache the public key, allowing it to be used regardless of
 // signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
-func SenderFeePayerPubkey(signer Signer, tx *Transaction) (*ecdsa.PublicKey, error) {
+func SenderFeePayerPubkey(signer Signer, tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if sc := tx.feePayer.Load(); sc != nil {
 		sigCache := sc.(sigCachePubkey)
 		// If the signer used to derive from in a previous
@@ -231,7 +237,7 @@ func SenderFrom(signer Signer, tx *Transaction) (common.Address, error) {
 // SenderPubkey may cache the public key, allowing it to be used regardless of
 // signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
-func SenderPubkey(signer Signer, tx *Transaction) (*ecdsa.PublicKey, error) {
+func SenderPubkey(signer Signer, tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCachePubkey)
 		// If the signer used to derive from in a previous
@@ -256,9 +262,9 @@ type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
 	// SenderPubkey returns the public key derived from tx signature and txhash.
-	SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error)
+	SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error)
 	// SenderFeePayer returns the public key derived from tx signature and txhash.
-	SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error)
+	SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
 	SignatureValues(sig []byte) (r, s, v *big.Int, err error)
@@ -308,7 +314,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	})
 }
 
-func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
+func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
@@ -326,7 +332,7 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
 	})
 }
 
-func (s EIP155Signer) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
+func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
@@ -402,7 +408,7 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 	return tx.data.RecoverAddress(hs.Hash(tx), true, identityV)
 }
 
-func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
+func (hs HomesteadSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
@@ -411,7 +417,7 @@ func (hs HomesteadSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error
 	return tx.data.RecoverPubkey(hs.Hash(tx), true, identityV)
 }
 
-func (hs HomesteadSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
+func (hs HomesteadSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
@@ -459,7 +465,7 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 	return tx.data.RecoverAddress(fs.Hash(tx), false, identityV)
 }
 
-func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error) {
+func (fs FrontierSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
@@ -468,7 +474,7 @@ func (fs FrontierSigner) SenderPubkey(tx *Transaction) (*ecdsa.PublicKey, error)
 	return tx.data.RecoverPubkey(fs.Hash(tx), false, identityV)
 }
 
-func (fs FrontierSigner) SenderFeePayer(tx *Transaction) (*ecdsa.PublicKey, error) {
+func (fs FrontierSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
