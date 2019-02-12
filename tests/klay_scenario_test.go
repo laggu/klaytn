@@ -50,7 +50,7 @@ var (
 
 type TestAccountType struct {
 	Addr   common.Address
-	Key    *ecdsa.PrivateKey
+	Keys   []*ecdsa.PrivateKey
 	Nonce  uint64
 	AccKey types.AccountKey
 }
@@ -76,7 +76,7 @@ func createAnonymousAccount(prvKeyHex string) (*TestAccountType, error) {
 
 	return &TestAccountType{
 		Addr:   addr,
-		Key:    key,
+		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
 		AccKey: types.NewAccountKeyNil(),
 	}, nil
@@ -91,7 +91,7 @@ func createDecoupledAccount(prvKeyHex string, addr common.Address) (*TestAccount
 
 	return &TestAccountType{
 		Addr:   addr,
-		Key:    key,
+		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
 		AccKey: types.NewAccountKeyPublicWithValue(&key.PublicKey),
 	}, nil
@@ -110,7 +110,7 @@ func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*Te
 
 	return &TestAccountType{
 		Addr:   addr,
-		Key:    key,
+		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
 		AccKey: types.NewAccountKeyPublicWithValue(&key.PublicKey),
 	}, nil
@@ -178,7 +178,7 @@ func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*Te
 //		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 //		assert.Equal(t, nil, err)
 //
-//		err = tx.Sign(signer, reservoir.Key)
+//		err = tx.SignWithKeys(signer, reservoir.Keys)
 //		assert.Equal(t, nil, err)
 //
 //		txs = append(txs, tx)
@@ -230,7 +230,7 @@ func TestTransactionScenario(t *testing.T) {
 	// reservoir account
 	reservoir := &TestAccountType{
 		Addr:  *bcdata.addrs[0],
-		Key:   bcdata.privKeys[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
 		Nonce: uint64(0),
 	}
 
@@ -263,7 +263,7 @@ func TestTransactionScenario(t *testing.T) {
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
-		err := tx.Sign(signer, reservoir.Key)
+		err := tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 		txs = append(txs, tx)
 
@@ -291,7 +291,7 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -347,7 +347,7 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -374,7 +374,7 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -403,7 +403,7 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -430,7 +430,7 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, colin.Key)
+		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -459,14 +459,12 @@ func TestTransactionScenario(t *testing.T) {
 			types.TxValueKeyAnchoredData: dataAnchoredRLP,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
-		if err != nil {
-			t.Fatal(err)
-		}
-		signedTx, err := types.SignTx(tx, signer, reservoir.Key)
-		if err != nil {
-			t.Fatal(err)
-		}
-		txs = append(txs, signedTx)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
@@ -491,10 +489,10 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, colin.Key)
+		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayer(signer, reservoir.Key)
+		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -523,10 +521,10 @@ func TestTransactionScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, colin.Key)
+		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayer(signer, reservoir.Key)
+		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -573,7 +571,7 @@ func TestSmartContractScenario(t *testing.T) {
 	// reservoir account
 	reservoir := &TestAccountType{
 		Addr:  *bcdata.addrs[0],
-		Key:   bcdata.privKeys[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
 		Nonce: uint64(0),
 	}
 
@@ -618,7 +616,7 @@ func TestSmartContractScenario(t *testing.T) {
 	//		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 	//		assert.Equal(t, nil, err)
 	//
-	//		err = tx.Sign(signer, reservoir.Key)
+	//		err = tx.SignWithKeys(signer, reservoir.Keys)
 	//		assert.Equal(t, nil, err)
 	//
 	//		txs = append(txs, tx)
@@ -651,7 +649,7 @@ func TestSmartContractScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -697,7 +695,7 @@ func TestSmartContractScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -732,7 +730,7 @@ func TestSmartContractScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		ret, err := callContract(bcdata, tx)
@@ -786,7 +784,7 @@ func TestAccountUpdate(t *testing.T) {
 	// reservoir account
 	reservoir := &TestAccountType{
 		Addr:  *bcdata.addrs[0],
-		Key:   bcdata.privKeys[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
 		Nonce: uint64(0),
 	}
 
@@ -819,7 +817,7 @@ func TestAccountUpdate(t *testing.T) {
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
-		err := tx.Sign(signer, reservoir.Key)
+		err := tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 		txs = append(txs, tx)
 
@@ -849,7 +847,7 @@ func TestAccountUpdate(t *testing.T) {
 	// tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 	// assert.Equal(t, nil, err)
 	//
-	// err = tx.Sign(signer, anon.Key)
+	// err = tx.SignWithKeys(signer, anon.Keys)
 	// assert.Equal(t, nil, err)
 	//
 	// txs = append(txs, tx)
@@ -881,7 +879,7 @@ func TestAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -911,7 +909,7 @@ func TestAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -921,7 +919,7 @@ func TestAccountUpdate(t *testing.T) {
 		}
 		decoupled.Nonce += 1
 
-		decoupled.Key = newKey
+		decoupled.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
 	// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
@@ -940,7 +938,7 @@ func TestAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -969,7 +967,7 @@ func TestAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, reservoir.Key)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -999,7 +997,7 @@ func TestAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, colin.Key)
+		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -1009,7 +1007,7 @@ func TestAccountUpdate(t *testing.T) {
 		}
 		colin.Nonce += 1
 
-		colin.Key = newKey
+		colin.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
 	// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
@@ -1028,7 +1026,7 @@ func TestAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, colin.Key)
+		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -1085,7 +1083,7 @@ func TestValidateSender(t *testing.T) {
 		tx := types.NewTransaction(anon.Nonce,
 			decoupled.Addr, amount, gasLimit, gasPrice, []byte{})
 
-		err := tx.Sign(signer, anon.Key)
+		err := tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
@@ -1105,7 +1103,7 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, anon.Key)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
@@ -1125,7 +1123,7 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
@@ -1148,7 +1146,7 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
@@ -1170,7 +1168,7 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
@@ -1187,8 +1185,6 @@ func TestValidateSender(t *testing.T) {
 		scData := types.NewChainHashes(dummyBlock)
 		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
 
-		var txs types.Transactions
-
 		amount := new(big.Int).SetUint64(0)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:        anon.Nonce,
@@ -1203,13 +1199,10 @@ func TestValidateSender(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedTx, err := types.SignTx(tx, signer, anon.Key)
-		if err != nil {
-			t.Fatal(err)
-		}
-		txs = append(txs, signedTx)
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, signedTx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -1227,10 +1220,10 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayer(signer, anon.Key)
+		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
@@ -1256,10 +1249,10 @@ func TestValidateSender(t *testing.T) {
 		})
 		assert.Equal(t, nil, err)
 
-		err = tx.Sign(signer, decoupled.Key)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayer(signer, anon.Key)
+		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
