@@ -886,7 +886,7 @@ func convertNodeType(nodetype string) p2p.ConnType {
 	switch strings.ToLower(nodetype) {
 	case "cn":
 		return node.CONSENSUSNODE
-	case "rn":
+	case "rn", "en":
 		return node.RANGERNODE
 	case "bn", "pn":
 		return node.BRIDGENODE
