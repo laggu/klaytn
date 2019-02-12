@@ -666,6 +666,9 @@ func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rl
 	if err := db.Put(blockBodyKey(number, hash), rlp); err != nil {
 		logger.Crit("Failed to store block body", "err", err)
 	}
+	if common.WriteThroughCaching {
+		dbm.cm.writeBodyRLPCache(hash, rlp)
+	}
 }
 
 // DeleteBody removes all block body data associated with a hash.
