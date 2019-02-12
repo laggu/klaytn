@@ -144,13 +144,18 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	_, size, _ := s.Kind()
 	serializer := newTxInternalDataSerializer()
-	err := s.Decode(serializer)
-	tx.data = serializer.tx
-	if err == nil {
-		tx.size.Store(common.StorageSize(rlp.ListSize(size)))
+	if err := s.Decode(serializer); err != nil {
+		return err
 	}
 
-	return err
+	if !serializer.tx.ValidateSignature() {
+		return ErrInvalidSig
+	}
+
+	tx.data = serializer.tx
+	tx.size.Store(common.StorageSize(rlp.ListSize(size)))
+
+	return nil
 }
 
 // MarshalJSON encodes the web3 RPC transaction format.
