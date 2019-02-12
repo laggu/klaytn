@@ -1067,6 +1067,171 @@ func TestAccountUpdate(t *testing.T) {
 	}
 }
 
+// TestMultisigScenario tests a test case for a multi-sig accounts.
+// 1. Create an account multisig using TxTypeAccountCreation.
+// 2. Transfer (multisig -> reservoir) using TxTypeValueTransfer.
+// 3. Transfer (multisig -> reservoir) using TxTypeValueTransfer with only two keys.
+// 4. FAILED-CASE: Transfer (multisig -> reservoir) using TxTypeValueTransfer with only one key.
+func TestMultisigScenario(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// multi-sig account
+	multisig, err := createMultisigAccount(uint(2),
+		[]uint{1, 1, 1},
+		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
+		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("multisigAddr = ", multisig.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// 1. Create an account multisig using TxTypeAccountCreation.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            multisig.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    multisig.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 2. Transfer (multisig -> reservoir) using TxTypeValueTransfer.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(1000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    multisig.Nonce,
+			types.TxValueKeyFrom:     multisig.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, multisig.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		multisig.Nonce += 1
+	}
+
+	// 3. Transfer (multisig -> reservoir) using TxTypeValueTransfer with only two keys.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(1000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    multisig.Nonce,
+			types.TxValueKeyFrom:     multisig.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, multisig.Keys[0:2])
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		multisig.Nonce += 1
+	}
+
+	// 4. FAILED-CASE: Transfer (multisig -> reservoir) using TxTypeValueTransfer with only one key.
+	//{
+	// var txs types.Transactions
+	//
+	// amount := new(big.Int).SetUint64(1000)
+	// values := map[types.TxValueKeyType]interface{}{
+	//   types.TxValueKeyNonce:    multisig.Nonce,
+	//   types.TxValueKeyFrom:     multisig.Addr,
+	//   types.TxValueKeyTo:       reservoir.Addr,
+	//   types.TxValueKeyAmount:   amount,
+	//   types.TxValueKeyGasLimit: gasLimit,
+	//   types.TxValueKeyGasPrice: gasPrice,
+	// }
+	// tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+	// assert.Equal(t, nil, err)
+	//
+	// err = tx.SignWithKeys(signer, multisig.Keys[:1])
+	// assert.Equal(t, nil, err)
+	//
+	// txs = append(txs, tx)
+	//
+	// if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+	//   t.Fatal(err)
+	// }
+	// multisig.Nonce += 1
+	//}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
 // TestValidateSender tests ValidateSender with all transaction types.
 func TestValidateSender(t *testing.T) {
 	// anonymous account
