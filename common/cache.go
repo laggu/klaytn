@@ -31,10 +31,22 @@ const (
 	ARCChacheType
 )
 
-//it's set by flag
+const (
+	cacheLevelSaving  = "saving"
+	cacheLevelNormal  = "normal"
+	cacheLevelExtreme = "extreme"
+)
+const (
+	defaultMemorySize      = 16
+	defaultCacheUsageLevel = cacheLevelSaving
+)
+
+// it's set by flag.
 var DefaultCacheType CacheType = LRUCacheType
-var CacheScale int = 100 // cache size = preset size * CacheScale / 100
 var logger = log.NewModuleLogger(log.Common)
+var CacheScale int = 100               // cache size = preset size * CacheScale / 100.
+var ScaleByCacheUsageLevel int = 100   // Scale according to cache usage level (%).
+var MemorySize int = defaultMemorySize // RAM size (GB). // TODO-Klaytn The memory size will be automatically calculated and set later without receiving the settings.
 
 // TODO-Klaytn-Storage WriteThroughCaching flag should be stored to proper place.
 var WriteThroughCaching = false
@@ -168,7 +180,7 @@ type LRUConfig struct {
 }
 
 func (c LRUConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * CacheScale / 100
+	cacheSize := c.CacheSize * calculateScale()
 	lru, err := lru.New(cacheSize)
 	return &lruCache{lru}, err
 }
@@ -186,7 +198,7 @@ const (
 //If key is not common.Hash nor common.Address then you should set numShard 1 or use LRU Cache
 //The number of shards is readjusted to meet the minimum shard size.
 func (c LRUShardConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * CacheScale / 100
+	cacheSize := c.CacheSize * calculateScale()
 
 	if cacheSize < 1 {
 		logger.Error("Negative Cache Size Error", "Cache Size", cacheSize, "Cache Scale", CacheScale)
@@ -216,7 +228,7 @@ func (c LRUShardConfig) newCache() (Cache, error) {
 }
 
 func (c LRUShardConfig) makeNumShardsPowOf2() int {
-	maxNumShards := float64(c.CacheSize * CacheScale / 100 / minShardSize)
+	maxNumShards := float64(c.CacheSize * calculateScale() / minShardSize)
 	numShards := int(math.Min(float64(c.NumShards), maxNumShards))
 
 	preNumShards := minNumShards
@@ -235,4 +247,24 @@ type ARCConfig struct {
 func (c ARCConfig) newCache() (Cache, error) {
 	arc, err := lru.NewARC(c.CacheSize)
 	return &arcCache{arc}, err
+}
+
+// calculateScale returns the scale of the cache.
+// The scale of the cache is obtained by multiplying (MemorySize / defaultMemorySize), (scaleByCacheUsageLevel / 100), and (CacheScale / 100).
+func calculateScale() int {
+	return CacheScale * ScaleByCacheUsageLevel * MemorySize / defaultMemorySize / 100 / 100
+}
+
+// GetScaleByCacheUsageLevel returns the scale according to cacheUsageLevel
+func GetScaleByCacheUsageLevel(cacheUsageLevelFlag string) (int, error) {
+	switch cacheUsageLevelFlag {
+	case cacheLevelSaving:
+		return 100, nil
+	case cacheLevelNormal:
+		return 200, nil
+	case cacheLevelExtreme:
+		return 300, nil
+	default:
+		return 100, errors.New("input string does not meet the given format. expected: ('saving', 'normal, 'extreme')")
+	}
 }

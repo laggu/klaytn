@@ -263,6 +263,14 @@ var (
 		Name:  "cache.scale",
 		Usage: "Scale of cache (cache size = preset size * scale of cache(%))",
 	}
+	CacheUsageLevelFlag = cli.StringFlag{
+		Name:  "cache.level",
+		Usage: "Set the cache usage level ('saving', 'normal', 'extreme')",
+	}
+	MemorySizeFlag = cli.IntFlag{
+		Name:  "cache.memory",
+		Usage: "Set the physical RAM size (GB, Default: 16GB)",
+	}
 	CacheWriteThroughFlag = cli.BoolFlag{
 		Name:  "cache.writethrough",
 		Usage: "Enables write-through writing to database and cache for certain types of cache.",
@@ -1104,6 +1112,17 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
+	}
+	if ctx.GlobalIsSet(CacheUsageLevelFlag.Name) {
+		cacheUsageLevelFlag := ctx.GlobalString(CacheUsageLevelFlag.Name)
+		if scaleByCacheUsageLevel, err := common.GetScaleByCacheUsageLevel(cacheUsageLevelFlag); err != nil {
+			logger.Crit("Incorrect CacheUsageLevelFlag value", "error", err, "CacheUsageLevelFlag", cacheUsageLevelFlag)
+		} else {
+			common.ScaleByCacheUsageLevel = scaleByCacheUsageLevel
+		}
+	}
+	if ctx.GlobalIsSet(MemorySizeFlag.Name) {
+		common.MemorySize = ctx.GlobalInt(MemorySizeFlag.Name)
 	}
 	if ctx.GlobalIsSet(CacheWriteThroughFlag.Name) {
 		common.WriteThroughCaching = ctx.GlobalBool(CacheWriteThroughFlag.Name)

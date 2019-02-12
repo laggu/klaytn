@@ -103,6 +103,8 @@ var (
 		utils.TrieBlockIntervalFlag,
 		utils.CacheTypeFlag,
 		utils.CacheScaleFlag,
+		utils.CacheUsageLevelFlag,
+		utils.MemorySizeFlag,
 		utils.ChildChainIndexingFlag,
 		utils.CacheWriteThroughFlag,
 		utils.ListenPortFlag,
