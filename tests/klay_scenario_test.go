@@ -97,6 +97,7 @@ func createDecoupledAccount(prvKeyHex string, addr common.Address) (*TestAccount
 	}, nil
 }
 
+// createHumanReadableAccount creates an account whose address is a human-readable address.
 func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*TestAccountType, error) {
 	key, err := crypto.HexToECDSA(prvKeyHex)
 	if err != nil {
@@ -113,6 +114,30 @@ func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*Te
 		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
 		AccKey: types.NewAccountKeyPublicWithValue(&key.PublicKey),
+	}, nil
+}
+
+// createMultisigAccount creates an account having multiple of keys.
+func createMultisigAccount(threshold uint, weights []uint, prvKeys []string, addr common.Address) (*TestAccountType, error) {
+	var err error
+
+	keys := make([]*ecdsa.PrivateKey, len(prvKeys))
+	weightedKeys := make(types.WeightedPublicKeys, len(prvKeys))
+
+	for i, p := range prvKeys {
+		keys[i], err = crypto.HexToECDSA(p)
+		if err != nil {
+			return nil, err
+		}
+
+		weightedKeys[i] = types.NewWeightedPublicKey(weights[i], (*types.PublicKeySerializable)(&keys[i].PublicKey))
+	}
+
+	return &TestAccountType{
+		Addr:   addr,
+		Keys:   keys,
+		Nonce:  uint64(0),
+		AccKey: types.NewAccountKeyWeightedMultiSigWithValues(threshold, weightedKeys),
 	}, nil
 }
 
