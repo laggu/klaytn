@@ -195,7 +195,7 @@ type BlockChain struct {
 
 	badBlocks *lru.Cache // Bad block cache
 
-	parallelWrite bool // TODO-Klaytn-Storage This is a temp variable to control parallel/serial write.
+	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -216,17 +216,17 @@ func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *p
 	badBlocks, _ := lru.New(maxBadBlocks)
 
 	bc := &BlockChain{
-		chainConfig:   chainConfig,
-		trieConfig:    trieConfig,
-		db:            db,
-		triegc:        prque.New(),
-		stateCache:    state.NewDatabase(db),
-		quit:          make(chan struct{}),
-		futureBlocks:  futureBlocks,
-		engine:        engine,
-		vmConfig:      vmConfig,
-		badBlocks:     badBlocks,
-		parallelWrite: false,
+		chainConfig:     chainConfig,
+		trieConfig:      trieConfig,
+		db:              db,
+		triegc:          prque.New(),
+		stateCache:      state.NewDatabase(db),
+		quit:            make(chan struct{}),
+		futureBlocks:    futureBlocks,
+		engine:          engine,
+		vmConfig:        vmConfig,
+		badBlocks:       badBlocks,
+		parallelDBWrite: db.IsParallelDBWrite(),
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -1125,10 +1125,10 @@ func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *t
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
-// If BlockChain.parallelWrite is true, it calls writeBlockWithStateParallel.
+// If BlockChain.parallelDBWrite is true, it calls writeBlockWithStateParallel.
 // If not, it calls writeBlockWithStateSerial.
 func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteStatus, error) {
-	if bc.parallelWrite {
+	if bc.parallelDBWrite {
 		return bc.writeBlockWithStateParallel(block, receipts, state)
 	}
 	return bc.writeBlockWithStateSerial(block, receipts, state)
@@ -1227,38 +1227,38 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 		}
 	}
 
-	parallelWriteWG := sync.WaitGroup{}
-	parallelWriteErrCh := make(chan error, 2)
+	parallelDBWriteWG := sync.WaitGroup{}
+	parallelDBWriteErrCh := make(chan error, 2)
 	// Irrelevant of the canonical status, write the block itself to the database
 	// TODO-Klaytn-Storage Implementing worker pool pattern instead of generating goroutines every time.
-	parallelWriteWG.Add(4)
+	parallelDBWriteWG.Add(4)
 	go func() {
-		defer parallelWriteWG.Done()
+		defer parallelDBWriteWG.Done()
 		bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
 	}()
 
 	// Write other block data.
 	go func() {
-		defer parallelWriteWG.Done()
+		defer parallelDBWriteWG.Done()
 		bc.writeBlock(block)
 	}()
 	if bc.GetChildChainIndexingEnabled() {
-		parallelWriteWG.Add(1)
+		parallelDBWriteWG.Add(1)
 		go func() {
-			defer parallelWriteWG.Done()
+			defer parallelDBWriteWG.Done()
 			bc.writeChildChainTxHashFromBlock(block)
 		}()
 	}
 
 	go func() {
-		defer parallelWriteWG.Done()
+		defer parallelDBWriteWG.Done()
 		if err := bc.writeStateTrie(block, state); err != nil {
-			parallelWriteErrCh <- err
+			parallelDBWriteErrCh <- err
 		}
 	}()
 
 	go func() {
-		defer parallelWriteWG.Done()
+		defer parallelDBWriteWG.Done()
 		bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
 	}()
 
@@ -1270,18 +1270,18 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	currentBlock = bc.CurrentBlock()
 	if reorg {
-		parallelWriteWG.Add(2)
+		parallelDBWriteWG.Add(2)
 
 		go func() {
-			defer parallelWriteWG.Done()
+			defer parallelDBWriteWG.Done()
 			// Write the positional metadata for transaction/receipt lookups
 			if err := bc.writeTxLookupEntries(block); err != nil {
-				parallelWriteErrCh <- err
+				parallelDBWriteErrCh <- err
 			}
 		}()
 
 		go func() {
-			defer parallelWriteWG.Done()
+			defer parallelDBWriteWG.Done()
 			bc.db.WritePreimages(block.NumberU64(), state.Preimages())
 		}()
 		status = CanonStatTy
@@ -1290,9 +1290,9 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	}
 
 	// Wait until all writing goroutines are terminated.
-	parallelWriteWG.Wait()
+	parallelDBWriteWG.Wait()
 	select {
-	case err := <-parallelWriteErrCh:
+	case err := <-parallelDBWriteErrCh:
 		return NonStatTy, err
 	default:
 		break
@@ -2008,4 +2008,10 @@ func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
 		}
 		bc.WriteChildChainTxHash(chainHashes.BlockHash, tx.Hash())
 	}
+}
+
+// IsParallelDBWrite returns if parallel write is enabled or not.
+// If enabled, data written in WriteBlockWithState is being written in parallel manner.
+func (bc *BlockChain) IsParallelDBWrite() bool {
+	return bc.parallelDBWrite
 }

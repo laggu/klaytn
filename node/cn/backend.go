@@ -233,8 +233,8 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.DBManager, error) {
-	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, LevelDBCacheSize: config.LevelDBCacheSize,
-		LevelDBHandles: config.DatabaseHandles, ChildChainIndexing: config.ChildChainIndexing}
+	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: config.ParallelDBWrite,
+		LevelDBCacheSize: config.LevelDBCacheSize, LevelDBHandles: config.DatabaseHandles, ChildChainIndexing: config.ChildChainIndexing}
 	db, err := ctx.OpenDatabase(dbc)
 	if err != nil {
 		return nil, err

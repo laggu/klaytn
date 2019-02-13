@@ -240,6 +240,10 @@ var (
 		Usage: "Size of in-memory cache in LevelDB (MiB)",
 		Value: 768,
 	}
+	DBParallelDBWriteFlag = cli.BoolFlag{
+		Name:  "db.parallel-write",
+		Usage: "Determines parallel or serial writes of block data to database",
+	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
@@ -1139,6 +1143,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(ChildChainIndexingFlag.Name) {
 		cfg.ChildChainIndexing = true
 	}
+	if ctx.GlobalIsSet(DBParallelDBWriteFlag.Name) {
+		cfg.ParallelDBWrite = ctx.GlobalBool(DBParallelDBWriteFlag.Name)
+	}
 
 	// TODO-Klaytn-RemoveLater Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*
@@ -1215,6 +1222,14 @@ func SetupNetwork(ctx *cli.Context) {
 	params.TargetGasLimit = ctx.GlobalUint64(TargetGasLimitFlag.Name)
 }
 
+func IsParallelDBWrite(ctx *cli.Context) bool {
+	pw := false
+	if ctx.GlobalIsSet(DBParallelDBWriteFlag.Name) {
+		pw = ctx.GlobalBool(DBParallelDBWriteFlag.Name)
+	}
+	return pw
+}
+
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	var (
@@ -1226,7 +1241,8 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB,
+	pw := IsParallelDBWrite(ctx)
+	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: pw,
 		LevelDBCacheSize: ldbCacheSize, LevelDBHandles: numHandles, ChildChainIndexing: childChainIndexing}
 	chainDB, err := stack.OpenDatabase(dbc)
 	if err != nil {

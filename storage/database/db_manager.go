@@ -32,6 +32,8 @@ import (
 var logger = log.NewModuleLogger(log.StorageDatabase)
 
 type DBManager interface {
+	IsParallelDBWrite() bool
+
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDatabase
@@ -234,6 +236,7 @@ type databaseManager struct {
 	cm                 *cacheManager
 	isMemoryDB         bool
 	childChainIndexing bool
+	parallelDBWrite    bool
 }
 
 func NewMemoryDBManager() DBManager {
@@ -251,9 +254,10 @@ func NewMemoryDBManager() DBManager {
 // DBConfig handles database related configurations.
 type DBConfig struct {
 	// General configurations for all types of DB.
-	Dir         string
-	DBType      DBType
-	Partitioned bool
+	Dir             string
+	DBType          DBType
+	Partitioned     bool
+	ParallelDBWrite bool
 
 	// LevelDB related configurations.
 	LevelDBCacheSize int
@@ -326,6 +330,7 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 		cm:                 newCacheManager(),
 		isMemoryDB:         false,
 		childChainIndexing: dbc.ChildChainIndexing,
+		parallelDBWrite:    dbc.ParallelDBWrite,
 	}
 }
 
@@ -343,6 +348,10 @@ func NewDBManager(dbc *DBConfig) (DBManager, error) {
 		checkDBEntryConfigRatio()
 		return partitionedDatabaseDBManager(dbc)
 	}
+}
+
+func (dbm *databaseManager) IsParallelDBWrite() bool {
+	return dbm.parallelDBWrite
 }
 
 func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {

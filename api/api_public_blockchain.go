@@ -174,6 +174,12 @@ func (s *PublicBlockChainAPI) WriteThroughCaching() bool {
 	return common.WriteThroughCaching
 }
 
+// IsParallelDBWrite returns if parallel write is enabled or not.
+// If enabled, data written in WriteBlockWithState is being written in parallel manner.
+func (s *PublicBlockChainAPI) IsParallelDBWrite() bool {
+	return s.b.IsParallelDBWrite()
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From     common.Address  `json:"from"`

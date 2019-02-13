@@ -280,3 +280,7 @@ func (b *CNAPIBackend) GetAnchoringPeriod() uint64 {
 func (b *CNAPIBackend) GetSentChainTxsLimit() uint64 {
 	return b.cn.protocolManager.GetSentChainTxsLimit()
 }
+
+func (b *CNAPIBackend) IsParallelDBWrite() bool {
+	return b.cn.BlockChain().IsParallelDBWrite()
+}

@@ -83,6 +83,7 @@ var (
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.LevelDBCacheSizeFlag,
+		utils.DBParallelDBWriteFlag,
 		utils.TrieMemoryCacheSizeFlag,
 		utils.TrieCacheGenFlag,
 		utils.TrieBlockIntervalFlag,

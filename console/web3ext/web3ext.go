@@ -424,6 +424,10 @@ web3._extend({
 			name: 'writeThroughCaching',
 			call: 'klay_writeThroughCaching',
 		}),
+		new web3._extend.Method({
+			name: 'isParallelDBWrite',
+			call: 'klay_isParallelDBWrite',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
