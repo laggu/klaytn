@@ -49,7 +49,7 @@ func newAccountCommon() *AccountCommon {
 		nonce:         0,
 		balance:       new(big.Int),
 		humanReadable: false,
-		key:           types.NewAccountKeyNil(),
+		key:           types.NewAccountKeyLegacy(),
 	}
 }
 

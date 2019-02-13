@@ -311,7 +311,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		checkNonce:    true,
 		intrinsicGas:  intrinsicGas,
 		txType:        tx.data.Type(),
-		accountKey:    NewAccountKeyNil(),
+		accountKey:    NewAccountKeyLegacy(),
 		humanReadable: false,
 		feeRatio:      tx.FeeRatio(),
 	}
@@ -622,7 +622,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		checkNonce:    checkNonce,
 		intrinsicGas:  intrinsicGas,
 		txType:        TxTypeLegacyTransaction,
-		accountKey:    NewAccountKeyNil(),
+		accountKey:    NewAccountKeyLegacy(),
 		humanReadable: false,
 	}
 }

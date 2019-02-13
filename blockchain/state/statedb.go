@@ -261,7 +261,7 @@ func (self *StateDB) GetKey(addr common.Address) types.AccountKey {
 	if stateObject != nil {
 		return stateObject.GetKey()
 	}
-	return types.NewAccountKeyNil()
+	return types.NewAccountKeyLegacy()
 }
 
 // Database retrieves the low level database supporting the lower level trie ops.

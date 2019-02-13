@@ -28,7 +28,7 @@ func TestAccountKeySerialization(t *testing.T) {
 		Name string
 		k    AccountKey
 	}{
-		{"Nil", genAccountKeyNil()},
+		{"Legacy", genAccountKeyLegacy()},
 		{"Public", genAccountKeyPublic()},
 		{"Fail", genAccountKeyFail()},
 		{"WeightedMultisig", genAccountKeyWeightedMultisig()},
@@ -103,8 +103,8 @@ func testAccountKeyJSON(t *testing.T, k AccountKey) {
 	}
 }
 
-func genAccountKeyNil() AccountKey {
-	return NewAccountKeyNil()
+func genAccountKeyLegacy() AccountKey {
+	return NewAccountKeyLegacy()
 }
 
 func genAccountKeyPublic() AccountKey {

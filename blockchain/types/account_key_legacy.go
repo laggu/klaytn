@@ -22,34 +22,34 @@ import (
 	"runtime"
 )
 
-// AccountKeyNil is used for accounts having no keys.
+// AccountKeyLegacy is used for accounts having no keys.
 // In this case, verifying the signature of a transaction uses the legacy scheme.
 // 1. The address comes from the public key which is derived from txhash and the tx's signature.
 // 2. Check that the address is the same as the address in the tx.
 // It is implemented to support LegacyAccounts.
-type AccountKeyNil struct {
+type AccountKeyLegacy struct {
 }
 
-var globalNilKey = &AccountKeyNil{}
+var globalLegacyKey = &AccountKeyLegacy{}
 
-// NewAccountKeyNil creates a new AccountKeyNil object.
-// Since AccountKeyNil has no attributes, use one global variable for all allocations.
-func NewAccountKeyNil() *AccountKeyNil { return globalNilKey }
+// NewAccountKeyLegacy creates a new AccountKeyLegacy object.
+// Since AccountKeyLegacy has no attributes, use one global variable for all allocations.
+func NewAccountKeyLegacy() *AccountKeyLegacy { return globalLegacyKey }
 
-func (a *AccountKeyNil) Type() AccountKeyType {
-	return AccountKeyTypeNil
+func (a *AccountKeyLegacy) Type() AccountKeyType {
+	return AccountKeyTypeLegacy
 }
 
-func (a *AccountKeyNil) Equal(b AccountKey) bool {
-	if _, ok := b.(*AccountKeyNil); !ok {
+func (a *AccountKeyLegacy) Equal(b AccountKey) bool {
+	if _, ok := b.(*AccountKeyLegacy); !ok {
 		return false
 	}
 
-	// if b is a type of AccountKeyNil, just return true.
+	// if b is a type of AccountKeyLegacy, just return true.
 	return true
 }
 
-func (a *AccountKeyNil) Validate(pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyLegacy) Validate(pubkeys []*ecdsa.PublicKey) bool {
 	buf := make([]byte, 1024*1024)
 	buf = buf[:runtime.Stack(buf, false)]
 	logger.Error("this function should not be called. Validation should be done at ValidateSender or ValidateFeePayer",
@@ -57,20 +57,20 @@ func (a *AccountKeyNil) Validate(pubkeys []*ecdsa.PublicKey) bool {
 	return false
 }
 
-func (a *AccountKeyNil) String() string {
-	return "AccountKeyNil"
+func (a *AccountKeyLegacy) String() string {
+	return "AccountKeyLegacy"
 }
 
-func (a *AccountKeyNil) DeepCopy() AccountKey {
-	return NewAccountKeyNil()
+func (a *AccountKeyLegacy) DeepCopy() AccountKey {
+	return NewAccountKeyLegacy()
 }
 
-func (a *AccountKeyNil) AccountCreationGas() (uint64, error) {
+func (a *AccountKeyLegacy) AccountCreationGas() (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxAccountCreationGasDefault, nil
 }
 
-func (a *AccountKeyNil) SigValidationGas() (uint64, error) {
+func (a *AccountKeyLegacy) SigValidationGas() (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxValidationGasDefault, nil
 }

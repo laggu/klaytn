@@ -422,7 +422,7 @@ func (m callmsg) Gas() uint64                  { return m.CallMsg.Gas }
 func (m callmsg) Value() *big.Int              { return m.CallMsg.Value }
 func (m callmsg) Data() []byte                 { return m.CallMsg.Data }
 func (m callmsg) TxType() types.TxType         { return types.TxTypeLegacyTransaction }
-func (m callmsg) AccountKey() types.AccountKey { return types.NewAccountKeyNil() }
+func (m callmsg) AccountKey() types.AccountKey { return types.NewAccountKeyLegacy() }
 func (m callmsg) HumanReadable() bool          { return false }
 
 func (m callmsg) IntrinsicGas() (uint64, error) {

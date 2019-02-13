@@ -53,7 +53,7 @@ type txInternalDataAccountUpdateSerializable struct {
 func newTxInternalDataAccountUpdate() *TxInternalDataAccountUpdate {
 	return &TxInternalDataAccountUpdate{
 		Price:        new(big.Int),
-		Key:          NewAccountKeyNil(),
+		Key:          NewAccountKeyLegacy(),
 		TxSignatures: NewTxSignatures(),
 	}
 }

@@ -24,7 +24,9 @@ import (
 type AccountKeyType uint
 
 const (
+	// TODO-Klaytn-Accounts: implement account key nil.
 	AccountKeyTypeNil AccountKeyType = iota
+	AccountKeyTypeLegacy
 	AccountKeyTypePublic
 	AccountKeyTypeFail
 	AccountKeyTypeWeightedMultiSig
@@ -36,7 +38,7 @@ var (
 
 // AccountKey is a common interface to exploit polymorphism of AccountKey.
 // Currently, we have the following implementations of AccountKey:
-// - AccountKeyNil
+// - AccountKeyLegacy
 // - AccountKeyPublic
 type AccountKey interface {
 	// Type returns the type of account key.
@@ -63,8 +65,8 @@ type AccountKey interface {
 
 func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 	switch t {
-	case AccountKeyTypeNil:
-		return NewAccountKeyNil(), nil
+	case AccountKeyTypeLegacy:
+		return NewAccountKeyLegacy(), nil
 	case AccountKeyTypePublic:
 		return NewAccountKeyPublic(), nil
 	case AccountKeyTypeFail:

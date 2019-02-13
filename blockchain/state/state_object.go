@@ -202,7 +202,7 @@ func (self *stateObject) GetKey() types.AccountKey {
 	if ak, ok := self.account.(AccountWithKey); ok {
 		return ak.GetKey()
 	}
-	return types.NewAccountKeyNil()
+	return types.NewAccountKeyLegacy()
 }
 
 func (self *stateObject) setState(key, value common.Hash) {

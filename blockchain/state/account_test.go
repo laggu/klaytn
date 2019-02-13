@@ -133,7 +133,7 @@ func genEOA() *ExternallyOwnedAccount {
 		AccountValueKeyNonce:         rand.Uint64(),
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    types.NewAccountKeyNil(),
+		AccountValueKeyAccountKey:    types.NewAccountKeyLegacy(),
 	})
 }
 
@@ -162,7 +162,7 @@ func genSCA() *SmartContractAccount {
 		AccountValueKeyNonce:         rand.Uint64(),
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    types.NewAccountKeyNil(),
+		AccountValueKeyAccountKey:    types.NewAccountKeyLegacy(),
 		AccountValueKeyStorageRoot:   genRandomHash(),
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
 	})

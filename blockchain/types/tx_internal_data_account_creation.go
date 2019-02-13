@@ -48,7 +48,7 @@ func newTxInternalDataAccountCreation() *TxInternalDataAccountCreation {
 	return &TxInternalDataAccountCreation{
 		TxInternalDataCommon: newTxInternalDataCommon(),
 		HumanReadable:        false,
-		Key:                  NewAccountKeyNil(),
+		Key:                  NewAccountKeyLegacy(),
 		TxSignatures:         NewTxSignatures(),
 	}
 }
@@ -59,7 +59,7 @@ func newTxInternalDataAccountCreationWithMap(values map[TxValueKeyType]interface
 		return nil, err
 	}
 
-	b := &TxInternalDataAccountCreation{c, false, NewAccountKeyNil(), NewTxSignatures()}
+	b := &TxInternalDataAccountCreation{c, false, NewAccountKeyLegacy(), NewTxSignatures()}
 
 	if v, ok := values[TxValueKeyHumanReadable].(bool); ok {
 		b.HumanReadable = v

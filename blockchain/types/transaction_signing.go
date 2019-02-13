@@ -95,8 +95,8 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 		return common.Address{}, 0, err
 	}
 
-	// Special treatment for AccountKeyNil.
-	if accKey.Type() == AccountKeyTypeNil {
+	// Special treatment for AccountKeyLegacy.
+	if accKey.Type() == AccountKeyTypeLegacy {
 		if len(pubkey) != 1 {
 			return common.Address{}, 0, ErrShouldBeSingleSignature
 		}
@@ -135,8 +135,8 @@ func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (commo
 		return common.Address{}, 0, err
 	}
 
-	// Special treatment for AccountKeyNil.
-	if accKey.Type() == AccountKeyTypeNil {
+	// Special treatment for AccountKeyLegacy.
+	if accKey.Type() == AccountKeyTypeLegacy {
 		if len(pubkey) != 1 {
 			return common.Address{}, 0, ErrShouldBeSingleSignature
 		}

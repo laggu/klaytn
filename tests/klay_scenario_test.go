@@ -78,7 +78,7 @@ func createAnonymousAccount(prvKeyHex string) (*TestAccountType, error) {
 		Addr:   addr,
 		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
-		AccKey: types.NewAccountKeyNil(),
+		AccKey: types.NewAccountKeyLegacy(),
 	}, nil
 }
 
