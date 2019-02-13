@@ -33,6 +33,7 @@ import (
 	"github.com/ground-x/klaytn/common/fdlimit"
 	"github.com/ground-x/klaytn/consensus/gxhash"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
@@ -127,7 +128,7 @@ var (
 	defaultSyncMode = cn.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
+		Usage: `Blockchain sync mode ("fast" or "full")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
@@ -1075,6 +1076,12 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	setTxPool(ctx, &cfg.TxPool)
 	setGxhash(ctx, cfg)
 
+	switch {
+	case ctx.GlobalIsSet(SyncModeFlag.Name):
+		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
+	case ctx.GlobalBool(FastSyncFlag.Name):
+		cfg.SyncMode = downloader.FastSync
+	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)
 	}
