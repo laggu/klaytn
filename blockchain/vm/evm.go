@@ -452,7 +452,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	return ret, contractAddr, contract.Gas, err
 }
 
-// Create creates a new contract using code as deployment code with given address and humanReadable.
+// CreateWithAddress creates a new contract using code as deployment code with given address and humanReadable.
 func (evm *EVM) CreateWithAddress(caller ContractRef, code []byte, gas uint64, value *big.Int,
 	contractAddr common.Address, humanReadable bool) ([]byte, common.Address, uint64, error) {
 

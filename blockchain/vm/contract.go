@@ -28,6 +28,7 @@ import (
 // ContractRef is a reference to the contract's backing object
 type ContractRef interface {
 	Address() common.Address
+	FeePayer() common.Address
 }
 
 // AccountRef implements ContractRef.
@@ -40,7 +41,22 @@ type ContractRef interface {
 type AccountRef common.Address
 
 // Address casts AccountRef to a Address
-func (ar AccountRef) Address() common.Address { return (common.Address)(ar) }
+func (ar AccountRef) Address() common.Address  { return (common.Address)(ar) }
+func (ar AccountRef) FeePayer() common.Address { return ar.Address() }
+
+// AccountRefWithFeePayer implements ContractRef.
+// This structure has an additional field `feePayer` compared to `AccountRef`.
+type AccountRefWithFeePayer struct {
+	SenderAddress   common.Address
+	FeePayerAddress common.Address
+}
+
+func NewAccountRefWithFeePayer(sender common.Address, feePayer common.Address) *AccountRefWithFeePayer {
+	return &AccountRefWithFeePayer{sender, feePayer}
+}
+
+func (a *AccountRefWithFeePayer) Address() common.Address  { return a.SenderAddress }
+func (a *AccountRefWithFeePayer) FeePayer() common.Address { return a.FeePayerAddress }
 
 // Contract represents an ethereum contract in the state database. It contains
 // the the contract code, calling arguments. Contract implements ContractRef
@@ -70,12 +86,7 @@ type Contract struct {
 
 // NewContract returns a new contract environment for the execution of EVM.
 func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
-	return NewContractWithFeePayer(caller, caller.Address(), object, value, gas)
-}
-
-// NewContractWithFeePayer returns a new contract environment with the given fee payer for the execution of EVM.
-func NewContractWithFeePayer(caller ContractRef, feePayer common.Address, object ContractRef, value *big.Int, gas uint64) *Contract {
-	c := &Contract{CallerAddress: caller.Address(), FeePayerAddress: feePayer, caller: caller, self: object, Args: nil}
+	c := &Contract{CallerAddress: caller.Address(), FeePayerAddress: caller.FeePayer(), caller: caller, self: object, Args: nil}
 
 	if parent, ok := caller.(*Contract); ok {
 		// Reuse JUMPDEST analysis from parent context if available.
@@ -140,6 +151,10 @@ func (c *Contract) UseGas(gas uint64) (ok bool) {
 // Address returns the contracts address
 func (c *Contract) Address() common.Address {
 	return c.self.Address()
+}
+
+func (c *Contract) FeePayer() common.Address {
+	return c.FeePayerAddress
 }
 
 // Value returns the contracts value (sent to it from it's caller)

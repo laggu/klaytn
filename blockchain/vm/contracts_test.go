@@ -356,6 +356,15 @@ var vmlogTests = []precompiledTest{
 	},
 }
 
+// feePayerTests is the test data for the feePayer precompiled contract.
+var feePayerTests = []precompiledTest{
+	{
+		input:    "",
+		expected: "0000000000000000000000000000000000133773",
+		name:     "feePayerTest1",
+	},
+}
+
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
@@ -526,6 +535,26 @@ func TestRunVMLogContract(t *testing.T) {
 			nil, new(big.Int), p.RequiredGas(in))
 		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
 			if res, err := RunVMLogContract(p, in, contract, evm); err != nil {
+				t.Error(err)
+			} else if common.Bytes2Hex(res) != test.expected {
+				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))
+			}
+		})
+	}
+}
+
+func TestRunFeePayerContract(t *testing.T) {
+	p := PrecompiledContractsByzantium[common.HexToAddress("0A")]
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
+	statedb.Prepare(txhash, common.Hash{}, 0)
+
+	for _, test := range feePayerTests {
+		in := common.Hex2Bytes(test.input)
+		contract := NewContract(NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
+			nil, new(big.Int), p.RequiredGas(in))
+		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
+			if res, err := RunFeePayerContract(p, in, contract); err != nil {
 				t.Error(err)
 			} else if common.Bytes2Hex(res) != test.expected {
 				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))

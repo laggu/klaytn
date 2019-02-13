@@ -156,7 +156,8 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 
 	vmenv := NewEnv(cfg)
 
-	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
+	senderAccount := cfg.State.GetOrNewStateObject(cfg.Origin)
+	sender := vm.NewAccountRefWithFeePayer(senderAccount.Address(), senderAccount.Address())
 	// Call the code with the given configuration.
 	ret, leftOverGas, err := vmenv.Call(
 		sender,

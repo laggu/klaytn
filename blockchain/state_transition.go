@@ -218,7 +218,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return
 	}
 	msg := st.msg
-	sender := vm.AccountRef(msg.From())
+	sender := vm.NewAccountRefWithFeePayer(msg.From(), msg.FeePayer())
 	txType := msg.TxType()
 
 	// IsContractCreation returns true if one of the following conditions is met:
