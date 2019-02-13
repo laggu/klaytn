@@ -24,7 +24,6 @@ import (
 type AccountKeyType uint
 
 const (
-	// TODO-Klaytn-Accounts: implement account key nil.
 	AccountKeyTypeNil AccountKeyType = iota
 	AccountKeyTypeLegacy
 	AccountKeyTypePublic
@@ -65,6 +64,8 @@ type AccountKey interface {
 
 func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 	switch t {
+	case AccountKeyTypeNil:
+		return NewAccountKeyNil(), nil
 	case AccountKeyTypeLegacy:
 		return NewAccountKeyLegacy(), nil
 	case AccountKeyTypePublic:

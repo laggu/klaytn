@@ -28,6 +28,7 @@ func TestAccountKeySerialization(t *testing.T) {
 		Name string
 		k    AccountKey
 	}{
+		{"Nil", genAccountKeyNil()},
 		{"Legacy", genAccountKeyLegacy()},
 		{"Public", genAccountKeyPublic()},
 		{"Fail", genAccountKeyFail()},
@@ -101,6 +102,10 @@ func testAccountKeyJSON(t *testing.T, k AccountKey) {
 			t.Errorf("AlwaysFail key returns true! k != dec.key\nk=%v\ndec.key=%v", k, dec.key)
 		}
 	}
+}
+
+func genAccountKeyNil() AccountKey {
+	return NewAccountKeyNil()
 }
 
 func genAccountKeyLegacy() AccountKey {
