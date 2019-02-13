@@ -24,9 +24,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"net"
-	"os"
-
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/crypto"
@@ -35,6 +32,8 @@ import (
 	"github.com/ground-x/klaytn/networks/p2p/nat"
 	"github.com/ground-x/klaytn/networks/p2p/netutil"
 	"gopkg.in/urfave/cli.v1"
+	"net"
+	"os"
 )
 
 type bootnodeConfig struct {
@@ -55,7 +54,7 @@ type bootnodeConfig struct {
 }
 
 var (
-	logger = log.NewModuleLogger(log.CMDBootnode)
+	logger = log.NewModuleLogger(log.CMDKBN)
 )
 
 const (
@@ -225,7 +224,7 @@ func main() {
 	)
 	// TODO-Klaytn: remove `help` command
 	app := utils.NewApp("", "the klaytn's bootnode command line interface")
-	app.Name = "bootnode"
+	app.Name = "kbn"
 	app.Copyright = "Copyright 2018 The klaytn Authors"
 	app.UsageText = app.Name + " [global options] [commands]"
 	app.Flags = append(app.Flags, cliFlags...)

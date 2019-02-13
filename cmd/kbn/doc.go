@@ -18,5 +18,5 @@
 // This file is derived from cmd/bootnode/main.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// bootnode runs a bootstrap node for the Klaytn Node Discovery Protocol.
+// kbn runs a bootstrap node for the Klaytn Node Discovery Protocol.
 package main

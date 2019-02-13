@@ -96,7 +96,7 @@ const (
 	StorageStateDB
 	VM
 	Work
-	CMDBootnode
+	CMDKBN
 	CMDUtilsNodeCMD
 	CMDKCN
 	CMDKPN
@@ -154,7 +154,7 @@ var moduleNames = [ModuleNameLen]string{
 	"storage/statedb",
 	"vm",
 	"work",
-	"cmd/bootnode",
+	"cmd/kbn",
 	"cmd/utils/nodecmd",
 	"cmd/kcn",
 	"cmd/kpn",
