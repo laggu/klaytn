@@ -106,6 +106,7 @@ type Config struct {
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
+	PartitionedDB      bool
 	LevelDBCacheSize   int
 	TrieCacheSize      int
 	TrieTimeout        time.Duration

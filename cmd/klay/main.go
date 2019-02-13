@@ -82,6 +82,7 @@ var (
 		utils.LightServFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
+		utils.PartitionedDBFlag,
 		utils.LevelDBCacheSizeFlag,
 		utils.DBParallelDBWriteFlag,
 		utils.TrieMemoryCacheSizeFlag,

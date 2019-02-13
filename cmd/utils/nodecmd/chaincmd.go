@@ -40,6 +40,7 @@ var (
 		ArgsUsage: "<genesisPath>",
 		Flags: []cli.Flag{
 			utils.DbTypeFlag,
+			utils.PartitionedDBFlag,
 			utils.DataDirFlag,
 			utils.LightModeFlag,
 		},
@@ -73,9 +74,11 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
-	pw := utils.IsParallelDBWrite(ctx)
+
+	parallelDBWrite := utils.IsParallelDBWrite(ctx)
+	partitioned := utils.IsPartitionedDB(ctx)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: pw,
+		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite, Partitioned: partitioned,
 			LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
 		chaindb, err := stack.OpenDatabase(dbc)
 		if err != nil {

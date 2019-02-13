@@ -154,9 +154,7 @@ type DBManager interface {
 type DBEntryType uint8
 
 const (
-	_ DBEntryType = iota
-
-	headerDB
+	headerDB DBEntryType = iota
 	BodyDB
 	tdDB
 	ReceiptsDB
@@ -219,7 +217,7 @@ func checkDBEntryConfigRatio() {
 // getDBEntryConfig returns a new DBConfig with original DBConfig and DBEntryType.
 // It adjusts configuration according to the ratio specified in dbConfigRatio and dbDirs.
 func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType) *DBConfig {
-	newDBC := &*originalDBC
+	newDBC := *originalDBC
 	ratio := dbConfigRatio[i]
 
 	newDBC.LevelDBCacheSize = originalDBC.LevelDBCacheSize * ratio / 100
@@ -228,7 +226,7 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType) *DBConfig {
 	// Update dir to each Database specific directory.
 	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDirs[i])
 
-	return newDBC
+	return &newDBC
 }
 
 type databaseManager struct {
@@ -338,14 +336,13 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 // If Partitioned is true, each Database will have its own LevelDB.
 // If not, each Database will share one common LevelDB.
 func NewDBManager(dbc *DBConfig) (DBManager, error) {
-	// TODO-Klaytn-Storage Need to decide how to initialize this value
 	// TODO-Klaytn-Storage Remove unnecessary error from return value
-	dbc.Partitioned = false
-
 	if !dbc.Partitioned {
+		logger.Info("Single database is used for persistent storage", "DBType", dbc.DBType)
 		return singleDatabaseDBManager(dbc)
 	} else {
 		checkDBEntryConfigRatio()
+		logger.Info("Partitioned database is used for persistent storage", "DBType", dbc.DBType)
 		return partitionedDatabaseDBManager(dbc)
 	}
 }

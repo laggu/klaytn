@@ -235,6 +235,10 @@ var (
 		Value: cn.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
+	PartitionedDBFlag = cli.BoolFlag{
+		Name:  "db.partitioned",
+		Usage: "Use partitioned databases or single database for persistent storage",
+	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
 		Name:  "db.leveldb.cache-size",
 		Usage: "Size of in-memory cache in LevelDB (MiB)",
@@ -1081,6 +1085,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
 	}
 
+	if ctx.GlobalIsSet(PartitionedDBFlag.Name) {
+		cfg.PartitionedDB = true
+	}
 	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
 		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 	}
@@ -1230,9 +1237,18 @@ func IsParallelDBWrite(ctx *cli.Context) bool {
 	return pw
 }
 
+func IsPartitionedDB(ctx *cli.Context) bool {
+	if ctx.GlobalIsSet(PartitionedDBFlag.Name) {
+		return true
+	}
+	return false
+}
+
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	var (
+		parallelDBWrite    = IsParallelDBWrite(ctx)
+		partitionedDB      = IsPartitionedDB(ctx)
 		ldbCacheSize       = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 		numHandles         = makeDatabaseHandles()
 		childChainIndexing = ctx.GlobalBool(ChildChainIndexingFlag.Name)
@@ -1241,8 +1257,7 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	pw := IsParallelDBWrite(ctx)
-	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: pw,
+	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite, Partitioned: partitionedDB,
 		LevelDBCacheSize: ldbCacheSize, LevelDBHandles: numHandles, ChildChainIndexing: childChainIndexing}
 	chainDB, err := stack.OpenDatabase(dbc)
 	if err != nil {
