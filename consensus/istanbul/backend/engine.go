@@ -378,8 +378,11 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 
 	// set header's timestamp
 	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(sb.config.BlockPeriod))
+	header.TimeFoS = parent.TimeFoS
 	if header.Time.Int64() < time.Now().Unix() {
-		header.Time = big.NewInt(time.Now().Unix())
+		t := time.Now()
+		header.Time = big.NewInt(t.Unix())
+		header.TimeFoS = uint8((t.UnixNano() / 1000 / 1000 / 10) % 100)
 	}
 	return nil
 }

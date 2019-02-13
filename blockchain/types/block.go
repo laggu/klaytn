@@ -85,9 +85,11 @@ type Header struct {
 	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
+	// TimeFoS represents a fraction of a second since `Time`.
+	TimeFoS   uint8       `json:"timestampFoS"     gencodec:"required"`
+	Extra     []byte      `json:"extraData"        gencodec:"required"`
+	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
+	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
 }
 
 // HeaderWithoutUncle represents a block header without UncleHash.
@@ -104,9 +106,11 @@ type HeaderWithoutUncle struct {
 	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
+	// TimeFoS represents a fraction of a second since `Time`.
+	TimeFoS   uint8       `json:"timestampFoS"     gencodec:"required"`
+	Extra     []byte      `json:"extraData"        gencodec:"required"`
+	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
+	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -116,6 +120,7 @@ type headerMarshaling struct {
 	GasLimit   hexutil.Uint64
 	GasUsed    hexutil.Uint64
 	Time       *hexutil.Big
+	TimeFoS    hexutil.Uint
 	Extra      hexutil.Bytes
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
@@ -151,6 +156,7 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.GasLimit,
 		h.GasUsed,
 		h.Time,
+		h.TimeFoS,
 		h.Extra,
 	})
 }
@@ -171,6 +177,7 @@ func (h *Header) ToHeaderWithoutUncle() *HeaderWithoutUncle {
 		h.GasLimit,
 		h.GasUsed,
 		h.Time,
+		h.TimeFoS,
 		h.Extra,
 		h.MixDigest,
 		h.Nonce,
@@ -363,6 +370,7 @@ func (b *Block) GasLimit() uint64     { return b.header.GasLimit }
 func (b *Block) GasUsed() uint64      { return b.header.GasUsed }
 func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
 func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
+func (b *Block) TimeFoS() uint8       { return b.header.TimeFoS }
 
 func (b *Block) NumberU64() uint64          { return b.header.Number.Uint64() }
 func (b *Block) MixDigest() common.Hash     { return b.header.MixDigest }
@@ -462,23 +470,24 @@ Uncles:
 func (h *Header) String() string {
 	return fmt.Sprintf(`Header(%x):
 [
-	ParentHash:	    %x
-	UncleHash:	    %x
-	Coinbase:	    %x
-    Rewardbase:     %x
-	Root:		    %x
-	TxSha		    %x
-	ReceiptSha:	    %x
-	Bloom:		    %x
-	Difficulty:	    %v
-	Number:		    %v
-	GasLimit:	    %v
-	GasUsed:	    %v
-	Time:		    %v
-	Extra:		    %s
-	MixDigest:      %x
-	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce)
+	ParentHash:       %x
+	UncleHash:        %x
+	Coinbase:         %x
+	Rewardbase:       %x
+	Root:             %x
+	TxSha:            %x
+	ReceiptSha:       %x
+	Bloom:            %x
+	Difficulty:       %v
+	Number:           %v
+	GasLimit:         %v
+	GasUsed:          %v
+	Time:             %v
+	TimeFoS:          %v
+	Extra:            %s
+	MixDigest:        %x
+	Nonce:            %x
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce)
 }
 
 type Blocks []*Block

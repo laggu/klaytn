@@ -235,6 +235,7 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
 		Time:       new(big.Int).SetUint64(g.Timestamp),
+		TimeFoS:    0,
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
 		GasLimit:   g.GasLimit,
