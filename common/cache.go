@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/ground-x/klaytn/log"
 	"github.com/hashicorp/golang-lru"
+	"github.com/pbnjay/memory"
 	"math"
 )
 
@@ -44,9 +45,22 @@ const (
 // it's set by flag.
 var DefaultCacheType CacheType = LRUCacheType
 var logger = log.NewModuleLogger(log.Common)
-var CacheScale int = 100               // cache size = preset size * CacheScale / 100.
-var ScaleByCacheUsageLevel int = 100   // Scale according to cache usage level (%).
-var MemorySize int = defaultMemorySize // RAM size (GB). // TODO-Klaytn The memory size will be automatically calculated and set later without receiving the settings.
+var CacheScale int = 100                             // Cache size = preset size * CacheScale / 100.
+var ScaleByCacheUsageLevel int = 100                 // Scale according to cache usage level (%).
+var TotalPhysicalMemGB int = getPhysicalMemorySize() // Convert Byte to GByte
+
+// getPhysicalMemorySize returns the system's physical memory value.
+// It internally returns a defaultMemorySize if it is an os that does not support using the system call to obtain it,
+// or if the system call fails.
+func getPhysicalMemorySize() int {
+	TotalMemGB := int(memory.TotalMemory() / 1024 / 1024 / 1024)
+	if TotalMemGB != 0 {
+		return TotalMemGB
+	} else {
+		logger.Error("Failed to get the physical memory of the system. Default physical memory size is used", "defaultMemorySize(GB)", defaultMemorySize)
+		return defaultMemorySize
+	}
+}
 
 // TODO-Klaytn-Storage WriteThroughCaching flag should be stored to proper place.
 var WriteThroughCaching = false
@@ -252,7 +266,7 @@ func (c ARCConfig) newCache() (Cache, error) {
 // calculateScale returns the scale of the cache.
 // The scale of the cache is obtained by multiplying (MemorySize / defaultMemorySize), (scaleByCacheUsageLevel / 100), and (CacheScale / 100).
 func calculateScale() int {
-	return CacheScale * ScaleByCacheUsageLevel * MemorySize / defaultMemorySize / 100 / 100
+	return CacheScale * ScaleByCacheUsageLevel * TotalPhysicalMemGB / defaultMemorySize / 100 / 100
 }
 
 // GetScaleByCacheUsageLevel returns the scale according to cacheUsageLevel

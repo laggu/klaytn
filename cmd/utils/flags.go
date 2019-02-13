@@ -1140,7 +1140,11 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	}
 	if ctx.GlobalIsSet(MemorySizeFlag.Name) {
-		common.MemorySize = ctx.GlobalInt(MemorySizeFlag.Name)
+		physicalMemory := common.TotalPhysicalMemGB
+		common.TotalPhysicalMemGB = ctx.GlobalInt(MemorySizeFlag.Name)
+		logger.Info("Physical memory has been replaced by user settings", "PhysicalMemory(GB)", physicalMemory, "UserSetting(GB)", common.TotalPhysicalMemGB)
+	} else {
+		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
 	}
 	if ctx.GlobalIsSet(CacheWriteThroughFlag.Name) {
 		common.WriteThroughCaching = ctx.GlobalBool(CacheWriteThroughFlag.Name)
