@@ -38,7 +38,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	TxTypeLegacyTransaction, _, _ TxType = (0x10 * iota), (0x10*iota + 1), (0x10*iota + 2)
+	TxTypeLegacyTransaction, TxTypeFeeDelegatedTransactions, TxTypeFeeDelegatedWithRatioTransaction TxType = (0x10 * iota), (0x10*iota + 1), (0x10*iota + 2)
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -154,6 +154,10 @@ func (t TxType) IsContractDeploy() bool {
 
 func (t TxType) IsLegacyTransaction() bool {
 	return t == TxTypeLegacyTransaction
+}
+
+func (t TxType) IsFeeDelegatedTransaction() bool {
+	return (t & (TxTypeFeeDelegatedTransactions | TxTypeFeeDelegatedWithRatioTransaction)) != 0x0
 }
 
 // TxInternalData is an interface for an internal data structure of a Transaction
