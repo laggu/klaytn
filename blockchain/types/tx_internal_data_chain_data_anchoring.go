@@ -24,29 +24,73 @@ import (
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"math/big"
 )
 
 // TxInternalDataChainDataAnchoring represents the transaction anchoring child chain data.
 type TxInternalDataChainDataAnchoring struct {
-	*TxInternalDataCommon
-
+	AccountNonce uint64
+	Price        *big.Int
+	GasLimit     uint64
+	Recipient    common.Address
+	Amount       *big.Int
+	From         common.Address
 	AnchoredData []byte
 
 	TxSignatures
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
 func newTxInternalDataChainDataAnchoring() *TxInternalDataChainDataAnchoring {
-	return &TxInternalDataChainDataAnchoring{newTxInternalDataCommon(), []byte{},
-		NewTxSignatures()}
+	h := common.Hash{}
+
+	return &TxInternalDataChainDataAnchoring{
+		Price:  new(big.Int),
+		Amount: new(big.Int),
+		Hash:   &h,
+	}
 }
 
 func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataChainDataAnchoring, error) {
-	c, err := newTxInternalDataCommonWithMap(values)
-	if err != nil {
-		return nil, err
+	d := newTxInternalDataChainDataAnchoring()
+
+	if v, ok := values[TxValueKeyNonce].(uint64); ok {
+		d.AccountNonce = v
+	} else {
+		return nil, errValueKeyNonceMustUint64
 	}
 
-	d := &TxInternalDataChainDataAnchoring{c, []byte{}, NewTxSignatures()}
+	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
+		d.Price.Set(v)
+	} else {
+		return nil, errValueKeyGasPriceMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
+		d.GasLimit = v
+	} else {
+		return nil, errValueKeyGasLimitMustUint64
+	}
+
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
+		d.Recipient = v
+	} else {
+		return nil, errValueKeyToMustAddress
+	}
+
+	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
+		d.Amount.Set(v)
+	} else {
+		return nil, errValueKeyAmountMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
+		d.From = v
+	} else {
+		return nil, errValueKeyFromMustAddress
+	}
 
 	if v, ok := values[TxValueKeyAnchoredData].([]byte); ok {
 		d.AnchoredData = v
@@ -67,7 +111,12 @@ func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
+	return t.AccountNonce == tb.AccountNonce &&
+		t.Price.Cmp(tb.Price) == 0 &&
+		t.GasLimit == tb.GasLimit &&
+		t.Recipient == tb.Recipient &&
+		t.Amount.Cmp(tb.Amount) == 0 &&
+		t.From == tb.From &&
 		t.TxSignatures.equal(tb.TxSignatures) &&
 		bytes.Equal(t.AnchoredData, tb.AnchoredData)
 }
@@ -80,24 +129,82 @@ func (t *TxInternalDataChainDataAnchoring) String() string {
 
 	return fmt.Sprintf(`
 	TX(%x)
-	Type:          %s%s
+	From:          %s
+	To:            %s
+	Nonce:         %v
+	GasPrice:      %#x
+	GasLimit:      %#x
+	Value:         %#x
+	Type:          %s
 	Signature:     %s
 	Hex:           %x
 	AnchoredData:  %s
 `,
 		tx.Hash(),
 		t.Type().String(),
-		t.TxInternalDataCommon.string(),
+		t.From.String(),
+		t.Recipient.String(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Amount,
 		t.TxSignatures.string(),
 		enc,
 		common.Bytes2Hex(dataAnchoredRLP))
 }
 
 func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
-	infs := []interface{}{t.Type()}
-	infs = append(infs, t.TxInternalDataCommon.serializeForSign()...)
+	return []interface{}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.AnchoredData,
+	}
+}
 
-	return append(infs, t.AnchoredData)
+func (t *TxInternalDataChainDataAnchoring) IsLegacyTransaction() bool {
+	return false
+}
+
+func (t *TxInternalDataChainDataAnchoring) GetAccountNonce() uint64 {
+	return t.AccountNonce
+}
+
+func (t *TxInternalDataChainDataAnchoring) GetPrice() *big.Int {
+	return new(big.Int).Set(t.Price)
+}
+
+func (t *TxInternalDataChainDataAnchoring) GetGasLimit() uint64 {
+	return t.GasLimit
+}
+
+func (t *TxInternalDataChainDataAnchoring) GetRecipient() *common.Address {
+	if t.Recipient == (common.Address{}) {
+		return nil
+	}
+
+	to := common.Address(t.Recipient)
+	return &to
+}
+
+func (t *TxInternalDataChainDataAnchoring) GetAmount() *big.Int {
+	return new(big.Int).Set(t.Amount)
+}
+
+func (t *TxInternalDataChainDataAnchoring) GetFrom() common.Address {
+	return t.From
+}
+
+func (t *TxInternalDataChainDataAnchoring) GetHash() *common.Hash {
+	return t.Hash
+}
+
+func (t *TxInternalDataChainDataAnchoring) SetHash(h *common.Hash) {
+	t.Hash = h
 }
 
 func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
