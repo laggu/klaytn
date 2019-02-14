@@ -17,40 +17,89 @@
 package types
 
 import (
+	"crypto/ecdsa"
 	"fmt"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"math/big"
 )
 
 // TxInternalDataFeeDelegatedValueTransfer represents a fee-delegated transaction
 // transferring KLAY with a fee payer.
 // FeePayer should be RLP-encoded after the signature of the sender.
 type TxInternalDataFeeDelegatedValueTransfer struct {
-	*TxInternalDataCommon
+	AccountNonce uint64
+	Price        *big.Int
+	GasLimit     uint64
+	Recipient    common.Address
+	Amount       *big.Int
+	From         common.Address
+
 	TxSignatures
-	*TxInternalDataFeePayerCommon
+
+	FeePayer          common.Address
+	FeePayerSignature TxSignatures
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-func NewTxInternalDataFeeDelegatedValueTransfer() *TxInternalDataFeeDelegatedValueTransfer {
+func newTxInternalDataFeeDelegatedValueTransfer() *TxInternalDataFeeDelegatedValueTransfer {
+	h := common.Hash{}
 	return &TxInternalDataFeeDelegatedValueTransfer{
-		newTxInternalDataCommon(),
-		NewTxSignatures(),
-		newTxInternalDataFeePayerCommon(),
+		Price:  new(big.Int),
+		Amount: new(big.Int),
+		Hash:   &h,
 	}
 }
 
-func NewTxInternalDataFeeDelegatedValueTransferWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataFeeDelegatedValueTransfer, error) {
-	c, err := newTxInternalDataCommonWithMap(values)
-	if err != nil {
-		return nil, err
+func newTxInternalDataFeeDelegatedValueTransferWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataFeeDelegatedValueTransfer, error) {
+	d := newTxInternalDataFeeDelegatedValueTransfer()
+
+	if v, ok := values[TxValueKeyNonce].(uint64); ok {
+		d.AccountNonce = v
+	} else {
+		return nil, errValueKeyNonceMustUint64
 	}
 
-	f, err := newTxInternalDataFeePayerCommonWithMap(values)
-	if err != nil {
-		return nil, err
+	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
+		d.Price.Set(v)
+	} else {
+		return nil, errValueKeyGasPriceMustBigInt
 	}
 
-	return &TxInternalDataFeeDelegatedValueTransfer{c, NewTxSignatures(), f}, nil
+	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
+		d.GasLimit = v
+	} else {
+		return nil, errValueKeyGasLimitMustUint64
+	}
+
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
+		d.Recipient = v
+	} else {
+		return nil, errValueKeyToMustAddress
+	}
+
+	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
+		d.Amount.Set(v)
+	} else {
+		return nil, errValueKeyAmountMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
+		d.From = v
+	} else {
+		return nil, errValueKeyFromMustAddress
+	}
+
+	if v, ok := values[TxValueKeyFeePayer].(common.Address); ok {
+		d.FeePayer = v
+	} else {
+		return nil, errValueKeyFeePayerMustAddress
+	}
+
+	return d, nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) Type() TxType {
@@ -63,13 +112,76 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) Equal(b TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
+	return t.AccountNonce == tb.AccountNonce &&
+		t.Price.Cmp(tb.Price) == 0 &&
+		t.GasLimit == tb.GasLimit &&
+		t.Recipient == tb.Recipient &&
+		t.Amount.Cmp(tb.Amount) == 0 &&
+		t.From == tb.From &&
 		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.TxInternalDataFeePayerCommon.equal(tb.TxInternalDataFeePayerCommon)
+		t.FeePayer == tb.FeePayer &&
+		t.FeePayerSignature.equal(tb.FeePayerSignature)
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) IsLegacyTransaction() bool {
+	return false
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetAccountNonce() uint64 {
+	return t.AccountNonce
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetPrice() *big.Int {
+	return new(big.Int).Set(t.Price)
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetGasLimit() uint64 {
+	return t.GasLimit
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetRecipient() *common.Address {
+	if t.Recipient == (common.Address{}) {
+		return nil
+	}
+
+	to := common.Address(t.Recipient)
+	return &to
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetAmount() *big.Int {
+	return new(big.Int).Set(t.Amount)
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetFrom() common.Address {
+	return t.From
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetHash() *common.Hash {
+	return t.Hash
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayer() common.Address {
+	return t.FeePayer
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayerRawSignatureValues() []*big.Int {
+	return t.FeePayerSignature.RawSignatureValues()
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) SetHash(h *common.Hash) {
+	t.Hash = h
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) SetFeePayerSignature(s TxSignatures) {
+	t.FeePayerSignature = s
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransfer) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
+	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
@@ -78,16 +190,29 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
 	enc, _ := rlp.EncodeToBytes(ser)
 	return fmt.Sprintf(`
 	TX(%x)
-	Type:          %s%s
+	Type:          %s
+	From:          %s
+	To:            %s
+	Nonce:         %v
+	GasPrice:      %#x
+	GasLimit:      %#x
+	Value:         %#x
 	Signature:     %s
 	FeePayer:      %s
+	FeePayerSig:   %s
 	Hex:           %x
 `,
 		tx.Hash(),
 		t.Type().String(),
-		t.TxInternalDataCommon.string(),
+		t.From.String(),
+		t.Recipient.String(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Amount,
 		t.TxSignatures.string(),
-		t.TxInternalDataFeePayerCommon.string(),
+		t.FeePayer.String(),
+		t.FeePayerSignature.string(),
 		enc)
 }
 
@@ -96,6 +221,13 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas() (uint64, error)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSign() []interface{} {
-	infs := []interface{}{t.Type()}
-	return append(infs, t.TxInternalDataCommon.serializeForSign()...)
+	return []interface{}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+	}
 }
