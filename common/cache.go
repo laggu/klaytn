@@ -53,8 +53,8 @@ var TotalPhysicalMemGB int = getPhysicalMemorySize() // Convert Byte to GByte
 // It internally returns a defaultMemorySize if it is an os that does not support using the system call to obtain it,
 // or if the system call fails.
 func getPhysicalMemorySize() int {
-	TotalMemGB := int(memory.TotalMemory() / 1024 / 1024 / 1024)
-	if TotalMemGB != 0 {
+	TotalMemGB := int(memory.TotalMemory() / 1000 / 1000 / 1000)
+	if TotalMemGB >= defaultMemorySize {
 		return TotalMemGB
 	} else {
 		logger.Error("Failed to get the physical memory of the system. Default physical memory size is used", "defaultMemorySize(GB)", defaultMemorySize)
