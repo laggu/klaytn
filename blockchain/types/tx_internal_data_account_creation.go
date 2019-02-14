@@ -19,25 +19,38 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
+	"math/big"
 )
 
 // TxInternalDataAccountCreation represents a transaction creating an account.
 type TxInternalDataAccountCreation struct {
-	*TxInternalDataCommon
-
+	AccountNonce  uint64
+	Price         *big.Int
+	GasLimit      uint64
+	Recipient     common.Address
+	Amount        *big.Int
+	From          common.Address
 	HumanReadable bool
 	Key           AccountKey
 
 	TxSignatures
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
 // txInternalDataAccountCreationSerializable for RLP serialization.
 type txInternalDataAccountCreationSerializable struct {
-	*TxInternalDataCommon
-
+	AccountNonce  uint64
+	Price         *big.Int
+	GasLimit      uint64
+	Recipient     common.Address
+	Amount        *big.Int
+	From          common.Address
 	HumanReadable bool
 	KeyData       []byte
 
@@ -45,21 +58,53 @@ type txInternalDataAccountCreationSerializable struct {
 }
 
 func newTxInternalDataAccountCreation() *TxInternalDataAccountCreation {
+	h := common.Hash{}
 	return &TxInternalDataAccountCreation{
-		TxInternalDataCommon: newTxInternalDataCommon(),
-		HumanReadable:        false,
-		Key:                  NewAccountKeyLegacy(),
-		TxSignatures:         NewTxSignatures(),
+		Price:  new(big.Int),
+		Amount: new(big.Int),
+		Key:    NewAccountKeyLegacy(),
+		Hash:   &h,
 	}
 }
 
 func newTxInternalDataAccountCreationWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataAccountCreation, error) {
-	c, err := newTxInternalDataCommonWithMap(values)
-	if err != nil {
-		return nil, err
+	b := newTxInternalDataAccountCreation()
+
+	if v, ok := values[TxValueKeyNonce].(uint64); ok {
+		b.AccountNonce = v
+	} else {
+		return nil, errValueKeyNonceMustUint64
 	}
 
-	b := &TxInternalDataAccountCreation{c, false, NewAccountKeyLegacy(), NewTxSignatures()}
+	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
+		b.Price.Set(v)
+	} else {
+		return nil, errValueKeyGasPriceMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
+		b.GasLimit = v
+	} else {
+		return nil, errValueKeyGasLimitMustUint64
+	}
+
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
+		b.Recipient = v
+	} else {
+		return nil, errValueKeyToMustAddress
+	}
+
+	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
+		b.Amount.Set(v)
+	} else {
+		return nil, errValueKeyAmountMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
+		b.From = v
+	} else {
+		return nil, errValueKeyFromMustAddress
+	}
 
 	if v, ok := values[TxValueKeyHumanReadable].(bool); ok {
 		b.HumanReadable = v
@@ -85,7 +130,12 @@ func (t *TxInternalDataAccountCreation) toSerializable() *txInternalDataAccountC
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
 	return &txInternalDataAccountCreationSerializable{
-		t.TxInternalDataCommon,
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
 		t.HumanReadable,
 		keyEnc,
 		t.TxSignatures,
@@ -93,7 +143,12 @@ func (t *TxInternalDataAccountCreation) toSerializable() *txInternalDataAccountC
 }
 
 func (t *TxInternalDataAccountCreation) fromSerializable(serialized *txInternalDataAccountCreationSerializable) {
-	t.TxInternalDataCommon = serialized.TxInternalDataCommon
+	t.AccountNonce = serialized.AccountNonce
+	t.Price = serialized.Price
+	t.GasLimit = serialized.GasLimit
+	t.Recipient = serialized.Recipient
+	t.Amount = serialized.Amount
+	t.From = serialized.From
 	t.HumanReadable = serialized.HumanReadable
 	t.TxSignatures = serialized.TxSignatures
 
@@ -143,7 +198,12 @@ func (t *TxInternalDataAccountCreation) Equal(a TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.equal(ta.TxInternalDataCommon) &&
+	return t.AccountNonce == ta.AccountNonce &&
+		t.Price.Cmp(ta.Price) == 0 &&
+		t.GasLimit == ta.GasLimit &&
+		t.Recipient == ta.Recipient &&
+		t.Amount.Cmp(ta.Amount) == 0 &&
+		t.From == ta.From &&
 		t.HumanReadable == ta.HumanReadable &&
 		t.Key.Equal(ta.Key) &&
 		t.TxSignatures.equal(ta.TxSignatures)
@@ -155,7 +215,13 @@ func (t *TxInternalDataAccountCreation) String() string {
 	enc, _ := rlp.EncodeToBytes(ser)
 	return fmt.Sprintf(`
 	TX(%x)
-	Type:          %s%s
+	Type:          %s
+	From:          %s
+	To:            %s
+	Nonce:         %v
+	GasPrice:      %#x
+	GasLimit:      %#x
+	Value:         %#x
 	HumanReadable: %t
 	Key:           %s
 	Signature:     %s
@@ -163,11 +229,57 @@ func (t *TxInternalDataAccountCreation) String() string {
 `,
 		tx.Hash(),
 		t.Type().String(),
-		t.TxInternalDataCommon.string(),
+		t.From.String(),
+		t.Recipient.String(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Amount,
 		t.HumanReadable,
 		t.Key.String(),
 		t.TxSignatures.string(),
 		enc)
+}
+
+func (t *TxInternalDataAccountCreation) IsLegacyTransaction() bool {
+	return false
+}
+
+func (t *TxInternalDataAccountCreation) GetAccountNonce() uint64 {
+	return t.AccountNonce
+}
+
+func (t *TxInternalDataAccountCreation) GetPrice() *big.Int {
+	return new(big.Int).Set(t.Price)
+}
+
+func (t *TxInternalDataAccountCreation) GetGasLimit() uint64 {
+	return t.GasLimit
+}
+
+func (t *TxInternalDataAccountCreation) GetRecipient() *common.Address {
+	if t.Recipient == (common.Address{}) {
+		return nil
+	}
+
+	to := common.Address(t.Recipient)
+	return &to
+}
+
+func (t *TxInternalDataAccountCreation) GetAmount() *big.Int {
+	return new(big.Int).Set(t.Amount)
+}
+
+func (t *TxInternalDataAccountCreation) GetFrom() common.Address {
+	return t.From
+}
+
+func (t *TxInternalDataAccountCreation) GetHash() *common.Hash {
+	return t.Hash
+}
+
+func (t *TxInternalDataAccountCreation) SetHash(h *common.Hash) {
+	t.Hash = h
 }
 
 func (t *TxInternalDataAccountCreation) SetSignature(s TxSignatures) {
@@ -184,11 +296,18 @@ func (t *TxInternalDataAccountCreation) IntrinsicGas() (uint64, error) {
 }
 
 func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
-	infs := []interface{}{t.Type()}
 	serializer := NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
-	infs = append(infs, t.TxInternalDataCommon.serializeForSign()...)
-
-	return append(infs, t.HumanReadable, keyEnc)
+	return []interface{}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.HumanReadable,
+		keyEnc,
+	}
 }
