@@ -18,27 +18,78 @@ package types
 
 import (
 	"fmt"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"math/big"
 )
 
 // TxInternalDataValueTransfer represents a transaction transferring KLAY.
 // No more attributes required than attributes in TxInternalDataCommon.
 type TxInternalDataValueTransfer struct {
-	*TxInternalDataCommon
+	AccountNonce uint64
+	Price        *big.Int
+	GasLimit     uint64
+	Recipient    common.Address
+	Amount       *big.Int
+	From         common.Address
+
 	TxSignatures
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
 func newTxInternalDataValueTransfer() *TxInternalDataValueTransfer {
-	return &TxInternalDataValueTransfer{newTxInternalDataCommon(), NewTxSignatures()}
+	h := common.Hash{}
+
+	return &TxInternalDataValueTransfer{
+		Price:  new(big.Int),
+		Amount: new(big.Int),
+		Hash:   &h,
+	}
 }
 
 func newTxInternalDataValueTransferWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataValueTransfer, error) {
-	c, err := newTxInternalDataCommonWithMap(values)
-	if err != nil {
-		return nil, err
+	d := newTxInternalDataValueTransfer()
+
+	if v, ok := values[TxValueKeyNonce].(uint64); ok {
+		d.AccountNonce = v
+	} else {
+		return nil, errValueKeyNonceMustUint64
 	}
-	return &TxInternalDataValueTransfer{c, NewTxSignatures()}, nil
+
+	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
+		d.Price.Set(v)
+	} else {
+		return nil, errValueKeyGasPriceMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
+		d.GasLimit = v
+	} else {
+		return nil, errValueKeyGasLimitMustUint64
+	}
+
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
+		d.Recipient = v
+	} else {
+		return nil, errValueKeyToMustAddress
+	}
+
+	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
+		d.Amount.Set(v)
+	} else {
+		return nil, errValueKeyAmountMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
+		d.From = v
+	} else {
+		return nil, errValueKeyFromMustAddress
+	}
+
+	return d, nil
 }
 
 func (t *TxInternalDataValueTransfer) Type() TxType {
@@ -51,7 +102,12 @@ func (t *TxInternalDataValueTransfer) Equal(b TxInternalData) bool {
 		return false
 	}
 
-	return t.TxInternalDataCommon.equal(tb.TxInternalDataCommon) &&
+	return t.AccountNonce == tb.AccountNonce &&
+		t.Price.Cmp(tb.Price) == 0 &&
+		t.GasLimit == tb.GasLimit &&
+		t.Recipient == tb.Recipient &&
+		t.Amount.Cmp(tb.Amount) == 0 &&
+		t.From == tb.From &&
 		t.TxSignatures.equal(tb.TxSignatures)
 }
 
@@ -61,15 +117,67 @@ func (t *TxInternalDataValueTransfer) String() string {
 	enc, _ := rlp.EncodeToBytes(ser)
 	return fmt.Sprintf(`
 	TX(%x)
-	Type:          %s%s
+	Type:          %s
+	From:          %s
+	To:            %s
+	Nonce:         %v
+	GasPrice:      %#x
+	GasLimit:      %#x
+	Value:         %#x
 	Signature:     %s
 	Hex:           %x
 `,
 		tx.Hash(),
 		t.Type().String(),
-		t.TxInternalDataCommon.string(),
+		t.From.String(),
+		t.Recipient.String(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Amount,
 		t.TxSignatures.string(),
 		enc)
+}
+
+func (t *TxInternalDataValueTransfer) IsLegacyTransaction() bool {
+	return false
+}
+
+func (t *TxInternalDataValueTransfer) GetAccountNonce() uint64 {
+	return t.AccountNonce
+}
+
+func (t *TxInternalDataValueTransfer) GetPrice() *big.Int {
+	return new(big.Int).Set(t.Price)
+}
+
+func (t *TxInternalDataValueTransfer) GetGasLimit() uint64 {
+	return t.GasLimit
+}
+
+func (t *TxInternalDataValueTransfer) GetRecipient() *common.Address {
+	if t.Recipient == (common.Address{}) {
+		return nil
+	}
+
+	to := common.Address(t.Recipient)
+	return &to
+}
+
+func (t *TxInternalDataValueTransfer) GetAmount() *big.Int {
+	return new(big.Int).Set(t.Amount)
+}
+
+func (t *TxInternalDataValueTransfer) GetFrom() common.Address {
+	return t.From
+}
+
+func (t *TxInternalDataValueTransfer) GetHash() *common.Hash {
+	return t.Hash
+}
+
+func (t *TxInternalDataValueTransfer) SetHash(h *common.Hash) {
+	t.Hash = h
 }
 
 func (t *TxInternalDataValueTransfer) SetSignature(s TxSignatures) {
@@ -84,6 +192,13 @@ func (t *TxInternalDataValueTransfer) IntrinsicGas() (uint64, error) {
 }
 
 func (t *TxInternalDataValueTransfer) SerializeForSign() []interface{} {
-	infs := []interface{}{t.Type()}
-	return append(infs, t.TxInternalDataCommon.serializeForSign()...)
+	return []interface{}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+	}
 }
