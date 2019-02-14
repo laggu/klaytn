@@ -18,6 +18,7 @@ package tests
 
 import (
 	"flag"
+	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common/profile"
@@ -236,6 +237,63 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 	return txs, nil
 }
 
+// makeNewTransactionsToRing makes `numTransactions` transactions which transfers a fixed amount of KLAY
+// from account with index i to account with index (i+1). To have same amount of balance before and after the test,
+// total number of transactions should be the multiple of number of addresses.
+// It returns the generated transactions if successful, or it returns an error if failed.
+func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
+	amount *big.Int, data []byte) (types.Transactions, error) {
+	numAddrs := len(bcdata.addrs)
+	fromAddrs := bcdata.addrs
+
+	if numTransactions%numAddrs != 0 {
+		return nil, fmt.Errorf("numTranasctions should be divided by numAddrs! numTransactions: %v, numAddrs: %v", numTransactions, numAddrs)
+	}
+
+	var err error
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range fromAddrs {
+		fromNonces[i], err = accountMap.GetNonce(*addr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	txs := make(types.Transactions, 0, numTransactions)
+	txAmount := amount
+	if txAmount == nil {
+		txAmount = big.NewInt(rand.Int63n(10))
+		txAmount = txAmount.Add(txAmount, big.NewInt(1))
+	}
+	var gasLimit uint64 = 1000000
+	gasPrice := new(big.Int).SetInt64(0)
+	for i := 0; i < numTransactions; i++ {
+		fromIdx := i % numAddrs
+
+		toIdx := (fromIdx + 1) % numAddrs
+		toAddr := *bcdata.addrs[toIdx]
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    fromNonces[fromIdx],
+			types.TxValueKeyTo:       toAddr,
+			types.TxValueKeyAmount:   txAmount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyFrom:     *bcdata.addrs[fromIdx],
+		})
+
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[fromIdx])
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, signedTx)
+		fromNonces[fromIdx]++
+	}
+
+	return txs, nil
+}
+
 func TestValueTransfer(t *testing.T) {
 	var nBlocks int = 3
 	var txPerBlock int = 10
@@ -258,6 +316,8 @@ func TestValueTransfer(t *testing.T) {
 			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions}},
 		{"MultipleSenderRandomRecipient",
 			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom}},
+		{"MultipleSenderMultipleRecipientRingTx",
+			testOption{2000, 1000, 4, nBlocks, []byte{}, makeNewTransactionsToRing}},
 	}
 
 	for _, test := range valueTransferTests {
@@ -293,6 +353,75 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+func TestValueTransferRing(t *testing.T) {
+	var valueTransferTests = [...]struct {
+		name string
+		opt  testOption
+	}{
+		{"RingTxValueTransfer2000TxsPerBlock1000Accounts",
+			testOption{2000, 1000, 4, 10, []byte{}, makeNewTransactionsToRing}},
+		{"RingTxValueTransfer3000TxsPerBlock1000Accounts",
+			testOption{3000, 1000, 4, 10, []byte{}, makeNewTransactionsToRing}},
+		{"RingTxValueTransfer4000TxsPerBlock1000Accounts",
+			testOption{4000, 1000, 4, 10, []byte{}, makeNewTransactionsToRing}},
+	}
+
+	for _, test := range valueTransferTests {
+		t.Run(test.name, func(t *testing.T) {
+			testValueTransferRing(t, &test.opt)
+		})
+	}
+}
+
+func testValueTransferRing(t *testing.T, opt *testOption) {
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	statedb, err := bcdata.bc.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	preBalance := statedb.GetBalance(*bcdata.addrs[0])
+
+	for i := 0; i < opt.numGeneratedBlocks; i++ {
+		//fmt.Printf("iteration %d\n", i)
+		err := bcdata.GenABlock(accountMap, opt, opt.numTransactions, prof)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	statedb, err = bcdata.bc.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	postBalance := statedb.GetBalance(*bcdata.addrs[0])
+
+	if preBalance.Cmp(postBalance) != 0 {
+		t.Fatal("Different balance after ring transactions")
 	}
 
 	if testing.Verbose() {
