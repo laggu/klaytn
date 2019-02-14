@@ -38,7 +38,7 @@ const (
 	cacheLevelExtreme = "extreme"
 )
 const (
-	defaultMemorySize      = 16
+	minimumMemorySize      = 16
 	defaultCacheUsageLevel = cacheLevelSaving
 )
 
@@ -50,15 +50,19 @@ var ScaleByCacheUsageLevel int = 100                 // Scale according to cache
 var TotalPhysicalMemGB int = getPhysicalMemorySize() // Convert Byte to GByte
 
 // getPhysicalMemorySize returns the system's physical memory value.
-// It internally returns a defaultMemorySize if it is an os that does not support using the system call to obtain it,
+// It internally returns a minimumMemorySize if it is an os that does not support using the system call to obtain it,
 // or if the system call fails.
 func getPhysicalMemorySize() int {
 	TotalMemGB := int(memory.TotalMemory() / 1000 / 1000 / 1000)
-	if TotalMemGB >= defaultMemorySize {
+	if TotalMemGB >= minimumMemorySize {
 		return TotalMemGB
 	} else {
-		logger.Error("Failed to get the physical memory of the system. Default physical memory size is used", "defaultMemorySize(GB)", defaultMemorySize)
-		return defaultMemorySize
+		if TotalMemGB != 0 {
+			logger.Warn("The system's physical memory is less than minimum physical memory size", "physicalSystemMemory(GB)", TotalMemGB, "minimumMemorySize(GB)", minimumMemorySize)
+		} else {
+			logger.Error("Failed to get the physical memory of the system. Minimum physical memory size is used", "minimumMemorySize(GB)", minimumMemorySize)
+		}
+		return minimumMemorySize
 	}
 }
 
@@ -287,9 +291,9 @@ func (c ARCConfig) newCache() (Cache, error) {
 }
 
 // calculateScale returns the scale of the cache.
-// The scale of the cache is obtained by multiplying (MemorySize / defaultMemorySize), (scaleByCacheUsageLevel / 100), and (CacheScale / 100).
+// The scale of the cache is obtained by multiplying (MemorySize / minimumMemorySize), (scaleByCacheUsageLevel / 100), and (CacheScale / 100).
 func calculateScale() int {
-	return CacheScale * ScaleByCacheUsageLevel * TotalPhysicalMemGB / defaultMemorySize / 100 / 100
+	return CacheScale * ScaleByCacheUsageLevel * TotalPhysicalMemGB / minimumMemorySize / 100 / 100
 }
 
 // GetScaleByCacheUsageLevel returns the scale according to cacheUsageLevel
