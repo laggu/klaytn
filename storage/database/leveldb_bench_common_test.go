@@ -24,6 +24,8 @@ const (
 	primeNumber = 71887
 	// levelDBMemDBSize is the size of internal memory database of LevelDB. Data is first saved to memDB and then moved to persistent storage.
 	levelDBMemDBSize = 64
+	// numOfGet is the number read per goroutine for the parallel read test.
+	numberOfGet = 10000
 )
 
 // initTestDB creates the db and inputs the data in db for valSize
@@ -80,26 +82,6 @@ func benchmarkReadDBFromMemDB(b *testing.B, valueSize int) {
 	}
 }
 
-// benchmarkReadCache is a benchmark function that reads the data stored in the cache.
-func benchmarkReadCache(b *testing.B, valueSize int) {
-	b.StopTimer()
-	cache, _ := common.NewCache(common.LRUConfig{CacheSize: numDataInsertions})
-	keys, values := genKeysAndValues(valueSize, numDataInsertions)
-	hashKeys := make([]common.Hash, 0, numDataInsertions)
-
-	for i, key := range keys {
-		var hashKey common.Hash
-		copy(hashKey[:], key[:32])
-		hashKeys = append(hashKeys, hashKey)
-		cache.Add(hashKey, values[i])
-	}
-
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		cache.Get(hashKeys[(i*primeNumber)%(numDataInsertions)])
-	}
-}
-
 // getReadDataOptions is a test case for measuring read performance.
 var getReadDataOptions = [...]struct {
 	name        string
@@ -116,10 +98,25 @@ var getReadDataOptions = [...]struct {
 	{"DBFromMem256", 256, benchmarkReadDBFromMemDB},
 	{"DBFromMem512", 512, benchmarkReadDBFromMemDB},
 
-	{"Cache1", 1, benchmarkReadCache},
-	{"Cache128", 128, benchmarkReadCache},
-	{"Cache256", 256, benchmarkReadCache},
-	{"Cache512", 512, benchmarkReadCache},
+	{"LRUCacheSingle1", 1, benchmarkLruCacheGetSingle},
+	{"LRUCacheSingle128", 128, benchmarkLruCacheGetSingle},
+	{"LRUCacheSingle256", 256, benchmarkLruCacheGetSingle},
+	{"LRUCacheSingle512", 512, benchmarkLruCacheGetSingle},
+
+	{"FIFOCacheSingle1", 1, benchmarkFIFOCacheGetSingle},
+	{"FIFOCacheSingle128", 128, benchmarkFIFOCacheGetSingle},
+	{"FIFOCacheSingle256", 256, benchmarkFIFOCacheGetSingle},
+	{"FIFOCacheSingle512", 512, benchmarkFIFOCacheGetSingle},
+
+	{"LRUCacheParallel1", 1, benchmarkLruCacheCacheGetParallel},
+	{"LRUCacheParallel128", 128, benchmarkLruCacheCacheGetParallel},
+	{"LRUCacheParallel256", 256, benchmarkLruCacheCacheGetParallel},
+	{"LRUCacheParallel512", 512, benchmarkLruCacheCacheGetParallel},
+
+	{"FIFOCacheParallel1", 1, benchmarkFIFOCacheGetParallel},
+	{"FIFOCacheParallel128", 128, benchmarkFIFOCacheGetParallel},
+	{"FIFOCacheParallel256", 256, benchmarkFIFOCacheGetParallel},
+	{"FIFOCacheParallel512", 512, benchmarkFIFOCacheGetParallel},
 }
 
 // Benchmark_read_data is a benchmark that measures data read performance in DB and cache.
@@ -129,4 +126,70 @@ func Benchmark_read_data(b *testing.B) {
 			bm.testFunc(b, bm.valueLength)
 		})
 	}
+}
+
+// benchmarkFIFOCacheGetParallel measures the performance of the fifoCache when reading data in parallel
+func benchmarkFIFOCacheGetParallel(b *testing.B, valueSize int) {
+	cache, _ := common.NewCache(common.FIFOCacheConfig{CacheSize: numDataInsertions})
+	benchmarkCacheGetParallel(b, cache, valueSize)
+}
+
+// benchmarkLruCacheCacheGetParallel measures the performance of the lruCache when reading data in parallel
+func benchmarkLruCacheCacheGetParallel(b *testing.B, valueSize int) {
+	cache, _ := common.NewCache(common.LRUConfig{CacheSize: numDataInsertions})
+	benchmarkCacheGetParallel(b, cache, valueSize)
+}
+
+// benchmarkCacheGetParallel is a benchmark for measuring performance
+// when cacheSize data is entered into the cache and then read in parallel.
+func benchmarkCacheGetParallel(b *testing.B, cache common.Cache, valueSize int) {
+	hashKeys := initCacheData(cache, valueSize)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			for i := 0; i < numberOfGet; i++ {
+				key := hashKeys[(i*primeNumber)%numDataInsertions]
+				cache.Get(key)
+			}
+		}
+	})
+}
+
+// benchmarkFIFOCacheGetSingle is a benchmark to read fifoCache serially.
+func benchmarkFIFOCacheGetSingle(b *testing.B, valueSize int) {
+	cache, _ := common.NewCache(common.FIFOCacheConfig{CacheSize: numDataInsertions})
+	benchmarkCacheGetSingle(b, cache, valueSize)
+}
+
+// benchmarkLruCacheGetSingle is a benchmark to read lruCache serially.
+func benchmarkLruCacheGetSingle(b *testing.B, valueSize int) {
+	cache, _ := common.NewCache(common.LRUConfig{CacheSize: numDataInsertions})
+	benchmarkCacheGetSingle(b, cache, valueSize)
+}
+
+// benchmarkCacheGetSingle is a benchmark for measuring performance
+// when cacheSize data is entered into the cache and then serially read.
+func benchmarkCacheGetSingle(b *testing.B, cache common.Cache, valueSize int) {
+	hashKeys := initCacheData(cache, valueSize)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		key := hashKeys[(i*primeNumber)%numDataInsertions]
+		cache.Get(key)
+	}
+}
+
+// initCacheData initializes the cache by entering test data into the cache.
+func initCacheData(cache common.Cache, valueSize int) []common.Hash {
+	keys, values := genKeysAndValues(valueSize, numDataInsertions)
+	hashKeys := make([]common.Hash, 0, numDataInsertions)
+
+	for i, key := range keys {
+		var hashKey common.Hash
+		copy(hashKey[:], key[:32])
+		hashKeys = append(hashKeys, hashKey)
+		cache.Add(hashKey, values[i])
+	}
+
+	return hashKeys
 }

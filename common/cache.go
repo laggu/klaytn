@@ -254,6 +254,29 @@ func (c LRUShardConfig) makeNumShardsPowOf2() int {
 	return preNumShards
 }
 
+// FIFOCacheConfig is a implementation of CacheConfiger interface for fifoCache.
+type FIFOCacheConfig struct {
+	CacheSize int
+}
+
+// newCache creates a Cache interface whose implementation is fifoCache.
+func (c FIFOCacheConfig) newCache() (Cache, error) {
+	cacheSize := c.CacheSize * calculateScale()
+	lru, err := lru.New(cacheSize)
+	return &fifoCache{&lruCache{lru}}, err
+}
+
+// fifoCache internally has a lruCache.
+// All methods are the same as lruCache, but we override Get function, not to update the lifetime of data.
+type fifoCache struct {
+	*lruCache
+}
+
+// Get returns the value corresponding to the cache key.
+func (cache *fifoCache) Get(key CacheKey) (value interface{}, ok bool) {
+	return cache.Peek(key)
+}
+
 type ARCConfig struct {
 	CacheSize int
 }
