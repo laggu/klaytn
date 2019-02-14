@@ -101,13 +101,13 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 			return common.Address{}, 0, ErrShouldBeSingleSignature
 		}
 		if crypto.PubkeyToAddress(*pubkey[0]) != from {
-			return common.Address{}, 0, ErrInvalidSig
+			return common.Address{}, 0, ErrInvalidSigSender
 		}
 		return from, gasKey, nil
 	}
 
 	if !accKey.Validate(pubkey) {
-		return common.Address{}, 0, ErrInvalidSig
+		return common.Address{}, 0, ErrInvalidSigSender
 	}
 
 	return from, gasKey, nil
@@ -141,13 +141,13 @@ func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (commo
 			return common.Address{}, 0, ErrShouldBeSingleSignature
 		}
 		if crypto.PubkeyToAddress(*pubkey[0]) != feePayer {
-			return common.Address{}, 0, ErrInvalidSig
+			return common.Address{}, 0, ErrInvalidSigFeePayer
 		}
 		return feePayer, gasKey, nil
 	}
 
 	if !accKey.Validate(pubkey) {
-		return common.Address{}, 0, ErrInvalidSig
+		return common.Address{}, 0, ErrInvalidSigFeePayer
 	}
 
 	return feePayer, gasKey, nil

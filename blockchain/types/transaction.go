@@ -35,6 +35,8 @@ import (
 
 var (
 	ErrInvalidSig                     = errors.New("invalid transaction v, r, s values")
+	ErrInvalidSigSender               = errors.New("invalid transaction v, r, s values of the sender")
+	ErrInvalidSigFeePayer             = errors.New("invalid transaction v, r, s values of the fee payer")
 	errNoSigner                       = errors.New("missing signing methods")
 	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
