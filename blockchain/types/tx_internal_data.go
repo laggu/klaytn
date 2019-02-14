@@ -153,6 +153,10 @@ func (t TxType) IsContractDeploy() bool {
 		t == TxTypeFeeDelegatedSmartContractDeployWithRatio
 }
 
+func (t TxType) IsCancelTransaction() bool {
+	return (t &^ 0x0) == TxTypeCancel
+}
+
 func (t TxType) IsLegacyTransaction() bool {
 	return t == TxTypeLegacyTransaction
 }
@@ -269,6 +273,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataSmartContractDeploy(), nil
 	case TxTypeSmartContractExecution:
 		return newTxInternalDataSmartContractExecution(), nil
+	case TxTypeCancel:
+		return newTxInternalDataCancel(), nil
 	case TxTypeChainDataAnchoring:
 		return newTxInternalDataChainDataAnchoring(), nil
 	}
@@ -294,6 +300,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataSmartContractDeployWithMap(values)
 	case TxTypeSmartContractExecution:
 		return newTxInternalDataSmartContractExecutionWithMap(values)
+	case TxTypeCancel:
+		return newTxInternalDataCancelWithMap(values)
 	case TxTypeChainDataAnchoring:
 		return newTxInternalDataChainDataAnchoringWithMap(values)
 	}

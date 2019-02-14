@@ -50,6 +50,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"FeeDelegatedValueTransfer", genFeeDelegatedValueTransferTransaction()},
 		{"SmartContractExecution", genSmartContractExecutionTransaction()},
 		{"FeeDelegatedValueTransferWithRatio", genFeeDelegatedValueTransferWithRatioTransaction()},
+		{"Cancel", genCancelTransaction()},
 	}
 
 	var testcases = []struct {
@@ -292,6 +293,23 @@ func genAccountUpdateTransaction() TxInternalData {
 		TxValueKeyGasPrice:   gasPrice,
 		TxValueKeyFrom:       from,
 		TxValueKeyAccountKey: NewAccountKeyPublicWithValue(&key.PublicKey),
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
+}
+
+func genCancelTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeCancel, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:    nonce,
+		TxValueKeyAmount:   amount,
+		TxValueKeyGasLimit: gasLimit,
+		TxValueKeyGasPrice: gasPrice,
+		TxValueKeyFrom:     from,
 	})
 
 	if err != nil {
