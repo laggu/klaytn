@@ -22,33 +22,71 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"math/big"
 )
 
 // TxInternalDataSmartContractExecution represents a transaction executing a smart contract.
 type TxInternalDataSmartContractExecution struct {
-	*TxInternalDataCommon
-
-	Payload []byte
+	AccountNonce uint64
+	Price        *big.Int
+	GasLimit     uint64
+	Recipient    common.Address
+	Amount       *big.Int
+	From         common.Address
+	Payload      []byte
 
 	TxSignatures
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
 func newTxInternalDataSmartContractExecution() *TxInternalDataSmartContractExecution {
+	h := common.Hash{}
 	return &TxInternalDataSmartContractExecution{
-		newTxInternalDataCommon(),
-		[]byte{},
-		NewTxSignatures(),
+		Price:  new(big.Int),
+		Amount: new(big.Int),
+		Hash:   &h,
 	}
 }
 
 func newTxInternalDataSmartContractExecutionWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataSmartContractExecution, error) {
-	c, err := newTxInternalDataCommonWithMap(values)
-	if err != nil {
-		return nil, err
+	t := newTxInternalDataSmartContractExecution()
+
+	if v, ok := values[TxValueKeyNonce].(uint64); ok {
+		t.AccountNonce = v
+	} else {
+		return nil, errValueKeyNonceMustUint64
 	}
 
-	t := &TxInternalDataSmartContractExecution{
-		c, []byte{}, NewTxSignatures(),
+	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
+		t.Price.Set(v)
+	} else {
+		return nil, errValueKeyGasPriceMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
+		t.GasLimit = v
+	} else {
+		return nil, errValueKeyGasLimitMustUint64
+	}
+
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
+		t.Recipient = v
+	} else {
+		return nil, errValueKeyToMustAddress
+	}
+
+	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
+		t.Amount.Set(v)
+	} else {
+		return nil, errValueKeyAmountMustBigInt
+	}
+
+	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
+		t.From = v
+	} else {
+		return nil, errValueKeyFromMustAddress
 	}
 
 	if v, ok := values[TxValueKeyData].([]byte); ok {
@@ -64,19 +102,65 @@ func (t *TxInternalDataSmartContractExecution) Type() TxType {
 	return TxTypeSmartContractExecution
 }
 
-func (t *TxInternalDataSmartContractExecution) GetPayload() []byte {
-	return t.Payload
-}
-
 func (t *TxInternalDataSmartContractExecution) Equal(a TxInternalData) bool {
 	ta, ok := a.(*TxInternalDataSmartContractExecution)
 	if !ok {
 		return false
 	}
 
-	return t.TxInternalDataCommon.equal(ta.TxInternalDataCommon) &&
+	return t.AccountNonce == ta.AccountNonce &&
+		t.Price.Cmp(ta.Price) == 0 &&
+		t.GasLimit == ta.GasLimit &&
+		t.Recipient == ta.Recipient &&
+		t.Amount.Cmp(ta.Amount) == 0 &&
+		t.From == ta.From &&
 		bytes.Equal(t.Payload, ta.Payload) &&
 		t.TxSignatures.equal(ta.TxSignatures)
+}
+
+func (t *TxInternalDataSmartContractExecution) IsLegacyTransaction() bool {
+	return false
+}
+
+func (t *TxInternalDataSmartContractExecution) GetPayload() []byte {
+	return t.Payload
+}
+
+func (t *TxInternalDataSmartContractExecution) GetAccountNonce() uint64 {
+	return t.AccountNonce
+}
+
+func (t *TxInternalDataSmartContractExecution) GetPrice() *big.Int {
+	return new(big.Int).Set(t.Price)
+}
+
+func (t *TxInternalDataSmartContractExecution) GetGasLimit() uint64 {
+	return t.GasLimit
+}
+
+func (t *TxInternalDataSmartContractExecution) GetRecipient() *common.Address {
+	if t.Recipient == (common.Address{}) {
+		return nil
+	}
+
+	to := common.Address(t.Recipient)
+	return &to
+}
+
+func (t *TxInternalDataSmartContractExecution) GetAmount() *big.Int {
+	return new(big.Int).Set(t.Amount)
+}
+
+func (t *TxInternalDataSmartContractExecution) GetFrom() common.Address {
+	return t.From
+}
+
+func (t *TxInternalDataSmartContractExecution) GetHash() *common.Hash {
+	return t.Hash
+}
+
+func (t *TxInternalDataSmartContractExecution) SetHash(h *common.Hash) {
+	t.Hash = h
 }
 
 func (t *TxInternalDataSmartContractExecution) SetSignature(s TxSignatures) {
@@ -89,14 +173,25 @@ func (t *TxInternalDataSmartContractExecution) String() string {
 	enc, _ := rlp.EncodeToBytes(ser)
 	return fmt.Sprintf(`
 	TX(%x)
-	Type:          %s%s
+	Type:          %s
+	From:          %s
+	To:            %s
+	Nonce:         %v
+	GasPrice:      %#x
+	GasLimit:      %#x
+	Value:         %#x
 	Signature:     %s
 	Paylod:        %x
 	Hex:           %x
 `,
 		tx.Hash(),
 		t.Type().String(),
-		t.TxInternalDataCommon.string(),
+		t.From.String(),
+		t.Recipient.String(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Amount,
 		t.TxSignatures.string(),
 		common.Bytes2Hex(t.Payload),
 		enc)
@@ -114,8 +209,14 @@ func (t *TxInternalDataSmartContractExecution) IntrinsicGas() (uint64, error) {
 }
 
 func (t *TxInternalDataSmartContractExecution) SerializeForSign() []interface{} {
-	infs := []interface{}{t.Type()}
-	infs = append(infs, t.TxInternalDataCommon.serializeForSign()...)
-
-	return append(infs, t.Payload)
+	return []interface{}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.Payload,
+	}
 }
