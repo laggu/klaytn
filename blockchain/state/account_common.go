@@ -176,6 +176,11 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 }
 
 func (e *AccountCommon) UpdateKey(key types.AccountKey) error {
+	if myRoleKey, ok := e.key.(*types.AccountKeyRoleBased); ok {
+		if newRoleKey, ok := key.(*types.AccountKeyRoleBased); ok {
+			myRoleKey.Update(newRoleKey)
+		}
+	}
 	e.key = key
 	return nil
 }
