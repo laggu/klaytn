@@ -5,7 +5,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.11.2
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
     working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
