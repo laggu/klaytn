@@ -85,6 +85,7 @@ var (
 	errValueKeyFromMustAddress           = errors.New("From must be a type of common.Address")
 	errValueKeyFeePayerMustAddress       = errors.New("FeePayer must be a type of common.Address")
 	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
+	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 )
 
 func (t TxType) String() string {
@@ -284,7 +285,7 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	case TxTypeFeeDelegatedValueTransfer:
 		return newTxInternalDataFeeDelegatedValueTransferWithMap(values)
 	case TxTypeFeeDelegatedValueTransferWithRatio:
-		return NewTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values)
+		return newTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values)
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreationWithMap(values)
 	case TxTypeAccountUpdate:

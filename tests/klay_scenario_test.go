@@ -1435,7 +1435,7 @@ func TestValidateSender(t *testing.T) {
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
-			types.TxValueKeyFeeRatioOfFeePayer: uint(30),
+			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
 		})
 		assert.Equal(t, nil, err)
 
