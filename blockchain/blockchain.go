@@ -54,31 +54,12 @@ var (
 	logger           = log.NewModuleLogger(log.Blockchain)
 )
 
-// TODO-Klaytn: Below should be handled by ini or other configurations.
-const (
-	futureBlocksCacheType = common.LRUCacheType
-	badBlocksCacheType    = common.LRUCacheType
-)
-
 // Below is the list of the constants for cache size.
 // TODO-Klaytn: Below should be handled by ini or other configurations.
 const (
-	maxBodyCache           = 256
-	maxBlockCache          = 256
-	maxFutureBlocks        = 256
-	maxTimeFutureBlocks    = 30
-	maxBadBlocks           = 10
-	maxRecentTransactions  = 30000
-	maxRecentBlockReceipts = 30
-	maxRecentTxReceipt     = 30000
-)
-
-const (
-	numShardsBodyCache           = 4096
-	numShardsBlockCache          = 4096
-	numShardsRecentTransactions  = 4096
-	numShardsRecentBlockReceipts = 4096
-	numShardsRecentTxReceipt     = 4096
+	maxFutureBlocks     = 256
+	maxTimeFutureBlocks = 30
+	maxBadBlocks        = 10
 )
 
 const (
@@ -87,51 +68,6 @@ const (
 	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
 )
-
-type blockChainCacheKey int
-
-const (
-	bodyCacheIndex blockChainCacheKey = iota
-	bodyRLPCacheIndex
-	blockCacheIndex
-	recentTxAndLookupInfoIndex
-	recentBlockReceiptsIndex
-	recentTxReceiptIndex
-
-	blockCacheKeySize
-)
-
-var blockLRUCacheConfig = [blockCacheKeySize]common.CacheConfiger{
-	bodyCacheIndex:             common.LRUConfig{CacheSize: maxBodyCache},
-	bodyRLPCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache},
-	blockCacheIndex:            common.LRUConfig{CacheSize: maxBlockCache},
-	recentTxAndLookupInfoIndex: common.LRUConfig{CacheSize: maxRecentTransactions},
-	recentBlockReceiptsIndex:   common.LRUConfig{CacheSize: maxRecentBlockReceipts},
-	recentTxReceiptIndex:       common.LRUConfig{CacheSize: maxRecentTxReceipt},
-}
-
-var blockLRUShardCacheConfig = [blockCacheKeySize]common.CacheConfiger{
-	bodyCacheIndex:             common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	bodyRLPCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	blockCacheIndex:            common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
-	recentTxAndLookupInfoIndex: common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
-	recentBlockReceiptsIndex:   common.LRUShardConfig{CacheSize: maxRecentBlockReceipts, NumShards: numShardsRecentBlockReceipts},
-	recentTxReceiptIndex:       common.LRUShardConfig{CacheSize: maxRecentTxReceipt, NumShards: numShardsRecentTxReceipt},
-}
-
-func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheType) common.Cache {
-	var cache common.Cache
-
-	switch cacheType {
-	case common.LRUCacheType:
-		cache, _ = common.NewCache(blockLRUCacheConfig[cacheNameKey])
-	case common.LRUShardCacheType:
-		cache, _ = common.NewCache(blockLRUShardCacheConfig[cacheNameKey])
-	default:
-		cache, _ = common.NewCache(blockLRUCacheConfig[cacheNameKey])
-	}
-	return cache
-}
 
 // TrieConfig contains the configuration values for the trie caching/pruning
 // that's resident in a blockchain.
