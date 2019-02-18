@@ -184,6 +184,19 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), scc); err != nil {
 		return nil, err
 	}
+
+	// Set AcceptTxs flag in 1CN case to receive tx propagation.
+	if chainConfig.Istanbul != nil {
+		istanbulExtra, err := types.ExtractIstanbulExtra(cn.blockchain.Genesis().Header())
+		if err != nil {
+			logger.Error("Failed to decode IstanbulExtra", "err", err)
+		} else {
+			if len(istanbulExtra.Validators) == 1 {
+				atomic.StoreUint32(&cn.protocolManager.acceptTxs, 1)
+			}
+		}
+	}
+
 	cn.protocolManager.wsendpoint = config.WsEndpoint
 
 	wallet, err := cn.RewardbaseWallet()
