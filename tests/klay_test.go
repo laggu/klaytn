@@ -318,6 +318,14 @@ func TestValueTransfer(t *testing.T) {
 			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom}},
 		{"MultipleSenderMultipleRecipientRingTx",
 			testOption{2000, 1000, 4, nBlocks, []byte{}, makeNewTransactionsToRing}},
+
+		// Below test cases execute one transaction per a block.
+		{"SingleSenderMultipleRecipientSingleTxPerBlock",
+			testOption{1, 1000, 4, 10, []byte{}, makeTransactionsFrom}},
+		{"MultipleSenderMultipleRecipientSingleTxPerBlock",
+			testOption{1, 2000, 4, 10, []byte{}, makeIndependentTransactions}},
+		{"MultipleSenderRandomRecipientSingleTxPerBlock",
+			testOption{1, 2000, 4, 10, []byte{}, makeTransactionsToRandom}},
 	}
 
 	for _, test := range valueTransferTests {
