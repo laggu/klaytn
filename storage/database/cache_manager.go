@@ -24,58 +24,14 @@ import (
 	"reflect"
 )
 
-const (
-	headerCacheLimit      = 512
-	tdCacheLimit          = 1024
-	blockNumberCacheLimit = 2048
-)
-
-const (
-	numShardsHeaderCache      = 4096
-	numShardsTdCache          = 4096
-	numShardsBlockNumberCache = 4096
-)
-
-type headerChainCacheKey int
-
-const (
-	hedearCacheIndex headerChainCacheKey = iota
-	tdCacheIndex
-	blockNumberCacheIndex
-
-	headerChainCacheKeySize
-)
-
-var headerLRUCacheConfig = [headerChainCacheKeySize]common.CacheConfiger{
-	hedearCacheIndex:      common.LRUConfig{CacheSize: headerCacheLimit},
-	tdCacheIndex:          common.LRUConfig{CacheSize: tdCacheLimit},
-	blockNumberCacheIndex: common.LRUConfig{CacheSize: blockNumberCacheLimit},
-}
-
-var headerLRUShardCacheConfig = [headerChainCacheKeySize]common.CacheConfiger{
-	hedearCacheIndex:      common.LRUShardConfig{CacheSize: headerCacheLimit, NumShards: numShardsHeaderCache},
-	tdCacheIndex:          common.LRUShardConfig{CacheSize: tdCacheLimit, NumShards: numShardsTdCache},
-	blockNumberCacheIndex: common.LRUShardConfig{CacheSize: blockNumberCacheLimit, NumShards: numShardsBlockNumberCache},
-}
-
-func newHeaderChainCache(cacheNameKey headerChainCacheKey, cacheType common.CacheType) common.Cache {
-	var cache common.Cache
-
-	switch cacheType {
-	case common.LRUCacheType:
-		cache, _ = common.NewCache(headerLRUCacheConfig[cacheNameKey])
-	case common.LRUShardCacheType:
-		cache, _ = common.NewCache(headerLRUShardCacheConfig[cacheNameKey])
-	default:
-		cache, _ = common.NewCache(headerLRUCacheConfig[cacheNameKey])
-	}
-	return cache // NOTE-Klaytn-Cache HeaderChain Caches
-}
-
 // NOTE-Klaytn-Cache BlockChain Caches
 // Below is the list of the constants for cache size.
 // TODO-Klaytn: Below should be handled by ini or other configurations.
 const (
+	maxHeaderCache      = 512
+	maxTdCache          = 1024
+	maxBlockNumberCache = 2048
+
 	maxBodyCache           = 256
 	maxBlockCache          = 256
 	maxRecentTransactions  = 30000
@@ -84,6 +40,10 @@ const (
 )
 
 const (
+	numShardsHeaderCache      = 4096
+	numShardsTdCache          = 4096
+	numShardsBlockNumberCache = 4096
+
 	numShardsBodyCache           = 4096
 	numShardsBlockCache          = 4096
 	numShardsRecentTransactions  = 4096
@@ -91,20 +51,28 @@ const (
 	numShardsRecentTxReceipt     = 4096
 )
 
-type blockChainCacheKey int
+type cacheKey int
 
 const (
-	bodyCacheIndex blockChainCacheKey = iota
+	hedearCacheIndex cacheKey = iota
+	tdCacheIndex
+	blockNumberCacheIndex
+
+	bodyCacheIndex
 	bodyRLPCacheIndex
 	blockCacheIndex
 	recentTxAndLookupInfoIndex
 	recentBlockReceiptsIndex
 	recentTxReceiptIndex
 
-	blockCacheKeySize
+	cacheKeySize
 )
 
-var blockLRUCacheConfig = [blockCacheKeySize]common.CacheConfiger{
+var lruCacheConfig = [cacheKeySize]common.CacheConfiger{
+	hedearCacheIndex:      common.LRUConfig{CacheSize: maxHeaderCache},
+	tdCacheIndex:          common.LRUConfig{CacheSize: maxTdCache},
+	blockNumberCacheIndex: common.LRUConfig{CacheSize: maxBlockNumberCache},
+
 	bodyCacheIndex:             common.LRUConfig{CacheSize: maxBodyCache},
 	bodyRLPCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache},
 	blockCacheIndex:            common.LRUConfig{CacheSize: maxBlockCache},
@@ -113,7 +81,11 @@ var blockLRUCacheConfig = [blockCacheKeySize]common.CacheConfiger{
 	recentTxReceiptIndex:       common.LRUConfig{CacheSize: maxRecentTxReceipt},
 }
 
-var blockLRUShardCacheConfig = [blockCacheKeySize]common.CacheConfiger{
+var lruShardCacheConfig = [cacheKeySize]common.CacheConfiger{
+	hedearCacheIndex:      common.LRUShardConfig{CacheSize: maxHeaderCache, NumShards: numShardsHeaderCache},
+	tdCacheIndex:          common.LRUShardConfig{CacheSize: maxTdCache, NumShards: numShardsTdCache},
+	blockNumberCacheIndex: common.LRUShardConfig{CacheSize: maxBlockNumberCache, NumShards: numShardsBlockNumberCache},
+
 	bodyCacheIndex:             common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
 	bodyRLPCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
 	blockCacheIndex:            common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
@@ -122,16 +94,16 @@ var blockLRUShardCacheConfig = [blockCacheKeySize]common.CacheConfiger{
 	recentTxReceiptIndex:       common.LRUShardConfig{CacheSize: maxRecentTxReceipt, NumShards: numShardsRecentTxReceipt},
 }
 
-func newBlockChainCache(cacheNameKey blockChainCacheKey, cacheType common.CacheType) common.Cache {
+func newCache(cacheNameKey cacheKey, cacheType common.CacheType) common.Cache {
 	var cache common.Cache
 
 	switch cacheType {
 	case common.LRUCacheType:
-		cache, _ = common.NewCache(blockLRUCacheConfig[cacheNameKey])
+		cache, _ = common.NewCache(lruCacheConfig[cacheNameKey])
 	case common.LRUShardCacheType:
-		cache, _ = common.NewCache(blockLRUShardCacheConfig[cacheNameKey])
+		cache, _ = common.NewCache(lruShardCacheConfig[cacheNameKey])
 	default:
-		cache, _ = common.NewCache(blockLRUCacheConfig[cacheNameKey])
+		cache, _ = common.NewCache(lruCacheConfig[cacheNameKey])
 	}
 	return cache
 }
@@ -162,17 +134,17 @@ type cacheManager struct {
 // newCacheManager returns a pointer of cacheManager with predefined configurations.
 func newCacheManager() *cacheManager {
 	cm := &cacheManager{
-		headerCache:      newHeaderChainCache(hedearCacheIndex, common.DefaultCacheType),
-		tdCache:          newHeaderChainCache(tdCacheIndex, common.DefaultCacheType),
-		blockNumberCache: newHeaderChainCache(blockNumberCacheIndex, common.DefaultCacheType),
+		headerCache:      newCache(hedearCacheIndex, common.DefaultCacheType),
+		tdCache:          newCache(tdCacheIndex, common.DefaultCacheType),
+		blockNumberCache: newCache(blockNumberCacheIndex, common.DefaultCacheType),
 
-		bodyCache:    newBlockChainCache(bodyCacheIndex, common.DefaultCacheType),
-		bodyRLPCache: newBlockChainCache(bodyRLPCacheIndex, common.DefaultCacheType),
-		blockCache:   newBlockChainCache(blockCacheIndex, common.DefaultCacheType),
+		bodyCache:    newCache(bodyCacheIndex, common.DefaultCacheType),
+		bodyRLPCache: newCache(bodyRLPCacheIndex, common.DefaultCacheType),
+		blockCache:   newCache(blockCacheIndex, common.DefaultCacheType),
 
-		recentTxAndLookupInfo: newBlockChainCache(recentTxAndLookupInfoIndex, common.DefaultCacheType),
-		recentBlockReceipts:   newBlockChainCache(recentBlockReceiptsIndex, common.DefaultCacheType),
-		recentTxReceipt:       newBlockChainCache(recentTxReceiptIndex, common.DefaultCacheType),
+		recentTxAndLookupInfo: newCache(recentTxAndLookupInfoIndex, common.DefaultCacheType),
+		recentBlockReceipts:   newCache(recentBlockReceiptsIndex, common.DefaultCacheType),
+		recentTxReceipt:       newCache(recentTxReceiptIndex, common.DefaultCacheType),
 	}
 	return cm
 }
