@@ -186,14 +186,15 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Gas() uint64                   { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int            { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int               { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64                 { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool              { return true }
-func (tx *Transaction) Type() TxType                  { return tx.data.Type() }
-func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
-func (tx *Transaction) IsLegacyTransaction() bool     { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) Gas() uint64                        { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int                 { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int                    { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64                      { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonce() bool                   { return true }
+func (tx *Transaction) Type() TxType                       { return tx.data.Type() }
+func (tx *Transaction) IntrinsicGas() (uint64, error)      { return tx.data.IntrinsicGas() }
+func (tx *Transaction) IsLegacyTransaction() bool          { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) GetRoleTypeForValidation() RoleType { return tx.data.GetRoleTypeForValidation() }
 
 func (tx *Transaction) Data() []byte {
 	tp, ok := tx.data.(TxInternalDataPayload)

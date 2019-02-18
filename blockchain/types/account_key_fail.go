@@ -43,7 +43,7 @@ func (a *AccountKeyFail) Equal(b AccountKey) bool {
 	return false
 }
 
-func (a *AccountKeyFail) Validate(pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyFail) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	// This type of account key always fails to validate.
 	return false
 }

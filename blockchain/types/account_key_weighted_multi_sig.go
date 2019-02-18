@@ -69,7 +69,7 @@ func (a *AccountKeyWeightedMultiSig) Equal(b AccountKey) bool {
 		a.Keys.Equal(tb.Keys)
 }
 
-func (a *AccountKeyWeightedMultiSig) Validate(pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	weightedSum := uint(0)
 
 	// To prohibit making a signature with the same key, make a map.

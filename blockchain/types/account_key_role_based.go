@@ -137,34 +137,11 @@ func (a *AccountKeyRoleBased) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (a *AccountKeyRoleBased) Validate(pubkeys []*ecdsa.PublicKey) bool {
-	return a.getDefaultKey().Validate(pubkeys)
-}
-
-func (a *AccountKeyRoleBased) ValidateWithTxType(txtype TxType, pubkeys []*ecdsa.PublicKey) bool {
-	if txtype == TxTypeAccountUpdate {
-		if len(*a) > int(RoleAccountUpdate) {
-			return (*a)[RoleAccountUpdate].Validate(pubkeys)
-		}
+func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
+	if len(*a) > int(RoleAccountUpdate) {
+		return (*a)[r].Validate(r, pubkeys)
 	}
-	// Fallback to the default key if the above conditions are not met.
-	return a.getDefaultKey().Validate(pubkeys)
-}
-
-func (a *AccountKeyRoleBased) ValidateFeePayer(pubkeys []*ecdsa.PublicKey) bool {
-	return a.getDefaultKey().Validate(pubkeys)
-}
-
-func (a *AccountKeyRoleBased) ValidateFeePayerWithTxType(txtype TxType, pubkeys []*ecdsa.PublicKey) bool {
-	if txtype.IsFeeDelegatedTransaction() {
-		// If the above condition is passed, it means the tx is a fee-delegated tx type.
-		if len(*a) > int(RoleFeePayer) {
-			return (*a)[RoleFeePayer].Validate(pubkeys)
-		}
-	}
-
-	// Fallback to the default key if the above conditions are not met.
-	return a.getDefaultKey().Validate(pubkeys)
+	return a.getDefaultKey().Validate(r, pubkeys)
 }
 
 // ValidateAccountCreation validates keys when creating an account with this key.

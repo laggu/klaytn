@@ -159,6 +159,10 @@ func (t *TxInternalDataAccountUpdate) Type() TxType {
 	return TxTypeAccountUpdate
 }
 
+func (t *TxInternalDataAccountUpdate) GetRoleTypeForValidation() RoleType {
+	return RoleAccountUpdate
+}
+
 func (t *TxInternalDataAccountUpdate) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }

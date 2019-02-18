@@ -49,7 +49,7 @@ func (a *AccountKeyLegacy) Equal(b AccountKey) bool {
 	return true
 }
 
-func (a *AccountKeyLegacy) Validate(pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyLegacy) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	buf := make([]byte, 1024*1024)
 	buf = buf[:runtime.Stack(buf, false)]
 	logger.Error("this function should not be called. Validation should be done at ValidateSender or ValidateFeePayer",

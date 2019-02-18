@@ -81,6 +81,10 @@ func (t *TxInternalDataCancel) Type() TxType {
 	return TxTypeCancel
 }
 
+func (t *TxInternalDataCancel) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *TxInternalDataCancel) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }

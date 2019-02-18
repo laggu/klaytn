@@ -58,7 +58,7 @@ func (a *AccountKeyNil) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (a *AccountKeyNil) Validate(pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyNil) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	logger.ErrorWithStack("this function should not be called. Validation should be done at ValidateSender or ValidateFeePayer")
 	return false
 }

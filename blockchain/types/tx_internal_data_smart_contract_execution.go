@@ -102,6 +102,10 @@ func (t *TxInternalDataSmartContractExecution) Type() TxType {
 	return TxTypeSmartContractExecution
 }
 
+func (t *TxInternalDataSmartContractExecution) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *TxInternalDataSmartContractExecution) Equal(a TxInternalData) bool {
 	ta, ok := a.(*TxInternalDataSmartContractExecution)
 	if !ok {

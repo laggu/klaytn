@@ -192,6 +192,10 @@ func (t *TxInternalDataAccountCreation) Type() TxType {
 	return TxTypeAccountCreation
 }
 
+func (t *TxInternalDataAccountCreation) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *TxInternalDataAccountCreation) Equal(a TxInternalData) bool {
 	ta, ok := a.(*TxInternalDataAccountCreation)
 	if !ok {

@@ -140,6 +140,10 @@ func (t *txdata) Type() TxType {
 	return TxTypeLegacyTransaction
 }
 
+func (t *txdata) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *txdata) ChainId() *big.Int {
 	return deriveChainId(t.V)
 }

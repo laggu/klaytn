@@ -57,7 +57,7 @@ func (a *AccountKeyPublic) Equal(b AccountKey) bool {
 	return a.PublicKeySerializable.Equal(tb.PublicKeySerializable)
 }
 
-func (a *AccountKeyPublic) Validate(pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyPublic) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	if len(pubkeys) != 1 {
 		// AccountKeyPublic has only one public key.
 		return false

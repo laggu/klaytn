@@ -55,7 +55,7 @@ type AccountKey interface {
 	Equal(AccountKey) bool
 
 	// Validate returns true if the given public keys are verifiable with the AccountKey.
-	Validate([]*ecdsa.PublicKey) bool
+	Validate(RoleType, []*ecdsa.PublicKey) bool
 
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey

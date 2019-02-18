@@ -109,6 +109,10 @@ func (t *TxInternalDataSmartContractDeploy) Type() TxType {
 	return TxTypeSmartContractDeploy
 }
 
+func (t *TxInternalDataSmartContractDeploy) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *TxInternalDataSmartContractDeploy) GetPayload() []byte {
 	return t.Payload
 }

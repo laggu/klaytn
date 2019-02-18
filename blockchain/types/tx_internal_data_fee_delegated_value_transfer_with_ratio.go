@@ -115,6 +115,10 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Type() TxType {
 	return TxTypeFeeDelegatedValueTransferWithRatio
 }
 
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Equal(a TxInternalData) bool {
 	ta, ok := a.(*TxInternalDataFeeDelegatedValueTransferWithRatio)
 	if !ok {

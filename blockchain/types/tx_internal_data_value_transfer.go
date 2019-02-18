@@ -96,6 +96,10 @@ func (t *TxInternalDataValueTransfer) Type() TxType {
 	return TxTypeValueTransfer
 }
 
+func (t *TxInternalDataValueTransfer) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *TxInternalDataValueTransfer) Equal(b TxInternalData) bool {
 	tb, ok := b.(*TxInternalDataValueTransfer)
 	if !ok {

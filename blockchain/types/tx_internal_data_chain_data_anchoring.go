@@ -105,6 +105,10 @@ func (t *TxInternalDataChainDataAnchoring) Type() TxType {
 	return TxTypeChainDataAnchoring
 }
 
+func (t *TxInternalDataChainDataAnchoring) GetRoleTypeForValidation() RoleType {
+	return RoleTransaction
+}
+
 func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
 	tb, ok := b.(*TxInternalDataChainDataAnchoring)
 	if !ok {
