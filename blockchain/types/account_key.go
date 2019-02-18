@@ -36,6 +36,10 @@ var (
 	errUndefinedAccountKeyType = errors.New("undefined account key type")
 )
 
+func (a AccountKeyType) IsLegacyAccountKey() bool {
+	return a == AccountKeyTypeLegacy
+}
+
 // AccountKey is a common interface to exploit polymorphism of AccountKey.
 // Currently, we have the following implementations of AccountKey:
 // - AccountKeyLegacy
