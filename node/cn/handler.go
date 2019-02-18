@@ -1193,7 +1193,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 		for peer, txs := range txset {
 			err := peer.ReSendTransactions(txs)
 			if err != nil {
-				logger.Error("peer.ReSendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs))
+				logger.Error("peer.ReSendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs), "err", err)
 			}
 		}
 	} else {
@@ -1202,13 +1202,13 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			//peer.AsyncSendTransactions(txs)
 			err := peer.SendTransactions(txs)
 			if err != nil {
-				logger.Error("peer.SendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs))
+				logger.Error("peer.SendTransactions (cntxset)", "peer", peer.GetAddr(), "numTxs", len(txs), "err", err)
 			}
 		}
 		for peer, txs := range txset {
 			err := peer.SendTransactions(txs)
 			if err != nil {
-				logger.Error("peer.SendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs))
+				logger.Error("peer.SendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs), "err", err)
 			}
 			//peer.AsyncSendTransactions(txs)
 		}
