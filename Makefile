@@ -16,10 +16,25 @@ klay:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/klay\" to launch klay."
 
-bootnode:
-	build/env.sh go run build/ci.go install ./cmd/bootnode
+kcn:
+	build/env.sh go run build/ci.go install ./cmd/kcn
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
+	@echo "Run \"$(GOBIN)/kcn\" to launch Consensus Node."
+
+kpn:
+	build/env.sh go run build/ci.go install ./cmd/kpn
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/kpn\" to launch Proxy Node."
+
+ken:
+	build/env.sh go run build/ci.go install ./cmd/ken
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/ken\" to launch Endpoint Node."
+
+kbn:
+	build/env.sh go run build/ci.go install ./cmd/kbn
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/kbn\" to launch bootnode."
 
 istanbul:
 	build/env.sh go run build/ci.go install ./cmd/istanbul
