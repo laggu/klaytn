@@ -78,90 +78,132 @@ devtools:
 
 klay-cross: klay-linux klay-darwin klay-windows
 	@echo "Full cross compilation done:"
-	@ls -ld $(GOBIN)/klay-*
+	@ls -ld $(GOBIN)/klay-* $(GOBIN)/k*n-*
 
 klay-linux: klay-linux-386 klay-linux-amd64 klay-linux-arm klay-linux-mips64 klay-linux-mips64le
 	@echo "Linux cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-*
+	@ls -ld $(GOBIN)/klay-* $(GOBIN)/k*n-*
 
 klay-linux-386:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/ken
 	@echo "Linux 386 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep 386
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep 386
 
 klay-linux-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/ken
 	@echo "Linux amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep amd64
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep amd64
 
 klay-linux-arm: klay-linux-arm-5 klay-linux-arm-6 klay-linux-arm-7 klay-linux-arm64
 	@echo "Linux ARM cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep arm
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep arm
 
 klay-linux-arm-5:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/ken
 	@echo "Linux ARMv5 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep arm-5
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep arm-5
 
 klay-linux-arm-6:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/ken
 	@echo "Linux ARMv6 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep arm-6
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep arm-6
 
 klay-linux-arm-7:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/ken
 	@echo "Linux ARMv7 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep arm-7
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep arm-7
 
 klay-linux-arm64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/ken
 	@echo "Linux ARM64 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep arm64
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep arm64
 
 klay-linux-mips:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/ken
 	@echo "Linux MIPS cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep mips
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep mips
 
 klay-linux-mipsle:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/ken
 	@echo "Linux MIPSle cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep mipsle
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep mipsle
 
 klay-linux-mips64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/ken
 	@echo "Linux MIPS64 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep mips64
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep mips64
 
 klay-linux-mips64le:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/ken
 	@echo "Linux MIPS64le cross compilation done:"
-	@ls -ld $(GOBIN)/klay-linux-* | grep mips64le
+	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep mips64le
 
 klay-darwin: klay-darwin-386 klay-darwin-amd64
 	@echo "Darwin cross compilation done:"
-	@ls -ld $(GOBIN)/klay-darwin-*
+	@ls -ld $(GOBIN)/klay-darwin-* $(GOBIN)/k*n-darwin-*
 
 klay-darwin-386:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/ken
 	@echo "Darwin 386 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-darwin-* | grep 386
+	@ls -ld $(GOBIN)/klay-darwin-* $(GOBIN)/k*n-darwin-* | grep 386
 
 klay-darwin-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/ken
 	@echo "Darwin amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-darwin-* | grep amd64
+	@ls -ld $(GOBIN)/klay-darwin-* $(GOBIN)/k*n-darwin-* | grep amd64
 
 klay-windows: klay-windows-386 klay-windows-amd64
 	@echo "Windows cross compilation done:"
-	@ls -ld $(GOBIN)/klay-windows-*
+	@ls -ld $(GOBIN)/klay-windows-* $(GOBIN)/k*n-windows-*
 
 klay-windows-386:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/ken
 	@echo "Windows 386 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-windows-* | grep 386
+	@ls -ld $(GOBIN)/klay-windows-* $(GOBIN)/k*n-windows-* | grep 386
 
 klay-windows-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/klay
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kcn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kpn
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/ken
 	@echo "Windows amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/klay-windows-* | grep amd64
+	@ls -ld $(GOBIN)/klay-windows-* $(GOBIN)/k*n-windows-* | grep amd64
