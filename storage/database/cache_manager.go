@@ -54,7 +54,7 @@ const (
 type cacheKey int
 
 const (
-	hedearCacheIndex cacheKey = iota
+	headerCacheIndex cacheKey = iota
 	tdCacheIndex
 	blockNumberCacheIndex
 
@@ -69,7 +69,7 @@ const (
 )
 
 var lruCacheConfig = [cacheKeySize]common.CacheConfiger{
-	hedearCacheIndex:      common.LRUConfig{CacheSize: maxHeaderCache},
+	headerCacheIndex:      common.LRUConfig{CacheSize: maxHeaderCache},
 	tdCacheIndex:          common.LRUConfig{CacheSize: maxTdCache},
 	blockNumberCacheIndex: common.LRUConfig{CacheSize: maxBlockNumberCache},
 
@@ -82,7 +82,7 @@ var lruCacheConfig = [cacheKeySize]common.CacheConfiger{
 }
 
 var lruShardCacheConfig = [cacheKeySize]common.CacheConfiger{
-	hedearCacheIndex:      common.LRUShardConfig{CacheSize: maxHeaderCache, NumShards: numShardsHeaderCache},
+	headerCacheIndex:      common.LRUShardConfig{CacheSize: maxHeaderCache, NumShards: numShardsHeaderCache},
 	tdCacheIndex:          common.LRUShardConfig{CacheSize: maxTdCache, NumShards: numShardsTdCache},
 	blockNumberCacheIndex: common.LRUShardConfig{CacheSize: maxBlockNumberCache, NumShards: numShardsBlockNumberCache},
 
@@ -94,16 +94,31 @@ var lruShardCacheConfig = [cacheKeySize]common.CacheConfiger{
 	recentTxReceiptIndex:       common.LRUShardConfig{CacheSize: maxRecentTxReceipt, NumShards: numShardsRecentTxReceipt},
 }
 
+var fifoCacheConfig = [cacheKeySize]common.CacheConfiger{
+	headerCacheIndex:      common.FIFOCacheConfig{CacheSize: maxHeaderCache},
+	tdCacheIndex:          common.FIFOCacheConfig{CacheSize: maxTdCache},
+	blockNumberCacheIndex: common.FIFOCacheConfig{CacheSize: maxBlockNumberCache},
+
+	bodyCacheIndex:             common.FIFOCacheConfig{CacheSize: maxBodyCache},
+	bodyRLPCacheIndex:          common.FIFOCacheConfig{CacheSize: maxBodyCache},
+	blockCacheIndex:            common.FIFOCacheConfig{CacheSize: maxBlockCache},
+	recentTxAndLookupInfoIndex: common.FIFOCacheConfig{CacheSize: maxRecentTransactions},
+	recentBlockReceiptsIndex:   common.FIFOCacheConfig{CacheSize: maxRecentBlockReceipts},
+	recentTxReceiptIndex:       common.FIFOCacheConfig{CacheSize: maxRecentTxReceipt},
+}
+
 func newCache(cacheNameKey cacheKey, cacheType common.CacheType) common.Cache {
 	var cache common.Cache
 
 	switch cacheType {
+	case common.FIFOCacheType:
+		cache, _ = common.NewCache(fifoCacheConfig[cacheNameKey])
 	case common.LRUCacheType:
 		cache, _ = common.NewCache(lruCacheConfig[cacheNameKey])
 	case common.LRUShardCacheType:
 		cache, _ = common.NewCache(lruShardCacheConfig[cacheNameKey])
 	default:
-		cache, _ = common.NewCache(lruCacheConfig[cacheNameKey])
+		cache, _ = common.NewCache(fifoCacheConfig[cacheNameKey])
 	}
 	return cache
 }
@@ -134,7 +149,7 @@ type cacheManager struct {
 // newCacheManager returns a pointer of cacheManager with predefined configurations.
 func newCacheManager() *cacheManager {
 	cm := &cacheManager{
-		headerCache:      newCache(hedearCacheIndex, common.DefaultCacheType),
+		headerCache:      newCache(headerCacheIndex, common.DefaultCacheType),
 		tdCache:          newCache(tdCacheIndex, common.DefaultCacheType),
 		blockNumberCache: newCache(blockNumberCacheIndex, common.DefaultCacheType),
 

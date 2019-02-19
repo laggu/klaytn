@@ -29,6 +29,7 @@ type CacheType int
 const (
 	LRUCacheType CacheType = iota
 	LRUShardCacheType
+	FIFOCacheType
 	ARCChacheType
 )
 
@@ -43,7 +44,7 @@ const (
 )
 
 // it's set by flag.
-var DefaultCacheType CacheType = LRUCacheType
+var DefaultCacheType CacheType = FIFOCacheType
 var logger = log.NewModuleLogger(log.Common)
 var CacheScale int = 100                             // Cache size = preset size * CacheScale / 100.
 var ScaleByCacheUsageLevel int = 100                 // Scale according to cache usage level (%).

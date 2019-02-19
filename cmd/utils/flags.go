@@ -266,7 +266,8 @@ var (
 	}
 	CacheTypeFlag = cli.IntFlag{
 		Name:  "cache.type",
-		Usage: "Cache Type: 0=LRU, 1=LRUShard",
+		Usage: "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",
+		Value: int(common.DefaultCacheType),
 	}
 	CacheScaleFlag = cli.IntFlag{
 		Name:  "cache.scale",

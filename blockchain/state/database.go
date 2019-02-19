@@ -80,10 +80,15 @@ type Trie interface {
 
 func NewDatabase(db database.DBManager) Database {
 	var cacheConfig common.CacheConfiger
-	if common.DefaultCacheType == common.LRUShardCacheType {
+	switch common.DefaultCacheType {
+	case common.LRUShardCacheType:
 		cacheConfig = common.LRUShardConfig{CacheSize: codeSizeCacheSize, NumShards: shardsCodeSizeCache}
-	} else {
+	case common.LRUCacheType:
 		cacheConfig = common.LRUConfig{CacheSize: codeSizeCacheSize}
+	case common.FIFOCacheType:
+		cacheConfig = common.FIFOCacheConfig{CacheSize: codeSizeCacheSize}
+	default:
+		cacheConfig = common.FIFOCacheConfig{CacheSize: codeSizeCacheSize}
 	}
 	csc, _ := common.NewCache(cacheConfig)
 
