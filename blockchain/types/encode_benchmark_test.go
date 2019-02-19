@@ -120,7 +120,7 @@ type SliceMaker interface {
 	MakeInterfaceSlice() []interface{}
 }
 
-func (v *txdata) MakeInterfaceSlice() []interface{} {
+func (v *TxInternalDataLegacy) MakeInterfaceSlice() []interface{} {
 	return []interface{}{
 		v.Type(),
 		v.AccountNonce,

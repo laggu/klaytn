@@ -27,9 +27,9 @@ import (
 	"math/big"
 )
 
-//go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
+//go:generate gencodec -type TxInternalDataLegacy -field-override txdataMarshaling -out gen_tx_json.go
 
-type txdata struct {
+type TxInternalDataLegacy struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     uint64          `json:"gas"      gencodec:"required"`
@@ -57,12 +57,12 @@ type txdataMarshaling struct {
 	S            *hexutil.Big
 }
 
-func newEmptyTxdata() *txdata {
-	return &txdata{}
+func newEmptyTxdata() *TxInternalDataLegacy {
+	return &TxInternalDataLegacy{}
 }
 
-func newTxdata() *txdata {
-	return &txdata{
+func newTxdata() *TxInternalDataLegacy {
+	return &TxInternalDataLegacy{
 		AccountNonce: 0,
 		Recipient:    nil,
 		Payload:      []byte{},
@@ -75,7 +75,7 @@ func newTxdata() *txdata {
 	}
 }
 
-func newTxdataWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *txdata {
+func newTxdataWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *TxInternalDataLegacy {
 	d := newTxdata()
 
 	d.AccountNonce = nonce
@@ -95,7 +95,7 @@ func newTxdataWithValues(nonce uint64, to *common.Address, amount *big.Int, gasL
 	return d
 }
 
-func newTxdataWithMap(values map[TxValueKeyType]interface{}) (*txdata, error) {
+func newTxdataWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataLegacy, error) {
 	d := newTxdata()
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
@@ -137,55 +137,55 @@ func newTxdataWithMap(values map[TxValueKeyType]interface{}) (*txdata, error) {
 	return d, nil
 }
 
-func (t *txdata) Type() TxType {
+func (t *TxInternalDataLegacy) Type() TxType {
 	return TxTypeLegacyTransaction
 }
 
-func (t *txdata) GetRoleTypeForValidation() accountkey.RoleType {
+func (t *TxInternalDataLegacy) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
 }
 
-func (t *txdata) ChainId() *big.Int {
+func (t *TxInternalDataLegacy) ChainId() *big.Int {
 	return deriveChainId(t.V)
 }
 
-func (t *txdata) Protected() bool {
+func (t *TxInternalDataLegacy) Protected() bool {
 	return isProtectedV(t.V)
 }
 
-func (t *txdata) GetAccountNonce() uint64 {
+func (t *TxInternalDataLegacy) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *txdata) GetPrice() *big.Int {
+func (t *TxInternalDataLegacy) GetPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
-func (t *txdata) GetGasLimit() uint64 {
+func (t *TxInternalDataLegacy) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *txdata) GetRecipient() *common.Address {
+func (t *TxInternalDataLegacy) GetRecipient() *common.Address {
 	return t.Recipient
 }
 
-func (t *txdata) GetAmount() *big.Int {
+func (t *TxInternalDataLegacy) GetAmount() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *txdata) GetHash() *common.Hash {
+func (t *TxInternalDataLegacy) GetHash() *common.Hash {
 	return t.Hash
 }
 
-func (t *txdata) GetPayload() []byte {
+func (t *TxInternalDataLegacy) GetPayload() []byte {
 	return t.Payload
 }
 
-func (t *txdata) SetHash(h *common.Hash) {
+func (t *TxInternalDataLegacy) SetHash(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *txdata) SetSignature(s TxSignatures) {
+func (t *TxInternalDataLegacy) SetSignature(s TxSignatures) {
 	if len(s) != 1 {
 		logger.Crit("LegacyTransaction receives a single signature only!")
 	}
@@ -195,20 +195,20 @@ func (t *txdata) SetSignature(s TxSignatures) {
 	t.S = s[0].S
 }
 
-func (t *txdata) RawSignatureValues() []*big.Int {
+func (t *TxInternalDataLegacy) RawSignatureValues() []*big.Int {
 	return []*big.Int{t.V, t.R, t.S}
 }
 
-func (t *txdata) ValidateSignature() bool {
+func (t *TxInternalDataLegacy) ValidateSignature() bool {
 	return validateSignature(t.V, t.R, t.S)
 }
 
-func (t *txdata) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
+func (t *TxInternalDataLegacy) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
 	V := vfunc(t.V)
 	return recoverPlain(txhash, t.R, t.S, V, homestead)
 }
 
-func (t *txdata) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
+func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
 	V := vfunc(t.V)
 
 	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
@@ -219,11 +219,11 @@ func (t *txdata) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*b
 	return []*ecdsa.PublicKey{pk}, nil
 }
 
-func (t *txdata) IntrinsicGas() (uint64, error) {
+func (t *TxInternalDataLegacy) IntrinsicGas() (uint64, error) {
 	return IntrinsicGas(t.Payload, t.Recipient == nil, true)
 }
 
-func (t *txdata) SerializeForSign() []interface{} {
+func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.AccountNonce,
 		t.Price,
@@ -234,11 +234,11 @@ func (t *txdata) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *txdata) IsLegacyTransaction() bool {
+func (t *TxInternalDataLegacy) IsLegacyTransaction() bool {
 	return true
 }
 
-func (t *txdata) equalHash(a *txdata) bool {
+func (t *TxInternalDataLegacy) equalHash(a *TxInternalDataLegacy) bool {
 	if t.GetHash() == nil && a.GetHash() == nil {
 		return true
 	}
@@ -251,7 +251,7 @@ func (t *txdata) equalHash(a *txdata) bool {
 	return false
 }
 
-func (t *txdata) equalRecipient(a *txdata) bool {
+func (t *TxInternalDataLegacy) equalRecipient(a *TxInternalDataLegacy) bool {
 	if t.Recipient == nil && a.Recipient == nil {
 		return true
 	}
@@ -263,8 +263,8 @@ func (t *txdata) equalRecipient(a *txdata) bool {
 	return false
 }
 
-func (t *txdata) Equal(a TxInternalData) bool {
-	ta, ok := a.(*txdata)
+func (t *TxInternalDataLegacy) Equal(a TxInternalData) bool {
+	ta, ok := a.(*TxInternalDataLegacy)
 	if !ok {
 		return false
 	}
@@ -279,7 +279,7 @@ func (t *txdata) Equal(a TxInternalData) bool {
 		t.S.Cmp(ta.S) == 0
 }
 
-func (t *txdata) String() string {
+func (t *TxInternalDataLegacy) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
 

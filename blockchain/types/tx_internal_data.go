@@ -211,7 +211,7 @@ type TxInternalData interface {
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
 
-	// IsLegacyTransaction returns true if the tx type is a legacy transaction (txdata) object.
+	// IsLegacyTransaction returns true if the tx type is a legacy transaction (TxInternalDataLegacy) object.
 	IsLegacyTransaction() bool
 
 	// GetRoleTypeForValidation returns RoleType to validate this transaction.
@@ -246,7 +246,7 @@ type TxInternalDataFeeRatio interface {
 
 // TxInternalDataFrom has a function `GetFrom()`.
 // All other transactions to be implemented will have `from` field, but
-// `txdata` (a legacy transaction type) does not have the field.
+// `TxInternalDataLegacy` (a legacy transaction type) does not have the field.
 // Hence, this function is defined in another interface TxInternalDataFrom.
 type TxInternalDataFrom interface {
 	GetFrom() common.Address

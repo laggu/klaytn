@@ -83,7 +83,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
-	d := txdata{
+	d := TxInternalDataLegacy{
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
@@ -237,8 +237,8 @@ func (tx *Transaction) To() *common.Address {
 }
 
 // From returns the from address of the transaction.
-// Since a legacy transaction (txdata) does not have the field `from`,
-// calling From() is failed for `txdata`.
+// Since a legacy transaction (TxInternalDataLegacy) does not have the field `from`,
+// calling From() is failed for `TxInternalDataLegacy`.
 func (tx *Transaction) From() (common.Address, error) {
 	if tx.IsLegacyTransaction() {
 		return common.Address{}, errLegacyTransaction
