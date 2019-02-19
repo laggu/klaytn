@@ -501,74 +501,62 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 		// Block header query, collect the requested headers and reply
 	case msg.Code == BlockHeadersRequestMsg:
-		logger.Debug("received BlockHeadersRequestMsg")
 		if err := handleBlockHeadersRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == BlockHeadersMsg:
-		logger.Debug("received BlockHeadersMsg")
 		if err := handleBlockHeadersMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == BlockBodiesRequestMsg:
-		logger.Debug("received BlockBodiesRequestMsg")
 		if err := handleBlockBodiesRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == BlockBodiesMsg:
-		logger.Debug("received BlockBodiesMsg")
 		if err := handleBlockBodiesMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case p.GetVersion() >= klay63 && msg.Code == NodeDataRequestMsg:
-		logger.Debug("received NodeDataRequestMsg")
 		if err := handleNodeDataRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case p.GetVersion() >= klay63 && msg.Code == NodeDataMsg:
-		logger.Debug("received NodeDataMsg")
 		if err := handleNodeDataMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case p.GetVersion() >= klay63 && msg.Code == ReceiptsRequestMsg:
-		logger.Debug("received ReceiptsRequestMsg")
 		if err := handleReceiptsRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case p.GetVersion() >= klay63 && msg.Code == ReceiptsMsg:
-		logger.Debug("received ReceiptsMsg")
 		if err := handleReceiptsMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == NewBlockHashesMsg:
-		logger.Debug("received NewBlockHashesMsg")
 		if err := handleNewBlockHashesMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == NewBlockMsg:
-		logger.Debug("received NewBlockMsg")
 		if err := handleNewBlockMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == TxMsg:
-		logger.Debug("received TxMsg")
 		if err := handleTxMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	// ServiceChain related messages
 	case msg.Code == ServiceChainTxsMsg:
-		scLogger.Debug("received ServiceChainTxsMsg")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
@@ -578,25 +566,21 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		}
 
 	case msg.Code == ServiceChainParentChainInfoRequestMsg:
-		scLogger.Debug("received ServiceChainParentChainInfoRequestMsg")
 		if err := handleServiceChainParentChainInfoRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == ServiceChainParentChainInfoResponseMsg:
-		scLogger.Debug("received ServiceChainParentChainInfoResponseMsg")
 		if err := handleServiceChainParentChainInfoResponseMsg(pm, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == ServiceChainReceiptResponseMsg:
-		scLogger.Debug("received ServiceChainReceiptResponseMsg")
 		if err := handleServiceChainReceiptResponseMsg(pm, msg); err != nil {
 			return err
 		}
 
 	case msg.Code == ServiceChainReceiptRequestMsg:
-		scLogger.Debug("received ServiceChainReceiptRequestMsg")
 		if err := handleServiceChainReceiptRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
