@@ -18,6 +18,7 @@ package types
 
 import (
 	"encoding/json"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -215,7 +216,7 @@ func genAccountCreationTransaction() TxInternalData {
 		TxValueKeyGasPrice:      gasPrice,
 		TxValueKeyFrom:          from,
 		TxValueKeyHumanReadable: false,
-		TxValueKeyAccountKey:    NewAccountKeyPublicWithValue(&key.PublicKey),
+		TxValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
 	})
 
 	if err != nil {
@@ -292,7 +293,7 @@ func genAccountUpdateTransaction() TxInternalData {
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasPrice:   gasPrice,
 		TxValueKeyFrom:       from,
-		TxValueKeyAccountKey: NewAccountKeyPublicWithValue(&key.PublicKey),
+		TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
 	})
 
 	if err != nil {

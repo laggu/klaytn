@@ -18,7 +18,7 @@ package state
 
 import (
 	"errors"
-	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
@@ -73,7 +73,7 @@ type Account interface {
 	SetHumanReadable(b bool)
 
 	// UpdateKey updates the account's key with the given key.
-	UpdateKey(key types.AccountKey) error
+	UpdateKey(key accountkey.AccountKey) error
 
 	// Empty returns whether the account is considered empty.
 	// The "empty" account may be defined differently depending on the actual account type.
@@ -108,8 +108,8 @@ type ProgramAccount interface {
 type AccountWithKey interface {
 	Account
 
-	GetKey() types.AccountKey
-	SetKey(key types.AccountKey)
+	GetKey() accountkey.AccountKey
+	SetKey(key accountkey.AccountKey)
 }
 
 // NewAccountWithType creates an Account object with the given type.

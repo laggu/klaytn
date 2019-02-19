@@ -18,6 +18,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -81,8 +82,8 @@ func (t *TxInternalDataCancel) Type() TxType {
 	return TxTypeCancel
 }
 
-func (t *TxInternalDataCancel) GetRoleTypeForValidation() RoleType {
-	return RoleTransaction
+func (t *TxInternalDataCancel) GetRoleTypeForValidation() accountkey.RoleType {
+	return accountkey.RoleTransaction
 }
 
 func (t *TxInternalDataCancel) GetAccountNonce() uint64 {

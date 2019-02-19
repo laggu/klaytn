@@ -23,6 +23,7 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -185,7 +186,7 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 func TestGasOverflow(t *testing.T) {
 	// AccountCreation
 	// calculate gas for account creation
-	numKeys := new(big.Int).SetUint64(MaxNumKeysForMultiSig)
+	numKeys := new(big.Int).SetUint64(accountkey.MaxNumKeysForMultiSig)
 	gasPerKey := new(big.Int).SetUint64(params.TxAccountCreationGasPerKey)
 	defaultGas := new(big.Int).SetUint64(params.TxAccountCreationGasDefault)
 	txGas := new(big.Int).SetUint64(params.TxGasAccountCreation)

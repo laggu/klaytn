@@ -23,6 +23,7 @@ package vm
 import (
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
@@ -54,7 +55,7 @@ type StateDB interface {
 	HasSuicided(common.Address) bool
 
 	// UpdateKey updates the account's key with the given key.
-	UpdateKey(addr common.Address, key types.AccountKey) error
+	UpdateKey(addr common.Address, key accountkey.AccountKey) error
 
 	// Exist reports whether the given account exists in state.
 	// Notably this should also return true for suicided accounts.

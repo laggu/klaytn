@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
@@ -68,7 +69,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 
 // AccountKeyPicker has a function GetKey() to retrieve an account key from statedb.
 type AccountKeyPicker interface {
-	GetKey(address common.Address) AccountKey
+	GetKey(address common.Address) accountkey.AccountKey
 }
 
 // ValidateSender finds a sender from both legacy and new types of transactions.
@@ -146,7 +147,7 @@ func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (commo
 		return feePayer, gasKey, nil
 	}
 
-	if !accKey.Validate(RoleFeePayer, pubkey) {
+	if !accKey.Validate(accountkey.RoleFeePayer, pubkey) {
 		return common.Address{}, 0, ErrInvalidSigFeePayer
 	}
 

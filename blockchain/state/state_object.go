@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -198,11 +198,11 @@ func (self *stateObject) IsProgramAccount() bool {
 	return ok
 }
 
-func (self *stateObject) GetKey() types.AccountKey {
+func (self *stateObject) GetKey() accountkey.AccountKey {
 	if ak, ok := self.account.(AccountWithKey); ok {
 		return ak.GetKey()
 	}
-	return types.NewAccountKeyLegacy()
+	return accountkey.NewAccountKeyLegacy()
 }
 
 func (self *stateObject) setState(key, value common.Hash) {
@@ -210,7 +210,7 @@ func (self *stateObject) setState(key, value common.Hash) {
 	self.dirtyStorage[key] = value
 }
 
-func (self *stateObject) UpdateKey(key types.AccountKey) error {
+func (self *stateObject) UpdateKey(key accountkey.AccountKey) error {
 	return self.account.UpdateKey(key)
 }
 

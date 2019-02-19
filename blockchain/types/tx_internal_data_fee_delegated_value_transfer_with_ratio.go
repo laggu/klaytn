@@ -19,6 +19,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -115,8 +116,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Type() TxType {
 	return TxTypeFeeDelegatedValueTransferWithRatio
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) GetRoleTypeForValidation() RoleType {
-	return RoleTransaction
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) GetRoleTypeForValidation() accountkey.RoleType {
+	return accountkey.RoleTransaction
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Equal(a TxInternalData) bool {

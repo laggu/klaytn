@@ -30,6 +30,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/bloombits"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
@@ -413,17 +414,17 @@ func (m callmsg) From() common.Address { return m.CallMsg.From }
 func (m callmsg) FeePayer() common.Address { return m.CallMsg.From }
 
 // TODO-Klaytn-FeePayer: Support fee ratio feature for the simulated backend.
-func (m callmsg) FeeRatio() uint8              { return types.MaxFeeRatio }
-func (m callmsg) Nonce() uint64                { return 0 }
-func (m callmsg) CheckNonce() bool             { return false }
-func (m callmsg) To() *common.Address          { return m.CallMsg.To }
-func (m callmsg) GasPrice() *big.Int           { return m.CallMsg.GasPrice }
-func (m callmsg) Gas() uint64                  { return m.CallMsg.Gas }
-func (m callmsg) Value() *big.Int              { return m.CallMsg.Value }
-func (m callmsg) Data() []byte                 { return m.CallMsg.Data }
-func (m callmsg) TxType() types.TxType         { return types.TxTypeLegacyTransaction }
-func (m callmsg) AccountKey() types.AccountKey { return types.NewAccountKeyLegacy() }
-func (m callmsg) HumanReadable() bool          { return false }
+func (m callmsg) FeeRatio() uint8                   { return types.MaxFeeRatio }
+func (m callmsg) Nonce() uint64                     { return 0 }
+func (m callmsg) CheckNonce() bool                  { return false }
+func (m callmsg) To() *common.Address               { return m.CallMsg.To }
+func (m callmsg) GasPrice() *big.Int                { return m.CallMsg.GasPrice }
+func (m callmsg) Gas() uint64                       { return m.CallMsg.Gas }
+func (m callmsg) Value() *big.Int                   { return m.CallMsg.Value }
+func (m callmsg) Data() []byte                      { return m.CallMsg.Data }
+func (m callmsg) TxType() types.TxType              { return types.TxTypeLegacyTransaction }
+func (m callmsg) AccountKey() accountkey.AccountKey { return accountkey.NewAccountKeyLegacy() }
+func (m callmsg) HumanReadable() bool               { return false }
 
 func (m callmsg) IntrinsicGas() (uint64, error) {
 	return types.IntrinsicGas(m.Data(), m.To() == nil, true)

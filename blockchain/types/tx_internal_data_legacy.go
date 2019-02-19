@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -140,8 +141,8 @@ func (t *txdata) Type() TxType {
 	return TxTypeLegacyTransaction
 }
 
-func (t *txdata) GetRoleTypeForValidation() RoleType {
-	return RoleTransaction
+func (t *txdata) GetRoleTypeForValidation() accountkey.RoleType {
+	return accountkey.RoleTransaction
 }
 
 func (t *txdata) ChainId() *big.Int {

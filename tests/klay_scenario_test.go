@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/compiler"
 	"github.com/ground-x/klaytn/common/profile"
@@ -54,7 +55,7 @@ type TestAccountType struct {
 	Addr   common.Address
 	Keys   []*ecdsa.PrivateKey
 	Nonce  uint64
-	AccKey types.AccountKey
+	AccKey accountkey.AccountKey
 }
 
 func genRandomHash() (h common.Hash) {
@@ -80,7 +81,7 @@ func createAnonymousAccount(prvKeyHex string) (*TestAccountType, error) {
 		Addr:   addr,
 		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
-		AccKey: types.NewAccountKeyLegacy(),
+		AccKey: accountkey.NewAccountKeyLegacy(),
 	}, nil
 }
 
@@ -95,7 +96,7 @@ func createDecoupledAccount(prvKeyHex string, addr common.Address) (*TestAccount
 		Addr:   addr,
 		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
-		AccKey: types.NewAccountKeyPublicWithValue(&key.PublicKey),
+		AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
 	}, nil
 }
 
@@ -115,7 +116,7 @@ func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*Te
 		Addr:   addr,
 		Keys:   []*ecdsa.PrivateKey{key},
 		Nonce:  uint64(0),
-		AccKey: types.NewAccountKeyPublicWithValue(&key.PublicKey),
+		AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
 	}, nil
 }
 
@@ -124,7 +125,7 @@ func createMultisigAccount(threshold uint, weights []uint, prvKeys []string, add
 	var err error
 
 	keys := make([]*ecdsa.PrivateKey, len(prvKeys))
-	weightedKeys := make(types.WeightedPublicKeys, len(prvKeys))
+	weightedKeys := make(accountkey.WeightedPublicKeys, len(prvKeys))
 
 	for i, p := range prvKeys {
 		keys[i], err = crypto.HexToECDSA(p)
@@ -132,14 +133,14 @@ func createMultisigAccount(threshold uint, weights []uint, prvKeys []string, add
 			return nil, err
 		}
 
-		weightedKeys[i] = types.NewWeightedPublicKey(weights[i], (*types.PublicKeySerializable)(&keys[i].PublicKey))
+		weightedKeys[i] = accountkey.NewWeightedPublicKey(weights[i], (*accountkey.PublicKeySerializable)(&keys[i].PublicKey))
 	}
 
 	return &TestAccountType{
 		Addr:   addr,
 		Keys:   keys,
 		Nonce:  uint64(0),
-		AccKey: types.NewAccountKeyWeightedMultiSigWithValues(threshold, weightedKeys),
+		AccKey: accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, weightedKeys),
 	}, nil
 }
 
@@ -902,7 +903,7 @@ func TestAccountUpdate(t *testing.T) {
 			types.TxValueKeyFrom:       decoupled.Addr,
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: types.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
@@ -990,7 +991,7 @@ func TestAccountUpdate(t *testing.T) {
 			types.TxValueKeyFrom:       colin.Addr,
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: types.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)

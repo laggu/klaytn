@@ -18,6 +18,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -96,8 +97,8 @@ func (t *TxInternalDataValueTransfer) Type() TxType {
 	return TxTypeValueTransfer
 }
 
-func (t *TxInternalDataValueTransfer) GetRoleTypeForValidation() RoleType {
-	return RoleTransaction
+func (t *TxInternalDataValueTransfer) GetRoleTypeForValidation() accountkey.RoleType {
+	return accountkey.RoleTransaction
 }
 
 func (t *TxInternalDataValueTransfer) Equal(b TxInternalData) bool {

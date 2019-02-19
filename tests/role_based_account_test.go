@@ -19,6 +19,7 @@ package tests
 import (
 	"crypto/ecdsa"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
@@ -34,7 +35,7 @@ type TestRoleBasedAccountType struct {
 	UpdateKeys []*ecdsa.PrivateKey
 	FeeKeys    []*ecdsa.PrivateKey
 	Nonce      uint64
-	AccKey     types.AccountKey
+	AccKey     accountkey.AccountKey
 }
 
 func genTestKeys(len int) []*ecdsa.PrivateKey {
@@ -89,10 +90,10 @@ func TestRoleBasedAccount(t *testing.T) {
 	// Create an account having a role-based key
 	colinAddr, err := common.FromHumanReadableAddress("colin")
 	keys := genTestKeys(3)
-	accKey := types.NewAccountKeyRoleBasedWithValues(types.AccountKeyRoleBased{
-		types.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
-		types.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
-		types.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
+	accKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
 	})
 	colin := &TestRoleBasedAccountType{
 		Addr:       colinAddr,
@@ -206,9 +207,9 @@ func TestRoleBasedAccount(t *testing.T) {
 			types.TxValueKeyFrom:     colin.Addr,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyAccountKey: types.NewAccountKeyRoleBasedWithValues(types.AccountKeyRoleBased{
-				types.NewAccountKeyPublicWithValue(&newKey.PublicKey),
-				types.NewAccountKeyNil(),
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+				accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+				accountkey.NewAccountKeyNil(),
 			}),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)

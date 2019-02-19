@@ -19,6 +19,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"errors"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
@@ -214,7 +215,7 @@ type TxInternalData interface {
 	IsLegacyTransaction() bool
 
 	// GetRoleTypeForValidation returns RoleType to validate this transaction.
-	GetRoleTypeForValidation() RoleType
+	GetRoleTypeForValidation() accountkey.RoleType
 
 	// String returns a string containing information about the fields of the object.
 	String() string

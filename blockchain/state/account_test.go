@@ -19,7 +19,7 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/crypto/sha3"
@@ -133,7 +133,7 @@ func genEOA() *ExternallyOwnedAccount {
 		AccountValueKeyNonce:         rand.Uint64(),
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    types.NewAccountKeyLegacy(),
+		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
 	})
 }
 
@@ -149,7 +149,7 @@ func genEOAWithPublicKey() *ExternallyOwnedAccount {
 		AccountValueKeyNonce:         rand.Uint64(),
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&k.PublicKey),
+		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
 	})
 }
 
@@ -162,7 +162,7 @@ func genSCA() *SmartContractAccount {
 		AccountValueKeyNonce:         rand.Uint64(),
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    types.NewAccountKeyLegacy(),
+		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
 		AccountValueKeyStorageRoot:   genRandomHash(),
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
 	})
@@ -179,7 +179,7 @@ func genSCAWithPublicKey() *SmartContractAccount {
 		AccountValueKeyNonce:         rand.Uint64(),
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&k.PublicKey),
+		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
 		AccountValueKeyStorageRoot:   genRandomHash(),
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
 	})

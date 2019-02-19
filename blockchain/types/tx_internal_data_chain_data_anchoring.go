@@ -19,6 +19,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/kerrors"
@@ -105,8 +106,8 @@ func (t *TxInternalDataChainDataAnchoring) Type() TxType {
 	return TxTypeChainDataAnchoring
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetRoleTypeForValidation() RoleType {
-	return RoleTransaction
+func (t *TxInternalDataChainDataAnchoring) GetRoleTypeForValidation() accountkey.RoleType {
+	return accountkey.RoleTransaction
 }
 
 func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {

@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/kerrors"
 	"math/big"
@@ -42,7 +43,7 @@ func NewTxSignaturesWithValues(signer Signer, txhash common.Hash, prv []*ecdsa.P
 	if len(prv) == 0 {
 		return nil, kerrors.ErrEmptySlice
 	}
-	if uint64(len(prv)) > MaxNumKeysForMultiSig {
+	if uint64(len(prv)) > accountkey.MaxNumKeysForMultiSig {
 		return nil, kerrors.ErrMaxKeysExceed
 	}
 	txsigs := make(TxSignatures, len(prv))

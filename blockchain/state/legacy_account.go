@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/go-stack/stack"
-	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
@@ -123,7 +123,7 @@ func (a *LegacyAccount) Empty() bool {
 	return a.GetNonce() == 0 && a.GetBalance().Sign() == 0 && bytes.Equal(a.GetCodeHash(), emptyCodeHash)
 }
 
-func (a *LegacyAccount) UpdateKey(key types.AccountKey) error {
+func (a *LegacyAccount) UpdateKey(key accountkey.AccountKey) error {
 	return ErrAccountKeyNotModifiable
 }
 

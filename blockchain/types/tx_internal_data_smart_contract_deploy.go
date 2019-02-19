@@ -19,6 +19,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -109,8 +110,8 @@ func (t *TxInternalDataSmartContractDeploy) Type() TxType {
 	return TxTypeSmartContractDeploy
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetRoleTypeForValidation() RoleType {
-	return RoleTransaction
+func (t *TxInternalDataSmartContractDeploy) GetRoleTypeForValidation() accountkey.RoleType {
+	return accountkey.RoleTransaction
 }
 
 func (t *TxInternalDataSmartContractDeploy) GetPayload() []byte {

@@ -22,7 +22,7 @@ package vm
 
 import (
 	"github.com/ground-x/klaytn/blockchain/state"
-	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
@@ -480,7 +480,7 @@ func (evm *EVM) CreateWithAddress(caller ContractRef, code []byte, gas uint64, v
 		// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
 		//   because the account key is set to AccountKeyFail by default.
 		//   Need to make a decision of the key type.
-		state.AccountValueKeyAccountKey: types.NewAccountKeyFail(),
+		state.AccountValueKeyAccountKey: accountkey.NewAccountKeyFail(),
 	})
 	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 

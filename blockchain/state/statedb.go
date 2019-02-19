@@ -23,6 +23,7 @@ package state
 import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
@@ -256,12 +257,12 @@ func (self *StateDB) IsProgramAccount(addr common.Address) bool {
 	return false
 }
 
-func (self *StateDB) GetKey(addr common.Address) types.AccountKey {
+func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetKey()
 	}
-	return types.NewAccountKeyLegacy()
+	return accountkey.NewAccountKeyLegacy()
 }
 
 // Database retrieves the low level database supporting the lower level trie ops.
@@ -339,7 +340,7 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 }
 
 // UpdateKey updates the account's key with the given key.
-func (self *StateDB) UpdateKey(addr common.Address, key types.AccountKey) error {
+func (self *StateDB) UpdateKey(addr common.Address, key accountkey.AccountKey) error {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.UpdateKey(key)

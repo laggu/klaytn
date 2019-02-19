@@ -25,6 +25,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -186,15 +187,17 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Gas() uint64                        { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int                 { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int                    { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64                      { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool                   { return true }
-func (tx *Transaction) Type() TxType                       { return tx.data.Type() }
-func (tx *Transaction) IntrinsicGas() (uint64, error)      { return tx.data.IntrinsicGas() }
-func (tx *Transaction) IsLegacyTransaction() bool          { return tx.data.IsLegacyTransaction() }
-func (tx *Transaction) GetRoleTypeForValidation() RoleType { return tx.data.GetRoleTypeForValidation() }
+func (tx *Transaction) Gas() uint64                   { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int            { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int               { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64                 { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonce() bool              { return true }
+func (tx *Transaction) Type() TxType                  { return tx.data.Type() }
+func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
+func (tx *Transaction) IsLegacyTransaction() bool     { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) GetRoleTypeForValidation() accountkey.RoleType {
+	return tx.data.GetRoleTypeForValidation()
+}
 
 func (tx *Transaction) Data() []byte {
 	tp, ok := tx.data.(TxInternalDataPayload)
@@ -318,7 +321,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		checkNonce:    true,
 		intrinsicGas:  intrinsicGas,
 		txType:        tx.data.Type(),
-		accountKey:    NewAccountKeyLegacy(),
+		accountKey:    accountkey.NewAccountKeyLegacy(),
 		humanReadable: false,
 		feeRatio:      tx.FeeRatio(),
 	}
@@ -611,7 +614,7 @@ type Message struct {
 	checkNonce    bool
 	intrinsicGas  uint64
 	txType        TxType
-	accountKey    AccountKey
+	accountKey    accountkey.AccountKey
 	humanReadable bool
 }
 
@@ -629,22 +632,22 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		checkNonce:    checkNonce,
 		intrinsicGas:  intrinsicGas,
 		txType:        TxTypeLegacyTransaction,
-		accountKey:    NewAccountKeyLegacy(),
+		accountKey:    accountkey.NewAccountKeyLegacy(),
 		humanReadable: false,
 	}
 }
 
-func (m Message) From() common.Address          { return m.from }
-func (m Message) FeePayer() common.Address      { return m.feePayer }
-func (m Message) FeeRatio() uint8               { return m.feeRatio }
-func (m Message) To() *common.Address           { return m.to }
-func (m Message) GasPrice() *big.Int            { return m.gasPrice }
-func (m Message) Value() *big.Int               { return m.amount }
-func (m Message) Gas() uint64                   { return m.gasLimit }
-func (m Message) Nonce() uint64                 { return m.nonce }
-func (m Message) Data() []byte                  { return m.data }
-func (m Message) CheckNonce() bool              { return m.checkNonce }
-func (m Message) IntrinsicGas() (uint64, error) { return m.intrinsicGas, nil }
-func (m Message) TxType() TxType                { return m.txType }
-func (m Message) AccountKey() AccountKey        { return m.accountKey }
-func (m Message) HumanReadable() bool           { return m.humanReadable }
+func (m Message) From() common.Address              { return m.from }
+func (m Message) FeePayer() common.Address          { return m.feePayer }
+func (m Message) FeeRatio() uint8                   { return m.feeRatio }
+func (m Message) To() *common.Address               { return m.to }
+func (m Message) GasPrice() *big.Int                { return m.gasPrice }
+func (m Message) Value() *big.Int                   { return m.amount }
+func (m Message) Gas() uint64                       { return m.gasLimit }
+func (m Message) Nonce() uint64                     { return m.nonce }
+func (m Message) Data() []byte                      { return m.data }
+func (m Message) CheckNonce() bool                  { return m.checkNonce }
+func (m Message) IntrinsicGas() (uint64, error)     { return m.intrinsicGas, nil }
+func (m Message) TxType() TxType                    { return m.txType }
+func (m Message) AccountKey() accountkey.AccountKey { return m.accountKey }
+func (m Message) HumanReadable() bool               { return m.humanReadable }

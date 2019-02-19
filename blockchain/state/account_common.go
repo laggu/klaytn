@@ -19,7 +19,7 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"math/big"
@@ -30,7 +30,7 @@ type AccountCommon struct {
 	nonce         uint64
 	balance       *big.Int
 	humanReadable bool
-	key           types.AccountKey
+	key           accountkey.AccountKey
 }
 
 // accountCommonSerializable is an internal data structure for RLP serialization.
@@ -40,7 +40,7 @@ type accountCommonSerializable struct {
 	Nonce         uint64
 	Balance       *big.Int
 	HumanReadable bool
-	Key           *types.AccountKeySerializer
+	Key           *accountkey.AccountKeySerializer
 }
 
 // newAccountCommon creates an AccountCommon object with default values.
@@ -49,7 +49,7 @@ func newAccountCommon() *AccountCommon {
 		nonce:         0,
 		balance:       new(big.Int),
 		humanReadable: false,
-		key:           types.NewAccountKeyLegacy(),
+		key:           accountkey.NewAccountKeyLegacy(),
 	}
 }
 
@@ -69,7 +69,7 @@ func newAccountCommonWithMap(values map[AccountValueKeyType]interface{}) *Accoun
 		acc.humanReadable = v
 	}
 
-	if v, ok := values[AccountValueKeyAccountKey].(types.AccountKey); ok {
+	if v, ok := values[AccountValueKeyAccountKey].(accountkey.AccountKey); ok {
 		acc.key = v
 	}
 
@@ -79,7 +79,7 @@ func newAccountCommonWithMap(values map[AccountValueKeyType]interface{}) *Accoun
 func newAccountCommonSerializable() *accountCommonSerializable {
 	return &accountCommonSerializable{
 		Balance: new(big.Int),
-		Key:     types.NewAccountKeySerializer(),
+		Key:     accountkey.NewAccountKeySerializer(),
 	}
 }
 
@@ -89,7 +89,7 @@ func (e *AccountCommon) toSerializable() *accountCommonSerializable {
 		e.nonce,
 		e.balance,
 		e.humanReadable,
-		types.NewAccountKeySerializerWithAccountKey(e.key),
+		accountkey.NewAccountKeySerializerWithAccountKey(e.key),
 	}
 }
 
@@ -143,7 +143,7 @@ func (e *AccountCommon) GetHumanReadable() bool {
 	return e.humanReadable
 }
 
-func (e *AccountCommon) GetKey() types.AccountKey {
+func (e *AccountCommon) GetKey() accountkey.AccountKey {
 	return e.key
 }
 
@@ -159,7 +159,7 @@ func (e *AccountCommon) SetHumanReadable(h bool) {
 	e.humanReadable = h
 }
 
-func (e *AccountCommon) SetKey(k types.AccountKey) {
+func (e *AccountCommon) SetKey(k accountkey.AccountKey) {
 	e.key = k
 }
 
@@ -175,9 +175,9 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 		key:           e.key.DeepCopy()}
 }
 
-func (e *AccountCommon) UpdateKey(key types.AccountKey) error {
-	if myRoleKey, ok := e.key.(*types.AccountKeyRoleBased); ok {
-		if newRoleKey, ok := key.(*types.AccountKeyRoleBased); ok {
+func (e *AccountCommon) UpdateKey(key accountkey.AccountKey) error {
+	if myRoleKey, ok := e.key.(*accountkey.AccountKeyRoleBased); ok {
+		if newRoleKey, ok := key.(*accountkey.AccountKeyRoleBased); ok {
 			myRoleKey.Update(newRoleKey)
 		}
 	}

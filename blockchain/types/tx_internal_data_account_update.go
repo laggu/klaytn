@@ -19,6 +19,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -32,7 +33,7 @@ type TxInternalDataAccountUpdate struct {
 	Price        *big.Int
 	GasLimit     uint64
 	From         common.Address
-	Key          AccountKey
+	Key          accountkey.AccountKey
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -53,7 +54,7 @@ type txInternalDataAccountUpdateSerializable struct {
 func newTxInternalDataAccountUpdate() *TxInternalDataAccountUpdate {
 	return &TxInternalDataAccountUpdate{
 		Price:        new(big.Int),
-		Key:          NewAccountKeyLegacy(),
+		Key:          accountkey.NewAccountKeyLegacy(),
 		TxSignatures: NewTxSignatures(),
 	}
 }
@@ -85,7 +86,7 @@ func newTxInternalDataAccountUpdateWithMap(values map[TxValueKeyType]interface{}
 		return nil, errValueKeyFromMustAddress
 	}
 
-	if v, ok := values[TxValueKeyAccountKey].(AccountKey); ok {
+	if v, ok := values[TxValueKeyAccountKey].(accountkey.AccountKey); ok {
 		d.Key = v
 	} else {
 		return nil, errValueKeyAccountKeyMustAccountKey
@@ -99,7 +100,7 @@ func newTxInternalDataAccountUpdateSerializable() *txInternalDataAccountUpdateSe
 }
 
 func (t *TxInternalDataAccountUpdate) toSerializable() *txInternalDataAccountUpdateSerializable {
-	serializer := NewAccountKeySerializerWithAccountKey(t.Key)
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
 	return &txInternalDataAccountUpdateSerializable{
@@ -119,9 +120,9 @@ func (t *TxInternalDataAccountUpdate) fromSerializable(serialized *txInternalDat
 	t.From = serialized.From
 	t.TxSignatures = serialized.TxSignatures
 
-	serializer := NewAccountKeySerializer()
+	serializer := accountkey.NewAccountKeySerializer()
 	rlp.DecodeBytes(serialized.Key, serializer)
-	t.Key = serializer.key
+	t.Key = serializer.GetKey()
 }
 
 func (t *TxInternalDataAccountUpdate) EncodeRLP(w io.Writer) error {
@@ -159,8 +160,8 @@ func (t *TxInternalDataAccountUpdate) Type() TxType {
 	return TxTypeAccountUpdate
 }
 
-func (t *TxInternalDataAccountUpdate) GetRoleTypeForValidation() RoleType {
-	return RoleAccountUpdate
+func (t *TxInternalDataAccountUpdate) GetRoleTypeForValidation() accountkey.RoleType {
+	return accountkey.RoleAccountUpdate
 }
 
 func (t *TxInternalDataAccountUpdate) GetAccountNonce() uint64 {
@@ -253,7 +254,7 @@ func (t *TxInternalDataAccountUpdate) IntrinsicGas() (uint64, error) {
 }
 
 func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
-	serializer := NewAccountKeySerializerWithAccountKey(t.Key)
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
 	return []interface{}{

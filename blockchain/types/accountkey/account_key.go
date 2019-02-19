@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package types
+package accountkey
 
 import (
 	"crypto/ecdsa"
 	"errors"
+	"github.com/ground-x/klaytn/log"
 )
 
 type AccountKeyType uint
@@ -35,6 +36,8 @@ const (
 var (
 	errUndefinedAccountKeyType = errors.New("undefined account key type")
 )
+
+var logger = log.NewModuleLogger(log.BlockchainTypesAccountKey)
 
 func (a AccountKeyType) IsLegacyAccountKey() bool {
 	return a == AccountKeyTypeLegacy

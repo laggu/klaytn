@@ -18,6 +18,7 @@ package types
 
 import (
 	"bytes"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"testing"
 )
@@ -179,7 +180,7 @@ func (v *TxInternalDataFeeDelegatedValueTransferWithRatio) MakeInterfaceSlice() 
 }
 
 func (v *TxInternalDataAccountCreation) MakeInterfaceSlice() []interface{} {
-	serializer := NewAccountKeySerializerWithAccountKey(v.Key)
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(v.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 	return []interface{}{
 		v.Type(),
@@ -196,7 +197,7 @@ func (v *TxInternalDataAccountCreation) MakeInterfaceSlice() []interface{} {
 }
 
 func (v *TxInternalDataAccountUpdate) MakeInterfaceSlice() []interface{} {
-	serializer := NewAccountKeySerializerWithAccountKey(v.Key)
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(v.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 	return []interface{}{
 		v.Type(),

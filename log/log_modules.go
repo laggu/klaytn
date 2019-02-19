@@ -60,11 +60,12 @@ const (
 	Blockchain
 	BlockchainState
 	BlockchainTypes
+	BlockchainTypesAccountKey
 	CMDKlay
 	_
-	CMDUtils
 
 	// 11~20
+	CMDUtils
 	Common
 	ConsensusGxhash
 	ConsensusIstanbul
@@ -74,9 +75,9 @@ const (
 	Console
 	DatasyncDownloader
 	DatasyncFetcher
-	Metrics
 
 	// 21~30
+	Metrics
 	NetworksP2P
 	NetworksP2PDiscover
 	NetworksP2PNat
@@ -86,9 +87,9 @@ const (
 	NetworksRPC
 	Node
 	NodeCN
-	NodeCNFilters
 
 	// 31~40
+	NodeCNFilters
 	NodeCNTracers
 	_
 	ServiceChain
@@ -98,6 +99,8 @@ const (
 	Work
 	CMDKBN
 	CMDUtilsNodeCMD
+
+	// 41~50
 	CMDKCN
 	CMDKPN
 	CMDKEN

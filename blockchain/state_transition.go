@@ -25,6 +25,7 @@ import (
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/kerrors"
@@ -97,7 +98,7 @@ type Message interface {
 	TxType() types.TxType
 
 	// AccountKey returns an AccountKey object belonging to the transaction.
-	AccountKey() types.AccountKey
+	AccountKey() accountkey.AccountKey
 
 	// HumanReadable returns true if the account to be created is a human-readable account.
 	HumanReadable() bool
