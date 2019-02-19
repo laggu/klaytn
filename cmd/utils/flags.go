@@ -573,6 +573,21 @@ var (
 		Name:  "writeaddress",
 		Usage: `write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"`,
 	}
+	// gennodekey flags
+	GenNodeKeyToFileFlag = cli.BoolFlag{
+		Name:  "file",
+		Usage: `Generate a nodekey and a klaytn node information as files`,
+	}
+	GenNodeKeyPortFlag = cli.IntFlag{
+		Name:  "port",
+		Usage: `Specify a tcp port number`,
+		Value: 32323,
+	}
+	GenNodeKeyIPFlag = cli.StringFlag{
+		Name:  "ip",
+		Usage: `Specify an ip address`,
+		Value: "0.0.0.0",
+	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
