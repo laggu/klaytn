@@ -26,6 +26,7 @@ jobs:
       - run:
           name: "Run coverage tests"
           command: |
+            export GOPATH=/go
             git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/klaytn-tests.git tests/testdata
             make cover
             mkdir -p /tmp/coverage_reports
