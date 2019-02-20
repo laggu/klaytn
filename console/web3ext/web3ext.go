@@ -31,6 +31,7 @@ var Modules = map[string]string{
 	"txpool":       TxPool_JS,
 	"istanbul":     Istanbul_JS,
 	"servicechain": ServiceChain_JS,
+	"bridge":       Bridge_JS,
 }
 
 const Admin_JS = `
@@ -697,5 +698,64 @@ web3._extend({
 		}),
 	],
 	properties: []
+});
+`
+const Bridge_JS = `
+web3._extend({
+	property: 'bridge',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'addPeer',
+			call: 'bridge_addPeer',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'removePeer',
+			call: 'bridge_removePeer',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getChildChainIndexingEnabled',
+			call: 'bridge_getChildChainIndexingEnabled'
+		}),
+		new web3._extend.Method({
+			name: 'convertChildChainBlockHashToParentChainTxHash',
+			call: 'bridge_convertChildChainBlockHashToParentChainTxHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getLatestAnchoredBlockNumber',
+			call: 'bridge_getLatestAnchoredBlockNumber',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getReceiptFromParentChain',
+			call: 'bridge_getReceiptFromParentChain',
+			params: 1
+		}),
+	],
+    properties: [
+		new web3._extend.Property({
+			name: 'nodeInfo',
+			getter: 'bridge_nodeInfo'
+		}),
+		new web3._extend.Property({
+			name: 'peers',
+			getter: 'bridge_peers'
+		}),
+		new web3._extend.Property({
+			name: 'chainAccount',
+			getter: 'bridge_getChainAccountAddr'
+		}),
+		new web3._extend.Property({
+			name: 'anchoringPeriod',
+			getter: 'bridge_getAnchoringPeriod'
+		}),
+		new web3._extend.Property({
+			name: 'sendChainTxslimit',
+			getter: 'bridge_getSentChainTxsLimit'
+		}),
+	]
 });
 `
