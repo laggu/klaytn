@@ -60,11 +60,12 @@ const (
 	Blockchain
 	BlockchainState
 	BlockchainTypes
+	BlockchainTypesAccount
 	BlockchainTypesAccountKey
 	CMDKlay
-	_
 
 	// 11~20
+	_
 	CMDUtils
 	Common
 	ConsensusGxhash
@@ -74,9 +75,9 @@ const (
 	ConsensusIstanbulValidator
 	Console
 	DatasyncDownloader
-	DatasyncFetcher
 
 	// 21~30
+	DatasyncFetcher
 	Metrics
 	NetworksP2P
 	NetworksP2PDiscover
@@ -86,9 +87,9 @@ const (
 	NetworksP2PSimulationsCnism
 	NetworksRPC
 	Node
-	NodeCN
 
 	// 31~40
+	NodeCN
 	NodeCNFilters
 	NodeCNTracers
 	_
@@ -98,9 +99,9 @@ const (
 	VM
 	Work
 	CMDKBN
-	CMDUtilsNodeCMD
 
 	// 41~50
+	CMDUtilsNodeCMD
 	CMDKCN
 	CMDKPN
 	CMDKEN
@@ -121,11 +122,13 @@ var moduleNames = [ModuleNameLen]string{
 	"blockchain",
 	"blockchain/state",
 	"blockchain/types",
+	"blockchain/types/account",
+	"blockchain/types/accountkey",
 	"cmd/klay",
-	"",
-	"cmd/utils",
 
 	// 11~20
+	"",
+	"cmd/utils",
 	"common",
 	"consensus/gxhash",
 	"consensus/istanbul",
@@ -134,10 +137,10 @@ var moduleNames = [ModuleNameLen]string{
 	"consensus/istanbul/validator",
 	"console",
 	"datasync/downloader",
-	"datasync/fetcher",
-	"metrics",
 
 	// 21~30
+	"datasync/fetcher",
+	"metrics",
 	"networks/p2p",
 	"networks/p2p/discover",
 	"networks/p2p/nat",
@@ -146,10 +149,10 @@ var moduleNames = [ModuleNameLen]string{
 	"networks/p2p/simulations/cnism",
 	"networks/rpc",
 	"node",
-	"node/cn",
-	"node/cn/filters",
 
 	// 31~40
+	"node/cn",
+	"node/cn/filters",
 	"node/cn/tracers",
 	"",
 	"servicechain",
@@ -158,6 +161,8 @@ var moduleNames = [ModuleNameLen]string{
 	"vm",
 	"work",
 	"cmd/kbn",
+
+	// 41~50
 	"cmd/utils/nodecmd",
 	"cmd/kcn",
 	"cmd/kpn",

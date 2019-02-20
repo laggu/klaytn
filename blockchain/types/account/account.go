@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package state
+package account
 
 import (
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
 	"math/big"
 )
 
@@ -57,6 +59,13 @@ func (a AccountType) String() string {
 var (
 	ErrUndefinedAccountType    = errors.New("undefined account type")
 	ErrAccountKeyNotModifiable = errors.New("account key is not modifiable")
+)
+
+var (
+	// TODO-Klaytn-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
+	emptyCodeHash = crypto.Keccak256(nil)
+
+	logger = log.NewModuleLogger(log.BlockchainState)
 )
 
 // Account is the Klaytn consensus representation of accounts.

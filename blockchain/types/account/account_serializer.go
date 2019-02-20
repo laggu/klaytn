@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package state
+package account
 
 import (
 	"encoding/json"
@@ -56,6 +56,10 @@ func (ser *AccountSerializer) EncodeRLP(w io.Writer) error {
 	}
 
 	return rlp.Encode(w, ser.account)
+}
+
+func (ser *AccountSerializer) GetAccount() Account {
+	return ser.account
 }
 
 func (ser *AccountSerializer) DecodeRLP(s *rlp.Stream) error {

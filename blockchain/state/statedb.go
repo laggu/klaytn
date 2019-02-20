@@ -23,6 +23,7 @@ package state
 import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
@@ -415,12 +416,12 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 		self.setError(err)
 		return nil
 	}
-	serializer := NewAccountSerializer()
+	serializer := account.NewAccountSerializer()
 	if err := rlp.DecodeBytes(enc, serializer); err != nil {
 		logger.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}
-	data := serializer.account
+	data := serializer.GetAccount()
 	// Insert into the live set.
 	obj := newObject(self, addr, data)
 	self.setStateObject(obj)
@@ -444,7 +445,11 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	newobj = newObject(self, addr, newLegacyAccount())
+	acc, err := account.NewAccountWithType(account.LegacyAccountType)
+	if err != nil {
+		logger.Error("An error occurred on call NewAccountWithType", "err", err)
+	}
+	newobj = newObject(self, addr, acc)
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
@@ -458,15 +463,18 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 // createObjectWithMap creates a new state object with the given parameters (accountType and values).
 // If there is an existing account with the given address, it is overwritten and
 // returned as the second return value.
-func (self *StateDB) createObjectWithMap(addr common.Address, accountType AccountType,
-	values map[AccountValueKeyType]interface{}) (newobj, prev *stateObject) {
+func (self *StateDB) createObjectWithMap(addr common.Address, accountType account.AccountType,
+	values map[account.AccountValueKeyType]interface{}) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	acc, err := NewAccountWithMap(accountType, values)
+	acc, err := account.NewAccountWithMap(accountType, values)
 	if err != nil {
 		// falling back to create a legacy account if an error occurs.
 		logger.Warn("falling back to create a legacy account", "accountType", accountType,
 			"values", values, "err", err, "acc", acc.String())
-		acc = newLegacyAccountWithMap(values)
+		acc, err = account.NewAccountWithMap(account.LegacyAccountType, values)
+		if err != nil {
+			logger.Error("failed on NewAccountWithMap", "err", err)
+		}
 	}
 	newobj = newObject(self, addr, acc)
 	newobj.setNonce(0) // sets the object to dirty
@@ -498,8 +506,8 @@ func (self *StateDB) CreateAccount(addr common.Address) {
 
 // CreateAccountWithMap explicitly creates a state object with the given parameters (accountType and values).
 // If a state object with the address already exists the balance is carried over to the new account.
-func (self *StateDB) CreateAccountWithMap(addr common.Address, accountType AccountType,
-	values map[AccountValueKeyType]interface{}) {
+func (self *StateDB) CreateAccountWithMap(addr common.Address, accountType account.AccountType,
+	values map[account.AccountValueKeyType]interface{}) {
 	new, prev := self.createObjectWithMap(addr, accountType, values)
 	if prev != nil {
 		new.setBalance(prev.account.GetBalance())
@@ -696,12 +704,13 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	}
 	// Write trie changes.
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {
-		serializer := NewAccountSerializer()
+		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			return nil
 		}
-		account := serializer.account
-		if pa, ok := account.(ProgramAccount); ok {
+		acc := serializer.GetAccount()
+		// TODO-Klaytn-Accounts: move below type check into the account package.
+		if pa, ok := acc.(account.ProgramAccount); ok {
 			if pa.GetStorageRoot() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
 			}

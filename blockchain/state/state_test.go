@@ -22,13 +22,13 @@ package state
 
 import (
 	"bytes"
-	"math/big"
-	"testing"
-
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/storage/database"
 	checker "gopkg.in/check.v1"
+	"math/big"
+	"testing"
 )
 
 type StateSuite struct {
@@ -210,8 +210,8 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 	if so0.Nonce() != so1.Nonce() {
 		t.Fatalf("Nonce mismatch: have %v, want %v", so0.Nonce(), so1.Nonce())
 	}
-	so0ac, so0ok := so0.account.(ProgramAccount)
-	so1ac, so1ok := so1.account.(ProgramAccount)
+	so0ac, so0ok := so0.account.(account.ProgramAccount)
+	so1ac, so1ok := so1.account.(account.ProgramAccount)
 	if so0ok != so1ok {
 		t.Errorf("so0ok(%v) != so1ok(%v). Both should be smart contracts or not!", so0ok, so1ok)
 	}

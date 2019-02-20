@@ -22,6 +22,7 @@ package state
 
 import (
 	"bytes"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
@@ -32,12 +33,13 @@ import (
 func NewStateSync(root common.Hash, database database.DBManager) *statedb.TrieSync {
 	var syncer *statedb.TrieSync
 	callback := func(leaf []byte, parent common.Hash) error {
-		serializer := NewAccountSerializer()
+		serializer := account.NewAccountSerializer()
 		if err := rlp.Decode(bytes.NewReader(leaf), serializer); err != nil {
 			return err
 		}
-		obj := serializer.account
-		if pa, ok := obj.(ProgramAccount); ok {
+		obj := serializer.GetAccount()
+		// TODO-Klaytn-Accounts: move below type check into the account package.
+		if pa, ok := obj.(account.ProgramAccount); ok {
 			syncer.AddSubTrie(pa.GetStorageRoot(), 64, parent, nil)
 			syncer.AddRawEntry(common.BytesToHash(pa.GetCodeHash()), 64, parent)
 		}

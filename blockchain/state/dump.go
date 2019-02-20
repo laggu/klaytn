@@ -23,6 +23,7 @@ package state
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/statedb"
@@ -51,14 +52,14 @@ func (self *StateDB) RawDump() Dump {
 	it := statedb.NewIterator(self.trie.NodeIterator(nil))
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
-		serializer := NewAccountSerializer()
+		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(it.Value, serializer); err != nil {
 			panic(err)
 		}
-		data := serializer.account
+		data := serializer.GetAccount()
 
 		obj := self.getStateObject(common.BytesToAddress(addr))
-		account := DumpAccount{
+		acc := DumpAccount{
 			Balance:  data.GetBalance().String(),
 			Nonce:    data.GetNonce(),
 			Root:     common.Bytes2Hex([]byte{}),
@@ -66,16 +67,17 @@ func (self *StateDB) RawDump() Dump {
 			Code:     common.Bytes2Hex(obj.Code(self.db)),
 			Storage:  make(map[string]string),
 		}
-		if pa, ok := data.(ProgramAccount); ok {
-			account.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
-			account.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
+		// TODO-Klaytn-Accounts: move below type check into the account package.
+		if pa, ok := data.(account.ProgramAccount); ok {
+			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
+			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
 		}
 		storageTrie := obj.getStorageTrie(self.db)
 		storageIt := statedb.NewIterator(storageTrie.NodeIterator(nil))
 		for storageIt.Next() {
-			account.Storage[common.Bytes2Hex(storageTrie.GetKey(storageIt.Key))] = common.Bytes2Hex(storageIt.Value)
+			acc.Storage[common.Bytes2Hex(storageTrie.GetKey(storageIt.Key))] = common.Bytes2Hex(storageIt.Value)
 		}
-		dump.Accounts[common.Bytes2Hex(addr)] = account
+		dump.Accounts[common.Bytes2Hex(addr)] = acc
 	}
 	return dump
 }

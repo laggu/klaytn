@@ -23,8 +23,8 @@ package blockchain
 import (
 	"bytes"
 	"errors"
-	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
@@ -289,10 +289,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 			kerr.Status = getReceiptStatusFromVMerr(nil)
 			return nil, 0, kerr
 		}
-		evm.StateDB.CreateAccountWithMap(*to, state.ExternallyOwnedAccountType,
-			map[state.AccountValueKeyType]interface{}{
-				state.AccountValueKeyAccountKey:    msg.AccountKey(),
-				state.AccountValueKeyHumanReadable: msg.HumanReadable(),
+		evm.StateDB.CreateAccountWithMap(*to, account.ExternallyOwnedAccountType,
+			map[account.AccountValueKeyType]interface{}{
+				account.AccountValueKeyAccountKey:    msg.AccountKey(),
+				account.AccountValueKeyHumanReadable: msg.HumanReadable(),
 			})
 	}
 	if contractCreation {

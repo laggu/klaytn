@@ -21,8 +21,8 @@
 package vm
 
 import (
-	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
@@ -31,7 +31,7 @@ import (
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
-	CreateAccountWithMap(common.Address, state.AccountType, map[state.AccountValueKeyType]interface{})
+	CreateAccountWithMap(common.Address, account.AccountType, map[account.AccountValueKeyType]interface{})
 
 	SubBalance(common.Address, *big.Int)
 	AddBalance(common.Address, *big.Int)

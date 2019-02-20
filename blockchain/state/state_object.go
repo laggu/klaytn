@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
@@ -72,7 +73,7 @@ func (self Storage) Copy() Storage {
 // Finally, call CommitTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address common.Address
-	account Account
+	account account.Account
 	db      *StateDB
 
 	// DB error.
@@ -103,7 +104,7 @@ func (s *stateObject) empty() bool {
 }
 
 // newObject creates a state object.
-func newObject(db *StateDB, address common.Address, data Account) *stateObject {
+func newObject(db *StateDB, address common.Address, data account.Account) *stateObject {
 	return &stateObject{
 		db:            db,
 		address:       address,
@@ -115,7 +116,7 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 
 // EncodeRLP implements rlp.Encoder.
 func (c *stateObject) EncodeRLP(w io.Writer) error {
-	serializer := NewAccountSerializerWithAccount(c.account)
+	serializer := account.NewAccountSerializerWithAccount(c.account)
 	return rlp.Encode(w, serializer)
 }
 
@@ -143,7 +144,8 @@ func (c *stateObject) touch() {
 
 func (c *stateObject) getStorageTrie(db Database) Trie {
 	if c.storageTrie == nil {
-		if acc, ok := c.account.(ProgramAccount); ok {
+		// TODO-Klaytn-Accounts: move below type check into the account package.
+		if acc, ok := c.account.(account.ProgramAccount); ok {
 			var err error
 			c.storageTrie, err = db.OpenStorageTrie(acc.GetStorageRoot())
 			if err != nil {
@@ -193,13 +195,14 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 
 // IsProgramAccount returns true if the account implements ProgramAccount.
 func (self *stateObject) IsProgramAccount() bool {
-	_, ok := self.account.(ProgramAccount)
+	// TODO-Klaytn-Accounts: move below type check into the account package.
+	_, ok := self.account.(account.ProgramAccount)
 
 	return ok
 }
 
 func (self *stateObject) GetKey() accountkey.AccountKey {
-	if ak, ok := self.account.(AccountWithKey); ok {
+	if ak, ok := self.account.(account.AccountWithKey); ok {
 		return ak.GetKey()
 	}
 	return accountkey.NewAccountKeyLegacy()
@@ -233,7 +236,8 @@ func (self *stateObject) updateTrie(db Database) Trie {
 // UpdateRoot sets the trie root to the current root hash of
 func (self *stateObject) updateRoot(db Database) {
 	self.updateTrie(db)
-	if acc, ok := self.account.(ProgramAccount); ok {
+	// TODO-Klaytn-Accounts: move below type check into the account package.
+	if acc, ok := self.account.(account.ProgramAccount); ok {
 		acc.SetStorageRoot(self.storageTrie.Hash())
 	}
 }
@@ -245,7 +249,8 @@ func (self *stateObject) CommitTrie(db Database) error {
 	if self.dbErr != nil {
 		return self.dbErr
 	}
-	if acc, ok := self.account.(ProgramAccount); ok {
+	// TODO-Klaytn-Accounts: move below type check into the account package.
+	if acc, ok := self.account.(account.ProgramAccount); ok {
 		root, err := self.storageTrie.Commit(nil)
 		if err != nil {
 			return err
@@ -344,7 +349,8 @@ func (self *stateObject) SetCode(codeHash common.Hash, code []byte) error {
 }
 
 func (self *stateObject) setCode(codeHash common.Hash, code []byte) error {
-	acc, ok := self.account.(ProgramAccount)
+	// TODO-Klaytn-Accounts: move below type check into the account package.
+	acc, ok := self.account.(account.ProgramAccount)
 	if !ok {
 		logger.Error("setCode() should be called only to a ProgramAccount!", "account address", self.address)
 		return errNotProgramAccount
@@ -378,7 +384,8 @@ func (self *stateObject) setNonce(nonce uint64) {
 }
 
 func (self *stateObject) CodeHash() []byte {
-	if acc, ok := self.account.(ProgramAccount); ok {
+	// TODO-Klaytn-Accounts: move below type check into the account package.
+	if acc, ok := self.account.(account.ProgramAccount); ok {
 		return acc.GetCodeHash()
 	}
 	logger.Error("CodeHash() should be called only to a ProgramAccount!")
