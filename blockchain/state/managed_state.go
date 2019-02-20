@@ -25,7 +25,7 @@ import (
 	"sync"
 )
 
-type account struct {
+type accountState struct {
 	stateObject *stateObject
 	nstart      uint64
 	nonces      []bool
@@ -36,14 +36,14 @@ type ManagedState struct {
 
 	mu sync.RWMutex
 
-	accounts map[common.Address]*account
+	accounts map[common.Address]*accountState
 }
 
 // ManagedState returns a new managed state with the statedb as it's backing layer
 func ManageState(statedb *StateDB) *ManagedState {
 	return &ManagedState{
 		StateDB:  statedb.Copy(),
-		accounts: make(map[common.Address]*account),
+		accounts: make(map[common.Address]*accountState),
 	}
 }
 
@@ -124,7 +124,7 @@ func (ms *ManagedState) hasAccount(addr common.Address) bool {
 }
 
 // populate the managed state
-func (ms *ManagedState) getAccount(addr common.Address) *account {
+func (ms *ManagedState) getAccount(addr common.Address) *accountState {
 	if account, ok := ms.accounts[addr]; !ok {
 		so := ms.GetOrNewStateObject(addr)
 		ms.accounts[addr] = newAccount(so)
@@ -141,6 +141,6 @@ func (ms *ManagedState) getAccount(addr common.Address) *account {
 	return ms.accounts[addr]
 }
 
-func newAccount(so *stateObject) *account {
-	return &account{so, so.Nonce(), nil}
+func newAccount(so *stateObject) *accountState {
+	return &accountState{so, so.Nonce(), nil}
 }

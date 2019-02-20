@@ -28,7 +28,7 @@ import (
 
 var addr = common.BytesToAddress([]byte("test"))
 
-func create() (*ManagedState, *account) {
+func create() (*ManagedState, *accountState) {
 	memDBManager := database.NewMemoryDBManager()
 	stateDB, _ := New(common.Hash{}, NewDatabase(memDBManager))
 	ms := ManageState(stateDB)
