@@ -271,6 +271,8 @@ type Signer interface {
 	SignatureValues(sig []byte) (r, s, v *big.Int, err error)
 	// Hash returns the hash to be signed.
 	Hash(tx *Transaction) common.Hash
+	// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
+	HashFeePayer(tx *Transaction) (common.Hash, error)
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
 }
@@ -352,7 +354,12 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 		return nil, errNotFeePayer
 	}
 
-	return tf.RecoverFeePayerPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	hash, err := s.HashFeePayer(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return tf.RecoverFeePayerPubkey(hash, true, func(v *big.Int) *big.Int {
 		V := new(big.Int).Sub(v, s.chainIdMul)
 		return V.Sub(V, big8)
 	})
@@ -378,6 +385,19 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	infs := append(tx.data.SerializeForSign(),
 		s.chainId, uint(0), uint(0))
 	return rlpHash(infs)
+}
+
+// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
+// It does not uniquely identify the transaction.
+func (s EIP155Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return common.Hash{}, errNotFeePayer
+	}
+	infs := append(tx.data.SerializeForSign(),
+		tf.GetFeePayer(),
+		s.chainId, uint(0), uint(0))
+	return rlpHash(infs), nil
 }
 
 // TODO-Klaytn-RemoveLater Remove HomesteadSigner
@@ -429,7 +449,12 @@ func (hs HomesteadSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, e
 		return nil, errNotFeePayer
 	}
 
-	return tf.RecoverFeePayerPubkey(hs.Hash(tx), true, identityV)
+	hash, err := hs.HashFeePayer(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return tf.RecoverFeePayerPubkey(hash, true, identityV)
 }
 
 type FrontierSigner struct{}
@@ -455,6 +480,17 @@ func (fs FrontierSigner) SignatureValues(sig []byte) (r, s, v *big.Int, err erro
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash(tx.data.SerializeForSign())
+}
+
+// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
+// It does not uniquely identify the transaction.
+func (fs FrontierSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return common.Hash{}, errNotFeePayer
+	}
+	infs := append(tx.data.SerializeForSign(), tf.GetFeePayer())
+	return rlpHash(infs), nil
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
@@ -486,7 +522,12 @@ func (fs FrontierSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, er
 		return nil, errNotFeePayer
 	}
 
-	return tf.RecoverFeePayerPubkey(fs.Hash(tx), false, identityV)
+	hash, err := fs.HashFeePayer(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return tf.RecoverFeePayerPubkey(hash, false, identityV)
 }
 
 func recoverPlainCommon(sighash common.Hash, R, S, Vb *big.Int, homestead bool) ([]byte, error) {

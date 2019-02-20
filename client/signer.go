@@ -70,6 +70,11 @@ func (s *senderFromServer) SenderFeePayer(tx *types.Transaction) ([]*ecdsa.Publi
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }
+
+func (s *senderFromServer) HashFeePayer(tx *types.Transaction) (common.Hash, error) {
+	panic("can't sign with senderFromServer")
+}
+
 func (s *senderFromServer) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
 	panic("can't sign with senderFromServer")
 }

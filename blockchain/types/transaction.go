@@ -393,7 +393,10 @@ func (tx *Transaction) SignWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
 
 // SignFeePayer signs the tx with the given signer and private key as a fee payer.
 func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
-	h := s.Hash(tx)
+	h, err := s.HashFeePayer(tx)
+	if err != nil {
+		return err
+	}
 	sig, err := NewTxSignatureWithValues(s, h, prv)
 	if err != nil {
 		return err
@@ -408,7 +411,10 @@ func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
 
 // SignFeePayerWithKeys signs the tx with the given signer and a slice of private keys as a fee payer.
 func (tx *Transaction) SignFeePayerWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
-	h := s.Hash(tx)
+	h, err := s.HashFeePayer(tx)
+	if err != nil {
+		return err
+	}
 	sig, err := NewTxSignaturesWithValues(s, h, prv)
 	if err != nil {
 		return err
