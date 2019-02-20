@@ -355,6 +355,16 @@ func (self *stateObject) setCode(codeHash common.Hash, code []byte) error {
 	return nil
 }
 
+// IncNonce increases the nonce of the account by one with making a journal of the previous nonce.
+func (self *stateObject) IncNonce() {
+	nonce := self.account.GetNonce()
+	self.db.journal.append(nonceChange{
+		account: &self.address,
+		prev:    nonce,
+	})
+	self.setNonce(nonce + 1)
+}
+
 func (self *stateObject) SetNonce(nonce uint64) {
 	self.db.journal.append(nonceChange{
 		account: &self.address,

@@ -316,6 +316,14 @@ func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
+// IncNonce increases the nonce of the account of the given address by one.
+func (self *StateDB) IncNonce(addr common.Address) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.IncNonce()
+	}
+}
+
 func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
