@@ -106,7 +106,7 @@ out:
 }
 
 func (self *CpuAgent) mine(work *Task, stop <-chan struct{}) {
-	// TODO-KLAYTN drop or missing tx and remove mining on BN, RN, GN
+	// TODO-KLAYTN drop or missing tx and remove mining on PN and EN
 	if self.nodetype != node.CONSENSUSNODE {
 		self.returnCh <- &Result{work, nil}
 		return

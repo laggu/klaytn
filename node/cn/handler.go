@@ -1138,8 +1138,8 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 		// TODO-Klaytn drop or missing tx
 		if resend {
 			var peers []Peer
-			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
-				peers = pm.peers.TypePeers(node.BRIDGENODE)
+			if pm.nodetype == node.ENDPOINTNODE {
+				peers = pm.peers.TypePeers(node.PROXYNODE)
 			} else {
 				peers = pm.peers.TypePeers(node.CONSENSUSNODE)
 			}
@@ -1158,8 +1158,8 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 				}
 				logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 			}
-			if pm.nodetype == node.RANGERNODE || pm.nodetype == node.GENERALNODE {
-				peers = pm.peers.TypePeersWithoutTx(tx.Hash(), node.BRIDGENODE)
+			if pm.nodetype == node.ENDPOINTNODE {
+				peers = pm.peers.TypePeersWithoutTx(tx.Hash(), node.PROXYNODE)
 				for _, peer := range peers {
 					txset[peer] = append(txset[peer], tx)
 				}
@@ -1306,9 +1306,9 @@ func (pm *ProtocolManager) FindCNPeers(targets map[common.Address]bool) map[comm
 	return m
 }
 
-func (pm *ProtocolManager) GetRNPeers() map[common.Address]consensus.Peer {
+func (pm *ProtocolManager) GetENPeers() map[common.Address]consensus.Peer {
 	m := make(map[common.Address]consensus.Peer)
-	for addr, p := range pm.peers.RNPeers() {
+	for addr, p := range pm.peers.ENPeers() {
 		m[addr] = p
 	}
 	return m

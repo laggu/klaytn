@@ -62,7 +62,7 @@ type Broadcaster interface {
 
 	GetCNPeers() map[common.Address]Peer
 
-	GetRNPeers() map[common.Address]Peer
+	GetENPeers() map[common.Address]Peer
 
 	RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
 }

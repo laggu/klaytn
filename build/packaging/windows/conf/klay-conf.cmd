@@ -10,5 +10,5 @@ set KLAY_HOME=%homepath%\.klay
 
 set DATA_DIR=%KLAY_HOME%\data
 
-REM NODE_TYPE [CN, BN, RN]
-set NODE_TYPE=RN
+REM NODE_TYPE [CN, PN, EN]
+set NODE_TYPE=EN

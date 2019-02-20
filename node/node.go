@@ -44,9 +44,9 @@ var logger = log.NewModuleLogger(log.Node)
 
 const (
 	CONSENSUSNODE = iota
-	RANGERNODE
-	BRIDGENODE
-	GENERALNODE
+	ENDPOINTNODE
+	PROXYNODE
+	UNKNOWNNODE // For error case
 )
 
 // Node is a container on which services can be registered.

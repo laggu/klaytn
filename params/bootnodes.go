@@ -35,9 +35,8 @@ var MainnetBootnodes = []string{
 // TODO-Klaytn-Bootnode: below consts are derived from `node` package due to importing `node` package occurs cyclic import issue
 const (
 	CONSENSUSNODE = iota
-	RANGERNODE
-	BRIDGENODE
-	GENERALNODE
+	ENDPOINTNODE
+	PROXYNODE
 )
 
 // BaobabBootnodes are the kni URLs of the PN's P2P bootstrap nodes running on the
@@ -51,14 +50,14 @@ var BaobabBootnodes = map[int]bootnodesByTypes{
 			"kni://572eac675ad859034958570313f48e2de532a9d83717fbc257bdecd1e01250369fab5adbd9d14bc513b1844e5048df163efac161d878eb61cb033b830b017054@permissoned.baobab.jp.klaytn.net:32323?discport=32323", // Imaginary (JP) bootnode for CN
 		},
 	},
-	RANGERNODE: {
+	ENDPOINTNODE: {
 		// EN (formerly known as RN) bootnodes
 		[]string{
 			"kni://0971511b988b840a9921e24a6da5cc3cc82111c0459bc85bf993fd20b418c0f19ac9ae07abcb1f26d04d15ed186c643acf1991f36a57b386ab20e3f8d4cfc3ba@boot.baobab.kr.klaytn.net:32323?discport=32323", // Imaginary (KR) bootnode for EN
 			"kni://76251a528cc8d0fea5ec7db67bb5b4e3c3056c82c9b9543b0389e5cc207fb0a4fb8d7b9b165b914b62cf7ad8fde05e6198192b514444014debd47c316e725c15@boot.baobab.jp.klaytn.net:32323?discport=32323", // Imaginary (JP) bootnode for EN
 		},
 	},
-	BRIDGENODE: {
+	PROXYNODE: {
 		// PN (formerly known as BN) bootnodes
 		[]string{
 			"kni://11eb3d77843914f4b78c8b814b343e0825fe1adc0ec2df001bec9cce6ff0fd8ae5c36dec31ce71f00b00de0c7230d22c54507520fd449986f6ad062510d5c9d9@bridge.baobab.kr.klaytn.net:32323?discport=32323", // Imaginary (KR) bootnode for PN

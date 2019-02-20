@@ -508,7 +508,7 @@ func (self *worker) commitNewWork() {
 	// TODO-KLAYTN drop or missing tx
 	tstamp := tstart.Unix()
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-		//if self.nodetype == node.RANGERNODE || self.nodetype == node.GENERALNODE {
+		//if self.nodetype == node.ENDPOINTNODE {
 		//	tstamp = parent.Time().Int64() + 5
 		//} else {
 		tstamp = parent.Time().Int64() + 1

@@ -208,7 +208,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.protocolManager.SetRewardbase(cn.rewardbase)
 	cn.protocolManager.SetRewardContract(cn.rewardcontract)
 
-	// TODO-Klaytn improve to handle drop transaction on network traffic in BN,GN,RN
+	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
 	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
 	// istanbul BFT
 	cn.miner.SetExtra(makeExtraData(config.ExtraData, cn.chainConfig.IsBFT))

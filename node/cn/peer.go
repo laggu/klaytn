@@ -1044,7 +1044,7 @@ func (v ByPassValidator) ValidatePeerType(addr common.Address) error {
 type peerSet struct {
 	peers   map[string]Peer
 	cnpeers map[common.Address]Peer
-	rnpeers map[common.Address]Peer
+	enpeers map[common.Address]Peer
 	lock    sync.RWMutex
 	closed  bool
 
@@ -1056,14 +1056,13 @@ func newPeerSet() *peerSet {
 	peerSet := &peerSet{
 		peers:     make(map[string]Peer),
 		cnpeers:   make(map[common.Address]Peer),
-		rnpeers:   make(map[common.Address]Peer),
+		enpeers:   make(map[common.Address]Peer),
 		validator: make(map[p2p.ConnType]p2p.PeerTypeValidator),
 	}
 
 	peerSet.validator[node.CONSENSUSNODE] = ByPassValidator{}
-	peerSet.validator[node.RANGERNODE] = ByPassValidator{}
-	peerSet.validator[node.GENERALNODE] = ByPassValidator{}
-	peerSet.validator[node.BRIDGENODE] = ByPassValidator{}
+	peerSet.validator[node.PROXYNODE] = ByPassValidator{}
+	peerSet.validator[node.ENDPOINTNODE] = ByPassValidator{}
 
 	return peerSet
 }
@@ -1088,14 +1087,14 @@ func (ps *peerSet) Register(p Peer) error {
 			return fmt.Errorf("fail to validate cntype: %s", err)
 		}
 		ps.cnpeers[p.GetAddr()] = p
-	} else if p.ConnType() == node.RANGERNODE {
-		if _, ok := ps.rnpeers[p.GetAddr()]; ok {
+	} else if p.ConnType() == node.ENDPOINTNODE {
+		if _, ok := ps.enpeers[p.GetAddr()]; ok {
 			return errAlreadyRegistered
 		}
-		if err := ps.validator[node.RANGERNODE].ValidatePeerType(p.GetAddr()); err != nil {
+		if err := ps.validator[node.ENDPOINTNODE].ValidatePeerType(p.GetAddr()); err != nil {
 			return fmt.Errorf("fail to validate rntype: %s", err)
 		}
-		ps.rnpeers[p.GetAddr()] = p
+		ps.enpeers[p.GetAddr()] = p
 	}
 	ps.peers[p.GetID()] = p
 	go p.Broadcast()
@@ -1115,8 +1114,8 @@ func (ps *peerSet) Unregister(id string) error {
 	}
 	if p.ConnType() == node.CONSENSUSNODE {
 		delete(ps.cnpeers, p.GetAddr())
-	} else if p.ConnType() == node.RANGERNODE {
-		delete(ps.rnpeers, p.GetAddr())
+	} else if p.ConnType() == node.ENDPOINTNODE {
+		delete(ps.enpeers, p.GetAddr())
 	}
 	delete(ps.peers, id)
 	p.Close()
@@ -1147,12 +1146,12 @@ func (ps *peerSet) CNPeers() map[common.Address]Peer {
 	return set
 }
 
-func (ps *peerSet) RNPeers() map[common.Address]Peer {
+func (ps *peerSet) ENPeers() map[common.Address]Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
 	set := make(map[common.Address]Peer)
-	for addr, p := range ps.rnpeers {
+	for addr, p := range ps.enpeers {
 		set[addr] = p
 	}
 	return set

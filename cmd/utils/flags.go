@@ -451,8 +451,8 @@ var (
 	// Network Settings
 	NodeTypeFlag = cli.StringFlag{
 		Name:  "nodetype",
-		Usage: "klaytn node type (consensus node (cn), bridge node (bn), ranger node (rn), general node (gn), ...)",
-		Value: "gn",
+		Usage: "klaytn node type (consensus node (cn), proxy node (pn), endpoint node (en))",
+		Value: "en",
 	}
 	MaxPeersFlag = cli.IntFlag{
 		Name:  "maxpeers",
@@ -870,6 +870,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	cfg.ConnectionType = convertNodeType(nodeType)
+	if cfg.ConnectionType == node.UNKNOWNNODE {
+		logger.Crit("Unknown node type", "nodetype", nodeType)
+	}
 	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
 
 	// set bootnodes via this function by check specified parameters
@@ -919,12 +922,12 @@ func convertNodeType(nodetype string) p2p.ConnType {
 	switch strings.ToLower(nodetype) {
 	case "cn":
 		return node.CONSENSUSNODE
-	case "rn", "en":
-		return node.RANGERNODE
-	case "bn", "pn":
-		return node.BRIDGENODE
+	case "pn":
+		return node.PROXYNODE
+	case "en":
+		return node.ENDPOINTNODE
 	default:
-		return node.GENERALNODE
+		return node.UNKNOWNNODE
 	}
 }
 
@@ -932,12 +935,10 @@ func convertNodeTypeToString(nodetype int) string {
 	switch p2p.ConnType(nodetype) {
 	case node.CONSENSUSNODE:
 		return "CN"
-	case node.RANGERNODE:
-		return "RN"
-	case node.BRIDGENODE:
-		return "BN"
-	case node.GENERALNODE:
-		return "GN"
+	case node.PROXYNODE:
+		return "PN"
+	case node.ENDPOINTNODE:
+		return "EN"
 	default:
 		logger.Error("failed to convert nodetype as string", "err", "unknown nodetype")
 		return "unknown"
@@ -1392,7 +1393,7 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 }
 
 func getBaobabBootnodesByConnectionType(cType int) []string {
-	if cType >= int(node.CONSENSUSNODE) && cType <= int(node.BRIDGENODE) {
+	if cType >= int(node.CONSENSUSNODE) && cType <= int(node.PROXYNODE) {
 		return params.BaobabBootnodes[cType].Addrs
 	}
 	logger.Crit("Does not have any bootnode of given node type", "node_type", convertNodeTypeToString(cType))
