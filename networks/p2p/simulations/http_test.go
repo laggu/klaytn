@@ -125,6 +125,9 @@ func (t *testService) Stop() error {
 	return nil
 }
 
+func (s *testService) Components() []interface{}              { return nil }
+func (s *testService) SetComponents(components []interface{}) {}
+
 // handshake performs a peer handshake by sending and expecting an empty
 // message with the given code
 func (t *testService) handshake(rw p2p.MsgReadWriter, code uint64) error {

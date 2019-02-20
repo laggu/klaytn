@@ -33,10 +33,12 @@ import (
 // NoopService is a trivial implementation of the Service interface.
 type NoopService struct{}
 
-func (s *NoopService) Protocols() []p2p.Protocol { return nil }
-func (s *NoopService) APIs() []rpc.API           { return nil }
-func (s *NoopService) Start(p2p.Server) error    { return nil }
-func (s *NoopService) Stop() error               { return nil }
+func (s *NoopService) Protocols() []p2p.Protocol              { return nil }
+func (s *NoopService) APIs() []rpc.API                        { return nil }
+func (s *NoopService) Start(p2p.Server) error                 { return nil }
+func (s *NoopService) Stop() error                            { return nil }
+func (s *NoopService) Components() []interface{}              { return nil }
+func (s *NoopService) SetComponents(components []interface{}) {}
 
 func NewNoopService(*ServiceContext) (Service, error) { return new(NoopService), nil }
 
@@ -88,6 +90,13 @@ func (s *InstrumentedService) Stop() error {
 		s.stopHook()
 	}
 	return s.stop
+}
+
+func (s *InstrumentedService) Components() []interface{} {
+	return nil
+}
+
+func (s *InstrumentedService) SetComponents(components []interface{}) {
 }
 
 // InstrumentingWrapper is a method to specialize a service constructor returning

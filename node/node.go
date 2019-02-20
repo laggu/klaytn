@@ -61,8 +61,10 @@ type Node struct {
 	serverConfig p2p.Config
 	server       p2p.Server
 
-	serviceFuncs []ServiceConstructor
-	services     map[reflect.Type]Service // Currently running services
+	coreServiceFuncs []ServiceConstructor
+	serviceFuncs     []ServiceConstructor
+
+	services map[reflect.Type]Service // Currently running services
 
 	rpcAPIs       []rpc.API
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
@@ -127,6 +129,7 @@ func New(conf *Config) (*Node, error) {
 		accman:            am,
 		ephemeralKeystore: ephemeralKeystore,
 		config:            conf,
+		coreServiceFuncs:  []ServiceConstructor{},
 		serviceFuncs:      []ServiceConstructor{},
 		ipcEndpoint:       conf.IPCEndpoint(),
 		httpEndpoint:      conf.HTTPEndpoint(),
@@ -139,6 +142,17 @@ func New(conf *Config) (*Node, error) {
 // Register injects a new service into the node's stack. The service created by
 // the passed constructor must be unique in its type with regard to sibling ones.
 func (n *Node) Register(constructor ServiceConstructor) error {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	if n.server != nil {
+		return ErrNodeRunning
+	}
+	n.coreServiceFuncs = append(n.coreServiceFuncs, constructor)
+	return nil
+}
+
+func (n *Node) RegisterSubService(constructor ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
@@ -178,8 +192,86 @@ func (n *Node) Start() error {
 	n.logger.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
 	// Otherwise copy and specialize the P2P configuration
+	coreservices := make(map[reflect.Type]Service)
+	if err := n.initService(n.coreServiceFuncs, coreservices); err != nil {
+		return err
+	}
+
 	services := make(map[reflect.Type]Service)
-	for _, constructor := range n.serviceFuncs {
+	if err := n.initService(n.serviceFuncs, services); err != nil {
+		return err
+	}
+
+	// Gather the protocols and start the freshly assembled P2P server
+	for _, service := range coreservices {
+		if len(service.Protocols()) > 0 {
+			p2pServer.AddProtocols(service.Protocols())
+		}
+		for _, s := range services {
+			// TODO-Klaytn-ServiceChain call setcomponents repeatedly for same component
+			s.SetComponents(service.Components())
+		}
+	}
+	if err := p2pServer.Start(); err != nil {
+		return convertFileLockError(err)
+	}
+
+	// Start each of the coreservices
+	coreStarted := []reflect.Type{}
+	for kind, service := range coreservices {
+		// Start the next service, stopping all previous upon failure
+		if err := service.Start(p2pServer); err != nil {
+			for _, kind := range coreStarted {
+				coreservices[kind].Stop()
+			}
+			p2pServer.Stop()
+
+			return err
+		}
+		// Mark the service started for potential cleanup
+		coreStarted = append(coreStarted, kind)
+	}
+
+	started := []reflect.Type{}
+	for kind, service := range services {
+		if err := service.Start(p2pServer); err != nil {
+			for _, kind := range started {
+				services[kind].Stop()
+			}
+			for _, kind := range coreStarted {
+				coreservices[kind].Stop()
+			}
+			p2pServer.Stop()
+
+			return err
+		}
+		// Mark the service started for potential cleanup
+		started = append(started, kind)
+	}
+
+	for kind, service := range services {
+		coreservices[kind] = service
+	}
+
+	// Lastly start the configured RPC interfaces
+	if err := n.startRPC(coreservices); err != nil {
+		for _, service := range coreservices {
+			service.Stop()
+		}
+		p2pServer.Stop()
+		return err
+	}
+
+	// Finish initializing the startup
+	n.services = coreservices
+	n.server = p2pServer
+	n.stop = make(chan struct{})
+
+	return nil
+}
+
+func (n *Node) initService(serviceFunc []ServiceConstructor, services map[reflect.Type]Service) error {
+	for _, constructor := range serviceFunc {
 		// Create a new context for the particular service
 		ctx := &ServiceContext{
 			config:         n.config,
@@ -201,44 +293,6 @@ func (n *Node) Start() error {
 		}
 		services[kind] = service
 	}
-	// Gather the protocols and start the freshly assembled P2P server
-	for _, service := range services {
-		p2pServer.AddProtocols(service.Protocols())
-	}
-	if err := p2pServer.Start(); err != nil {
-		return convertFileLockError(err)
-	}
-
-	// Start each of the services
-	started := []reflect.Type{}
-	for kind, service := range services {
-		// Start the next service, stopping all previous upon failure
-		if err := service.Start(p2pServer); err != nil {
-			for _, kind := range started {
-				services[kind].Stop()
-			}
-			p2pServer.Stop()
-
-			return err
-		}
-		// Mark the service started for potential cleanup
-		started = append(started, kind)
-	}
-
-	// Lastly start the configured RPC interfaces
-	if err := n.startRPC(services); err != nil {
-		for _, service := range services {
-			service.Stop()
-		}
-		p2pServer.Stop()
-		return err
-	}
-
-	// Finish initializing the startup
-	n.services = services
-	n.server = p2pServer
-	n.stop = make(chan struct{})
-
 	return nil
 }
 

@@ -484,6 +484,13 @@ func (s *snapshotService) Stop() error {
 	return nil
 }
 
+func (s *snapshotService) Components() []interface{} {
+	return nil
+}
+
+func (s *snapshotService) SetComponents(components []interface{}) {
+}
+
 // SnapshotAPI provides an RPC method to create snapshots of services
 type SnapshotAPI struct {
 	services map[string]node.Service

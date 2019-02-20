@@ -132,6 +132,13 @@ func (p *cnSimService) Stop() error {
 	return nil
 }
 
+func (s *cnSimService) Components() []interface{} {
+	return nil
+}
+
+func (s *cnSimService) SetComponents(components []interface{}) {
+}
+
 func (p *cnSimService) Info() interface{} {
 	return struct {
 		Received int64 `json:"received"`

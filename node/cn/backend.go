@@ -97,6 +97,8 @@ type CN struct {
 	netRPCService *api.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
+
+	components []interface{}
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -223,7 +225,24 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams)
 
+	//@TODO Klaytn add core component
+	cn.addComponent(cn.blockchain)
+	cn.addComponent(cn.txPool)
+
 	return cn, nil
+}
+
+// add component which may be used in another service component
+func (s *CN) addComponent(component interface{}) {
+	s.components = append(s.components, component)
+}
+
+func (s *CN) Components() []interface{} {
+	return s.components
+}
+
+func (s *CN) SetComponents(component []interface{}) {
+	// do nothing
 }
 
 // istanbul BFT
