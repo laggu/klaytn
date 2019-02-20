@@ -57,11 +57,11 @@ type txdataMarshaling struct {
 	S            *hexutil.Big
 }
 
-func newEmptyTxdata() *TxInternalDataLegacy {
+func newEmptyTxInternalDataLegacy() *TxInternalDataLegacy {
 	return &TxInternalDataLegacy{}
 }
 
-func newTxdata() *TxInternalDataLegacy {
+func newTxInternalDataLegacy() *TxInternalDataLegacy {
 	return &TxInternalDataLegacy{
 		AccountNonce: 0,
 		Recipient:    nil,
@@ -75,8 +75,8 @@ func newTxdata() *TxInternalDataLegacy {
 	}
 }
 
-func newTxdataWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *TxInternalDataLegacy {
-	d := newTxdata()
+func newTxInternalDataLegacyWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *TxInternalDataLegacy {
+	d := newTxInternalDataLegacy()
 
 	d.AccountNonce = nonce
 	d.Recipient = to
@@ -95,8 +95,8 @@ func newTxdataWithValues(nonce uint64, to *common.Address, amount *big.Int, gasL
 	return d
 }
 
-func newTxdataWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataLegacy, error) {
-	d := newTxdata()
+func newTxInternalDataLegacyWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataLegacy, error) {
+	d := newTxInternalDataLegacy()
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		d.AccountNonce = v

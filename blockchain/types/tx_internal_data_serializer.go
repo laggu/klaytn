@@ -59,7 +59,7 @@ func (serializer *TxInternalDataSerializer) EncodeRLP(w io.Writer) error {
 func (serializer *TxInternalDataSerializer) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&serializer.txType); err != nil {
 		// fallback to the original transaction decoding.
-		txd := newEmptyTxdata()
+		txd := newEmptyTxInternalDataLegacy()
 		if err := s.Decode(txd); err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func (serializer *TxInternalDataSerializer) UnmarshalJSON(b []byte) error {
 
 	if len(dec.Tx) == 0 {
 		// fallback to unmarshal the legacy transaction.
-		txd := newEmptyTxdata()
+		txd := newEmptyTxInternalDataLegacy()
 		if err := json.Unmarshal(b, txd); err != nil {
 			return err
 		}

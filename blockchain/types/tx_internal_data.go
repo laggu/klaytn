@@ -262,7 +262,7 @@ type TxInternalDataPayload interface {
 func NewTxInternalData(t TxType) (TxInternalData, error) {
 	switch t {
 	case TxTypeLegacyTransaction:
-		return newTxdata(), nil
+		return newTxInternalDataLegacy(), nil
 	case TxTypeValueTransfer:
 		return newTxInternalDataValueTransfer(), nil
 	case TxTypeFeeDelegatedValueTransfer:
@@ -289,7 +289,7 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (TxInternalData, error) {
 	switch t {
 	case TxTypeLegacyTransaction:
-		return newTxdataWithMap(values)
+		return newTxInternalDataLegacyWithMap(values)
 	case TxTypeValueTransfer:
 		return newTxInternalDataValueTransferWithMap(values)
 	case TxTypeFeeDelegatedValueTransfer:
