@@ -39,7 +39,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	TxTypeLegacyTransaction, TxTypeFeeDelegatedTransactions, TxTypeFeeDelegatedWithRatioTransaction TxType = (0x10 * iota), (0x10*iota + 1), (0x10*iota + 2)
+	TxTypeLegacyTransaction, TxTypeFeeDelegatedTransactions, TxTypeFeeDelegatedWithRatioTransaction TxType = iota << 3, iota<<3 + 1, iota<<3 + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
