@@ -31,7 +31,7 @@ import (
 // the maximum value is 100.
 const MaxFeeRatio uint8 = 100
 
-type TxType uint
+type TxType uint8
 
 const (
 	// TxType declarations

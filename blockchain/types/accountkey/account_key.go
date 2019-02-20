@@ -22,7 +22,7 @@ import (
 	"github.com/ground-x/klaytn/log"
 )
 
-type AccountKeyType uint
+type AccountKeyType uint8
 
 const (
 	AccountKeyTypeNil AccountKeyType = iota

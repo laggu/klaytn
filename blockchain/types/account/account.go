@@ -25,7 +25,7 @@ import (
 	"math/big"
 )
 
-type AccountType uint64
+type AccountType uint8
 
 const (
 	LegacyAccountType AccountType = iota
