@@ -61,6 +61,16 @@ type Transaction struct {
 	size     atomic.Value
 	from     atomic.Value
 	feePayer atomic.Value
+
+	// validatedSender represents the sender of the transaction to be used for ApplyTransaction().
+	// This value is set in AsMessageWithAccountKeyPicker().
+	validatedSender common.Address
+	// validatedFeePayer represents the fee payer of the transaction to be used for ApplyTransaction().
+	// This value is set in AsMessageWithAccountKeyPicker().
+	validatedFeePayer common.Address
+	// validatedIntrinsicGas represents intrinsic gas of the transaction to be used for ApplyTransaction().
+	// This value is set in AsMessageWithAccountKeyPicker().
+	validatedIntrinsicGas uint64
 }
 
 func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (*Transaction, error) {
@@ -187,14 +197,18 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Gas() uint64                   { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int            { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int               { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64                 { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool              { return true }
-func (tx *Transaction) Type() TxType                  { return tx.data.Type() }
-func (tx *Transaction) IntrinsicGas() (uint64, error) { return tx.data.IntrinsicGas() }
-func (tx *Transaction) IsLegacyTransaction() bool     { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) Gas() uint64                       { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int                { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int                   { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64                     { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonce() bool                  { return true }
+func (tx *Transaction) Type() TxType                      { return tx.data.Type() }
+func (tx *Transaction) IntrinsicGas() (uint64, error)     { return tx.data.IntrinsicGas() }
+func (tx *Transaction) IsLegacyTransaction() bool         { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) ValidatedSender() common.Address   { return tx.validatedSender }
+func (tx *Transaction) ValidatedFeePayer() common.Address { return tx.validatedFeePayer }
+func (tx *Transaction) ValidatedIntrinsicGas() uint64     { return tx.validatedIntrinsicGas }
+
 func (tx *Transaction) GetRoleTypeForValidation() accountkey.RoleType {
 	return tx.data.GetRoleTypeForValidation()
 }
@@ -306,6 +320,7 @@ func (tx *Transaction) Size() common.StorageSize {
 // AsMessageWithAccountKeyPicker requires a signer to derive the sender and AccountKeyPicker.
 //
 // XXX Rename message to something less arbitrary?
+// TODO-Klaytn: Message is removed and this function will return *Transaction.
 func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker) (Message, error) {
 	intrinsicGas, err := tx.IntrinsicGas()
 	if err != nil {
@@ -319,7 +334,6 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		amount:        tx.data.GetAmount(),
 		data:          tx.Data(),
 		checkNonce:    true,
-		intrinsicGas:  intrinsicGas,
 		txType:        tx.data.Type(),
 		accountKey:    accountkey.NewAccountKeyLegacy(),
 		humanReadable: false,
@@ -335,12 +349,20 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	}
 
 	gasFrom := uint64(0)
-	msg.from, gasFrom, err = ValidateSender(s, tx, picker)
+	sender, gasFrom, err := ValidateSender(s, tx, picker)
 
 	gasFeePayer := uint64(0)
-	msg.feePayer, gasFeePayer, err = ValidateFeePayer(s, tx, picker)
+	feePayer, gasFeePayer, err := ValidateFeePayer(s, tx, picker)
 
-	msg.intrinsicGas += gasFrom + gasFeePayer
+	// TODO-Klaytn: msg will be removed after refactoring TransitionDb() is done.
+	msg.from = sender
+	msg.feePayer = feePayer
+	msg.intrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+
+	tx.validatedSender = sender
+	tx.validatedFeePayer = feePayer
+	tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+
 	return msg, err
 }
 
