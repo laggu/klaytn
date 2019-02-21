@@ -22,6 +22,7 @@ package vm
 
 import (
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"math/big"
 	"testing"
 
@@ -551,7 +552,7 @@ func TestRunFeePayerContract(t *testing.T) {
 
 	for _, test := range feePayerTests {
 		in := common.Hex2Bytes(test.input)
-		contract := NewContract(NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
+		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
 			nil, new(big.Int), p.RequiredGas(in))
 		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
 			if res, err := RunFeePayerContract(p, in, contract); err != nil {

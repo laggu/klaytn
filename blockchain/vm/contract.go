@@ -21,15 +21,10 @@
 package vm
 
 import (
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
 )
-
-// ContractRef is a reference to the contract's backing object
-type ContractRef interface {
-	Address() common.Address
-	FeePayer() common.Address
-}
 
 // AccountRef implements ContractRef.
 //
@@ -44,20 +39,6 @@ type AccountRef common.Address
 func (ar AccountRef) Address() common.Address  { return (common.Address)(ar) }
 func (ar AccountRef) FeePayer() common.Address { return ar.Address() }
 
-// AccountRefWithFeePayer implements ContractRef.
-// This structure has an additional field `feePayer` compared to `AccountRef`.
-type AccountRefWithFeePayer struct {
-	SenderAddress   common.Address
-	FeePayerAddress common.Address
-}
-
-func NewAccountRefWithFeePayer(sender common.Address, feePayer common.Address) *AccountRefWithFeePayer {
-	return &AccountRefWithFeePayer{sender, feePayer}
-}
-
-func (a *AccountRefWithFeePayer) Address() common.Address  { return a.SenderAddress }
-func (a *AccountRefWithFeePayer) FeePayer() common.Address { return a.FeePayerAddress }
-
 // Contract represents an ethereum contract in the state database. It contains
 // the the contract code, calling arguments. Contract implements ContractRef
 type Contract struct {
@@ -66,8 +47,8 @@ type Contract struct {
 	// needs to be initialised to that of the caller's caller.
 	CallerAddress   common.Address
 	FeePayerAddress common.Address
-	caller          ContractRef
-	self            ContractRef
+	caller          types.ContractRef
+	self            types.ContractRef
 
 	jumpdests destinations // result of JUMPDEST analysis.
 
@@ -85,7 +66,7 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
+func NewContract(caller types.ContractRef, object types.ContractRef, value *big.Int, gas uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), FeePayerAddress: caller.FeePayer(), caller: caller, self: object, Args: nil}
 
 	if parent, ok := caller.(*Contract); ok {

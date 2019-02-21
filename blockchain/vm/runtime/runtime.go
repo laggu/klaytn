@@ -21,6 +21,7 @@
 package runtime
 
 import (
+	"github.com/ground-x/klaytn/blockchain/types"
 	"math"
 	"math/big"
 	"time"
@@ -157,7 +158,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 	vmenv := NewEnv(cfg)
 
 	senderAccount := cfg.State.GetOrNewStateObject(cfg.Origin)
-	sender := vm.NewAccountRefWithFeePayer(senderAccount.Address(), senderAccount.Address())
+	sender := types.NewAccountRefWithFeePayer(senderAccount.Address(), senderAccount.Address())
 	// Call the code with the given configuration.
 	ret, leftOverGas, err := vmenv.Call(
 		sender,
