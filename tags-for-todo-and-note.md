@@ -51,3 +51,4 @@ Please note that the tag name always
 | Downloader                                     | Related to Downloader.                                    |
 | NodeCmd                                        | Related to cmd/utils/nodecmd.                             |
 | Storage                                        | Related to storage.                                       |
+| Refactoring                                    | Related to refactoring.                                   |
