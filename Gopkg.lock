@@ -282,14 +282,6 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:808cdddf087fb64baeae67b8dfaee2069034d9704923a3cb8bd96a995421a625"
-  name = "github.com/patrickmn/go-cache"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0"
-  version = "v2.1.0"
-
-[[projects]]
   branch = "master"
   digest = "1:5f81e80915d9312397c603b6da6f751a4ae36ae2b4d4f0474a34241d95738686"
   name = "github.com/pbnjay/memory"
@@ -690,7 +682,6 @@
     "github.com/julienschmidt/httprouter",
     "github.com/mattn/go-colorable",
     "github.com/naoina/toml",
-    "github.com/patrickmn/go-cache",
     "github.com/pbnjay/memory",
     "github.com/pborman/uuid",
     "github.com/peterh/liner",
