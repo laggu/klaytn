@@ -67,8 +67,7 @@ func (self *StateDB) RawDump() Dump {
 			Code:     common.Bytes2Hex(obj.Code(self.db)),
 			Storage:  make(map[string]string),
 		}
-		// TODO-Klaytn-Accounts: move below type check into the account package.
-		if pa, ok := data.(account.ProgramAccount); ok {
+		if pa := account.GetProgramAccount(data); pa != nil {
 			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
 			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
 		}

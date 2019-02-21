@@ -148,3 +148,19 @@ func NewAccountWithMap(t AccountType, values map[AccountValueKeyType]interface{}
 
 	return nil, ErrUndefinedAccountType
 }
+
+func GetProgramAccount(a Account) ProgramAccount {
+	if pa, ok := a.(ProgramAccount); ok {
+		return pa
+	}
+
+	return nil
+}
+
+func GetAccountWithKey(a Account) AccountWithKey {
+	if ak, ok := a.(AccountWithKey); ok {
+		return ak
+	}
+
+	return nil
+}

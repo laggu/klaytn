@@ -38,8 +38,7 @@ func NewStateSync(root common.Hash, database database.DBManager) *statedb.TrieSy
 			return err
 		}
 		obj := serializer.GetAccount()
-		// TODO-Klaytn-Accounts: move below type check into the account package.
-		if pa, ok := obj.(account.ProgramAccount); ok {
+		if pa := account.GetProgramAccount(obj); pa != nil {
 			syncer.AddSubTrie(pa.GetStorageRoot(), 64, parent, nil)
 			syncer.AddRawEntry(common.BytesToHash(pa.GetCodeHash()), 64, parent)
 		}

@@ -709,8 +709,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			return nil
 		}
 		acc := serializer.GetAccount()
-		// TODO-Klaytn-Accounts: move below type check into the account package.
-		if pa, ok := acc.(account.ProgramAccount); ok {
+		if pa := account.GetProgramAccount(acc); pa != nil {
 			if pa.GetStorageRoot() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
 			}
