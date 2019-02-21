@@ -21,10 +21,10 @@
 package blockchain
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
-	"github.com/pkg/errors"
 	"math/big"
 	"sync"
 	"time"
