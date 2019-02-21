@@ -266,3 +266,9 @@ func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
 		keyEnc,
 	}
 }
+
+func (t *TxInternalDataAccountUpdate) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	stateDB.IncNonce(sender.Address())
+	err = stateDB.UpdateKey(sender.Address(), t.Key)
+	return nil, gas, err, nil
+}

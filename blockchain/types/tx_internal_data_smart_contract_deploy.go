@@ -237,3 +237,9 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 		t.HumanReadable,
 	}
 }
+
+func (t *TxInternalDataSmartContractDeploy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	ret, _, usedGas, vmerr = vm.CreateWithAddress(sender, t.Payload, gas, value, t.Recipient, t.HumanReadable)
+
+	return
+}

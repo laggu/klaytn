@@ -17,8 +17,10 @@
 package types
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
@@ -315,4 +317,33 @@ func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
 		t.HumanReadable,
 		keyEnc,
 	}
+}
+
+func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	to := t.Recipient
+	if t.HumanReadable {
+		addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
+			if r == rune(0x0) {
+				return true
+			}
+			return false
+		}))
+		if err := common.IsHumanReadableAddress(addrString); err != nil {
+			return nil, 0, err, nil
+		}
+	}
+	// Fail if the address is already created.
+	if stateDB.Exist(to) {
+		return nil, 0, errAccountAlreadyExists, nil
+	}
+	stateDB.CreateAccountWithMap(to, account.ExternallyOwnedAccountType,
+		map[account.AccountValueKeyType]interface{}{
+			account.AccountValueKeyAccountKey:    t.Key,
+			account.AccountValueKeyHumanReadable: t.HumanReadable,
+		})
+
+	stateDB.IncNonce(sender.Address())
+	ret, usedGas, vmerr = vm.Call(sender, to, []byte{}, gas, value)
+
+	return
 }

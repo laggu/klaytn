@@ -333,3 +333,14 @@ func (t *TxInternalDataLegacy) String() string {
 		enc,
 	)
 }
+
+func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	if t.Recipient == nil {
+		ret, _, usedGas, vmerr = vm.Create(sender, t.Payload, gas, value)
+	} else {
+		stateDB.IncNonce(sender.Address())
+		ret, usedGas, vmerr = vm.Call(sender, *t.Recipient, t.Payload, gas, value)
+	}
+
+	return
+}

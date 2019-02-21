@@ -19,6 +19,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"errors"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/kerrors"
@@ -74,6 +75,7 @@ var (
 	errNotTxTypeAccountCreation               = errors.New("not account creation transaction type")
 	errUndefinedTxType                        = errors.New("undefined tx type")
 	errCannotBeSignedByFeeDelegator           = errors.New("this transaction type cannot be signed by a fee delegator")
+	errAccountAlreadyExists                   = errors.New("account already exists")
 
 	errValueKeyHumanReadableMustBool     = errors.New("HumanReadable must be a type of bool")
 	errValueKeyAccountKeyMustAccountKey  = errors.New("AccountKey must be a type of AccountKey")
@@ -219,6 +221,9 @@ type TxInternalData interface {
 
 	// String returns a string containing information about the fields of the object.
 	String() string
+
+	// Execute performs execution of the transaction according to the transaction type.
+	Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error)
 }
 
 // TxInternalDataFeePayer has functions related to fee delegated transactions.
@@ -257,6 +262,23 @@ type TxInternalDataFrom interface {
 // an interface `TxInternalDataPayload` to obtain the payload.
 type TxInternalDataPayload interface {
 	GetPayload() []byte
+}
+
+// Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
+// TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
+type VM interface {
+	Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error)
+	CreateWithAddress(caller ContractRef, code []byte, gas uint64, value *big.Int, contractAddr common.Address, humanReadable bool) ([]byte, common.Address, uint64, error)
+	Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error)
+}
+
+// Since we cannot access the package `blockchain/state` directly, an interface `StateDB` is introduced.
+// TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
+type StateDB interface {
+	IncNonce(common.Address)
+	Exist(common.Address) bool
+	UpdateKey(addr common.Address, key accountkey.AccountKey) error
+	CreateAccountWithMap(addr common.Address, accountType account.AccountType, values map[account.AccountValueKeyType]interface{})
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {

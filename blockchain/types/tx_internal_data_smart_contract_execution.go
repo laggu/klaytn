@@ -225,3 +225,10 @@ func (t *TxInternalDataSmartContractExecution) SerializeForSign() []interface{} 
 		t.Payload,
 	}
 }
+
+func (t *TxInternalDataSmartContractExecution) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	stateDB.IncNonce(sender.Address())
+	ret, usedGas, vmerr = vm.Call(sender, t.Recipient, t.Payload, gas, value)
+
+	return
+}

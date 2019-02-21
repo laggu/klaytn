@@ -207,3 +207,10 @@ func (t *TxInternalDataValueTransfer) SerializeForSign() []interface{} {
 		t.From,
 	}
 }
+
+func (t *TxInternalDataValueTransfer) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	stateDB.IncNonce(sender.Address())
+	ret, usedGas, vmerr = vm.Call(sender, t.Recipient, nil, gas, value)
+
+	return
+}
