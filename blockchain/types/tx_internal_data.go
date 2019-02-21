@@ -32,6 +32,8 @@ import (
 // the maximum value is 100.
 const MaxFeeRatio uint8 = 100
 
+const SubTxTypeBits uint = 3
+
 type TxType uint8
 
 const (
@@ -40,7 +42,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	TxTypeLegacyTransaction, TxTypeFeeDelegatedTransactions, TxTypeFeeDelegatedWithRatioTransaction TxType = iota << 3, iota<<3 + 1, iota<<3 + 2
+	TxTypeLegacyTransaction, TxTypeFeeDelegatedTransactions, TxTypeFeeDelegatedWithRatioTransactions TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -151,13 +153,11 @@ func (t TxType) IsAccountUpdate() bool {
 }
 
 func (t TxType) IsContractDeploy() bool {
-	return t == TxTypeSmartContractDeploy ||
-		t == TxTypeFeeDelegatedSmartContractDeploy ||
-		t == TxTypeFeeDelegatedSmartContractDeployWithRatio
+	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeSmartContractDeploy
 }
 
 func (t TxType) IsCancelTransaction() bool {
-	return (t &^ 0x0) == TxTypeCancel
+	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeCancel
 }
 
 func (t TxType) IsLegacyTransaction() bool {
@@ -165,7 +165,7 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	return (t & (TxTypeFeeDelegatedTransactions | TxTypeFeeDelegatedWithRatioTransaction)) != 0x0
+	return (t & (TxTypeFeeDelegatedTransactions | TxTypeFeeDelegatedWithRatioTransactions)) != 0x0
 }
 
 // TxInternalData is an interface for an internal data structure of a Transaction
