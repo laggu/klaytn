@@ -42,6 +42,7 @@ import (
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
 	"github.com/ground-x/klaytn/node/cn/gasprice"
+	"github.com/ground-x/klaytn/node/sc"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
@@ -588,6 +589,20 @@ var (
 		Name:  "ip",
 		Usage: `Specify an ip address`,
 		Value: "0.0.0.0",
+	}
+	// ServiceChain's settings
+	EnabledBridgeFlag = cli.BoolFlag{
+		Name:  "bridge",
+		Usage: "Enable bridge service for service chain",
+	}
+	IsMainBridgeFlag = cli.BoolFlag{
+		Name:  "mainbridge",
+		Usage: "Enable bridge as main bridge",
+	}
+	BridgeListenPortFlag = cli.IntFlag{
+		Name:  "bridgeport",
+		Usage: "bridge listen port",
+		Value: 50505,
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
@@ -1248,6 +1263,23 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	})
 	if err != nil {
 		Fatalf("Failed to register the CN service: %v", err)
+	}
+}
+
+func RegisterService(stack *node.Node, cfg *sc.SCConfig) {
+	if cfg.EnabledBridge {
+		err := stack.RegisterSubService(func(ctx *node.ServiceContext) (node.Service, error) {
+			if cfg.IsMainBridge {
+				mainBridge, err := sc.NewMainBridge(ctx, cfg)
+				return mainBridge, err
+			} else {
+				subBridge, err := sc.NewSubBridge(ctx, cfg)
+				return subBridge, err
+			}
+		})
+		if err != nil {
+			Fatalf("Failed to register the service: %v", err)
+		}
 	}
 }
 

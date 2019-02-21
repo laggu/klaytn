@@ -112,6 +112,9 @@ var CommonNodeFlags = []cli.Flag{
 	utils.SentChainTxsLimit,
 	utils.BaobabFlag,
 	ConfigFileFlag,
+	utils.EnabledBridgeFlag,
+	utils.IsMainBridgeFlag,
+	utils.BridgeListenPortFlag,
 }
 
 // Common RPC flags

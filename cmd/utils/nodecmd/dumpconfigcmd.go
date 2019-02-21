@@ -25,8 +25,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
+	"github.com/ground-x/klaytn/node/sc"
 	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"os"
@@ -133,10 +135,52 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	return stack, cfg
 }
 
+func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
+	cfg := sc.SCConfig{
+		// TODO-Klaytn this value is temp for test
+		NetworkId: 1,
+		MaxPeer:   50,
+	}
+
+	// bridge service
+	if ctx.GlobalBool(utils.EnabledBridgeFlag.Name) {
+		cfg.EnabledBridge = true
+		if ctx.GlobalBool(utils.IsMainBridgeFlag.Name) {
+			cfg.IsMainBridge = true
+		} else {
+			cfg.IsMainBridge = false
+		}
+		if ctx.GlobalIsSet(utils.BridgeListenPortFlag.Name) {
+			cfg.BridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.BridgeListenPortFlag.Name))
+		}
+		//// TODO-Klaytn-ServiceChain Add human-readable address once its implementation is introduced.
+		if ctx.GlobalIsSet(utils.ChainAccountAddrFlag.Name) {
+			tempStr := ctx.GlobalString(utils.ChainAccountAddrFlag.Name)
+			if !common.IsHexAddress(tempStr) {
+				logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
+			}
+			tempAddr := common.StringToAddress(tempStr)
+			cfg.ChainAccountAddr = &tempAddr
+			logger.Info("A chain address is registered.", "chainAccountAddr", *cfg.ChainAccountAddr)
+		}
+		cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
+		cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
+	} else {
+		cfg.EnabledBridge = false
+	}
+
+	return cfg
+}
+
 func MakeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
 	utils.RegisterCNService(stack, &cfg.CN)
+
+	scfg := makeServiceChainConfig(ctx)
+	scfg.DataDir = cfg.Node.DataDir
+
+	utils.RegisterService(stack, &scfg)
 
 	return stack
 }
