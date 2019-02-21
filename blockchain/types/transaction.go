@@ -328,49 +328,27 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, gas uint64, value *big.In
 //
 // XXX Rename message to something less arbitrary?
 // TODO-Klaytn: Message is removed and this function will return *Transaction.
-func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker) (Message, error) {
+func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker) (*Transaction, error) {
 	intrinsicGas, err := tx.IntrinsicGas()
 	if err != nil {
-		return Message{}, err
-	}
-	msg := Message{
-		nonce:         tx.data.GetAccountNonce(),
-		gasLimit:      tx.data.GetGasLimit(),
-		gasPrice:      new(big.Int).Set(tx.data.GetPrice()),
-		to:            tx.data.GetRecipient(),
-		amount:        tx.data.GetAmount(),
-		data:          tx.Data(),
-		checkNonce:    true,
-		txType:        tx.data.Type(),
-		accountKey:    accountkey.NewAccountKeyLegacy(),
-		humanReadable: false,
-		feeRatio:      tx.FeeRatio(),
+		return nil, err
 	}
 
-	if ta, ok := tx.data.(*TxInternalDataAccountCreation); ok {
-		msg.accountKey = ta.Key
-		msg.humanReadable = ta.HumanReadable
-	}
-	if ta, ok := tx.data.(*TxInternalDataAccountUpdate); ok {
-		msg.accountKey = ta.Key
-	}
-
-	gasFrom := uint64(0)
 	sender, gasFrom, err := ValidateSender(s, tx, picker)
+	if err != nil {
+		return nil, err
+	}
 
-	gasFeePayer := uint64(0)
 	feePayer, gasFeePayer, err := ValidateFeePayer(s, tx, picker)
-
-	// TODO-Klaytn: msg will be removed after refactoring TransitionDb() is done.
-	msg.from = sender
-	msg.feePayer = feePayer
-	msg.intrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+	if err != nil {
+		return nil, err
+	}
 
 	tx.validatedSender = sender
 	tx.validatedFeePayer = feePayer
 	tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
 
-	return msg, err
+	return tx, err
 }
 
 // WithSignature returns a new transaction with the given signature.
@@ -633,56 +611,12 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 	heap.Pop(&t.heads)
 }
 
-// Message is a fully derived transaction and implements blockchain.Message
-//
-// NOTE: In a future PR this will be removed.
-type Message struct {
-	to            *common.Address
-	from          common.Address
-	feePayer      common.Address
-	feeRatio      uint8
-	nonce         uint64
-	amount        *big.Int
-	gasLimit      uint64
-	gasPrice      *big.Int
-	data          []byte
-	checkNonce    bool
-	intrinsicGas  uint64
-	txType        TxType
-	accountKey    accountkey.AccountKey
-	humanReadable bool
-}
-
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) Message {
-	return Message{
-		from:          from,
-		feePayer:      from,
-		feeRatio:      MaxFeeRatio,
-		to:            to,
-		nonce:         nonce,
-		amount:        amount,
-		gasLimit:      gasLimit,
-		gasPrice:      gasPrice,
-		data:          data,
-		checkNonce:    checkNonce,
-		intrinsicGas:  intrinsicGas,
-		txType:        TxTypeLegacyTransaction,
-		accountKey:    accountkey.NewAccountKeyLegacy(),
-		humanReadable: false,
+// NewMessage returns a `*Transaction` object with the given arguments.
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) *Transaction {
+	return &Transaction{
+		data:                  newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data),
+		validatedIntrinsicGas: intrinsicGas,
+		validatedFeePayer:     from,
+		validatedSender:       from,
 	}
 }
-
-func (m Message) From() common.Address              { return m.from }
-func (m Message) FeePayer() common.Address          { return m.feePayer }
-func (m Message) FeeRatio() uint8                   { return m.feeRatio }
-func (m Message) To() *common.Address               { return m.to }
-func (m Message) GasPrice() *big.Int                { return m.gasPrice }
-func (m Message) Value() *big.Int                   { return m.amount }
-func (m Message) Gas() uint64                       { return m.gasLimit }
-func (m Message) Nonce() uint64                     { return m.nonce }
-func (m Message) Data() []byte                      { return m.data }
-func (m Message) CheckNonce() bool                  { return m.checkNonce }
-func (m Message) IntrinsicGas() (uint64, error)     { return m.intrinsicGas, nil }
-func (m Message) TxType() TxType                    { return m.txType }
-func (m Message) AccountKey() accountkey.AccountKey { return m.accountKey }
-func (m Message) HumanReadable() bool               { return m.humanReadable }

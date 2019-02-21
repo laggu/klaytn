@@ -21,11 +21,8 @@
 package blockchain
 
 import (
-	"bytes"
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/blockchain/types/account"
-	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/kerrors"
@@ -71,8 +68,17 @@ type StateTransition struct {
 
 // Message represents a message sent to a contract.
 type Message interface {
-	From() common.Address
-	FeePayer() common.Address
+	// ValidatedSender returns the sender of the transaction.
+	// The returned sender should be derived by calling AsMessageAccountKeyPicker().
+	ValidatedSender() common.Address
+
+	// ValidatedFeePayer returns the fee payer of the transaction.
+	// The returned fee payer should be derived by calling AsMessageAccountKeyPicker().
+	ValidatedFeePayer() common.Address
+
+	// ValidatedIntrinsicGas returns the intrinsic gas of the transaction.
+	// The returned intrinsic gas should be derived by calling AsMessageAccountKeyPicker().
+	ValidatedIntrinsicGas() uint64
 
 	// FeeRatio returns a ratio of tx fee paid by the fee payer in percentage.
 	// For example, if it is 30, 30% of tx fee will be paid by the fee payer.
@@ -94,14 +100,11 @@ type Message interface {
 	// This value is used to differentiate tx fee based on the tx type.
 	IntrinsicGas() (uint64, error)
 
-	// TxType returns the transaction type of the message.
-	TxType() types.TxType
+	// Type returns the transaction type of the message.
+	Type() types.TxType
 
-	// AccountKey returns an AccountKey object belonging to the transaction.
-	AccountKey() accountkey.AccountKey
-
-	// HumanReadable returns true if the account to be created is a human-readable account.
-	HumanReadable() bool
+	// Execute performs execution of the transaction according to the transaction type.
+	Execute(vm types.VM, stateDB types.StateDB, gas uint64, value *big.Int) ([]byte, uint64, error, error)
 }
 
 // TODO-Klaytn Later we can merge Err and Status into one uniform error.
@@ -163,28 +166,30 @@ func (st *StateTransition) buyGas() error {
 	}
 
 	feeRatio := st.msg.FeeRatio()
+	validatedFeePayer := st.msg.ValidatedFeePayer()
+	validatedSender := st.msg.ValidatedSender()
 	switch {
 	case feeRatio == types.MaxFeeRatio:
 		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
-		if st.state.GetBalance(st.msg.FeePayer()).Cmp(mgval) < 0 {
+		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
 			return errInsufficientBalanceForGas
 		}
 
-		st.state.SubBalance(st.msg.FeePayer(), mgval)
+		st.state.SubBalance(validatedFeePayer, mgval)
 
 	case feeRatio < types.MaxFeeRatio:
 		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, mgval)
 
-		if st.state.GetBalance(st.msg.FeePayer()).Cmp(feePayer) < 0 {
+		if st.state.GetBalance(validatedFeePayer).Cmp(feePayer) < 0 {
 			return errInsufficientBalanceForGasFeePayer
 		}
 
-		if st.state.GetBalance(st.msg.From()).Cmp(feeSender) < 0 {
+		if st.state.GetBalance(validatedSender).Cmp(feeSender) < 0 {
 			return errInsufficientBalanceForGas
 		}
 
-		st.state.SubBalance(st.msg.FeePayer(), feePayer)
-		st.state.SubBalance(st.msg.From(), feeSender)
+		st.state.SubBalance(validatedFeePayer, feePayer)
+		st.state.SubBalance(validatedSender, feeSender)
 
 	default:
 		// feeRatio > types.MaxFeeRatio
@@ -199,7 +204,7 @@ func (st *StateTransition) buyGas() error {
 func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
 	if st.msg.CheckNonce() {
-		nonce := st.state.GetNonce(st.msg.From())
+		nonce := st.state.GetNonce(st.msg.ValidatedSender())
 		if nonce < st.msg.Nonce() {
 			return ErrNonceTooHigh
 		} else if nonce > st.msg.Nonce() {
@@ -219,100 +224,24 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return
 	}
 	msg := st.msg
-	sender := types.NewAccountRefWithFeePayer(msg.From(), msg.FeePayer())
-	txType := msg.TxType()
-
-	// IsContractCreation returns true if one of the following conditions is met:
-	// - ContractDeploy transaction type
-	// - legacy transaction type && msg.To() == nil
-	contractCreation := txType.IsLegacyTransaction() && msg.To() == nil
-	newContractCreation := txType.IsContractDeploy()
-
-	// IsAccountCreation returns true if the transaction is an account creation transaction.
-	accountCreation := txType.IsAccountCreation()
 
 	// TODO-Klaytn-Issue136
 	// Pay intrinsic gas.
-	gas, err := msg.IntrinsicGas()
-	kerr.Err = err
-	if kerr.Err != nil {
-		kerr.Status = getReceiptStatusFromVMerr(nil)
-		return nil, 0, kerr
-	}
-	if kerr.Err = st.useGas(gas); kerr.Err != nil {
+	if kerr.Err = st.useGas(msg.ValidatedIntrinsicGas()); kerr.Err != nil {
 		kerr.Status = getReceiptStatusFromVMerr(nil)
 		return nil, 0, kerr
 	}
 
 	var (
-		evm = st.evm
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
 		// error and total time limit reached error.
 		vmerr error
+		err   error
 	)
-	if txType.IsAccountUpdate() {
-		// Update key
-		err := evm.StateDB.UpdateKey(msg.From(), msg.AccountKey())
-		if err != nil {
-			kerr.Err = err
-			kerr.Status = getReceiptStatusFromVMerr(nil)
-			return nil, 0, kerr
-		}
-	}
-	if accountCreation {
-		to := msg.To()
-		if to == nil {
-			// This MUST not happen since only legacy transaction types allows that `to` is nil.
-			// But it would be better to explicitly terminate the program if an unintended result happens.
-			logger.Error("msg.To() should not be nil!", msg)
-			kerr.Err = errMsgToNil
-			kerr.Status = getReceiptStatusFromVMerr(nil)
-			return nil, 0, kerr
-		}
-		if msg.HumanReadable() {
-			addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
-				if r == rune(0x0) {
-					return true
-				}
-				return false
-			}))
-			if err := common.IsHumanReadableAddress(addrString); err != nil {
-				kerr.Err = err
-				kerr.Status = getReceiptStatusFromVMerr(nil)
-				return nil, 0, kerr
-			}
-		}
-		// Fail if the address is already created.
-		if evm.StateDB.Exist(*to) {
-			kerr.Err = errAccountAlreadyExists
-			kerr.Status = getReceiptStatusFromVMerr(nil)
-			return nil, 0, kerr
-		}
-		evm.StateDB.CreateAccountWithMap(*to, account.ExternallyOwnedAccountType,
-			map[account.AccountValueKeyType]interface{}{
-				account.AccountValueKeyAccountKey:    msg.AccountKey(),
-				account.AccountValueKeyHumanReadable: msg.HumanReadable(),
-			})
-	}
-	if contractCreation {
-		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
-	} else if newContractCreation {
-		to := msg.To()
-		if to == nil {
-			// This MUST not happen since only legacy transaction types allows that `to` is nil.
-			// But it would be better to explicitly terminate the program if an unintended result happens.
-			logger.Error("msg.To() should not be nil!", msg)
-			kerr.Err = errMsgToNil
-			kerr.Status = getReceiptStatusFromVMerr(nil)
-			return nil, 0, kerr
-		}
-		ret, _, st.gas, vmerr = evm.CreateWithAddress(sender, st.data, st.gas, st.value, *to, msg.HumanReadable())
-	} else {
-		// Increment the nonce for the next transaction
-		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, st.value)
-	}
+
+	ret, st.gas, err, vmerr = msg.Execute(st.evm, st.state, st.gas, st.value)
+
 	// TODO-Klaytn-Issue136
 	if vmerr != nil {
 		logger.Debug("VM returned with error", "err", vmerr)
@@ -333,6 +262,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	st.refundGas()
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)) // TODO-Klaytn-Issue136 gasPrice
 
+	kerr.Err = err
 	kerr.Status = getReceiptStatusFromVMerr(vmerr)
 	return ret, st.gasUsed(), kerr
 }
@@ -396,16 +326,18 @@ func (st *StateTransition) refundGas() {
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice
 
 	feeRatio := st.msg.FeeRatio()
+	validatedFeePayer := st.msg.ValidatedFeePayer()
+	validatedSender := st.msg.ValidatedSender()
 	switch {
 	case feeRatio == types.MaxFeeRatio:
 		// To make a short circuit, the below routine processes when feeRatio == 100.
-		st.state.AddBalance(st.msg.FeePayer(), remaining)
+		st.state.AddBalance(validatedFeePayer, remaining)
 
 	case feeRatio < types.MaxFeeRatio:
 		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, remaining)
 
-		st.state.AddBalance(st.msg.FeePayer(), feePayer)
-		st.state.AddBalance(st.msg.From(), feeSender)
+		st.state.AddBalance(validatedFeePayer, feePayer)
+		st.state.AddBalance(validatedSender, feeSender)
 
 	default:
 		// feeRatio > types.MaxFeeRatio

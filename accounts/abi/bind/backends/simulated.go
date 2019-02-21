@@ -30,7 +30,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain/bloombits"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
@@ -283,7 +282,9 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call klaytn.CallMsg
 	from := statedb.GetOrNewStateObject(call.From)
 	from.SetBalance(math.MaxBig256)
 	// Execute the call.
-	msg := callmsg{call}
+	nonce := from.Nonce()
+	intrinsicGas, _ := types.IntrinsicGas(call.Data, call.To == nil, true)
+	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas)
 
 	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.blockchain, nil)
 	// Create a new environment which holds all relevant information
@@ -401,33 +402,6 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
 
 	return nil
-}
-
-// callmsg implements blockchain.Message to allow passing it as a transaction simulator.
-type callmsg struct {
-	klaytn.CallMsg
-}
-
-func (m callmsg) From() common.Address { return m.CallMsg.From }
-
-// TODO-Klaytn-FeePayer: Support fee payer feature for the simulated backend.
-func (m callmsg) FeePayer() common.Address { return m.CallMsg.From }
-
-// TODO-Klaytn-FeePayer: Support fee ratio feature for the simulated backend.
-func (m callmsg) FeeRatio() uint8                   { return types.MaxFeeRatio }
-func (m callmsg) Nonce() uint64                     { return 0 }
-func (m callmsg) CheckNonce() bool                  { return false }
-func (m callmsg) To() *common.Address               { return m.CallMsg.To }
-func (m callmsg) GasPrice() *big.Int                { return m.CallMsg.GasPrice }
-func (m callmsg) Gas() uint64                       { return m.CallMsg.Gas }
-func (m callmsg) Value() *big.Int                   { return m.CallMsg.Value }
-func (m callmsg) Data() []byte                      { return m.CallMsg.Data }
-func (m callmsg) TxType() types.TxType              { return types.TxTypeLegacyTransaction }
-func (m callmsg) AccountKey() accountkey.AccountKey { return accountkey.NewAccountKeyLegacy() }
-func (m callmsg) HumanReadable() bool               { return false }
-
-func (m callmsg) IntrinsicGas() (uint64, error) {
-	return types.IntrinsicGas(m.Data(), m.To() == nil, true)
 }
 
 // filterBackend implements filters.Backend to support filtering for logs without

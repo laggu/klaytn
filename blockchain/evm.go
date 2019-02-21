@@ -51,7 +51,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
 		GetHash:     GetHashFn(header, chain),
-		Origin:      msg.From(),
+		Origin:      msg.ValidatedSender(),
 		Coinbase:    beneficiary,
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),

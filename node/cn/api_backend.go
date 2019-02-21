@@ -155,7 +155,7 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 }
 
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
-	state.SetBalance(msg.From(), math.MaxBig256)
+	state.SetBalance(msg.ValidatedSender(), math.MaxBig256)
 	vmError := func() error { return nil }
 
 	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
