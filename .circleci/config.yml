@@ -148,13 +148,13 @@ jobs:
           command: |
             export GOPATH=/go
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            go run build/rpm/main.go gen_spec --devel --build_num $CIRCLE_BUILD_NUM > /rpmbuild/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
+            go run build/rpm/main.go gen_spec --devel --build_num $CIRCLE_BUILD_NUM > /rpmbuild_home/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
             cd ..
             mv klaytn klaytn-devel-$KLAYTN_VERSION
             tar czf klaytn-devel-$KLAYTN_VERSION.tar.gz klaytn-devel-$KLAYTN_VERSION
-            mv klaytn-devel-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
-            rpmbuild -ba /rpmbuild/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
-            scp -o StrictHostKeyChecking=no /rpmbuild/RPMS/x86_64/klaytn-devel-v*.rpm ec2-user@52.79.114.173:/srv/repo/
+            mv klaytn-devel-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
+            rpmbuild -ba /rpmbuild_home/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
+            scp -o StrictHostKeyChecking=no /rpmbuild_home/RPMS/x86_64/klaytn-devel-v*.rpm ec2-user@52.79.114.173:/srv/repo/
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged:
@@ -172,13 +172,13 @@ jobs:
             export GOPATH=/go
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            go run build/rpm/main.go gen_spec > /rpmbuild/SPECS/klaytn-$KLAYTN_VERSION.spec
+            go run build/rpm/main.go gen_spec > /rpmbuild_home/SPECS/klaytn-$KLAYTN_VERSION.spec
             cd ..
             mv klaytn klaytn-$KLAYTN_VERSION
             tar czf klaytn-$KLAYTN_VERSION.tar.gz klaytn-$KLAYTN_VERSION
-            mv klaytn-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
-            rpmbuild -ba /rpmbuild/SPECS/klaytn-$KLAYTN_VERSION.spec
-            scp -o StrictHostKeyChecking=no /rpmbuild/RPMS/x86_64/klaytn-v*.rpm ec2-user@52.79.114.173:/srv/repo/
+            mv klaytn-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
+            rpmbuild -ba /rpmbuild_home/SPECS/klaytn-$KLAYTN_VERSION.spec
+            scp -o StrictHostKeyChecking=no /rpmbuild_home/RPMS/x86_64/klaytn-v*.rpm ec2-user@52.79.114.173:/srv/repo/
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
 workflows:
