@@ -86,53 +86,62 @@ jobs:
             curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
             python get-pip.py --user
             ~/.local/bin/pip install awscli --upgrade --user
-      - run:
-          name: "Packaging klaytn for linux-amd64"
-          command: |
-            export GOPATH=~/go
-            export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
-            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            make klay-linux-amd64
-            mkdir -p klay-linux-amd64
-            cp -R build/packaging/linux/* klay-linux-amd64/
-            cp -R build/bin/klay-linux-amd64 klay-linux-amd64/bin/klay
-            cp -R build/packaging/aspen klay-linux-amd64/conf/
-            KLAYTN_PACKAGE_NAME="klay-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM-linux-amd64.tar.gz"
-            tar czf $KLAYTN_PACKAGE_NAME klay-linux-amd64
-            aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-            aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
 
       - run:
-          name: "Packaging klaytn for macOS"
+          name: "Build kcn, kpn, ken"
           command: |
             export GOPATH=~/go
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            make klay-darwin-amd64
-            mkdir -p klay-darwin-amd64
-            cp -R build/packaging/linux/* klay-darwin-amd64/
-            cp -R build/bin/klay-darwin-10.10-amd64 klay-darwin-amd64/bin/klay
-            cp -R build/packaging/aspen klay-darwin-amd64/conf/
-            KLAYTN_PACKAGE_NAME="klay-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM-darwin-amd64.tar.gz"
-            tar czf $KLAYTN_PACKAGE_NAME klay-darwin-amd64
-            aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-            aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            make klay-linux-amd64 klay-darwin-amd64 klay-windows-amd64
 
       - run:
-          name: "Packaging klaytn for windows"
+          name: "Packaging kcn, kpn, ken for linux-amd64"
           command: |
-            export GOPATH=~/go
-            export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
-            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            make klay-windows-amd64
-            mkdir -p klay-windows-amd64/bin
-            cp -R build/packaging/windows/* klay-windows-amd64/
-            cp -R build/bin/klay-windows-4.0-amd64.exe klay-windows-amd64/bin/klay.exe
-            KLAYTN_PACKAGE_NAME="klay-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM-windows-amd64.zip"
-            cp -R build/packaging/aspen klay-windows-amd64/conf/
-            zip -r $KLAYTN_PACKAGE_NAME klay-windows-amd64
-            aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-            aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-linux-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-linux-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+      - run:
+          name: "Packaging kcn, kpn, ken for macOS"
+          command: |
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-darwin-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+      - run:
+          name: "Packaging kcn, kpn, ken for windows"
+          command: |
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-windows-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
+              cp build/packaging/windows/conf/${item}-conf.cmd ${PACK_NAME}/conf/
+              cp build/packaging/windows/start-${item}.bat ${PACK_NAME}/
+              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-windows-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
 
   rpm-untagged:
     docker:
