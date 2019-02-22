@@ -407,6 +407,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"timestampFoS":     (hexutil.Uint)(head.TimeFoS),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"klaytnExtra":      head.KlaytnExtra,
 	}
 
 	if inclTx {

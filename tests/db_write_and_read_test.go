@@ -299,11 +299,12 @@ func generateHeaderWithBlockNum(blockNum int) (common.Hash, uint64, *types.Heade
 	blockNumber := new(big.Int).SetUint64(uint64(blockNum))
 
 	header := &types.Header{
-		ParentHash: parentHash,
-		Number:     blockNumber,
-		Difficulty: blockNumber,
-		Time:       blockNumber,
-		Extra:      []byte{'a', 'b', 'c'},
+		ParentHash:  parentHash,
+		Number:      blockNumber,
+		Difficulty:  blockNumber,
+		Time:        blockNumber,
+		Extra:       []byte{'a', 'b', 'c'},
+		KlaytnExtra: []common.Address{common.HexToAddress("0x00000000000000000000000000000000000")},
 	}
 	return header.Hash(), uint64(blockNum), header
 }

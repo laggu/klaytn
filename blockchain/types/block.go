@@ -86,10 +86,11 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	// TimeFoS represents a fraction of a second since `Time`.
-	TimeFoS   uint8       `json:"timestampFoS"     gencodec:"required"`
-	Extra     []byte      `json:"extraData"        gencodec:"required"`
-	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
-	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
+	TimeFoS     uint8            `json:"timestampFoS"     gencodec:"required"`
+	Extra       []byte           `json:"extraData"        gencodec:"required"`
+	MixDigest   common.Hash      `json:"mixHash"          gencodec:"required"`
+	Nonce       BlockNonce       `json:"nonce"            gencodec:"required"`
+	KlaytnExtra []common.Address `json:"klaytnExtra"`
 }
 
 // HeaderWithoutUncle represents a block header without UncleHash.
@@ -107,22 +108,24 @@ type HeaderWithoutUncle struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	// TimeFoS represents a fraction of a second since `Time`.
-	TimeFoS   uint8       `json:"timestampFoS"     gencodec:"required"`
-	Extra     []byte      `json:"extraData"        gencodec:"required"`
-	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
-	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
+	TimeFoS     uint8            `json:"timestampFoS"     gencodec:"required"`
+	Extra       []byte           `json:"extraData"        gencodec:"required"`
+	MixDigest   common.Hash      `json:"mixHash"          gencodec:"required"`
+	Nonce       BlockNonce       `json:"nonce"            gencodec:"required"`
+	KlaytnExtra []common.Address `json:"klaytnExtra"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Difficulty *hexutil.Big
-	Number     *hexutil.Big
-	GasLimit   hexutil.Uint64
-	GasUsed    hexutil.Uint64
-	Time       *hexutil.Big
-	TimeFoS    hexutil.Uint
-	Extra      hexutil.Bytes
-	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Difficulty  *hexutil.Big
+	Number      *hexutil.Big
+	GasLimit    hexutil.Uint64
+	GasUsed     hexutil.Uint64
+	Time        *hexutil.Big
+	TimeFoS     hexutil.Uint
+	Extra       hexutil.Bytes
+	Hash        common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	KlaytnExtra []common.Address
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -158,6 +161,7 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Time,
 		h.TimeFoS,
 		h.Extra,
+		h.KlaytnExtra,
 	})
 }
 
@@ -181,6 +185,7 @@ func (h *Header) ToHeaderWithoutUncle() *HeaderWithoutUncle {
 		h.Extra,
 		h.MixDigest,
 		h.Nonce,
+		h.KlaytnExtra,
 	}
 	return &header
 }
@@ -317,6 +322,10 @@ func CopyHeader(h *Header) *Header {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
 	}
+	if len(h.KlaytnExtra) > 0 {
+		cpy.KlaytnExtra = make([]common.Address, len(h.KlaytnExtra))
+		copy(cpy.KlaytnExtra, h.KlaytnExtra)
+	}
 	return &cpy
 }
 
@@ -372,18 +381,19 @@ func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficu
 func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
 func (b *Block) TimeFoS() uint8       { return b.header.TimeFoS }
 
-func (b *Block) NumberU64() uint64          { return b.header.Number.Uint64() }
-func (b *Block) MixDigest() common.Hash     { return b.header.MixDigest }
-func (b *Block) Nonce() uint64              { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
-func (b *Block) Bloom() Bloom               { return b.header.Bloom }
-func (b *Block) Coinbase() common.Address   { return b.header.Coinbase }
-func (b *Block) Rewardbase() common.Address { return b.header.Rewardbase }
-func (b *Block) Root() common.Hash          { return b.header.Root }
-func (b *Block) ParentHash() common.Hash    { return b.header.ParentHash }
-func (b *Block) TxHash() common.Hash        { return b.header.TxHash }
-func (b *Block) ReceiptHash() common.Hash   { return b.header.ReceiptHash }
-func (b *Block) UncleHash() common.Hash     { return b.header.UncleHash }
-func (b *Block) Extra() []byte              { return common.CopyBytes(b.header.Extra) }
+func (b *Block) NumberU64() uint64             { return b.header.Number.Uint64() }
+func (b *Block) MixDigest() common.Hash        { return b.header.MixDigest }
+func (b *Block) Nonce() uint64                 { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
+func (b *Block) Bloom() Bloom                  { return b.header.Bloom }
+func (b *Block) Coinbase() common.Address      { return b.header.Coinbase }
+func (b *Block) Rewardbase() common.Address    { return b.header.Rewardbase }
+func (b *Block) Root() common.Hash             { return b.header.Root }
+func (b *Block) ParentHash() common.Hash       { return b.header.ParentHash }
+func (b *Block) TxHash() common.Hash           { return b.header.TxHash }
+func (b *Block) ReceiptHash() common.Hash      { return b.header.ReceiptHash }
+func (b *Block) UncleHash() common.Hash        { return b.header.UncleHash }
+func (b *Block) Extra() []byte                 { return common.CopyBytes(b.header.Extra) }
+func (b *Block) KlaytnExtra() []common.Address { return b.header.KlaytnExtra }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -487,7 +497,8 @@ func (h *Header) String() string {
 	Extra:            %s
 	MixDigest:        %x
 	Nonce:            %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce)
+	KlaytnExtra:      %x
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.KlaytnExtra)
 }
 
 type Blocks []*Block
