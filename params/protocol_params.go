@@ -109,6 +109,7 @@ const (
 	rewardContractIncentiveInSton int64 = 3200000000 // 3.2 KLAY for Reward contract (Unit: ston)
 	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
 	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
+	proposerIncentiveInSton       int64 = 3200000000 // 3.2 KLAY for proposer as block reward (Unit: ston)
 
 	// Fee for new tx types
 	// TODO-Klaytn: Need to fix values
@@ -125,7 +126,8 @@ var (
 	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 
-	// TODO-Klaytn-Issue973 Developing Klaytn token economy
+	// TODO-Klaytn-Issue1166 Please remove unused addresses later
+	ProposerIncentive       = big.NewInt(0).Mul(big.NewInt(proposerIncentiveInSton), big.NewInt(Ston))
 	RewardContractIncentive = big.NewInt(0).Mul(big.NewInt(rewardContractIncentiveInSton), big.NewInt(Ston))
 	KIRContractIncentive    = big.NewInt(0).Mul(big.NewInt(kirContractIncentiveInSton), big.NewInt(Ston))
 	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))

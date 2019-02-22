@@ -93,14 +93,15 @@ const (
 	NodeCNFilters
 	NodeCNTracers
 	_
+	Reward
 	ServiceChain
 	StorageDatabase
 	StorageStateDB
 	VM
 	Work
-	CMDKBN
 
 	// 41~50
+	CMDKBN
 	CMDUtilsNodeCMD
 	CMDKCN
 	CMDKPN
@@ -155,14 +156,15 @@ var moduleNames = [ModuleNameLen]string{
 	"node/cn/filters",
 	"node/cn/tracers",
 	"",
+	"contracts/reward",
 	"servicechain",
 	"storage/database",
 	"storage/statedb",
 	"vm",
 	"work",
-	"cmd/kbn",
 
 	// 41~50
+	"cmd/kbn",
 	"cmd/utils/nodecmd",
 	"cmd/kcn",
 	"cmd/kpn",
