@@ -27,4 +27,5 @@ const (
 	KIRContractAddress     = "0x00000000000000000042"
 	PoCContractAddress     = "0x00000000000000000043"
 	TxFeeContractAddress   = "0x00000000000000000044"
+	AddressBookAddress     = "0x00000000000000000050"
 )

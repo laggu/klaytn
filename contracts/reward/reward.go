@@ -18,6 +18,7 @@
 //go:generate abigen --sol contract/CommitteeReward.sol --pkg contract --out contract/CommitteeReward.go
 //go:generate abigen --sol contract/ProposerReward.sol --pkg contract --out contract/ProposerReward.go
 //go:generate abigen --sol contract/PIRerve.sol --pkg contract --out contract/PIRerve.go
+//go:generate abigen --sol contract/AddressBook.sol --pkg contract --out contract/AddressBook.go
 
 package reward
 
