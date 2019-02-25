@@ -107,10 +107,7 @@ type SubBridge struct {
 // New creates a new CN object (including the
 // initialisation of the common CN object)
 func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error) {
-	chainDB, err := CreateDB(ctx, config, "subbridgedata")
-	if err != nil {
-		return nil, err
-	}
+	chainDB := CreateDB(ctx, config, "subbridgedata")
 
 	config.chainkey = config.ChainKey()
 
@@ -146,6 +143,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 
 	sc.APIBackend = &SubBridgeAPI{sc}
+	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		return nil, err

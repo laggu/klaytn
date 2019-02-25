@@ -335,16 +335,26 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 // NewDBManager returns DBManager interface.
 // If Partitioned is true, each Database will have its own LevelDB.
 // If not, each Database will share one common LevelDB.
-func NewDBManager(dbc *DBConfig) (DBManager, error) {
+func NewDBManager(dbc *DBConfig) DBManager {
 	// TODO-Klaytn-Storage Remove unnecessary error from return value
 	if !dbc.Partitioned {
-		logger.Info("Single database is used for persistent storage", "DBType", dbc.DBType)
-		return singleDatabaseDBManager(dbc)
+		logger.Info("Non-partitioned database is used for persistent storage", "DBType", dbc.DBType)
+		if dbm, err := singleDatabaseDBManager(dbc); err != nil {
+			logger.Crit("Failed to create non-partitioned database", "DBType", dbc.DBType, "err", err)
+		} else {
+			return dbm
+		}
 	} else {
 		checkDBEntryConfigRatio()
 		logger.Info("Partitioned database is used for persistent storage", "DBType", dbc.DBType)
-		return partitionedDatabaseDBManager(dbc)
+		if dbm, err := partitionedDatabaseDBManager(dbc); err != nil {
+			logger.Crit("Failed to partitioned database", "DBType", dbc.DBType, "err", err)
+		} else {
+			return dbm
+		}
 	}
+	logger.Crit("Must not reach here!")
+	return nil
 }
 
 func (dbm *databaseManager) IsParallelDBWrite() bool {

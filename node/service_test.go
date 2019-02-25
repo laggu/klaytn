@@ -46,10 +46,7 @@ func TestContextDatabases(t *testing.T) {
 	ctx := &ServiceContext{config: &Config{Name: "unit-test", DataDir: dir}}
 	dbc := &database.DBConfig{Dir: "persistent", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
-	db, err := ctx.OpenDatabase(dbc)
-	if err != nil {
-		t.Fatalf("failed to open persistent database: %v", err)
-	}
+	db := ctx.OpenDatabase(dbc)
 	db.Close()
 
 	if _, err := os.Stat(filepath.Join(dir, "unit-test", "persistent")); err != nil {
@@ -59,10 +56,8 @@ func TestContextDatabases(t *testing.T) {
 	ctx = &ServiceContext{config: &Config{DataDir: ""}}
 	dbc = &database.DBConfig{Dir: "ephemeral", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
-	db, err = ctx.OpenDatabase(dbc)
-	if err != nil {
-		t.Fatalf("failed to open ephemeral database: %v", err)
-	}
+
+	db = ctx.OpenDatabase(dbc)
 	db.Close()
 
 	if _, err := os.Stat(filepath.Join(dir, "ephemeral")); err == nil {

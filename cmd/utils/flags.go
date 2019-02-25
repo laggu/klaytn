@@ -1319,11 +1319,7 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
 	}
 	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite, Partitioned: partitionedDB,
 		LevelDBCacheSize: ldbCacheSize, LevelDBHandles: numHandles, ChildChainIndexing: childChainIndexing}
-	chainDB, err := stack.OpenDatabase(dbc)
-	if err != nil {
-		Fatalf("Could not open database: %v", err)
-	}
-	return chainDB
+	return stack.OpenDatabase(dbc)
 }
 
 func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {

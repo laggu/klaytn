@@ -82,10 +82,8 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
-	chainDb, err := NewDatabase(dir, database.LevelDB)
-	if err != nil {
-		return nil, err
-	}
+	chainDb := NewDatabase(dir, database.LevelDB)
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Create accounts as many as maxAccounts
 	if numValidators > maxAccounts {
@@ -376,9 +374,9 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-func NewDatabase(dir string, dbType database.DBType) (db database.DBManager, err error) {
+func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	if dir == "" {
-		return database.NewMemoryDBManager(), nil
+		return database.NewMemoryDBManager()
 	} else {
 		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 16, LevelDBHandles: 16, ChildChainIndexing: false}
 		return database.NewDBManager(dbc)

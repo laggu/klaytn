@@ -600,11 +600,8 @@ func tempDB() (string, *Database) {
 		panic(fmt.Sprintf("can't create temporary directory: %v", err))
 	}
 	dbc := &database.DBConfig{Dir: dir, DBType: database.LevelDB, LevelDBCacheSize: 256, LevelDBHandles: 0, ChildChainIndexing: false}
-	diskdb, err := database.NewDBManager(dbc)
-	if err != nil {
-		panic(fmt.Sprintf("can't create temporary database: %v", err))
-	}
-	return dir, NewDatabase(diskdb)
+	diskDB := database.NewDBManager(dbc)
+	return dir, NewDatabase(diskDB)
 }
 
 func getString(trie *Trie, k string) []byte {

@@ -115,10 +115,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-	chainDB, err := CreateDB(ctx, config, "chaindata")
-	if err != nil {
-		return nil, err
-	}
+	chainDB := CreateDB(ctx, config, "chaindata")
+
 	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
@@ -165,6 +163,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		vmConfig   = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
 	)
+	var err error
 	cn.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
@@ -264,15 +263,11 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 }
 
 // CreateDB creates the chain database.
-func CreateDB(ctx *node.ServiceContext, config *Config, name string) (database.DBManager, error) {
+func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DBManager {
 	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: config.ParallelDBWrite, Partitioned: config.PartitionedDB,
 		LevelDBCacheSize: config.LevelDBCacheSize, LevelDBHandles: config.DatabaseHandles,
 		ChildChainIndexing: config.ChildChainIndexing}
-	db, err := ctx.OpenDatabase(dbc)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
+	return ctx.OpenDatabase(dbc)
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a klaytn service

@@ -55,9 +55,7 @@ func TestDBManager_WriteAndRead_Functional(t *testing.T) {
 			t.Fatalf("cannot create temporary directory: %v", err)
 		}
 		entry.dbConfig.Dir = tempDir
-		dbManager, _ := database.NewDBManager(entry.dbConfig)
-		defer os.RemoveAll(tempDir)
-		defer dbManager.Close()
+		dbManager := database.NewDBManager(entry.dbConfig)
 
 		t.Run(entry.name, func(t *testing.T) {
 			testWriteAndReadCanonicalHash(t, dbManager)
@@ -73,6 +71,9 @@ func TestDBManager_WriteAndRead_Functional(t *testing.T) {
 			// TODO-Klaytn-Storage To implement this test case, error shouldn't be returned.
 			// testWriteAndReadIstanbulSnapshot(t, dbManager)
 		})
+
+		dbManager.Close()
+		os.RemoveAll(tempDir)
 	}
 }
 

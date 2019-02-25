@@ -378,10 +378,6 @@ func genDBManagerForTest(b *testing.B, dir string, dbType database.DBType) datab
 		return db
 	} else {
 		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 128, LevelDBHandles: 128, ChildChainIndexing: false}
-		db, err := database.NewDBManager(dbc)
-		if err != nil {
-			b.Fatalf("cannot create temporary database %v at %v, %v", dbType, dir, err)
-		}
-		return db
+		return database.NewDBManager(dbc)
 	}
 }

@@ -80,10 +80,7 @@ func initGenesis(ctx *cli.Context) error {
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite, Partitioned: partitioned,
 			LevelDBCacheSize: 0, LevelDBHandles: 0, ChildChainIndexing: false}
-		chaindb, err := stack.OpenDatabase(dbc)
-		if err != nil {
-			utils.Fatalf("Failed to open database: %v", err)
-		}
+		chaindb := stack.OpenDatabase(dbc)
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 

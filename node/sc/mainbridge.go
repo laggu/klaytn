@@ -106,10 +106,8 @@ type MainBridge struct {
 // initialisation of the common CN object)
 func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, error) {
 	config.ChildChainIndexing = true
-	chainDB, err := CreateDB(ctx, config, "scchaindata")
-	if err != nil {
-		return nil, err
-	}
+	chainDB := CreateDB(ctx, config, "scchaindata")
+
 	config.chainkey = config.ChainKey()
 
 	//config.chainkey, err = crypto.GenerateKey()
@@ -147,6 +145,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 
 	sc.APIBackend = &MainBridgeAPI{sc}
 
+	var err error
 	sc.handler, err = NewMainBridgeHandler(sc)
 	if err != nil {
 		return nil, err
@@ -160,14 +159,10 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 }
 
 // CreateDB creates the chain database.
-func CreateDB(ctx *node.ServiceContext, config *SCConfig, name string) (database.DBManager, error) {
+func CreateDB(ctx *node.ServiceContext, config *SCConfig, name string) database.DBManager {
 	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, LevelDBCacheSize: config.LevelDBCacheSize,
 		LevelDBHandles: config.DatabaseHandles, ChildChainIndexing: config.ChildChainIndexing}
-	db, err := ctx.OpenDatabase(dbc)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
+	return ctx.OpenDatabase(dbc)
 }
 
 // implement PeerSetManager
