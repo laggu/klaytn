@@ -91,10 +91,6 @@ var (
 		Name:  "keystore",
 		Usage: "Directory for the keystore (default = inside the datadir)",
 	}
-	NoUSBFlag = cli.BoolFlag{
-		Name:  "nousb",
-		Usage: "Disables monitoring for and managing USB hardware wallets",
-	}
 	// TODO-Klaytn-Bootnode: redefine networkid
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
@@ -353,10 +349,6 @@ var (
 	}
 
 	// Logging and debug settings
-	EthStatsURLFlag = cli.StringFlag{
-		Name:  "ethstats",
-		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
-	}
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
 		Usage: "Enable metrics collection and reporting",
@@ -369,14 +361,6 @@ var (
 		Name:  metrics.PrometheusExporterPortFlag,
 		Usage: "Prometheus exporter listening port",
 		Value: 61001,
-	}
-	FakePoWFlag = cli.BoolFlag{
-		Name:  "fakepow",
-		Usage: "Disables proof-of-work verification",
-	}
-	NoCompactionFlag = cli.BoolFlag{
-		Name:  "nocompaction",
-		Usage: "Disables db compaction after import",
 	}
 	// RPC settings
 	RPCEnabledFlag = cli.BoolFlag{
@@ -513,10 +497,6 @@ var (
 	NoDiscoverFlag = cli.BoolFlag{
 		Name:  "nodiscover",
 		Usage: "Disables the peer discovery mechanism (manual peer addition)",
-	}
-	DiscoveryV5Flag = cli.BoolFlag{
-		Name:  "v5disc",
-		Usage: "Enables the experimental RLPx V5 (Topic Discovery) mechanism",
 	}
 	NetrestrictFlag = cli.StringFlag{
 		Name:  "netrestrict",
@@ -1345,17 +1325,15 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain
 	if err != nil {
 		Fatalf("%v", err)
 	}
-	engine := gxhash.NewFaker()
-	if !ctx.GlobalBool(FakePoWFlag.Name) {
-		engine = gxhash.New(gxhash.Config{
-			CacheDir:       stack.ResolvePath(cn.DefaultConfig.Gxhash.CacheDir),
-			CachesInMem:    cn.DefaultConfig.Gxhash.CachesInMem,
-			CachesOnDisk:   cn.DefaultConfig.Gxhash.CachesOnDisk,
-			DatasetDir:     stack.ResolvePath(cn.DefaultConfig.Gxhash.DatasetDir),
-			DatasetsInMem:  cn.DefaultConfig.Gxhash.DatasetsInMem,
-			DatasetsOnDisk: cn.DefaultConfig.Gxhash.DatasetsOnDisk,
-		})
-	}
+
+	engine := gxhash.New(gxhash.Config{
+		CacheDir:       stack.ResolvePath(cn.DefaultConfig.Gxhash.CacheDir),
+		CachesInMem:    cn.DefaultConfig.Gxhash.CachesInMem,
+		CachesOnDisk:   cn.DefaultConfig.Gxhash.CachesOnDisk,
+		DatasetDir:     stack.ResolvePath(cn.DefaultConfig.Gxhash.DatasetDir),
+		DatasetsInMem:  cn.DefaultConfig.Gxhash.DatasetsInMem,
+		DatasetsOnDisk: cn.DefaultConfig.Gxhash.DatasetsOnDisk,
+	})
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
