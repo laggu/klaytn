@@ -234,6 +234,7 @@ func createMultisigAccount(threshold uint, weights []uint, prvKeys []string, add
 // 8. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir).
 // 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransferWithRatio with a fee payer (reservoir) and a ratio of 30.
 // 10. Transfer (reservoir -> decoupled) using TxTypeValueTransferMemo.
+// 11. Transfer (reservoir -> decoupled) using TxTypeFeeDelegatedValueTransferMemo.
 func TestTransactionScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -599,6 +600,44 @@ func TestTransactionScenario(t *testing.T) {
 		assert.Equal(t, data, blkTxs[0].Data())
 	}
 
+	// 11. Transfer (reservoir -> decoupled) using TxTypeFeeDelegatedValueTransferMemo.
+	{
+		var txs types.Transactions
+		data := []byte("hello")
+
+		amount := new(big.Int).SetUint64(10000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       decoupled.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
+			types.TxValueKeyFeePayer: colin.Addr,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemo, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, colin.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+
+		blkTxs := bcdata.bc.CurrentBlock().Transactions()
+		assert.Equal(t, 1, blkTxs.Len())
+		assert.Equal(t, types.TxTypeFeeDelegatedValueTransferMemo, blkTxs[0].Type())
+		assert.Equal(t, data, blkTxs[0].Data())
+	}
+
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
 	}
@@ -731,6 +770,198 @@ func TestSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 4. Validate "reward" function is executed correctly by executing "balanceOf".
+	{
+		amount := new(big.Int).SetUint64(0)
+
+		abii, err := abi.JSON(strings.NewReader(string(abiStr)))
+		assert.Equal(t, nil, err)
+
+		data, err := abii.Pack("balanceOf", reservoir.Addr)
+		assert.Equal(t, nil, err)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          data,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		ret, err := callContract(bcdata, tx)
+		assert.Equal(t, nil, err)
+
+		balance := new(big.Int)
+		abii.Unpack(&balance, "balanceOf", ret)
+
+		assert.Equal(t, amountToSend, balance)
+		reservoir.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestFeeDelegatedSmartContractScenario tests the following scenario:
+// 1. Deploy smart contract (reservoir -> contract) with fee-delegation.
+// 2. Check the the smart contract is deployed well.
+// 3. Execute "reward" function with amountToSend with fee-delegation.
+// 4. Validate "reward" function is executed correctly by executing "balanceOf".
+func TestFeeDelegatedSmartContractScenario(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	reservoir2 := &TestAccountType{
+		Addr:  *bcdata.addrs[1],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[1]},
+		Nonce: uint64(0),
+	}
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+	}
+
+	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
+		"contract")
+	assert.Equal(t, nil, err)
+
+	gasPrice := new(big.Int).SetUint64(0)
+	gasLimit := uint64(250000000)
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	var abiStr string
+	var code string
+
+	if isCompilerAvailable() {
+		filename := string("../contracts/reward/contract/KlaytnReward.sol")
+		codes, abistrings := compileSolidity(filename)
+		code = codes[0]
+		abiStr = abistrings[0]
+	} else {
+		// Falling back to use compiled code.
+		code = "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
+		abiStr = `[{"constant":true,"inputs":[],"name":"totalAmount","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"receiver","type":"address"}],"name":"reward","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"safeWithdrawal","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"}]`
+	}
+
+	// 1. Deploy smart contract (reservoir -> contract) with fee-delegation.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(0)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyFeePayer:      reservoir2.Addr,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 2. Check the the smart contract is deployed well.
+	{
+		statedb, err := bcdata.bc.State()
+		if err != nil {
+			t.Fatal(err)
+		}
+		code := statedb.GetCode(contract.Addr)
+		assert.Equal(t, 478, len(code))
+	}
+
+	// 3. Execute "reward" function with amountToSend with fee-delegation.
+	amountToSend := new(big.Int).SetUint64(10)
+	{
+		var txs types.Transactions
+
+		abii, err := abi.JSON(strings.NewReader(string(abiStr)))
+		assert.Equal(t, nil, err)
+
+		data, err := abii.Pack("reward", reservoir.Addr)
+		assert.Equal(t, nil, err)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyAmount:        amountToSend,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          data,
+			types.TxValueKeyFeePayer:      reservoir2.Addr,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -1031,6 +1262,307 @@ func TestAccountUpdate(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, colin.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		colin.Nonce += 1
+
+		colin.Keys = []*ecdsa.PrivateKey{newKey}
+	}
+
+	// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(10000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    colin.Nonce,
+			types.TxValueKeyFrom:     colin.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, colin.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		colin.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestFeeDelegatedAccountUpdate tests a following scenario:
+// 1. Transfer (reservoir -> anon) using a legacy transaction.
+// 2. Key update of anon using AccountUpdate
+// 3. Create an account decoupled using TxTypeAccountCreation.
+// 4. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
+// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+// 6. Create an account colin using TxTypeAccountCreation.
+// 7. Key update of colin using TxTypeFeeDelegatedAccountUpdate
+// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+func TestFeeDelegatedAccountUpdate(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// anonymous account
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	// decoupled account
+	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
+	assert.Equal(t, nil, err)
+
+	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
+		fmt.Println("colinAddr = ", colin.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// 1. Transfer (reservoir -> anon) using a legacy transaction.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(100000000000)
+		tx := types.NewTransaction(reservoir.Nonce,
+			anon.Addr, amount, gasLimit, gasPrice, []byte{})
+
+		err := tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 2. Key update of anon using AccountUpdate
+	// This test should be failed because a legacy account does not have attribute `key`.
+	//{
+	// var txs types.Transactions
+	//
+	// newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
+	// if err != nil {
+	//   t.Fatal(err)
+	// }
+	//
+	// values := map[types.TxValueKeyType]interface{}{
+	//   types.TxValueKeyNonce:         anon.Nonce,
+	//   types.TxValueKeyFrom:          anon.Addr,
+	//   types.TxValueKeyGasLimit:      gasLimit,
+	//   types.TxValueKeyGasPrice:      gasPrice,
+	//   types.TxValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+	// }
+	// tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+	// assert.Equal(t, nil, err)
+	//
+	// err = tx.SignWithKeys(signer, anon.Keys)
+	// assert.Equal(t, nil, err)
+	//
+	// txs = append(txs, tx)
+	//
+	// if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+	//   t.Fatal(err)
+	// }
+	// anon.Nonce += 1
+	//
+	// anon.Key = newKey
+	// // This should be failed.
+	//}
+
+	// 3. Create an account decoupled using TxTypeAccountCreation.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            decoupled.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    decoupled.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 4. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
+	{
+		var txs types.Transactions
+
+		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      decoupled.Nonce,
+			types.TxValueKeyFrom:       decoupled.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+			types.TxValueKeyFeePayer:   reservoir.Addr,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, decoupled.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		decoupled.Nonce += 1
+
+		decoupled.Keys = []*ecdsa.PrivateKey{newKey}
+	}
+
+	// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(1000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    decoupled.Nonce,
+			types.TxValueKeyFrom:     decoupled.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, decoupled.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		decoupled.Nonce += 1
+	}
+
+	// 6. Create an account colin using TxTypeAccountCreation.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            colin.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    colin.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 7. Key update of colin using TxTypeFeeDelegatedAccountUpdate
+	{
+		var txs types.Transactions
+
+		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      colin.Nonce,
+			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+			types.TxValueKeyFeePayer:   reservoir.Addr,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, colin.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
