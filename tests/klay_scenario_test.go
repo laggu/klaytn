@@ -233,6 +233,7 @@ func createMultisigAccount(threshold uint, weights []uint, prvKeys []string, add
 // 7. ChainDataAnchoring (reservoir -> reservoir) using TxTypeChainDataAnchoring.
 // 8. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir).
 // 9. Transfer (colin-> reservoir) using TxTypeFeeDelegatedValueTransferWithRatio with a fee payer (reservoir) and a ratio of 30.
+// 10. Transfer (reservoir -> decoupled) using TxTypeValueTransferMemo.
 func TestTransactionScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -562,6 +563,40 @@ func TestTransactionScenario(t *testing.T) {
 			t.Fatal(err)
 		}
 		colin.Nonce += 1
+	}
+
+	// 10. Transfer (reservoir -> decoupled) using TxTypeValueTransferMemo.
+	{
+		var txs types.Transactions
+		data := []byte("hello")
+
+		amount := new(big.Int).SetUint64(10000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       decoupled.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransferMemo, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+
+		blkTxs := bcdata.bc.CurrentBlock().Transactions()
+		assert.Equal(t, 1, blkTxs.Len())
+		assert.Equal(t, types.TxTypeValueTransferMemo, blkTxs[0].Type())
+		assert.Equal(t, data, blkTxs[0].Data())
 	}
 
 	if testing.Verbose() {

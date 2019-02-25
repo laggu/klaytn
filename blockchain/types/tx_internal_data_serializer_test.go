@@ -45,6 +45,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"OriginalTx", genLegacyTransaction()},
 		{"SmartContractDeploy", genSmartContractDeployTransaction()},
 		{"ValueTransfer", genValueTransferTransaction()},
+		{"ValueTransferMemo", genValueTransferMemoTransaction()},
 		{"ChainDataTx", genChainDataTransaction()},
 		{"AccountCreation", genAccountCreationTransaction()},
 		{"AccountUpdate", genAccountUpdateTransaction()},
@@ -144,6 +145,25 @@ func genValueTransferTransaction() TxInternalData {
 		TxValueKeyGasLimit: gasLimit,
 		TxValueKeyGasPrice: gasPrice,
 		TxValueKeyFrom:     from,
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
+}
+
+func genValueTransferMemoTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeValueTransferMemo, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:    nonce,
+		TxValueKeyTo:       to,
+		TxValueKeyAmount:   amount,
+		TxValueKeyGasLimit: gasLimit,
+		TxValueKeyGasPrice: gasPrice,
+		TxValueKeyFrom:     from,
+		TxValueKeyData:     []byte(string("hello")),
 	})
 
 	if err != nil {
