@@ -33,6 +33,11 @@ import (
 
 var logger = log.NewModuleLogger(log.Reward)
 
+const (
+	// TODO-Klaytn-Issue1166 We use small number for testing. We have to decide staking interval for real network.
+	StakingUpdateInterval uint64 = 16
+)
+
 type Reward struct {
 	*contract.KlaytnRewardSession
 	contractBackend bind.ContractBackend
@@ -116,4 +121,59 @@ func DistributeBlockReward(b BalanceAdder, validators []common.Address, totalTxF
 		b.AddBalance(pocAddr, params.PoCContractIncentive)
 		logger.Debug("Block reward - PoC", "PoC address", pocAddr, "Amount", params.PoCContractIncentive)
 	}
+}
+
+func IsStakingUpdateInterval(blockNum uint64) bool {
+	return (blockNum % StakingUpdateInterval) == 0
+}
+
+// CalcStakingBlockNumber returns number of block which contains staking information required to make a new block with blockNum.
+func CalcStakingBlockNumber(blockNum uint64) uint64 {
+	if blockNum < 2*StakingUpdateInterval {
+		// Bootstrapping. Just return genesis block number.
+		return 0
+	}
+	number := blockNum - StakingUpdateInterval - (blockNum % StakingUpdateInterval)
+	return number
+}
+
+// StakingCache
+const (
+	// TODO-Klaytn-Issue1166 Decide size of cache
+	maxStakingCache = 3
+)
+
+var stakingCache common.Cache // TODO-Klaytn-Issue1166 Cache for staking information of Council
+
+func init() {
+	initStakingCache()
+}
+
+func initStakingCache() {
+	stakingCache, _ = common.NewCache(common.LRUConfig{CacheSize: maxStakingCache})
+}
+
+// GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
+func GetStakingInfoFromStakingCache(blockNum uint64) *common.StakingInfo {
+	number := CalcStakingBlockNumber(blockNum)
+	stakingCacheKey := common.StakingCacheKey(number)
+	value, ok := stakingCache.Get(stakingCacheKey)
+	if !ok {
+		logger.Error("Staking cache missed", "Block number", blockNum, "cache key", stakingCacheKey)
+		return nil
+	}
+
+	stakingInfo, ok := value.(*common.StakingInfo)
+	if !ok {
+		logger.Error("Found staking information is invalid", "Block number", blockNum, "cache key", stakingCacheKey)
+		return nil
+	}
+
+	if stakingInfo.BlockNum != number {
+		logger.Error("Staking cache hit. But staking information not found", "Block number", blockNum, "cache key", stakingCacheKey)
+		return nil
+	}
+
+	logger.Debug("Staking cache hit.", "Block number", blockNum, "stakingInfo", stakingInfo, "cache key", stakingCacheKey)
+	return stakingInfo
 }
