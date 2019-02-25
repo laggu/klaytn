@@ -265,7 +265,7 @@ loop:
 		rw.close(reason)
 	}
 	p.wg.Wait()
-	logger.Debug(fmt.Sprintf("peer(%p) run stopped", p))
+	logger.Debug(fmt.Sprintf("run stopped, peer: %v", p.ID()))
 	return remoteRequested, err
 }
 
@@ -312,7 +312,7 @@ func (p *Peer) runWithRWs() (remoteRequested bool, err error) {
 		close(p.closed)
 	}
 	p.wg.Wait()
-	logger.Debug(fmt.Sprintf("peer(%p) run stopped", p))
+	logger.Debug(fmt.Sprintf("run stopped, peer: %v", p.ID()))
 	return errs.remoteRequested, errs.err
 }
 
@@ -364,12 +364,12 @@ func (p *Peer) pingLoop(rw *conn) {
 		case <-ping.C:
 			if err := SendItems(rw, pingMsg); err != nil {
 				p.protoErr <- err
-				logger.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
+				logger.Debug(fmt.Sprintf("pingLoop stopped, peer: %v", p.ID()))
 				return
 			}
 			ping.Reset(pingInterval)
 		case <-p.closed:
-			logger.Debug(fmt.Sprintf("peer(%p) pingLoop stopped", p))
+			logger.Debug(fmt.Sprintf("pingLoop stopped, peer: %v", p.ID()))
 			return
 		}
 	}
@@ -381,13 +381,13 @@ func (p *Peer) readLoop(rw *conn, errc chan<- error) {
 		msg, err := rw.ReadMsg()
 		if err != nil {
 			errc <- err
-			logger.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
+			logger.Debug(fmt.Sprintf("readLoop stopped, peer: %v", p.ID()))
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(rw, msg); err != nil {
 			errc <- err
-			logger.Debug(fmt.Sprintf("peer(%p) readLoop stopped", p))
+			logger.Debug(fmt.Sprintf("readLoop stopped, peer: %v", p.ID()))
 			return
 		}
 	}
@@ -496,7 +496,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 				p.logger.Error(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
 			}
 			p.protoErr <- err
-			p.logger.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))
+			p.logger.Debug(fmt.Sprintf("Protocol go routine stopped, peer: %v", p.ID()))
 			//p.wg.Done()
 		}()
 	}
@@ -537,7 +537,7 @@ func (p *Peer) startProtocolsWithRWs(writeStarts []chan struct{}, writeErrs []ch
 				p.logger.Error(fmt.Sprintf("Protocol %s/%d failed", protos[ConnDefault].Name, protos[ConnDefault].Version), "err", err)
 			}
 			p.protoErr <- err
-			p.logger.Debug(fmt.Sprintf("Peer(%p)Stopped protocol go routine", p))
+			p.logger.Debug(fmt.Sprintf("Protocol go routine stopped, peer: %v", p.ID()))
 			//p.wg.Done()
 		}()
 	}

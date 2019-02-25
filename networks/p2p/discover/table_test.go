@@ -128,7 +128,7 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 			if hasDuplicates(b.entries) {
 				t.Logf("bucket has duplicates after %d/%d bumps:", i+1, len(bumps))
 				for _, n := range b.entries {
-					t.Logf("  %p", n)
+					t.Logf("  %v", n.ID)
 				}
 				return false
 			}
