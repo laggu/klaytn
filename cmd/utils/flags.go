@@ -28,10 +28,8 @@ import (
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/state"
-	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/fdlimit"
-	"github.com/ground-x/klaytn/consensus/gxhash"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/metrics"
@@ -43,7 +41,6 @@ import (
 	"github.com/ground-x/klaytn/node/cn"
 	"github.com/ground-x/klaytn/node/sc"
 	"github.com/ground-x/klaytn/params"
-	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"os"
@@ -1153,73 +1150,6 @@ func IsPartitionedDB(ctx *cli.Context) bool {
 		return true
 	}
 	return false
-}
-
-// MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
-func MakeChainDatabase(ctx *cli.Context, stack *node.Node) database.DBManager {
-	var (
-		parallelDBWrite    = IsParallelDBWrite(ctx)
-		partitionedDB      = IsPartitionedDB(ctx)
-		ldbCacheSize       = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
-		numHandles         = makeDatabaseHandles()
-		childChainIndexing = ctx.GlobalBool(ChildChainIndexingFlag.Name)
-	)
-	name := "chaindata"
-	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite, Partitioned: partitionedDB,
-		LevelDBCacheSize: ldbCacheSize, LevelDBHandles: numHandles, ChildChainIndexing: childChainIndexing}
-	return stack.OpenDatabase(dbc)
-}
-
-func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
-	var genesis *blockchain.Genesis
-	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
-	/*
-		if ctx.GlobalBool(TestnetFlag.Name) {
-			genesis = blockchain.DefaultTestnetGenesisBlock()
-		}
-	*/
-	return genesis
-}
-
-// MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *blockchain.BlockChain, chainDb database.DBManager) {
-	var err error
-	chainDb = MakeChainDatabase(ctx, stack)
-
-	config, _, err := blockchain.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
-	if err != nil {
-		Fatalf("%v", err)
-	}
-
-	engine := gxhash.New(gxhash.Config{
-		CacheDir:       stack.ResolvePath(cn.DefaultConfig.Gxhash.CacheDir),
-		CachesInMem:    cn.DefaultConfig.Gxhash.CachesInMem,
-		CachesOnDisk:   cn.DefaultConfig.Gxhash.CachesOnDisk,
-		DatasetDir:     stack.ResolvePath(cn.DefaultConfig.Gxhash.DatasetDir),
-		DatasetsInMem:  cn.DefaultConfig.Gxhash.DatasetsInMem,
-		DatasetsOnDisk: cn.DefaultConfig.Gxhash.DatasetsOnDisk,
-	})
-
-	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
-		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
-	}
-	trieConfig := &blockchain.TrieConfig{
-		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
-		CacheSize:     cn.DefaultConfig.TrieCacheSize,
-		BlockInterval: blockchain.DefaultBlockInterval,
-	}
-	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
-		trieConfig.CacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
-	}
-	if ctx.GlobalIsSet(TrieBlockIntervalFlag.Name) {
-		trieConfig.BlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
-	}
-	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = blockchain.NewBlockChain(chainDb, trieConfig, config, engine, vmcfg)
-	if err != nil {
-		Fatalf("Can't create BlockChain: %v", err)
-	}
-	return chain, chainDb
 }
 
 // MakeConsolePreloads retrieves the absolute paths for the console JavaScript
