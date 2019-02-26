@@ -49,6 +49,9 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 	cont := make(map[string]*deployedContract)
 	transactions := make(types.Transactions, 0, 10)
 
+	userAddr := bcdata.addrs[0]
+	nonce, err := accountMap.GetNonce(*userAddr)
+
 	// create a contract tx
 	for name, contract := range contracts {
 
@@ -57,8 +60,6 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 			return nil, err
 		}
 
-		userAddr := bcdata.addrs[0]
-		nonce, err := accountMap.GetNonce(*userAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -79,6 +80,8 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 			name:    name,
 			address: contractAddr,
 		}
+
+		nonce += 1
 	}
 
 	bcdata.GenABlockWithTransactions(accountMap, transactions, prof)
