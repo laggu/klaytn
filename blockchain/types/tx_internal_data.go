@@ -295,24 +295,34 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataValueTransferMemo(), nil
 	case TxTypeFeeDelegatedValueTransferMemo:
 		return newTxInternalDataFeeDelegatedValueTransferMemo(), nil
+	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		return newTxInternalDataFeeDelegatedValueTransferMemoWithRatio(), nil
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreation(), nil
 	case TxTypeAccountUpdate:
 		return newTxInternalDataAccountUpdate(), nil
 	case TxTypeFeeDelegatedAccountUpdate:
 		return newTxInternalDataFeeDelegatedAccountUpdate(), nil
+	case TxTypeFeeDelegatedAccountUpdateWithRatio:
+		return newTxInternalDataFeeDelegatedAccountUpdateWithRatio(), nil
 	case TxTypeSmartContractDeploy:
 		return newTxInternalDataSmartContractDeploy(), nil
 	case TxTypeFeeDelegatedSmartContractDeploy:
 		return newTxInternalDataFeeDelegatedSmartContractDeploy(), nil
+	case TxTypeFeeDelegatedSmartContractDeployWithRatio:
+		return newTxInternalDataFeeDelegatedSmartContractDeployWithRatio(), nil
 	case TxTypeSmartContractExecution:
 		return newTxInternalDataSmartContractExecution(), nil
 	case TxTypeFeeDelegatedSmartContractExecution:
 		return newTxInternalDataFeeDelegatedSmartContractExecution(), nil
+	case TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		return newTxInternalDataFeeDelegatedSmartContractExecutionWithRatio(), nil
 	case TxTypeCancel:
 		return newTxInternalDataCancel(), nil
 	case TxTypeFeeDelegatedCancel:
 		return newTxInternalDataFeeDelegatedCancel(), nil
+	case TxTypeFeeDelegatedCancelWithRatio:
+		return newTxInternalDataFeeDelegatedCancelWithRatio(), nil
 	case TxTypeChainDataAnchoring:
 		return newTxInternalDataChainDataAnchoring(), nil
 	}
@@ -334,24 +344,34 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataValueTransferMemoWithMap(values)
 	case TxTypeFeeDelegatedValueTransferMemo:
 		return newTxInternalDataFeeDelegatedValueTransferMemoWithMap(values)
+	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		return newTxInternalDataFeeDelegatedValueTransferMemoWithRatioWithMap(values)
 	case TxTypeAccountCreation:
 		return newTxInternalDataAccountCreationWithMap(values)
 	case TxTypeAccountUpdate:
 		return newTxInternalDataAccountUpdateWithMap(values)
 	case TxTypeFeeDelegatedAccountUpdate:
 		return newTxInternalDataFeeDelegatedAccountUpdateWithMap(values)
+	case TxTypeFeeDelegatedAccountUpdateWithRatio:
+		return newTxInternalDataFeeDelegatedAccountUpdateWithRatioWithMap(values)
 	case TxTypeSmartContractDeploy:
 		return newTxInternalDataSmartContractDeployWithMap(values)
 	case TxTypeFeeDelegatedSmartContractDeploy:
 		return newTxInternalDataFeeDelegatedSmartContractDeployWithMap(values)
+	case TxTypeFeeDelegatedSmartContractDeployWithRatio:
+		return newTxInternalDataFeeDelegatedSmartContractDeployWithRatioWithMap(values)
 	case TxTypeSmartContractExecution:
 		return newTxInternalDataSmartContractExecutionWithMap(values)
 	case TxTypeFeeDelegatedSmartContractExecution:
 		return newTxInternalDataFeeDelegatedSmartContractExecutionWithMap(values)
+	case TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		return newTxInternalDataFeeDelegatedSmartContractExecutionWithRatioWithMap(values)
 	case TxTypeCancel:
 		return newTxInternalDataCancelWithMap(values)
 	case TxTypeFeeDelegatedCancel:
 		return newTxInternalDataFeeDelegatedCancelWithMap(values)
+	case TxTypeFeeDelegatedCancelWithRatio:
+		return newTxInternalDataFeeDelegatedCancelWithRatioWithMap(values)
 	case TxTypeChainDataAnchoring:
 		return newTxInternalDataChainDataAnchoringWithMap(values)
 	}

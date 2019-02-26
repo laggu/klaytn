@@ -27,6 +27,11 @@ func TestFeeRatioCheck(t *testing.T) {
 	}{
 		// Please include only tx types with a fee-ratio.
 		{"FeeDelegatedValueTransferWithRatio", genFeeDelegatedValueTransferWithRatioTransaction()},
+		{"FeeDelegatedValueTransferMemoWithRatio", genFeeDelegatedValueTransferMemoWithRatioTransaction()},
+		{"FeeDelegatedAccountUpdateWithRatio", genFeeDelegatedAccountUpdateWithRatioTransaction()},
+		{"FeeDelegatedSmartContractDeployWithRatio", genFeeDelegatedSmartContractDeployWithRatioTransaction()},
+		{"FeeDelegatedSmartContractExecutionWithRatio", genFeeDelegatedSmartContractExecutionWithRatioTransaction()},
+		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
 	}
 
 	for _, tx := range txs {
