@@ -23,12 +23,15 @@
 package reward
 
 import (
+	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
+	"strings"
 )
 
 var logger = log.NewModuleLogger(log.Reward)
@@ -137,27 +140,32 @@ func CalcStakingBlockNumber(blockNum uint64) uint64 {
 	return number
 }
 
+func CalcProposerBlockNumber(blockNum uint64) uint64 {
+	number := blockNum - (blockNum % StakingUpdateInterval)
+	return number
+}
+
 // StakingCache
 const (
 	// TODO-Klaytn-Issue1166 Decide size of cache
 	maxStakingCache = 3
 )
 
-var stakingCache common.Cache // TODO-Klaytn-Issue1166 Cache for staking information of Council
+var StakingCache common.Cache // TODO-Klaytn-Issue1166 Cache for staking information of Council
 
 func init() {
 	initStakingCache()
 }
 
 func initStakingCache() {
-	stakingCache, _ = common.NewCache(common.LRUConfig{CacheSize: maxStakingCache})
+	StakingCache, _ = common.NewCache(common.LRUConfig{CacheSize: maxStakingCache})
 }
 
 // GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
 func GetStakingInfoFromStakingCache(blockNum uint64) *common.StakingInfo {
 	number := CalcStakingBlockNumber(blockNum)
 	stakingCacheKey := common.StakingCacheKey(number)
-	value, ok := stakingCache.Get(stakingCacheKey)
+	value, ok := StakingCache.Get(stakingCacheKey)
 	if !ok {
 		logger.Error("Staking cache missed", "Block number", blockNum, "cache key", stakingCacheKey)
 		return nil
@@ -176,4 +184,67 @@ func GetStakingInfoFromStakingCache(blockNum uint64) *common.StakingInfo {
 
 	logger.Debug("Staking cache hit.", "Block number", blockNum, "stakingInfo", stakingInfo, "cache key", stakingCacheKey)
 	return stakingInfo
+}
+
+func MakeGetAllAddressInfoMsg() (*types.Transaction, error) {
+	abiStr := contract.AddressBookABI
+	abii, err := abi.JSON(strings.NewReader(abiStr))
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := abii.Pack("getAllAddressInfo")
+	if err != nil {
+		return nil, err
+	}
+
+	intrinsicGas, err := types.IntrinsicGas(data, false, true)
+	if err != nil {
+		return nil, err
+	}
+
+	addr := common.HexToAddress(contract.AddressBookAddress)
+
+	// Create new call message
+	// TODO-Klaytn-Issue1166 Decide who will be sender(i.e. from)
+	msg := types.NewMessage(common.Address{}, &addr, 0, big.NewInt(0), 10000000, big.NewInt(0), data, false, intrinsicGas)
+
+	return msg, nil
+}
+
+func ParseGetAllAddressInfo(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
+	if result == nil {
+		// logger.Trace("Issue1166-V1V2V3: ParseGetAllAddressInfo() Got empty result", "result", result)
+		return nil, nil, nil, common.Address{}, common.Address{}, nil
+	}
+
+	abiStr := contract.AddressBookABI
+	abii, err := abi.JSON(strings.NewReader(abiStr))
+	if err != nil {
+		logger.Error("ParseGetAllAddressInfo() failed to make ABI interface.")
+		return nil, nil, nil, common.Address{}, common.Address{}, err
+	}
+
+	var (
+		ret0 = new([]common.Address)
+		ret1 = new([]common.Address)
+		ret2 = new([]common.Address)
+		ret3 = new(common.Address)
+		ret4 = new(common.Address)
+	)
+	out := &[]interface{}{
+		ret0,
+		ret1,
+		ret2,
+		ret3,
+		ret4,
+	}
+
+	err = abii.Unpack(out, "getAllAddressInfo", result)
+	if err != nil {
+		logger.Error("ParseGetAllAddressInfo() abii.Unpack failed")
+		return nil, nil, nil, common.Address{}, common.Address{}, err
+	}
+
+	return *ret0, *ret1, *ret2, *ret3, *ret4, nil
 }
