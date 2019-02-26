@@ -42,7 +42,6 @@ var (
 			utils.DbTypeFlag,
 			utils.PartitionedDBFlag,
 			utils.DataDirFlag,
-			utils.LightModeFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `

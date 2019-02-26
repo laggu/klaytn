@@ -108,7 +108,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}()
 
 	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
+	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
 
 		var cn *cn.CN
 		if err := stack.Service(&cn); err != nil {
