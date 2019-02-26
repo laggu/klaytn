@@ -151,6 +151,15 @@ type Config struct {
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
 
+	// GRPCHost is the host interface on which to start the gRPC server. If
+	// this field is empty, no gRPC API endpoint will be started.
+	GRPCHost string `toml:",omitempty"`
+
+	// GRPCPort is the TCP port number on which to start the gRPC server. The
+	// default zero value is valid and will pick a port number randomly (useful for
+	// ephemeral nodes).
+	GRPCPort int `toml:",omitempty"`
+
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
 }
@@ -227,6 +236,21 @@ func (c *Config) WSEndpoint() string {
 func DefaultWSEndpoint() string {
 	config := &Config{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
 	return config.WSEndpoint()
+}
+
+// GRPCEndpoint resolves a gRPC endpoint based on the configured host interface
+// and port parameters.
+func (c *Config) GRPCEndpoint() string {
+	if c.GRPCHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.GRPCHost, c.GRPCPort)
+}
+
+// DefaultGRPCEndpoint returns the gRPC endpoint used by default.
+func DefaultGRPCEndpoint() string {
+	config := &Config{GRPCHost: DefaultGRPCHost, GRPCPort: DefaultGRPCPort}
+	return config.GRPCEndpoint()
 }
 
 // NodeName returns the devp2p node identifier.

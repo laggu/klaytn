@@ -363,6 +363,20 @@ var (
 		Usage: "WS-RPC server listening port",
 		Value: node.DefaultWSPort,
 	}
+	GRPCEnabledFlag = cli.BoolFlag{
+		Name:  "grpc",
+		Usage: "Enable the gRPC server",
+	}
+	GRPCListenAddrFlag = cli.StringFlag{
+		Name:  "grpcaddr",
+		Usage: "gRPC server listening interface",
+		Value: node.DefaultGRPCHost,
+	}
+	GRPCPortFlag = cli.IntFlag{
+		Name:  "grpcport",
+		Usage: "gRPC server listening port",
+		Value: node.DefaultGRPCPort,
+	}
 	WSApiFlag = cli.StringFlag{
 		Name:  "wsapi",
 		Usage: "API's offered over the WS-RPC interface",
@@ -697,6 +711,21 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
+// setgRPC creates the gRPC listener interface string from the set
+// command line flags, returning empty if the gRPC endpoint is disabled.
+func setgRPC(ctx *cli.Context, cfg *node.Config) {
+	if ctx.GlobalBool(GRPCEnabledFlag.Name) && cfg.GRPCHost == "" {
+		cfg.GRPCHost = "127.0.0.1"
+		if ctx.GlobalIsSet(GRPCListenAddrFlag.Name) {
+			cfg.GRPCHost = ctx.GlobalString(GRPCListenAddrFlag.Name)
+		}
+	}
+
+	if ctx.GlobalIsSet(GRPCPortFlag.Name) {
+		cfg.GRPCPort = ctx.GlobalInt(GRPCPortFlag.Name)
+	}
+}
+
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for Geth and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
@@ -882,6 +911,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 
 	setHTTP(ctx, cfg)
 	setWS(ctx, cfg)
+	setgRPC(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
 	// dbtype is leveldb or badger

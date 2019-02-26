@@ -21,23 +21,23 @@
 package node
 
 import (
-	"github.com/ground-x/klaytn/accounts"
-	"github.com/ground-x/klaytn/networks/p2p"
-	"github.com/ground-x/klaytn/networks/rpc"
-	"net"
-	"sync"
-
 	"errors"
 	"fmt"
+	"github.com/ground-x/klaytn/accounts"
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/networks/grpc"
+	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/prometheus/prometheus/util/flock"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 var logger = log.NewModuleLogger(log.Node)
@@ -81,6 +81,10 @@ type Node struct {
 	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
 	wsListener net.Listener // Websocket RPC listener socket to server API requests
 	wsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
+
+	grpcEndpoint string         // gRPC endpoint (interface + port) to listen at (empty = gRPC disabled)
+	grpcListener *grpc.Listener // gRPC listener socket to server API requests
+	grpcHandler  *rpc.Server    // gRPC request handler to process the API requests
 
 	stop chan struct{} // Channel to wait for termination notifications
 	lock sync.RWMutex
@@ -134,6 +138,7 @@ func New(conf *Config) (*Node, error) {
 		ipcEndpoint:       conf.IPCEndpoint(),
 		httpEndpoint:      conf.HTTPEndpoint(),
 		wsEndpoint:        conf.WSEndpoint(),
+		grpcEndpoint:      conf.GRPCEndpoint(),
 		eventmux:          new(event.TypeMux),
 		logger:            conf.Logger,
 	}, nil
@@ -355,6 +360,13 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 			return err
 		}
 	}
+	// start gRPC server
+	if err := n.startgRPC(apis); err != nil {
+		n.stopHTTP()
+		n.stopIPC()
+		n.stopInProc()
+		return err
+	}
 	// All API endpoints started successfully
 	n.rpcAPIs = apis
 
@@ -410,6 +422,32 @@ func (n *Node) stopIPC() {
 		n.ipcHandler.Stop()
 		n.ipcHandler = nil
 	}
+}
+
+// startgRPC initializes and starts the gRPC endpoint.
+func (n *Node) startgRPC(apis []rpc.API) error {
+	if n.grpcEndpoint == "" {
+		return nil
+	}
+
+	handler := rpc.NewServer()
+	for _, api := range apis {
+		if api.Public {
+			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+				return err
+			}
+			n.logger.Debug("gRPC registered", "namespace", api.Namespace)
+		}
+	}
+
+	listener := &grpc.Listener{Addr: n.grpcEndpoint}
+	n.grpcHandler = handler
+	n.grpcListener = listener
+	listener.SetRPCServer(handler)
+
+	go listener.Start()
+	n.logger.Info("gRPC endpoint opened", "url", n.grpcEndpoint)
+	return nil
 }
 
 // startHTTP initializes and starts the HTTP RPC endpoint.
@@ -516,6 +554,20 @@ func (n *Node) stopWS() {
 	}
 }
 
+func (n *Node) stopgRPC() {
+	if n.grpcListener != nil {
+		n.grpcListener.Stop()
+		n.grpcListener = nil
+
+		n.logger.Info("gRPC endpoint closed", "url", fmt.Sprintf("grpc://%s", n.grpcEndpoint))
+	}
+
+	if n.grpcHandler != nil {
+		n.grpcHandler.Stop()
+		n.grpcHandler = nil
+	}
+}
+
 // Stop terminates a running node along with all it's services. In the node was
 // not started, an error is returned.
 func (n *Node) Stop() error {
@@ -531,6 +583,7 @@ func (n *Node) Stop() error {
 	n.stopWS()
 	n.stopHTTP()
 	n.stopIPC()
+	n.stopgRPC()
 	n.rpcAPIs = nil
 	failure := &StopError{
 		Services: make(map[reflect.Type]error),

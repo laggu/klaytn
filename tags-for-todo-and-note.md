@@ -52,3 +52,4 @@ Please note that the tag name always
 | NodeCmd                                        | Related to cmd/utils/nodecmd.                             |
 | Storage                                        | Related to storage.                                       |
 | Refactoring                                    | Related to refactoring.                                   |
+| gRPC                                           | Related to gRPC.                                          |

@@ -34,6 +34,8 @@ const (
 	DefaultHTTPPort = 8545        // Default TCP port for the HTTP RPC server
 	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
 	DefaultWSPort   = 8546        // Default TCP port for the websocket RPC server
+	DefaultGRPCHost = "localhost" // Default host interface for the gRPC server
+	DefaultGRPCPort = 8547        // Default TCP port for the gRPC server
 )
 
 // DefaultConfig contains reasonable default settings.
@@ -45,6 +47,7 @@ var DefaultConfig = Config{
 	HTTPVirtualHosts: []string{"localhost"},
 	WSPort:           DefaultWSPort,
 	WSModules:        []string{"net", "web3"},
+	GRPCPort:         DefaultGRPCPort,
 	P2P: p2p.Config{
 		ListenAddr: ":30303",
 		MaxPeers:   25,
