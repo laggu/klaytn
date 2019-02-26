@@ -95,6 +95,8 @@ type SubBridge struct {
 	// chain event
 	chainHeadCh  chan blockchain.ChainHeadEvent
 	chainHeadSub event.Subscription
+	logsCh       chan []*types.Log
+	logsSub      event.Subscription
 	txCh         chan blockchain.NewTxsEvent
 	txSub        event.Subscription
 
@@ -129,6 +131,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		networkId:      config.NetworkId,
 		ctx:            ctx,
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		txCh:           make(chan blockchain.NewTxsEvent, transactionChanSize),
 		quitSync:       make(chan struct{}),
 		maxPeers:       config.MaxPeer,
@@ -203,7 +206,7 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 			sc.blockchain = v
 			// event from core-service
 			sc.chainHeadSub = sc.blockchain.SubscribeChainHeadEvent(sc.chainHeadCh)
-
+			sc.logsSub = sc.blockchain.SubscribeLogsEvent(sc.logsCh)
 		case *blockchain.TxPool:
 			sc.txPool = v
 			// event from core-service
@@ -447,14 +450,33 @@ func (sc *SubBridge) loop() {
 			} else {
 				logger.Error("subbridge block event is nil")
 			}
+		// Handle NewTexsEvent
 		case ev := <-sc.txCh:
 			if ev.Txs != nil {
 				sc.eventhandler.HandleTxsEvent(ev.Txs)
 			} else {
 				logger.Error("subbridge tx event is nil")
 			}
+		// Handle ChainLogsEvent
+		case logs := <-sc.logsCh:
+			sc.eventhandler.HandleLogsEvent(logs)
 		case <-report.C:
 			// report status
+		case err := <-sc.chainHeadSub.Err():
+			if err != nil {
+				logger.Error("subbridge block subscription ", "err", err)
+			}
+			return
+		case err := <-sc.txSub.Err():
+			if err != nil {
+				logger.Error("subbridge tx subscription ", "err", err)
+			}
+			return
+		case err := <-sc.logsSub.Err():
+			if err != nil {
+				logger.Error("subbridge log subscription ", "err", err)
+			}
+			return
 		}
 	}
 }
@@ -533,6 +555,7 @@ func (s *SubBridge) Stop() error {
 
 	s.chainHeadSub.Unsubscribe()
 	s.txSub.Unsubscribe()
+	s.logsSub.Unsubscribe()
 	s.eventMux.Stop()
 	s.chainDB.Close()
 

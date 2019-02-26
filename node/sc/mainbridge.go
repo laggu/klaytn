@@ -26,6 +26,7 @@ import (
 	"github.com/ground-x/klaytn/accounts"
 	"github.com/ground-x/klaytn/api"
 	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/event"
@@ -43,6 +44,7 @@ import (
 const (
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize   = 10
+	chainLogChanSize    = 100
 	transactionChanSize = 500
 )
 
@@ -94,6 +96,8 @@ type MainBridge struct {
 
 	chainHeadCh  chan blockchain.ChainHeadEvent
 	chainHeadSub event.Subscription
+	logsCh       chan []*types.Log
+	logsSub      event.Subscription
 	txCh         chan blockchain.NewTxsEvent
 	txSub        event.Subscription
 
@@ -130,6 +134,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 		networkId:      config.NetworkId,
 		ctx:            ctx,
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		txCh:           make(chan blockchain.NewTxsEvent, transactionChanSize),
 		quitSync:       make(chan struct{}),
 		maxPeers:       config.MaxPeer,
@@ -212,7 +217,7 @@ func (sc *MainBridge) SetComponents(components []interface{}) {
 			sc.blockchain = v
 			// event from core-service
 			sc.chainHeadSub = sc.blockchain.SubscribeChainHeadEvent(sc.chainHeadCh)
-
+			sc.logsSub = sc.blockchain.SubscribeLogsEvent(sc.logsCh)
 		case *blockchain.TxPool:
 			sc.txPool = v
 			// event from core-service
@@ -393,14 +398,33 @@ func (sc *MainBridge) loop() {
 			} else {
 				logger.Error("mainbridge block event is nil")
 			}
+		// Handle NewTxsEvent
 		case ev := <-sc.txCh:
 			if ev.Txs != nil {
 				sc.eventhandler.HandleTxsEvent(ev.Txs)
 			} else {
 				logger.Error("mainbridge tx event is nil")
 			}
+		// Handle ChainLogsEvent
+		case logs := <-sc.logsCh:
+			sc.eventhandler.HandleLogsEvent(logs)
 		case <-report.C:
 			// report status
+		case err := <-sc.chainHeadSub.Err():
+			if err != nil {
+				logger.Error("mainbridge block subscription ", "err", err)
+			}
+			return
+		case err := <-sc.txSub.Err():
+			if err != nil {
+				logger.Error("mainbridge tx subscription ", "err", err)
+			}
+			return
+		case err := <-sc.logsSub.Err():
+			if err != nil {
+				logger.Error("mainbridge log subscription ", "err", err)
+			}
+			return
 		}
 	}
 }
@@ -479,6 +503,7 @@ func (s *MainBridge) Stop() error {
 
 	s.chainHeadSub.Unsubscribe()
 	s.txSub.Unsubscribe()
+	s.logsSub.Unsubscribe()
 	s.eventMux.Stop()
 	s.chainDB.Close()
 

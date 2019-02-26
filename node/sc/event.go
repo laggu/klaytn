@@ -55,10 +55,17 @@ func (mce *MainChainEventHandler) HandleChainHeadEvent(block *types.Block) error
 }
 
 func (mce *MainChainEventHandler) HandleTxEvent(tx *types.Transaction) error {
+	//@TODO-Klaytn event handle
 	return nil
 }
 
 func (mce *MainChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error {
+	//@TODO-Klaytn event handle
+	return nil
+}
+
+func (mce *MainChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
+	//@TODO-Klaytn event handle
 	return nil
 }
 
@@ -156,12 +163,17 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 }
 
 func (cce *ChildChainEventHandler) HandleTxEvent(tx *types.Transaction) error {
-	//@TODO
+	//@TODO-Klaytn event handle
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error {
-	//@TODO
+	//@TODO-Klaytn event handle
+	return nil
+}
+
+func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
+	//@TODO-Klaytn event handle
 	return nil
 }
 
