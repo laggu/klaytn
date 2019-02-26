@@ -1044,6 +1044,7 @@ func (v ByPassValidator) ValidatePeerType(addr common.Address) error {
 type peerSet struct {
 	peers   map[string]Peer
 	cnpeers map[common.Address]Peer
+	pnpeers map[common.Address]Peer
 	enpeers map[common.Address]Peer
 	lock    sync.RWMutex
 	closed  bool
@@ -1056,6 +1057,7 @@ func newPeerSet() *peerSet {
 	peerSet := &peerSet{
 		peers:     make(map[string]Peer),
 		cnpeers:   make(map[common.Address]Peer),
+		pnpeers:   make(map[common.Address]Peer),
 		enpeers:   make(map[common.Address]Peer),
 		validator: make(map[p2p.ConnType]p2p.PeerTypeValidator),
 	}
@@ -1079,24 +1081,35 @@ func (ps *peerSet) Register(p Peer) error {
 	if _, ok := ps.peers[p.GetID()]; ok {
 		return errAlreadyRegistered
 	}
-	if p.ConnType() == node.CONSENSUSNODE {
-		if _, ok := ps.cnpeers[p.GetAddr()]; ok {
-			return errAlreadyRegistered
-		}
-		if err := ps.validator[node.CONSENSUSNODE].ValidatePeerType(p.GetAddr()); err != nil {
-			return fmt.Errorf("fail to validate cntype: %s", err)
-		}
-		ps.cnpeers[p.GetAddr()] = p
-	} else if p.ConnType() == node.ENDPOINTNODE {
-		if _, ok := ps.enpeers[p.GetAddr()]; ok {
-			return errAlreadyRegistered
-		}
-		if err := ps.validator[node.ENDPOINTNODE].ValidatePeerType(p.GetAddr()); err != nil {
-			return fmt.Errorf("fail to validate rntype: %s", err)
-		}
-		ps.enpeers[p.GetAddr()] = p
+
+	var peersByNodeType map[common.Address]Peer
+	var peerTypeValidator p2p.PeerTypeValidator
+
+	switch p.ConnType() {
+	case node.CONSENSUSNODE:
+		peersByNodeType = ps.cnpeers
+		peerTypeValidator = ps.validator[node.CONSENSUSNODE]
+	case node.PROXYNODE:
+		peersByNodeType = ps.pnpeers
+		peerTypeValidator = ps.validator[node.PROXYNODE]
+	case node.ENDPOINTNODE:
+		peersByNodeType = ps.enpeers
+		peerTypeValidator = ps.validator[node.ENDPOINTNODE]
+	default:
+		return fmt.Errorf("undefined peer type entered, p.ConnType(): %v", p.ConnType())
 	}
-	ps.peers[p.GetID()] = p
+
+	if _, ok := peersByNodeType[p.GetAddr()]; ok {
+		return errAlreadyRegistered
+	}
+
+	if err := peerTypeValidator.ValidatePeerType(p.GetAddr()); err != nil {
+		return fmt.Errorf("fail to validate peer type: %s", err)
+	}
+
+	peersByNodeType[p.GetAddr()] = p // add peer to its node type peer map.
+	ps.peers[p.GetID()] = p          // add peer to entire peer map.
+
 	go p.Broadcast()
 
 	return nil
@@ -1114,6 +1127,8 @@ func (ps *peerSet) Unregister(id string) error {
 	}
 	if p.ConnType() == node.CONSENSUSNODE {
 		delete(ps.cnpeers, p.GetAddr())
+	} else if p.ConnType() == node.PROXYNODE {
+		delete(ps.pnpeers, p.GetAddr())
 	} else if p.ConnType() == node.ENDPOINTNODE {
 		delete(ps.enpeers, p.GetAddr())
 	}
@@ -1152,6 +1167,17 @@ func (ps *peerSet) ENPeers() map[common.Address]Peer {
 
 	set := make(map[common.Address]Peer)
 	for addr, p := range ps.enpeers {
+		set[addr] = p
+	}
+	return set
+}
+
+func (ps *peerSet) PNPeers() map[common.Address]Peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	set := make(map[common.Address]Peer)
+	for addr, p := range ps.pnpeers {
 		set[addr] = p
 	}
 	return set
@@ -1201,13 +1227,13 @@ func (ps *peerSet) TypePeersWithoutBlock(hash common.Hash, nodetype p2p.ConnType
 	return list
 }
 
-func (ps *peerSet) AnotherTypePeersWithoutBlock(hash common.Hash, nodetype p2p.ConnType) []Peer {
+func (ps *peerSet) PeersWithoutBlockExceptCN(hash common.Hash) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() != nodetype && !p.GetKnownBlocks().Has(hash) {
+		if p.ConnType() != node.CONSENSUSNODE && !p.GetKnownBlocks().Has(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1220,6 +1246,19 @@ func (ps *peerSet) CNWithoutBlock(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.cnpeers))
 	for _, p := range ps.cnpeers {
+		if !p.GetKnownBlocks().Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+func (ps *peerSet) PNWithoutBlock(hash common.Hash) []Peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]Peer, 0, len(ps.pnpeers))
+	for _, p := range ps.pnpeers {
 		if !p.GetKnownBlocks().Has(hash) {
 			list = append(list, p)
 		}

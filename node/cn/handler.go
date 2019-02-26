@@ -57,6 +57,8 @@ const (
 
 	concurrentPerPeer  = 3
 	channelSizePerPeer = 20
+
+	blockReceivingPNLimit = 5 // maximum number of PNs that a CN broadcasts block.
 )
 
 var (
@@ -1039,6 +1041,57 @@ func handleServiceChainReceiptRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Ms
 	return p.SendServiceChainReceiptResponse(receiptsForStorage)
 }
 
+// getPeersWithoutBlock returns a list of peers without given block.
+// If current node is CN, propagate block to all peers without block.
+// Otherwise, node will send block to all peers without block, except for CNs.
+func (pm *ProtocolManager) getPeersWithoutBlock(hash common.Hash) []Peer {
+	if pm.nodetype == node.CONSENSUSNODE {
+		return pm.peers.PeersWithoutBlock(hash)
+	} else {
+		return pm.peers.PeersWithoutBlockExceptCN(hash)
+	}
+}
+
+// sendBlockToPeers send block to peers without given block.
+// If current node is CN, it will send block to
+func (pm *ProtocolManager) sendBlockToPeers(block *types.Block) {
+	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
+	// Send the block to a subset of our peers
+	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+	hash := block.Hash()
+	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
+	td := new(big.Int).Add(block.Difficulty(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
+
+	if pm.nodetype == node.CONSENSUSNODE {
+		cnsWithoutBlock := pm.peers.CNWithoutBlock(hash)
+		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, int(math.Sqrt(float64(len(cnsWithoutBlock)))))
+		for _, cnPeer := range sampledCNsWithoutBlock {
+			cnPeer.AsyncSendNewBlock(block, td)
+		}
+
+		// CN always broadcasts a block to its PN peers, unless number of PN peers exceeds the limit.
+		pnsWithoutBlock := pm.peers.PNWithoutBlock(hash)
+		if len(pnsWithoutBlock) > blockReceivingPNLimit {
+			pnsWithoutBlock = samplingPeers(pnsWithoutBlock, blockReceivingPNLimit)
+		}
+		for _, pnPeer := range pnsWithoutBlock {
+			pnPeer.AsyncSendNewBlock(block, td)
+		}
+
+		logger.Trace("Propagated block", "hash", hash,
+			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+	} else {
+		peersWithoutBlock := pm.peers.PeersWithoutBlockExceptCN(hash)
+		sampledPeersWithoutBlock := samplingPeers(peersWithoutBlock, int(math.Sqrt(float64(len(peersWithoutBlock)))))
+		for _, peer := range sampledPeersWithoutBlock {
+			//peer.SendNewBlock(block, td)
+			peer.AsyncSendNewBlock(block, td)
+		}
+		logger.Trace("Propagated block", "hash", hash,
+			"recipients", len(sampledPeersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+	}
+}
+
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
@@ -1048,43 +1101,25 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 	}
 
 	hash := block.Hash()
-	var peers []Peer
-	if pm.nodetype == node.CONSENSUSNODE {
-		peers = pm.peers.PeersWithoutBlock(hash)
-	} else {
-		peers = pm.peers.AnotherTypePeersWithoutBlock(hash, node.CONSENSUSNODE)
-	}
-
 	// If propagation is requested, send to a subset of the peer
 	if propagate {
-		// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
-		var td *big.Int
-		if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent != nil {
-			td = new(big.Int).Add(block.Difficulty(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
-		} else {
+		if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent == nil {
 			logger.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
 			return
 		}
+		pm.sendBlockToPeers(block)
+	} else {
+		// Otherwise if the block is indeed in out own chain, announce it
+		if pm.blockchain.HasBlock(hash, block.NumberU64()) {
+			peersWithoutBlock := pm.getPeersWithoutBlock(hash)
+			for _, peer := range peersWithoutBlock {
+				//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+				peer.AsyncSendNewBlockHash(block)
+			}
+			logger.Trace("Announced block", "hash", hash, "recipients", len(peersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+		}
+	}
 
-		// TODO-Klaytn only send all validators + sub(peer) except subset for this block
-		// Send the block to a subset of our peers
-		//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
-		transfer := pm.subPeers(peers, int(math.Sqrt(float64(len(peers)))))
-		for _, peer := range transfer {
-			//peer.SendNewBlock(block, td)
-			peer.AsyncSendNewBlock(block, td)
-		}
-		logger.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-		return
-	}
-	// Otherwise if the block is indeed in out own chain, announce it
-	if pm.blockchain.HasBlock(hash, block.NumberU64()) {
-		for _, peer := range peers {
-			//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
-			peer.AsyncSendNewBlockHash(block)
-		}
-		logger.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-	}
 }
 
 // BroadcastTxs will propagate a batch of transactions to all peers which are not known to
@@ -1117,7 +1152,7 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 		// TODO-Klaytn Code Check
 		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		half := (len(peers) / 2) + 2
-		peers = pm.subPeers(peers, half)
+		peers = samplingPeers(peers, half)
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
 		}
@@ -1144,7 +1179,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 				peers = pm.peers.TypePeers(node.CONSENSUSNODE)
 			}
 			// TODO-Klaytn need to tuning pickSize. currently 3 is for availability and efficiency
-			peers = pm.subPeers(peers, 3)
+			peers = samplingPeers(peers, 3)
 			for _, peer := range peers {
 				txset[peer] = append(txset[peer], tx)
 			}
@@ -1152,7 +1187,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			peers := pm.peers.CNWithoutTx(tx.Hash())
 			if len(peers) > 0 {
 				// TODO-Klaytn optimize pickSize or propagation way
-				peers = pm.subPeers(peers, 2)
+				peers = samplingPeers(peers, 2)
 				for _, peer := range peers {
 					cntxset[peer] = append(cntxset[peer], tx)
 				}
@@ -1199,7 +1234,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 	}
 }
 
-func (pm *ProtocolManager) subPeers(peers []Peer, pickSize int) []Peer {
+func samplingPeers(peers []Peer, pickSize int) []Peer {
 	if len(peers) < pickSize {
 		return peers
 	}
