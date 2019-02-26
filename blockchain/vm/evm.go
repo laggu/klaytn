@@ -66,6 +66,8 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			if *contract.CodeAddr == vmLogAddress {
 				return RunVMLogContract(p, input, contract, evm)
+			} else if *contract.CodeAddr == feePayerAddress {
+				return RunFeePayerContract(p, input, contract)
 			} else {
 				return RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
 			}
