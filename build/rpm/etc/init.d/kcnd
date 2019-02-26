@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# kcnd         Startup script for the kcn
+#
+# chkconifg: - 85 15
+# description : kcnd is klaytn consensus node daemon
+#
+# processname: kcnd
+# config:  /etc/kcnd/conf/kcnd.conf
+# pidfile: /var/run/kcnd.pid
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+if [ -f /etc/kcnd/conf/kcnd.conf ]; then
+        . /etc/kcnd/conf/kcnd.conf
+fi
+
+kcn=/usr/bin/kcn
+prog=kcnd
+lockfile=${LOCKFILE-/var/lock/subsys/kcnd}
+pidfile=${PIDFILE-/var/run/kcnd.pid}
+RETVAL=0
+STOP_TIMEOUT=${STOP_TIMEOUT-10}
+
+OPTIONS="--networkid $NETWORK_ID --datadir $DATA_DIR --port $PORT --srvtype fasthttp --metrics --prometheus --verbosity 3 \
+--txpool.globalslots 4096 --txpool.globalqueue 4096 --txpool.accountslots 4096 --txpool.accountqueue 4096 --nodiscover \
+--syncmode full --mine --maxpeers 5000 --db.leveldb.cache-size 10240"
+
+start() {
+        echo -n "Starting $prog: "
+        if [ ! -d ${LOG_DIR} ]; then
+                mkdir -p ${LOG_DIR}
+        fi
+        if [ ! -d ${RUN_DIR} ]; then
+                mkdir -p ${RUN_DIR}
+        fi
+
+        __pids_var_run "$prog" "$pidfile"
+        [ -n "$pid" ] && echo && return
+
+        set -f
+        $kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &
+        RETVAL=$?
+        PIDNUM=$!
+        set +f
+        if [ $RETVAL = 0 ]; then
+                echo $PIDNUM > ${pidfile}
+                touch ${lockfile}
+                success "$prog startup"
+        else
+                failure "$prog startup"
+        fi
+        echo
+        return $RETVAL
+}
+
+stop() {
+        echo -n "Shutting down $prog: "
+        killproc -p ${pidfile} -d ${STOP_TIMEOUT} kcn
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status -p ${pidfile} -l ${lockfile} $kcn
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit $?
