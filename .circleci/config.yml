@@ -4,16 +4,30 @@
 version: 2
 jobs:
   build:
+    machine: true
+    working_directory: ~/go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Build"
+          command: |
+            cd $HOME
+            wget https://s3.ap-northeast-2.amazonaws.com/klaytn-ops-stuff/circle-ci/go1.11.2.tar.gz
+            tar xfz go1.11.2.tar.gz
+            export PATH=$HOME/go-go1.11.2/bin:$PATH
+            cd -
+            make fmt
+            make all
+
+  test:
     docker:
       - image: kjhman21/dev:go1.11.2-solc0.4.24
     working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - run:
-          name: "Build and run tests"
+          name: "Run tests"
           command: |
-            make fmt
-            make all
             git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/klaytn-tests.git tests/testdata
             make test
 
@@ -203,6 +217,10 @@ workflows:
   build_n_packaging:
     jobs:
       - build:
+          filters:
+            tags:
+              only: /.*/
+      - test:
           filters:
             tags:
               only: /.*/
