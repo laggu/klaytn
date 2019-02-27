@@ -31,6 +31,10 @@ type Validator interface {
 
 	// String representation of Validator
 	String() string
+
+	RewardAddress() common.Address
+	VotingPower() float64
+	Weight() int
 }
 
 // ----------------------------------------------------------------------------
@@ -86,6 +90,17 @@ type ValidatorSet interface {
 	Policy() ProposerPolicy
 
 	IsSubSet() bool
+
+	// TODO-Klaytn-Issue1166 V3: Refresh updates Council using staking information
+	Refresh(prevHash common.Hash) error
+
+	SetStakingInfo(stakingInfo *common.StakingInfo) error
+
+	SetBlockNum(blockNum uint64)
+
+	Proposers() []Validator // TODO-Klaytn-Issue1166 For debugging
+
+	TotalVotingPower() float64
 }
 
 // ----------------------------------------------------------------------------

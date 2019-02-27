@@ -21,6 +21,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
@@ -38,7 +39,7 @@ type weightedValidator struct {
 	address common.Address
 
 	rewardAddress common.Address
-	votingPower   int // TODO-Klaytn-Issue1336 This should be updated for governance implementation
+	votingPower   float64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
 	weight        int
 }
 
@@ -62,7 +63,7 @@ func (val *weightedValidator) RewardAddress() common.Address {
 	return val.rewardAddress
 }
 
-func (val *weightedValidator) VotingPower() int {
+func (val *weightedValidator) VotingPower() float64 {
 	return val.votingPower
 }
 
@@ -70,7 +71,7 @@ func (val *weightedValidator) Weight() int {
 	return val.weight
 }
 
-func newWeightedValidator(addr common.Address, reward common.Address, votingpower int) istanbul.Validator {
+func newWeightedValidator(addr common.Address, reward common.Address, votingpower float64) istanbul.Validator {
 	return &weightedValidator{
 		address:       addr,
 		rewardAddress: reward,
@@ -314,3 +315,131 @@ func (valSet *weightedCouncil) F() int {
 }
 
 func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.policy }
+
+func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
+	// TODO-Klaytn-Issue1166 Disable trace logs below after all implementation is merged.
+	if valSet.Size() == 0 {
+		return errors.New("No validator")
+	}
+
+	hashString := strings.TrimPrefix(prevHash.Hex(), "0x")
+	if len(hashString) > 15 {
+		hashString = hashString[:15]
+	}
+	seed, err := strconv.ParseInt(hashString, 16, 64)
+	if err != nil {
+		logger.Error("Parsing error", "prevHash", prevHash, "hashString", hashString, "seed", seed, "err", err)
+		return err
+	}
+
+	// TODO-Klaytn-Issue1166 Update weightedValidator information with staking info if available
+	if valSet.stakingInfo != nil {
+		logger.Info("Refresh() - Let's use staking info", "stakingInfo", valSet.stakingInfo)
+		// (1) Update rewardAddress
+		// (2) Calculate total staking amount
+		totalStaking := big.NewInt(0)
+		for valIdx, val := range valSet.List() {
+			i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
+			if i != -1 {
+				val.(*weightedValidator).rewardAddress = valSet.stakingInfo.CouncilRewardAddrs[i]
+				totalStaking.Add(totalStaking, valSet.stakingInfo.CouncilStakingAmounts[i])
+			} else {
+				val.(*weightedValidator).rewardAddress = common.Address{}
+			}
+			logger.Trace("Refresh() - Update rewardAddr with staking info", "Council index", valIdx, "validator", val.(*weightedValidator))
+		}
+
+		// TODO-Klaytn-Issue1400 one of exception cases
+		if totalStaking.Cmp(common.Big0) > 0 {
+			// update weight
+			tmp := big.NewInt(0)
+			tmp100 := big.NewInt(100)
+			for _, val := range valSet.List() {
+				i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
+				if i != -1 {
+					stakingAmount := valSet.stakingInfo.CouncilStakingAmounts[i]
+					weight := int(tmp.Div(tmp.Mul(stakingAmount, tmp100), totalStaking).Int64()) // No overflow occurs here.
+					val.(*weightedValidator).weight = weight
+					logger.Trace("Refresh() Update weight", "validator", val.(*weightedValidator), "weight", weight)
+				} else {
+					val.(*weightedValidator).weight = 0
+					logger.Trace("Refresh() Set weight to 0, because of no staking info.", "validator", val.(*weightedValidator))
+				}
+			}
+		} else {
+			for i, val := range valSet.List() {
+				val.(*weightedValidator).weight = 0
+				logger.Trace("Refresh() Set weight to 0, because total staking value is 0.", "i", i, "validator", val.(*weightedValidator))
+			}
+		}
+	} else {
+		logger.Info("Issue1166-V3: Refresh() - No staking info", "stakingInfo", valSet.stakingInfo)
+	}
+
+	candidateVals := []istanbul.Validator{}
+	for _, val := range valSet.List() {
+		weight := val.Weight()
+		for i := 0; i < weight; i++ {
+			candidateVals = append(candidateVals, val)
+		}
+	}
+
+	if len(candidateVals) == 0 {
+		// No validator with weight found. Let's use all validators
+		for _, val := range valSet.List() {
+			candidateVals = append(candidateVals, val)
+		}
+		logger.Trace("Refresh() Use all validators, because there is no weight information", "candidateVals", candidateVals)
+	} else {
+		logger.Trace("Refresh() Candidate validators chosen with weights", "candidateVals", candidateVals)
+	}
+
+	proposers := make([]istanbul.Validator, len(candidateVals))
+
+	limit := len(candidateVals)
+	picker := rand.New(rand.NewSource(seed))
+
+	indexs := make([]int, limit)
+	idx := 0
+	for i := 0; i < limit; i++ {
+		indexs[idx] = i
+		idx++
+	}
+
+	// shuffle
+	for i := 0; i < limit; i++ {
+		randIndex := picker.Intn(limit)
+		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
+	}
+
+	for i := 0; i < limit; i++ {
+		proposers[i] = candidateVals[indexs[i]]
+		logger.Trace("Refresh() Calculated new proposers", "i", i, "proposers[i]", proposers[i].String())
+	}
+
+	valSet.proposers = proposers
+
+	logger.Info("Refresh() finished", "valSet", valSet, "valSet.proposers", valSet.proposers)
+
+	return nil
+}
+
+func (valSet *weightedCouncil) SetStakingInfo(stakingInfo *common.StakingInfo) error {
+	valSet.stakingInfo = stakingInfo
+	return nil
+}
+func (valSet *weightedCouncil) SetBlockNum(blockNum uint64) {
+	valSet.blockNum = blockNum
+}
+
+func (valSet *weightedCouncil) Proposers() []istanbul.Validator {
+	return valSet.proposers
+}
+
+func (valSet *weightedCouncil) TotalVotingPower() float64 {
+	sum := float64(0.0)
+	for _, v := range valSet.List() {
+		sum += float64(v.VotingPower())
+	}
+	return sum
+}
