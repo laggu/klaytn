@@ -500,32 +500,10 @@ func (bc *BlockChain) Genesis() *types.Block {
 	return bc.genesisBlock
 }
 
-// GetBody retrieves a block body (transactions and uncles) from the database by
-// hash, caching it if found.
-func (bc *BlockChain) GetBody(hash common.Hash) *types.Body {
-	// Short circuit if the body's already in the cache, retrieve otherwise
-	if cachedBody := bc.db.ReadBodyInCache(hash); cachedBody != nil {
-		return cachedBody
-	}
-	number := bc.GetBlockNumber(hash)
-	if number == nil {
-		return nil
-	}
-	return bc.db.ReadBody(hash, *number)
-}
-
 // GetBodyRLP retrieves a block body in RLP encoding from the database by hash,
 // caching it if found.
 func (bc *BlockChain) GetBodyRLP(hash common.Hash) rlp.RawValue {
-	// Short circuit if the body's already in the cache, retrieve otherwise
-	if cachedBodyRLP := bc.db.ReadBodyRLPInCache(hash); cachedBodyRLP != nil {
-		return cachedBodyRLP
-	}
-	number := bc.GetBlockNumber(hash)
-	if number == nil {
-		return nil
-	}
-	return bc.db.ReadBodyRLP(hash, *number)
+	return bc.db.ReadBodyRLPByHash(hash)
 }
 
 // HasBlock checks if a block is fully present in the database or not.
@@ -558,11 +536,7 @@ func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 
 // GetBlockByHash retrieves a block from the database by hash, caching it if found.
 func (bc *BlockChain) GetBlockByHash(hash common.Hash) *types.Block {
-	number := bc.GetBlockNumber(hash)
-	if number == nil {
-		return nil
-	}
-	return bc.GetBlock(hash, *number)
+	return bc.db.ReadBlockByHash(hash)
 }
 
 // GetBlockNumber retrieves a blockNumber from the database by hash, caching it if found.
