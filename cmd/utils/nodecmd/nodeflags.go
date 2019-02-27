@@ -35,7 +35,6 @@ var CommonNodeFlags = []cli.Flag{
 	utils.DbTypeFlag,
 	utils.DataDirFlag,
 	utils.KeyStoreDirFlag,
-	utils.DashboardEnabledFlag,
 	utils.TxPoolNoLocalsFlag,
 	utils.TxPoolJournalFlag,
 	utils.TxPoolRejournalFlag,
