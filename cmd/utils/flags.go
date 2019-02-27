@@ -67,6 +67,11 @@ func NewApp(gitCommit, usage string) *cli.App {
 
 var (
 	// General settings
+	NetworkTypeFlag = cli.StringFlag{
+		Name:  "networktype",
+		Usage: "klaytn network type (main-net (mn), service chain-net (scn))",
+		Value: "mn",
+	}
 	DbTypeFlag = cli.StringFlag{
 		Name:  "dbtype",
 		Usage: `Blockchain storage database type ("leveldb", "badger")`,
@@ -1133,7 +1138,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 // RegisterCNService adds a CN client to the stack.
 func RegisterCNService(stack *node.Node, cfg *cn.Config) {
-	// @toDo add syncMode.LightSync func and add LesServer
+	// TODO-Klaytn add syncMode.LightSync func and add LesServer
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
 		fullNode, err := cn.New(ctx, cfg)
@@ -1141,6 +1146,18 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	})
 	if err != nil {
 		Fatalf("Failed to register the CN service: %v", err)
+	}
+}
+
+// RegisterServiceChainService adds a ServiceChain node to the stack.
+func RegisterServiceChainService(stack *node.Node, cfg *cn.Config) {
+	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		cfg.WsEndpoint = stack.WSEndpoint()
+		fullNode, err := cn.NewServiceChain(ctx, cfg)
+		return fullNode, err
+	})
+	if err != nil {
+		Fatalf("Failed to register the SCN service: %v", err)
 	}
 }
 

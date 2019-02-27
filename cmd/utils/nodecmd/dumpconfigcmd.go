@@ -175,11 +175,13 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 func MakeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterCNService(stack, &cfg.CN)
-
+	if utils.NetworkTypeFlag.Value == "scn" {
+		utils.RegisterServiceChainService(stack, &cfg.CN)
+	} else {
+		utils.RegisterCNService(stack, &cfg.CN)
+	}
 	scfg := makeServiceChainConfig(ctx)
 	scfg.DataDir = cfg.Node.DataDir
-
 	utils.RegisterService(stack, &scfg)
 
 	return stack

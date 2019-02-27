@@ -149,6 +149,10 @@ type DBManager interface {
 	ReadTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts
 	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
+
+	// snapshot in clique(POA) consensus
+	WriteCliqueSnapshot(key []byte, value []byte) error
+	ReadCliqueSnapshot(key []byte) ([]byte, error)
 }
 
 type DBEntryType uint8
@@ -168,7 +172,9 @@ const (
 	// indexSectionsDB must appear after MiscDB
 	indexSectionsDB
 
-	childChainDB
+	bridgeServiceDB
+
+	CliqueSnapshotDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -183,7 +189,8 @@ var dbDirs = [databaseEntryTypeSize]string{
 	"txlookup",
 	"misc",
 	"indexsections",
-	"childchain",
+	"bridgeservice",
+	"cliquesnapshot",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -199,7 +206,8 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	2,  // MiscDB
 	// indexSectionsDB is not a DB, it is a table.
 	0, // indexSectionsDB
-	6, // childChainDB
+	4, // bridgeServiceDB
+	2, // CliqueSnapshot
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -1174,7 +1182,7 @@ func (dbm *databaseManager) ChildChainIndexingEnabled() bool {
 // ChainHashes, with the key made with given child chain block hash.
 func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
 	key := childChainTxHashKey(ccBlockHash)
-	db := dbm.getDatabase(childChainDB)
+	db := dbm.getDatabase(bridgeServiceDB)
 	if err := db.Put(key, ccTxHash.Bytes()); err != nil {
 		logger.Crit("Failed to store ChildChainTxHash", "ccBlockHash", ccBlockHash.String(), "ccTxHash", ccTxHash.String(), "err", err)
 	}
@@ -1184,7 +1192,7 @@ func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxH
 // ChainHashes, with the key made with given child chain block hash.
 func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	key := childChainTxHashKey(ccBlockHash)
-	db := dbm.getDatabase(childChainDB)
+	db := dbm.getDatabase(bridgeServiceDB)
 	data, _ := db.Get(key)
 	if len(data) == 0 {
 		return common.Hash{}
@@ -1195,7 +1203,7 @@ func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBloc
 // WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
 func (dbm *databaseManager) WriteAnchoredBlockNumber(blockNum uint64) {
 	key := lastServiceChainTxReceiptKey
-	db := dbm.getDatabase(childChainDB)
+	db := dbm.getDatabase(bridgeServiceDB)
 	if err := db.Put(key, encodeBlockNumber(blockNum)); err != nil {
 		logger.Crit("Failed to store LatestServiceChainBlockNum", "blockNumber", blockNum, "err", err)
 	}
@@ -1204,7 +1212,7 @@ func (dbm *databaseManager) WriteAnchoredBlockNumber(blockNum uint64) {
 // ReadAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
 func (dbm *databaseManager) ReadAnchoredBlockNumber() uint64 {
 	key := lastServiceChainTxReceiptKey
-	db := dbm.getDatabase(childChainDB)
+	db := dbm.getDatabase(bridgeServiceDB)
 	data, _ := db.Get(key)
 	if len(data) != 8 {
 		return 0
@@ -1216,7 +1224,7 @@ func (dbm *databaseManager) ReadAnchoredBlockNumber() uint64 {
 // with corresponding block hash. It assumes that a child chain has only one parent chain.
 func (dbm *databaseManager) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
 	receiptForStorage := (*types.ReceiptForStorage)(receipt)
-	db := dbm.getDatabase(childChainDB)
+	db := dbm.getDatabase(bridgeServiceDB)
 	byte, err := rlp.EncodeToBytes(receiptForStorage)
 	if err != nil {
 		logger.Crit("Failed to RLP encode receipt received from parent chain", "receipt.TxHash", receipt.TxHash, "err", err)
@@ -1230,7 +1238,7 @@ func (dbm *databaseManager) WriteReceiptFromParentChain(blockHash common.Hash, r
 // ReadReceiptFromParentChain returns a receipt received from parent chain to child chain
 // with corresponding block hash. It assumes that a child chain has only one parent chain.
 func (dbm *databaseManager) ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	db := dbm.getDatabase(childChainDB)
+	db := dbm.getDatabase(bridgeServiceDB)
 	key := receiptFromParentChainKey(blockHash)
 	data, _ := db.Get(key)
 	if data == nil || len(data) == 0 {
@@ -1277,4 +1285,14 @@ func BloomBitsKey(bit uint, section uint64, hash common.Hash) []byte {
 	binary.BigEndian.PutUint64(key[3:], section)
 
 	return key
+}
+
+func (dbm *databaseManager) WriteCliqueSnapshot(key []byte, value []byte) error {
+	db := dbm.getDatabase(CliqueSnapshotDB)
+	return db.Put(append([]byte("clique-"), key...), value)
+}
+
+func (dbm *databaseManager) ReadCliqueSnapshot(key []byte) ([]byte, error) {
+	db := dbm.getDatabase(CliqueSnapshotDB)
+	return db.Get(append([]byte("clique-"), key...))
 }

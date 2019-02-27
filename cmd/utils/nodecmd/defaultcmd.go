@@ -34,6 +34,8 @@ import (
 
 const (
 	clientIdentifier = "klay" // Client identifier to advertise over the network
+	SCNNetworkType   = "scn"  // Service Chain Network
+	MNNetworkType    = "mn"   // Mainnet Network
 )
 
 // runKlaytnNode is the main entry point into the system if no special subcommand is ran.
@@ -107,9 +109,16 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 
+	if utils.NetworkTypeFlag.Value == SCNNetworkType {
+		startServiceChainService(ctx, stack)
+	} else {
+		startKlaytnAuxiliaryService(ctx, stack)
+	}
+}
+
+func startKlaytnAuxiliaryService(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
-
 		var cn *cn.CN
 		if err := stack.Service(&cn); err != nil {
 			utils.Fatalf("Klaytn service not running: %v", err)
@@ -131,6 +140,35 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		// istanbul BFT
 		var cn *cn.CN
 		if err := stack.Service(&cn); err != nil {
+			utils.Fatalf("Klaytn service not running: %v", err)
+		}
+	}
+}
+
+func startServiceChainService(ctx *cli.Context, stack *node.Node) {
+	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
+		// Start servicechain services if enabled
+		var scn *cn.ServiceChain
+		if err := stack.Service(&scn); err != nil {
+			utils.Fatalf("Klaytn service not running: %v", err)
+		}
+		// Use a reduced number of threads if requested
+		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
+			type threaded interface {
+				SetThreads(threads int)
+			}
+			if th, ok := scn.Engine().(threaded); ok {
+				th.SetThreads(threads)
+			}
+		}
+		// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
+		if err := scn.StartMining(false); err != nil {
+			utils.Fatalf("Failed to start mining: %v", err)
+		}
+	} else {
+		// Start servicechain services
+		var scn *cn.ServiceChain
+		if err := stack.Service(&scn); err != nil {
 			utils.Fatalf("Klaytn service not running: %v", err)
 		}
 	}

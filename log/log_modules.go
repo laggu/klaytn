@@ -107,6 +107,9 @@ const (
 	CMDKPN
 	CMDKEN
 	NetworksGRPC
+	CMDKSCN
+
+	POA
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -171,4 +174,7 @@ var moduleNames = [ModuleNameLen]string{
 	"cmd/kpn",
 	"cmd/ken",
 	"networks/grpc",
+	"cmd/kscn",
+
+	"consensus/clique",
 }
