@@ -54,23 +54,27 @@ const (
 	// Protocol messages belonging to klay/62
 	StatusMsg                              = 0x00
 	NewBlockHashesMsg                      = 0x01
-	TxMsg                                  = 0x02
-	BlockHeadersRequestMsg                 = 0x03
-	BlockHeadersMsg                        = 0x04
-	BlockBodiesRequestMsg                  = 0x05
-	BlockBodiesMsg                         = 0x06
-	NewBlockMsg                            = 0x07
-	ServiceChainTxsMsg                     = 0x08
-	ServiceChainReceiptResponseMsg         = 0x09
-	ServiceChainReceiptRequestMsg          = 0x0a
-	ServiceChainParentChainInfoResponseMsg = 0x0b
-	ServiceChainParentChainInfoRequestMsg  = 0x0c
+	BlockHeaderFetchRequestMsg             = 0x02
+	BlockHeaderFetchResponseMsg            = 0x03
+	BlockBodiesFetchRequestMsg             = 0x04
+	BlockBodiesFetchResponseMsg            = 0x05
+	TxMsg                                  = 0x06
+	BlockHeadersRequestMsg                 = 0x07
+	BlockHeadersMsg                        = 0x08
+	BlockBodiesRequestMsg                  = 0x09
+	BlockBodiesMsg                         = 0x0a
+	NewBlockMsg                            = 0x0b
+	ServiceChainTxsMsg                     = 0x0c
+	ServiceChainReceiptResponseMsg         = 0x0d
+	ServiceChainReceiptRequestMsg          = 0x0e
+	ServiceChainParentChainInfoResponseMsg = 0x0f
+	ServiceChainParentChainInfoRequestMsg  = 0x10
 
 	// Protocol messages belonging to klay/63
-	NodeDataRequestMsg = 0x0d
-	NodeDataMsg        = 0x0e
-	ReceiptsRequestMsg = 0x0f
-	ReceiptsMsg        = 0x10
+	NodeDataRequestMsg = 0x11
+	NodeDataMsg        = 0x12
+	ReceiptsRequestMsg = 0x13
+	ReceiptsMsg        = 0x14
 )
 
 type errCode int

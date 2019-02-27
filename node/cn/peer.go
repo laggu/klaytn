@@ -136,12 +136,19 @@ type Peer interface {
 	// SendBlockHeaders sends a batch of block headers to the remote peer.
 	SendBlockHeaders(headers []*types.Header) error
 
+	// SendFetchedBlockHeader sends a block header to the remote peer, requested by fetcher.
+	SendFetchedBlockHeader(header *types.Header) error
+
 	// SendBlockBodies sends a batch of block contents to the remote peer.
 	SendBlockBodies(bodies []*blockBody) error
 
 	// SendBlockBodiesRLP sends a batch of block contents to the remote peer from
 	// an already RLP encoded format.
 	SendBlockBodiesRLP(bodies []rlp.RawValue) error
+
+	// SendFetchedBlockBodiesRLP sends a batch of block contents to the remote peer from
+	// an already RLP encoded format, requested by fetcher.
+	SendFetchedBlockBodiesRLP(bodies []rlp.RawValue) error
 
 	// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
 	// hashes requested.
@@ -151,9 +158,14 @@ type Peer interface {
 	// ones requested from an already RLP encoded format.
 	SendReceiptsRLP(receipts []rlp.RawValue) error
 
-	// RequestOneHeader is a wrapper around the header query functions to fetch a
+	// FetchBlockHeader is a wrapper around the header query functions to fetch a
 	// single header. It is used solely by the fetcher.
-	RequestOneHeader(hash common.Hash) error
+	FetchBlockHeader(hash common.Hash) error
+
+	// FetchBlockBodies fetches a batch of blocks' bodies corresponding to the hashes
+	// specified. If uses different message type from RequestBodies.
+	// It is used solely by the fetcher.
+	FetchBlockBodies(hashes []common.Hash) error
 
 	// Handshake executes the klaytn protocol handshake, negotiating version number,
 	// network IDs, difficulties, head, genesis blocks, and onChildChain(if the node is on child chain for the peer)
@@ -268,14 +280,18 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 
 // ChannelOfMessage is a map with the index of the channel per message
 var ChannelOfMessage = map[uint64]int{
-	StatusMsg:              p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
-	NewBlockHashesMsg:      p2p.ConnBlockMsg,
-	TxMsg:                  p2p.ConnDefault,
-	BlockHeadersRequestMsg: p2p.ConnBlockMsg,
-	BlockHeadersMsg:        p2p.ConnBlockMsg,
-	BlockBodiesRequestMsg:  p2p.ConnBlockMsg,
-	BlockBodiesMsg:         p2p.ConnBlockMsg,
-	NewBlockMsg:            p2p.ConnBlockMsg,
+	StatusMsg:                   p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
+	NewBlockHashesMsg:           p2p.ConnBlockMsg,
+	BlockHeaderFetchRequestMsg:  p2p.ConnBlockMsg,
+	BlockHeaderFetchResponseMsg: p2p.ConnBlockMsg,
+	BlockBodiesFetchRequestMsg:  p2p.ConnBlockMsg,
+	BlockBodiesFetchResponseMsg: p2p.ConnBlockMsg,
+	TxMsg:                       p2p.ConnDefault,
+	BlockHeadersRequestMsg:      p2p.ConnBlockMsg,
+	BlockHeadersMsg:             p2p.ConnBlockMsg,
+	BlockBodiesRequestMsg:       p2p.ConnBlockMsg,
+	BlockBodiesMsg:              p2p.ConnBlockMsg,
+	NewBlockMsg:                 p2p.ConnBlockMsg,
 
 	// Protocol messages belonging to klay/63
 	NodeDataRequestMsg: p2p.ConnDefault,
@@ -488,6 +504,11 @@ func (p *basePeer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
 }
 
+// SendFetchedBlockHeader sends a block header to the remote peer, requested by fetcher.
+func (p *basePeer) SendFetchedBlockHeader(header *types.Header) error {
+	return p2p.Send(p.rw, BlockHeaderFetchResponseMsg, header)
+}
+
 // SendBlockBodies sends a batch of block contents to the remote peer.
 func (p *basePeer) SendBlockBodies(bodies []*blockBody) error {
 	return p2p.Send(p.rw, BlockBodiesMsg, blockBodiesData(bodies))
@@ -497,6 +518,12 @@ func (p *basePeer) SendBlockBodies(bodies []*blockBody) error {
 // an already RLP encoded format.
 func (p *basePeer) SendBlockBodiesRLP(bodies []rlp.RawValue) error {
 	return p2p.Send(p.rw, BlockBodiesMsg, bodies)
+}
+
+// SendFetchedBlockBodiesRLP sends a batch of block contents to the remote peer from
+// an already RLP encoded format.
+func (p *basePeer) SendFetchedBlockBodiesRLP(bodies []rlp.RawValue) error {
+	return p2p.Send(p.rw, BlockBodiesFetchResponseMsg, bodies)
 }
 
 // SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
@@ -511,11 +538,11 @@ func (p *basePeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 	return p2p.Send(p.rw, ReceiptsMsg, receipts)
 }
 
-// RequestOneHeader is a wrapper around the header query functions to fetch a
+// FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
-func (p *basePeer) RequestOneHeader(hash common.Hash) error {
-	p.Log().Debug("Fetching single header", "hash", hash)
-	return p2p.Send(p.rw, BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+func (p *basePeer) FetchBlockHeader(hash common.Hash) error {
+	p.Log().Debug("Fetching a new block header", "hash", hash)
+	return p2p.Send(p.rw, BlockHeaderFetchRequestMsg, hash)
 }
 
 // RequestHeadersByHash fetches a batch of blocks' headers corresponding to the
@@ -537,6 +564,13 @@ func (p *basePeer) RequestHeadersByNumber(origin uint64, amount int, skip int, r
 func (p *basePeer) RequestBodies(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
 	return p2p.Send(p.rw, BlockBodiesRequestMsg, hashes)
+}
+
+// FetchBlockBodies fetches a batch of blocks' bodies corresponding to the hashes
+// specified. If uses different message type from RequestBodies.
+func (p *basePeer) FetchBlockBodies(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of new block bodies", "count", len(hashes))
+	return p2p.Send(p.rw, BlockBodiesFetchRequestMsg, hashes)
 }
 
 // RequestNodeData fetches a batch of arbitrary data from a node's known state
@@ -836,6 +870,11 @@ func (p *multiChannelPeer) SendBlockHeaders(headers []*types.Header) error {
 	return p.msgSender(BlockHeadersMsg, headers)
 }
 
+// SendFetchedBlockHeader sends a block header to the remote peer, requested by fetcher.
+func (p *multiChannelPeer) SendFetchedBlockHeader(header *types.Header) error {
+	return p.msgSender(BlockHeaderFetchResponseMsg, header)
+}
+
 // SendBlockBodies sends a batch of block contents to the remote peer.
 func (p *multiChannelPeer) SendBlockBodies(bodies []*blockBody) error {
 	return p.msgSender(BlockBodiesMsg, blockBodiesData(bodies))
@@ -845,6 +884,12 @@ func (p *multiChannelPeer) SendBlockBodies(bodies []*blockBody) error {
 // an already RLP encoded format.
 func (p *multiChannelPeer) SendBlockBodiesRLP(bodies []rlp.RawValue) error {
 	return p.msgSender(BlockBodiesMsg, bodies)
+}
+
+// SendFetchedBlockBodiesRLP sends a batch of block contents to the remote peer from
+// an already RLP encoded format.
+func (p *multiChannelPeer) SendFetchedBlockBodiesRLP(bodies []rlp.RawValue) error {
+	return p.msgSender(BlockBodiesFetchResponseMsg, bodies)
 }
 
 // SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
@@ -859,11 +904,11 @@ func (p *multiChannelPeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 	return p.msgSender(ReceiptsMsg, receipts)
 }
 
-// RequestOneHeader is a wrapper around the header query functions to fetch a
+// FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
-func (p *multiChannelPeer) RequestOneHeader(hash common.Hash) error {
-	p.Log().Debug("Fetching single header", "hash", hash)
-	return p.msgSender(BlockHeadersRequestMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+func (p *multiChannelPeer) FetchBlockHeader(hash common.Hash) error {
+	p.Log().Debug("Fetching a new block header", "hash", hash)
+	return p.msgSender(BlockHeaderFetchRequestMsg, hash)
 }
 
 // RequestHeadersByHash fetches a batch of blocks' headers corresponding to the
@@ -885,6 +930,13 @@ func (p *multiChannelPeer) RequestHeadersByNumber(origin uint64, amount int, ski
 func (p *multiChannelPeer) RequestBodies(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
 	return p.msgSender(BlockBodiesRequestMsg, hashes)
+}
+
+// FetchBlockBodies fetches a batch of blocks' bodies corresponding to the hashes
+// specified.
+func (p *multiChannelPeer) FetchBlockBodies(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of new block bodies", "count", len(hashes))
+	return p.msgSender(BlockBodiesFetchRequestMsg, hashes)
 }
 
 // RequestNodeData fetches a batch of arbitrary data from a node's known state

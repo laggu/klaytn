@@ -547,6 +547,26 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			return err
 		}
 
+	case msg.Code == BlockHeaderFetchRequestMsg:
+		if err := handleBlockHeaderFetchRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case msg.Code == BlockHeaderFetchResponseMsg:
+		if err := handleBlockHeaderFetchResponseMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case msg.Code == BlockBodiesFetchRequestMsg:
+		if err := handleBlockBodiesFetchRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case msg.Code == BlockBodiesFetchResponseMsg:
+		if err := handleBlockBodiesFetchResponseMsg(pm, p, msg); err != nil {
+			return err
+		}
+
 	case msg.Code == NewBlockMsg:
 		if err := handleNewBlockMsg(pm, p, msg); err != nil {
 			return err
@@ -680,27 +700,24 @@ func handleBlockHeadersMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&headers); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	// Filter out any explicitly requested headers, deliver the rest to the downloader
-	filter := len(headers) == 1
-	if filter {
-		// Irrelevant of the fork checks, send the header to the fetcher just in case
-		headers = pm.fetcher.FilterHeaders(p.GetID(), headers, time.Now())
+
+	if len(headers) == 0 {
+		return nil
 	}
-	if len(headers) > 0 || !filter {
-		err := pm.downloader.DeliverHeaders(p.GetID(), headers)
-		if err != nil {
-			logger.Debug("Failed to deliver headers", "err", err)
-		}
+	if err := pm.downloader.DeliverHeaders(p.GetID(), headers); err != nil {
+		logger.Debug("Failed to deliver headers", "err", err)
 	}
 	return nil
 }
 
-// handleBlockBodiesRequestMsg handles block body request message.
-func handleBlockBodiesRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+// handleBlockBodiesRequest handles common part for handleBlockBodiesRequest and
+// handleBlockBodiesFetchRequestMsg. It decodes the message to get list of hashes
+// and then send block bodies corresponding to those hashes.
+func handleBlockBodiesRequest(pm *ProtocolManager, p Peer, msg p2p.Msg) ([]rlp.RawValue, error) {
 	// Decode the retrieval message
 	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 	if _, err := msgStream.List(); err != nil {
-		return err
+		return nil, err
 	}
 	// Gather blocks until the fetch or network limits is reached
 	var (
@@ -713,7 +730,7 @@ func handleBlockBodiesRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
 		} else if err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
+			return nil, errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested block body, stopping if enough was found
 		if data := pm.blockchain.GetBodyRLP(hash); len(data) != 0 {
@@ -721,7 +738,17 @@ func handleBlockBodiesRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 			bytes += len(data)
 		}
 	}
-	return p.SendBlockBodiesRLP(bodies)
+
+	return bodies, nil
+}
+
+// handleBlockBodiesRequestMsg handles block body request message.
+func handleBlockBodiesRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if bodies, err := handleBlockBodiesRequest(pm, p, msg); err != nil {
+		return err
+	} else {
+		return p.SendBlockBodiesRLP(bodies)
+	}
 }
 
 // handleGetBlockBodiesMsg handles block body response message.
@@ -739,17 +766,12 @@ func handleBlockBodiesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		transactions[i] = body.Transactions
 		uncles[i] = body.Uncles
 	}
-	// Filter out any explicitly requested bodies, deliver the rest to the downloader
-	filter := len(transactions) > 0 || len(uncles) > 0
-	if filter {
-		transactions, uncles = pm.fetcher.FilterBodies(p.GetID(), transactions, uncles, time.Now())
+
+	err := pm.downloader.DeliverBodies(p.GetID(), transactions, uncles)
+	if err != nil {
+		logger.Debug("Failed to deliver bodies", "err", err)
 	}
-	if len(transactions) > 0 || len(uncles) > 0 || !filter {
-		err := pm.downloader.DeliverBodies(p.GetID(), transactions, uncles)
-		if err != nil {
-			logger.Debug("Failed to deliver bodies", "err", err)
-		}
-	}
+
 	return nil
 }
 
@@ -860,8 +882,75 @@ func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		p.AddToKnownBlocks(block.Hash)
 
 		if !pm.blockchain.HasBlock(block.Hash, block.Number) {
-			pm.fetcher.Notify(p.GetID(), block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
+			pm.fetcher.Notify(p.GetID(), block.Hash, block.Number, time.Now(), p.FetchBlockHeader, p.FetchBlockBodies)
 		}
+	}
+	return nil
+}
+
+// handleBlockHeaderFetchRequestMsg handles block header fetch request message.
+// It will send a header that the peer requested.
+// If the peer requests a header which does not exist, error will be returned.
+func handleBlockHeaderFetchRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	var hash common.Hash
+	if err := msg.Decode(&hash); err != nil {
+		return errResp(ErrDecode, "%v: %v", msg, err)
+	}
+
+	header := pm.blockchain.GetHeaderByHash(hash)
+	if header == nil {
+		return fmt.Errorf("peer requested header for non-existing hash. peer: %v, hash: %v", p.GetID(), hash)
+	}
+
+	return p.SendFetchedBlockHeader(header)
+}
+
+// handleBlockHeaderFetchResponseMsg handles new block header response message.
+// This message should contain only one header.
+func handleBlockHeaderFetchResponseMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	var header *types.Header
+	if err := msg.Decode(&header); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	headers := pm.fetcher.FilterHeaders(p.GetID(), []*types.Header{header}, time.Now())
+	if len(headers) != 0 {
+		logger.Warn("Failed to filter header", "peer", p.GetID(), "num", header.Number.Uint64(), "hash", header.TxHash)
+	}
+
+	return nil
+}
+
+// handleBlockBodiesFetchRequestMsg handles block bodies fetch request message.
+// If the peer requests bodies which do not exist, error will be returned.
+func handleBlockBodiesFetchRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if bodies, err := handleBlockBodiesRequest(pm, p, msg); err != nil {
+		return err
+	} else {
+		return p.SendFetchedBlockBodiesRLP(bodies)
+	}
+}
+
+// handleBlockBodiesFetchResponseMsg handles block bodies fetch response message.
+func handleBlockBodiesFetchResponseMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of block bodies arrived to one of our previous requests
+	var request blockBodiesData
+	if err := msg.Decode(&request); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver them all to the downloader for queuing
+	transactions := make([][]*types.Transaction, len(request))
+	uncles := make([][]*types.Header, len(request))
+
+	for i, body := range request {
+		transactions[i] = body.Transactions
+		uncles[i] = body.Uncles
+	}
+
+	transactions, uncles = pm.fetcher.FilterBodies(p.GetID(), transactions, uncles, time.Now())
+
+	if len(transactions) > 0 || len(uncles) > 0 {
+		logger.Warn("Failed to filter bodies", "peer", p.GetID(), "lenTxs", len(transactions), "lenUncles", len(uncles))
 	}
 	return nil
 }
