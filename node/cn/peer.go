@@ -1318,6 +1318,19 @@ func (ps *peerSet) PNWithoutBlock(hash common.Hash) []Peer {
 	return list
 }
 
+func (ps *peerSet) ENWithoutBlock(hash common.Hash) []Peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]Peer, 0, len(ps.enpeers))
+	for _, p := range ps.enpeers {
+		if !p.GetKnownBlocks().Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
 func (ps *peerSet) TypePeers(nodetype p2p.ConnType) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()

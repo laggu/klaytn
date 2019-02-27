@@ -58,7 +58,8 @@ const (
 	concurrentPerPeer  = 3
 	channelSizePerPeer = 20
 
-	blockReceivingPNLimit = 5 // maximum number of PNs that a CN broadcasts block.
+	blockReceivingPNLimit  = 5 // maximum number of PNs that a CN broadcasts block.
+	minNumPeersToSendBlock = 3 // minimum number of peers that a node broadcasts block.
 )
 
 var (
@@ -1131,8 +1132,8 @@ func handleServiceChainReceiptRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Ms
 }
 
 // getPeersWithoutBlock returns a list of peers without given block.
-// If current node is CN, propagate block to all peers without block.
-// Otherwise, node will send block to all peers without block, except for CNs.
+// If current node is CN, it returns all peers without block.
+// If not, it returns all peers without block except CNs.
 func (pm *ProtocolManager) getPeersWithoutBlock(hash common.Hash) []Peer {
 	if pm.nodetype == node.CONSENSUSNODE {
 		return pm.peers.PeersWithoutBlock(hash)
@@ -1141,74 +1142,113 @@ func (pm *ProtocolManager) getPeersWithoutBlock(hash common.Hash) []Peer {
 	}
 }
 
-// sendBlockToPeers send block to peers without given block.
-// If current node is CN, it will send block to
-func (pm *ProtocolManager) sendBlockToPeers(block *types.Block) {
-	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
-	// Send the block to a subset of our peers
-	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+// sampleSize calculates the number of peers to send block.
+// If calcSampleSize is smaller than minNumPeersToSendBlock, it returns minNumPeersToSendBlock.
+// Otherwise, it returns calcSampleSize.
+func sampleSize(peers []Peer) int {
+	if len(peers) < minNumPeersToSendBlock {
+		return len(peers)
+	}
+
+	calcSampleSize := int(math.Sqrt(float64(len(peers))))
+	if calcSampleSize > minNumPeersToSendBlock {
+		return calcSampleSize
+	} else {
+		return minNumPeersToSendBlock
+	}
+}
+
+// samplePeersToSendBlock samples peers from peers without block.
+// It uses different sampling policy for different node type.
+func (pm *ProtocolManager) samplePeersToSendBlock(block *types.Block) []Peer {
+	var peersWithoutBlock []Peer
 	hash := block.Hash()
-	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
-	td := new(big.Int).Add(block.Difficulty(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
 
-	if pm.nodetype == node.CONSENSUSNODE {
+	switch pm.nodetype {
+	case node.CONSENSUSNODE:
+		// If currNode is CN, sends block to sampled peers from (CN + PN), not to EN.
 		cnsWithoutBlock := pm.peers.CNWithoutBlock(hash)
-		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, int(math.Sqrt(float64(len(cnsWithoutBlock)))))
-		for _, cnPeer := range sampledCNsWithoutBlock {
-			cnPeer.AsyncSendNewBlock(block, td)
-		}
+		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, sampleSize(cnsWithoutBlock))
 
-		// CN always broadcasts a block to its PN peers, unless number of PN peers exceeds the limit.
+		// CN always broadcasts a block to its PN peers, unless the number of PN peers exceeds the limit.
 		pnsWithoutBlock := pm.peers.PNWithoutBlock(hash)
 		if len(pnsWithoutBlock) > blockReceivingPNLimit {
 			pnsWithoutBlock = samplingPeers(pnsWithoutBlock, blockReceivingPNLimit)
 		}
-		for _, pnPeer := range pnsWithoutBlock {
-			pnPeer.AsyncSendNewBlock(block, td)
-		}
 
 		logger.Trace("Propagated block", "hash", hash,
 			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-	} else {
-		peersWithoutBlock := pm.peers.PeersWithoutBlockExceptCN(hash)
-		sampledPeersWithoutBlock := samplingPeers(peersWithoutBlock, int(math.Sqrt(float64(len(peersWithoutBlock)))))
-		for _, peer := range sampledPeersWithoutBlock {
-			//peer.SendNewBlock(block, td)
-			peer.AsyncSendNewBlock(block, td)
-		}
-		logger.Trace("Propagated block", "hash", hash,
-			"recipients", len(sampledPeersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+
+		return append(cnsWithoutBlock, pnsWithoutBlock...)
+	case node.PROXYNODE:
+		// If currNode is PN, sends block to sampled peers from (PN + EN), not to CN.
+		peersWithoutBlock = pm.peers.PeersWithoutBlockExceptCN(hash)
+
+	case node.ENDPOINTNODE:
+		// If currNode is EN, sends block to sampled EN peers, not to EN nor CN.
+		peersWithoutBlock = pm.peers.ENWithoutBlock(hash)
+
+	default:
+		logger.Error("Undefined nodeType of protocolManager! nodeType: %v", pm.nodetype)
+		return []Peer{}
 	}
+
+	sampledPeersWithoutBlock := samplingPeers(peersWithoutBlock, sampleSize(peersWithoutBlock))
+	logger.Trace("Propagated block", "hash", hash,
+		"recipients", len(sampledPeersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+
+	return sampledPeersWithoutBlock
+}
+
+// sendBlockToPeers sends block to peers without given block.
+// If current node is CN, it will send block to all PN peers + sampled CN peers without block.
+// However, if there are more than 5 PN peers, it will sample 5 PN peers.
+// If current node is not CN, it will send block to sampled peers except CNs.
+func (pm *ProtocolManager) sendBlockToPeers(block *types.Block) {
+	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
+	// Send the block to a subset of our peers
+	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+
+	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
+	td := new(big.Int).Add(block.Difficulty(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
+
+	peersToSendBlock := pm.samplePeersToSendBlock(block)
+	for _, peer := range peersToSendBlock {
+		peer.AsyncSendNewBlock(block, td)
+	}
+}
+
+// sendBlockHashToPeers sends block hash to peers who don't have the block.
+func (pm *ProtocolManager) sendBlockHashToPeers(block *types.Block) {
+	peersWithoutBlock := pm.getPeersWithoutBlock(block.Hash())
+	for _, peer := range peersWithoutBlock {
+		//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+		peer.AsyncSendNewBlockHash(block)
+	}
+	logger.Trace("Announced block", "hash", block.Hash(),
+		"recipients", len(peersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 }
 
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
-	// If it is connected to a parent chain, broadcast service chain block.
 	if propagate {
+		// If it is connected to a parent chain, broadcast service chain block.
 		pm.scpm.BroadcastServiceChainTxAndReceiptRequest(block)
-	}
 
-	hash := block.Hash()
-	// If propagation is requested, send to a subset of the peer
-	if propagate {
+		// If propagation is requested, send to a subset of the peer
 		if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent == nil {
-			logger.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
+			logger.Error("Propagating dangling block", "number", block.Number(), "hash", block.Hash())
 			return
 		}
 		pm.sendBlockToPeers(block)
-	} else {
-		// Otherwise if the block is indeed in out own chain, announce it
-		if pm.blockchain.HasBlock(hash, block.NumberU64()) {
-			peersWithoutBlock := pm.getPeersWithoutBlock(hash)
-			for _, peer := range peersWithoutBlock {
-				//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
-				peer.AsyncSendNewBlockHash(block)
-			}
-			logger.Trace("Announced block", "hash", hash, "recipients", len(peersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-		}
+		return
 	}
 
+	if pm.blockchain.HasBlock(block.Hash(), block.NumberU64()) {
+		// Otherwise if the block is indeed in out own chain, announce it
+		pm.sendBlockHashToPeers(block)
+	}
 }
 
 // BroadcastTxs will propagate a batch of transactions to all peers which are not known to
@@ -1324,7 +1364,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 }
 
 func samplingPeers(peers []Peer, pickSize int) []Peer {
-	if len(peers) < pickSize {
+	if len(peers) <= pickSize {
 		return peers
 	}
 
