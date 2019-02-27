@@ -71,6 +71,8 @@ type Transaction struct {
 	// validatedIntrinsicGas represents intrinsic gas of the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
 	validatedIntrinsicGas uint64
+	// The account's nonce is checked only if `checkNonce` is true.
+	checkNonce bool
 }
 
 func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (*Transaction, error) {
@@ -201,7 +203,7 @@ func (tx *Transaction) Gas() uint64                       { return tx.data.GetGa
 func (tx *Transaction) GasPrice() *big.Int                { return new(big.Int).Set(tx.data.GetPrice()) }
 func (tx *Transaction) Value() *big.Int                   { return new(big.Int).Set(tx.data.GetAmount()) }
 func (tx *Transaction) Nonce() uint64                     { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool                  { return true }
+func (tx *Transaction) CheckNonce() bool                  { return tx.checkNonce }
 func (tx *Transaction) Type() TxType                      { return tx.data.Type() }
 func (tx *Transaction) IntrinsicGas() (uint64, error)     { return tx.data.IntrinsicGas() }
 func (tx *Transaction) IsLegacyTransaction() bool         { return tx.data.IsLegacyTransaction() }
@@ -347,6 +349,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	tx.validatedSender = sender
 	tx.validatedFeePayer = feePayer
 	tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+	tx.checkNonce = true
 
 	return tx, err
 }
@@ -618,5 +621,6 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		validatedIntrinsicGas: intrinsicGas,
 		validatedFeePayer:     from,
 		validatedSender:       from,
+		checkNonce:            checkNonce,
 	}
 }
