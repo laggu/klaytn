@@ -73,7 +73,6 @@ const (
 	ErrNoStatusMsg
 	ErrExtraStatusMsg
 	ErrSuspendedPeer
-	ErrInvalidPeerHierarchy
 	ErrUnexpectedTxType
 	ErrFailedToGetStateDB
 )
@@ -93,7 +92,6 @@ var errorToString = map[int]string{
 	ErrNoStatusMsg:             "No status message",
 	ErrExtraStatusMsg:          "Extra status message",
 	ErrSuspendedPeer:           "Suspended peer",
-	ErrInvalidPeerHierarchy:    "InvalidPeerHierarchy",
 	ErrUnexpectedTxType:        "Unexpected tx type",
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 }

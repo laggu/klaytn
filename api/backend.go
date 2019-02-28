@@ -78,14 +78,6 @@ type Backend interface {
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
-
-	GetChildChainIndexingEnabled() bool
-	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
-	GetLatestAnchoredBlockNumber() uint64
-	GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt
-	GetChainAccountAddr() string
-	GetAnchoringPeriod() uint64
-	GetSentChainTxsLimit() uint64
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
@@ -130,11 +122,6 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
-		}, {
-			Namespace: "servicechain",
-			Version:   "1.0",
-			Service:   NewPublicServiceChainAPI(apiBackend),
-			Public:    true,
 		},
 	}
 }

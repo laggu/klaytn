@@ -115,13 +115,11 @@ type ProtocolManager struct {
 	wsendpoint string
 
 	nodetype p2p.ConnType
-
-	scpm ServiceChainProtocolManager
 }
 
 // NewProtocolManager returns a new klaytn sub protocol manager. The klaytn sub protocol manages peers capable
 // with the klaytn network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType, scc *ServiceChainConfig) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
@@ -136,7 +134,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		quitSync:    make(chan struct{}),
 		engine:      engine,
 		nodetype:    nodetype,
-		scpm:        NewServiceChainProtocolManager(scc),
 	}
 
 	// istanbul BFT
@@ -330,8 +327,6 @@ func (pm *ProtocolManager) Stop() {
 	// sessions which are already established but not added to pm.peers yet
 	// will exit when they try to register.
 	pm.peers.Close()
-	pm.scpm.getParentChainPeers().Close()
-	pm.scpm.getChildChainPeers().Close()
 
 	// Wait for all peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
@@ -370,8 +365,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		td      = pm.blockchain.GetTd(hash, number)
 	)
 
-	peerIsOnParentChain := p.GetP2PPeer().OnParentChain() // If the peer is on parent chain, this node is on child chain for the peer.
-	onTheSameChain, err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash(), peerIsOnParentChain)
+	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash())
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("klaytn peer handshake failed", "err", err)
 		return err
@@ -380,38 +374,23 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		rw.Init(p.GetVersion())
 	}
 
-	if onTheSameChain {
-		// Register the peer locally
-		if err := pm.peers.Register(p); err != nil {
-			// if starting node with unlock account, can't register peer until finish unlock
-			p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
-			return err
-		}
-		defer pm.removePeer(p.GetID())
-
-		// Register the peer in the downloader. If the downloader considers it banned, we disconnect
-		if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
-			return err
-		}
-		// Propagate existing transactions. new transactions appearing
-		// after this will be sent via broadcasts.
-		pm.syncTransactions(p)
-	} else {
-		// Register the peer according to their role.
-		if peerIsOnParentChain {
-			if err := pm.scpm.registerParentChainPeer(p); err != nil {
-				return err
-			}
-			defer pm.scpm.removeParentPeer(p.GetID())
-		} else {
-			if err := pm.scpm.getChildChainPeers().Register(p); err != nil {
-				return err
-			}
-			defer pm.scpm.removeChildPeer(p.GetID())
-		}
+	// Register the peer locally
+	if err := pm.peers.Register(p); err != nil {
+		// if starting node with unlock account, can't register peer until finish unlock
+		p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
+		return err
 	}
+	defer pm.removePeer(p.GetID())
 
-	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID(), "onTheSameChain", onTheSameChain, "onParentChain", peerIsOnParentChain)
+	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
+	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
+		return err
+	}
+	// Propagate existing transactions. new transactions appearing
+	// after this will be sent via broadcasts.
+	pm.syncTransactions(p)
+
+	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 
 	pubKey, err := p.GetP2PPeerID().Pubkey()
 	if err != nil {
@@ -575,36 +554,6 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 	case msg.Code == TxMsg:
 		if err := handleTxMsg(pm, p, msg); err != nil {
-			return err
-		}
-
-	// ServiceChain related messages
-	case msg.Code == ServiceChainTxsMsg:
-		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
-			break
-		}
-		if err := handleServiceChainTxDataMsg(pm, p, msg); err != nil {
-			return err
-		}
-
-	case msg.Code == ServiceChainParentChainInfoRequestMsg:
-		if err := handleServiceChainParentChainInfoRequestMsg(pm, p, msg); err != nil {
-			return err
-		}
-
-	case msg.Code == ServiceChainParentChainInfoResponseMsg:
-		if err := handleServiceChainParentChainInfoResponseMsg(pm, msg); err != nil {
-			return err
-		}
-
-	case msg.Code == ServiceChainReceiptResponseMsg:
-		if err := handleServiceChainReceiptResponseMsg(pm, msg); err != nil {
-			return err
-		}
-
-	case msg.Code == ServiceChainReceiptRequestMsg:
-		if err := handleServiceChainReceiptRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
@@ -1043,90 +992,6 @@ func handleServiceChainTxDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 	return err
 }
 
-// handleServiceChainParentChainInfoRequestMsg handles parent chain info request message from child chain.
-// It will send the nonce of the account and its gas price to the child chain peer who requested.
-func handleServiceChainParentChainInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
-	var addr common.Address
-	if err := msg.Decode(&addr); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	stateDB, err := pm.blockchain.State()
-	if err != nil {
-		// TODO-Klaytn-ServiceChain This error and inefficient balance error should be transferred.
-		return errResp(ErrFailedToGetStateDB, "failed to get stateDB, err: %v", err)
-	} else {
-		pcInfo := parentChainInfo{stateDB.GetNonce(addr), pm.blockchain.Config().UnitPrice}
-		p.SendServiceChainInfoResponse(&pcInfo)
-		scLogger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
-	}
-	return nil
-}
-
-// handleServiceChainParentChainInfoResponseMsg handles parent chain info response message from parent chain.
-// It will update the chainAccountNonce and remoteGasPrice of ServiceChainProtocolManager.
-func handleServiceChainParentChainInfoResponseMsg(pm *ProtocolManager, msg p2p.Msg) error {
-	var pcInfo parentChainInfo
-	if err := msg.Decode(&pcInfo); err != nil {
-		scLogger.Error("failed to decode", "err", err)
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	if pm.scpm.getChainAccountNonce() > pcInfo.Nonce {
-		// If received nonce is bigger than the current one, just leave a log and do nothing.
-		scLogger.Warn("chain account nonce is bigger than the parent chain nonce.", "chainAccountNonce", pm.scpm.getChainAccountNonce(), "parentChainNonce", pcInfo.Nonce)
-		return nil
-	}
-	pm.scpm.setChainAccountNonce(pcInfo.Nonce)
-	pm.scpm.setChainAccountNonceSynced(true)
-	pm.scpm.setRemoteGasPrice(pcInfo.GasPrice)
-	scLogger.Debug("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
-	return nil
-}
-
-// handleServiceChainReceiptResponseMsg handles receipt response message from parent chain.
-// It will store the received receipts and remove corresponding transaction in the resending list.
-func handleServiceChainReceiptResponseMsg(pm *ProtocolManager, msg p2p.Msg) error {
-	// TODO-Klaytn-ServiceChain Need to add an option, not to write receipts.
-	// Decode the retrieval message
-	var receipts []*types.ReceiptForStorage
-	if err := msg.Decode(&receipts); err != nil && err != rlp.EOL {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	// Stores receipt and remove tx from sentServiceChainTxs only if the tx is successfully executed.
-	pm.scpm.writeServiceChainTxReceipts(pm.blockchain, receipts)
-	return nil
-}
-
-// handleServiceChainReceiptRequestMsg handles receipt request message from child chain.
-// It will find and send corresponding receipts with given transaction hashes.
-func handleServiceChainReceiptRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
-	// Decode the retrieval message
-	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
-	if _, err := msgStream.List(); err != nil {
-		return err
-	}
-	// Gather state data until the fetch or network limits is reached
-	var (
-		hash               common.Hash
-		receiptsForStorage []*types.ReceiptForStorage
-	)
-	for len(receiptsForStorage) < downloader.MaxReceiptFetch {
-		// Retrieve the hash of the next block
-		if err := msgStream.Decode(&hash); err == rlp.EOL {
-			break
-		} else if err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		// Retrieve the receipt of requested service chain tx, skip if unknown.
-		receipt := pm.blockchain.GetReceiptByTxHash(hash)
-		if receipt == nil {
-			continue
-		}
-
-		receiptsForStorage = append(receiptsForStorage, (*types.ReceiptForStorage)(receipt))
-	}
-	return p.SendServiceChainReceiptResponse(receiptsForStorage)
-}
-
 // getPeersWithoutBlock returns a list of peers without given block.
 // If current node is CN, it returns all peers without block.
 // If not, it returns all peers without block except CNs.
@@ -1229,9 +1094,6 @@ func (pm *ProtocolManager) sendBlockHashToPeers(block *types.Block) {
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 	if propagate {
-		// If it is connected to a parent chain, broadcast service chain block.
-		pm.scpm.BroadcastServiceChainTxAndReceiptRequest(block)
-
 		// If propagation is requested, send to a subset of the peer
 		if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent == nil {
 			logger.Error("Propagating dangling block", "number", block.Number(), "hash", block.Hash())
@@ -1490,23 +1352,4 @@ func (pm *ProtocolManager) GetPeers() []common.Address {
 		addrs = append(addrs, addr)
 	}
 	return addrs
-}
-
-// GetChainAccountAddr returns an address of an account used for service chain in string format.
-// If given as a parameter, it will use it. If not given, it will use the address of the public key
-// derived from chainKey.
-func (pm *ProtocolManager) GetChainAccountAddr() string {
-	return pm.scpm.GetChainAccountAddr().String()
-}
-
-// GetAnchoringPeriod returns the period (in child chain blocks) of sending an anchoring transaction
-// from child chain to parent chain.
-func (pm *ProtocolManager) GetAnchoringPeriod() uint64 {
-	return pm.scpm.GetAnchoringPeriod()
-}
-
-// GetSentChainTxsLimit returns the maximum number of stored  chain transactions
-// in child chain node, which is for resending.
-func (pm *ProtocolManager) GetSentChainTxsLimit() uint64 {
-	return pm.scpm.GetSentChainTxsLimit()
 }

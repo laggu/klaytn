@@ -52,23 +52,18 @@ const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a prot
 // TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.
 const (
 	// Protocol messages belonging to klay/62
-	StatusMsg                              = 0x00
-	NewBlockHashesMsg                      = 0x01
-	BlockHeaderFetchRequestMsg             = 0x02
-	BlockHeaderFetchResponseMsg            = 0x03
-	BlockBodiesFetchRequestMsg             = 0x04
-	BlockBodiesFetchResponseMsg            = 0x05
-	TxMsg                                  = 0x06
-	BlockHeadersRequestMsg                 = 0x07
-	BlockHeadersMsg                        = 0x08
-	BlockBodiesRequestMsg                  = 0x09
-	BlockBodiesMsg                         = 0x0a
-	NewBlockMsg                            = 0x0b
-	ServiceChainTxsMsg                     = 0x0c
-	ServiceChainReceiptResponseMsg         = 0x0d
-	ServiceChainReceiptRequestMsg          = 0x0e
-	ServiceChainParentChainInfoResponseMsg = 0x0f
-	ServiceChainParentChainInfoRequestMsg  = 0x10
+	StatusMsg                   = 0x00
+	NewBlockHashesMsg           = 0x01
+	BlockHeaderFetchRequestMsg  = 0x02
+	BlockHeaderFetchResponseMsg = 0x03
+	BlockBodiesFetchRequestMsg  = 0x04
+	BlockBodiesFetchResponseMsg = 0x05
+	TxMsg                       = 0x06
+	BlockHeadersRequestMsg      = 0x07
+	BlockHeadersMsg             = 0x08
+	BlockBodiesRequestMsg       = 0x09
+	BlockBodiesMsg              = 0x0a
+	NewBlockMsg                 = 0x0b
 
 	// Protocol messages belonging to klay/63
 	NodeDataRequestMsg = 0x11
@@ -85,10 +80,11 @@ const (
 	ErrInvalidMsgCode
 	ErrProtocolVersionMismatch
 	ErrNetworkIdMismatch
+	ErrGenesisBlockMismatch
+	ErrChainIDMismatch
 	ErrNoStatusMsg
 	ErrExtraStatusMsg
 	ErrSuspendedPeer
-	ErrInvalidPeerHierarchy
 	ErrUnexpectedTxType
 	ErrFailedToGetStateDB
 )
@@ -104,10 +100,11 @@ var errorToString = map[int]string{
 	ErrInvalidMsgCode:          "Invalid message code",
 	ErrProtocolVersionMismatch: "Protocol version mismatch",
 	ErrNetworkIdMismatch:       "NetworkId mismatch",
+	ErrGenesisBlockMismatch:    "Genesis block mismatch",
+	ErrChainIDMismatch:         "ChainID mismatch",
 	ErrNoStatusMsg:             "No status message",
 	ErrExtraStatusMsg:          "Extra status message",
 	ErrSuspendedPeer:           "Suspended peer",
-	ErrInvalidPeerHierarchy:    "InvalidPeerHierarchy",
 	ErrUnexpectedTxType:        "Unexpected tx type",
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 }
@@ -132,8 +129,7 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
-	ChainID         *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
-	OnChildChain    bool     // OnChildChain presents if the peer is on child chain or not(same chain or parent chain).
+	ChainID         *big.Int // ChainID to sign a transaction.
 }
 
 // newBlockHashesData is the network packet for the block announcements.

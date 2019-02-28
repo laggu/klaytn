@@ -168,9 +168,8 @@ type Peer interface {
 	FetchBlockBodies(hashes []common.Hash) error
 
 	// Handshake executes the klaytn protocol handshake, negotiating version number,
-	// network IDs, difficulties, head, genesis blocks, and onChildChain(if the node is on child chain for the peer)
-	// and returning if the peer on the same chain or not and error.
-	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash, onChildChain bool) (bool, error)
+	// network IDs, difficulties, head, and genesis blocks and returning error.
+	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error
 
 	// ConnType returns the conntype of the peer.
 	ConnType() p2p.ConnType
@@ -212,22 +211,6 @@ type Peer interface {
 	// UpdateRWImplementationVersion updates the version of the implementation of RW.
 	UpdateRWImplementationVersion()
 
-	// SendServiceChainTxs sends child chain tx data to from child chain to parent chain.
-	SendServiceChainTxs(txs types.Transactions) error
-
-	// SendServiceChainInfoRequest sends a parentChainInfo request from child chain to parent chain.
-	SendServiceChainInfoRequest(addr *common.Address) error
-
-	// SendServiceChainInfoResponse sends a parentChainInfo from parent chain to child chain.
-	// parentChainInfo includes nonce of an account and gasPrice in the parent chain.
-	SendServiceChainInfoResponse(pcInfo *parentChainInfo) error
-
-	// SendServiceChainReceiptRequest sends a receipt request from child chain to parent chain.
-	SendServiceChainReceiptRequest(txHashes []common.Hash) error
-
-	// SendServiceChainReceiptResponse sends a receipt as a response to request from child chain.
-	SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error
-
 	// Peer encapsulates the methods required to synchronise with a remote full peer.
 	downloader.Peer
 }
@@ -255,7 +238,7 @@ type basePeer struct {
 	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
 	term        chan struct{}             // Termination channel to stop the broadcaster
 
-	chainID *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
+	chainID *big.Int // ChainID to sign a transaction
 }
 
 // newPeer returns new Peer interface.
@@ -586,32 +569,11 @@ func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, ReceiptsRequestMsg, hashes)
 }
 
-func (p *basePeer) SendServiceChainTxs(txs types.Transactions) error {
-	return p2p.Send(p.rw, ServiceChainTxsMsg, txs)
-}
-
-func (p *basePeer) SendServiceChainInfoRequest(addr *common.Address) error {
-	return p2p.Send(p.rw, ServiceChainParentChainInfoRequestMsg, addr)
-}
-
-func (p *basePeer) SendServiceChainInfoResponse(pcInfo *parentChainInfo) error {
-	return p2p.Send(p.rw, ServiceChainParentChainInfoResponseMsg, pcInfo)
-}
-
-func (p *basePeer) SendServiceChainReceiptRequest(txHashes []common.Hash) error {
-	return p2p.Send(p.rw, ServiceChainReceiptRequestMsg, txHashes)
-}
-
-func (p *basePeer) SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error {
-	return p2p.Send(p.rw, ServiceChainReceiptResponseMsg, receipts)
-}
-
 // Handshake executes the klaytn protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash, onChildChain bool) (bool, error) {
+func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
-	onTheSameChain := true
 	var status statusData // safe to read after two values have been received from errc
 
 	go func() {
@@ -622,18 +584,10 @@ func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.H
 			CurrentBlock:    head,
 			GenesisBlock:    genesis,
 			ChainID:         chainID,
-			OnChildChain:    onChildChain,
 		})
 	}()
 	go func() {
-		e := p.readStatus(&status)
-		if e != nil {
-			errc <- e
-			return
-		}
-
-		onTheSameChain, e = p.isOnTheSameChain(&status, network, genesis, chainID)
-		errc <- e
+		errc <- p.readStatus(network, &status, genesis, chainID)
 	}()
 	timeout := time.NewTimer(handshakeTimeout)
 	defer timeout.Stop()
@@ -641,23 +595,17 @@ func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.H
 		select {
 		case err := <-errc:
 			if err != nil {
-				return onTheSameChain, err
+				return err
 			}
 		case <-timeout.C:
-			return onTheSameChain, p2p.DiscReadTimeout
+			return p2p.DiscReadTimeout
 		}
 	}
 	p.td, p.head, p.chainID = status.TD, status.CurrentBlock, status.ChainID
-	return onTheSameChain, nil
+	return nil
 }
 
-// isSameChainPeer checks if the peer is on the same chain.
-// Being on same chain means that the peer has same genesis hash and chain ID with the node.
-func (p *basePeer) isSameChainPeer(status *statusData, genesis common.Hash, chainID *big.Int) bool {
-	return status.GenesisBlock == genesis && status.ChainID.Cmp(chainID) == 0
-}
-
-func (p *basePeer) readStatus(status *statusData) error {
+func (p *basePeer) readStatus(network uint64, status *statusData, genesis common.Hash, chainID *big.Int) error {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -672,40 +620,19 @@ func (p *basePeer) readStatus(status *statusData) error {
 	if err := msg.Decode(&status); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	return nil
-}
-
-// isOnTheSameChain checks if the peer is on the same chain or not and validates peer's status.
-func (p *basePeer) isOnTheSameChain(status *statusData, network uint64, genesis common.Hash, chainID *big.Int) (bool, error) {
-	onTheSameChain := true
-	if p.isSameChainPeer(status, genesis, chainID) {
-		// Handle same chain peer case
-
-		// On the same chain, but have different network id
-		if status.NetworkId != network {
-			return onTheSameChain, errResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
-		}
-
-		// On the same chain, but it's invalid hierarchical connection.
-		if p.OnParentChain() || status.OnChildChain {
-			return onTheSameChain, errResp(ErrInvalidPeerHierarchy, "(PeerIsOnParentChain:%v) || (OnChildChain:%v)", p.OnParentChain(), status.OnChildChain)
-		}
-	} else {
-		// Handle service chain peer case
-		onTheSameChain = false
-
-		// Checking invalid hierarchy
-		if p.OnParentChain() == status.OnChildChain {
-			return onTheSameChain, errResp(ErrInvalidPeerHierarchy, "(PeerIsOnParentChain:%v) == (OnChildChain:%v)", p.OnParentChain(), status.OnChildChain)
-		}
+	if status.GenesisBlock != genesis {
+		return errResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
 	}
-
+	if status.NetworkId != network {
+		return errResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
+	}
+	if status.ChainID.Cmp(chainID) != 0 {
+		return errResp(ErrChainIDMismatch, "%v (!= %v)", status.ChainID.String(), chainID.String())
+	}
 	if int(status.ProtocolVersion) != p.version {
-		return onTheSameChain, errResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
+		return errResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
 	}
-
-	logger.Debug("handshaking with candidate chain peer passed", "peerChainID", status.ChainID, "isOnParentChain", p.OnParentChain())
-	return onTheSameChain, nil
+	return nil
 }
 
 // String implements fmt.Stringer.
@@ -1018,8 +945,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 		td      = pm.blockchain.GetTd(hash, number)
 	)
 
-	peerIsOnParentChain := p.GetP2PPeer().OnParentChain() // If the peer is on parent chain, this node is on child chain for the peer.
-	onTheSameChain, err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash(), peerIsOnParentChain)
+	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash())
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("klaytn peer handshake failed", "err", err)
 		return err
@@ -1027,29 +953,23 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 
 	p.UpdateRWImplementationVersion()
 
-	if onTheSameChain {
-		// Register the peer locally
-		if err := pm.peers.Register(p); err != nil {
-			// if starting node with unlock account, can't register peer until finish unlock
-			p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
-			return err
-		}
-		defer pm.removePeer(p.GetID())
-
-		// Register the peer in the downloader. If the downloader considers it banned, we disconnect
-		if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
-			return err
-		}
-		// Propagate existing transactions. new transactions appearing
-		// after this will be sent via broadcasts.
-		pm.syncTransactions(p)
-	} else {
-		//TODO-Klaytn-Servicechain service chain peer register code will be added.
-		p.GetP2PPeer().Log().Error("Different chain peer connection is not supported yet.", "OnTheSameChain", onTheSameChain, "OnParentChain", peerIsOnParentChain)
-		return errors.New("Different chain peer connection is not supported yet.")
+	// Register the peer locally
+	if err := pm.peers.Register(p); err != nil {
+		// if starting node with unlock account, can't register peer until finish unlock
+		p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
+		return err
 	}
+	defer pm.removePeer(p.GetID())
 
-	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID(), "onTheSameChain", onTheSameChain, "onParentChain", peerIsOnParentChain)
+	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
+	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
+		return err
+	}
+	// Propagate existing transactions. new transactions appearing
+	// after this will be sent via broadcasts.
+	pm.syncTransactions(p)
+
+	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 
 	pubKey, err := p.GetP2PPeerID().Pubkey()
 	if err != nil {

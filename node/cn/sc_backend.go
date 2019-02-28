@@ -149,8 +149,7 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 	}
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 
-	scc := &ServiceChainConfig{config.ChainAccountAddr, ctx.ChainKey(), config.AnchoringPeriod, config.SentChainTxsLimit}
-	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), scc); err != nil {
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType()); err != nil {
 		return nil, err
 	}
 

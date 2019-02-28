@@ -269,18 +269,6 @@ func (b *CNAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.R
 	return b.cn.blockchain.GetReceiptFromParentChain(blockHash)
 }
 
-func (b *CNAPIBackend) GetChainAccountAddr() string {
-	return b.cn.protocolManager.GetChainAccountAddr()
-}
-
-func (b *CNAPIBackend) GetAnchoringPeriod() uint64 {
-	return b.cn.protocolManager.GetAnchoringPeriod()
-}
-
-func (b *CNAPIBackend) GetSentChainTxsLimit() uint64 {
-	return b.cn.protocolManager.GetSentChainTxsLimit()
-}
-
 func (b *CNAPIBackend) IsParallelDBWrite() bool {
 	return b.cn.BlockChain().IsParallelDBWrite()
 }

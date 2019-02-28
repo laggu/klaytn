@@ -253,34 +253,6 @@ func (b *ServiceChainAPIBackend) ServiceFilter(ctx context.Context, session *blo
 	}
 }
 
-func (b *ServiceChainAPIBackend) GetChildChainIndexingEnabled() bool {
-	return b.sc.blockchain.GetChildChainIndexingEnabled()
-}
-
-func (b *ServiceChainAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
-	return b.sc.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
-}
-
-func (b *ServiceChainAPIBackend) GetLatestAnchoredBlockNumber() uint64 {
-	return b.sc.blockchain.GetLatestAnchoredBlockNumber()
-}
-
-func (b *ServiceChainAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return b.sc.blockchain.GetReceiptFromParentChain(blockHash)
-}
-
-func (b *ServiceChainAPIBackend) GetChainAccountAddr() string {
-	return b.sc.protocolManager.GetChainAccountAddr()
-}
-
-func (b *ServiceChainAPIBackend) GetAnchoringPeriod() uint64 {
-	return b.sc.protocolManager.GetAnchoringPeriod()
-}
-
-func (b *ServiceChainAPIBackend) GetSentChainTxsLimit() uint64 {
-	return b.sc.protocolManager.GetSentChainTxsLimit()
-}
-
 func (b *ServiceChainAPIBackend) IsParallelDBWrite() bool {
 	return b.sc.BlockChain().IsParallelDBWrite()
 }
