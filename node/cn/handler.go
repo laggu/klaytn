@@ -701,10 +701,6 @@ func handleBlockHeadersMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&headers); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-
-	if len(headers) == 0 {
-		return nil
-	}
 	if err := pm.downloader.DeliverHeaders(p.GetID(), headers); err != nil {
 		logger.Debug("Failed to deliver headers", "err", err)
 	}
