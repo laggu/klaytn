@@ -248,3 +248,30 @@ func testParallelPutGet(db Database, t *testing.T) {
 	}
 	pending.Wait()
 }
+
+// TestDBEntryLengthCheck checks if dbDirs and dbConfigRatio are
+// specified for every DBEntryType.
+func TestDBEntryLengthCheck(t *testing.T) {
+	dbRatioSum := 0
+	for i := 0; i < int(databaseEntryTypeSize); i++ {
+		// indexSectionsDB is not a DB, it is a table.
+		// It does not create a DB.
+		if i == int(indexSectionsDB) {
+			continue
+		}
+
+		if dbDirs[i] == "" {
+			t.Fatalf("Database directory should be specified! index: %v", i)
+		}
+
+		if dbConfigRatio[i] == 0 {
+			t.Fatalf("Database configuration ratio should be specified! index: %v", i)
+		}
+
+		dbRatioSum += dbConfigRatio[i]
+	}
+
+	if dbRatioSum != 100 {
+		t.Fatalf("Sum of database configuration ratio should be 100! actual: %v", dbRatioSum)
+	}
+}

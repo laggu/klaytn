@@ -65,7 +65,7 @@ const (
 	CMDKlay
 
 	// 11~20
-	_
+
 	CMDUtils
 	Common
 	ConsensusGxhash
@@ -92,7 +92,7 @@ const (
 	NodeCN
 	NodeCNFilters
 	NodeCNTracers
-	_
+
 	Reward
 	ServiceChain
 	StorageDatabase
@@ -132,7 +132,7 @@ var moduleNames = [ModuleNameLen]string{
 	"cmd/klay",
 
 	// 11~20
-	"",
+
 	"cmd/utils",
 	"common",
 	"consensus/gxhash",
@@ -159,7 +159,7 @@ var moduleNames = [ModuleNameLen]string{
 	"node/cn",
 	"node/cn/filters",
 	"node/cn/tracers",
-	"",
+
 	"contracts/reward",
 	"servicechain",
 	"storage/database",

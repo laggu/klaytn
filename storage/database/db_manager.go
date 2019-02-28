@@ -189,7 +189,8 @@ var dbDirs = [databaseEntryTypeSize]string{
 	"statetrie",
 	"txlookup",
 	"misc",
-	"indexsections",
+	// indexSectionsDB is not a DB, it is a table.
+	"",
 	"bridgeservice",
 	"cliquesnapshot",
 }
