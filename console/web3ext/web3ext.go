@@ -21,17 +21,16 @@
 package web3ext
 
 var Modules = map[string]string{
-	"admin":        Admin_JS,
-	"debug":        Debug_JS,
-	"klay":         Klay_JS,
-	"miner":        Miner_JS,
-	"net":          Net_JS,
-	"personal":     Personal_JS,
-	"rpc":          RPC_JS,
-	"txpool":       TxPool_JS,
-	"istanbul":     Istanbul_JS,
-	"servicechain": ServiceChain_JS,
-	"bridge":       Bridge_JS,
+	"admin":    Admin_JS,
+	"debug":    Debug_JS,
+	"klay":     Klay_JS,
+	"miner":    Miner_JS,
+	"net":      Net_JS,
+	"personal": Personal_JS,
+	"rpc":      RPC_JS,
+	"txpool":   TxPool_JS,
+	"istanbul": Istanbul_JS,
+	"bridge":   Bridge_JS,
 }
 
 const Admin_JS = `
@@ -653,51 +652,6 @@ web3._extend({
 			getter: 'istanbul_candidates'
 		}),
 	]
-});
-`
-const ServiceChain_JS = `
-web3._extend({
-	property: 'servicechain',
-	methods:
-	[
-		new web3._extend.Method({
-			name: 'getChildChainIndexingEnabled',
-			call: 'servicechain_getChildChainIndexingEnabled'
-		}),
-		new web3._extend.Method({
-			name: 'convertChildChainBlockHashToParentChainTxHash',
-			call: 'servicechain_convertChildChainBlockHashToParentChainTxHash',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getLatestAnchoredBlockNumber',
-			call: 'servicechain_getLatestAnchoredBlockNumber',
-			params: 0
-		}),
-		new web3._extend.Method({
-			name: 'getReceiptFromParentChain',
-			call: 'servicechain_getReceiptFromParentChain',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getChainAccountAddr',
-			call: 'servicechain_getChainAccountAddr',
-		}),
-		new web3._extend.Method({
-			name: 'getAnchoringPeriod',
-			call: 'servicechain_getAnchoringPeriod',
-		}),
-		new web3._extend.Method({
-			name: 'getSentChainTxsLimit',
-			call: 'servicechain_getSentChainTxsLimit',
-		}),
-		new web3._extend.Method({
-			name: 'addPeerOnParentChain',
-			call: 'servicechain_addPeerOnParentChain',
-			params: 1
-		}),
-	],
-	properties: []
 });
 `
 const Bridge_JS = `
