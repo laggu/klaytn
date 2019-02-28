@@ -262,6 +262,32 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) IntrinsicGas() (u
 	return params.TxGas + gasPayload + params.TxGasFeeDelegatedWithRatio, nil
 }
 
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSignToBytes() []byte {
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype       TxType
+		AccountNonce uint64
+		Price        *big.Int
+		GasLimit     uint64
+		Recipient    common.Address
+		Amount       *big.Int
+		From         common.Address
+		Payload      []byte
+		FeeRatio     uint8
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.Payload,
+		t.FeeRatio,
+	})
+
+	return b
+}
+
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

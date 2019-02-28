@@ -226,6 +226,10 @@ type TxInternalData interface {
 	Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error)
 }
 
+type TxInternalDataSerializeForSignToByte interface {
+	SerializeForSignToBytes() []byte
+}
+
 // TxInternalDataFeePayer has functions related to fee delegated transactions.
 type TxInternalDataFeePayer interface {
 	GetFeePayer() common.Address

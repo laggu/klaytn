@@ -212,6 +212,30 @@ func (t *TxInternalDataValueTransferMemo) IntrinsicGas() (uint64, error) {
 	return params.TxGas + gasPayload, nil
 }
 
+func (t *TxInternalDataValueTransferMemo) SerializeForSignToBytes() []byte {
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype       TxType
+		AccountNonce uint64
+		Price        *big.Int
+		GasLimit     uint64
+		Recipient    common.Address
+		Amount       *big.Int
+		From         common.Address
+		Payload      []byte
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.Payload,
+	})
+
+	return b
+}
+
 func (t *TxInternalDataValueTransferMemo) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

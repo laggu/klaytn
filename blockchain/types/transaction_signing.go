@@ -382,6 +382,21 @@ func (s EIP155Signer) SignatureValues(sig []byte) (R, S, V *big.Int, err error) 
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
+	// If the data object implements SerializeForSignToByte(), use it.
+	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
+		return rlpHash(struct {
+			Byte    []byte
+			ChainId *big.Int
+			R       uint
+			S       uint
+		}{
+			ser.SerializeForSignToBytes(),
+			s.chainId,
+			uint(0),
+			uint(0),
+		})
+	}
+
 	infs := append(tx.data.SerializeForSign(),
 		s.chainId, uint(0), uint(0))
 	return rlpHash(infs)
@@ -394,6 +409,24 @@ func (s EIP155Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
 	if !ok {
 		return common.Hash{}, errNotFeePayer
 	}
+
+	// If the data object implements SerializeForSignToByte(), use it.
+	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
+		return rlpHash(struct {
+			Byte     []byte
+			FeePayer common.Address
+			ChainId  *big.Int
+			R        uint
+			S        uint
+		}{
+			ser.SerializeForSignToBytes(),
+			tf.GetFeePayer(),
+			s.chainId,
+			uint(0),
+			uint(0),
+		}), nil
+	}
+
 	infs := append(tx.data.SerializeForSign(),
 		tf.GetFeePayer(),
 		s.chainId, uint(0), uint(0))
@@ -479,6 +512,10 @@ func (fs FrontierSigner) SignatureValues(sig []byte) (r, s, v *big.Int, err erro
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
+	// If the data object implements SerializeForSignToByte(), use it.
+	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
+		return rlpHash(ser.SerializeForSignToBytes())
+	}
 	return rlpHash(tx.data.SerializeForSign())
 }
 
@@ -489,6 +526,18 @@ func (fs FrontierSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
 	if !ok {
 		return common.Hash{}, errNotFeePayer
 	}
+
+	// If the data object implements SerializeForSignToByte(), use it.
+	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
+		return rlpHash(struct {
+			Byte     []byte
+			FeePayer common.Address
+		}{
+			ser.SerializeForSignToBytes(),
+			tf.GetFeePayer(),
+		}), nil
+	}
+
 	infs := append(tx.data.SerializeForSign(), tf.GetFeePayer())
 	return rlpHash(infs), nil
 }

@@ -158,6 +158,30 @@ func (t *TxInternalDataChainDataAnchoring) String() string {
 		common.Bytes2Hex(dataAnchoredRLP))
 }
 
+func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype       TxType
+		AccountNonce uint64
+		Price        *big.Int
+		GasLimit     uint64
+		Recipient    common.Address
+		Amount       *big.Int
+		From         common.Address
+		AnchoredData []byte
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.AnchoredData,
+	})
+
+	return b
+}
+
 func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

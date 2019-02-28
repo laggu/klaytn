@@ -274,6 +274,34 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IntrinsicGas() 
 	return gas + gasPayload, nil
 }
 
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SerializeForSignToBytes() []byte {
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype        TxType
+		AccountNonce  uint64
+		Price         *big.Int
+		GasLimit      uint64
+		Recipient     common.Address
+		Amount        *big.Int
+		From          common.Address
+		Payload       []byte
+		HumanReadable bool
+		FeeRatio      uint8
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.Payload,
+		t.HumanReadable,
+		t.FeeRatio,
+	})
+
+	return b
+}
+
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

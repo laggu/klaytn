@@ -253,18 +253,50 @@ func (t *TxInternalDataAccountUpdate) IntrinsicGas() (uint64, error) {
 	return params.TxGasAccountUpdate + gasKey, nil
 }
 
-func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
+func (t *TxInternalDataAccountUpdate) SerializeForSignToBytes() []byte {
 	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
-	return []interface{}{
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype       TxType
+		AccountNonce uint64
+		Price        *big.Int
+		GasLimit     uint64
+		From         common.Address
+		Key          []byte
+	}{
 		t.Type(),
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
 		t.From,
 		keyEnc,
-	}
+	})
+
+	return b
+}
+
+func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype       TxType
+		AccountNonce uint64
+		Price        *big.Int
+		GasLimit     uint64
+		From         common.Address
+		Key          []byte
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.From,
+		keyEnc,
+	})
+
+	return []interface{}{b}
 }
 
 func (t *TxInternalDataAccountUpdate) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {

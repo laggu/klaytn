@@ -224,6 +224,32 @@ func (t *TxInternalDataSmartContractDeploy) IntrinsicGas() (uint64, error) {
 	return gas + gasPayload, nil
 }
 
+func (t *TxInternalDataSmartContractDeploy) SerializeForSignToBytes() []byte {
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype        TxType
+		AccountNonce  uint64
+		Price         *big.Int
+		GasLimit      uint64
+		Recipient     common.Address
+		Amount        *big.Int
+		From          common.Address
+		Payload       []byte
+		HumanReadable bool
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.Payload,
+		t.HumanReadable,
+	})
+
+	return b
+}
+
 func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

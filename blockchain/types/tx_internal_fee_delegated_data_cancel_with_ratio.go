@@ -217,6 +217,26 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) IntrinsicGas() (uint64, erro
 	return params.TxGasCancel + params.TxGasFeeDelegatedWithRatio, nil
 }
 
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSignToBytes() []byte {
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype       TxType
+		AccountNonce uint64
+		Price        *big.Int
+		GasLimit     uint64
+		From         common.Address
+		FeeRatio     uint8
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.From,
+		t.FeeRatio,
+	})
+
+	return b
+}
+
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

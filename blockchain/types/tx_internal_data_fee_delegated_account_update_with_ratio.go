@@ -313,6 +313,31 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IntrinsicGas() (uint6
 	return params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio, nil
 }
 
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSignToBytes() []byte {
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	b, _ := rlp.EncodeToBytes(struct {
+		Txtype       TxType
+		AccountNonce uint64
+		Price        *big.Int
+		GasLimit     uint64
+		From         common.Address
+		Key          []byte
+		FeeRatio     uint8
+	}{
+		t.Type(),
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.From,
+		keyEnc,
+		t.FeeRatio,
+	})
+
+	return b
+}
+
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSign() []interface{} {
 	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
