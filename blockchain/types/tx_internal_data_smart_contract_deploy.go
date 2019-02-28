@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -268,4 +269,17 @@ func (t *TxInternalDataSmartContractDeploy) Execute(sender ContractRef, vm VM, s
 	ret, _, usedGas, vmerr = vm.CreateWithAddress(sender, t.Payload, gas, value, t.Recipient, t.HumanReadable)
 
 	return
+}
+
+func (t *TxInternalDataSmartContractDeploy) MakeRPCOutput() map[string]interface{} {
+	return map[string]interface{}{
+		"type":          t.Type().String(),
+		"gas":           hexutil.Uint64(t.GasLimit),
+		"gasPrice":      (*hexutil.Big)(t.Price),
+		"nonce":         hexutil.Uint64(t.AccountNonce),
+		"to":            t.Recipient,
+		"value":         (*hexutil.Big)(t.Amount),
+		"input":         hexutil.Bytes(t.Payload),
+		"humanReadable": t.HumanReadable,
+	}
 }

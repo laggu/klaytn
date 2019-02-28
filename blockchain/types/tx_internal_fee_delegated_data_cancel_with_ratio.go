@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -251,4 +252,15 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSign() []interfa
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
 	stateDB.IncNonce(sender.Address())
 	return nil, gas, nil, nil
+}
+
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) MakeRPCOutput() map[string]interface{} {
+	return map[string]interface{}{
+		"type":     t.Type().String(),
+		"gas":      hexutil.Uint64(t.GasLimit),
+		"gasPrice": (*hexutil.Big)(t.Price),
+		"nonce":    hexutil.Uint64(t.AccountNonce),
+		"feePayer": t.FeePayer,
+		"feeRatio": hexutil.Uint(t.FeeRatio),
+	}
 }

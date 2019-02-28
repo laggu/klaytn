@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -375,4 +376,20 @@ func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, state
 	ret, usedGas, vmerr = vm.Call(sender, to, []byte{}, gas, value)
 
 	return
+}
+
+func (t *TxInternalDataAccountCreation) MakeRPCOutput() map[string]interface{} {
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	return map[string]interface{}{
+		"type":          t.Type().String(),
+		"gas":           hexutil.Uint64(t.GasLimit),
+		"gasPrice":      (*hexutil.Big)(t.Price),
+		"nonce":         hexutil.Uint64(t.AccountNonce),
+		"to":            t.Recipient,
+		"value":         (*hexutil.Big)(t.Amount),
+		"humanReadable": t.HumanReadable,
+		"key":           hexutil.Bytes(keyEnc),
+	}
 }

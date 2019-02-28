@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -303,4 +304,17 @@ func (t *TxInternalDataAccountUpdate) Execute(sender ContractRef, vm VM, stateDB
 	stateDB.IncNonce(sender.Address())
 	err = stateDB.UpdateKey(sender.Address(), t.Key)
 	return nil, gas, err, nil
+}
+
+func (t *TxInternalDataAccountUpdate) MakeRPCOutput() map[string]interface{} {
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	return map[string]interface{}{
+		"type":     t.Type().String(),
+		"gas":      hexutil.Uint64(t.GasLimit),
+		"gasPrice": (*hexutil.Big)(t.Price),
+		"nonce":    hexutil.Uint64(t.AccountNonce),
+		"key":      hexutil.Bytes(keyEnc),
+	}
 }
