@@ -116,15 +116,10 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 	if err := msg.Decode(&addr); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	stateDB, err := mbh.mainbridge.blockchain.State()
-	if err != nil {
-		// TODO-Klaytn-ServiceChain This error and inefficient balance error should be transferred.
-		return errResp(ErrFailedToGetStateDB, "failed to get stateDB, err: %v", err)
-	} else {
-		pcInfo := parentChainInfo{stateDB.GetNonce(addr), mbh.mainbridge.blockchain.Config().UnitPrice}
-		p.SendServiceChainInfoResponse(&pcInfo)
-		scLogger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
-	}
+	nonce := mbh.mainbridge.txPool.State().GetNonce(addr)
+	pcInfo := parentChainInfo{nonce, mbh.mainbridge.blockchain.Config().UnitPrice}
+	p.SendServiceChainInfoResponse(&pcInfo)
+	scLogger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
 	return nil
 }
 
