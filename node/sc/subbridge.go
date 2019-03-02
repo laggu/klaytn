@@ -230,9 +230,9 @@ func (s *SubBridge) Protocols() []p2p.Protocol {
 
 func (s *SubBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
-		Name:     "servicechain",
-		Versions: []uint{1},
-		Lengths:  []uint64{20},
+		Name:     SCProtocolName,
+		Versions: SCProtocolVersion,
+		Lengths:  SCProtocolLength,
 	}
 }
 
@@ -346,14 +346,13 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 
 	// Execute the handshake
 	var (
-		genesis = pm.blockchain.Genesis()
-		head    = pm.blockchain.CurrentHeader()
-		hash    = head.Hash()
-		number  = head.Number.Uint64()
-		td      = pm.blockchain.GetTd(hash, number)
+		head   = pm.blockchain.CurrentHeader()
+		hash   = head.Hash()
+		number = head.Number.Uint64()
+		td     = pm.blockchain.GetTd(hash, number)
 	)
 
-	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash())
+	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash)
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("klaytn peer handshake failed", "err", err)
 		fmt.Println(err)

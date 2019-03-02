@@ -29,26 +29,19 @@ const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a prot
 
 const (
 	// Protocol messages belonging to servicechain/1
-	StatusMsg              = 0x00
-	NewBlockHashesMsg      = 0x01
-	TxMsg                  = 0x02
-	BlockHeadersRequestMsg = 0x03
-	BlockHeadersMsg        = 0x04
-	BlockBodiesRequestMsg  = 0x05
-	BlockBodiesMsg         = 0x06
-	NewBlockMsg            = 0x07
+	StatusMsg = 0x00
 
-	ServiceChainTxsMsg                     = 0x08
-	ServiceChainReceiptResponseMsg         = 0x09
-	ServiceChainReceiptRequestMsg          = 0x0a
-	ServiceChainParentChainInfoResponseMsg = 0x0b
-	ServiceChainParentChainInfoRequestMsg  = 0x0c
+	ServiceChainTxsMsg                     = 0x01
+	ServiceChainReceiptResponseMsg         = 0x02
+	ServiceChainReceiptRequestMsg          = 0x03
+	ServiceChainParentChainInfoResponseMsg = 0x04
+	ServiceChainParentChainInfoRequestMsg  = 0x05
+)
 
-	// Protocol messages belonging to klay/63
-	NodeDataRequestMsg = 0x0d
-	NodeDataMsg        = 0x0e
-	ReceiptsRequestMsg = 0x0f
-	ReceiptsMsg        = 0x10
+var (
+	SCProtocolName    = "servicechain"
+	SCProtocolVersion = []uint{1}
+	SCProtocolLength  = []uint64{6}
 )
 
 // Protocol defines the protocol of the consensus
@@ -69,12 +62,8 @@ const (
 	ErrInvalidMsgCode
 	ErrProtocolVersionMismatch
 	ErrNetworkIdMismatch
-	ErrGenesisBlockMismatch
 	ErrNoStatusMsg
-	ErrExtraStatusMsg
-	ErrSuspendedPeer
 	ErrUnexpectedTxType
-	ErrFailedToGetStateDB
 )
 
 func (e errCode) String() string {
@@ -88,12 +77,8 @@ var errorToString = map[int]string{
 	ErrInvalidMsgCode:          "Invalid message code",
 	ErrProtocolVersionMismatch: "Protocol version mismatch",
 	ErrNetworkIdMismatch:       "NetworkId mismatch",
-	ErrGenesisBlockMismatch:    "Genesis block mismatch",
 	ErrNoStatusMsg:             "No status message",
-	ErrExtraStatusMsg:          "Extra status message",
-	ErrSuspendedPeer:           "Suspended peer",
 	ErrUnexpectedTxType:        "Unexpected tx type",
-	ErrFailedToGetStateDB:      "Failed to get stateDB",
 }
 
 // statusData is the network packet for the status message.
@@ -102,7 +87,5 @@ type statusData struct {
 	NetworkId       uint64
 	TD              *big.Int
 	CurrentBlock    common.Hash
-	GenesisBlock    common.Hash
 	ChainID         *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
-	OnChildChain    bool     // OnChildChain presents if the peer is on child chain or not(same chain or parent chain).
 }

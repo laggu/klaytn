@@ -27,7 +27,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
-	"github.com/ground-x/klaytn/ser/rlp"
 	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync"
@@ -41,23 +40,7 @@ var (
 )
 
 const (
-	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-
-	// maxQueuedTxs is the maximum number of transaction lists to queue up before
-	// dropping broadcasts. This is a sensitive number as a transaction list might
-	// contain a single transaction, or thousands.
-	maxQueuedTxs = 128
-
-	// maxQueuedProps is the maximum number of block propagations to queue up before
-	// dropping broadcasts. There's not much point in queueing stale blocks, so a few
-	// that might cover uncles should be enough.
-	maxQueuedProps = 4
-
-	// maxQueuedAnns is the maximum number of block announcements to queue up before
-	// dropping broadcasts. Similarly to block propagations, there's no point to queue
-	// above some healthy uncle limit, so use that.
-	maxQueuedAnns = 4
+	maxKnownTxs = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 
 	handshakeTimeout = 5 * time.Second
 )
@@ -67,12 +50,6 @@ const (
 type BridgePeerInfo struct {
 	Version int    `json:"version"` // Klaytn Bridge protocol version negotiated
 	Head    string `json:"head"`    // SHA3 hash of the peer's best owned block
-}
-
-// propEvent is a block propagation, waiting for its turn in the broadcast queue.
-type propEvent struct {
-	block *types.Block
-	td    *big.Int
 }
 
 type PeerSetManager interface {
@@ -96,18 +73,10 @@ type BridgePeer interface {
 	// data should have been encoded as an RLP list.
 	Send(msgcode uint64, data interface{}) error
 
-	// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
-	// hashes requested.
-	SendNodeData(data [][]byte) error
-
-	// SendReceiptsRLP sends a batch of transaction receipts, corresponding to the
-	// ones requested from an already RLP encoded format.
-	SendReceiptsRLP(receipts []rlp.RawValue) error
-
 	// Handshake executes the klaytn protocol handshake, negotiating version number,
 	// network IDs, difficulties, head, genesis blocks, and onChildChain(if the node is on child chain for the peer)
 	// and returning if the peer on the same chain or not and error.
-	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error
+	Handshake(network uint64, chainID, td *big.Int, head common.Hash) error
 
 	// ConnType returns the conntype of the peer.
 	ConnType() p2p.ConnType
@@ -129,9 +98,6 @@ type BridgePeer interface {
 
 	// GetVersion returns the version of the peer.
 	GetVersion() int
-
-	// GetKnownBlocks returns the knownBlocks of the peer.
-	GetKnownBlocks() *set.Set
 
 	// GetKnownTxs returns the knownBlocks of the peer.
 	GetKnownTxs() *set.Set
@@ -172,19 +138,14 @@ type baseBridgePeer struct {
 	*p2p.Peer
 	rw p2p.MsgReadWriter
 
-	version  int         // Protocol version negotiated
-	forkDrop *time.Timer // Timed connection dropper if forks aren't validated in time
+	version int // Protocol version negotiated
 
 	head common.Hash
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxs    *set.Set                  // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set                  // Set of block hashes known to be known by this peer
-	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
-	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
-	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
-	term        chan struct{}             // Termination channel to stop the broadcaster
+	knownTxs *set.Set      // Set of transaction hashes known to be known by this peer
+	term     chan struct{} // Termination channel to stop the broadcaster
 
 	chainID *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
 }
@@ -195,54 +156,13 @@ func newBridgePeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 
 	return &singleChannelPeer{
 		baseBridgePeer: &baseBridgePeer{
-			Peer:        p,
-			rw:          rw,
-			version:     version,
-			id:          fmt.Sprintf("%x", id[:8]),
-			knownTxs:    set.New(),
-			knownBlocks: set.New(),
-			queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
-			queuedProps: make(chan *propEvent, maxQueuedProps),
-			queuedAnns:  make(chan *types.Block, maxQueuedAnns),
-			term:        make(chan struct{}),
+			Peer:     p,
+			rw:       rw,
+			version:  version,
+			id:       fmt.Sprintf("%x", id[:8]),
+			knownTxs: set.New(),
+			term:     make(chan struct{}),
 		},
-	}
-}
-
-// Broadcast is a write loop that multiplexes block propagations, announcements
-// and transaction broadcasts into the remote peer. The goal is to have an async
-// writer that does not lock up node internals.
-func (p *baseBridgePeer) Broadcast() {
-	for {
-		select {
-		case txs := <-p.queuedTxs:
-			if err := p.SendTransactions(txs); err != nil {
-				logger.Error("fail to SendTransactions", "err", err)
-				continue
-				//return
-			}
-			p.Log().Trace("Broadcast transactions", "count", len(txs))
-
-		case prop := <-p.queuedProps:
-			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
-				logger.Error("fail to SendNewBlock", "err", err)
-				continue
-				//return
-			}
-			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
-
-		//case block := <-p.queuedAnns:
-		//	if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
-		//		logger.Error("fail to SendNewBlockHashes", "err", err)
-		//		continue
-		//		//return
-		//	}
-		//	p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
-
-		case <-p.term:
-			p.Log().Debug("Peer broadcast loop end")
-			return
-		}
 	}
 }
 
@@ -280,18 +200,6 @@ func (p *baseBridgePeer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
-// AddToKnownBlocks adds a block to knownBlocks for the peer, ensuring that the block will
-// never be propagated to this particular peer.
-func (p *baseBridgePeer) AddToKnownBlocks(hash common.Hash) {
-	if !p.knownBlocks.Has(hash) {
-		// If we reached the memory allowance, drop a previously known block hash
-		for p.knownBlocks.Size() >= maxKnownBlocks {
-			p.knownBlocks.Pop()
-		}
-		p.knownBlocks.Add(hash)
-	}
-}
-
 // AddToKnownTxs adds a transaction to knownTxs for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (p *baseBridgePeer) AddToKnownTxs(hash common.Hash) {
@@ -308,103 +216,6 @@ func (p *baseBridgePeer) AddToKnownTxs(hash common.Hash) {
 // data should have been encoded as an RLP list.
 func (p *baseBridgePeer) Send(msgcode uint64, data interface{}) error {
 	return p2p.Send(p.rw, msgcode, data)
-}
-
-// SendTransactions sends transactions to the peer and includes the hashes
-// in its transaction hash set for future reference.
-func (p *baseBridgePeer) SendTransactions(txs types.Transactions) error {
-	for _, tx := range txs {
-		p.AddToKnownTxs(tx.Hash())
-	}
-	return p2p.Send(p.rw, TxMsg, txs)
-}
-
-// ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
-func (p *baseBridgePeer) ReSendTransactions(txs types.Transactions) error {
-	return p2p.Send(p.rw, TxMsg, txs)
-}
-
-func (p *baseBridgePeer) AsyncSendTransactions(txs []*types.Transaction) {
-	select {
-	case p.queuedTxs <- txs:
-		for _, tx := range txs {
-			p.AddToKnownTxs(tx.Hash())
-		}
-	default:
-		p.Log().Debug("Dropping transaction propagation", "count", len(txs))
-	}
-}
-
-// AsyncSendNewBlockHash queues the availability of a block for propagation to a
-// remote peer. If the peer's broadcast queue is full, the event is silently
-// dropped.
-func (p *baseBridgePeer) AsyncSendNewBlockHash(block *types.Block) {
-	select {
-	case p.queuedAnns <- block:
-		p.knownBlocks.Add(block.Hash())
-	default:
-		p.Log().Debug("Dropping block announcement", "number", block.NumberU64(), "hash", block.Hash())
-	}
-}
-
-// SendNewBlock propagates an entire block to a remote peer.
-func (p *baseBridgePeer) SendNewBlock(block *types.Block, td *big.Int) error {
-	p.knownBlocks.Add(block.Hash())
-	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
-}
-
-// AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
-// the peer's broadcast queue is full, the event is silently dropped.
-func (p *baseBridgePeer) AsyncSendNewBlock(block *types.Block, td *big.Int) {
-	select {
-	case p.queuedProps <- &propEvent{block: block, td: td}:
-		p.knownBlocks.Add(block.Hash())
-	default:
-		p.Log().Debug("Dropping block propagation", "number", block.NumberU64(), "hash", block.Hash())
-	}
-}
-
-// SendBlockHeaders sends a batch of block headers to the remote peer.
-func (p *baseBridgePeer) SendBlockHeaders(headers []*types.Header) error {
-	return p2p.Send(p.rw, BlockHeadersMsg, headers)
-}
-
-// SendBlockBodiesRLP sends a batch of block contents to the remote peer from
-// an already RLP encoded format.
-func (p *baseBridgePeer) SendBlockBodiesRLP(bodies []rlp.RawValue) error {
-	return p2p.Send(p.rw, BlockBodiesMsg, bodies)
-}
-
-// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
-// hashes requested.
-func (p *baseBridgePeer) SendNodeData(data [][]byte) error {
-	return p2p.Send(p.rw, NodeDataMsg, data)
-}
-
-// SendReceiptsRLP sends a batch of transaction receipts, corresponding to the
-// ones requested from an already RLP encoded format.
-func (p *baseBridgePeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
-	return p2p.Send(p.rw, ReceiptsMsg, receipts)
-}
-
-// RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
-// specified.
-func (p *baseBridgePeer) RequestBodies(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
-	return p2p.Send(p.rw, BlockBodiesRequestMsg, hashes)
-}
-
-// RequestNodeData fetches a batch of arbitrary data from a node's known state
-// data, corresponding to the specified hashes.
-func (p *baseBridgePeer) RequestNodeData(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of state data", "count", len(hashes))
-	return p2p.Send(p.rw, NodeDataRequestMsg, hashes)
-}
-
-// RequestReceipts fetches a batch of transaction receipts from a remote node.
-func (p *baseBridgePeer) RequestReceipts(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
-	return p2p.Send(p.rw, ReceiptsRequestMsg, hashes)
 }
 
 func (p *baseBridgePeer) SendServiceChainTxs(txs types.Transactions) error {
@@ -429,7 +240,7 @@ func (p *baseBridgePeer) SendServiceChainReceiptResponse(receipts []*types.Recei
 
 // Handshake executes the klaytn protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error {
+func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 	var status statusData // safe to read after two values have been received from errc
@@ -440,12 +251,11 @@ func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head co
 			NetworkId:       network,
 			TD:              td,
 			CurrentBlock:    head,
-			GenesisBlock:    genesis,
 			ChainID:         chainID,
 		})
 	}()
 	go func() {
-		e := p.readStatus(network, &status, genesis)
+		e := p.readStatus(network, &status)
 		if e != nil {
 			errc <- e
 			return
@@ -468,7 +278,7 @@ func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head co
 	return nil
 }
 
-func (p *baseBridgePeer) readStatus(network uint64, status *statusData, genesis common.Hash) error {
+func (p *baseBridgePeer) readStatus(network uint64, status *statusData) error {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -483,9 +293,6 @@ func (p *baseBridgePeer) readStatus(network uint64, status *statusData, genesis 
 	if err := msg.Decode(&status); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	//if status.GenesisBlock != genesis {
-	//	return errResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
-	//}
 	if status.NetworkId != network {
 		return errResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
 	}
@@ -535,11 +342,6 @@ func (p *baseBridgePeer) SetAddr(addr common.Address) {
 // GetVersion returns the version of the peer.
 func (p *baseBridgePeer) GetVersion() int {
 	return p.version
-}
-
-// GetKnownBlocks returns the knownBlocks of the peer.
-func (p *baseBridgePeer) GetKnownBlocks() *set.Set {
-	return p.knownBlocks
 }
 
 // GetKnownTxs returns the knownBlocks of the peer.
@@ -644,21 +446,6 @@ func (ps *bridgePeerSet) Len() int {
 	defer ps.lock.RUnlock()
 
 	return len(ps.peers)
-}
-
-// PeersWithoutBlock retrieves a list of peers that do not have a given block in
-// their set of known hashes.
-func (ps *bridgePeerSet) PeersWithoutBlock(hash common.Hash) []BridgePeer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]BridgePeer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.GetKnownBlocks().Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
 }
 
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
