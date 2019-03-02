@@ -262,7 +262,7 @@ func (sbh *SubBridgeHandler) genUnsignedServiceChainTx(block *types.Block) (*typ
 		types.TxValueKeyFrom:         *sbh.GetChainAccountAddr(),
 		types.TxValueKeyTo:           *sbh.GetChainAccountAddr(),
 		types.TxValueKeyAmount:       new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit:     uint64(999999999998), // TODO-Klaytn-ServiceChain should define proper gas limit
+		types.TxValueKeyGasLimit:     uint64(100000), // TODO-Klaytn-ServiceChain should define proper gas limit
 		types.TxValueKeyGasPrice:     new(big.Int).SetUint64(sbh.remoteGasPrice),
 		types.TxValueKeyAnchoredData: encodedCCTxData,
 	}
