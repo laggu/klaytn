@@ -146,12 +146,13 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 
 	sc.APIBackend = &SubBridgeAPI{sc}
+
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc)
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
 		return nil, err
 	}
-	sc.eventhandler, err = NewChildChainEventHandler(sc)
+	sc.eventhandler, err = NewChildChainEventHandler(sc, sc.handler)
 	if err != nil {
 		return nil, err
 	}
@@ -162,10 +163,6 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 // implement PeerSetManager
 func (sb *SubBridge) BridgePeerSet() *bridgePeerSet {
 	return sb.peers
-}
-
-func (mb *SubBridge) GetEventHadler() ChainEventHandler {
-	return mb.eventhandler
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
@@ -415,7 +412,7 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 	}
 	defer pm.removePeer(p.GetID())
 
-	pm.eventhandler.RegisterNewPeer(p)
+	pm.handler.RegisterNewPeer(p)
 
 	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 

@@ -151,11 +151,11 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	sc.APIBackend = &MainBridgeAPI{sc}
 
 	var err error
-	sc.handler, err = NewMainBridgeHandler(sc)
+	sc.handler, err = NewMainBridgeHandler(sc.config, sc)
 	if err != nil {
 		return nil, err
 	}
-	sc.eventhandler, err = NewMainChainEventHandler(sc)
+	sc.eventhandler, err = NewMainChainEventHandler(sc, sc.handler)
 	if err != nil {
 		return nil, err
 	}
@@ -173,10 +173,6 @@ func CreateDB(ctx *node.ServiceContext, config *SCConfig, name string) database.
 // implement PeerSetManager
 func (mb *MainBridge) BridgePeerSet() *bridgePeerSet {
 	return mb.peers
-}
-
-func (mb *MainBridge) GetEventHadler() ChainEventHandler {
-	return mb.eventhandler
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
@@ -363,7 +359,7 @@ func (pm *MainBridge) handle(p BridgePeer) error {
 	}
 	defer pm.removePeer(p.GetID())
 
-	pm.eventhandler.RegisterNewPeer(p)
+	pm.handler.RegisterNewPeer(p)
 
 	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 

@@ -17,35 +17,23 @@
 package sc
 
 import (
-	"fmt"
+	"errors"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/ser/rlp"
 )
 
-type EventManager interface {
-	GetEventHadler() ChainEventHandler
-}
-
-type ChainEventHandler interface {
-	GetChildChainIndexingEnabled() bool
-	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
-	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
-	GetLatestAnchoredBlockNumber() uint64
-	WriteAnchoredBlockNumber(blockNum uint64)
-	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
-	GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt
-	writeChildChainTxHashFromBlock(block *types.Block)
-}
+var (
+	ErrGetServiceChainPHInMCEH = errors.New("ServiceChainPH isn't set in MainChainEventHandler")
+)
 
 type MainChainEventHandler struct {
 	mainbridge *MainBridge
 
-	protocolHandler ServiceChainProtocolHandler
+	handler *MainBridgeHandler
 }
 
-func NewMainChainEventHandler(bridge *MainBridge) (*MainChainEventHandler, error) {
-	return &MainChainEventHandler{bridge, bridge.handler.protocolHandler}, nil
+func NewMainChainEventHandler(bridge *MainBridge, handler *MainBridgeHandler) (*MainChainEventHandler, error) {
+	return &MainChainEventHandler{mainbridge: bridge, handler: handler}, nil
 }
 
 func (mce *MainChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
@@ -66,17 +54,6 @@ func (mce *MainChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error
 
 func (mce *MainChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	//@TODO-Klaytn event handle
-	return nil
-}
-
-func (mce *MainChainEventHandler) RegisterNewPeer(p BridgePeer) error {
-	if mce.protocolHandler.getParentChainID() == nil {
-		mce.protocolHandler.setParentChainID(p.GetChainID())
-		return nil
-	}
-	if mce.protocolHandler.getParentChainID().Cmp(p.GetChainID()) != 0 {
-		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", mce.protocolHandler.getParentChainID(), p.GetChainID())
-	}
 	return nil
 }
 
@@ -119,28 +96,4 @@ func (mce *MainChainEventHandler) WriteReceiptFromParentChain(blockHash common.H
 // with corresponding block hash. It assumes that a child chain has only one parent chain.
 func (mce *MainChainEventHandler) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
 	return mce.mainbridge.chainDB.ReadReceiptFromParentChain(blockHash)
-}
-
-// writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
-// ChainHashes.
-func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {
-	txs := block.Transactions()
-	signer := types.MakeSigner(mce.mainbridge.blockchain.Config(), block.Number())
-	for _, tx := range txs {
-		// TODO-Klaytn-ServiceChain GetChildChainAccountAddr will be removed once new transaction type is introduced.
-		if ccAddr := tx.GetChildChainAccountAddr(signer); ccAddr == nil {
-			continue
-		}
-		chainHashes := new(types.ChainHashes)
-		data, err := tx.AnchoredData()
-		if err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to get anchoring data from the tx", "txHash", tx.Hash())
-			continue
-		}
-		if err := rlp.DecodeBytes(data, chainHashes); err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
-			continue
-		}
-		mce.WriteChildChainTxHash(chainHashes.BlockHash, tx.Hash())
-	}
 }

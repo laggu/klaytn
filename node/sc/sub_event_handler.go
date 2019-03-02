@@ -17,24 +17,29 @@
 package sc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 )
 
+var (
+	ErrGetServiceChainPHInCCEH = errors.New("ServiceChainPH isn't set in ChildChainEventHandler")
+)
+
 type ChildChainEventHandler struct {
 	subbridge *SubBridge
 
-	protocolHandler ServiceChainProtocolHandler
+	handler *SubBridgeHandler
 }
 
-func NewChildChainEventHandler(bridge *SubBridge) (*ChildChainEventHandler, error) {
-	return &ChildChainEventHandler{bridge, bridge.handler.protocolHandler}, nil
+func NewChildChainEventHandler(bridge *SubBridge, handler *SubBridgeHandler) (*ChildChainEventHandler, error) {
+	return &ChildChainEventHandler{subbridge: bridge, handler: handler}, nil
 }
 
 func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
 	logger.Debug("bridgeNode block number", "number", block.Number())
-	cce.protocolHandler.BroadcastServiceChainTxAndReceiptRequest(block)
+	cce.handler.BroadcastServiceChainTxAndReceiptRequest(block)
 	return nil
 }
 
@@ -95,15 +100,4 @@ func (cce *ChildChainEventHandler) GetReceiptFromParentChain(blockHash common.Ha
 // writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
 // ChainHashes.
 func (cce *ChildChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {
-}
-
-func (cce *ChildChainEventHandler) RegisterNewPeer(p BridgePeer) error {
-	if cce.protocolHandler.getParentChainID() == nil {
-		cce.protocolHandler.setParentChainID(p.GetChainID())
-		return nil
-	}
-	if cce.protocolHandler.getParentChainID().Cmp(p.GetChainID()) != 0 {
-		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", cce.protocolHandler.getParentChainID(), p.GetChainID())
-	}
-	return nil
 }

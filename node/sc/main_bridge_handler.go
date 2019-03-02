@@ -17,24 +17,32 @@
 package sc
 
 import (
+	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"math/big"
 )
 
 type MainBridgeHandler struct {
 	mainbridge *MainBridge
-
-	protocolHandler ServiceChainProtocolHandler
+	// parentChainID is the first received chainID from parent chain peer.
+	// It will be reset to nil if there's no parent peer.
+	childChainID *big.Int
 }
 
-func NewMainBridgeHandler(main *MainBridge) (*MainBridgeHandler, error) {
+func NewMainBridgeHandler(scc *SCConfig, main *MainBridge) (*MainBridgeHandler, error) {
+	return &MainBridgeHandler{mainbridge: main}, nil
+}
 
-	handler := NewServiceChainProtocolHandler(main.config, main, main.eventhandler)
+func (mbh *MainBridgeHandler) setChildChainID(chainId *big.Int) {
+	mbh.childChainID = chainId
+}
 
-	return &MainBridgeHandler{mainbridge: main, protocolHandler: handler}, nil
+func (mbh *MainBridgeHandler) getChildChainID() *big.Int {
+	return mbh.childChainID
 }
 
 func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
@@ -44,32 +52,22 @@ func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
 	case StatusMsg:
 		return nil
 	case ServiceChainTxsMsg:
-		scLogger.Debug("received ServiceChainTxsMsg")
+		logger.Debug("received ServiceChainTxsMsg")
+		// TODO-Klaytn how to check acceptTxs
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		//if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 		//	break
 		//}
-		//fmt.Println("========== received servicechainTX")
 		if err := mbh.handleServiceChainTxDataMsg(p, msg); err != nil {
 			return err
 		}
 	case ServiceChainParentChainInfoRequestMsg:
-		scLogger.Debug("received ServiceChainParentChainInfoRequestMsg")
+		logger.Debug("received ServiceChainParentChainInfoRequestMsg")
 		if err := mbh.handleServiceChainParentChainInfoRequestMsg(p, msg); err != nil {
 			return err
 		}
-	case ServiceChainParentChainInfoResponseMsg:
-		scLogger.Debug("received ServiceChainParentChainInfoResponseMsg")
-		if err := mbh.handleServiceChainParentChainInfoResponseMsg(p, msg); err != nil {
-			return err
-		}
-	case ServiceChainReceiptResponseMsg:
-		logger.Debug("received ServiceChainReceiptResponseMsg")
-		if err := mbh.handleServiceChainReceiptResponseMsg(p, msg); err != nil {
-			return err
-		}
 	case ServiceChainReceiptRequestMsg:
-		scLogger.Debug("received ServiceChainReceiptRequestMsg")
+		logger.Debug("received ServiceChainReceiptRequestMsg")
 		if err := mbh.handleServiceChainReceiptRequestMsg(p, msg); err != nil {
 			return err
 		}
@@ -119,41 +117,7 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 	nonce := mbh.mainbridge.txPool.State().GetNonce(addr)
 	pcInfo := parentChainInfo{nonce, mbh.mainbridge.blockchain.Config().UnitPrice}
 	p.SendServiceChainInfoResponse(&pcInfo)
-	scLogger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
-	return nil
-}
-
-// handleServiceChainParentChainInfoResponseMsg handles parent chain info response message from parent chain.
-// It will update the chainAccountNonce and remoteGasPrice of ServiceChainProtocolManager.
-func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoResponseMsg(p BridgePeer, msg p2p.Msg) error {
-	var pcInfo parentChainInfo
-	if err := msg.Decode(&pcInfo); err != nil {
-		scLogger.Error("failed to decode", "err", err)
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	if mbh.protocolHandler.getChainAccountNonce() > pcInfo.Nonce {
-		// If received nonce is bigger than the current one, just leave a log and do nothing.
-		scLogger.Warn("chain account nonce is bigger than the parent chain nonce.", "chainAccountNonce", mbh.protocolHandler.getChainAccountNonce(), "parentChainNonce", pcInfo.Nonce)
-		return nil
-	}
-	mbh.protocolHandler.setChainAccountNonce(pcInfo.Nonce)
-	mbh.protocolHandler.setChainAccountNonceSynced(true)
-	mbh.protocolHandler.setRemoteGasPrice(pcInfo.GasPrice)
-	scLogger.Debug("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
-	return nil
-}
-
-// handleServiceChainReceiptResponseMsg handles receipt response message from parent chain.
-// It will store the received receipts and remove corresponding transaction in the resending list.
-func (mbh *MainBridgeHandler) handleServiceChainReceiptResponseMsg(p BridgePeer, msg p2p.Msg) error {
-	// TODO-Klaytn-ServiceChain Need to add an option, not to write receipts.
-	// Decode the retrieval message
-	var receipts []*types.ReceiptForStorage
-	if err := msg.Decode(&receipts); err != nil && err != rlp.EOL {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	// Stores receipt and remove tx from sentServiceChainTxs only if the tx is successfully executed.
-	mbh.protocolHandler.writeServiceChainTxReceipts(mbh.mainbridge.blockchain, receipts)
+	logger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
 	return nil
 }
 
@@ -186,4 +150,15 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 		receiptsForStorage = append(receiptsForStorage, (*types.ReceiptForStorage)(receipt))
 	}
 	return p.SendServiceChainReceiptResponse(receiptsForStorage)
+}
+
+func (mbh *MainBridgeHandler) RegisterNewPeer(p BridgePeer) error {
+	if mbh.getChildChainID() == nil {
+		mbh.setChildChainID(p.GetChainID())
+		return nil
+	}
+	if mbh.getChildChainID().Cmp(p.GetChainID()) != 0 {
+		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", mbh.getChildChainID(), p.GetChainID())
+	}
+	return nil
 }
