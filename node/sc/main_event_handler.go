@@ -97,3 +97,8 @@ func (mce *MainChainEventHandler) WriteReceiptFromParentChain(blockHash common.H
 func (mce *MainChainEventHandler) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
 	return mce.mainbridge.chainDB.ReadReceiptFromParentChain(blockHash)
 }
+
+// writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
+// ChainHashes.
+func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {
+}

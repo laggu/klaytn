@@ -18,7 +18,6 @@ package sc
 
 import (
 	"errors"
-	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 )
@@ -39,23 +38,22 @@ func NewChildChainEventHandler(bridge *SubBridge, handler *SubBridgeHandler) (*C
 
 func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
 	logger.Debug("bridgeNode block number", "number", block.Number())
-	cce.handler.BroadcastServiceChainTxAndReceiptRequest(block)
+	cce.handler.NewAnchoringTx(block)
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleTxEvent(tx *types.Transaction) error {
-	//@TODO
+	//TODO-Klaytn event handle
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error {
-	//@TODO
+	//TODO-Klaytn event handle
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
-	//@TODO
-	fmt.Println("call HandleLogsEvent ", len(logs))
+	//TODO-Klaytn event handle
 	return nil
 }
 
@@ -75,29 +73,5 @@ func (cce *ChildChainEventHandler) ConvertChildChainBlockHashToParentChainTxHash
 // ChainHashes, with the key made with given child chain block hash.
 // Index is built when child chain indexing is enabled.
 func (cce *ChildChainEventHandler) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
-}
-
-// GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
-func (cce *ChildChainEventHandler) GetLatestAnchoredBlockNumber() uint64 {
-	return 0
-}
-
-// WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
-func (cce *ChildChainEventHandler) WriteAnchoredBlockNumber(blockNum uint64) {
-}
-
-// WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
-// with corresponding block hash. It assumes that a child chain has only one parent chain.
-func (cce *ChildChainEventHandler) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
-}
-
-// GetReceiptFromParentChain returns a receipt received from parent chain to child chain
-// with corresponding block hash. It assumes that a child chain has only one parent chain.
-func (cce *ChildChainEventHandler) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return nil
-}
-
-// writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
-// ChainHashes.
-func (cce *ChildChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {
+	cce.subbridge.chainDB.WriteChildChainTxHash(ccBlockHash, ccTxHash)
 }

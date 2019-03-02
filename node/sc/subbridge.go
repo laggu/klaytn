@@ -35,9 +35,9 @@ import (
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/params"
-	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
 	"math/big"
+	"path"
 	"sync"
 	"time"
 )
@@ -56,7 +56,7 @@ type SubBridgeInfo struct {
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
 }
 
-// CN implements the Klaytn consensus node service.
+// SubBridge implements the Klaytn consensus node service.
 type SubBridge struct {
 	config *SCConfig
 
@@ -89,8 +89,9 @@ type SubBridge struct {
 	wg   sync.WaitGroup
 	pmwg sync.WaitGroup
 
-	blockchain *blockchain.BlockChain
-	txPool     *blockchain.TxPool
+	blockchain   *blockchain.BlockChain
+	txPool       *blockchain.TxPool
+	bridgeTxPool *BridgeTxPool
 
 	// chain event
 	chainHeadCh  chan blockchain.ChainHeadEvent
@@ -103,7 +104,6 @@ type SubBridge struct {
 	peers        *bridgePeerSet
 	handler      *SubBridgeHandler
 	eventhandler *ChildChainEventHandler
-	//fetcher    *fetcher.Fetcher
 }
 
 // New creates a new CN object (including the
@@ -113,13 +113,6 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 
 	config.chainkey = config.ChainKey()
 
-	//config.chainkey, err = crypto.GenerateKey()
-	//pubkey := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	//config.ChainAccountAddr = &pubkey
-	//config.AnchoringPeriod = uint64(1)
-	//if err != nil {
-	//	return nil, err
-	//}
 	sc := &SubBridge{
 		config:         config,
 		chainDB:        chainDB,
@@ -136,6 +129,12 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		quitSync:       make(chan struct{}),
 		maxPeers:       config.MaxPeer,
 	}
+	// TODO-Klaytn change static config to user define config
+	bridgetxConfig := BridgeTxPoolConfig{
+		Journal:     path.Join(config.DataDir, "bridge_transactions.rlp"),
+		Rejournal:   time.Hour,
+		GlobalQueue: 8912,
+	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
 
@@ -146,6 +145,8 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 
 	sc.APIBackend = &SubBridgeAPI{sc}
+
+	sc.bridgeTxPool = NewBridgeTxPool(bridgetxConfig)
 
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -163,6 +164,10 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 // implement PeerSetManager
 func (sb *SubBridge) BridgePeerSet() *bridgePeerSet {
 	return sb.peers
+}
+
+func (sb *SubBridge) GetBridgeTxPool() *BridgeTxPool {
+	return sb.bridgeTxPool
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
@@ -326,58 +331,8 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 	return nil
 }
 
-//func (pm *SubBridge) GetBlockByHash(hash common.Hash) *types.Block {
-//	return pm.blockchain.GetBlockByHash(hash)
-//}
-//
-//func (pm *SubBridge) BroadcastBlock(block *types.Block, propagate bool) {
-//	// do nothing
-//}
-
 func (pm *SubBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 	return newBridgePeer(pv, p, rw)
-}
-
-// genUnsignedServiceChainTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
-// Nonce of account used for service chain transaction will be increased after the signing.
-func (scpm *SubBridge) genUnsignedServiceChainTx(block *types.Block) (*types.Transaction, error) {
-	chainHashes := types.NewChainHashes(block)
-	encodedCCTxData, err := rlp.EncodeToBytes(chainHashes)
-	if err != nil {
-		return nil, err
-	}
-
-	values := map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:        scpm.getChainAccountNonce(), // chain account nonce will be increased after signing a transaction.
-		types.TxValueKeyFrom:         *scpm.GetChainAccountAddr(),
-		types.TxValueKeyTo:           *scpm.GetChainAccountAddr(),
-		types.TxValueKeyAmount:       new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit:     uint64(999999999998), // TODO-Klaytn-ServiceChain should define proper gas limit
-		types.TxValueKeyGasPrice:     new(big.Int).SetUint64(scpm.getRemoteGasPrice()),
-		types.TxValueKeyAnchoredData: encodedCCTxData,
-	}
-
-	if tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values); err != nil {
-		return nil, err
-	} else {
-		return tx, nil
-	}
-}
-
-// getChainAccountNonce returns the chain account nonce of chain account address.
-func (scpm *SubBridge) getChainAccountNonce() uint64 {
-	return uint64(0)
-}
-
-// GetChainAccountAddr returns a pointer of a hex address of an account used for service chain.
-// If given as a parameter, it will use it. If not given, it will use the address of the public key
-// derived from chainKey.
-func (scpm *SubBridge) GetChainAccountAddr() *common.Address {
-	return &common.Address{}
-}
-
-func (scpm *SubBridge) getRemoteGasPrice() uint64 {
-	return uint64(0)
 }
 
 func (pm *SubBridge) handle(p BridgePeer) error {
@@ -556,6 +511,7 @@ func (s *SubBridge) Stop() error {
 	s.eventMux.Stop()
 	s.chainDB.Close()
 
+	s.bridgeTxPool.Stop()
 	s.bridgeServer.Stop()
 
 	return nil

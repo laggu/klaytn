@@ -92,11 +92,11 @@ func (sbapi *SubBridgeAPI) ConvertChildChainBlockHashToParentChainTxHash(ccBlock
 }
 
 func (sbapi *SubBridgeAPI) GetLatestAnchoredBlockNumber() uint64 {
-	return sbapi.sc.eventhandler.GetLatestAnchoredBlockNumber()
+	return sbapi.sc.handler.GetLatestAnchoredBlockNumber()
 }
 
 func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return sbapi.sc.eventhandler.GetReceiptFromParentChain(blockHash)
+	return sbapi.sc.handler.GetReceiptFromParentChain(blockHash)
 }
 
 // AddPeer requests connecting to a remote node, and also maintaining the new

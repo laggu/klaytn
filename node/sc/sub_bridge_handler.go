@@ -23,10 +23,14 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
-	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
+	"sync/atomic"
+)
+
+const (
+	SyncRequestInterval = 10
 )
 
 // parentChainInfo handles the information of parent chain, which is needed from child chain.
@@ -54,8 +58,8 @@ type SubBridgeHandler struct {
 
 	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
-	//protocolHandler     ServiceChainProtocolHandler
-	sentServiceChainTxs map[common.Hash]*types.Transaction
+
+	skipSyncBlockCount int32
 }
 
 func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, error) {
@@ -75,7 +79,6 @@ func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, err
 		chainAccountNonce:        uint64(0),
 		nonceSynced:              false,
 		chainTxPeriod:            scc.AnchoringPeriod,
-		sentServiceChainTxs:      make(map[common.Hash]*types.Transaction),
 		sentServiceChainTxsLimit: scc.SentChainTxsLimit,
 	}, nil
 }
@@ -90,12 +93,17 @@ func (sbh *SubBridgeHandler) getParentChainID() *big.Int {
 
 // getChainAccountNonce returns the chain account nonce of chain account address.
 func (sbh *SubBridgeHandler) getChainAccountNonce() uint64 {
-	return sbh.chainAccountNonce
+	return atomic.LoadUint64(&sbh.chainAccountNonce)
 }
 
 // setChainAccountNonce sets the chain account nonce of chain account address.
 func (sbh *SubBridgeHandler) setChainAccountNonce(newNonce uint64) {
-	sbh.chainAccountNonce = newNonce
+	atomic.StoreUint64(&sbh.chainAccountNonce, newNonce)
+}
+
+// addChainAccountNonce increases nonce by number
+func (sbh *SubBridgeHandler) addChainAccountNonce(number uint64) {
+	atomic.AddUint64(&sbh.chainAccountNonce, number)
 }
 
 // getChainAccountNonceSynced returns whether the chain account nonce is synced or not.
@@ -143,20 +151,6 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 	switch msg.Code {
 	case StatusMsg:
 		return nil
-	case ServiceChainTxsMsg:
-		logger.Debug("received ServiceChainTxsMsg")
-		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		//if atomic.LoadUint32(&pm.acceptTxs) == 0 {
-		//	break
-		//}
-		if err := sbh.handleServiceChainTxDataMsg(p, msg); err != nil {
-			return err
-		}
-	case ServiceChainParentChainInfoRequestMsg:
-		logger.Debug("received ServiceChainParentChainInfoRequestMsg")
-		if err := sbh.handleServiceChainParentChainInfoRequestMsg(p, msg); err != nil {
-			return err
-		}
 	case ServiceChainParentChainInfoResponseMsg:
 		logger.Debug("received ServiceChainParentChainInfoResponseMsg")
 		if err := sbh.handleServiceChainParentChainInfoResponseMsg(p, msg); err != nil {
@@ -167,57 +161,8 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := sbh.handleServiceChainReceiptResponseMsg(p, msg); err != nil {
 			return err
 		}
-	case ServiceChainReceiptRequestMsg:
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
-	}
-	return nil
-}
-
-// handleServiceChainTxDataMsg handles service chain transactions from child chain.
-// It will return an error if given tx is not TxTypeChainDataAnchoring type.
-func (sbh *SubBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.Msg) error {
-	//pm.txMsgLock.Lock()
-	// Transactions can be processed, parse all of them and deliver to the pool
-	var txs []*types.Transaction
-	if err := msg.Decode(&txs); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-
-	// Only valid txs should be pushed into the pool.
-	validTxs := make([]*types.Transaction, 0, len(txs))
-	var err error
-	for i, tx := range txs {
-		if tx == nil {
-			err = errResp(ErrDecode, "tx %d is nil", i)
-			continue
-		}
-		if tx.Type() != types.TxTypeChainDataAnchoring {
-			err = errResp(ErrUnexpectedTxType, "tx %d should be TxTypeChainDataAnchoring, but %s", i, tx.Type())
-			continue
-		}
-		p.AddToKnownTxs(tx.Hash())
-		validTxs = append(validTxs, tx)
-	}
-	sbh.subbridge.txPool.AddRemotes(validTxs)
-	return err
-}
-
-// handleServiceChainParentChainInfoRequestMsg handles parent chain info request message from child chain.
-// It will send the nonce of the account and its gas price to the child chain peer who requested.
-func (sbh *SubBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p BridgePeer, msg p2p.Msg) error {
-	var addr common.Address
-	if err := msg.Decode(&addr); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	stateDB, err := sbh.subbridge.blockchain.State()
-	if err != nil {
-		// TODO-Klaytn-ServiceChain This error and inefficient balance error should be transferred.
-		return errResp(ErrFailedToGetStateDB, "failed to get stateDB, err: %v", err)
-	} else {
-		pcInfo := parentChainInfo{stateDB.GetNonce(addr), sbh.subbridge.blockchain.Config().UnitPrice}
-		p.SendServiceChainInfoResponse(&pcInfo)
-		logger.Debug("SendServiceChainInfoResponse", "addr", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
 	}
 	return nil
 }
@@ -230,15 +175,31 @@ func (sbh *SubBridgeHandler) handleServiceChainParentChainInfoResponseMsg(p Brid
 		logger.Error("failed to decode", "err", err)
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	if sbh.getChainAccountNonce() > pcInfo.Nonce {
-		// If received nonce is bigger than the current one, just leave a log and do nothing.
-		logger.Warn("chain account nonce is bigger than the parent chain nonce.", "chainAccountNonce", sbh.getChainAccountNonce(), "parentChainNonce", pcInfo.Nonce)
-		return nil
+	poolNonce := sbh.subbridge.bridgeTxPool.GetMaxTxNonce(sbh.GetChainAccountAddr())
+	if poolNonce > 0 {
+		poolNonce += 1
+		// just check
+		if sbh.getChainAccountNonce() > poolNonce {
+			logger.Error("chain account nonce is bigger than the chain pool nonce.", "chainPoolNonce", poolNonce, "chainAccountNonce", sbh.getChainAccountNonce())
+		}
+		if poolNonce < pcInfo.Nonce {
+			// bridgeTxPool journal miss txs which already sent to parent-chain
+			logger.Error("chain pool nonce is less than the parent chain nonce.", "chainPoolNonce", poolNonce, "parentChainNonce", pcInfo.Nonce)
+			sbh.setChainAccountNonce(pcInfo.Nonce)
+		} else {
+			// bridgeTxPool journal has txs which don't receive receipt from parent-chain
+			sbh.setChainAccountNonce(poolNonce)
+		}
+	} else if sbh.getChainAccountNonce() > pcInfo.Nonce {
+		logger.Error("chain account nonce is bigger than the parent chain nonce.", "chainAccountNonce", sbh.getChainAccountNonce(), "parentChainNonce", pcInfo.Nonce)
+		sbh.setChainAccountNonce(pcInfo.Nonce)
+	} else {
+		// there is no tx in bridgetTxPool, so parent-chain's nonce is used
+		sbh.setChainAccountNonce(pcInfo.Nonce)
 	}
-	sbh.setChainAccountNonce(pcInfo.Nonce)
 	sbh.setChainAccountNonceSynced(true)
 	sbh.setRemoteGasPrice(pcInfo.GasPrice)
-	logger.Debug("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
+	logger.Info("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice, "chainAccountNonce", sbh.getChainAccountNonce())
 	return nil
 }
 
@@ -254,37 +215,6 @@ func (sbh *SubBridgeHandler) handleServiceChainReceiptResponseMsg(p BridgePeer, 
 	// Stores receipt and remove tx from sentServiceChainTxs only if the tx is successfully executed.
 	sbh.writeServiceChainTxReceipts(sbh.subbridge.blockchain, receipts)
 	return nil
-}
-
-// handleServiceChainReceiptRequestMsg handles receipt request message from child chain.
-// It will find and send corresponding receipts with given transaction hashes.
-func (sbh *SubBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, msg p2p.Msg) error {
-	// Decode the retrieval message
-	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
-	if _, err := msgStream.List(); err != nil {
-		return err
-	}
-	// Gather state data until the fetch or network limits is reached
-	var (
-		hash               common.Hash
-		receiptsForStorage []*types.ReceiptForStorage
-	)
-	for len(receiptsForStorage) < downloader.MaxReceiptFetch {
-		// Retrieve the hash of the next block
-		if err := msgStream.Decode(&hash); err == rlp.EOL {
-			break
-		} else if err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		// Retrieve the receipt of requested service chain tx, skip if unknown.
-		receipt := sbh.subbridge.blockchain.GetReceiptByTxHash(hash)
-		if receipt == nil {
-			continue
-		}
-
-		receiptsForStorage = append(receiptsForStorage, (*types.ReceiptForStorage)(receipt))
-	}
-	return p.SendServiceChainReceiptResponse(receiptsForStorage)
 }
 
 // genUnsignedServiceChainTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
@@ -313,69 +243,53 @@ func (sbh *SubBridgeHandler) genUnsignedServiceChainTx(block *types.Block) (*typ
 	}
 }
 
-// BroadcastServiceChainTxAndReceiptRequest broadcasts service chain transactions and
-// request receipts to parent chain peers.
-func (sbh *SubBridgeHandler) BroadcastServiceChainTxAndReceiptRequest(block *types.Block) {
-	// Before broadcasting service chain transactions and receipt requests,
-	// check connection and nonceSynced.
-	if sbh.subbridge.BridgePeerSet().Len() == 0 {
-		sbh.setChainAccountNonceSynced(false)
-		sbh.parentChainID = nil
-		return
+// NewAnchoringTx broadcasts service chain transactions and
+func (sbh *SubBridgeHandler) NewAnchoringTx(block *types.Block) {
+	if sbh.getChainAccountNonceSynced() {
+		sbh.blockAnchoringManager(block)
+		sbh.broadcastServiceChainTx()
+		sbh.broadcastServiceChainReceiptRequest()
+		sbh.skipSyncBlockCount = 0
+	} else {
+		if sbh.skipSyncBlockCount%SyncRequestInterval == 0 {
+			// TODO-Klaytn too many request while sync main-net
+			sbh.SyncNonceAndGasPrice()
+			// check tx's receipts which parent-chain already executed in bridgeTxPool
+			go sbh.broadcastServiceChainReceiptRequest()
+		}
+		sbh.skipSyncBlockCount++
 	}
-	if !sbh.getChainAccountNonceSynced() {
-		sbh.SyncNonceAndGasPrice()
-		// If nonce is not synced, clear sent service chain txs.
-		sbh.sentServiceChainTxs = make(map[common.Hash]*types.Transaction)
-		return
-	}
-	if block.NumberU64()%sbh.chainTxPeriod != 0 {
-		return
-	}
-	tx, err := sbh.genUnsignedServiceChainTx(block)
-	if err != nil {
-		logger.Error("Failed to generate service chain transaction", "blockNum", block.NumberU64(), "err", err)
-		return
-	}
-	sbh.BroadcastServiceChainTx(tx)
-	sbh.broadcastServiceChainReceiptRequest()
 }
 
-// BroadcastServiceChainTx broadcasts service chain transactions to parent chain peers.
+// broadcastServiceChainTx broadcasts service chain transactions to parent chain peers.
 // It signs the given unsigned transaction with parent chain ID and then send it to its
 // parent chain peers.
-func (sbh *SubBridgeHandler) BroadcastServiceChainTx(unsignedTx *types.Transaction) {
+func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	parentChainID := sbh.parentChainID
 	if parentChainID == nil {
-		logger.Error("unexpected nil parentChainID while BroadcastServiceChainTx")
-		return
+		logger.Error("unexpected nil parentChainID while broadcastServiceChainTx")
 	}
-	// TODO-Klaytn-ServiceChain Change types.NewEIP155Signer to types.MakeSigner using parent chain's chain config and block number
-	signedTx, err := types.SignTx(unsignedTx, types.NewEIP155Signer(sbh.parentChainID), sbh.getChainKey())
-	if err != nil {
-		logger.Error("failed signing tx", "err", err)
-		return
+	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(sbh.ChainAccountAddr, (int)(sbh.GetSentChainTxsLimit()))
+	peers := sbh.subbridge.BridgePeerSet().peers
+	if len(peers) == 0 {
+		sbh.setChainAccountNonceSynced(false)
 	}
-	sbh.chainAccountNonce++
-	sbh.addToSentServiceChainTxs(signedTx)
-	txs := sbh.getSentServiceChainTxsSlice()
-
-	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
-		if peer.GetChainID() != parentChainID {
-			logger.Debug("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
+	for _, peer := range peers {
+		if peer.GetChainID().Cmp(parentChainID) != 0 {
+			logger.Error("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
 			continue
 		}
 		peer.SendServiceChainTxs(txs)
 		logger.Debug("sent ServiceChainTxData", "peerID", peer.GetID())
 	}
+	logger.Info("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
 }
 
 // writeServiceChainTxReceipt writes the received receipts of service chain transactions.
 func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
-	sentServiceChainTxs := sbh.sentServiceChainTxs
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
-		if tx, ok := sentServiceChainTxs[txHash]; ok {
+		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
 			chainHashes := new(types.ChainHashes)
 			data, err := tx.AnchoredData()
 			if err != nil {
@@ -387,59 +301,13 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 				return
 			}
 			sbh.WriteReceiptFromParentChain(chainHashes.BlockHash, (*types.Receipt)(receipt))
-			sbh.removeServiceChainTx(txHash)
+			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
 		} else {
 			logger.Error("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
 
 		logger.Info("received service chain transaction receipt", "txHash", txHash.String())
 	}
-}
-
-// addToSentServiceChainTxs adds a transaction to SentServiceChainTxs.
-func (sbh *SubBridgeHandler) addToSentServiceChainTxs(tx *types.Transaction) {
-	if uint64(len(sbh.sentServiceChainTxs)) > sbh.sentServiceChainTxsLimit {
-		logger.Warn("Number of txs in sentServiceChainTxs already exceeds the limit", "sentServiceChainTxsLimit", sbh.sentServiceChainTxsLimit)
-		return
-	}
-	if _, ok := sbh.sentServiceChainTxs[tx.Hash()]; ok {
-		logger.Error("ServiceChainTx already exists in sentServiceChainTxs", "txHash", tx.Hash())
-		return
-	}
-	sbh.sentServiceChainTxs[tx.Hash()] = tx
-}
-
-// removeServiceChainTx removes a transaction from SentServiceChainTxs with the given
-// transaction hash.
-func (sbh *SubBridgeHandler) removeServiceChainTx(txHash common.Hash) {
-	if _, ok := sbh.sentServiceChainTxs[txHash]; !ok {
-		logger.Error("ServiceChainTx does not exists in sentServiceChainTxs", "txHash", txHash)
-		return
-	}
-	delete(sbh.sentServiceChainTxs, txHash)
-}
-
-// getSentServiceChainTxsHashes returns only the hashes of SentServiceChainTxs.
-func (sbh *SubBridgeHandler) getSentServiceChainTxsHashes() []common.Hash {
-	var hashes []common.Hash
-	for k := range sbh.sentServiceChainTxs {
-		hashes = append(hashes, k)
-	}
-	return hashes
-}
-
-// getSentServiceChainTxsSlice returns SentServiceChainTxs in types.Transactions.
-func (sbh *SubBridgeHandler) getSentServiceChainTxsSlice() types.Transactions {
-	var txs types.Transactions
-	for _, v := range sbh.sentServiceChainTxs {
-		txs = append(txs, v)
-	}
-	return txs
-}
-
-// WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
-// with corresponding block hash. It assumes that a child chain has only one parent chain.
-func (sbh *SubBridgeHandler) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
 }
 
 func (sbh *SubBridgeHandler) RegisterNewPeer(p BridgePeer) error {
@@ -454,12 +322,54 @@ func (sbh *SubBridgeHandler) RegisterNewPeer(p BridgePeer) error {
 }
 
 // broadcastServiceChainReceiptRequest broadcasts receipt requests for service chain transactions.
-func (scpm *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
-	hashes := scpm.getSentServiceChainTxsHashes()
-	for _, peer := range scpm.subbridge.BridgePeerSet().peers {
+func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
+	hashes := sbh.subbridge.GetBridgeTxPool().PendingTxHashsByAddress(sbh.GetChainAccountAddr(), (int)(sbh.GetSentChainTxsLimit()))
+	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
 		peer.SendServiceChainReceiptRequest(hashes)
 		logger.Debug("sent ServiceChainReceiptRequest", "peerID", peer.GetID(), "numReceiptsRequested", len(hashes))
 	}
+}
+
+func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
+	latestAnchoredBlockNumber := sbh.GetLatestAnchoredBlockNumber()
+	var successCnt, cnt, blkNum uint64
+	for cnt, blkNum = 0, latestAnchoredBlockNumber+1; cnt <= sbh.sentServiceChainTxsLimit && blkNum <= block.Number().Uint64(); cnt, blkNum = cnt+1, blkNum+1 {
+		if err := sbh.generateAndAddAnchoringTxIntoTxPool(sbh.subbridge.blockchain.GetBlockByNumber(blkNum)); err == nil {
+			sbh.WriteAnchoredBlockNumber(blkNum)
+			successCnt++
+		} else {
+			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", latestAnchoredBlockNumber+1, "FaildBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
+			break
+		}
+	}
+	logger.Info("blockAnchoringManager: Success to generate anchoring txs", "successCnt", successCnt, "startBlockNumber", latestAnchoredBlockNumber+1, "latestBlockNum", block.NumberU64())
+}
+
+func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Block) error {
+	// Generating Anchoring Tx
+	if block.NumberU64()%sbh.chainTxPeriod != 0 {
+		return nil
+	}
+	//scpm.muChainAccount.Lock()
+	//defer scpm.muChainAccount.Unlock()
+	unsignedTx, err := sbh.genUnsignedServiceChainTx(block)
+	if err != nil {
+		logger.Error("Failed to generate service chain transaction", "blockNum", block.NumberU64(), "err", err)
+		return err
+	}
+	// TODO-Klaytn-ServiceChain Change types.NewEIP155Signer to types.MakeSigner using parent chain's chain config and block number
+	signedTx, err := types.SignTx(unsignedTx, types.NewEIP155Signer(sbh.parentChainID), sbh.getChainKey())
+	if err != nil {
+		logger.Error("failed signing tx", "err", err)
+		return err
+	}
+	if err := sbh.subbridge.GetBridgeTxPool().AddLocal(signedTx); err == nil {
+		sbh.addChainAccountNonce(1)
+	} else {
+		logger.Error("failed to add signed tx into txpool", "err", err)
+		return err
+	}
+	return nil
 }
 
 // SyncNonceAndGasPrice requests the nonce of address used for service chain tx to parent chain peers.
@@ -468,4 +378,26 @@ func (scpm *SubBridgeHandler) SyncNonceAndGasPrice() {
 	for _, peer := range scpm.subbridge.BridgePeerSet().peers {
 		peer.SendServiceChainInfoRequest(addr)
 	}
+}
+
+// GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
+func (sbh *SubBridgeHandler) GetLatestAnchoredBlockNumber() uint64 {
+	return sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
+}
+
+// WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
+func (sbh *SubBridgeHandler) WriteAnchoredBlockNumber(blockNum uint64) {
+	sbh.subbridge.chainDB.WriteAnchoredBlockNumber(blockNum)
+}
+
+// WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
+// with corresponding block hash. It assumes that a child chain has only one parent chain.
+func (sbh *SubBridgeHandler) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
+	sbh.subbridge.chainDB.WriteReceiptFromParentChain(blockHash, receipt)
+}
+
+// GetReceiptFromParentChain returns a receipt received from parent chain to child chain
+// with corresponding block hash. It assumes that a child chain has only one parent chain.
+func (sbh *SubBridgeHandler) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	return sbh.subbridge.chainDB.ReadReceiptFromParentChain(blockHash)
 }

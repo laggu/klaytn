@@ -23,26 +23,37 @@ import (
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"github.com/pkg/errors"
 	"math/big"
+)
+
+var (
+	ErrNoChildChainID = errors.New("There is no childChainID")
 )
 
 type MainBridgeHandler struct {
 	mainbridge *MainBridge
-	// parentChainID is the first received chainID from parent chain peer.
-	// It will be reset to nil if there's no parent peer.
-	childChainID *big.Int
+	// childChainID is the first received chainID from child chain peer.
+	childChainIDs map[common.Address]*big.Int
 }
 
 func NewMainBridgeHandler(scc *SCConfig, main *MainBridge) (*MainBridgeHandler, error) {
-	return &MainBridgeHandler{mainbridge: main}, nil
+	return &MainBridgeHandler{
+		mainbridge:    main,
+		childChainIDs: make(map[common.Address]*big.Int),
+	}, nil
 }
 
-func (mbh *MainBridgeHandler) setChildChainID(chainId *big.Int) {
-	mbh.childChainID = chainId
+func (mbh *MainBridgeHandler) setChildChainID(addr common.Address, chainId *big.Int) {
+	mbh.childChainIDs[addr] = chainId
 }
 
-func (mbh *MainBridgeHandler) getChildChainID() *big.Int {
-	return mbh.childChainID
+func (mbh *MainBridgeHandler) getChildChainID(addr common.Address) *big.Int {
+	childChainId, ok := mbh.childChainIDs[addr]
+	if !ok {
+		return nil
+	}
+	return childChainId
 }
 
 func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
@@ -100,7 +111,6 @@ func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.
 			err = errResp(ErrUnexpectedTxType, "tx %d should be TxTypeChainDataAnchoring, but %s", i, tx.Type())
 			continue
 		}
-		p.AddToKnownTxs(tx.Hash())
 		validTxs = append(validTxs, tx)
 	}
 	mbh.mainbridge.txPool.AddRemotes(validTxs)
@@ -149,16 +159,19 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 
 		receiptsForStorage = append(receiptsForStorage, (*types.ReceiptForStorage)(receipt))
 	}
+	if len(receiptsForStorage) == 0 {
+		return nil
+	}
 	return p.SendServiceChainReceiptResponse(receiptsForStorage)
 }
 
 func (mbh *MainBridgeHandler) RegisterNewPeer(p BridgePeer) error {
-	if mbh.getChildChainID() == nil {
-		mbh.setChildChainID(p.GetChainID())
+	if mbh.getChildChainID(p.GetAddr()) == nil {
+		mbh.setChildChainID(p.GetAddr(), p.GetChainID())
 		return nil
 	}
-	if mbh.getChildChainID().Cmp(p.GetChainID()) != 0 {
-		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", mbh.getChildChainID(), p.GetChainID())
+	if mbh.getChildChainID(p.GetAddr()).Cmp(p.GetChainID()) != 0 {
+		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", mbh.getChildChainID(p.GetAddr()), p.GetChainID())
 	}
 	return nil
 }
