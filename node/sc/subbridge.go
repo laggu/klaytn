@@ -46,14 +46,14 @@ const (
 	forceSyncCycle = 10 * time.Second // Time interval to force syncs, even if few peers are available
 )
 
-// NodeInfo represents a short summary of the Ethereum sub-protocol metadata
+// NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
 // known about the host peer.
 type SubBridgeInfo struct {
-	Network    uint64              `json:"network"`    // Ethereum network ID (1=Frontier, 2=Morden, Ropsten=3, Rinkeby=4)
-	Difficulty *big.Int            `json:"difficulty"` // Total difficulty of the host's blockchain
-	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
-	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
-	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
+	Network uint64              `json:"network"` // Klaytn network ID
+	Genesis common.Hash         `json:"genesis"` // SHA3 hash of the host's genesis block
+	Config  *params.ChainConfig `json:"config"`  // Chain configuration for the fork rules
+	Head    common.Hash         `json:"head"`    // SHA3 hash of the host's best owned block
+	ChainID *big.Int            `json:"chainid"` // ChainID
 }
 
 // SubBridge implements the Klaytn consensus node service.
@@ -111,7 +111,9 @@ type SubBridge struct {
 func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error) {
 	chainDB := CreateDB(ctx, config, "subbridgedata")
 
+	// initialize private keys for servicechain
 	config.chainkey = config.ChainKey()
+	config.nodekey = config.NodeKey()
 
 	sc := &SubBridge{
 		config:         config,
@@ -235,14 +237,14 @@ func (s *SubBridge) SCProtocol() SCProtocol {
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
-func (pm *SubBridge) NodeInfo() *MainBridgeInfo {
+func (pm *SubBridge) NodeInfo() *SubBridgeInfo {
 	currentBlock := pm.blockchain.CurrentBlock()
-	return &MainBridgeInfo{
-		Network:    pm.networkId,
-		Difficulty: pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-		Genesis:    pm.blockchain.Genesis().Hash(),
-		Config:     pm.blockchain.Config(),
-		Head:       currentBlock.Hash(),
+	return &SubBridgeInfo{
+		Network: pm.networkId,
+		Genesis: pm.blockchain.Genesis().Hash(),
+		Config:  pm.blockchain.Config(),
+		Head:    currentBlock.Hash(),
+		ChainID: pm.blockchain.Config().ChainID,
 	}
 }
 

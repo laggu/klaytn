@@ -26,6 +26,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		BridgePort         string
 		MaxPeer            int
 		ChainAccountAddr   *common.Address
+		NodeAccountAddr    *common.Address
 		AnchoringPeriod    uint64
 		SentChainTxsLimit  uint64
 	}
@@ -45,6 +46,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.BridgePort = s.BridgePort
 	enc.MaxPeer = s.MaxPeer
 	enc.ChainAccountAddr = s.ChainAccountAddr
+	enc.NodeAccountAddr = s.NodeAccountAddr
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
 	return &enc, nil
@@ -68,6 +70,7 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		BridgePort         *string
 		MaxPeer            *int
 		ChainAccountAddr   *common.Address
+		NodeAccountAddr    *common.Address
 		AnchoringPeriod    *uint64
 		SentChainTxsLimit  *uint64
 	}
@@ -119,6 +122,9 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.ChainAccountAddr != nil {
 		s.ChainAccountAddr = dec.ChainAccountAddr
+	}
+	if dec.NodeAccountAddr != nil {
+		s.NodeAccountAddr = dec.NodeAccountAddr
 	}
 	if dec.AnchoringPeriod != nil {
 		s.AnchoringPeriod = *dec.AnchoringPeriod

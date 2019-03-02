@@ -56,6 +56,9 @@ type SubBridgeHandler struct {
 	nonceSynced       bool
 	chainTxPeriod     uint64
 
+	nodeKey         *ecdsa.PrivateKey
+	NodeAccountAddr *common.Address
+
 	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
 
@@ -63,6 +66,7 @@ type SubBridgeHandler struct {
 }
 
 func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, error) {
+	// initialize chain account
 	var chainAccountAddr *common.Address
 	if scc.ChainAccountAddr != nil {
 		chainAccountAddr = scc.ChainAccountAddr
@@ -70,6 +74,15 @@ func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, err
 		chainKeyAddr := crypto.PubkeyToAddress(scc.chainkey.PublicKey)
 		chainAccountAddr = &chainKeyAddr
 		scc.ChainAccountAddr = chainAccountAddr
+	}
+	// initialize node account
+	var nodeAccountAddr *common.Address
+	if scc.NodeAccountAddr != nil {
+		nodeAccountAddr = scc.NodeAccountAddr
+	} else {
+		nodeKeyAddr := crypto.PubkeyToAddress(scc.nodekey.PublicKey)
+		nodeAccountAddr = &nodeKeyAddr
+		scc.NodeAccountAddr = nodeAccountAddr
 	}
 	return &SubBridgeHandler{
 		subbridge:                main,
@@ -80,6 +93,8 @@ func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, err
 		nonceSynced:              false,
 		chainTxPeriod:            scc.AnchoringPeriod,
 		sentServiceChainTxsLimit: scc.SentChainTxsLimit,
+		NodeAccountAddr:          nodeAccountAddr,
+		nodeKey:                  scc.nodekey,
 	}, nil
 }
 
@@ -116,6 +131,10 @@ func (sbh *SubBridgeHandler) setChainAccountNonceSynced(synced bool) {
 	sbh.nonceSynced = synced
 }
 
+func (sbh *SubBridgeHandler) getNodeAccountNonce() uint64 {
+	return sbh.subbridge.txPool.State().GetNonce(*sbh.NodeAccountAddr)
+}
+
 func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
 	return sbh.remoteGasPrice
 }
@@ -124,16 +143,28 @@ func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
 	sbh.remoteGasPrice = gasPrice
 }
 
-// GetChainAccountAddr returns a pointer of a hex address of an account used for service chain.
+// GetChainAccountAddr returns a pointer of a hex address of an account used for parent chain.
 // If given as a parameter, it will use it. If not given, it will use the address of the public key
 // derived from chainKey.
 func (sbh *SubBridgeHandler) GetChainAccountAddr() *common.Address {
 	return sbh.ChainAccountAddr
 }
 
-// getChainKey returns the private key used for signing service chain tx.
+// GetNodeAccountAddr returns a pointer of a hex address of an account used for service chain.
+// If given as a parameter, it will use it. If not given, it will use the address of the public key
+// derived from chainKey.
+func (sbh *SubBridgeHandler) GetNodeAccountAddr() *common.Address {
+	return sbh.NodeAccountAddr
+}
+
+// getChainKey returns the private key used for signing parent chain tx.
 func (sbh *SubBridgeHandler) getChainKey() *ecdsa.PrivateKey {
 	return sbh.chainKey
+}
+
+// getNodeKey returns the private key used for signing service chain tx.
+func (sbh *SubBridgeHandler) getNodeKey() *ecdsa.PrivateKey {
+	return sbh.nodeKey
 }
 
 // GetAnchoringPeriod returns the period to make and send a chain transaction to parent chain.

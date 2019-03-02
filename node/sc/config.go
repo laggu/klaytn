@@ -36,7 +36,8 @@ import (
 )
 
 const (
-	datadirChainKey        = "chainkey"          // Path within the datadir to its chain's private key
+	datadirChainKey        = "chainkey"          // Path within the datadir to its parent chain's private key
+	datadirNodeKey         = "nodekey"           // Path within the datadir to its service chain's private key
 	datadirMainBridgeNodes = "main-bridges.json" // Path within the datadir to the static node list
 )
 
@@ -87,7 +88,9 @@ type SCConfig struct {
 
 	// ServiceChain
 	ChainAccountAddr  *common.Address
+	NodeAccountAddr   *common.Address
 	chainkey          *ecdsa.PrivateKey
+	nodekey           *ecdsa.PrivateKey
 	AnchoringPeriod   uint64
 	SentChainTxsLimit uint64
 }
@@ -168,11 +171,22 @@ func (c *SCConfig) instanceDir() string {
 	return filepath.Join(c.DataDir, c.name())
 }
 
-// ChainKey retrieves the currently configured private key for service chain, checking
+// ChainKey retrieves the currently configured private key for parent chain, checking
 // first any manually set key, falling back to the one found in the configured
 // data folder. If no key can be found, a new one is generated.
 func (c *SCConfig) ChainKey() *ecdsa.PrivateKey {
-	keyFile := c.ResolvePath(datadirChainKey)
+	return c.getKey(datadirChainKey)
+}
+
+// NodeKey retrieves the currently configured private key for service chain, checking
+// first any manually set key, falling back to the one found in the configured
+// data folder. If no key can be found, a new one is generated.
+func (c *SCConfig) NodeKey() *ecdsa.PrivateKey {
+	return c.getKey(datadirNodeKey)
+}
+
+func (c *SCConfig) getKey(path string) *ecdsa.PrivateKey {
+	keyFile := c.ResolvePath(path)
 	if key, err := crypto.LoadECDSA(keyFile); err == nil {
 		return key
 	}
@@ -185,7 +199,7 @@ func (c *SCConfig) ChainKey() *ecdsa.PrivateKey {
 	if err := os.MkdirAll(instanceDir, 0700); err != nil {
 		logger.Crit("Failed to make dir to persist chain key", "err", err)
 	}
-	keyFile = filepath.Join(instanceDir, datadirChainKey)
+	keyFile = filepath.Join(instanceDir, path)
 	if err := crypto.SaveECDSA(keyFile, key); err != nil {
 		logger.Crit("Failed to persist chain key", "err", err)
 	}
