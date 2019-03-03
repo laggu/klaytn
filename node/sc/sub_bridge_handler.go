@@ -26,7 +26,7 @@ import (
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
-	"sync/atomic"
+	"sync"
 )
 
 const (
@@ -63,6 +63,8 @@ type SubBridgeHandler struct {
 	sentServiceChainTxsLimit uint64
 
 	skipSyncBlockCount int32
+
+	chainAccountLock sync.RWMutex
 }
 
 func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, error) {
@@ -106,19 +108,27 @@ func (sbh *SubBridgeHandler) getParentChainID() *big.Int {
 	return sbh.parentChainID
 }
 
+func (sbh *SubBridgeHandler) LockChainAccount() {
+	sbh.chainAccountLock.Lock()
+}
+
+func (sbh *SubBridgeHandler) UnLockChainAccount() {
+	sbh.chainAccountLock.Unlock()
+}
+
 // getChainAccountNonce returns the chain account nonce of chain account address.
 func (sbh *SubBridgeHandler) getChainAccountNonce() uint64 {
-	return atomic.LoadUint64(&sbh.chainAccountNonce)
+	return sbh.chainAccountNonce
 }
 
 // setChainAccountNonce sets the chain account nonce of chain account address.
 func (sbh *SubBridgeHandler) setChainAccountNonce(newNonce uint64) {
-	atomic.StoreUint64(&sbh.chainAccountNonce, newNonce)
+	sbh.chainAccountNonce = newNonce
 }
 
 // addChainAccountNonce increases nonce by number
 func (sbh *SubBridgeHandler) addChainAccountNonce(number uint64) {
-	atomic.AddUint64(&sbh.chainAccountNonce, number)
+	sbh.chainAccountNonce += number
 }
 
 // getChainAccountNonceSynced returns whether the chain account nonce is synced or not.
@@ -206,6 +216,9 @@ func (sbh *SubBridgeHandler) handleServiceChainParentChainInfoResponseMsg(p Brid
 		logger.Error("failed to decode", "err", err)
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
+	sbh.LockChainAccount()
+	defer sbh.UnLockChainAccount()
+
 	poolNonce := sbh.subbridge.bridgeTxPool.GetMaxTxNonce(sbh.GetChainAccountAddr())
 	if poolNonce > 0 {
 		poolNonce += 1
@@ -344,11 +357,15 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 func (sbh *SubBridgeHandler) RegisterNewPeer(p BridgePeer) error {
 	if sbh.getParentChainID() == nil {
 		sbh.setParentChainID(p.GetChainID())
+		// sync nonce and gasprice with peer
+		sbh.SyncNonceAndGasPrice()
 		return nil
 	}
 	if sbh.getParentChainID().Cmp(p.GetChainID()) != 0 {
 		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", sbh.getParentChainID(), p.GetChainID())
 	}
+	// sync nonce and gasprice with peer
+	sbh.SyncNonceAndGasPrice()
 	return nil
 }
 
@@ -381,8 +398,9 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 	if block.NumberU64()%sbh.chainTxPeriod != 0 {
 		return nil
 	}
-	//scpm.muChainAccount.Lock()
-	//defer scpm.muChainAccount.Unlock()
+	sbh.LockChainAccount()
+	defer sbh.UnLockChainAccount()
+
 	unsignedTx, err := sbh.genUnsignedServiceChainTx(block)
 	if err != nil {
 		logger.Error("Failed to generate service chain transaction", "blockNum", block.NumberU64(), "err", err)

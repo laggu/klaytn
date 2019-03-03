@@ -191,7 +191,10 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 		}
 		return addr, err
 	} else {
-		addr, gateway, err := gwm.deployGateway(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.chainAccountNonce)), gwm.subBridge.handler.chainKey, backend)
+		gwm.subBridge.handler.LockChainAccount()
+		defer gwm.subBridge.handler.UnLockChainAccount()
+
+		addr, gateway, err := gwm.deployGateway(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.getChainAccountNonce())), gwm.subBridge.handler.chainKey, backend)
 		gwm.remoteGateWays[addr] = gateway
 		if err := gwm.journal.insert(addr, local); err != nil {
 			logger.Error("fail to journal address", "err", err)
