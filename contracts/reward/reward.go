@@ -30,6 +30,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
+	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
@@ -196,17 +197,54 @@ func CalcProposerBlockNumber(blockNum uint64) uint64 {
 // StakingCache
 const (
 	// TODO-Klaytn-Issue1166 Decide size of cache
-	maxStakingCache = 3
+	maxStakingCache   = 3
+	chainHeadChanSize = 10
 )
 
 var StakingCache common.Cache // TODO-Klaytn-Issue1166 Cache for staking information of Council
+
+var chainHeadCh chan blockchain.ChainHeadEvent
+var chainHeadSub event.Subscription
+var blockchainForReward *blockchain.BlockChain
 
 func init() {
 	initStakingCache()
 }
 
+// Subscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
+func Subscribe(bc *blockchain.BlockChain) {
+	blockchainForReward = bc
+	chainHeadSub = bc.SubscribeChainHeadEvent(chainHeadCh)
+
+	go waitHeadChain()
+}
+
 func initStakingCache() {
 	StakingCache, _ = common.NewCache(common.LRUConfig{CacheSize: maxStakingCache})
+	chainHeadCh = make(chan blockchain.ChainHeadEvent, chainHeadChanSize)
+}
+
+func waitHeadChain() {
+	defer chainHeadSub.Unsubscribe()
+
+	logger.Info("Start listening chain head event to update staking cache.")
+
+	for {
+		// A real event arrived, process interesting content
+		select {
+		// Handle ChainHeadEvent
+		case ev := <-chainHeadCh:
+			if IsStakingUpdateInterval(ev.Block.NumberU64()) {
+				blockNum := ev.Block.NumberU64()
+				logger.Debug("ChainHeadEvent arrived and try to update staking cache.", "Block number", blockNum)
+				if err := updateStakingCache(blockchainForReward, blockNum); err != nil {
+					logger.Error("Failed to update staking cache", err)
+				}
+			}
+		case <-chainHeadSub.Err():
+			return
+		}
+	}
 }
 
 // GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
