@@ -57,6 +57,16 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
+func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedEvent) error {
+	//TODO-Klaytn event handle
+	return nil
+}
+
+func (cce *ChildChainEventHandler) HandleTokenTransferEvent(token TokenTransferEvent) error {
+	//TODO-Klaytn event handle
+	return nil
+}
+
 // GetChildChainIndexingEnabled returns the current child chain indexing configuration.
 func (cce *ChildChainEventHandler) GetChildChainIndexingEnabled() bool {
 	return cce.subbridge.chainDB.ChildChainIndexingEnabled()

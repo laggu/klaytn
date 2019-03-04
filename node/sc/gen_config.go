@@ -29,6 +29,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		NodeAccountAddr    *common.Address
 		AnchoringPeriod    uint64
 		SentChainTxsLimit  uint64
+		ParentChainURL     string
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -49,6 +50,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.NodeAccountAddr = s.NodeAccountAddr
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
+	enc.ParentChainURL = s.ParentChainURL
 	return &enc, nil
 }
 
@@ -73,6 +75,7 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NodeAccountAddr    *common.Address
 		AnchoringPeriod    *uint64
 		SentChainTxsLimit  *uint64
+		ParentChainURL     *string
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -131,6 +134,9 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.SentChainTxsLimit != nil {
 		s.SentChainTxsLimit = *dec.SentChainTxsLimit
+	}
+	if dec.ParentChainURL != nil {
+		s.ParentChainURL = *dec.ParentChainURL
 	}
 	return nil
 }

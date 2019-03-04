@@ -36,6 +36,7 @@ import (
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
+	"github.com/ground-x/klaytn/work"
 	"math/big"
 	"path"
 	"sync"
@@ -44,6 +45,9 @@ import (
 
 const (
 	forceSyncCycle = 10 * time.Second // Time interval to force syncs, even if few peers are available
+
+	tokenReceivedChanSize = 100
+	tokenTransferChanSize = 100
 )
 
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
@@ -104,6 +108,18 @@ type SubBridge struct {
 	peers        *bridgePeerSet
 	handler      *SubBridgeHandler
 	eventhandler *ChildChainEventHandler
+
+	// gatewaymanager for value exchange
+	localBackend  *LocalBackend
+	remoteBackend *RemoteBackend
+	gatewayMgr    *GateWayManager
+
+	tokenReceivedCh  chan TokenReceivedEvent
+	tokenReceivedSub event.Subscription
+	tokenTransferCh  chan TokenTransferEvent
+	tokenTransferSub event.Subscription
+
+	bootFail bool
 }
 
 // New creates a new CN object (including the
@@ -116,20 +132,23 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	config.nodekey = config.NodeKey()
 
 	sc := &SubBridge{
-		config:         config,
-		chainDB:        chainDB,
-		peers:          newBridgePeerSet(),
-		newPeerCh:      make(chan BridgePeer),
-		noMorePeers:    make(chan struct{}),
-		eventMux:       ctx.EventMux,
-		accountManager: ctx.AccountManager,
-		networkId:      config.NetworkId,
-		ctx:            ctx,
-		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		logsCh:         make(chan []*types.Log, chainLogChanSize),
-		txCh:           make(chan blockchain.NewTxsEvent, transactionChanSize),
-		quitSync:       make(chan struct{}),
-		maxPeers:       config.MaxPeer,
+		config:          config,
+		chainDB:         chainDB,
+		peers:           newBridgePeerSet(),
+		newPeerCh:       make(chan BridgePeer),
+		noMorePeers:     make(chan struct{}),
+		eventMux:        ctx.EventMux,
+		accountManager:  ctx.AccountManager,
+		networkId:       config.NetworkId,
+		ctx:             ctx,
+		chainHeadCh:     make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		logsCh:          make(chan []*types.Log, chainLogChanSize),
+		txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
+		quitSync:        make(chan struct{}),
+		maxPeers:        config.MaxPeer,
+		tokenReceivedCh: make(chan TokenReceivedEvent, tokenReceivedChanSize),
+		tokenTransferCh: make(chan TokenTransferEvent, tokenTransferChanSize),
+		bootFail:        false,
 	}
 	// TODO-Klaytn change static config to user define config
 	bridgetxConfig := BridgeTxPoolConfig{
@@ -215,8 +234,34 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 			sc.txPool = v
 			// event from core-service
 			sc.txSub = sc.txPool.SubscribeNewTxsEvent(sc.txCh)
+			// TODO-Klaytn if need pending block, should use miner
+		case *work.Miner:
 		}
 	}
+
+	var err error
+	if sc.config.ParentChainURL != "" {
+		sc.remoteBackend, err = NewRemoteBackend(sc, sc.config.ParentChainURL)
+		if err != nil {
+			logger.Error("fail to initialize RemoteBackend", "err", err, "url", sc.config.ParentChainURL)
+			sc.bootFail = true
+			return
+		}
+	}
+	sc.localBackend, err = NewLocalBackend(sc)
+	if err != nil {
+		logger.Error("fail to initialize LocalBackend", "err", err)
+		sc.bootFail = true
+		return
+	}
+	sc.gatewayMgr, err = NewGateWayManager(sc)
+	if err != nil {
+		logger.Error("fail to initialize GateWayManager", "err", err)
+		sc.bootFail = true
+		return
+	}
+	sc.tokenReceivedSub = sc.gatewayMgr.SubscribeKRC20TokenReceived(sc.tokenReceivedCh)
+	sc.tokenTransferSub = sc.gatewayMgr.SubscribeKRC20WithDraw(sc.tokenTransferCh)
 
 	sc.pmwg.Add(1)
 	go sc.loop()
@@ -256,6 +301,10 @@ func (pm *SubBridge) getChainID() *big.Int {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Klaytn protocol implementation.
 func (s *SubBridge) Start(srvr p2p.Server) error {
+
+	if s.bootFail {
+		return errors.New("subBridge node fail to start")
+	}
 
 	serverConfig := p2p.Config{}
 	serverConfig.PrivateKey = s.ctx.NodeKey()
@@ -399,20 +448,35 @@ func (sc *SubBridge) loop() {
 		// Handle ChainHeadEvent
 		case ev := <-sc.chainHeadCh:
 			if ev.Block != nil {
-				sc.eventhandler.HandleChainHeadEvent(ev.Block)
+				if err := sc.eventhandler.HandleChainHeadEvent(ev.Block); err != nil {
+					logger.Error("subbridge block event", "err", err)
+				}
 			} else {
 				logger.Error("subbridge block event is nil")
 			}
 		// Handle NewTexsEvent
 		case ev := <-sc.txCh:
 			if ev.Txs != nil {
-				sc.eventhandler.HandleTxsEvent(ev.Txs)
+				if err := sc.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
+					logger.Error("subbridge tx event", "err", err)
+				}
 			} else {
 				logger.Error("subbridge tx event is nil")
 			}
 		// Handle ChainLogsEvent
 		case logs := <-sc.logsCh:
-			sc.eventhandler.HandleLogsEvent(logs)
+			if err := sc.eventhandler.HandleLogsEvent(logs); err != nil {
+				logger.Error("subbridge log event", "err", err)
+			}
+		// Handle TokenEvent
+		case ev := <-sc.tokenReceivedCh:
+			if err := sc.eventhandler.HandleTokenReceivedEvent(ev); err != nil {
+				logger.Error("fail to handle for tokenReceivedEvent ", err)
+			}
+		case ev := <-sc.tokenTransferCh:
+			if err := sc.eventhandler.HandleTokenTransferEvent(ev); err != nil {
+				logger.Error("fail to handle for tokenTransferEvent ", err)
+			}
 		case <-report.C:
 			// report status
 		case err := <-sc.chainHeadSub.Err():
@@ -428,6 +492,16 @@ func (sc *SubBridge) loop() {
 		case err := <-sc.logsSub.Err():
 			if err != nil {
 				logger.Error("subbridge log subscription ", "err", err)
+			}
+			return
+		case err := <-sc.tokenReceivedSub.Err():
+			if err != nil {
+				logger.Error("subbridge token-received subscription ", "err", err)
+			}
+			return
+		case err := <-sc.tokenTransferSub.Err():
+			if err != nil {
+				logger.Error("subbridge token-transfer subscription ", "err", err)
 			}
 			return
 		}
@@ -509,9 +583,12 @@ func (s *SubBridge) Stop() error {
 	s.chainHeadSub.Unsubscribe()
 	s.txSub.Unsubscribe()
 	s.logsSub.Unsubscribe()
+	s.tokenReceivedSub.Unsubscribe()
+	s.tokenTransferSub.Unsubscribe()
 	s.eventMux.Stop()
 	s.chainDB.Close()
 
+	s.gatewayMgr.Stop()
 	s.bridgeTxPool.Stop()
 	s.bridgeServer.Stop()
 

@@ -103,9 +103,14 @@ func NewGateWayManager(main *SubBridge) (*GateWayManager, error) {
 		journal:        gatewayAddrJournal,
 	}
 
+	logger.Info("Load Gateway Address from JournalFiles ", "path", gwm.journal.path)
 	if err := gwm.journal.load(func(gwjournal GateWayJournal) error {
-		//return gwm.load(gwjournal.Address ,nil, gwjournal.IsLocal)
-		return nil
+		logger.Info("Load Gateway Address from JournalFiles ", "Address", gwjournal.Address.Hex(), "Local", gwjournal.IsLocal)
+		if gwjournal.IsLocal {
+			return gwm.load(gwjournal.Address, main.localBackend, gwjournal.IsLocal)
+		} else {
+			return gwm.load(gwjournal.Address, main.remoteBackend, gwjournal.IsLocal)
+		}
 	}); err != nil {
 		logger.Error("fail to load gateway address", "err", err)
 	}

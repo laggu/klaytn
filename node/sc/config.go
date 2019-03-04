@@ -93,6 +93,8 @@ type SCConfig struct {
 	nodekey           *ecdsa.PrivateKey
 	AnchoringPeriod   uint64
 	SentChainTxsLimit uint64
+
+	ParentChainURL string
 }
 
 // NodeName returns the devp2p node identifier.
