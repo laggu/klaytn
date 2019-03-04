@@ -99,6 +99,38 @@ func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *typ
 	return sbapi.sc.handler.GetReceiptFromParentChain(blockHash)
 }
 
+func (sbapi *SubBridgeAPI) DeployGatewayOnLocalChain() (common.Address, error) {
+	return sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.localBackend, true)
+}
+
+func (sbapi *SubBridgeAPI) DeployGatewayOnParentChain() (common.Address, error) {
+	return sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.remoteBackend, false)
+}
+
+func (sbapi *SubBridgeAPI) SubscribeEventGatewayOnLocalChain(address common.Address) error {
+	return sbapi.sc.gatewayMgr.SubscribeEvent(address, true)
+}
+
+func (sbapi *SubBridgeAPI) SubscribeEventGatewayOnParentChain(address common.Address) error {
+	return sbapi.sc.gatewayMgr.SubscribeEvent(address, false)
+}
+
+func (sbapi *SubBridgeAPI) TxPendingCount() int {
+	return len(sbapi.sc.GetBridgeTxPool().Pending())
+}
+
+func (sbapi *SubBridgeAPI) ListDeployedGateway() []*GateWayJournal {
+	return sbapi.sc.gatewayMgr.GetAllGateway()
+}
+
+func (sbapi *SubBridgeAPI) Anchoring(flag bool) bool {
+	return sbapi.sc.SetAnchoringTx(flag)
+}
+
+func (sbapi *SubBridgeAPI) GetAnchoring() bool {
+	return sbapi.sc.GetAnchoringTx()
+}
+
 // AddPeer requests connecting to a remote node, and also maintaining the new
 // connection at all times, even reconnecting if it is lost.
 func (sbapi *SubBridgeAPI) AddPeer(url string) (bool, error) {
@@ -164,6 +196,14 @@ func (sbapi *SubBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
 
 func (mbapi *SubBridgeAPI) GetChainAccountAddr() string {
 	return mbapi.sc.config.ChainAccountAddr.Hex()
+}
+
+func (mbapi *SubBridgeAPI) GetChainAccountNonce() uint64 {
+	return mbapi.sc.handler.getChainAccountNonce()
+}
+
+func (mbapi *SubBridgeAPI) GetNodeAccountAddr() string {
+	return mbapi.sc.config.NodeAccountAddr.Hex()
 }
 
 func (mbapi *SubBridgeAPI) GetAnchoringPeriod() uint64 {

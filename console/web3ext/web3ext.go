@@ -679,13 +679,33 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getLatestAnchoredBlockNumber',
-			call: 'bridge_getLatestAnchoredBlockNumber',
+			name: 'getReceiptFromParentChain',
+			call: 'bridge_getReceiptFromParentChain',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'deployGatewayOnLocal',
+			call: 'bridge_deployGatewayOnLocalChain',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'getReceiptFromParentChain',
-			call: 'bridge_getReceiptFromParentChain',
+			name: 'deployGatewayOnRemote',
+			call: 'bridge_deployGatewayOnParentChain',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'subscribeGatewayOnLocal',
+			call: 'bridge_subscribeEventGatewayOnLocalChain',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'subscribeGatewayOnRemote',
+			call: 'bridge_subscribeEventGatewayOnParentChain',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'anchoring',
+			call: 'bridge_anchoring',
 			params: 1
 		}),
 	],
@@ -709,6 +729,22 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'sendChainTxslimit',
 			getter: 'bridge_getSentChainTxsLimit'
+		}),
+		new web3._extend.Property({
+			name: 'chainAccountNonce',
+			getter: 'bridge_getChainAccountNonce'
+		}),
+		new web3._extend.Property({
+			name: 'listGateway',
+			getter: 'bridge_listDeployedGateway'
+		}),
+		new web3._extend.Property({
+			name: 'txPendingCount',
+			getter: 'bridge_txPendingCount'
+		}),
+		new web3._extend.Property({
+			name: 'latestAnchoredBlockNumber',
+			getter: 'bridge_getLatestAnchoredBlockNumber'
 		}),
 	]
 });

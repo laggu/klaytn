@@ -120,6 +120,9 @@ type SubBridge struct {
 	tokenTransferSub event.Subscription
 
 	bootFail bool
+
+	// service on/off
+	onAnchoringTx bool
 }
 
 // New creates a new CN object (including the
@@ -148,6 +151,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		maxPeers:        config.MaxPeer,
 		tokenReceivedCh: make(chan TokenReceivedEvent, tokenReceivedChanSize),
 		tokenTransferCh: make(chan TokenTransferEvent, tokenTransferChanSize),
+		onAnchoringTx:   true,
 		bootFail:        false,
 	}
 	// TODO-Klaytn change static config to user define config
@@ -189,6 +193,15 @@ func (sb *SubBridge) BridgePeerSet() *bridgePeerSet {
 
 func (sb *SubBridge) GetBridgeTxPool() *BridgeTxPool {
 	return sb.bridgeTxPool
+}
+
+func (sb *SubBridge) GetAnchoringTx() bool {
+	return sb.onAnchoringTx
+}
+
+func (sb *SubBridge) SetAnchoringTx(flag bool) bool {
+	sb.onAnchoringTx = flag
+	return sb.GetAnchoringTx()
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.

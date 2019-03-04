@@ -51,8 +51,8 @@ type TokenTransferEvent struct {
 }
 
 type GateWayJournal struct {
-	Address common.Address
-	IsLocal bool
+	Address common.Address `json:"address"`
+	IsLocal bool           `json:"local"`
 }
 
 // DecodeRLP decodes the Klaytn
