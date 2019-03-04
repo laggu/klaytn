@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/contracts/reward"
 	"math"
 	"math/big"
 	"math/rand"
@@ -96,6 +97,124 @@ type weightedCouncil struct {
 	stakings    []*big.Int
 
 	blockNum uint64 // block number when council is determined
+}
+
+func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs []common.Address) {
+	weightedCouncil, ok := valSet.(*weightedCouncil)
+	if !ok {
+		logger.Error("Not weightedCouncil type. Return without recovering.")
+		return
+	}
+
+	proposers := []istanbul.Validator{}
+
+	for i, proposerAddr := range proposerAddrs {
+		_, val := weightedCouncil.GetByAddress(proposerAddr)
+		if val == nil {
+			logger.Error("Proposer is not available now.", "proposer address", proposerAddr)
+		}
+		proposers = append(proposers, val)
+
+		// TODO-Klaytn-Issue1166 Disable Trace log later
+		logger.Trace("RecoverWeightedCouncilProposer() proposers", "i", i, "address", val.Address().String())
+	}
+	weightedCouncil.proposers = proposers
+}
+
+func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []float64, weights []int, policy istanbul.ProposerPolicy, committeeSize int, blockNum uint64, proposersBlockNum uint64) *weightedCouncil {
+	// TODO-Klaytn-Issue1166 Disable Trace log later
+	valSet := &weightedCouncil{}
+
+	valSet.subSize = committeeSize
+	valSet.policy = policy
+
+	// init validators
+	valSet.validators = make([]istanbul.Validator, len(addrs))
+	logger.Trace("NewWeightedCouncil() params", "addrs", addrs, "rewards", rewards, "votingPowers", votingPowers, "weights", weights, "policy", policy)
+	for i, addr := range addrs {
+		valSet.validators[i] = newWeightedValidator(addr, rewards[i], votingPowers[i])
+	}
+
+	// sort validator
+	sort.Sort(valSet.validators)
+
+	// init proposer
+	if valSet.Size() > 0 {
+		valSet.proposer = valSet.GetByIndex(0)
+	}
+	valSet.selector = weightedRandomProposer
+
+	valSet.blockNum = blockNum
+	valSet.proposers = make([]istanbul.Validator, len(addrs))
+	copy(valSet.proposers, valSet.validators)
+	valSet.proposersBlockNum = proposersBlockNum
+
+	logger.Trace("NewWeightedCouncil() New weightedCouncil", "weightedCouncil", valSet)
+
+	return valSet
+}
+
+func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.Address, votingPowers []float64, weights []int, proposers []common.Address, proposersBlockNum uint64) {
+	// TODO-Klaytn-Issue1166 Disable Trace log later
+
+	weightedCouncil, ok := valSet.(*weightedCouncil)
+	if !ok {
+		logger.Error("GetWeightedCouncilData() Not weightedCouncil type.")
+		return
+	}
+
+	if weightedCouncil.Policy() == istanbul.WeightedRandom {
+		numVals := len(weightedCouncil.validators)
+		rewardAddrs = make([]common.Address, numVals)
+		votingPowers = make([]float64, numVals)
+		weights = make([]int, numVals)
+		for i, val := range weightedCouncil.List() {
+			weightedVal := val.(*weightedValidator)
+			rewardAddrs[i] = weightedVal.rewardAddress
+			votingPowers[i] = weightedVal.votingPower
+			weights[i] = weightedVal.weight
+			logger.Trace("GetWeightedCouncilData()", "i", i, "rewardAddr", rewardAddrs[i], "votingPower", votingPowers[i], "weight", weights[i])
+		}
+
+		proposers = make([]common.Address, len(weightedCouncil.proposers))
+		for i, proposer := range weightedCouncil.proposers {
+			proposers[i] = proposer.Address()
+			logger.Trace("GetWeightedCouncilData() proposers", "i", i, "addr", proposers[i])
+		}
+		proposersBlockNum = weightedCouncil.proposersBlockNum
+	} else {
+		logger.Error("GetWeightedCouncilData() WeightedCouncil with wrong proposer policy.")
+	}
+	return
+}
+
+func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Address, round uint64) istanbul.Validator {
+	if valSet.Size() == 0 {
+		return nil
+	}
+
+	weightedCouncil, ok := valSet.(*weightedCouncil)
+	if !ok {
+		logger.Error("weightedRandomProposer() Not weightedCouncil type.")
+		return nil
+	}
+
+	numProposers := len(weightedCouncil.proposers)
+	if numProposers == 0 {
+		logger.Error("weightedRandomProposer() No available proposers.")
+		return nil
+	}
+
+	// TODO-Klaytn-Issue1166 proposers is already randomly shuffled considering weights.
+	// So let's just round robin this array
+	blockNum := weightedCouncil.blockNum
+	picker := (blockNum + round - reward.CalcProposerBlockNumber(blockNum)) % uint64(numProposers)
+	proposer := weightedCouncil.proposers[picker]
+
+	// TODO-Klaytn-Issue1166 Disable Trace log later
+	logger.Trace("Issue1166: weightedRandomProposer() returns", "proposer", proposer.String(), "weighedCouncil.blockNum", blockNum, "round", round, "picker", picker, "proposers", weightedCouncil.proposers)
+
+	return proposer
 }
 
 func (valSet *weightedCouncil) Size() int {
