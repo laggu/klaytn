@@ -17,15 +17,10 @@
 package contract
 
 const (
-	// TODO-Klaytn-Issue973 Remove unnecessary accounts after implementation is done
-	PIReserveAddr       = "0x00000000000000000035"
-	CommitteeRewardAddr = "0x00000000000000000036"
-	RNRewardAddr        = "0x00000000000000000037"
+	// TODO-Klaytn-Issue1587 Decide whether to cleanup below three addresses after discussing issue1587
+	RewardContractAddress = "0x00000000000000000041"
+	KIRContractAddress    = "0x00000000000000000042"
+	PoCContractAddress    = "0x00000000000000000043"
 
-	StakingContractAddress = "0x00000000000000000040"
-	RewardContractAddress  = "0x00000000000000000041"
-	KIRContractAddress     = "0x00000000000000000042"
-	PoCContractAddress     = "0x00000000000000000043"
-	TxFeeContractAddress   = "0x00000000000000000044"
-	AddressBookAddress     = "0x00000000000000000050"
+	AddressBookAddress = "0x00000000000000000050"
 )
