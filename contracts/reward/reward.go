@@ -25,7 +25,9 @@ package reward
 import (
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/log"
@@ -213,15 +215,18 @@ func MakeGetAllAddressInfoMsg() (*types.Transaction, error) {
 }
 
 func ParseGetAllAddressInfo(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
+
+	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
+
 	if result == nil {
-		// logger.Trace("Issue1166-V1V2V3: ParseGetAllAddressInfo() Got empty result", "result", result)
+		logger.Debug("ParseGetAllAddressInfo() Got empty result", "result", result)
 		return nil, nil, nil, common.Address{}, common.Address{}, nil
 	}
 
 	abiStr := contract.AddressBookABI
 	abii, err := abi.JSON(strings.NewReader(abiStr))
 	if err != nil {
-		logger.Error("ParseGetAllAddressInfo() failed to make ABI interface.")
+		logger.Trace("ParseGetAllAddressInfo() failed to make ABI interface.")
 		return nil, nil, nil, common.Address{}, common.Address{}, err
 	}
 
@@ -242,9 +247,119 @@ func ParseGetAllAddressInfo(result []byte) ([]common.Address, []common.Address, 
 
 	err = abii.Unpack(out, "getAllAddressInfo", result)
 	if err != nil {
-		logger.Error("ParseGetAllAddressInfo() abii.Unpack failed")
+		logger.Trace("ParseGetAllAddressInfo() abii.Unpack failed")
 		return nil, nil, nil, common.Address{}, common.Address{}, err
 	}
 
 	return *ret0, *ret1, *ret2, *ret3, *ret4, nil
+}
+
+// updateStakingCache updates staking cache with staking information of given block number.
+func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) error {
+
+	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
+
+	stakingInfo, err := getAddressBookInfo(bc, blockNum)
+	if err != nil {
+		logger.Trace("Failed to get staking info", "blockNum", blockNum, "err", err)
+		return err
+	}
+
+	stakingCacheKey := common.StakingCacheKey(blockNum)
+	evicted := StakingCache.Add(stakingCacheKey, stakingInfo)
+	logger.Trace("updateStakingCache() -  add new staking info", "stakingInfo", stakingInfo, "evicted", evicted)
+
+	return nil
+}
+
+func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*common.StakingInfo, error) {
+
+	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
+
+	var nodeIds []common.Address
+	var stakingAddrs []common.Address
+	var rewardAddrs []common.Address
+	var KIRAddr = common.Address{}
+	var PoCAddr = common.Address{}
+	var err error
+
+	if !IsStakingUpdateInterval(blockNum) {
+		logger.Trace("Invalid block number.", "blockNum", blockNum)
+		return nil, err
+	}
+
+	// Prepare a message
+	msg, err := MakeGetAllAddressInfoMsg()
+	if err != nil {
+		logger.Trace("Failed to make message for AddressBook Contract", "err", err)
+		return nil, err
+	}
+
+	// Prepare
+	chainConfig := bc.Config()
+	intervalBlock := bc.GetBlockByNumber(blockNum)
+	gaspool := new(blockchain.GasPool).AddGas(intervalBlock.GasLimit())
+	statedb, err := bc.StateAt(intervalBlock.Root())
+	if err != nil {
+		logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
+		return nil, err
+	}
+
+	// Create a new context to be used in the EVM environment
+	context := blockchain.NewEVMContext(msg, intervalBlock.Header(), bc, nil)
+	evm := vm.NewEVM(context, statedb, chainConfig, &vm.Config{})
+
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gaspool)
+	logger.Trace("Call AddressBook contract", "result", res, "used gas", gas, "kerr", kerr)
+	err = kerr.Err
+	if err != nil {
+		logger.Trace("Failed to call AddressBook contract", "err", err)
+		return nil, err
+	}
+
+	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = ParseGetAllAddressInfo(res)
+	if err != nil {
+		logger.Trace("Failed to parse result from AddressBook contract", "err", err)
+		return nil, err
+	}
+
+	// TODO-Klaytn-Issue1166 Disable Trace log later
+	logger.Trace("Result from AddressBook contract", "nodeIds", nodeIds)
+	logger.Trace("Result from AddressBook contract", "stakingAddrs", stakingAddrs)
+	logger.Trace("Result from AddressBook contract", "rewardAddrs", rewardAddrs)
+	logger.Trace("Result from AddressBook contract", "KIRAddr", KIRAddr, "PoCAddr", PoCAddr)
+
+	return newStakingInfo(bc, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
+}
+
+func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*common.StakingInfo, error) {
+
+	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
+
+	// Prepare
+	intervalBlock := bc.GetBlockByNumber(blockNum)
+	statedb, err := bc.StateAt(intervalBlock.Root())
+	if err != nil {
+		logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
+		return nil, err
+	}
+
+	// Get balance of rewardAddrs
+	var stakingAmounts []*big.Int
+	stakingAmounts = make([]*big.Int, len(stakingAddrs))
+	for i, stakingAddr := range stakingAddrs {
+		stakingAmounts[i] = statedb.GetBalance(stakingAddr)
+		logger.Trace("Get staking amounts", "i", i, "stakingAddr", stakingAddr.String(), "stakingAmount", stakingAmounts[i])
+	}
+
+	stakingInfo := &common.StakingInfo{
+		BlockNum:              blockNum,
+		CouncilNodeIds:        nodeIds,
+		CouncilStakingdAddrs:  stakingAddrs,
+		CouncilRewardAddrs:    rewardAddrs,
+		KIRAddr:               KIRAddr,
+		PoCAddr:               PoCAddr,
+		CouncilStakingAmounts: stakingAmounts,
+	}
+	return stakingInfo, nil
 }
