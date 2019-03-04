@@ -14,8 +14,6 @@
   * [Operating a private network](#operating-a-private-network)
     * [Defining the private genesis state](#defining-the-private-genesis-state)
   * [Configuration (istanbul-BFT)](#configuration-istanbul-bft)
-  * [sol2proto](#sol2proto)
-  * [grpc-contract](#grpc-contract)
 * [License](#license)
 
 <!-- vim-markdown-toc -->
@@ -41,8 +39,6 @@ The klaytn project comes with several wrappers/executables found in the `cmd` di
 | **`klay`** | Our main Klaytn CLI client. It is the entry point into the Klaytn network (main-, test- or private net), capable of running as a full node (default) archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Klaytn network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `klay --help`|
 | `istanbul` | tools for configuring Istanbul BFT (IBFT) network.
 | `abigen` | Source code generator to convert Klaytn contract definitions into easy to use, compile-time type-safe Go packages. |
-| `sol2proto` | The Klaytn ABI to gRPC protobuf transpiler. |
-| `grpc-contract` | A tool to generate the grpc server code for a contract. |
 
 ## Running klay
 
@@ -221,25 +217,6 @@ klay --srvtype fasthttp --datadir $DATAPATH --port 30303 --rpc --rpcaddr 0.0.0.0
 In this case, please make sure the IP and port number for each validator in
 `static-nodes.json` are the same as your local IP (e.g., 127.0.0.1) and the
 value used with`--port` when running `klay`.
-
-### sol2proto
-Solidity ABI to gRPC protobuf IDL transpiler
-
-The `context` is in the standard library Go 1.7 already. Make sure the latest version of grpc and protoc plugin are installed.
-```
-go get -u google.golang.org/grpc
-go get -u github.com/golang/protobuf/protoc-gen-go
-```
-
-```bash
-sol2proto --pkg awesome --abi MyAwesomeContract.abi > my_awesome_contract.proto
-```
-### grpc-contract
-A tool to generate the grpc server code for a contract
-
-```bash
-grpc-contract --types $(filename) --path ./protobuf --pb-path ./protobuf
-```
 
 ## License
 
