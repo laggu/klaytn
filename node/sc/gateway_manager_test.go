@@ -30,11 +30,19 @@ import (
 	"github.com/ground-x/klaytn/params"
 	"log"
 	"math/big"
+	"os"
+	"path"
 	"sync"
 	"testing"
 )
 
 func TestGateWayManager(t *testing.T) {
+
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), "gateway_addrs.rlp")); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -55,6 +63,7 @@ func TestGateWayManager(t *testing.T) {
 	config := &SCConfig{}
 	config.nodekey = key
 	config.chainkey = key2
+	config.DataDir = os.TempDir()
 
 	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
 	config.ChainAccountAddr = &chainKeyAddr
