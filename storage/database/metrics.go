@@ -47,4 +47,7 @@ var (
 
 	cacheGetBlockNumberMissMeter = metrics.NewRegisteredMeter("klay/cache/get/blocknumber/miss", nil)
 	cacheGetBlockNumberHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/blocknumber/hit", nil)
+
+	cacheGetCanonicalHashMissMeter = metrics.NewRegisteredMeter("klay/cache/get/canonicalhash/miss", nil)
+	cacheGetCanonicalHashHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/canonicalhash/hit", nil)
 )

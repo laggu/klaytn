@@ -85,6 +85,12 @@ type lruCache struct {
 	lru *lru.Cache
 }
 
+type CacheKeyUint64 uint64
+
+func (key CacheKeyUint64) getShardIndex(shardMask int) int {
+	return int(uint64(key) & uint64(shardMask))
+}
+
 func (cache *lruCache) Add(key CacheKey, value interface{}) (evicted bool) {
 	return cache.lru.Add(key, value)
 }

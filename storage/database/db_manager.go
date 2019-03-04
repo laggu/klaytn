@@ -78,12 +78,14 @@ type DBManager interface {
 	DeleteTd(hash common.Hash, number uint64)
 
 	ReadReceipts(hash common.Hash, number uint64) types.Receipts
+	ReadReceiptsByBlockHash(hash common.Hash) types.Receipts
 	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
 	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts)
 	DeleteReceipts(hash common.Hash, number uint64)
 
 	ReadBlock(hash common.Hash, number uint64) *types.Block
 	ReadBlockByHash(hash common.Hash) *types.Block
+	ReadBlockByNumber(number uint64) *types.Block
 	HasBlock(hash common.Hash, number uint64) bool
 	WriteBlock(block *types.Block)
 	DeleteBlock(hash common.Hash, number uint64)
@@ -408,12 +410,19 @@ func (dbm *databaseManager) Close() {
 // Canonical Hash operations.
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
 func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
+	if cached := dbm.cm.readCanonicalHashCache(number); !common.EmptyHash(cached) {
+		return cached
+	}
+
 	db := dbm.getDatabase(headerDB)
 	data, _ := db.Get(headerHashKey(number))
 	if len(data) == 0 {
 		return common.Hash{}
 	}
-	return common.BytesToHash(data)
+
+	hash := common.BytesToHash(data)
+	dbm.cm.writeCanonicalHashCache(number, hash)
+	return hash
 }
 
 // WriteCanonicalHash stores the hash assigned to a canonical block number.
@@ -422,6 +431,7 @@ func (dbm *databaseManager) WriteCanonicalHash(hash common.Hash, number uint64) 
 	if err := db.Put(headerHashKey(number), hash.Bytes()); err != nil {
 		logger.Crit("Failed to store number to hash mapping", "err", err)
 	}
+	dbm.cm.writeCanonicalHashCache(number, hash)
 }
 
 // DeleteCanonicalHash removes the number to hash canonical mapping.
@@ -430,6 +440,7 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 	if err := db.Delete(headerHashKey(number)); err != nil {
 		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
+	dbm.cm.writeCanonicalHashCache(number, common.Hash{})
 }
 
 // Head Number operations.
@@ -819,6 +830,18 @@ func (dbm *databaseManager) ReadReceipts(hash common.Hash, number uint64) types.
 	return receipts
 }
 
+func (dbm *databaseManager) ReadReceiptsByBlockHash(hash common.Hash) types.Receipts {
+	receipts := dbm.ReadBlockReceiptsInCache(hash)
+	if receipts != nil {
+		return receipts
+	}
+	number := dbm.ReadHeaderNumber(hash)
+	if number == nil {
+		return nil
+	}
+	return dbm.ReadReceipts(hash, *number)
+}
+
 // WriteReceipts stores all the transaction receipts belonging to a block.
 func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
 	db := dbm.getDatabase(ReceiptsDB)
@@ -927,6 +950,14 @@ func (dbm *databaseManager) ReadBlockByHash(hash common.Hash) *types.Block {
 	// Write to cache at the end of successful write.
 	dbm.cm.writeBlockCache(hash, block)
 	return block
+}
+
+func (dbm *databaseManager) ReadBlockByNumber(number uint64) *types.Block {
+	hash := dbm.ReadCanonicalHash(number)
+	if hash == (common.Hash{}) {
+		return nil
+	}
+	return dbm.ReadBlock(hash, number)
 }
 
 func (dbm *databaseManager) HasBlock(hash common.Hash, number uint64) bool {

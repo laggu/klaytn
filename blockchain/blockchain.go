@@ -547,31 +547,7 @@ func (bc *BlockChain) GetBlockNumber(hash common.Hash) *uint64 {
 // GetBlockByNumber retrieves a block from the database by number, caching it
 // (associated with its hash) if found.
 func (bc *BlockChain) GetBlockByNumber(number uint64) *types.Block {
-	hash := bc.db.ReadCanonicalHash(number)
-	if hash == (common.Hash{}) {
-		return nil
-	}
-	return bc.GetBlock(hash, number)
-}
-
-// GetReceiptByTxHash retrieves a receipt for a given transaction hash.
-func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
-	receipt := bc.GetTxReceiptInCache(txHash)
-	if receipt != nil {
-		return receipt
-	}
-
-	tx, blockHash, _, index := bc.GetTxAndLookupInfo(txHash)
-	if tx == nil {
-		return nil
-	}
-
-	receipts := bc.GetReceiptsByBlockHash(blockHash)
-	if len(receipts) <= int(index) {
-		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts))
-		return nil
-	}
-	return receipts[index]
+	return bc.db.ReadBlockByNumber(number)
 }
 
 // GetTxAndLookupInfo retrieves a tx and lookup info for a given transaction hash.
@@ -615,15 +591,27 @@ func (bc *BlockChain) GetTxLookupInfoAndReceiptInCache(txHash common.Hash) (*typ
 
 // GetReceiptsByBlockHash retrieves the receipts for all transactions with given block hash.
 func (bc *BlockChain) GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts {
-	receipts := bc.GetBlockReceiptsInCache(blockHash)
-	if receipts != nil {
-		return receipts
+	return bc.db.ReadReceiptsByBlockHash(blockHash)
+}
+
+// GetReceiptByTxHash retrieves a receipt for a given transaction hash.
+func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
+	receipt := bc.GetTxReceiptInCache(txHash)
+	if receipt != nil {
+		return receipt
 	}
-	number := bc.GetBlockNumber(blockHash)
-	if number == nil {
+
+	tx, blockHash, _, index := bc.GetTxAndLookupInfo(txHash)
+	if tx == nil {
 		return nil
 	}
-	return bc.db.ReadReceipts(blockHash, *number)
+
+	receipts := bc.GetReceiptsByBlockHash(blockHash)
+	if len(receipts) <= int(index) {
+		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts))
+		return nil
+	}
+	return receipts[index]
 }
 
 // GetLogsByHash retrieves the logs for all receipts in a given block.

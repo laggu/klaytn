@@ -28,9 +28,10 @@ import (
 // Below is the list of the constants for cache size.
 // TODO-Klaytn: Below should be handled by ini or other configurations.
 const (
-	maxHeaderCache      = 512
-	maxTdCache          = 1024
-	maxBlockNumberCache = 2048
+	maxHeaderCache        = 512
+	maxTdCache            = 1024
+	maxBlockNumberCache   = 2048
+	maxCanonicalHashCache = 2048
 
 	maxBodyCache           = 256
 	maxBlockCache          = 256
@@ -40,9 +41,10 @@ const (
 )
 
 const (
-	numShardsHeaderCache      = 4096
-	numShardsTdCache          = 4096
-	numShardsBlockNumberCache = 4096
+	numShardsHeaderCache        = 4096
+	numShardsTdCache            = 4096
+	numShardsBlockNumberCache   = 4096
+	numShardsCanonicalHashCache = 4096
 
 	numShardsBodyCache           = 4096
 	numShardsBlockCache          = 4096
@@ -57,6 +59,7 @@ const (
 	headerCacheIndex cacheKey = iota
 	tdCacheIndex
 	blockNumberCacheIndex
+	canonicalCacheIndex
 
 	bodyCacheIndex
 	bodyRLPCacheIndex
@@ -72,6 +75,7 @@ var lruCacheConfig = [cacheKeySize]common.CacheConfiger{
 	headerCacheIndex:      common.LRUConfig{CacheSize: maxHeaderCache},
 	tdCacheIndex:          common.LRUConfig{CacheSize: maxTdCache},
 	blockNumberCacheIndex: common.LRUConfig{CacheSize: maxBlockNumberCache},
+	canonicalCacheIndex:   common.LRUConfig{CacheSize: maxCanonicalHashCache},
 
 	bodyCacheIndex:             common.LRUConfig{CacheSize: maxBodyCache},
 	bodyRLPCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache},
@@ -85,6 +89,7 @@ var lruShardCacheConfig = [cacheKeySize]common.CacheConfiger{
 	headerCacheIndex:      common.LRUShardConfig{CacheSize: maxHeaderCache, NumShards: numShardsHeaderCache},
 	tdCacheIndex:          common.LRUShardConfig{CacheSize: maxTdCache, NumShards: numShardsTdCache},
 	blockNumberCacheIndex: common.LRUShardConfig{CacheSize: maxBlockNumberCache, NumShards: numShardsBlockNumberCache},
+	canonicalCacheIndex:   common.LRUShardConfig{CacheSize: maxCanonicalHashCache, NumShards: numShardsCanonicalHashCache},
 
 	bodyCacheIndex:             common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
 	bodyRLPCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
@@ -98,6 +103,7 @@ var fifoCacheConfig = [cacheKeySize]common.CacheConfiger{
 	headerCacheIndex:      common.FIFOCacheConfig{CacheSize: maxHeaderCache},
 	tdCacheIndex:          common.FIFOCacheConfig{CacheSize: maxTdCache},
 	blockNumberCacheIndex: common.FIFOCacheConfig{CacheSize: maxBlockNumberCache},
+	canonicalCacheIndex:   common.FIFOCacheConfig{CacheSize: maxCanonicalHashCache},
 
 	bodyCacheIndex:             common.FIFOCacheConfig{CacheSize: maxBodyCache},
 	bodyRLPCacheIndex:          common.FIFOCacheConfig{CacheSize: maxBodyCache},
@@ -133,9 +139,10 @@ type TransactionLookup struct {
 // blockchain.BlockChain.
 type cacheManager struct {
 	// caches from blockchain.HeaderChain
-	headerCache      common.Cache
-	tdCache          common.Cache
-	blockNumberCache common.Cache
+	headerCache        common.Cache
+	tdCache            common.Cache
+	blockNumberCache   common.Cache
+	canonicalHashCache common.Cache
 
 	// caches from blockchain.BlockChain
 	bodyCache             common.Cache // Cache for the most recent block bodies
@@ -149,9 +156,10 @@ type cacheManager struct {
 // newCacheManager returns a pointer of cacheManager with predefined configurations.
 func newCacheManager() *cacheManager {
 	cm := &cacheManager{
-		headerCache:      newCache(headerCacheIndex, common.DefaultCacheType),
-		tdCache:          newCache(tdCacheIndex, common.DefaultCacheType),
-		blockNumberCache: newCache(blockNumberCacheIndex, common.DefaultCacheType),
+		headerCache:        newCache(headerCacheIndex, common.DefaultCacheType),
+		tdCache:            newCache(tdCacheIndex, common.DefaultCacheType),
+		blockNumberCache:   newCache(blockNumberCacheIndex, common.DefaultCacheType),
+		canonicalHashCache: newCache(canonicalCacheIndex, common.DefaultCacheType),
 
 		bodyCache:    newCache(bodyCacheIndex, common.DefaultCacheType),
 		bodyRLPCache: newCache(bodyRLPCacheIndex, common.DefaultCacheType),
@@ -169,6 +177,7 @@ func (cm *cacheManager) clearHeaderChainCache() {
 	cm.headerCache.Purge()
 	cm.tdCache.Purge()
 	cm.blockNumberCache.Purge()
+	cm.canonicalHashCache.Purge()
 }
 
 // clearBlockChainCache flushes out 1) bodyCache, 2) bodyRLPCache, 3) blockCache,
@@ -255,6 +264,23 @@ func (cm *cacheManager) readBlockNumberCache(hash common.Hash) *uint64 {
 // writeHeaderCache writes headerNumber as a value, headerHash as a key.
 func (cm *cacheManager) writeBlockNumberCache(hash common.Hash, number uint64) {
 	cm.blockNumberCache.Add(hash, number)
+}
+
+// readCanonicalHashCache looks for cached canonical hash in canonicalHashCache.
+// It returns empty hash if not found.
+func (cm *cacheManager) readCanonicalHashCache(number uint64) common.Hash {
+	if cached, ok := cm.canonicalHashCache.Get(common.CacheKeyUint64(number)); ok {
+		cacheGetCanonicalHashHitMeter.Mark(1)
+		canonicalHash := cached.(common.Hash)
+		return canonicalHash
+	}
+	cacheGetCanonicalHashMissMeter.Mark(1)
+	return common.Hash{}
+}
+
+// writeCanonicalHashCache writes canonical hash as a value, headerNumber as a key.
+func (cm *cacheManager) writeCanonicalHashCache(number uint64, hash common.Hash) {
+	cm.canonicalHashCache.Add(common.CacheKeyUint64(number), hash)
 }
 
 // readBodyCache looks for cached blockBody in bodyCache.
