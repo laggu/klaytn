@@ -1023,7 +1023,7 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliver func(dataPack) (int, error), wakeCh chan bool,
 	expire func() map[string]int, pending func() int, inFlight func() bool, throttle func() bool, reserve func(*peerConnection, int) (*fetchRequest, bool, error),
 	fetchHook func([]*types.Header), fetch func(*peerConnection, *fetchRequest) error, cancel func(*fetchRequest), capacity func(*peerConnection) int,
-	idle func() ([]*peerConnection, int), setIdle func(*peerConnection, int), kind string) error {
+	idlePeers func() ([]*peerConnection, int), setIdle func(*peerConnection, int), kind string) error {
 
 	// Create a ticker to detect expired retrieval tasks
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -1121,9 +1121,11 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 			}
 			// Send a download request to all idle peers, until throttled
 			progressed, throttled, running := false, false, inFlight()
-			idles, total := idle()
 
-			for _, peer := range idles {
+			// numTotalPeers means the number of peers satisfying the protocol requirement.
+			idlePeers, numTotalPeers := idlePeers()
+
+			for _, peer := range idlePeers {
 				// Short circuit if throttling activated
 				if throttle() {
 					throttled = true
@@ -1167,7 +1169,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 			}
 			// Make sure that we have peers available for fetching. If all peers have been tried
 			// and all failed throw an error
-			if !progressed && !throttled && !running && len(idles) == total && pending() > 0 {
+			if !progressed && !throttled && !running && len(idlePeers) == numTotalPeers && pending() > 0 {
 				return errPeersUnavailable
 			}
 		}

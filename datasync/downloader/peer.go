@@ -469,7 +469,7 @@ func (ps *peerSet) AllPeers() []*peerConnection {
 // HeaderIdlePeers retrieves a flat list of all the currently header-idle peers
 // within the active peer set, ordered by their reputation.
 func (ps *peerSet) HeaderIdlePeers() ([]*peerConnection, int) {
-	idle := func(p *peerConnection) bool {
+	idleCheck := func(p *peerConnection) bool {
 		return atomic.LoadInt32(&p.headerIdle) == 0
 	}
 	throughput := func(p *peerConnection) float64 {
@@ -477,13 +477,13 @@ func (ps *peerSet) HeaderIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.headerThroughput
 	}
-	return ps.idlePeers(62, 64, idle, throughput)
+	return ps.idlePeers(62, 64, idleCheck, throughput)
 }
 
 // BodyIdlePeers retrieves a flat list of all the currently body-idle peers within
 // the active peer set, ordered by their reputation.
 func (ps *peerSet) BodyIdlePeers() ([]*peerConnection, int) {
-	idle := func(p *peerConnection) bool {
+	idleCheck := func(p *peerConnection) bool {
 		return atomic.LoadInt32(&p.blockIdle) == 0
 	}
 	throughput := func(p *peerConnection) float64 {
@@ -491,13 +491,13 @@ func (ps *peerSet) BodyIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.blockThroughput
 	}
-	return ps.idlePeers(62, 64, idle, throughput)
+	return ps.idlePeers(62, 64, idleCheck, throughput)
 }
 
 // ReceiptIdlePeers retrieves a flat list of all the currently receipt-idle peers
 // within the active peer set, ordered by their reputation.
 func (ps *peerSet) ReceiptIdlePeers() ([]*peerConnection, int) {
-	idle := func(p *peerConnection) bool {
+	idleCheck := func(p *peerConnection) bool {
 		return atomic.LoadInt32(&p.receiptIdle) == 0
 	}
 	throughput := func(p *peerConnection) float64 {
@@ -505,13 +505,13 @@ func (ps *peerSet) ReceiptIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.receiptThroughput
 	}
-	return ps.idlePeers(63, 64, idle, throughput)
+	return ps.idlePeers(63, 64, idleCheck, throughput)
 }
 
 // NodeDataIdlePeers retrieves a flat list of all the currently node-data-idle
 // peers within the active peer set, ordered by their reputation.
 func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
-	idle := func(p *peerConnection) bool {
+	idleCheck := func(p *peerConnection) bool {
 		return atomic.LoadInt32(&p.stateIdle) == 0
 	}
 	throughput := func(p *peerConnection) float64 {
@@ -519,7 +519,7 @@ func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.stateThroughput
 	}
-	return ps.idlePeers(63, 64, idle, throughput)
+	return ps.idlePeers(63, 64, idleCheck, throughput)
 }
 
 // idlePeers retrieves a flat list of all currently idle peers satisfying the
@@ -529,23 +529,23 @@ func (ps *peerSet) idlePeers(minProtocol, maxProtocol int, idleCheck func(*peerC
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
-	idle, total := make([]*peerConnection, 0, len(ps.peers)), 0
+	idlePeers, numTotalPeers := make([]*peerConnection, 0, len(ps.peers)), 0
 	for _, p := range ps.peers {
 		if p.version >= minProtocol && p.version <= maxProtocol {
 			if idleCheck(p) {
-				idle = append(idle, p)
+				idlePeers = append(idlePeers, p)
 			}
-			total++
+			numTotalPeers++
 		}
 	}
-	for i := 0; i < len(idle); i++ {
-		for j := i + 1; j < len(idle); j++ {
-			if throughput(idle[i]) < throughput(idle[j]) {
-				idle[i], idle[j] = idle[j], idle[i]
+	for i := 0; i < len(idlePeers); i++ {
+		for j := i + 1; j < len(idlePeers); j++ {
+			if throughput(idlePeers[i]) < throughput(idlePeers[j]) {
+				idlePeers[i], idlePeers[j] = idlePeers[j], idlePeers[i]
 			}
 		}
 	}
-	return idle, total
+	return idlePeers, numTotalPeers
 }
 
 // medianRTT returns the median RTT of the peerset, considering only the tuning
