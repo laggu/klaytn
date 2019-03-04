@@ -60,7 +60,10 @@ type bodyRequesterFn func([]common.Hash) error
 type headerVerifierFn func(header *types.Header) error
 
 // blockBroadcasterFn is a callback type for broadcasting a block to connected peers.
-type blockBroadcasterFn func(block *types.Block, propagate bool)
+type blockBroadcasterFn func(block *types.Block)
+
+// blockHashBroadcasterFn is a callback type for broadcasting a blockHash to connected peers.
+type blockHashBroadcasterFn func(block *types.Block)
 
 // chainHeightFn is a callback type to retrieve the current chain height.
 type chainHeightFn func() uint64
@@ -134,12 +137,13 @@ type Fetcher struct {
 	queued map[common.Hash]*inject // Set of already queued blocks (to dedupe imports)
 
 	// Callbacks
-	getBlock       blockRetrievalFn   // Retrieves a block from the local chain
-	verifyHeader   headerVerifierFn   // Checks if a block's headers have a valid proof of work
-	broadcastBlock blockBroadcasterFn // Broadcasts a block to connected peers
-	chainHeight    chainHeightFn      // Retrieves the current chain's height
-	insertChain    chainInsertFn      // Injects a batch of blocks into the chain
-	dropPeer       peerDropFn         // Drops a peer for misbehaving
+	getBlock           blockRetrievalFn       // Retrieves a block from the local chain
+	verifyHeader       headerVerifierFn       // Checks if a block's headers have a valid proof of work
+	broadcastBlock     blockBroadcasterFn     // Broadcasts a block to connected peers
+	broadcastBlockHash blockHashBroadcasterFn // Broadcasts a blockHash to connected peers
+	chainHeight        chainHeightFn          // Retrieves the current chain's height
+	insertChain        chainInsertFn          // Injects a batch of blocks into the chain
+	dropPeer           peerDropFn             // Drops a peer for misbehaving
 
 	// Testing hooks
 	announceChangeHook func(common.Hash, bool) // Method to call upon adding or deleting a hash from the announce list
@@ -150,29 +154,30 @@ type Fetcher struct {
 }
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
-func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn) *Fetcher {
+func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBlock blockBroadcasterFn, broadcastBlockHash blockHashBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn) *Fetcher {
 	return &Fetcher{
-		notify:         make(chan *announce),
-		inject:         make(chan *inject),
-		blockFilter:    make(chan chan []*types.Block),
-		headerFilter:   make(chan chan *headerFilterTask),
-		bodyFilter:     make(chan chan *bodyFilterTask),
-		done:           make(chan common.Hash),
-		quit:           make(chan struct{}),
-		announces:      make(map[string]int),
-		announced:      make(map[common.Hash][]*announce),
-		fetching:       make(map[common.Hash]*announce),
-		fetched:        make(map[common.Hash][]*announce),
-		completing:     make(map[common.Hash]*announce),
-		queue:          prque.New(),
-		queues:         make(map[string]int),
-		queued:         make(map[common.Hash]*inject),
-		getBlock:       getBlock,
-		verifyHeader:   verifyHeader,
-		broadcastBlock: broadcastBlock,
-		chainHeight:    chainHeight,
-		insertChain:    insertChain,
-		dropPeer:       dropPeer,
+		notify:             make(chan *announce),
+		inject:             make(chan *inject),
+		blockFilter:        make(chan chan []*types.Block),
+		headerFilter:       make(chan chan *headerFilterTask),
+		bodyFilter:         make(chan chan *bodyFilterTask),
+		done:               make(chan common.Hash),
+		quit:               make(chan struct{}),
+		announces:          make(map[string]int),
+		announced:          make(map[common.Hash][]*announce),
+		fetching:           make(map[common.Hash]*announce),
+		fetched:            make(map[common.Hash][]*announce),
+		completing:         make(map[common.Hash]*announce),
+		queue:              prque.New(),
+		queues:             make(map[string]int),
+		queued:             make(map[common.Hash]*inject),
+		getBlock:           getBlock,
+		verifyHeader:       verifyHeader,
+		broadcastBlock:     broadcastBlock,
+		broadcastBlockHash: broadcastBlockHash,
+		chainHeight:        chainHeight,
+		insertChain:        insertChain,
+		dropPeer:           dropPeer,
 	}
 }
 
@@ -659,7 +664,7 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 		case nil:
 			// All ok, quickly propagate to our peers
 			propBroadcastOutTimer.UpdateSince(block.ReceivedAt)
-			go f.broadcastBlock(block, true)
+			go f.broadcastBlock(block)
 
 		case consensus.ErrFutureBlock:
 			// Weird future block, don't fail, but neither propagate
@@ -677,7 +682,7 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 		}
 		// If import succeeded, broadcast the block
 		propAnnounceOutTimer.UpdateSince(block.ReceivedAt)
-		go f.broadcastBlock(block, false)
+		go f.broadcastBlockHash(block)
 
 		// Invoke the testing hook if needed
 		if f.importedHook != nil {

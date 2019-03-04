@@ -242,7 +242,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
 
 	return manager, nil
 }
@@ -1061,26 +1061,33 @@ func (pm *ProtocolManager) samplePeersToSendBlock(block *types.Block) []Peer {
 	return sampledPeersWithoutBlock
 }
 
-// sendBlockToPeers sends block to peers without given block.
+// BroadcastBlock will propagate a block to a subset of its peers.
 // If current node is CN, it will send block to all PN peers + sampled CN peers without block.
 // However, if there are more than 5 PN peers, it will sample 5 PN peers.
 // If current node is not CN, it will send block to sampled peers except CNs.
-func (pm *ProtocolManager) sendBlockToPeers(block *types.Block) {
+func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
+	if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent == nil {
+		logger.Error("Propagating dangling block", "number", block.Number(), "hash", block.Hash())
+		return
+	}
 	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
-	// Send the block to a subset of our peers
 	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 	td := new(big.Int).Add(block.Difficulty(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
-
 	peersToSendBlock := pm.samplePeersToSendBlock(block)
 	for _, peer := range peersToSendBlock {
 		peer.AsyncSendNewBlock(block, td)
 	}
 }
 
-// sendBlockHashToPeers sends block hash to peers who don't have the block.
-func (pm *ProtocolManager) sendBlockHashToPeers(block *types.Block) {
+// BroadcastBlockHash will propagate a blockHash to a subset of its peers.
+func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
+	if !pm.blockchain.HasBlock(block.Hash(), block.NumberU64()) {
+		return
+	}
+
+	// Otherwise if the block is indeed in out own chain, announce it
 	peersWithoutBlock := pm.getPeersWithoutBlock(block.Hash())
 	for _, peer := range peersWithoutBlock {
 		//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
@@ -1088,25 +1095,6 @@ func (pm *ProtocolManager) sendBlockHashToPeers(block *types.Block) {
 	}
 	logger.Trace("Announced block", "hash", block.Hash(),
 		"recipients", len(peersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-}
-
-// BroadcastBlock will either propagate a block to a subset of it's peers, or
-// will only announce it's availability (depending what's requested).
-func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
-	if propagate {
-		// If propagation is requested, send to a subset of the peer
-		if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent == nil {
-			logger.Error("Propagating dangling block", "number", block.Number(), "hash", block.Hash())
-			return
-		}
-		pm.sendBlockToPeers(block)
-		return
-	}
-
-	if pm.blockchain.HasBlock(block.Hash(), block.NumberU64()) {
-		// Otherwise if the block is indeed in out own chain, announce it
-		pm.sendBlockHashToPeers(block)
-	}
 }
 
 // BroadcastTxs will propagate a batch of transactions to all peers which are not known to
@@ -1242,8 +1230,8 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 	for obj := range pm.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case blockchain.NewMinedBlockEvent:
-			pm.BroadcastBlock(ev.Block, true)  // First propagate block to peers
-			pm.BroadcastBlock(ev.Block, false) // Only then announce to the rest
+			pm.BroadcastBlock(ev.Block)     // First propagate block to peers
+			pm.BroadcastBlockHash(ev.Block) // Only then announce to the rest
 		}
 	}
 }

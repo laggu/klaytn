@@ -218,6 +218,6 @@ func (pm *ProtocolManager) synchronise(peer Peer) {
 		// scenario will most often crop up in private and hackathon networks with
 		// degenerate connectivity, but it should be healthy for the mainnet too to
 		// more reliably update peers or the local TD state.
-		go pm.BroadcastBlock(head, false)
+		go pm.BroadcastBlockHash(head)
 	}
 }
