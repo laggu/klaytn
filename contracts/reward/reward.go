@@ -95,36 +95,82 @@ func isEmptyAddress(addr common.Address) bool {
 }
 
 // DistributeBlockReward mints KLAY and distribute newly minted KLAY to proposer, kirAddr and pocAddr. proposer also gets totalTxFee.
-func DistributeBlockReward(b BalanceAdder, validators []common.Address, totalTxFee *big.Int, kirAddr common.Address, pocAddr common.Address) {
-	proposer := validators[0]
+func DistributeBlockReward(b BalanceAdder, header *types.Header, config *params.ChainConfig) {
 
-	// Mint KLAY for proposer
-	mintedKLAY := params.ProposerIncentive
-	b.AddBalance(proposer, mintedKLAY)
-	logger.Debug("Block reward - Minted KLAY", "reward address of proposer", proposer, "Amount", mintedKLAY)
-
-	// Transfer Tx fee for proposer
-	b.AddBalance(proposer, totalTxFee)
-	logger.Debug("Block reward - Tx fee", "reward address of proposer", proposer, "Amount", totalTxFee)
-
-	// Mint KLAY for KIR
-	if isEmptyAddress(kirAddr) {
-		// Consider bootstrapping
-		b.AddBalance(proposer, params.KIRContractIncentive)
-		logger.Debug("Block reward - KIR. No KIR address.", "reward address of proposer", proposer, "Amount", params.KIRContractIncentive)
-	} else {
-		b.AddBalance(kirAddr, params.KIRContractIncentive)
-		logger.Debug("Block reward - KIR", "KIR address", kirAddr, "Amount", params.KIRContractIncentive)
+	for i, addr := range header.KlaytnExtra {
+		logger.Trace("header.KlaytnExtra", "i", i, "header.KlaytnExtra[i]", addr)
 	}
 
-	// Mint KLAY for PoC
+	var kirAddr common.Address
+	var pocAddr common.Address
+	stakingInfo := GetStakingInfoFromStakingCache(header.Number.Uint64())
+	if stakingInfo != nil {
+		kirAddr = stakingInfo.KIRAddr
+		pocAddr = stakingInfo.PoCAddr
+	}
+
+	// Calculate total tx fee
+	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
+	unitPrice := big.NewInt(0).SetUint64(config.UnitPrice)
+	totalTxFee := big.NewInt(0).Mul(totalGasUsed, unitPrice)
+
+	distributeBlockReward(b, header.KlaytnExtra, totalTxFee, kirAddr, pocAddr)
+}
+
+// DistributeBlockReward mints KLAY and distribute newly minted KLAY to proposer, kirAddr and pocAddr. proposer also gets totalTxFee.
+func distributeBlockReward(b BalanceAdder, validators []common.Address, totalTxFee *big.Int, kirAddr common.Address, pocAddr common.Address) {
+	proposer := validators[0]
+
+	// TODO-Klaytn-Issue1336 Get these ratio from governance after governance implementation is done
+	var cnRewardsRatio = big.NewInt(330) // 33.0%
+	var pocRatio = big.NewInt(545)       // 54.5%
+	var kirRatio = big.NewInt(125)       // 12.5%
+
+	var totalRatio = big.NewInt(0).Add(cnRewardsRatio, pocRatio)
+	totalRatio = big.NewInt(0).Add(totalRatio, kirRatio) // 100%
+
+	// TODO-Klaytn-Issue1336 Get amount of newly minted KLAY from governance after governance implementation is done
+	// Block reward
+	blockReward := big.NewInt(0).Add(params.DefaultMintedKLAY, totalTxFee) // Block reward
+
+	tmpInt := big.NewInt(0)
+
+	tmpInt = tmpInt.Mul(blockReward, cnRewardsRatio)
+	cnReward := tmpInt.Div(tmpInt, totalRatio)
+
+	tmpInt = tmpInt.Mul(blockReward, pocRatio)
+	pocIncentive := tmpInt.Div(tmpInt, totalRatio)
+
+	tmpInt = tmpInt.Mul(blockReward, kirRatio)
+	kirIncentive := tmpInt.Div(tmpInt, totalRatio)
+
+	remaining := tmpInt.Sub(blockReward, cnReward)
+	remaining = tmpInt.Sub(remaining, pocIncentive)
+	remaining = tmpInt.Sub(remaining, kirIncentive)
+	pocIncentive = tmpInt.Add(pocIncentive, remaining)
+
+	// CN reward
+	b.AddBalance(proposer, cnReward)
+	logger.Debug("Block reward - CN reward", "reward address of proposer", proposer, "Amount", cnReward)
+
+	// PoC
 	if isEmptyAddress(pocAddr) {
 		// Consider bootstrapping
-		b.AddBalance(proposer, params.KIRContractIncentive)
-		logger.Debug("Block reward - PoC. No PoC address.", "reward address of proposer", proposer, "Amount", params.PoCContractIncentive)
+		b.AddBalance(proposer, pocIncentive)
+		logger.Debug("Block reward - PoC. No PoC address.", "reward address of proposer", proposer, "Amount", pocIncentive)
 	} else {
-		b.AddBalance(pocAddr, params.PoCContractIncentive)
-		logger.Debug("Block reward - PoC", "PoC address", pocAddr, "Amount", params.PoCContractIncentive)
+		b.AddBalance(pocAddr, pocIncentive)
+		logger.Debug("Block reward - PoC", "PoC address", pocAddr, "Amount", pocIncentive)
+	}
+
+	// KIR
+	if isEmptyAddress(kirAddr) {
+		// Consider bootstrapping
+		b.AddBalance(proposer, kirIncentive)
+		logger.Debug("Block reward - KIR. No KIR address.", "reward address of proposer", proposer, "Amount", kirIncentive)
+	} else {
+		b.AddBalance(kirAddr, kirIncentive)
+		logger.Debug("Block reward - KIR", "KIR address", kirAddr, "Amount", kirIncentive)
 	}
 }
 

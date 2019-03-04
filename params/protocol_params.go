@@ -110,6 +110,7 @@ const (
 	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
 	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
 	proposerIncentiveInSton       int64 = 3200000000 // 3.2 KLAY for proposer as block reward (Unit: ston)
+	defaultMintedKLAYInSton       int64 = 9600000000 // 9.6 KLAY for proposer as block reward (Unit: ston)
 
 	// Fee for new tx types
 	// TODO-Klaytn: Need to fix values
@@ -131,6 +132,7 @@ var (
 	RewardContractIncentive = big.NewInt(0).Mul(big.NewInt(rewardContractIncentiveInSton), big.NewInt(Ston))
 	KIRContractIncentive    = big.NewInt(0).Mul(big.NewInt(kirContractIncentiveInSton), big.NewInt(Ston))
 	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))
+	DefaultMintedKLAY       = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
 )
 
 // Parameters for execution time limit
