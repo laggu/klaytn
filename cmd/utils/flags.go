@@ -522,6 +522,11 @@ var (
 		Name:  "baobab",
 		Usage: "Pre-configured Klaytn baobab network",
 	}
+	//TODO-Klaytn-Node remove after the real bootnode is implemented
+	EnableSBNFlag = cli.BoolFlag{
+		Name:  "enableSBN",
+		Usage: "enable simple bootnodes in order to retrieve two PNs' URIs",
+	}
 	// Bootnode's settings
 	AddrFlag = cli.StringFlag{
 		Name:  "addr",
@@ -895,6 +900,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 	if ctx.GlobalIsSet(NoDiscoverFlag.Name) {
 		cfg.NoDiscovery = true
+	}
+	//TODO-Klaytn-Node remove after the real bootnode is implemented
+	if ctx.GlobalIsSet(EnableSBNFlag.Name) {
+		cfg.EnableSBN = true
 	}
 
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {

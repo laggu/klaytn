@@ -98,6 +98,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.IsMainBridgeFlag,
 	utils.BridgeListenPortFlag,
 	utils.ParentChainURLFlag,
+	utils.EnableSBNFlag,
 }
 
 // Common RPC flags

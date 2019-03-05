@@ -78,6 +78,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.LightKDFFlag,
 			utils.NodeTypeFlag,
 			utils.BaobabFlag,
+			utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
 			utils.SrvTypeFlag,
 			utils.ExtraDataFlag,
 			ConfigFileFlag,
