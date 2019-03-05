@@ -116,8 +116,37 @@ type ChainConfig struct {
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
-	UnitPrice     uint64 `json:"unitPrice"`
-	DeriveShaImpl int    `json:"deriveShaImpl"`
+	UnitPrice     uint64            `json:"unitPrice"`
+	DeriveShaImpl int               `json:"deriveShaImpl"`
+	Governance    *GovernanceConfig `json:"governance"`
+}
+
+// GovernanceConfig stores governance information for a network
+type GovernanceConfig struct {
+	GoverningNode  common.Address  `json:"governingnode"`
+	GovernanceMode string          `json:"governancemode"`
+	Reward         *RewardConfig   `json:"reward,omitempty"`
+	Istanbul       *IstanbulConfig `json:"bft,omitempty"`
+	UnitPrice      uint64          `json:"unitPrice"`
+}
+
+func (g *GovernanceConfig) DeferredTxFee() bool {
+	return g.Reward.DeferredTxFee
+}
+
+// RewardConfig stores information about the network's token economy
+type RewardConfig struct {
+	MintingAmount *big.Int `json:"mintingamount"`
+	Ratio         string   `json:"ratio"`                   // Define how much portion of reward be distributed to CN/KIR/PoC
+	UseGiniCoeff  bool     `json:"useginicoeff,omitempty"`  // Decide if Gini Coefficient will be used or not
+	DeferredTxFee bool     `json:"deferredtxfee,omitempty"` // Decide if TX fee will be handled instantly or handled later at block finalization
+}
+
+// IstanbulConfig is the consensus engine configs for Istanbul based sealing.
+type IstanbulConfig struct {
+	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
+	SubGroupSize   int    `json:"sub"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -137,13 +166,6 @@ type CliqueConfig struct {
 // String implements the stringer interface, returning the consensus engine details.
 func (c *CliqueConfig) String() string {
 	return "clique"
-}
-
-// IstanbulConfig is the consensus engine configs for Istanbul based sealing.
-type IstanbulConfig struct {
-	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
-	SubGroupSize   int    `json:"sub"`
 }
 
 // String implements the stringer interface, returning the consensus engine details.

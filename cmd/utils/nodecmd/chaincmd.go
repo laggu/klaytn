@@ -24,7 +24,9 @@ import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"os"
@@ -70,7 +72,30 @@ func initGenesis(ctx *cli.Context) error {
 	genesis := new(blockchain.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
+		return err
 	}
+
+	// TODO-Klaytn-Governance We may need to clean up this code when all developers use same genesis.json template
+	// Note: For less code change, we copy values of Governance into existing data structure
+	if genesis.Config.Governance != nil {
+		genesis.Config.UnitPrice = genesis.Config.Governance.UnitPrice
+		genesis.Config.Istanbul = new(params.IstanbulConfig)
+		genesis.Config.Istanbul.Epoch = genesis.Config.Governance.Istanbul.Epoch
+		genesis.Config.Istanbul.SubGroupSize = genesis.Config.Governance.Istanbul.SubGroupSize
+		genesis.Config.Istanbul.ProposerPolicy = genesis.Config.Governance.Istanbul.ProposerPolicy
+	} else {
+		// When using older genesis.json
+		genesis.Config.Governance = governance.GetDefaultGovernanceConfig()
+		genesis.Config.Governance.Istanbul.Epoch = genesis.Config.Istanbul.Epoch
+		genesis.Config.Governance.Istanbul.SubGroupSize = genesis.Config.Istanbul.SubGroupSize
+		genesis.Config.Governance.Istanbul.ProposerPolicy = genesis.Config.Istanbul.ProposerPolicy
+	}
+
+	genesis.Governance, err = governance.MakeGovernanceData(genesis.Config.Governance)
+	if err != nil {
+		logger.Crit("Error in making governance data", "err", err)
+	}
+
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
 

@@ -50,6 +50,7 @@ type Genesis struct {
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
+	Governance []byte              `json:"governanceData"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
@@ -238,6 +239,7 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 		TimeFoS:    0,
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
+		Governance: g.Governance,
 		GasLimit:   g.GasLimit,
 		GasUsed:    g.GasUsed,
 		Difficulty: g.Difficulty,
