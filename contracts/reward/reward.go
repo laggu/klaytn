@@ -20,6 +20,7 @@
 package reward
 
 import (
+	"errors"
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/blockchain"
@@ -31,6 +32,7 @@ import (
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
+	"strconv"
 	"strings"
 )
 
@@ -115,40 +117,56 @@ func DistributeBlockReward(b BalanceAdder, header *types.Header, config *params.
 		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
 	}
 
-	distributeBlockReward(b, header.KlaytnExtra, totalTxFee, kirAddr, pocAddr)
+	distributeBlockReward(b, header.KlaytnExtra, totalTxFee, kirAddr, pocAddr, config)
 }
 
 // DistributeBlockReward mints KLAY and distribute newly minted KLAY to proposer, kirAddr and pocAddr. proposer also gets totalTxFee.
-func distributeBlockReward(b BalanceAdder, validators []common.Address, totalTxFee *big.Int, kirAddr common.Address, pocAddr common.Address) {
+func distributeBlockReward(b BalanceAdder, validators []common.Address, totalTxFee *big.Int, kirAddr common.Address, pocAddr common.Address, config *params.ChainConfig) {
 	proposer := validators[0]
 
-	// TODO-Klaytn-Issue1336 Get these ratio from governance after governance implementation is done
-	var cnRewardsRatio = big.NewInt(330) // 33.0%
-	var pocRatio = big.NewInt(545)       // 54.5%
-	var kirRatio = big.NewInt(125)       // 12.5%
+	// minting amount
+	var mintingAmount *big.Int
+	if config.Governance.Reward.MintingAmount == nil {
+		mintingAmount = params.DefaultMintedKLAY
+	} else {
+		mintingAmount = config.Governance.Reward.MintingAmount
+	}
+
+	// TODO-Klaytn-Issue1631 Do not parse every time. Improve it!
+	cn, kir, poc, err := parseRewardRatio(config.Governance.Reward.Ratio)
+	if err != nil {
+		logger.Error("Error while parsing reward ratio of governance. Using default ratio", "err", err)
+		cn = 330  // 33.0%
+		poc = 545 // 54.5%
+		kir = 125 // 12.5%
+	}
+	logger.Trace("Block reward ratio", "cn", cn, "poc", poc, "kir", kir)
+
+	var cnRewardsRatio = big.NewInt(int64(cn))
+	var pocRatio = big.NewInt(int64(poc))
+	var kirRatio = big.NewInt(int64(kir))
 
 	var totalRatio = big.NewInt(0).Add(cnRewardsRatio, pocRatio)
-	totalRatio = big.NewInt(0).Add(totalRatio, kirRatio) // 100%
+	totalRatio = big.NewInt(0).Add(totalRatio, kirRatio)
 
-	// TODO-Klaytn-Issue1336 Get amount of newly minted KLAY from governance after governance implementation is done
 	// Block reward
-	blockReward := big.NewInt(0).Add(params.DefaultMintedKLAY, totalTxFee) // Block reward
+	blockReward := big.NewInt(0).Add(mintingAmount, totalTxFee)
 
 	tmpInt := big.NewInt(0)
 
 	tmpInt = tmpInt.Mul(blockReward, cnRewardsRatio)
-	cnReward := tmpInt.Div(tmpInt, totalRatio)
+	cnReward := big.NewInt(0).Div(tmpInt, totalRatio)
 
 	tmpInt = tmpInt.Mul(blockReward, pocRatio)
-	pocIncentive := tmpInt.Div(tmpInt, totalRatio)
+	pocIncentive := big.NewInt(0).Div(tmpInt, totalRatio)
 
 	tmpInt = tmpInt.Mul(blockReward, kirRatio)
-	kirIncentive := tmpInt.Div(tmpInt, totalRatio)
+	kirIncentive := big.NewInt(0).Div(tmpInt, totalRatio)
 
 	remaining := tmpInt.Sub(blockReward, cnReward)
 	remaining = tmpInt.Sub(remaining, pocIncentive)
 	remaining = tmpInt.Sub(remaining, kirIncentive)
-	pocIncentive = tmpInt.Add(pocIncentive, remaining)
+	pocIncentive = pocIncentive.Add(pocIncentive, remaining)
 
 	// CN reward
 	b.AddBalance(proposer, cnReward)
@@ -173,6 +191,21 @@ func distributeBlockReward(b BalanceAdder, validators []common.Address, totalTxF
 		b.AddBalance(kirAddr, kirIncentive)
 		logger.Debug("Block reward - KIR", "KIR address", kirAddr, "Amount", kirIncentive)
 	}
+}
+
+func parseRewardRatio(ratio string) (int, int, int, error) {
+	s := strings.Split(ratio, "/")
+	if len(s) != 3 {
+		return 0, 0, 0, errors.New("Invalid format")
+	}
+	cn, err1 := strconv.Atoi(s[0])
+	kir, err2 := strconv.Atoi(s[1])
+	poc, err3 := strconv.Atoi(s[2])
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return 0, 0, 0, errors.New("Parsing error")
+	}
+	return cn, kir, poc, nil
 }
 
 func IsStakingUpdateInterval(blockNum uint64) bool {
