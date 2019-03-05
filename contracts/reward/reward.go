@@ -15,9 +15,6 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 //go:generate abigen --sol contract/KlaytnReward.sol --pkg contract --out contract/KlaytnReward.go
-//go:generate abigen --sol contract/CommitteeReward.sol --pkg contract --out contract/CommitteeReward.go
-//go:generate abigen --sol contract/ProposerReward.sol --pkg contract --out contract/ProposerReward.go
-//go:generate abigen --sol contract/PIRerve.sol --pkg contract --out contract/PIRerve.go
 //go:generate abigen --sol contract/AddressBook.sol --pkg contract --out contract/AddressBook.go
 
 package reward
