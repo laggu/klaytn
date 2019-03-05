@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"math/big"
 )
 
 var (
@@ -61,7 +62,33 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 
 func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedEvent) error {
 	//TODO-Klaytn event handle
-	return nil
+	gatewayAddr := cce.subbridge.AddressManager().GetCounterPartGateway(token.ContractAddr)
+	tokenAddr := cce.subbridge.AddressManager().GetCounterPartToken(token.TokenAddr)
+	user := cce.subbridge.AddressManager().GetCounterPartUser(token.From)
+
+	local, ok := cce.subbridge.gatewayMgr.IsLocal(gatewayAddr)
+	if !ok {
+		return errors.New("there is no gateway")
+	}
+
+	if local {
+		auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), big.NewInt(0))
+		gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
+		tx, err := gateway.WithdrawERC20(auth, token.Amount, user, tokenAddr)
+		logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
+		return err
+	} else {
+		cce.handler.LockChainAccount()
+		defer cce.handler.UnLockChainAccount()
+		auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, big.NewInt(0))
+		gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
+		tx, err := gateway.WithdrawERC20(auth, token.Amount, user, tokenAddr)
+		if err == nil {
+			cce.handler.addChainAccountNonce(1)
+		}
+		logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
+		return err
+	}
 }
 
 func (cce *ChildChainEventHandler) HandleTokenTransferEvent(token TokenTransferEvent) error {
