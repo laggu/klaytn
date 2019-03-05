@@ -119,6 +119,8 @@ type SubBridge struct {
 	tokenTransferCh  chan TokenTransferEvent
 	tokenTransferSub event.Subscription
 
+	addressManager *AddressManager
+
 	bootFail bool
 
 	// service on/off
@@ -182,6 +184,10 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	if err != nil {
 		return nil, err
 	}
+	sc.addressManager, err = NewAddressManager()
+	if err != nil {
+		return nil, err
+	}
 
 	return sc, nil
 }
@@ -225,6 +231,7 @@ func (s *SubBridge) APIs() []rpc.API {
 }
 
 func (s *SubBridge) AccountManager() *accounts.Manager { return s.accountManager }
+func (s *SubBridge) AddressManager() *AddressManager   { return s.addressManager }
 func (s *SubBridge) EventMux() *event.TypeMux          { return s.eventMux }
 func (s *SubBridge) ChainDB() database.DBManager       { return s.chainDB }
 func (s *SubBridge) IsListening() bool                 { return true } // Always listening
