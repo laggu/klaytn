@@ -30,6 +30,7 @@ import (
 	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -85,6 +86,20 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	chainDb := NewDatabase(dir, database.LevelDB)
 
 	////////////////////////////////////////////////////////////////////////////////
+	// Create a governance
+	gov := governance.NewGovernance(&params.ChainConfig{
+		ChainID:       big.NewInt(2018),
+		UnitPrice:     25000000000,
+		DeriveShaImpl: 0,
+		Istanbul: &params.IstanbulConfig{
+			Epoch:          30000,
+			ProposerPolicy: 0,
+			SubGroupSize:   21,
+		},
+		Governance: governance.GetDefaultGovernanceConfig(),
+	})
+
+	////////////////////////////////////////////////////////////////////////////////
 	// Create accounts as many as maxAccounts
 	if numValidators > maxAccounts {
 		return nil, errors.New("maxAccounts should be bigger numValidators!!")
@@ -109,7 +124,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(genesisAddr, genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDb)
+	engine := istanbulBackend.New(genesisAddr, genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDb, gov)
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
@@ -155,6 +170,8 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   blockchain.CalcGasLimit(parent),
 		Time:       big.NewInt(tstamp),
+		Governance: common.Hex2Bytes("b8dc7b22676f7665726e696e676e6f6465223a22307865373333636234643237396461363936663330643437306638633034646563623534666362306432222c22676f7665726e616e63656d6f6465223a2273696e676c65222c22726577617264223a7b226d696e74696e67616d6f756e74223a393630303030303030303030303030303030302c22726174696f223a2233342f33332f3333227d2c22626674223a7b2265706f6368223a33303030302c22706f6c696379223a302c22737562223a32317d2c22756e69745072696365223a32353030303030303030307d"),
+		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
 	}
 
 	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
@@ -415,6 +432,7 @@ func initBlockchain(conf *node.Config, db database.DBManager, coinbaseAddrs []*c
 	genesis.Nonce = 0
 	genesis.Mixhash = types.IstanbulDigest
 	genesis.Difficulty = big.NewInt(1)
+	genesis.Config.Governance = governance.GetDefaultGovernanceConfig()
 
 	alloc := make(blockchain.GenesisAlloc)
 	for _, a := range coinbaseAddrs {

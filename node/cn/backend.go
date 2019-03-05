@@ -38,6 +38,7 @@ import (
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/node"
@@ -99,6 +100,8 @@ type CN struct {
 	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
 
 	components []interface{}
+
+	governance *governance.Governance
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -127,6 +130,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	logger.Info("Initialised chain configuration", "config", chainConfig)
+	governance := governance.NewGovernance(chainConfig)
 
 	cn := &CN{
 		config:         config,
@@ -134,7 +138,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDB),
+		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
@@ -143,6 +147,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		rewardcontract: config.RewardContract,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDB, params.BloomBitsBlocks),
+		governance:     governance,
 	}
 
 	// istanbul BFT. force to set the istanbul coinbase to node key address
@@ -270,18 +275,21 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a klaytn service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	//if chainConfig.Clique != nil {
 	//	return clique.New(chainConfig.Clique, db)
 	//}
-	if chainConfig.Istanbul != nil {
-		if chainConfig.Istanbul.Epoch != 0 {
-			config.Istanbul.Epoch = chainConfig.Istanbul.Epoch
+	if chainConfig.Governance == nil {
+		chainConfig.Governance = governance.GetDefaultGovernanceConfig()
+	}
+	if chainConfig.Governance.Istanbul != nil {
+		if chainConfig.Governance.Istanbul.Epoch != 0 {
+			config.Istanbul.Epoch = chainConfig.Governance.Istanbul.Epoch
 		}
-		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
-		config.Istanbul.SubGroupSize = chainConfig.Istanbul.SubGroupSize
-		return istanbulBackend.New(config.Rewardbase, config.RewardContract, &config.Istanbul, ctx.NodeKey(), db)
+		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Governance.Istanbul.ProposerPolicy)
+		config.Istanbul.SubGroupSize = chainConfig.Governance.Istanbul.SubGroupSize
+		return istanbulBackend.New(config.Rewardbase, config.RewardContract, &config.Istanbul, ctx.NodeKey(), db, gov)
 	}
 	// Otherwise assume proof-of-work
 	switch {

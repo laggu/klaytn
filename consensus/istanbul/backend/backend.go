@@ -31,6 +31,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul/validator"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/hashicorp/golang-lru"
@@ -46,7 +47,7 @@ const (
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-func New(rewardbase common.Address, rewardcontract common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager) consensus.Istanbul {
+func New(rewardbase common.Address, rewardcontract common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance *governance.Governance) consensus.Istanbul {
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -66,6 +67,7 @@ func New(rewardbase common.Address, rewardcontract common.Address, config *istan
 		knownMessages:    knownMessages,
 		rewardbase:       rewardbase,
 		rewardcontract:   rewardcontract,
+		governance:       governance,
 	}
 	backend.core = istanbulCore.New(backend, backend.config)
 	return backend
@@ -107,6 +109,9 @@ type backend struct {
 
 	rewardbase     common.Address
 	rewardcontract common.Address
+
+	// Reference to the governance.Governance
+	governance *governance.Governance
 }
 
 func (sb *backend) GetRewardBase() common.Address {

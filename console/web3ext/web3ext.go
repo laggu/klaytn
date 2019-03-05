@@ -643,6 +643,11 @@ web3._extend({
 			name: 'discard',
 			call: 'istanbul_discard',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'vote',
+			call: 'istanbul_vote',
+			params: 2
 		})
 	],
 	properties:

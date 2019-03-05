@@ -110,6 +110,7 @@ const (
 	CMDKSCN
 
 	POA
+	Governance
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -177,4 +178,5 @@ var moduleNames = [ModuleNameLen]string{
 	"cmd/kscn",
 
 	"consensus/clique",
+	"governance/governance",
 }
