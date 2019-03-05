@@ -395,8 +395,46 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	// TODO-Klaytn-Issue973 Developing Klaytn token economy
-	reward.MintKLAY(state)
+	if sb.config.ProposerPolicy == istanbul.WeightedRandom {
+		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
+
+		// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
+
+		blockNumber := header.Number.Uint64()
+
+		if len(header.KlaytnExtra) != 0 {
+			logger.Trace("Finalize() Use existing header.KlaytnExtra (validation)", "blockNumer", blockNumber, "header.KlaytnExtra", header.KlaytnExtra)
+		} else {
+			logger.Trace("Finalize() Creating header.KlaytnExtra (mining)", "blockNumer", blockNumber)
+
+			lastHeader := chain.CurrentHeader()
+			valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
+
+			committee := valSet.SubList(lastHeader.Hash())
+			proposer := committee[0]
+			logger.Trace("Finalize() committee", "blockNumber", blockNumber, "committee", committee, "header.rewardBase", header.Rewardbase, "proposer", proposer)
+
+			rewardAddrs := make([]common.Address, len(committee))
+			for i, val := range committee {
+				rewardAddrs[i] = val.RewardAddress()
+				logger.Trace("Finalize() rewardAddrs", "i", i, "validator", val, "rewardAddr[i]", rewardAddrs[i], "weight", val.Weight())
+			}
+
+			if proposer.Weight() == 0 {
+				// bootstrapping phase
+				// Let's use RewardBase
+				rewardAddrs[0] = header.Rewardbase
+				logger.Trace("Finalize() Update rewardAddrs[0] with RewardBase. (bootstrapping phase)", "rewardAddrs[0]", rewardAddrs[0])
+			}
+			header.Rewardbase = rewardAddrs[0]
+
+			header.KlaytnExtra = rewardAddrs
+		}
+
+		reward.DistributeBlockReward(state, header, chain.Config())
+	} else {
+		reward.MintKLAY(state)
+	}
 
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(true)
