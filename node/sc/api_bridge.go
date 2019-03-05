@@ -99,6 +99,19 @@ func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *typ
 	return sbapi.sc.handler.GetReceiptFromParentChain(blockHash)
 }
 
+func (sbapi *SubBridgeAPI) DeployGateway() ([]common.Address, error) {
+	localAddr, err := sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.localBackend, true)
+	if err != nil {
+		return nil, err
+	}
+	remoteAddr, err := sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.remoteBackend, false)
+	if err != nil {
+		return nil, err
+	}
+	sbapi.sc.AddressManager().AddGateway(localAddr, remoteAddr)
+	return []common.Address{localAddr, remoteAddr}, nil
+}
+
 func (sbapi *SubBridgeAPI) DeployGatewayOnLocalChain() (common.Address, error) {
 	return sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.localBackend, true)
 }
@@ -107,12 +120,8 @@ func (sbapi *SubBridgeAPI) DeployGatewayOnParentChain() (common.Address, error) 
 	return sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.remoteBackend, false)
 }
 
-func (sbapi *SubBridgeAPI) SubscribeEventGatewayOnLocalChain(address common.Address) error {
-	return sbapi.sc.gatewayMgr.SubscribeEvent(address, true)
-}
-
-func (sbapi *SubBridgeAPI) SubscribeEventGatewayOnParentChain(address common.Address) error {
-	return sbapi.sc.gatewayMgr.SubscribeEvent(address, false)
+func (sbapi *SubBridgeAPI) SubscribeEventGateway(address common.Address) error {
+	return sbapi.sc.gatewayMgr.SubscribeEvent(address)
 }
 
 func (sbapi *SubBridgeAPI) TxPendingCount() int {
@@ -129,6 +138,30 @@ func (sbapi *SubBridgeAPI) Anchoring(flag bool) bool {
 
 func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 	return sbapi.sc.GetAnchoringTx()
+}
+
+func (sbapi *SubBridgeAPI) RegisterGateway(gateway1 common.Address, gateway2 common.Address) {
+	sbapi.sc.AddressManager().AddGateway(gateway1, gateway2)
+}
+
+func (sbapi *SubBridgeAPI) UnRegisterGateway(gateway common.Address) {
+	sbapi.sc.AddressManager().DeleteGateway(gateway)
+}
+
+func (sbapi *SubBridgeAPI) RegisterAccount(user1 common.Address, user2 common.Address) {
+	sbapi.sc.AddressManager().AddUser(user1, user2)
+}
+
+func (sbapi *SubBridgeAPI) UnRegisterAccount(user common.Address) {
+	sbapi.sc.AddressManager().DeleteUser(user)
+}
+
+func (sbapi *SubBridgeAPI) RegisterToken(token1 common.Address, token2 common.Address) {
+	sbapi.sc.AddressManager().AddToken(token1, token2)
+}
+
+func (sbapi *SubBridgeAPI) UnRegisterToken(token common.Address) {
+	sbapi.sc.AddressManager().DeleteToken(token)
 }
 
 // AddPeer requests connecting to a remote node, and also maintaining the new

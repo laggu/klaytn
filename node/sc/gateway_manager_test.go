@@ -39,7 +39,7 @@ import (
 func TestGateWayManager(t *testing.T) {
 
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), "gateway_addrs.rlp")); err != nil {
+		if err := os.Remove(path.Join(os.TempDir(), GatewayAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -87,7 +87,7 @@ func TestGateWayManager(t *testing.T) {
 	}
 	fmt.Println("===== GatewayContract Addr ", addr.Hex())
 
-	gatewayManager.SubscribeEvent(addr, false)
+	gatewayManager.SubscribeEvent(addr)
 
 	tokenCh := make(chan TokenReceivedEvent)
 	tokenSendCh := make(chan TokenTransferEvent)
@@ -113,7 +113,7 @@ func TestGateWayManager(t *testing.T) {
 	}
 
 	// Gateway transfer ERC20 to address
-	gateway := gatewayManager.GetGateway(addr, false)
+	gateway := gatewayManager.GetGateway(addr)
 	tx, err := gateway.WithdrawERC20(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, big.NewInt(200), auth.From, gxtokenaddr)
 	if err != nil {
 		log.Fatalf("Failed to WithdrawERC20: %v", err)
@@ -153,12 +153,14 @@ func TestGateWayManager(t *testing.T) {
 func (gwm *GateWayManager) DeployGatewayTest(backend bind.ContractBackend, local bool) (common.Address, error) {
 
 	if local {
-		addr, gateway, err := gwm.deployGatewayTest(gwm.subBridge.getChainID(), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
+		addr, gateway, err := gwm.deployGatewayTest(big.NewInt(2019), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
 		gwm.localGateWays[addr] = gateway
+		gwm.all[addr] = true
 		return addr, err
 	} else {
 		addr, gateway, err := gwm.deployGatewayTest(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.chainAccountNonce)), gwm.subBridge.handler.chainKey, backend)
 		gwm.remoteGateWays[addr] = gateway
+		gwm.all[addr] = false
 		return addr, err
 	}
 }

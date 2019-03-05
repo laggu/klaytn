@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
-	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	gatewaycontract "github.com/ground-x/klaytn/contracts/gateway"
 	"github.com/ground-x/klaytn/event"
@@ -32,6 +31,7 @@ import (
 
 const (
 	TokenEventChanSize = 30
+	GatewayAddrJournal = "gateway_addrs.rlp"
 )
 
 // TokenReceived Event from SmartContract
@@ -81,6 +81,7 @@ func (b *GateWayJournal) EncodeRLP(w io.Writer) error {
 type GateWayManager struct {
 	subBridge *SubBridge
 
+	all            map[common.Address]bool
 	localGateWays  map[common.Address]*gatewaycontract.Gateway
 	remoteGateWays map[common.Address]*gatewaycontract.Gateway
 
@@ -94,10 +95,11 @@ type GateWayManager struct {
 
 func NewGateWayManager(main *SubBridge) (*GateWayManager, error) {
 
-	gatewayAddrJournal := newGateWayAddrJournal(path.Join(main.config.DataDir, "gateway_addrs.rlp"))
+	gatewayAddrJournal := newGateWayAddrJournal(path.Join(main.config.DataDir, GatewayAddrJournal))
 
 	gwm := &GateWayManager{
 		subBridge:      main,
+		all:            make(map[common.Address]bool),
 		localGateWays:  make(map[common.Address]*gatewaycontract.Gateway),
 		remoteGateWays: make(map[common.Address]*gatewaycontract.Gateway),
 		journal:        gatewayAddrJournal,
@@ -133,7 +135,11 @@ func (gwm *GateWayManager) SubscribeKRC20WithDraw(ch chan<- TokenTransferEvent) 
 
 // GetGateway get gateway smartcontract with address
 // addr is smartcontract address and local is same node or not
-func (gwm *GateWayManager) GetGateway(addr common.Address, local bool) *gatewaycontract.Gateway {
+func (gwm *GateWayManager) GetGateway(addr common.Address) *gatewaycontract.Gateway {
+	local, ok := gwm.all[addr]
+	if !ok {
+		return nil
+	}
 	if local {
 		gateway, ok := gwm.localGateWays[addr]
 		if !ok {
@@ -179,10 +185,20 @@ func (gwm *GateWayManager) load(addr common.Address, backend bind.ContractBacken
 	}
 	if local {
 		gwm.localGateWays[addr] = gateway
+		gwm.all[addr] = true
 	} else {
 		gwm.remoteGateWays[addr] = gateway
+		gwm.all[addr] = false
 	}
 	return nil
+}
+
+func (gwm *GateWayManager) IsLocal(addr common.Address) (bool, bool) {
+	local, ok := gwm.all[addr]
+	if !ok {
+		return false, false
+	}
+	return local, true
 }
 
 // Deploy Gateway SmartContract on same node or remote node
@@ -191,6 +207,7 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 	if local {
 		addr, gateway, err := gwm.deployGateway(gwm.subBridge.getChainID(), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
 		gwm.localGateWays[addr] = gateway
+		gwm.all[addr] = true
 		if err := gwm.journal.insert(addr, local); err != nil {
 			logger.Error("fail to journal address", "err", err)
 		}
@@ -201,9 +218,11 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 
 		addr, gateway, err := gwm.deployGateway(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.getChainAccountNonce())), gwm.subBridge.handler.chainKey, backend)
 		gwm.remoteGateWays[addr] = gateway
+		gwm.all[addr] = false
 		if err := gwm.journal.insert(addr, local); err != nil {
 			logger.Error("fail to journal address", "err", err)
 		}
+		gwm.subBridge.handler.addChainAccountNonce(1)
 		return addr, err
 	}
 }
@@ -211,13 +230,7 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend) (common.Address, *gatewaycontract.Gateway, error) {
 
 	// TODO-Klaytn change config
-	auth := bind.NewKeyedTransactor(accountKey)
-	auth.GasLimit = 1000000
-	auth.GasPrice = big.NewInt(0)
-	auth.Nonce = nonce
-	auth.Signer = func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), accountKey)
-	}
+	auth := MakeTransactOpts(accountKey, nonce, chainID, big.NewInt(0))
 
 	addr, tx, contract, err := gatewaycontract.DeployGateway(auth, backend, true)
 	if err != nil {
@@ -230,8 +243,12 @@ func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accou
 }
 
 // SubscribeEvent registers a subscription of GatewayERC20Received and GatewayTokenWithdrawn
-func (gwm *GateWayManager) SubscribeEvent(addr common.Address, local bool) error {
+func (gwm *GateWayManager) SubscribeEvent(addr common.Address) error {
 
+	local, ok := gwm.all[addr]
+	if !ok {
+		return fmt.Errorf("there is no gateway contract which address %v", addr)
+	}
 	if local {
 		gateway, ok := gwm.localGateWays[addr]
 		if !ok {

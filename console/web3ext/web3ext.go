@@ -684,6 +684,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'deployGateway',
+			call: 'bridge_deployGateway',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'deployGatewayOnLocal',
 			call: 'bridge_deployGatewayOnLocalChain',
 			params: 0
@@ -694,18 +699,43 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'subscribeGatewayOnLocal',
-			call: 'bridge_subscribeEventGatewayOnLocalChain',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'subscribeGatewayOnRemote',
-			call: 'bridge_subscribeEventGatewayOnParentChain',
+			name: 'subscribeGateway',
+			call: 'bridge_subscribeEventGateway',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'anchoring',
 			call: 'bridge_anchoring',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'registerGateway',
+			call: 'bridge_registerGateway',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'unRegisterGateway',
+			call: 'bridge_unRegisterGateway',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'registerAccount',
+			call: 'bridge_registerAccount',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'unRegisterAccount',
+			call: 'bridge_unRegisterAccount',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'registerToken',
+			call: 'bridge_registerToken',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'unRegisterToken',
+			call: 'bridge_unRegisterToken',
 			params: 1
 		}),
 	],
