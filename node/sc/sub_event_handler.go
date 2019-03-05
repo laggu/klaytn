@@ -72,7 +72,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 	}
 
 	if local {
-		auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), big.NewInt(0))
+		auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
 		gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
 		tx, err := gateway.WithdrawERC20(auth, token.Amount, user, tokenAddr)
 		logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
@@ -80,7 +80,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 	} else {
 		cce.handler.LockChainAccount()
 		defer cce.handler.UnLockChainAccount()
-		auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, big.NewInt(0))
+		auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
 		gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
 		tx, err := gateway.WithdrawERC20(auth, token.Amount, user, tokenAddr)
 		if err == nil {

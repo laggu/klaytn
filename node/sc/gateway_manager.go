@@ -205,7 +205,7 @@ func (gwm *GateWayManager) IsLocal(addr common.Address) (bool, bool) {
 func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local bool) (common.Address, error) {
 
 	if local {
-		addr, gateway, err := gwm.deployGateway(gwm.subBridge.getChainID(), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
+		addr, gateway, err := gwm.deployGateway(gwm.subBridge.getChainID(), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend, gwm.subBridge.txPool.GasPrice())
 		gwm.localGateWays[addr] = gateway
 		gwm.all[addr] = true
 		if err := gwm.journal.insert(addr, local); err != nil {
@@ -216,7 +216,7 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 		gwm.subBridge.handler.LockChainAccount()
 		defer gwm.subBridge.handler.UnLockChainAccount()
 
-		addr, gateway, err := gwm.deployGateway(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.getChainAccountNonce())), gwm.subBridge.handler.chainKey, backend)
+		addr, gateway, err := gwm.deployGateway(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.getChainAccountNonce())), gwm.subBridge.handler.chainKey, backend, new(big.Int).SetUint64(gwm.subBridge.handler.remoteGasPrice))
 		gwm.remoteGateWays[addr] = gateway
 		gwm.all[addr] = false
 		if err := gwm.journal.insert(addr, local); err != nil {
@@ -227,10 +227,10 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 	}
 }
 
-func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend) (common.Address, *gatewaycontract.Gateway, error) {
+func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *gatewaycontract.Gateway, error) {
 
 	// TODO-Klaytn change config
-	auth := MakeTransactOpts(accountKey, nonce, chainID, big.NewInt(0))
+	auth := MakeTransactOpts(accountKey, nonce, chainID, gasPrice)
 
 	addr, tx, contract, err := gatewaycontract.DeployGateway(auth, backend, true)
 	if err != nil {

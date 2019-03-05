@@ -70,8 +70,6 @@ type SubBridge struct {
 	eventMux       *event.TypeMux
 	accountManager *accounts.Manager
 
-	gasPrice *big.Int
-
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
 
