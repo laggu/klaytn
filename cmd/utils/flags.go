@@ -565,6 +565,11 @@ var (
 		Usage: "bridge listen port",
 		Value: 50505,
 	}
+	ParentChainURLFlag = cli.StringFlag{
+		Name:  "parentchainws",
+		Usage: "parentchain ws url",
+		Value: "ws://0.0.0.0:8546",
+	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC

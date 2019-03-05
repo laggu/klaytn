@@ -93,6 +93,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.EnabledBridgeFlag,
 			utils.IsMainBridgeFlag,
 			utils.BridgeListenPortFlag,
+			utils.ParentChainURLFlag,
 		},
 	},
 	{

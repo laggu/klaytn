@@ -165,6 +165,11 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		}
 		cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
 		cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
+		if !cfg.IsMainBridge {
+			if ctx.GlobalIsSet(utils.ParentChainURLFlag.Name) {
+				cfg.ParentChainURL = ctx.GlobalString(utils.ParentChainURLFlag.Name)
+			}
+		}
 	} else {
 		cfg.EnabledBridge = false
 	}
