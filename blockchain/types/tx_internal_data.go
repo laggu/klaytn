@@ -102,13 +102,13 @@ func (t TxType) String() string {
 	case TxTypeFeeDelegatedValueTransfer:
 		return "TxTypeFeeDelegatedValueTransfer"
 	case TxTypeFeeDelegatedValueTransferWithRatio:
-		return "TxTypeValueTransferWithFeeRatio"
+		return "TxTypeFeeDelegatedValueTransferWithRatio"
 	case TxTypeValueTransferMemo:
 		return "TxTypeValueTransferMemo"
 	case TxTypeFeeDelegatedValueTransferMemo:
 		return "TxTypeFeeDelegatedValueTransferMemo"
 	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
-		return "TxTypeValueTransferMemoWithFeeRatio"
+		return "TxTypeFeeDelegatedValueTransferMemoWithRatio"
 	case TxTypeAccountCreation:
 		return "TxTypeAccountCreation"
 	case TxTypeAccountUpdate:
