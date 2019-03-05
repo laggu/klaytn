@@ -629,7 +629,7 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 }
 
 // GetBlocksFromHash returns the block corresponding to hash and up to n-1 ancestors.
-// [deprecated by eth/62]
+// [deprecated by klay/62]
 func (bc *BlockChain) GetBlocksFromHash(hash common.Hash, n int) (blocks []*types.Block) {
 	number := bc.GetBlockNumber(hash)
 	if number == nil {
