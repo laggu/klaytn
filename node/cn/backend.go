@@ -35,6 +35,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/gxhash"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	istanbulBackend "github.com/ground-x/klaytn/consensus/istanbul/backend"
+	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/event"
@@ -227,6 +228,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	gpoParams.Default = config.GasPrice
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams)
+
+	if cn.chainConfig.Governance.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
+		reward.Subscribe(cn.blockchain)
+	}
 
 	//@TODO Klaytn add core component
 	cn.addComponent(cn.blockchain)

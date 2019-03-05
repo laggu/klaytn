@@ -108,9 +108,12 @@ func DistributeBlockReward(b BalanceAdder, header *types.Header, config *params.
 	}
 
 	// Calculate total tx fee
-	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-	unitPrice := big.NewInt(0).SetUint64(config.UnitPrice)
-	totalTxFee := big.NewInt(0).Mul(totalGasUsed, unitPrice)
+	totalTxFee := common.Big0
+	if config.Governance.DeferredTxFee() {
+		totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
+		unitPrice := big.NewInt(0).SetUint64(config.Governance.UnitPrice)
+		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
+	}
 
 	distributeBlockReward(b, header.KlaytnExtra, totalTxFee, kirAddr, pocAddr)
 }

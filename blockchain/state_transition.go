@@ -260,7 +260,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	}
 	// TODO-Klaytn-Issue136
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)) // TODO-Klaytn-Issue136 gasPrice
+
+	// Defer transfering Tx fee when DeferredTxFee is true
+	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)) // TODO-Klaytn-Issue136 gasPrice
+	}
 
 	kerr.Err = err
 	kerr.Status = getReceiptStatusFromVMerr(vmerr)
