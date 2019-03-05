@@ -34,6 +34,8 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		MixDigest   common.Hash      `json:"mixHash"          gencodec:"required"`
 		Nonce       BlockNonce       `json:"nonce"            gencodec:"required"`
 		KlaytnExtra []common.Address `json:"klaytnExtra"`
+		Governance  hexutil.Bytes    `json:"governanceData"        gencodec:"required"`
+		Vote        hexutil.Bytes    `json:"voteData,omitempty"`
 		Hash        common.Hash      `json:"hash"`
 	}
 	var enc Header
@@ -55,6 +57,8 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.MixDigest = h.MixDigest
 	enc.Nonce = h.Nonce
 	enc.KlaytnExtra = h.KlaytnExtra
+	enc.Governance = h.Governance
+	enc.Vote = h.Vote
 	enc.Hash = h.Hash()
 	return json.Marshal(&enc)
 }
@@ -80,6 +84,8 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		MixDigest   *common.Hash     `json:"mixHash"          gencodec:"required"`
 		Nonce       *BlockNonce      `json:"nonce"            gencodec:"required"`
 		KlaytnExtra []common.Address `json:"klaytnExtra"`
+		Governance  *hexutil.Bytes   `json:"governanceData"        gencodec:"required"`
+		Vote        *hexutil.Bytes   `json:"voteData,omitempty"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -154,6 +160,13 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 	h.Nonce = *dec.Nonce
 	if dec.KlaytnExtra != nil {
 		h.KlaytnExtra = dec.KlaytnExtra
+	}
+	if dec.Governance == nil {
+		return errors.New("missing required field 'governanceData' for Header")
+	}
+	h.Governance = *dec.Governance
+	if dec.Vote != nil {
+		h.Vote = *dec.Vote
 	}
 	return nil
 }

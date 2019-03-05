@@ -22,6 +22,7 @@ package validator
 
 import (
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/log"
 )
@@ -32,6 +33,17 @@ func New(addr common.Address) istanbul.Validator {
 	return &defaultValidator{
 		address: addr,
 	}
+}
+
+func NewValidatorSet(addrs []common.Address, proposerPolicy istanbul.ProposerPolicy, subGroupSize int, chain consensus.ChainReader) istanbul.ValidatorSet {
+	var valSet istanbul.ValidatorSet
+	if proposerPolicy == istanbul.WeightedRandom {
+		valSet = NewWeightedCouncil(addrs, nil, nil, nil, proposerPolicy, subGroupSize, 0, 0, chain)
+	} else {
+		valSet = NewSubSet(addrs, proposerPolicy, subGroupSize)
+	}
+
+	return valSet
 }
 
 func NewSet(addrs []common.Address, policy istanbul.ProposerPolicy) istanbul.ValidatorSet {

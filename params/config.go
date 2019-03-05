@@ -305,3 +305,22 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 	return Rules{ChainID: new(big.Int).Set(chainID)}
 }
+
+// Copy copies self to a new governance config and return it
+func (g *GovernanceConfig) Copy() *GovernanceConfig {
+	newConfig := &GovernanceConfig{
+		Reward:   &RewardConfig{},
+		Istanbul: &IstanbulConfig{},
+	}
+	newConfig.GovernanceMode = g.GovernanceMode
+	newConfig.Reward.MintingAmount = big.NewInt(0).Set(g.Reward.MintingAmount)
+	newConfig.Reward.Ratio = g.Reward.Ratio
+	newConfig.Reward.UseGiniCoeff = g.Reward.UseGiniCoeff
+	newConfig.UnitPrice = g.UnitPrice
+	newConfig.GoverningNode = g.GoverningNode
+	newConfig.Istanbul.SubGroupSize = g.Istanbul.SubGroupSize
+	newConfig.Istanbul.Epoch = g.Istanbul.Epoch
+	newConfig.Istanbul.ProposerPolicy = g.Istanbul.ProposerPolicy
+
+	return newConfig
+}

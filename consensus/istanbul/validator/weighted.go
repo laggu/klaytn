@@ -148,18 +148,20 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 			logger.Crit("Requires chain to initialize voting powers.")
 		}
 
-		stateDB, err := chain.State()
-		if err != nil {
-			logger.Crit("Failed to get statedb from chain.")
-		}
+		//stateDB, err := chain.State()
+		//if err != nil {
+		//	logger.Crit("Failed to get statedb from chain.")
+		//}
 
-		for i, addr := range addrs {
-			staking := stateDB.GetBalance(addr)
-			if staking.Cmp(common.Big0) == 0 {
-				votingPowers[i] = 1
-			} else {
-				votingPowers[i] = 2
-			}
+		for i := range addrs {
+			// TODO-Klaytn-TokenEconomy: Use default value until the formula to calculate votingpower released
+			votingPowers[i] = 1
+			//staking := stateDB.GetBalance(addr)
+			//if staking.Cmp(common.Big0) == 0 {
+			//	votingPowers[i] = 1
+			//} else {
+			//	votingPowers[i] = 2
+			//}
 		}
 	}
 

@@ -38,7 +38,7 @@ var logger = log.NewModuleLogger(log.Reward)
 
 const (
 	// TODO-Klaytn-Issue1166 We use small number for testing. We have to decide staking interval for real network.
-	StakingUpdateInterval uint64 = 16
+	StakingUpdateInterval uint64 = 3600
 )
 
 type Reward struct {

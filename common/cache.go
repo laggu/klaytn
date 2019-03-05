@@ -316,3 +316,9 @@ func GetScaleByCacheUsageLevel(cacheUsageLevelFlag string) (int, error) {
 		return 100, errors.New("input string does not meet the given format. expected: ('saving', 'normal, 'extreme')")
 	}
 }
+
+type GovernanceCacheKey string
+
+func (g GovernanceCacheKey) getShardIndex(shardMask int) int {
+	return 0
+}

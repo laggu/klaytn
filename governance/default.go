@@ -207,13 +207,14 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 }
 
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
-func (g *Governance) RemoveVote(key string) {
+func (g *Governance) RemoveVote(key string, value string) {
 	g.voteMapLock.Lock()
 	defer g.voteMapLock.Unlock()
 
 	key = g.getKey(key)
-
-	delete(g.voteMap, key)
+	if g.voteMap[key] == value {
+		delete(g.voteMap, key)
+	}
 }
 
 func (g *Governance) ClearVotes() {

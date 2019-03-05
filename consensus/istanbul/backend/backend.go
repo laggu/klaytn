@@ -68,6 +68,7 @@ func New(rewardbase common.Address, rewardcontract common.Address, config *istan
 		rewardbase:       rewardbase,
 		rewardcontract:   rewardcontract,
 		governance:       governance,
+		GovernanceCache:  newGovernanceCache(),
 	}
 	backend.core = istanbulCore.New(backend, backend.config)
 	return backend
@@ -111,7 +112,15 @@ type backend struct {
 	rewardcontract common.Address
 
 	// Reference to the governance.Governance
-	governance *governance.Governance
+	governance      *governance.Governance
+	GovernanceCache common.Cache
+	// Last Block Number which has current Governance Config
+	lastGovernanceBlock uint64
+}
+
+func newGovernanceCache() common.Cache {
+	cache, _ := common.NewCache(common.LRUConfig{CacheSize: governance.GovernanceCacheLimit})
+	return cache
 }
 
 func (sb *backend) GetRewardBase() common.Address {
@@ -341,13 +350,15 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 	if block, ok := proposal.(*types.Block); ok {
 		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
 	}
-	return validator.NewSubSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize)
+
+	return validator.NewValidatorSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize, nil)
 }
 
 func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
 	snap, err := sb.snapshot(sb.chain, number, hash, nil)
 	if err != nil {
-		return validator.NewSubSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize)
+		logger.Error("Snapshot not found.", "err", err)
+		return validator.NewValidatorSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize, nil)
 	}
 	return snap.ValSet
 }

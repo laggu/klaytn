@@ -33,6 +33,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul/validator"
 	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/hashicorp/golang-lru"
@@ -47,7 +48,7 @@ const (
 	//inmemoryPeers      = 40
 	//inmemoryMessages   = 1024
 
-	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	checkpointInterval = 1200 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
 	inmemoryPeers      = 200
 	inmemoryMessages   = 4096
@@ -345,6 +346,15 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		return err
 	}
 
+	// If it reaches the GovernanceRefreshInterval, governance config will be added to block header
+	if number%governance.GovernanceRefreshInterval == 0 {
+		if governanceConfig, err := governance.MakeGovernanceData(snap.PendingGovernanceConfig); err != nil {
+			logger.Error("Failed to make governance data and header can't contain updated configuration", "Raw Governance Config", snap.PendingGovernanceConfig)
+		} else {
+			header.Governance = governanceConfig
+		}
+	}
+
 	// get valid candidate list
 	sb.candidatesLock.RLock()
 	var addresses []common.Address
@@ -368,6 +378,9 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 			copy(header.Nonce[:], nonceDropVote)
 		}
 	}
+
+	// if there is a vote to attach, attach it to the header
+	header.Vote = sb.governance.GetEncodedVote(sb.address)
 
 	// add validators in snapshot to extraData's validators section
 	extra, err := prepareExtra(header, snap.validators())
@@ -595,12 +608,7 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	var snap *Snapshot
-	if sb.config.ProposerPolicy == istanbul.WeightedRandom {
-		snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewWeightedCouncil(istanbulExtra.Validators, nil, nil, []int{0}, sb.config.ProposerPolicy, sb.config.SubGroupSize, 0, 0, chain))
-	} else {
-		snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSubSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize))
-	}
+	snap := newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewValidatorSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize, chain), chain.Config().Governance)
 
 	if err := snap.store(sb.db); err != nil {
 		return nil, err
@@ -644,7 +652,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(sb.config.Epoch, sb.config.SubGroupSize, sb.db, hash); err == nil {
+			if s, err := loadSnapshot(sb.config.Epoch, sb.config.SubGroupSize, sb.db, hash, chain.Config().Governance); err == nil {
 				logger.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
 				break
@@ -670,7 +678,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers)
+	snap, err := snap.apply(headers, sb.governance)
 	if err != nil {
 		return nil, err
 	}
