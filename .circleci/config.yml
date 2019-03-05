@@ -189,6 +189,7 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+            - "8f:f3:85:1d:09:1d:1d:14:72:70:61:94:b5:f3:2f:bc"
 
       - run:
           name: "Build & Deploy rpm package"
@@ -207,9 +208,13 @@ jobs:
               tar czf ${item}d-$KLAYTN_VERSION.tar.gz ${item}d-$KLAYTN_VERSION
               mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
               rpmbuild -ba /rpmbuild_home/SPECS/${item}d-$KLAYTN_VERSION.spec
-              scp -o StrictHostKeyChecking=no /rpmbuild_home/RPMS/x86_64/k*.rpm ec2-user@52.79.114.173:/srv/repo/
+              TARGET_RPM="/rpmbuild_home/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
+              if [ $item == 'ken' ]; then
+                scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
+                ssh -o StrictHostKeyChecking=no ec2-user@packages.klaytn.net createrepo --update /data/packages/rhel/7/prod
+              fi
             done
-
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
 workflows:
