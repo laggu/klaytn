@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/contracts/reward"
 	"math"
@@ -121,7 +122,7 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 	weightedCouncil.proposers = proposers
 }
 
-func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []float64, weights []int, policy istanbul.ProposerPolicy, committeeSize int, blockNum uint64, proposersBlockNum uint64) *weightedCouncil {
+func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []float64, weights []int, policy istanbul.ProposerPolicy, committeeSize int, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
 	// TODO-Klaytn-Issue1166 Disable Trace log later
 	valSet := &weightedCouncil{}
 
@@ -131,6 +132,37 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	// init validators
 	valSet.validators = make([]istanbul.Validator, len(addrs))
 	logger.Trace("NewWeightedCouncil() params", "addrs", addrs, "rewards", rewards, "votingPowers", votingPowers, "weights", weights, "policy", policy)
+
+	// init rewards if necessary
+	if rewards == nil {
+		rewards = make([]common.Address, len(addrs))
+		for i := range addrs {
+			rewards[i] = common.Address{}
+		}
+	}
+
+	// init votingPowers if necessary
+	if votingPowers == nil {
+		votingPowers = make([]float64, len(addrs))
+		if chain == nil {
+			logger.Crit("Requires chain to initialize voting powers.")
+		}
+
+		stateDB, err := chain.State()
+		if err != nil {
+			logger.Crit("Failed to get statedb from chain.")
+		}
+
+		for i, addr := range addrs {
+			staking := stateDB.GetBalance(addr)
+			if staking.Cmp(common.Big0) == 0 {
+				votingPowers[i] = 1
+			} else {
+				votingPowers[i] = 2
+			}
+		}
+	}
+
 	for i, addr := range addrs {
 		valSet.validators[i] = newWeightedValidator(addr, rewards[i], votingPowers[i])
 	}
@@ -447,7 +479,7 @@ func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
 	}
 	seed, err := strconv.ParseInt(hashString, 16, 64)
 	if err != nil {
-		logger.Error("Parsing error", "prevHash", prevHash, "hashString", hashString, "seed", seed, "err", err)
+		logger.Trace("Parsing error", "prevHash", prevHash, "hashString", hashString, "seed", seed, "err", err)
 		return err
 	}
 
@@ -538,7 +570,7 @@ func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
 
 	valSet.proposers = proposers
 
-	logger.Info("Refresh() finished", "valSet", valSet, "valSet.proposers", valSet.proposers)
+	logger.Info("Refresh done.", "valSet", valSet, "new proposers", valSet.proposers)
 
 	return nil
 }

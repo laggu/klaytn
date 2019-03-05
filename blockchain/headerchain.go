@@ -22,10 +22,9 @@ package blockchain
 
 import (
 	crand "crypto/rand"
-	mrand "math/rand"
-
 	"errors"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus"
@@ -33,6 +32,7 @@ import (
 	"github.com/ground-x/klaytn/storage/database"
 	"math"
 	"math/big"
+	mrand "math/rand"
 	"sync/atomic"
 	"time"
 )
@@ -402,4 +402,8 @@ func (hc *HeaderChain) Engine() consensus.Engine { return hc.engine }
 // a header chain does not have blocks available for retrieval.
 func (hc *HeaderChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 	return nil
+}
+
+func (hc *HeaderChain) State() (*state.StateDB, error) {
+	return nil, errors.New("HeaderChain does not support State() method")
 }

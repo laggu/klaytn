@@ -556,7 +556,14 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 	if err != nil {
 		return nil, err
 	}
-	snap := newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSubSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize))
+
+	var snap *Snapshot
+	if sb.config.ProposerPolicy == istanbul.WeightedRandom {
+		snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewWeightedCouncil(istanbulExtra.Validators, nil, nil, []int{0}, sb.config.ProposerPolicy, sb.config.SubGroupSize, 0, 0, chain))
+	} else {
+		snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSubSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize))
+	}
+
 	if err := snap.store(sb.db); err != nil {
 		return nil, err
 	}
@@ -632,6 +639,23 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+		if sb.config.ProposerPolicy == istanbul.WeightedRandom {
+			// Let's use staking information in staking cache
+			blockNum := snap.Number
+			stakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
+			if stakingInfo != nil {
+				logger.Debug("snapshot() Found staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
+			} else {
+				logger.Debug("snapshot() Can't find staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
+			}
+			snap.ValSet.SetStakingInfo(stakingInfo)
+
+			// Refresh proposers
+			if err = snap.ValSet.Refresh(hash); err != nil {
+				logger.Crit("Error when refreshing proposers", "number", snap.Number, "hash", snap.Hash, "err", err)
+			}
+		}
+
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}
