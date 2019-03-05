@@ -167,7 +167,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	}
 
 	// istanbul BFT
-	if _, ok := engine.(consensus.Istanbul); ok || !config.IsBFT {
+	if _, ok := engine.(consensus.Istanbul); ok {
 		// Subscribe NewTxsEvent for tx pool
 		worker.txsSub = backend.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 		// Subscribe events for blockchain

@@ -98,7 +98,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*
 		// istanbul BFT
-		if config.IsBFT && tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
+		if tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
 			return nil, uint64(0), ErrInvalidGasPrice
 		}
 	*/

@@ -55,7 +55,6 @@ var (
 		Gxhash:   new(GxhashConfig),
 		Clique:   nil,
 		Istanbul: nil,
-		IsBFT:    false,
 	}
 
 	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
@@ -68,7 +67,6 @@ var (
 		Gxhash:   nil,
 		Clique:   &CliqueConfig{Period: 0, Epoch: 30000},
 		Istanbul: nil,
-		IsBFT:    false,
 	}
 
 	TestChainConfig = &ChainConfig{
@@ -76,7 +74,6 @@ var (
 		Gxhash:        new(GxhashConfig),
 		Clique:        nil,
 		Istanbul:      nil,
-		IsBFT:         false,
 		UnitPrice:     1, // NOTE-Klaytn Use UnitPrice 1 for tests
 		DeriveShaImpl: 0,
 	}
@@ -88,7 +85,6 @@ var (
 		Gxhash:   new(GxhashConfig),
 		Clique:   nil,
 		Istanbul: nil,
-		IsBFT:    true,
 	}
 )
 
@@ -120,7 +116,6 @@ type ChainConfig struct {
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
-	IsBFT         bool   `json:"isBFT"`
 	UnitPrice     uint64 `json:"unitPrice"`
 	DeriveShaImpl int    `json:"deriveShaImpl"`
 }
@@ -170,18 +165,16 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v Engine: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d}",
 			c.ChainID,
-			c.IsBFT,
 			engine,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v Engine: %v UnitPrice: %d DeriveShaImpl: %d}",
 			c.ChainID,
-			c.IsBFT,
 			engine,
 			c.UnitPrice,
 			c.DeriveShaImpl,

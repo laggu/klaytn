@@ -211,7 +211,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
 	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
 	// istanbul BFT
-	cn.miner.SetExtra(makeExtraData(config.ExtraData, cn.chainConfig.IsBFT))
+	cn.miner.SetExtra(makeExtraData(config.ExtraData))
 
 	cn.APIBackend = &CNAPIBackend{cn, nil}
 
@@ -244,7 +244,7 @@ func (s *CN) SetComponents(component []interface{}) {
 }
 
 // istanbul BFT
-func makeExtraData(extra []byte, isBFT bool) []byte {
+func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
 		// create default extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
@@ -254,8 +254,8 @@ func makeExtraData(extra []byte, isBFT bool) []byte {
 			runtime.GOOS,
 		})
 	}
-	if uint64(len(extra)) > params.GetMaximumExtraDataSize(isBFT) {
-		logger.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize(isBFT))
+	if uint64(len(extra)) > params.GetMaximumExtraDataSize() {
+		logger.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize())
 		extra = nil
 	}
 	return extra

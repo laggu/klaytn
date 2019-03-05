@@ -143,10 +143,6 @@ var (
 )
 
 // istanbul BFT
-func GetMaximumExtraDataSize(isBFT bool) uint64 {
-	if isBFT {
-		return BFTMaximumExtraDataSize
-	} else {
-		return MaximumExtraDataSize
-	}
+func GetMaximumExtraDataSize() uint64 {
+	return BFTMaximumExtraDataSize
 }
