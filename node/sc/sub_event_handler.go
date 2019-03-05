@@ -27,14 +27,25 @@ var (
 	ErrGetServiceChainPHInCCEH = errors.New("ServiceChainPH isn't set in ChildChainEventHandler")
 )
 
+// LogEventListener is listener to handle log event
+type LogEventListener interface {
+	Handle(logs []*types.Log) error
+}
+
 type ChildChainEventHandler struct {
 	subbridge *SubBridge
 
-	handler *SubBridgeHandler
+	handler   *SubBridgeHandler
+	listeners []LogEventListener
 }
 
 func NewChildChainEventHandler(bridge *SubBridge, handler *SubBridgeHandler) (*ChildChainEventHandler, error) {
 	return &ChildChainEventHandler{subbridge: bridge, handler: handler}, nil
+}
+
+func (cce *ChildChainEventHandler) AddListener(listener LogEventListener) {
+	// TODO-Klaytn improve listener management
+	cce.listeners = append(cce.listeners, listener)
 }
 
 func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
@@ -57,6 +68,11 @@ func (cce *ChildChainEventHandler) HandleTxsEvent(txs []*types.Transaction) erro
 
 func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	//TODO-Klaytn event handle
+	for _, listener := range cce.listeners {
+		if err := listener.Handle(logs); err != nil {
+			logger.Error("fail to handle log", "err", err)
+		}
+	}
 	return nil
 }
 
