@@ -149,7 +149,7 @@ func (t TxType) IsAccountCreation() bool {
 }
 
 func (t TxType) IsAccountUpdate() bool {
-	return t == TxTypeAccountUpdate
+	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeAccountUpdate
 }
 
 func (t TxType) IsContractDeploy() bool {
