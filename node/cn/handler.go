@@ -419,12 +419,10 @@ func (pm *ProtocolManager) handle(p Peer) error {
 			return err
 		}
 
-		messageChannel <- msg
-
 		select {
 		case err := <-errChannel:
 			return err
-		default:
+		case messageChannel <- msg:
 		}
 		//go pm.handleMsg(p, addr, msg)
 
