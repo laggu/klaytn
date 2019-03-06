@@ -63,6 +63,11 @@ type StateDB struct {
 	stateObjects      map[common.Address]*stateObject
 	stateObjectsDirty map[common.Address]struct{}
 
+	// cachedStateObjects stores the most recent finalized stateObjects.
+	cachedStateObjects map[common.Address]*stateObject
+	// TODO-Klaytn-StateDB This should be initialized properly.
+	useCachedStateObjects bool
+
 	// DB error.
 	// State objects are used by the consensus core and VM which are
 	// unable to deal with database-level errors. Any error that occurs
@@ -96,13 +101,15 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:                db,
-		trie:              tr,
-		stateObjects:      make(map[common.Address]*stateObject),
-		stateObjectsDirty: make(map[common.Address]struct{}),
-		logs:              make(map[common.Hash][]*types.Log),
-		preimages:         make(map[common.Hash][]byte),
-		journal:           newJournal(),
+		db:                    db,
+		trie:                  tr,
+		stateObjects:          make(map[common.Address]*stateObject),
+		stateObjectsDirty:     make(map[common.Address]struct{}),
+		cachedStateObjects:    make(map[common.Address]*stateObject),
+		useCachedStateObjects: false,
+		logs:                  make(map[common.Hash][]*types.Log),
+		preimages:             make(map[common.Hash][]byte),
+		journal:               newJournal(),
 	}, nil
 }
 
@@ -127,6 +134,8 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.trie = tr
 	self.stateObjects = make(map[common.Address]*stateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
+	self.cachedStateObjects = make(map[common.Address]*stateObject)
+	self.useCachedStateObjects = false
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
@@ -135,6 +144,14 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.preimages = make(map[common.Hash][]byte)
 	self.clearJournalAndRefund()
 	return nil
+}
+
+// ResetStateObjects clears out stateObjects.
+// As cachedStateObjects still exists, it will load a stateObject from
+// cachedStateObjects if it exists in cachedStateObjects.
+func (self *StateDB) ResetStateObjects() {
+	// TODO-Klaytn-StateDB Check if it needs to clear out other member variables of StateDB for StateDB caching.
+	self.stateObjects = make(map[common.Address]*stateObject)
 }
 
 func (self *StateDB) AddLog(log *types.Log) {
@@ -402,7 +419,7 @@ func (self *StateDB) deleteStateObject(stateObject *stateObject) {
 
 // Retrieve a state object given by the address. Returns nil if not found.
 func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObject) {
-	// Prefer 'live' objects.
+	// First, check stateObjects if there is "live" object.
 	if obj := self.stateObjects[addr]; obj != nil {
 		if obj.deleted {
 			return nil
@@ -410,6 +427,19 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 		return obj
 	}
 
+	// Second, if not found in stateObjects, check cachedStateObjects.
+	// If ResetStateObjects() is called, stateObject does not exist in stateObjects.
+	if self.useCachedStateObjects {
+		if obj := self.cachedStateObjects[addr]; obj != nil {
+			if obj.deleted {
+				return nil
+			}
+			self.stateObjects[addr] = obj.deepCopy(self)
+			return obj
+		}
+	}
+
+	// Third, the object for given address is not cached.
 	// Load the object from the database.
 	enc, err := self.trie.TryGet(addr[:])
 	if len(enc) == 0 {
@@ -543,15 +573,17 @@ func (self *StateDB) Copy() *StateDB {
 
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
-		db:                self.db,
-		trie:              self.db.CopyTrie(self.trie),
-		stateObjects:      make(map[common.Address]*stateObject, len(self.journal.dirties)),
-		stateObjectsDirty: make(map[common.Address]struct{}, len(self.journal.dirties)),
-		refund:            self.refund,
-		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
-		logSize:           self.logSize,
-		preimages:         make(map[common.Hash][]byte),
-		journal:           newJournal(),
+		db:                    self.db,
+		trie:                  self.db.CopyTrie(self.trie),
+		stateObjects:          make(map[common.Address]*stateObject, len(self.journal.dirties)),
+		stateObjectsDirty:     make(map[common.Address]struct{}, len(self.journal.dirties)),
+		cachedStateObjects:    make(map[common.Address]*stateObject, len(self.cachedStateObjects)),
+		useCachedStateObjects: self.useCachedStateObjects,
+		refund:                self.refund,
+		logs:                  make(map[common.Hash][]*types.Log, len(self.logs)),
+		logSize:               self.logSize,
+		preimages:             make(map[common.Hash][]byte),
+		journal:               newJournal(),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
@@ -572,6 +604,10 @@ func (self *StateDB) Copy() *StateDB {
 			state.stateObjects[addr] = self.stateObjects[addr].deepCopy(state)
 			state.stateObjectsDirty[addr] = struct{}{}
 		}
+	}
+
+	for addr, obj := range self.cachedStateObjects {
+		state.cachedStateObjects[addr] = obj.deepCopy(state)
 	}
 
 	deepCopyLogs(self, state)
@@ -701,6 +737,12 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			s.updateStateObject(stateObject)
 		}
 		delete(s.stateObjectsDirty, addr)
+
+		if s.useCachedStateObjects {
+			// When Commit() is called, deepCopy the updated stateObjects to cachedStateObjects.
+			// TODO-Klaytn-StateDB This can be done periodically for EN and PN.
+			s.cachedStateObjects[addr] = stateObject.deepCopy(s)
+		}
 	}
 	// Write trie changes.
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {

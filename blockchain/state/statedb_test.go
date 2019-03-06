@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"math"
 	"math/big"
 	"math/rand"
@@ -188,6 +189,108 @@ func TestSnapshotRandom(t *testing.T) {
 	} else if err != nil {
 		t.Error(err)
 	}
+}
+
+// TestCachedStateObjects tests basic functional operations of cachedStateObjects.
+// It will be updated by StateDB.Commit() with state objects in StateDB.stateObjects.
+// StateDB.StateDB.ResetStateObjects() clears out stateObjects.
+func TestCachedStateObjects(t *testing.T) {
+	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	stateDB.useCachedStateObjects = true
+
+	// Update each account, it will only update StateDB.stateObjects.
+	for i := byte(0); i < 128; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		stateObj := stateDB.GetOrNewStateObject(addr)
+
+		stateObj.AddBalance(big.NewInt(int64(i)))
+		stateDB.updateStateObject(stateObj)
+	}
+
+	// Before call StateDB.Commit(), cachedStateObjects is empty.
+	for i := byte(0); i < 128; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		stateObj := stateDB.GetOrNewStateObject(addr)
+		cachedStateObj := stateDB.cachedStateObjects[addr]
+
+		assert.Equal(t, stateObj.Balance().Uint64(), uint64(i))
+		assert.Equal(t, cachedStateObj, (*stateObject)(nil))
+	}
+	assert.Equal(t, len(stateDB.stateObjects), 128)
+	assert.Equal(t, len(stateDB.cachedStateObjects), 0)
+
+	stateDB.Commit(true)
+
+	// After call StateDB.Commit(), now cachedStateObjects has latest data.
+	for i := byte(0); i < 128; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		obj := stateDB.GetOrNewStateObject(addr)
+		cachedStateObj := stateDB.cachedStateObjects[addr]
+
+		assert.Equal(t, obj.Balance().Uint64(), uint64(i))
+		assert.Equal(t, cachedStateObj.Balance().Uint64(), uint64(i))
+	}
+	assert.Equal(t, len(stateDB.stateObjects), len(stateDB.cachedStateObjects))
+
+	// Update each account, it will only update StateDB.stateObjects.
+	for i := byte(0); i < 128; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		stateObj := stateDB.GetOrNewStateObject(addr)
+
+		stateObj.AddBalance(big.NewInt(int64(i)))
+		stateDB.updateStateObject(stateObj)
+	}
+
+	// Before call StateDB.Commit(), cachedStateObjects has out-dated data.
+	for i := byte(0); i < 128; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		stateObj := stateDB.GetOrNewStateObject(addr)
+		cachedStateObj := stateDB.cachedStateObjects[addr]
+
+		assert.Equal(t, stateObj.Balance().Uint64(), 2*uint64(i))
+		assert.Equal(t, cachedStateObj.Balance().Uint64(), uint64(i))
+	}
+
+	stateDB.Commit(true)
+
+	// After call StateDB.Commit(), now cachedStateObjects has latest data.
+	for i := byte(0); i < 128; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		obj := stateDB.GetOrNewStateObject(addr)
+		assert.Equal(t, obj.Balance().Uint64(), stateDB.cachedStateObjects[addr].Balance().Uint64())
+	}
+
+	// Update new accounts, it will only update StateDB.stateObjects.
+	// Please note that below loop starts from byte(128).
+	for i := byte(128); i < 255; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		stateObj := stateDB.GetOrNewStateObject(addr)
+
+		stateObj.AddBalance(big.NewInt(int64(i)))
+		stateDB.updateStateObject(stateObj)
+	}
+
+	// Before call StateDB.Commit(), cachedStateObjects does not have data of new accounts.
+	for i := byte(128); i < 255; i++ {
+		addr := common.BytesToAddress([]byte{i})
+		stateObj := stateDB.GetOrNewStateObject(addr)
+		cachedStateObj := stateDB.cachedStateObjects[addr]
+
+		assert.Equal(t, stateObj.Balance().Uint64(), uint64(i))
+		assert.Equal(t, cachedStateObj, (*stateObject)(nil))
+	}
+	assert.Equal(t, len(stateDB.stateObjects), 255)
+	assert.Equal(t, len(stateDB.cachedStateObjects), 128)
+
+	stateDB.Commit(true)
+
+	// After call StateDB.Commit(), cachedStateObjects has latest data.
+	assert.Equal(t, len(stateDB.stateObjects), len(stateDB.cachedStateObjects))
+
+	// After call StateDB.ResetStateObjects(), stateObjects is empty.
+	stateDB.ResetStateObjects()
+	assert.Equal(t, len(stateDB.stateObjects), 0)
+	assert.Equal(t, len(stateDB.cachedStateObjects), 255)
 }
 
 // A snapshotTest checks that reverting StateDB snapshots properly undoes all changes
