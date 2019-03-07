@@ -102,15 +102,6 @@ const (
 	TxAccountCreationGasPerKey  uint64 = 20000 // WARNING: With integer overflow in mind before changing this value.
 	TxValidationGasPerKey       uint64 = 5000  // WARNING: With integer overflow in mind before changing this value.
 
-	// TODO-Klaytn-Issue973 Developing Klaytn token economy
-	// Because we need int64 type to allocate big.Int, define this parameter as int64 type.
-	// In addition, let's define these constants in ston instead of peb, because int64 can hold
-	// up to about 9*10^18 in golang.
-	rewardContractIncentiveInSton int64 = 3200000000 // 3.2 KLAY for Reward contract (Unit: ston)
-	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
-	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
-	defaultMintedKLAYInSton       int64 = 9600000000 // Default amount of minted KLAY. 9.6 KLAY for block reward (Unit: ston)
-
 	// Fee for new tx types
 	// TODO-Klaytn: Need to fix values
 	TxGasAccountCreation       uint64 = 10000
@@ -125,13 +116,6 @@ var (
 	GenesisDifficulty      = big.NewInt(131072) // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-
-	// TODO-Klaytn-Issue1587 Decide whether to remove below three variables after discussing token economy policy for service chain and private network
-	RewardContractIncentive = big.NewInt(0).Mul(big.NewInt(rewardContractIncentiveInSton), big.NewInt(Ston))
-	KIRContractIncentive    = big.NewInt(0).Mul(big.NewInt(kirContractIncentiveInSton), big.NewInt(Ston))
-	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))
-
-	DefaultMintedKLAY = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
 )
 
 // Parameters for execution time limit
