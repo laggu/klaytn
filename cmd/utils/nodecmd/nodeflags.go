@@ -98,7 +98,9 @@ var CommonNodeFlags = []cli.Flag{
 	utils.IsMainBridgeFlag,
 	utils.BridgeListenPortFlag,
 	utils.ParentChainURLFlag,
-	utils.EnableSBNFlag,
+	utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
+	utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
+	utils.SBNPortFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
 }
 
 // Common RPC flags

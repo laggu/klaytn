@@ -46,7 +46,12 @@ import (
 
 var logger = log.NewModuleLogger(log.Node)
 
-const SBN_URL = "http://sbn-baobab.klaytn.net:9000/get/pns" //TODO-Klaytn-Node remove after the real bootnode is implemented
+//TODO-Klaytn-Node remove after the real bootnode is implemented
+const (
+	SBN_ADDR = "http://sbn-baobab.klaytn.net"
+	SBN_PORT = 9000
+)
+
 const (
 	CONSENSUSNODE = iota
 	ENDPOINTNODE
@@ -174,8 +179,8 @@ func (n *Node) RegisterSubService(constructor ServiceConstructor) error {
 }
 
 // discoverPNsFromSBN returns two randomly picked PNs from the simple bootnode server.
-func discoverPNsFromSBN() ([]*discover.Node, error) {
-	resp, err := http.Get(SBN_URL)
+func discoverPNsFromSBN(url string) ([]*discover.Node, error) {
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +230,8 @@ func (n *Node) Start() error {
 	}
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	if n.serverConfig.ConnectionType == ENDPOINTNODE && n.serverConfig.EnableSBN {
-		if pns, err := discoverPNsFromSBN(); err == nil {
+		url := fmt.Sprintf("http://%s:%d/get/pns", n.serverConfig.SBNHost, n.serverConfig.SBNPort)
+		if pns, err := discoverPNsFromSBN(url); err == nil {
 			n.serverConfig.StaticNodes = append(n.serverConfig.StaticNodes, pns...)
 			logger.Info("Success get pns:", "pns", pns)
 		} else {

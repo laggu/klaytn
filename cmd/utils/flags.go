@@ -527,6 +527,18 @@ var (
 		Name:  "enableSBN",
 		Usage: "enable simple bootnodes in order to retrieve two PNs' URIs",
 	}
+	//TODO-Klaytn-Node remove after the real bootnode is implemented
+	SBNAddrFlag = cli.StringFlag{
+		Name:  "sbnaddr",
+		Usage: "SBN server listening interface",
+		Value: node.SBN_ADDR,
+	}
+	//TODO-Klaytn-Node remove after the real bootnode is implemented
+	SBNPortFlag = cli.IntFlag{
+		Name:  "sbnport",
+		Usage: "SBN server listening port",
+		Value: node.SBN_PORT,
+	}
 	// Bootnode's settings
 	AddrFlag = cli.StringFlag{
 		Name:  "addr",
@@ -903,7 +915,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	if ctx.GlobalIsSet(EnableSBNFlag.Name) {
+		if !ctx.GlobalIsSet(BaobabFlag.Name) && !(ctx.GlobalIsSet(SBNAddrFlag.Name) && ctx.GlobalIsSet(SBNPortFlag.Name)) {
+			Fatalf("SBN host and port number are not specified")
+		}
 		cfg.EnableSBN = true
+		cfg.SBNHost = ctx.GlobalString(SBNAddrFlag.Name)
+		cfg.SBNPort = ctx.GlobalInt(SBNPortFlag.Name)
 	}
 
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
