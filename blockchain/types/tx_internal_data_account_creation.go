@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -364,7 +365,7 @@ func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, state
 	}
 	// Fail if the address is already created.
 	if stateDB.Exist(to) {
-		return nil, 0, errAccountAlreadyExists, nil
+		return nil, 0, kerrors.ErrAccountAlreadyExists, nil
 	}
 	stateDB.CreateAccountWithMap(to, account.ExternallyOwnedAccountType,
 		map[account.AccountValueKeyType]interface{}{
