@@ -85,7 +85,8 @@ func (am *AddressManager) GetCounterPartGateway(addr common.Address) common.Addr
 func (am *AddressManager) GetCounterPartUser(addr common.Address) common.Address {
 	user, ok := am.users[addr]
 	if !ok {
-		return common.Address{}
+		// if there is no specific counter part user, it can be the its own address.
+		return addr
 	}
 	return user
 }
