@@ -45,6 +45,8 @@ func NewRemoteBackend(main *SubBridge, rawUrl string) (*RemoteBackend, error) {
 		logger.Error("fail to connect RemoteChain", "url", rawUrl, "err", err)
 		client = nil
 	}
+	logger.Info("success to connect RemoteChain", "url", rawUrl)
+
 	return &RemoteBackend{
 		subBrige:   main,
 		targetUrl:  rawUrl,

@@ -75,6 +75,9 @@ func (journal *gatewayAddrJournal) load(add func(journal GateWayJournal) error) 
 			}
 			break
 		}
+
+		total++
+
 		if err := add(*addr); err != nil {
 			failure = err
 			dropped++

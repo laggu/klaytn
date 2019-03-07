@@ -151,7 +151,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		maxPeers:        config.MaxPeer,
 		tokenReceivedCh: make(chan TokenReceivedEvent, tokenReceivedChanSize),
 		tokenTransferCh: make(chan TokenTransferEvent, tokenTransferChanSize),
-		onAnchoringTx:   true,
+		onAnchoringTx:   false,
 		bootFail:        false,
 	}
 	// TODO-Klaytn change static config to user define config
