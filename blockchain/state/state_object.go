@@ -28,6 +28,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"math/big"
@@ -36,7 +37,6 @@ import (
 var emptyCodeHash = crypto.Keccak256(nil)
 
 var (
-	errNotProgramAccount   = errors.New("not a program account")
 	errAccountDoesNotExist = errors.New("account does not exist")
 )
 
@@ -346,7 +346,7 @@ func (self *stateObject) setCode(codeHash common.Hash, code []byte) error {
 	acc := account.GetProgramAccount(self.account)
 	if acc == nil {
 		logger.Error("setCode() should be called only to a ProgramAccount!", "account address", self.address)
-		return errNotProgramAccount
+		return kerrors.ErrNotProgramAccount
 	}
 	self.code = code
 	acc.SetCodeHash(codeHash[:])
