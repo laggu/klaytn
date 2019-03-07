@@ -94,7 +94,7 @@ type weightedCouncil struct {
 	proposers         []istanbul.Validator
 	proposersBlockNum uint64 // block number when proposers is determined
 
-	stakingInfo *common.StakingInfo
+	stakingInfo *reward.StakingInfo
 	stakings    []*big.Int
 
 	blockNum uint64 // block number when council is determined
@@ -577,7 +577,7 @@ func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
 	return nil
 }
 
-func (valSet *weightedCouncil) SetStakingInfo(stakingInfo *common.StakingInfo) error {
+func (valSet *weightedCouncil) SetStakingInfo(stakingInfo *reward.StakingInfo) error {
 	valSet.stakingInfo = stakingInfo
 	return nil
 }

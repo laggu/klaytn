@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/contracts/reward"
 	"math"
 	"math/rand"
 	"reflect"
@@ -398,7 +399,7 @@ func (valSet *defaultSet) F() int {
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
 func (valSet *defaultSet) Refresh(prevHash common.Hash) error                   { return nil }
-func (valSet *defaultSet) SetStakingInfo(stakingInfo *common.StakingInfo) error { return nil }
+func (valSet *defaultSet) SetStakingInfo(stakingInfo *reward.StakingInfo) error { return nil }
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)                          { /* Do nothing */ }
 func (valSet *defaultSet) Proposers() []istanbul.Validator                      { return nil }
 func (valSet *defaultSet) TotalVotingPower() float64 {

@@ -48,6 +48,38 @@ type Reward struct {
 	contractBackend bind.ContractBackend
 }
 
+// StakingInfo contains staking information.
+type StakingInfo struct {
+	BlockNum uint64 // Block number where staking information of Council is fetched
+
+	// Information retrieved from AddressBook smart contract
+	CouncilNodeIds       []common.Address // NodeIds of Council
+	CouncilStakingdAddrs []common.Address // Address of Staking account which holds staking balance
+	CouncilRewardAddrs   []common.Address // Address of Council account which will get block reward
+	KIRAddr              common.Address   // Address of KIR contract
+	PoCAddr              common.Address   // Address of PoC contract
+
+	// Derived from CouncilStakingAddrs
+	CouncilStakingAmounts []*big.Int // Staking amounts of Council
+}
+
+func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) int {
+	for i, addr := range s.CouncilNodeIds {
+		if addr == nodeId {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) *big.Int {
+	i := s.GetIndexByNodeId(nodeId)
+	if i != -1 {
+		return s.CouncilStakingAmounts[i]
+	}
+	return nil
+}
+
 func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, contractBackend bind.ContractBackend) (*Reward, error) {
 	klaytnReward, err := contract.NewKlaytnReward(contractAddr, contractBackend)
 	if err != nil {
@@ -281,7 +313,7 @@ func waitHeadChain() {
 }
 
 // GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
-func GetStakingInfoFromStakingCache(blockNum uint64) *common.StakingInfo {
+func GetStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
 	number := CalcStakingBlockNumber(blockNum)
 	stakingCacheKey := common.StakingCacheKey(number)
 	value, ok := StakingCache.Get(stakingCacheKey)
@@ -290,7 +322,7 @@ func GetStakingInfoFromStakingCache(blockNum uint64) *common.StakingInfo {
 		return nil
 	}
 
-	stakingInfo, ok := value.(*common.StakingInfo)
+	stakingInfo, ok := value.(*StakingInfo)
 	if !ok {
 		logger.Error("Found staking information is invalid", "Block number", blockNum, "cache key", stakingCacheKey)
 		return nil
@@ -389,7 +421,7 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) error {
 	return nil
 }
 
-func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*common.StakingInfo, error) {
+func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
 
 	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
 
@@ -449,7 +481,7 @@ func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*common.Sta
 	return newStakingInfo(bc, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
 }
 
-func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*common.StakingInfo, error) {
+func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
 
 	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
 
@@ -469,7 +501,7 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 		logger.Trace("Get staking amounts", "i", i, "stakingAddr", stakingAddr.String(), "stakingAmount", stakingAmounts[i])
 	}
 
-	stakingInfo := &common.StakingInfo{
+	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
 		CouncilNodeIds:        nodeIds,
 		CouncilStakingdAddrs:  stakingAddrs,
