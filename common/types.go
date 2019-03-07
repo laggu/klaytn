@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/kerrors"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -44,9 +45,8 @@ var (
 )
 
 var (
-	errStringTooLong           = errors.New("string too long")
-	errEmptyString             = errors.New("empty string")
-	errNotHumanReadableAddress = errors.New("not a human readable address")
+	errStringTooLong = errors.New("string too long")
+	errEmptyString   = errors.New("empty string")
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -185,7 +185,7 @@ func IsHumanReadableAddress(s string) error {
 	if !isAlphaNumericWithFirstAlphabet(s) {
 		// NOTE-Klaytn-Accounts: For now, only alphanumeric characters are allowed for human-readable addresses.
 		// The first character should be an alphabet. Numeric is not allowed for the first character.
-		return errNotHumanReadableAddress
+		return kerrors.ErrNotHumanReadableAddress
 	}
 
 	return nil

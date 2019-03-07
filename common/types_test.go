@@ -22,6 +22,7 @@ package common
 
 import (
 	"encoding/json"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/stretchr/testify/assert"
 
 	"math/big"
@@ -154,11 +155,11 @@ func TestHumanReadableAddress(t *testing.T) {
 
 	string19 := "1234567890123456789"
 	_, err = FromHumanReadableAddress(string19)
-	assert.Equal(t, errNotHumanReadableAddress, err)
+	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 
 	string20 := "12345678901234567890"
 	_, err = FromHumanReadableAddress(string20)
-	assert.Equal(t, errNotHumanReadableAddress, err)
+	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 
 	string21 := "123456789012345678901"
 	_, err = FromHumanReadableAddress(string21)
@@ -174,23 +175,23 @@ func TestHumanReadableAddress(t *testing.T) {
 
 	firstNum := "1colin"
 	_, err = FromHumanReadableAddress(firstNum)
-	assert.Equal(t, errNotHumanReadableAddress, err)
+	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 
 	imti := "( ͡° ͜ʖ ͡°)"
 	_, err = FromHumanReadableAddress(imti)
-	assert.Equal(t, errNotHumanReadableAddress, err)
+	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 
 	korean := "김정현"
 	_, err = FromHumanReadableAddress(korean)
-	assert.Equal(t, errNotHumanReadableAddress, err)
+	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 
 	specialChars := "!@#$%^&*()_"
 	_, err = FromHumanReadableAddress(specialChars)
-	assert.Equal(t, errNotHumanReadableAddress, err)
+	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 
 	space := "co lin"
 	_, err = FromHumanReadableAddress(space)
-	assert.Equal(t, errNotHumanReadableAddress, err)
+	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 
 	_, err = FromHumanReadableAddress("")
 	assert.Equal(t, errEmptyString, err)
