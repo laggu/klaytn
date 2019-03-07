@@ -69,12 +69,14 @@ const (
 	DefaultBlockInterval = 128
 )
 
-// TrieConfig contains the configuration values for the trie caching/pruning
-// that's resident in a blockchain.
-type TrieConfig struct {
-	Disabled      bool // Whether to disable trie write caching (archive node)
-	CacheSize     int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+// CacheConfig contains the configuration values for the 1) stateDB caching and
+// 2) trie caching/pruning resident in a blockchain.
+type CacheConfig struct {
+	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
+	StateDBCaching bool // Enables caching of state objects in stateDB.
+	ArchiveMode    bool // If true, state trie is not pruned and always written to database.
+	CacheSize      int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval  uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -93,7 +95,7 @@ type TrieConfig struct {
 // canonical chain.
 type BlockChain struct {
 	chainConfig *params.ChainConfig // Chain & network configuration
-	trieConfig  *TrieConfig         // Trie configuration for pruning
+	cacheConfig *CacheConfig        // stateDB caching and trie caching/pruning configuration
 
 	db     database.DBManager // Low level persistent database to store final content in
 	triegc *prque.Prque       // Priority queue mapping block numbers to tries to gc
@@ -137,12 +139,13 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default klaytn validator and
 // Processor.
-func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
-	if trieConfig == nil {
-		trieConfig = &TrieConfig{
-			Disabled:      false,
-			CacheSize:     256 * 1024 * 1024,
-			BlockInterval: DefaultBlockInterval,
+func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+	if cacheConfig == nil {
+		cacheConfig = &CacheConfig{
+			StateDBCaching: false,
+			ArchiveMode:    false,
+			CacheSize:      256 * 1024 * 1024,
+			BlockInterval:  DefaultBlockInterval,
 		}
 	}
 	// Initialize DeriveSha implementation
@@ -153,7 +156,7 @@ func NewBlockChain(db database.DBManager, trieConfig *TrieConfig, chainConfig *p
 
 	bc := &BlockChain{
 		chainConfig:     chainConfig,
-		trieConfig:      trieConfig,
+		cacheConfig:     cacheConfig,
 		db:              db,
 		triegc:          prque.New(),
 		stateCache:      state.NewDatabase(db),
@@ -957,7 +960,7 @@ func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts ty
 
 // writeStateTrie writes state trie to database if possible.
 // If an archiving node is running, it always flushes state trie to DB.
-// If not, it flushes state trie to DB periodically. (period = bc.trieConfig.BlockInterval)
+// If not, it flushes state trie to DB periodically. (period = bc.cacheConfig.BlockInterval)
 func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) error {
 	root, err := state.Commit(true)
 	if err != nil {
@@ -978,7 +981,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
 			nodesSize, preimagesSize = trieDB.Size()
-			nodesSizeLimit           = common.StorageSize(bc.trieConfig.CacheSize) * 1024 * 1024
+			nodesSizeLimit           = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
 		)
 		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
 			// NOTE-Klaytn Not to change the original behavior, error is not returned.
@@ -988,7 +991,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			}
 		}
 
-		if block.NumberU64()%uint64(bc.trieConfig.BlockInterval) == 0 {
+		if block.NumberU64()%uint64(bc.cacheConfig.BlockInterval) == 0 {
 			logger.Trace("Commit the state trie into the disk", "blocknum", block.NumberU64())
 			trieDB.Commit(block.Header().Root, true)
 		}
@@ -1838,9 +1841,9 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 }
 
 // isArchiveMode returns whether current blockchain is in archiving mode or not.
-// trieConfig.Disabled means trie caching is diabled.
+// cacheConfig.ArchiveMode means trie caching is disabled.
 func (bc *BlockChain) isArchiveMode() bool {
-	return bc.trieConfig.Disabled
+	return bc.cacheConfig.ArchiveMode
 }
 
 // GetChildChainIndexingEnabled returns the current child chain indexing configuration.

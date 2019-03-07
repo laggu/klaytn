@@ -113,6 +113,7 @@ type Config struct {
 	TrieBlockInterval  uint
 	ChildChainIndexing bool
 	ParallelDBWrite    bool
+	StateDBCaching     bool
 
 	// Mining-related options
 	Gxbase       common.Address `toml:",omitempty"`

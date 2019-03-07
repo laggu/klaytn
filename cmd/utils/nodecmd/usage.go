@@ -132,6 +132,7 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "STATE",
 		Flags: []cli.Flag{
+			utils.StateDBCachingFlag,
 			utils.TrieMemoryCacheSizeFlag,
 			utils.TrieCacheGenFlag,
 			utils.TrieBlockIntervalFlag,

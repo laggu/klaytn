@@ -166,11 +166,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 	}
 	var (
-		vmConfig   = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		trieConfig = &blockchain.TrieConfig{Disabled: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
+		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching, ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
 	)
 	var err error
-	cn.blockchain, err = blockchain.NewBlockChain(chainDB, trieConfig, cn.chainConfig, cn.engine, vmConfig)
+	cn.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}

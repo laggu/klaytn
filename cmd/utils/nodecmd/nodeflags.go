@@ -50,6 +50,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.LightServFlag,
 	utils.LightPeersFlag,
 	utils.LightKDFFlag,
+	utils.StateDBCachingFlag,
 	utils.PartitionedDBFlag,
 	utils.LevelDBCacheSizeFlag,
 	utils.DBParallelDBWriteFlag,
