@@ -145,31 +145,28 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	// bridge service
 	if ctx.GlobalBool(utils.EnabledBridgeFlag.Name) {
 		cfg.EnabledBridge = true
+
+		cfg.BridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.BridgeListenPortFlag.Name))
+
 		if ctx.GlobalBool(utils.IsMainBridgeFlag.Name) {
 			cfg.IsMainBridge = true
 		} else {
 			cfg.IsMainBridge = false
-		}
-		if ctx.GlobalIsSet(utils.BridgeListenPortFlag.Name) {
-			cfg.BridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.BridgeListenPortFlag.Name))
-		}
-		//// TODO-Klaytn-ServiceChain Add human-readable address once its implementation is introduced.
-		if ctx.GlobalIsSet(utils.ChainAccountAddrFlag.Name) {
-			tempStr := ctx.GlobalString(utils.ChainAccountAddrFlag.Name)
-			if !common.IsHexAddress(tempStr) {
-				logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
+
+			if ctx.GlobalIsSet(utils.ChainAccountAddrFlag.Name) {
+				tempStr := ctx.GlobalString(utils.ChainAccountAddrFlag.Name)
+				if !common.IsHexAddress(tempStr) {
+					logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
+				}
+				tempAddr := common.StringToAddress(tempStr)
+				cfg.ChainAccountAddr = &tempAddr
+				logger.Info("A chain address is registered.", "chainAccountAddr", *cfg.ChainAccountAddr)
 			}
-			tempAddr := common.StringToAddress(tempStr)
-			cfg.ChainAccountAddr = &tempAddr
-			logger.Info("A chain address is registered.", "chainAccountAddr", *cfg.ChainAccountAddr)
+			cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
+			cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
+			cfg.ParentChainURL = ctx.GlobalString(utils.ParentChainURLFlag.Name)
 		}
-		cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
-		cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
-		if !cfg.IsMainBridge {
-			if ctx.GlobalIsSet(utils.ParentChainURLFlag.Name) {
-				cfg.ParentChainURL = ctx.GlobalString(utils.ParentChainURLFlag.Name)
-			}
-		}
+
 	} else {
 		cfg.EnabledBridge = false
 	}
