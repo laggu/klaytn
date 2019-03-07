@@ -240,7 +240,7 @@ func parseRewardRatio(ratio string) (int, int, int, error) {
 	return cn, kir, poc, nil
 }
 
-func IsStakingUpdateInterval(blockNum uint64) bool {
+func IsStakingUpdatePossible(blockNum uint64) bool {
 	return (blockNum % StakingUpdateInterval) == 0
 }
 
@@ -299,7 +299,7 @@ func waitHeadChain() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-chainHeadCh:
-			if IsStakingUpdateInterval(ev.Block.NumberU64()) {
+			if IsStakingUpdatePossible(ev.Block.NumberU64()) {
 				blockNum := ev.Block.NumberU64()
 				logger.Debug("ChainHeadEvent arrived and try to update staking cache.", "Block number", blockNum)
 				if err := updateStakingCache(blockchainForReward, blockNum); err != nil {
@@ -432,7 +432,7 @@ func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 	var PoCAddr = common.Address{}
 	var err error
 
-	if !IsStakingUpdateInterval(blockNum) {
+	if !IsStakingUpdatePossible(blockNum) {
 		logger.Trace("Invalid block number.", "blockNum", blockNum)
 		return nil, err
 	}
