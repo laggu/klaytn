@@ -163,7 +163,7 @@ func TestHumanReadableAddress(t *testing.T) {
 
 	string21 := "123456789012345678901"
 	_, err = FromHumanReadableAddress(string21)
-	assert.Equal(t, errStringTooLong, err)
+	assert.Equal(t, errStringLengthExceedsAddressLength, err)
 
 	colin := "colin"
 	_, err = FromHumanReadableAddress(colin)

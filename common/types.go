@@ -45,8 +45,8 @@ var (
 )
 
 var (
-	errStringTooLong = errors.New("string too long")
-	errEmptyString   = errors.New("empty string")
+	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
+	errEmptyString                      = errors.New("empty string")
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -176,7 +176,7 @@ func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 // Otherwise, it returns nil.
 func IsHumanReadableAddress(s string) error {
 	if len(s) > AddressLength {
-		return errStringTooLong
+		return errStringLengthExceedsAddressLength
 	}
 	if len(s) == 0 {
 		return errEmptyString
