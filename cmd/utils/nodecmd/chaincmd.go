@@ -86,6 +86,7 @@ func initGenesis(ctx *cli.Context) error {
 	} else {
 		// When using older genesis.json
 		genesis.Config.Governance = governance.GetDefaultGovernanceConfig()
+		genesis.Config.Governance.UnitPrice = genesis.Config.UnitPrice
 		genesis.Config.Governance.Istanbul.Epoch = genesis.Config.Istanbul.Epoch
 		genesis.Config.Governance.Istanbul.SubGroupSize = genesis.Config.Istanbul.SubGroupSize
 		genesis.Config.Governance.Istanbul.ProposerPolicy = genesis.Config.Istanbul.ProposerPolicy
