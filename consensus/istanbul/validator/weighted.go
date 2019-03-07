@@ -539,9 +539,7 @@ func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
 
 	if len(candidateVals) == 0 {
 		// No validator with weight found. Let's use all validators
-		for _, val := range valSet.List() {
-			candidateVals = append(candidateVals, val)
-		}
+		candidateVals = valSet.List()
 		logger.Trace("Refresh() Use all validators, because there is no weight information", "candidateVals", candidateVals)
 	} else {
 		logger.Trace("Refresh() Candidate validators chosen with weights", "candidateVals", candidateVals)
