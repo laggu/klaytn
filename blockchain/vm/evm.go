@@ -206,7 +206,6 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
 	if !isProgramAccount(addr, evm.StateDB) {
-		logger.Info("Returning since the addr is not a program account", "addr", addr)
 		return ret, gas, nil
 	}
 
