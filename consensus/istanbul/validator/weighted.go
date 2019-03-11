@@ -279,7 +279,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	if len(valSet.validators) <= int(valSet.subSize) {
+	if len(valSet.validators) <= valSet.subSize {
 		// logger.Trace("Choose all validators", "prevHash", prevHash, "proposer", proposer, "committee", valSet.validators)
 		return valSet.validators
 	}
@@ -339,7 +339,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
 	}
 
-	for i := 0; i < int(valSet.subSize)-2; i++ {
+	for i := 0; i < valSet.subSize-2; i++ {
 		committee[i+2] = valSet.validators[indexs[i]]
 	}
 
@@ -353,7 +353,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 
 func (valSet *weightedCouncil) IsSubSet() bool {
 	// TODO-Klaytn-RemoveLater We don't use this interface anymore. Eventually let's remove this function from ValidatorSet interface.
-	return valSet.Size() > int(valSet.subSize)
+	return valSet.Size() > valSet.subSize
 }
 
 func (valSet *weightedCouncil) GetByIndex(i uint64) istanbul.Validator {
@@ -460,7 +460,7 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 }
 
 func (valSet *weightedCouncil) F() int {
-	if valSet.Size() > int(valSet.subSize) {
+	if valSet.Size() > valSet.subSize {
 		return int(math.Ceil(float64(valSet.subSize)/3)) - 1
 	} else {
 		return int(math.Ceil(float64(valSet.Size())/3)) - 1
