@@ -385,7 +385,8 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 	nonce := evm.StateDB.GetNonce(caller.Address())
 	evm.StateDB.SetNonce(caller.Address(), nonce+1)
 
-	contractAddr = crypto.CreateAddress(caller.Address(), nonce)
+	codeHash := crypto.Keccak256Hash(code)
+	contractAddr = crypto.CreateAddress(caller.Address(), nonce, codeHash)
 	contractHash := evm.StateDB.GetCodeHash(contractAddr)
 	if evm.StateDB.GetNonce(contractAddr) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
@@ -400,7 +401,7 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
-	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
+	contract.SetCallCode(&contractAddr, codeHash, code)
 
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, contractAddr, gas, nil

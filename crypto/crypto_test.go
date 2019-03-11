@@ -135,12 +135,12 @@ func TestNewContractAddress(t *testing.T) {
 	// sanity check before using addr to create contract address
 	checkAddr(t, genAddr, addr)
 
-	caddr0 := CreateAddress(addr, 0)
-	caddr1 := CreateAddress(addr, 1)
-	caddr2 := CreateAddress(addr, 2)
-	checkAddr(t, common.HexToAddress("333c3310824b7c685133f2bedb2ca4b8b4df633d"), caddr0)
-	checkAddr(t, common.HexToAddress("8bda78331c916a08481428e4b07c96d3e916d165"), caddr1)
-	checkAddr(t, common.HexToAddress("c9ddedf451bc62ce88bf9292afb13df35b670699"), caddr2)
+	caddr0 := CreateAddress(addr, 0, common.Hash{})
+	caddr1 := CreateAddress(addr, 1, common.Hash{})
+	caddr2 := CreateAddress(addr, 2, common.Hash{})
+	checkAddr(t, common.HexToAddress("08e11d9edc6279a377ae521a1227ddff269f6301"), caddr0)
+	checkAddr(t, common.HexToAddress("ae55e3ba1fda7e5d181d81ff031962cf9895158d"), caddr1)
+	checkAddr(t, common.HexToAddress("02587920edd0d4688d4e9dcc08fd2f55d8c2b005"), caddr2)
 }
 
 func TestLoadECDSAFile(t *testing.T) {

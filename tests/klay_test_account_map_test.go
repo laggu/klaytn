@@ -125,7 +125,8 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 			if err != nil {
 				return err
 			}
-			addr := crypto.CreateAddress(from, nonce)
+			codeHash := crypto.Keccak256Hash(tx.Data())
+			addr := crypto.CreateAddress(from, nonce, codeHash)
 			to = &addr
 		}
 

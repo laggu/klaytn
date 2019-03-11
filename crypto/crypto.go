@@ -73,9 +73,26 @@ func Keccak512(data ...[]byte) []byte {
 	return d.Sum(nil)
 }
 
-// CreateAddress creates a Klaytn address given the bytes and the nonce
-func CreateAddress(b common.Address, nonce uint64) common.Address {
-	data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
+// CreateAddress creates a Klaytn address with the sender's address, the nonce, and the code hash.
+// Since Klaytn provides a mechanism that users can create an account with the specified address,
+// there is a possible attack scenario as the following:
+// 1. Alice's next contract address is determined by Alice's address and nonce.
+// 2. Bob can create an account with Alice's next contract address.
+// 3. Alice fails to deploy a smart contract due to the address collision.
+//
+// To prevent this kinds of attacks, Klaytn's address generation scheme includes the code hash
+// along with the address and the nonce. With this scheme, the next contract address is changed
+// based on the code hash. Of course, Bob can also create an account with Alice's next contract address,
+// but it is practically impossible because of the following:
+// 1. If Bob attacks, Alice can make a different code hash using different code.
+// 2. Even if Bob knows the different code hash, he should submit a transaction with the next contract address
+//   prior to Alice's deploy transaction. In this case, Alice can make a different code hash (see 1).
+func CreateAddress(b common.Address, nonce uint64, codeHash common.Hash) common.Address {
+	data, _ := rlp.EncodeToBytes(struct {
+		Addr  common.Address
+		Nonce uint64
+		Hash  common.Hash
+	}{b, nonce, codeHash})
 	return common.BytesToAddress(Keccak256(data)[12:])
 }
 

@@ -60,12 +60,12 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 			return nil, err
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		contractAddr := crypto.CreateAddress(*userAddr, nonce)
+		header := bcdata.bc.CurrentHeader()
+		codeHash := crypto.Keccak256Hash(common.FromHex(contract.Code))
 
-		signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+		contractAddr := crypto.CreateAddress(*userAddr, nonce, codeHash)
+
+		signer := types.MakeSigner(bcdata.bc.Config(), header.Number)
 		tx := types.NewContractCreation(nonce,
 			big.NewInt(0), 50000000, big.NewInt(0), common.FromHex(contract.Code))
 		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[0])

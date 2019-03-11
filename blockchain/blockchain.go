@@ -793,7 +793,8 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 		if transactions[j].To() == nil {
 			// Deriving the signer is expensive, only do if it's actually needed
 			from, _ := types.Sender(signer, transactions[j])
-			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce())
+			codeHash := crypto.Keccak256Hash(transactions[j].Data())
+			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce(), codeHash)
 		}
 		// The used gas can be calculated based on previous receipts
 		if j == 0 {

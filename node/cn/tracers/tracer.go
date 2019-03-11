@@ -27,14 +27,12 @@ import (
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
+	"gopkg.in/olebedev/go-duktape.v3"
 	"math/big"
 	"sync/atomic"
 	"time"
 	"unsafe"
-
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 // bigIntegerJS is the minified version of https://github.com/peterolson/BigInteger.js.
@@ -269,6 +267,15 @@ func (cw *contractWrapper) pushObject(vm *duktape.Context) {
 	})
 	vm.PutPropString(obj, "getValue")
 
+	// Push the wrapper for contract.CodeHash
+	vm.PushGoFunction(func(ctx *duktape.Context) int {
+		ptr := ctx.PushFixedBuffer(32)
+
+		copy(makeSlice(ptr, 32), cw.contract.CodeHash.Bytes())
+		return 1
+	})
+	vm.PutPropString(obj, "getCodeHash")
+
 	// Push the wrapper for contract.Input
 	vm.PushGoFunction(func(ctx *duktape.Context) int {
 		blob := cw.contract.Input
@@ -359,16 +366,24 @@ func New(code string) (*Tracer, error) {
 	})
 	tracer.vm.PushGlobalGoFunction("toContract", func(ctx *duktape.Context) int {
 		var from common.Address
-		if ptr, size := ctx.GetBuffer(-2); ptr != nil {
+		var codeHash common.Hash
+		if ptr, size := ctx.GetBuffer(-3); ptr != nil {
 			from = common.BytesToAddress(makeSlice(ptr, size))
 		} else {
-			from = common.HexToAddress(ctx.GetString(-2))
+			from = common.HexToAddress(ctx.GetString(-3))
 		}
-		nonce := uint64(ctx.GetInt(-1))
-		ctx.Pop2()
+		nonce := uint64(ctx.GetInt(-2))
+		if ptr, size := ctx.GetBuffer(-1); ptr != nil {
+			codeHash = common.BytesToHash(makeSlice(ptr, size))
+		} else {
+			codeHash = common.HexToHash(ctx.GetString(-1))
+		}
+		ctx.Pop3()
 
-		contract := crypto.CreateAddress(from, nonce)
-		copy(makeSlice(ctx.PushFixedBuffer(20), 20), contract[:])
+		logger.Debug("from", from, "nonce", nonce, "codeHash", codeHash)
+		logger.Warn("Failed to compile tracer", "err", codeHash)
+
+		copy(makeSlice(ctx.PushFixedBuffer(20), 20), codeHash[:])
 		return 1
 	})
 	tracer.vm.PushGlobalGoFunction("isPrecompiled", func(ctx *duktape.Context) int {

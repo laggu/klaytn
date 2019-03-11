@@ -130,7 +130,14 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil {
-		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
+		// TODO-Klaytn-Accounts: Do we need to compute hash multiple times? We can reduce codeHash computation.
+		//   codeHash computed at
+		//   1. ApplyTransaction()
+		//   2. EVM.Create()
+		//   3. EVM.CreateWithAddress()
+		//   4. StateDB.SetCode()
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce(), codeHash)
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())

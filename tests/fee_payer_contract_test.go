@@ -156,7 +156,6 @@ func testFeePayerContract(t *testing.T, fn string) {
 // 5. Check the returned value with the specified fee payer.
 func testFeePayerContractIndirect(t *testing.T, fn string) {
 	prof := profile.NewProfiler()
-	enableLog()
 
 	callee_path := "../contracts/feepayer/fee_payer_test.sol"
 	caller_path := "../contracts/feepayer/fee_payer_indirect_test.sol"
