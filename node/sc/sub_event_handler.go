@@ -78,6 +78,7 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 
 func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedEvent) error {
 	//TODO-Klaytn event handle
+	tokenType := token.TokenType
 	gatewayAddr := cce.subbridge.AddressManager().GetCounterPartGateway(token.ContractAddr)
 	tokenAddr := cce.subbridge.AddressManager().GetCounterPartToken(token.TokenAddr)
 	user := cce.subbridge.AddressManager().GetCounterPartUser(token.From)
@@ -86,25 +87,56 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 	if !ok {
 		return errors.New("there is no gateway")
 	}
-
-	if local {
-		auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
-		gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
-		tx, err := gateway.WithdrawERC20(auth, token.Amount, user, tokenAddr)
-		logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
-		return err
-	} else {
-		cce.handler.LockChainAccount()
-		defer cce.handler.UnLockChainAccount()
-		auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
-		gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
-		tx, err := gateway.WithdrawERC20(auth, token.Amount, user, tokenAddr)
-		if err == nil {
-			cce.handler.addChainAccountNonce(1)
+	switch tokenType {
+	case KLAY:
+		logger.Info("GateWay Got KLAY ReceivedEvent")
+		if local {
+			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
+			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
+			tx, err := gateway.WithdrawKLAY(auth, token.Amount, user)
+			logger.Info("GateWay.WithdrawKLAY", "tx", tx.Hash().Hex())
+			return err
+		} else {
+			cce.handler.LockChainAccount()
+			defer cce.handler.UnLockChainAccount()
+			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
+			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
+			tx, err := gateway.WithdrawKLAY(auth, token.Amount, user)
+			if err == nil {
+				cce.handler.addChainAccountNonce(1)
+			}
+			logger.Info("GateWay.WithdrawKLAY", "tx", tx.Hash().Hex())
+			return err
 		}
-		logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
-		return err
+	case TOKEN:
+		logger.Info("GateWay Got Token ReceivedEvent")
+		if local {
+			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
+			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
+			tx, err := gateway.WithdrawToken(auth, token.Amount, user, tokenAddr)
+			logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
+			return err
+		} else {
+			cce.handler.LockChainAccount()
+			defer cce.handler.UnLockChainAccount()
+			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
+			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
+			tx, err := gateway.WithdrawToken(auth, token.Amount, user, tokenAddr)
+			if err == nil {
+				cce.handler.addChainAccountNonce(1)
+			}
+			logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
+			return err
+		}
+	case NFT:
+		// TODO-Klaytn It will be implemented.
+		logger.Info("GateWay Got Token ReceivedEvent Of KLAY")
+		return nil
+	default:
+		logger.Error("Got Unknown Token Type ReceivedEvent")
 	}
+
+	return errors.New("unknown token type event")
 }
 
 func (cce *ChildChainEventHandler) HandleTokenTransferEvent(token TokenTransferEvent) error {

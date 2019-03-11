@@ -34,20 +34,28 @@ const (
 	GatewayAddrJournal = "gateway_addrs.rlp"
 )
 
+const (
+	KLAY uint8 = iota
+	TOKEN
+	NFT
+)
+
 // TokenReceived Event from SmartContract
 type TokenReceivedEvent struct {
+	TokenType    uint8
 	ContractAddr common.Address
 	TokenAddr    common.Address
 	From         common.Address
-	Amount       *big.Int
+	Amount       *big.Int // Amount is UID in NFT
 }
 
 // TokenWithdraw Event from SmartContract
 type TokenTransferEvent struct {
+	TokenType    uint8
 	ContractAddr common.Address
 	TokenAddr    common.Address
 	Owner        common.Address
-	Amount       *big.Int
+	Amount       *big.Int // Amount is UID in NFT
 }
 
 type GateWayJournal struct {
@@ -85,8 +93,8 @@ type GateWayManager struct {
 	localGateWays  map[common.Address]*gatewaycontract.Gateway
 	remoteGateWays map[common.Address]*gatewaycontract.Gateway
 
-	erc20Received event.Feed
-	erc20Withdraw event.Feed
+	tokenReceived event.Feed
+	tokenWithdraw event.Feed
 
 	scope event.SubscriptionScope
 
@@ -123,14 +131,14 @@ func NewGateWayManager(main *SubBridge) (*GateWayManager, error) {
 	return gwm, nil
 }
 
-// SubscribeKRC20TokenReceived registers a subscription of TokenReceivedEvent.
-func (gwm *GateWayManager) SubscribeKRC20TokenReceived(ch chan<- TokenReceivedEvent) event.Subscription {
-	return gwm.scope.Track(gwm.erc20Received.Subscribe(ch))
+// SubscribeTokenReceived registers a subscription of TokenReceivedEvent.
+func (gwm *GateWayManager) SubscribeTokenReceived(ch chan<- TokenReceivedEvent) event.Subscription {
+	return gwm.scope.Track(gwm.tokenReceived.Subscribe(ch))
 }
 
-// SubscribeKRC20WithDraw registers a subscription of TokenTransferEvent.
-func (gwm *GateWayManager) SubscribeKRC20WithDraw(ch chan<- TokenTransferEvent) event.Subscription {
-	return gwm.scope.Track(gwm.erc20Withdraw.Subscribe(ch))
+// SubscribeTokenWithDraw registers a subscription of TokenTransferEvent.
+func (gwm *GateWayManager) SubscribeTokenWithDraw(ch chan<- TokenTransferEvent) event.Subscription {
+	return gwm.scope.Track(gwm.tokenWithdraw.Subscribe(ch))
 }
 
 // GetGateway get gateway smartcontract with address
@@ -267,22 +275,24 @@ func (gwm *GateWayManager) SubscribeEvent(addr common.Address) error {
 
 func (gwm *GateWayManager) subscribeEvent(addr common.Address, gateway *gatewaycontract.Gateway) {
 
-	receivedCh := make(chan *gatewaycontract.GatewayERC20Received, TokenEventChanSize)
-	tokenwithdrawCh := make(chan *gatewaycontract.GatewayTokenWithdrawn, TokenEventChanSize)
+	tokenReceivedCh := make(chan *gatewaycontract.GatewayTokenReceived, TokenEventChanSize)
+	tokenWithdrawCh := make(chan *gatewaycontract.GatewayTokenWithdrawn, TokenEventChanSize)
 
-	receivedSub, err := gateway.WatchERC20Received(nil, receivedCh)
+	receivedSub, err := gateway.WatchTokenReceived(nil, tokenReceivedCh)
 	if err != nil {
 		logger.Error("Failed to pGateway.WatchERC20Received", "err", err)
 	}
-	withdrawnSub, err := gateway.WatchTokenWithdrawn(nil, tokenwithdrawCh)
+	withdrawnSub, err := gateway.WatchTokenWithdrawn(nil, tokenWithdrawCh)
 	if err != nil {
 		logger.Error("Failed to pGateway.WatchTokenWithdrawn", "err", err)
 	}
 
-	go gwm.loop(addr, receivedCh, tokenwithdrawCh, gwm.scope.Track(receivedSub), gwm.scope.Track(withdrawnSub))
+	go gwm.loop(addr, tokenReceivedCh, tokenWithdrawCh, gwm.scope.Track(receivedSub), gwm.scope.Track(withdrawnSub))
 }
 
-func (gwm *GateWayManager) loop(addr common.Address, receivedCh <-chan *gatewaycontract.GatewayERC20Received,
+func (gwm *GateWayManager) loop(
+	addr common.Address,
+	receivedCh <-chan *gatewaycontract.GatewayTokenReceived,
 	withdrawCh <-chan *gatewaycontract.GatewayTokenWithdrawn,
 	receivedSub event.Subscription,
 	withdrawSub event.Subscription) {
@@ -295,25 +305,27 @@ func (gwm *GateWayManager) loop(addr common.Address, receivedCh <-chan *gatewayc
 		select {
 		case ev := <-receivedCh:
 			receiveEvent := TokenReceivedEvent{
+				TokenType:    ev.Kind,
 				ContractAddr: addr,
 				TokenAddr:    ev.ContractAddress,
 				From:         ev.From,
 				Amount:       ev.Amount,
 			}
-			gwm.erc20Received.Send(receiveEvent)
+			gwm.tokenReceived.Send(receiveEvent)
 		case ev := <-withdrawCh:
 			withdrawEvent := TokenTransferEvent{
+				TokenType:    ev.Kind,
 				ContractAddr: addr,
 				TokenAddr:    ev.ContractAddress,
 				Owner:        ev.Owner,
 				Amount:       ev.Value,
 			}
-			gwm.erc20Withdraw.Send(withdrawEvent)
+			gwm.tokenWithdraw.Send(withdrawEvent)
 		case err := <-receivedSub.Err():
-			logger.Info("Contract Event Loop Running Stop", "err", err)
+			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
 			return
 		case err := <-withdrawSub.Err():
-			logger.Info("Contract Event Loop Running Stop", "err", err)
+			logger.Info("Contract Event Loop Running Stop by withdrawSub.Err()", "err", err)
 			return
 		}
 	}

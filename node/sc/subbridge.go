@@ -278,8 +278,8 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 		sc.bootFail = true
 		return
 	}
-	sc.tokenReceivedSub = sc.gatewayMgr.SubscribeKRC20TokenReceived(sc.tokenReceivedCh)
-	sc.tokenTransferSub = sc.gatewayMgr.SubscribeKRC20WithDraw(sc.tokenTransferCh)
+	sc.tokenReceivedSub = sc.gatewayMgr.SubscribeTokenReceived(sc.tokenReceivedCh)
+	sc.tokenTransferSub = sc.gatewayMgr.SubscribeTokenWithDraw(sc.tokenTransferCh)
 
 	sc.pmwg.Add(1)
 	go sc.loop()

@@ -91,8 +91,8 @@ func TestGateWayManager(t *testing.T) {
 
 	tokenCh := make(chan TokenReceivedEvent)
 	tokenSendCh := make(chan TokenTransferEvent)
-	gatewayManager.SubscribeKRC20TokenReceived(tokenCh)
-	gatewayManager.SubscribeKRC20WithDraw(tokenSendCh)
+	gatewayManager.SubscribeTokenReceived(tokenCh)
+	gatewayManager.SubscribeTokenWithDraw(tokenSendCh)
 
 	go func() {
 		for {
@@ -114,9 +114,9 @@ func TestGateWayManager(t *testing.T) {
 
 	// Gateway transfer ERC20 to address
 	gateway := gatewayManager.GetGateway(addr)
-	tx, err := gateway.WithdrawERC20(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, big.NewInt(200), auth.From, gxtokenaddr)
+	tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, big.NewInt(200), auth.From, gxtokenaddr)
 	if err != nil {
-		log.Fatalf("Failed to WithdrawERC20: %v", err)
+		log.Fatalf("Failed to WithdrawToken: %v", err)
 	}
 	fmt.Println(" Trasaction ", tx.Hash().Hex())
 	sim.Commit() // block #1

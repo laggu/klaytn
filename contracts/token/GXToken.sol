@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import "./KRC20Receiver.sol";
+import "./ITokenReceiver.sol";
 import "./SafeMath.sol";
 
 contract GXToken {
@@ -22,7 +22,7 @@ contract GXToken {
   event Transfer(address from, address to, uint256 amount);
 
   // TODO-Klaytn Undeclared identifier Err while compiling using abigen
-  bytes4 constant ERC20_RECEIVED = 0xbc04f0af;
+  bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
 
   constructor (address _gateway) public {
     gateway = _gateway;
@@ -64,7 +64,7 @@ contract GXToken {
   }
 
   function checkAndCallSafeTransfer(address _from, address _to, uint256 amount) internal returns (bool) {
-    bytes4 retval = IKRC20Receiver(_to).onERC20Received(_from, amount);
-    return(retval == ERC20_RECEIVED);
+    bytes4 retval = ITokenReceiver(_to).onTokenReceived(_from, amount);
+    return(retval == TOKEN_RECEIVED);
   }
 }
