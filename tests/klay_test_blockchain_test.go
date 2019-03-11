@@ -96,7 +96,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 			ProposerPolicy: 0,
 			SubGroupSize:   21,
 		},
-		Governance: governance.GetDefaultGovernanceConfig(),
+		Governance: governance.GetDefaultGovernanceConfig(governance.UseIstanbul),
 	})
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -432,7 +432,7 @@ func initBlockchain(conf *node.Config, db database.DBManager, coinbaseAddrs []*c
 	genesis.Nonce = 0
 	genesis.Mixhash = types.IstanbulDigest
 	genesis.Difficulty = big.NewInt(1)
-	genesis.Config.Governance = governance.GetDefaultGovernanceConfig()
+	genesis.Config.Governance = governance.GetDefaultGovernanceConfig(governance.UseIstanbul)
 
 	alloc := make(blockchain.GenesisAlloc)
 	for _, a := range coinbaseAddrs {

@@ -32,7 +32,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/consensus"
-	"github.com/ground-x/klaytn/consensus/gxhash"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	istanbulBackend "github.com/ground-x/klaytn/consensus/istanbul/backend"
 	"github.com/ground-x/klaytn/contracts/reward"
@@ -228,11 +227,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	gpoParams.Default = config.GasPrice
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams)
-
-	if cn.chainConfig.Governance.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
+	if chainConfig.Istanbul != nil && cn.chainConfig.Governance.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
 		reward.Subscribe(cn.blockchain)
 	}
-
 	//@TODO Klaytn add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
@@ -281,44 +278,19 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a klaytn service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	//if chainConfig.Clique != nil {
-	//	return clique.New(chainConfig.Clique, db)
-	//}
+	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
-		chainConfig.Governance = governance.GetDefaultGovernanceConfig()
-	}
-	if chainConfig.Governance.Istanbul != nil {
-		if chainConfig.Governance.Istanbul.Epoch != 0 {
+		chainConfig.Governance = governance.GetDefaultGovernanceConfig(governance.UseIstanbul)
+	} else {
+		if chainConfig.Governance.Istanbul != nil {
 			config.Istanbul.Epoch = chainConfig.Governance.Istanbul.Epoch
+			config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Governance.Istanbul.ProposerPolicy)
+			config.Istanbul.SubGroupSize = chainConfig.Governance.Istanbul.SubGroupSize
+		} else {
+			chainConfig.Governance.Istanbul = governance.GetDefaultIstanbulConfig()
 		}
-		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Governance.Istanbul.ProposerPolicy)
-		config.Istanbul.SubGroupSize = chainConfig.Governance.Istanbul.SubGroupSize
-		return istanbulBackend.New(config.Rewardbase, config.RewardContract, &config.Istanbul, ctx.NodeKey(), db, gov)
 	}
-	// Otherwise assume proof-of-work
-	switch {
-	case config.Gxhash.PowMode == gxhash.ModeFake:
-		logger.Debug("Gxhash used in fake mode")
-		return gxhash.NewFaker()
-	case config.Gxhash.PowMode == gxhash.ModeTest:
-		logger.Debug("Gxhash used in test mode")
-		return gxhash.NewTester()
-	case config.Gxhash.PowMode == gxhash.ModeShared:
-		logger.Debug("Gxhash used in shared mode")
-		return gxhash.NewShared()
-	default:
-		engine := gxhash.New(gxhash.Config{
-			CacheDir:       ctx.ResolvePath(config.Gxhash.CacheDir),
-			CachesInMem:    config.Gxhash.CachesInMem,
-			CachesOnDisk:   config.Gxhash.CachesOnDisk,
-			DatasetDir:     config.Gxhash.DatasetDir,
-			DatasetsInMem:  config.Gxhash.DatasetsInMem,
-			DatasetsOnDisk: config.Gxhash.DatasetsOnDisk,
-		})
-		engine.SetThreads(-1) // Disable CPU mining
-		return engine
-	}
+	return istanbulBackend.New(config.Rewardbase, config.RewardContract, &config.Istanbul, ctx.NodeKey(), db, gov)
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.

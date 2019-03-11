@@ -75,23 +75,7 @@ func initGenesis(ctx *cli.Context) error {
 		return err
 	}
 
-	// TODO-Klaytn-Governance We may need to clean up this code when all developers use same genesis.json template
-	// Note: For less code change, we copy values of Governance into existing data structure
-	if genesis.Config.Governance != nil {
-		genesis.Config.UnitPrice = genesis.Config.Governance.UnitPrice
-		genesis.Config.Istanbul = new(params.IstanbulConfig)
-		genesis.Config.Istanbul.Epoch = genesis.Config.Governance.Istanbul.Epoch
-		genesis.Config.Istanbul.SubGroupSize = genesis.Config.Governance.Istanbul.SubGroupSize
-		genesis.Config.Istanbul.ProposerPolicy = genesis.Config.Governance.Istanbul.ProposerPolicy
-	} else {
-		// When using older genesis.json
-		genesis.Config.Governance = governance.GetDefaultGovernanceConfig()
-		genesis.Config.Governance.UnitPrice = genesis.Config.UnitPrice
-		genesis.Config.Governance.Istanbul.Epoch = genesis.Config.Istanbul.Epoch
-		genesis.Config.Governance.Istanbul.SubGroupSize = genesis.Config.Istanbul.SubGroupSize
-		genesis.Config.Governance.Istanbul.ProposerPolicy = genesis.Config.Istanbul.ProposerPolicy
-	}
-
+	genesis = checkGenesisAndFillDefaultIfNeeded(genesis)
 	genesis.Governance, err = governance.MakeGovernanceData(genesis.Config.Governance)
 	if err != nil {
 		logger.Crit("Error in making governance data", "err", err)
@@ -117,4 +101,64 @@ func initGenesis(ctx *cli.Context) error {
 		chaindb.Close()
 	}
 	return nil
+}
+
+func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain.Genesis {
+	engine := governance.UseIstanbul
+	valueChanged := false
+
+	// using Clique as a consensus engine
+	if genesis.Config.Istanbul == nil && genesis.Config.Clique != nil {
+		engine = governance.UseClique
+		if genesis.Config.Governance == nil {
+			genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
+		}
+		valueChanged = true
+	} else if genesis.Config.Istanbul == nil && genesis.Config.Clique == nil {
+		engine = governance.UseIstanbul
+		genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
+		valueChanged = true
+	} else if genesis.Config.Istanbul != nil && genesis.Config.Clique != nil {
+		// Error case. Both istanbul and Clique exists
+		logger.Crit("Both clique and istanbul configuration exists. Only one configuration can be applied. Exiting..ßß")
+	}
+
+	// We have governance config
+	if genesis.Config.Governance != nil {
+		// and also we have istanbul config. Then use governance's value prior to istanbul's value
+		if engine == governance.UseIstanbul && genesis.Config.Governance.Istanbul != nil {
+			if genesis.Config.Istanbul != nil {
+				if genesis.Config.Istanbul.Epoch != genesis.Config.Governance.Istanbul.Epoch ||
+					genesis.Config.Istanbul.ProposerPolicy != genesis.Config.Governance.Istanbul.ProposerPolicy ||
+					genesis.Config.Istanbul.SubGroupSize != genesis.Config.Governance.Istanbul.SubGroupSize {
+					valueChanged = true
+				}
+			} else {
+				genesis.Config.Istanbul = new(params.IstanbulConfig)
+			}
+
+			if genesis.Config.UnitPrice != genesis.Config.Governance.UnitPrice {
+				valueChanged = true
+			}
+			genesis.Config.UnitPrice = genesis.Config.Governance.UnitPrice
+			genesis.Config.Istanbul.Epoch = genesis.Config.Governance.Istanbul.Epoch
+			genesis.Config.Istanbul.SubGroupSize = genesis.Config.Governance.Istanbul.SubGroupSize
+			genesis.Config.Istanbul.ProposerPolicy = genesis.Config.Governance.Istanbul.ProposerPolicy
+		}
+	} else {
+		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
+
+		// We don't have governance config and engine is istanbul
+		if engine == governance.UseIstanbul && genesis.Config.Istanbul != nil {
+			genesis.Config.Governance.UnitPrice = genesis.Config.UnitPrice
+			genesis.Config.Governance.Istanbul.Epoch = genesis.Config.Istanbul.Epoch
+			genesis.Config.Governance.Istanbul.SubGroupSize = genesis.Config.Istanbul.SubGroupSize
+			genesis.Config.Governance.Istanbul.ProposerPolicy = genesis.Config.Istanbul.ProposerPolicy
+		}
+	}
+
+	if valueChanged {
+		logger.Warn("Some input value of genesis.json have been set to default or changed")
+	}
+	return genesis
 }

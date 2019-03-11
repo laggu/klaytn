@@ -43,6 +43,15 @@ const (
 	// The prefix for governance cache
 	GovernanceCachePrefix = "governance"
 )
+
+type EngineType int
+
+const (
+	// Engine type
+	UseIstanbul EngineType = iota
+	UseClique
+)
+
 const (
 	// Governance Key
 	GovernanceMode = iota
@@ -83,6 +92,7 @@ const (
 	DefaultUseGiniCoeff   = false
 	DefaultDefferedTxFee  = false
 	DefaultUnitPrice      = 250000000000
+	DefaultPeriod         = 1
 )
 
 var (
@@ -394,21 +404,41 @@ func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceCo
 	return false
 }
 
-func GetDefaultGovernanceConfig() *params.GovernanceConfig {
-	return &params.GovernanceConfig{
+func GetDefaultGovernanceConfig(engine EngineType) *params.GovernanceConfig {
+	gov := &params.GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,
 		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          DefaultEpoch,
-			ProposerPolicy: DefaultProposerPolicy,
-			SubGroupSize:   DefaultSubGroupSize,
-		},
-		Reward: &params.RewardConfig{
-			MintingAmount: big.NewInt(DefaultMintingAmount),
-			Ratio:         DefaultRatio,
-			UseGiniCoeff:  DefaultUseGiniCoeff,
-			DeferredTxFee: DefaultDefferedTxFee,
-		},
-		UnitPrice: DefaultUnitPrice,
+		Reward:         GetDefaultRewardConfig(),
+		UnitPrice:      DefaultUnitPrice,
+	}
+
+	if engine == UseIstanbul {
+		gov.Istanbul = GetDefaultIstanbulConfig()
+	}
+
+	return gov
+}
+
+func GetDefaultIstanbulConfig() *params.IstanbulConfig {
+	return &params.IstanbulConfig{
+		Epoch:          DefaultEpoch,
+		ProposerPolicy: DefaultProposerPolicy,
+		SubGroupSize:   DefaultSubGroupSize,
+	}
+}
+
+func GetDefaultRewardConfig() *params.RewardConfig {
+	return &params.RewardConfig{
+		MintingAmount: big.NewInt(DefaultMintingAmount),
+		Ratio:         DefaultRatio,
+		UseGiniCoeff:  DefaultUseGiniCoeff,
+		DeferredTxFee: DefaultDefferedTxFee,
+	}
+}
+
+func GetDefaultCliqueConfig() *params.CliqueConfig {
+	return &params.CliqueConfig{
+		Epoch:  DefaultEpoch,
+		Period: DefaultPeriod,
 	}
 }
