@@ -50,9 +50,7 @@ func (cce *ChildChainEventHandler) AddListener(listener LogEventListener) {
 
 func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
 	logger.Debug("bridgeNode block number", "number", block.Number())
-	if cce.subbridge.GetAnchoringTx() {
-		cce.handler.NewAnchoringTx(block)
-	}
+	cce.handler.LocalChainHeadEvent(block)
 	return nil
 }
 

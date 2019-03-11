@@ -287,12 +287,15 @@ func (sbh *SubBridgeHandler) genUnsignedServiceChainTx(block *types.Block) (*typ
 	}
 }
 
-// NewAnchoringTx broadcasts service chain transactions and
-func (sbh *SubBridgeHandler) NewAnchoringTx(block *types.Block) {
+// LocalChainHeadEvent deals with servicechain feature to generate/broadcast service chain transactions and request receipts.
+func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 	if sbh.getChainAccountNonceSynced() {
-		sbh.blockAnchoringManager(block)
-		sbh.broadcastServiceChainTx()
-		sbh.broadcastServiceChainReceiptRequest()
+		// TODO-Klaytn if other feature use below chainTx, this condition should be refactored to use it for other feature.
+		if sbh.subbridge.GetAnchoringTx() {
+			sbh.blockAnchoringManager(block)
+			sbh.broadcastServiceChainTx()
+			sbh.broadcastServiceChainReceiptRequest()
+		}
 		sbh.skipSyncBlockCount = 0
 	} else {
 		if sbh.skipSyncBlockCount%SyncRequestInterval == 0 {
