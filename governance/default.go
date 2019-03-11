@@ -17,16 +17,16 @@
 package governance
 
 import (
+	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/pkg/errors"
 	"math/big"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,7 +74,7 @@ const (
 const (
 	// Default Values: Constants used for getting default values for configuration
 	DefaultGovernanceMode = "none"
-	DefaultGoverningNode  = "0x00000000000000000000"
+	DefaultGoverningNode  = "0x0000000000000000000000000000000000000000"
 	DefaultEpoch          = 30000
 	DefaultProposerPolicy = 0
 	DefaultSubGroupSize   = 21
@@ -99,15 +99,15 @@ var (
 	}
 
 	ProposerPolicyMap = map[string]int{
-		"0": RoundRobin,
-		"1": Sticky,
-		"2": WeightedRandom,
+		"roundrobin":     RoundRobin,
+		"sticky":         Sticky,
+		"weightedrandom": WeightedRandom,
 	}
 
 	GovernanceModeMap = map[string]int{
-		"none":   0,
-		"single": 1,
-		"ballot": 2,
+		"none":   GovernanceMode_None,
+		"single": GovernanceMode_Single,
+		"ballot": GovernanceMode_Ballot,
 	}
 )
 
@@ -117,28 +117,28 @@ var logger = log.NewModuleLogger(log.Governance)
 type GovernanceVote struct {
 	Validator common.Address `json:"validator"`
 	Key       string         `json:"key"`
-	Value     string         `json:"value"`
+	Value     interface{}    `json:"value"`
 }
 
 // GovernanceTally represents a tally for each governance item
 type GovernanceTally struct {
-	Key   string  `json:"key"`
-	Value string  `json:"value"`
-	Votes float64 `json:"votes"`
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
+	Votes uint64      `json:"votes"`
 }
 
 type Governance struct {
 	chainConfig *params.ChainConfig
 
 	// Map used to keep multiple types of votes
-	voteMap     map[string]string
+	voteMap     map[string]interface{}
 	voteMapLock sync.RWMutex
 }
 
 func NewGovernance(chainConfig *params.ChainConfig) *Governance {
 	ret := Governance{
 		chainConfig: chainConfig,
-		voteMap:     make(map[string]string),
+		voteMap:     make(map[string]interface{}),
 	}
 	return &ret
 }
@@ -185,29 +185,53 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 
 	key = g.getKey(key)
 
-	// value from JS console can be float64, bool or string
-	var newVal string
-	switch val.(type) {
-	case float64:
-		newVal = fmt.Sprint(newVal, val)
-	case bool:
-		newVal = strconv.FormatBool(val.(bool))
-	case string:
-		newVal = strings.ToLower(val.(string))
-	default:
-		newVal = fmt.Sprint(newVal, val)
-	}
-
-	if v, ok := g.CheckVoteValidity(key, newVal); ok {
-		g.voteMap[key] = v
-		logger.Info("New governance vote added", "key", key, "val", v)
+	if ok := g.CheckVoteValidity(key, val); ok {
+		g.voteMap[key] = val
 		return true
 	}
 	return false
 }
 
+func (g *Governance) checkValueType(key string, val interface{}) (interface{}, bool) {
+	keyIdx := GovernanceKeyMap[key]
+	switch t := val.(type) {
+	case uint64:
+		if keyIdx == Epoch || keyIdx == Sub || keyIdx == UnitPrice {
+			return val, true
+		}
+	case string:
+		if keyIdx == GovernanceMode || keyIdx == MintingAmount || keyIdx == Ratio || keyIdx == Policy {
+			return strings.ToLower(val.(string)), true
+		} else if keyIdx == GoverningNode {
+			if common.IsHexAddress(val.(string)) {
+				return val, true
+			}
+		}
+	case bool:
+		if keyIdx == UseGiniCoeff {
+			return val, true
+		}
+	case common.Address:
+		if keyIdx == GoverningNode {
+			return val, true
+		}
+	case float64:
+		// When value comes from JS console, all numbers come in a form of float64
+		if keyIdx == Epoch || keyIdx == Sub || keyIdx == UnitPrice {
+			if val.(float64) >= 0 && val.(float64) == float64(uint64(val.(float64))) {
+				val = uint64(val.(float64))
+				return val, true
+			}
+		}
+	default:
+		logger.Warn("Unknown value type of the given vote", "key", key, "value", val, "type", t)
+
+	}
+	return val, false
+}
+
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
-func (g *Governance) RemoveVote(key string, value string) {
+func (g *Governance) RemoveVote(key string, value interface{}) {
 	g.voteMapLock.Lock()
 	defer g.voteMapLock.Unlock()
 
@@ -221,104 +245,99 @@ func (g *Governance) ClearVotes() {
 	g.voteMapLock.Lock()
 	defer g.voteMapLock.Unlock()
 
-	g.voteMap = make(map[string]string)
+	g.voteMap = make(map[string]interface{})
 	logger.Info("Governance votes are cleared")
 }
 
 // CheckVoteValidity checks if the given key and value are appropriate for governance vote
-func (g *Governance) CheckVoteValidity(key string, val string) (string, bool) {
+func (g *Governance) CheckVoteValidity(key string, val interface{}) bool {
 	lowerKey := g.getKey(key)
 
-	if k, ok := GovernanceKeyMap[lowerKey]; ok {
-		if ret, passed := g.checkValue(k, val); passed {
-			return ret, true
-		}
+	// Check if the val's type meets type requirements
+	var passed bool
+	if val, passed = g.checkValueType(lowerKey, val); !passed {
+		logger.Warn("New vote couldn't pass the validity check", "key", key, "val", val)
+		return false
 	}
 
-	logger.Warn("New vote couldn't pass the validity check", "key", key, "val", val)
-	return "", false
+	return g.checkValue(key, val)
 }
 
 // checkValue checks if the given value is appropriate
-func (g *Governance) checkValue(key int, val string) (string, bool) {
-	switch key {
+func (g *Governance) checkValue(key string, val interface{}) bool {
+	k := GovernanceKeyMap[key]
+
+	// Using type assertion is okay below, because type check was done before calling this method
+	switch k {
 	case GoverningNode:
-		if common.IsHexAddress(val) {
-			return val, true
+		if reflect.TypeOf(val).String() == "common.Address" {
+			return true
+		} else if common.IsHexAddress(val.(string)) {
+			return true
 		}
 
 	case GovernanceMode:
-		if _, ok := GovernanceModeMap[val]; ok {
-			return val, true
+		if _, ok := GovernanceModeMap[val.(string)]; ok {
+			return true
 		}
 
-	case Epoch:
-		return g.checkUint(val, 64)
+	case Epoch, Sub, UnitPrice, UseGiniCoeff:
+		// For Uint64 and bool types, no more check is needed
+		return true
 
 	case Policy:
-		if _, ok := g.checkUint(val, 64); ok {
-			if _, ok := ProposerPolicyMap[val]; ok {
-				return val, true
-			}
+		if _, ok := ProposerPolicyMap[val.(string)]; ok {
+			return true
 		}
-
-	case Sub:
-		return g.checkUint(val, 8)
-
-	case UnitPrice:
-		return g.checkUint(val, 64)
 
 	case MintingAmount:
 		x := new(big.Int)
-		x, ok := x.SetString(val, 10)
-		if ok {
-			return val, true
+		if _, ok := x.SetString(val.(string), 10); ok {
+			return true
 		}
 
 	case Ratio:
-		x := strings.Split(val, "/")
+		x := strings.Split(val.(string), "/")
 		if len(x) != RewardSliceCount {
-			return "", false
+			return false
 		}
-		var sum float64
+		var sum uint64
 		for _, item := range x {
-			v, err := strconv.ParseFloat(item, 64)
+			v, err := strconv.ParseUint(item, 10, 64)
 			if err != nil {
-				return "", false
+				return false
 			}
 			sum += v
 		}
-		if sum == 100.0 {
-			return val, true
+		if sum == 100 {
+			return true
 		}
-
-	case UseGiniCoeff:
-		_, err := strconv.ParseBool(val)
-		if err == nil {
-			return val, true // send string because RLP can't support boolean,
-		}
+	default:
+		logger.Warn("Unknown vote key was given", "key", k)
 	}
-	return "", false
+	return false
 }
 
-// checkUint checks if the given string can be casted into uint8 or uint64
-func (g *Governance) checkUint(val string, bitsize int) (string, bool) {
-	tmp, err := strconv.ParseUint(val, 10, 64)
-	if err != nil {
-		logger.Error("Checking uint value failed", "value", val, "err", err)
-		return "", false
-	}
+// parsVoteValue parse vote.Value from []uint8 to appropriate type
+func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
+	var val interface{}
+	k := GovernanceKeyMap[gVote.Key]
 
-	x := uint64(tmp)
-
-	// Check if it meets uint8 limits
-	if bitsize == 64 {
-		return val, true
-	} else if bitsize == 8 && x <= math.MaxUint8 { // checking overflow
-		return val, true
-	} else {
-		return "", false
+	switch k {
+	case GovernanceMode, MintingAmount, Ratio:
+		val = string(gVote.Value.([]uint8))
+	case GoverningNode:
+		val = common.BytesToAddress(gVote.Value.([]uint8))
+	case Epoch, Policy, Sub, UnitPrice:
+		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
+		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
+	case UseGiniCoeff:
+		val, _ = strconv.ParseBool(string(gVote.Value.([]uint8)))
+	default:
+		logger.Warn("Unknown vote key was given", "key", k)
 	}
+	gVote.Value = val
+	return gVote
 }
 
 // MakeGovernanceData returns rlp encoded json retrieved from GovernanceConfig
@@ -343,36 +362,34 @@ func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceCo
 	case GoverningNode:
 		// CAUTION: governingnode can be changed at any current mode
 		// If it passed, a mode change have to be followed after setting governingnode
-		governance.GoverningNode = common.HexToAddress(vote.Value)
+		governance.GoverningNode = common.HexToAddress(vote.Value.(string))
 		return true
 	case GovernanceMode:
-		governance.GovernanceMode = vote.Value
+		governance.GovernanceMode = vote.Value.(string)
 		return true
 	case Epoch:
-		v, _ := strconv.ParseUint(vote.Value, 10, 64)
-		governance.Istanbul.Epoch = v
+		governance.Istanbul.Epoch = vote.Value.(uint64)
 		return true
 	case Policy:
-		v, _ := strconv.ParseUint(vote.Value, 10, 64)
-		governance.Istanbul.ProposerPolicy = v
+		governance.Istanbul.ProposerPolicy = uint64(ProposerPolicyMap[vote.Value.(string)])
 		return true
 	case UnitPrice:
-		v, _ := strconv.ParseUint(vote.Value, 10, 64)
-		governance.UnitPrice = v
+		governance.UnitPrice = vote.Value.(uint64)
 		return true
 	case Sub:
-		v, _ := strconv.ParseInt(vote.Value, 10, 64)
-		governance.Istanbul.SubGroupSize = int(v)
+		governance.Istanbul.SubGroupSize = int(vote.Value.(uint64))
 		return true
 	case MintingAmount:
-		governance.Reward.MintingAmount, _ = governance.Reward.MintingAmount.SetString(vote.Value, 10)
+		governance.Reward.MintingAmount, _ = governance.Reward.MintingAmount.SetString(vote.Value.(string), 10)
 		return true
 	case Ratio:
-		governance.Reward.Ratio = vote.Value
+		governance.Reward.Ratio = vote.Value.(string)
 		return true
 	case UseGiniCoeff:
-		governance.Reward.UseGiniCoeff, _ = strconv.ParseBool(vote.Value)
+		governance.Reward.UseGiniCoeff = vote.Value.(bool)
 		return true
+	default:
+		logger.Warn("Unknown vote key was given", "key", vote.Key)
 	}
 	return false
 }

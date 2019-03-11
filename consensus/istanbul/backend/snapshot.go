@@ -260,15 +260,12 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*
 		}
 
 		// Check if this governance vote duplicates
-
-		governanceMode := governance.GovernanceModeMap[s.GovernanceConfig.GovernanceMode]
-		governingNode := s.GovernanceConfig.GoverningNode
-
 		// Handle Governance related vote
 		gVote := new(governance.GovernanceVote)
-		snap.handleGovernanceVote(snap, header, validator, governanceMode, governingNode, gVote)
+		snap.handleGovernanceVote(snap, header, validator, gVote, gov)
 
-		// TODO-Klaytn-Governance: The code below is preservered not to touch former working codes. But it would be much better to be integrated with governance vote
+		// TODO-Klaytn-Governance: The code below is preservered not to touch former working codes
+		//  But it would be much better to be integrated with governance vote
 		// Tally up the new vote from the validator
 		var authorize bool
 		switch {
@@ -288,6 +285,8 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*
 			})
 		}
 		// If the vote passed, update the list of validators
+		governanceMode := governance.GovernanceModeMap[s.GovernanceConfig.GovernanceMode]
+		governingNode := s.GovernanceConfig.GoverningNode
 		if tally := snap.Tally[header.Coinbase]; governanceMode == governance.GovernanceMode_None ||
 			(governanceMode == governance.GovernanceMode_Single && gVote.Validator == governingNode) ||
 			(governanceMode == governance.GovernanceMode_Ballot && tally.Votes > snap.ValSet.TotalVotingPower()/2) {
@@ -323,58 +322,86 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*
 	snap.Hash = headers[len(headers)-1].Hash()
 
 	if snap.ValSet.Policy() == istanbul.WeightedRandom {
-		// TODO-Klaytn-Issue1166 We have to updated block number of ValSet too.
+		// TODO-Klaytn-Issue1166 We have to update block number of ValSet too.
 		snap.ValSet.SetBlockNum(snap.Number)
 	}
 
 	return snap, nil
 }
 
-func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, validator common.Address, governanceMode int, governingNode common.Address, gVote *governance.GovernanceVote) {
+func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, validator common.Address, gVote *governance.GovernanceVote, gov *governance.Governance) {
+
+	governanceMode := governance.GovernanceModeMap[s.GovernanceConfig.GovernanceMode]
+	governingNode := s.GovernanceConfig.GoverningNode
+
 	if len(header.Vote) > 0 {
 		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
-			logger.Error("Failed to decode a vote. This vote ignored", "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			logger.Error("Failed to decode a vote. This vote ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
 		} else {
-			// Removing duplicated previous GovernanceVotes
-			for idx, vote := range snap.GovernanceVotes {
-				// Check if previous vote from same validator exists
-				if vote.Validator == validator && vote.Key == gVote.Key {
-					// Reduce Tally
-					_, v := snap.ValSet.GetByAddress(vote.Validator)
-					changeGovernanceTally(snap, vote.Key, vote.Value, -1*v.VotingPower())
+			// Parse vote.Value and make it has appropriate type
+			gVote = gov.ParseVoteValue(gVote)
 
-					// Remove the old vote from GovernanceVotes
-					snap.GovernanceVotes = append(snap.GovernanceVotes[:idx], snap.GovernanceVotes[idx+1:]...)
-					break
-				}
-			}
+			// Check vote's validity
+			if gov.CheckVoteValidity(gVote.Key, gVote.Value) {
+				// Remove old vote with same validator and key
+				s.removePreviousVote(snap, validator, gVote)
 
-			// Add new Vote to snapshot.GovernanceVotes
-			snap.GovernanceVotes = append(snap.GovernanceVotes, gVote)
+				// Add new Vote to snapshot.GovernanceVotes
+				snap.GovernanceVotes = append(snap.GovernanceVotes, gVote)
 
-			// Tally up the new vote. This will be cleared when Epoch ended.
-			// Add to GovermanceTally if it doesn't exist
-			_, v := snap.ValSet.GetByAddress(gVote.Validator)
-			if v != nil {
-				currentVotes := changeGovernanceTally(snap, gVote.Key, gVote.Value, v.VotingPower())
-				if (governanceMode == governance.GovernanceMode_None ||
-					(governanceMode == governance.GovernanceMode_Single && gVote.Validator == governingNode)) ||
-					(governanceMode == governance.GovernanceMode_Ballot && currentVotes > snap.ValSet.TotalVotingPower()/2) {
-					governance.ReflectVotes(*gVote, snap.PendingGovernanceConfig)
-				}
+				// Tally up the new vote. This will be cleared when Epoch ended.
+				// Add to GovermanceTally if it doesn't exist
+				s.addNewVote(snap, gVote, governanceMode, governingNode)
+
+			} else {
+				logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
 		}
 	}
 }
 
+func (s *Snapshot) addNewVote(snap *Snapshot, gVote *governance.GovernanceVote, governanceMode int, governingNode common.Address) {
+	_, v := snap.ValSet.GetByAddress(gVote.Validator)
+	if v != nil {
+		vp := uint64(v.VotingPower())
+		currentVotes := changeGovernanceTally(snap, gVote.Key, gVote.Value, vp, true)
+		if (governanceMode == governance.GovernanceMode_None ||
+			(governanceMode == governance.GovernanceMode_Single && gVote.Validator == governingNode)) ||
+			(governanceMode == governance.GovernanceMode_Ballot && currentVotes > uint64(snap.ValSet.TotalVotingPower())/2) {
+			governance.ReflectVotes(*gVote, snap.PendingGovernanceConfig)
+		}
+	}
+}
+
+func (s *Snapshot) removePreviousVote(snap *Snapshot, validator common.Address, gVote *governance.GovernanceVote) {
+	// Removing duplicated previous GovernanceVotes
+	for idx, vote := range snap.GovernanceVotes {
+		// Check if previous vote from same validator exists
+		if vote.Validator == validator && vote.Key == gVote.Key {
+			// Reduce Tally
+			_, v := snap.ValSet.GetByAddress(vote.Validator)
+			vp := uint64(v.VotingPower())
+			changeGovernanceTally(snap, vote.Key, vote.Value, vp, false)
+
+			// Remove the old vote from GovernanceVotes
+			snap.GovernanceVotes = append(snap.GovernanceVotes[:idx], snap.GovernanceVotes[idx+1:]...)
+			break
+		}
+	}
+}
+
 // changeGovernanceTally updates snapshot's tally for governance votes.
-func changeGovernanceTally(snap *Snapshot, key string, value string, vote float64) float64 {
+func changeGovernanceTally(snap *Snapshot, key string, value interface{}, vote uint64, isAdd bool) uint64 {
 	found := false
-	currentVote := 0.0
+	var currentVote uint64
 
 	for idx, v := range snap.GovernanceTally {
 		if v.Key == key && v.Value == value {
-			snap.GovernanceTally[idx].Votes += vote
+			if isAdd {
+				snap.GovernanceTally[idx].Votes += vote
+			} else {
+				snap.GovernanceTally[idx].Votes -= vote
+			}
 			currentVote = snap.GovernanceTally[idx].Votes
 			found = true
 			break
