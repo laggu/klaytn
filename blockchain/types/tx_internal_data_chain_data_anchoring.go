@@ -135,13 +135,13 @@ func (t *TxInternalDataChainDataAnchoring) String() string {
 
 	return fmt.Sprintf(`
 	TX(%x)
+	Type:          %s
 	From:          %s
 	To:            %s
 	Nonce:         %v
 	GasPrice:      %#x
 	GasLimit:      %#x
 	Value:         %#x
-	Type:          %s
 	Signature:     %s
 	Hex:           %x
 	AnchoredData:  %s
