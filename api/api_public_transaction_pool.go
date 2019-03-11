@@ -167,11 +167,6 @@ func rpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 		"logsBloom":         receipt.Bloom,
 	}
 
-	// Assign post state if exists.
-	if len(receipt.PostState) > 0 {
-		fields["root"] = hexutil.Bytes(receipt.PostState)
-	}
-
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
 		fields["txError"] = hexutil.Uint(receipt.Status)

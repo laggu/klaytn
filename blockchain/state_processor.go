@@ -125,7 +125,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// NOTE-Klaytn The immediate root is not saved according to EIP-658.
 	// Create a new receipt for the transaction, storing the gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(nil, kerr.Status, *usedGas)
+	receipt := types.NewReceipt(kerr.Status, *usedGas)
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
