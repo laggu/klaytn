@@ -124,9 +124,9 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "DATABASE",
 		Flags: []cli.Flag{
-			utils.PartitionedDBFlag,
+			utils.NoPartitionedDBFlag,
 			utils.LevelDBCacheSizeFlag,
-			utils.DBParallelDBWriteFlag,
+			utils.NoParallelDBWriteFlag,
 		},
 	},
 	{

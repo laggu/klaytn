@@ -216,18 +216,18 @@ var (
 		Name:  "statedb.use-cache",
 		Usage: "Enables caching of state objects in stateDB",
 	}
-	PartitionedDBFlag = cli.BoolFlag{
-		Name:  "db.partitioned",
-		Usage: "Use partitioned databases or single database for persistent storage",
+	NoPartitionedDBFlag = cli.BoolFlag{
+		Name:  "db.no-partitioning",
+		Usage: "Disable partitioned databases for persistent storage",
 	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
 		Name:  "db.leveldb.cache-size",
 		Usage: "Size of in-memory cache in LevelDB (MiB)",
 		Value: 768,
 	}
-	DBParallelDBWriteFlag = cli.BoolFlag{
-		Name:  "db.parallel-write",
-		Usage: "Determines parallel or serial writes of block data to database",
+	NoParallelDBWriteFlag = cli.BoolFlag{
+		Name:  "db.no-parallel-write",
+		Usage: "Disables parallel writes of block data to persistent database",
 	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
@@ -1091,9 +1091,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
 	}
 
-	if ctx.GlobalIsSet(PartitionedDBFlag.Name) {
-		cfg.PartitionedDB = true
-	}
+	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
+
 	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
 		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 	}
@@ -1160,9 +1159,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(ChildChainIndexingFlag.Name) {
 		cfg.ChildChainIndexing = true
 	}
-	if ctx.GlobalIsSet(DBParallelDBWriteFlag.Name) {
-		cfg.ParallelDBWrite = ctx.GlobalBool(DBParallelDBWriteFlag.Name)
-	}
+
+	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
+
 	if ctx.GlobalIsSet(StateDBCachingFlag.Name) {
 		cfg.StateDBCaching = true
 	}
@@ -1248,18 +1247,14 @@ func SetupNetwork(ctx *cli.Context) {
 }
 
 func IsParallelDBWrite(ctx *cli.Context) bool {
-	pw := false
-	if ctx.GlobalIsSet(DBParallelDBWriteFlag.Name) {
-		pw = ctx.GlobalBool(DBParallelDBWriteFlag.Name)
-	}
-	return pw
+	return !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
 }
 
 func IsPartitionedDB(ctx *cli.Context) bool {
-	if ctx.GlobalIsSet(PartitionedDBFlag.Name) {
-		return true
+	if ctx.GlobalIsSet(NoPartitionedDBFlag.Name) {
+		return false
 	}
-	return false
+	return true
 }
 
 // MakeConsolePreloads retrieves the absolute paths for the console JavaScript

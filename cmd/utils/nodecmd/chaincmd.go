@@ -42,7 +42,7 @@ var (
 		ArgsUsage: "<genesisPath>",
 		Flags: []cli.Flag{
 			utils.DbTypeFlag,
-			utils.PartitionedDBFlag,
+			utils.NoPartitionedDBFlag,
 			utils.DataDirFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
