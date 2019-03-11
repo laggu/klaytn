@@ -87,7 +87,7 @@ var tstData = []voteValue{
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
-	config.Governance = GetDefaultGovernanceConfig()
+	config.Governance = GetDefaultGovernanceConfig(UseIstanbul)
 	config.Istanbul = &params.IstanbulConfig{
 		Epoch:          config.Governance.Istanbul.Epoch,
 		ProposerPolicy: config.Governance.Istanbul.ProposerPolicy,
@@ -107,7 +107,7 @@ func TestNewGovernance(t *testing.T) {
 }
 
 func TestGetDefaultGovernanceConfig(t *testing.T) {
-	tstGovernance := GetDefaultGovernanceConfig()
+	tstGovernance := GetDefaultGovernanceConfig(UseIstanbul)
 
 	want := []interface{}{
 		uint64(DefaultUnitPrice),
