@@ -361,6 +361,9 @@ func (self *worker) wait() {
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
+				// If miner fails to write its own block,
+				// reset StateDB updates generated during mining process.
+				self.chain.ResetStateDBUpdatesWhileMining()
 				continue
 			}
 
@@ -466,11 +469,11 @@ func (self *worker) push(work *Task) {
 
 // makeCurrent creates a new environment for the current cycle.
 func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error {
-	state, err := self.chain.StateAt(parent.Root())
+	stateDB, err := self.chain.TryGetCachedStateDB(parent.Root())
 	if err != nil {
 		return err
 	}
-	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), state, nil, header)
+	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, nil, header)
 
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {

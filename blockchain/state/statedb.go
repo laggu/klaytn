@@ -113,6 +113,16 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 	}, nil
 }
 
+// NewWithCache creates a new state from a given trie with state object caching enabled.
+func NewWithCache(root common.Hash, db Database) (*StateDB, error) {
+	if stateDB, err := New(root, db); err != nil {
+		return nil, err
+	} else {
+		stateDB.useCachedStateObjects = true
+		return stateDB, nil
+	}
+}
+
 // setError remembers the first non-nil error it is called with.
 func (self *StateDB) setError(err error) {
 	if self.dbErr == nil {
@@ -135,7 +145,8 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.stateObjects = make(map[common.Address]*stateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
 	self.cachedStateObjects = make(map[common.Address]*stateObject)
-	self.useCachedStateObjects = false
+	// Leave useCachedStateObjects flag as is.
+	// self.useCachedStateObjects = false
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
@@ -146,12 +157,28 @@ func (self *StateDB) Reset(root common.Hash) error {
 	return nil
 }
 
-// ResetStateObjects clears out stateObjects.
-// As cachedStateObjects still exists, it will load a stateObject from
-// cachedStateObjects if it exists in cachedStateObjects.
-func (self *StateDB) ResetStateObjects() {
-	// TODO-Klaytn-StateDB Check if it needs to clear out other member variables of StateDB for StateDB caching.
-	self.stateObjects = make(map[common.Address]*stateObject)
+// ResetExceptCachedStateObjects clears out all ephemeral state objects from the state db,
+// but keeps 1) underlying state trie and 2) cachedStateObjects to avoid reloading data.
+func (self *StateDB) ResetExceptCachedStateObjects(root common.Hash) {
+	cachedStateObjects := self.cachedStateObjects
+	self.Reset(root)
+	self.cachedStateObjects = cachedStateObjects
+}
+
+// UpdateCachedStateObjects copies stateObjects to cachedStateObjects.
+// And then, call ResetExceptCachedStateObjects() to clear out all ephemeral state objects,
+// except for 1) underlying state trie and 2) cachedStateObjects.
+func (self *StateDB) UpdateCachedStateObjects(root common.Hash) {
+	if !self.useCachedStateObjects {
+		logger.ErrorWithStack("UpdateCachedStateObjects should not be called! It is disabled!")
+		return
+	}
+	for addr, stateObj := range self.stateObjects {
+		self.cachedStateObjects[addr] = stateObj
+	}
+
+	// Reset all member variables except for cachedStateObjects.
+	self.ResetExceptCachedStateObjects(root)
 }
 
 func (self *StateDB) AddLog(log *types.Log) {
@@ -428,7 +455,6 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 	}
 
 	// Second, if not found in stateObjects, check cachedStateObjects.
-	// If ResetStateObjects() is called, stateObject does not exist in stateObjects.
 	if self.useCachedStateObjects {
 		if obj := self.cachedStateObjects[addr]; obj != nil {
 			if obj.deleted {
@@ -737,12 +763,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			s.updateStateObject(stateObject)
 		}
 		delete(s.stateObjectsDirty, addr)
-
-		if s.useCachedStateObjects {
-			// When Commit() is called, deepCopy the updated stateObjects to cachedStateObjects.
-			// TODO-Klaytn-StateDB This can be done periodically for EN and PN.
-			s.cachedStateObjects[addr] = stateObject.deepCopy(s)
-		}
 	}
 	// Write trie changes.
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {

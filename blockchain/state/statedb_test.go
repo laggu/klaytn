@@ -33,7 +33,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	check "gopkg.in/check.v1"
+	"gopkg.in/check.v1"
 
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -193,7 +193,6 @@ func TestSnapshotRandom(t *testing.T) {
 
 // TestCachedStateObjects tests basic functional operations of cachedStateObjects.
 // It will be updated by StateDB.Commit() with state objects in StateDB.stateObjects.
-// StateDB.StateDB.ResetStateObjects() clears out stateObjects.
 func TestCachedStateObjects(t *testing.T) {
 	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
 	stateDB.useCachedStateObjects = true
@@ -213,13 +212,17 @@ func TestCachedStateObjects(t *testing.T) {
 		stateObj := stateDB.GetOrNewStateObject(addr)
 		cachedStateObj := stateDB.cachedStateObjects[addr]
 
-		assert.Equal(t, stateObj.Balance().Uint64(), uint64(i))
-		assert.Equal(t, cachedStateObj, (*stateObject)(nil))
+		assert.Equal(t, uint64(i), stateObj.Balance().Uint64())
+		assert.Equal(t, (*stateObject)(nil), cachedStateObj)
 	}
-	assert.Equal(t, len(stateDB.stateObjects), 128)
-	assert.Equal(t, len(stateDB.cachedStateObjects), 0)
+	assert.Equal(t, 128, len(stateDB.stateObjects))
+	assert.Equal(t, 0, len(stateDB.cachedStateObjects))
 
-	stateDB.Commit(true)
+	if root, err := stateDB.Commit(true); err != nil {
+		t.Fatal(err)
+	} else {
+		stateDB.UpdateCachedStateObjects(root)
+	}
 
 	// After call StateDB.Commit(), now cachedStateObjects has latest data.
 	for i := byte(0); i < 128; i++ {
@@ -227,8 +230,8 @@ func TestCachedStateObjects(t *testing.T) {
 		obj := stateDB.GetOrNewStateObject(addr)
 		cachedStateObj := stateDB.cachedStateObjects[addr]
 
-		assert.Equal(t, obj.Balance().Uint64(), uint64(i))
-		assert.Equal(t, cachedStateObj.Balance().Uint64(), uint64(i))
+		assert.Equal(t, uint64(i), obj.Balance().Uint64())
+		assert.Equal(t, uint64(i), cachedStateObj.Balance().Uint64())
 	}
 	assert.Equal(t, len(stateDB.stateObjects), len(stateDB.cachedStateObjects))
 
@@ -247,11 +250,15 @@ func TestCachedStateObjects(t *testing.T) {
 		stateObj := stateDB.GetOrNewStateObject(addr)
 		cachedStateObj := stateDB.cachedStateObjects[addr]
 
-		assert.Equal(t, stateObj.Balance().Uint64(), 2*uint64(i))
-		assert.Equal(t, cachedStateObj.Balance().Uint64(), uint64(i))
+		assert.Equal(t, 2*uint64(i), stateObj.Balance().Uint64())
+		assert.Equal(t, uint64(i), cachedStateObj.Balance().Uint64())
 	}
 
-	stateDB.Commit(true)
+	if root, err := stateDB.Commit(true); err != nil {
+		t.Fatal(err)
+	} else {
+		stateDB.UpdateCachedStateObjects(root)
+	}
 
 	// After call StateDB.Commit(), now cachedStateObjects has latest data.
 	for i := byte(0); i < 128; i++ {
@@ -276,21 +283,22 @@ func TestCachedStateObjects(t *testing.T) {
 		stateObj := stateDB.GetOrNewStateObject(addr)
 		cachedStateObj := stateDB.cachedStateObjects[addr]
 
-		assert.Equal(t, stateObj.Balance().Uint64(), uint64(i))
+		assert.Equal(t, uint64(i), stateObj.Balance().Uint64())
 		assert.Equal(t, cachedStateObj, (*stateObject)(nil))
 	}
-	assert.Equal(t, len(stateDB.stateObjects), 255)
-	assert.Equal(t, len(stateDB.cachedStateObjects), 128)
+	assert.Equal(t, 255, len(stateDB.stateObjects))
+	assert.Equal(t, 128, len(stateDB.cachedStateObjects))
 
-	stateDB.Commit(true)
+	if root, err := stateDB.Commit(true); err != nil {
+		t.Fatal(err)
+	} else {
+		stateDB.UpdateCachedStateObjects(root)
+	}
 
-	// After call StateDB.Commit(), cachedStateObjects has latest data.
-	assert.Equal(t, len(stateDB.stateObjects), len(stateDB.cachedStateObjects))
-
-	// After call StateDB.ResetStateObjects(), stateObjects is empty.
-	stateDB.ResetStateObjects()
-	assert.Equal(t, len(stateDB.stateObjects), 0)
-	assert.Equal(t, len(stateDB.cachedStateObjects), 255)
+	// After call StateDB.Commit(), cachedStateObjects has latest data,
+	// whereas stateObjects is empty.
+	assert.Equal(t, 255, len(stateDB.cachedStateObjects))
+	assert.Equal(t, 0, len(stateDB.stateObjects))
 }
 
 // A snapshotTest checks that reverting StateDB snapshots properly undoes all changes

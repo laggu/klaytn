@@ -134,6 +134,9 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
+
+	cachedStateDB       *state.StateDB
+	lastUpdatedRootHash common.Hash
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -388,6 +391,66 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, bc.stateCache)
+}
+
+// StateAtWithCache returns a new mutable state based on a particular point in time.
+// If different from StateAt() in that it uses state object caching.
+func (bc *BlockChain) StateAtWithCache(root common.Hash) (*state.StateDB, error) {
+	return state.NewWithCache(root, bc.stateCache)
+}
+
+// TryGetCachedStateDB tries to get cachedStateDB, if StateDBCaching flag is true and it exists.
+// It checks the validity of cachedStateDB by comparing saved lastUpdatedRootHash and passed headRootHash.
+func (bc *BlockChain) TryGetCachedStateDB(headRootHash common.Hash) (*state.StateDB, error) {
+	if !bc.cacheConfig.StateDBCaching {
+		return bc.StateAt(headRootHash)
+	}
+
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	// When cachedStateDB is nil, set cachedStateDB with a new StateDB.
+	if bc.cachedStateDB == nil {
+		if !common.EmptyHash(bc.lastUpdatedRootHash) {
+			logger.Error("cachedStateDB is nil, but lastUpdatedRootHash is not common.Hash{}!",
+				"lastUpdatedRootHash", bc.lastUpdatedRootHash.String())
+			bc.lastUpdatedRootHash = common.Hash{}
+		}
+
+		stateDB, err := bc.StateAtWithCache(headRootHash)
+		if err != nil {
+			return nil, err
+		}
+		bc.cachedStateDB, bc.lastUpdatedRootHash = stateDB, headRootHash
+		return stateDB, nil
+	}
+
+	// If cachedStateDB exists, check the validity of cachedStateDB by lastUpdatedRootHash.
+	if headRootHash != bc.lastUpdatedRootHash {
+		// Must not reach here!
+		logger.CritWithStack("cachedStateDB is invalid! lastUpdatedRootHash is different from given headRootHash.",
+			"savedRootHash", bc.lastUpdatedRootHash.String(), "givenRootHash", headRootHash.String())
+	}
+
+	return bc.cachedStateDB, nil
+}
+
+// ResetStateDBUpdatesWhileMining clears out all ephemeral state objects from the state db,
+// but keeps 1) underlying state trie and 2) cachedStateObjects to avoid reloading data.
+func (bc *BlockChain) ResetStateDBUpdatesWhileMining() {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	if bc.cachedStateDB == nil {
+		if !common.EmptyHash(bc.lastUpdatedRootHash) {
+			logger.Error("cachedStateDB is nil, but lastUpdatedRootHash is not common.Hash{}!",
+				"lastUpdatedRootHash", bc.lastUpdatedRootHash.String())
+			bc.lastUpdatedRootHash = common.Hash{}
+		}
+		return
+	}
+
+	bc.cachedStateDB.ResetExceptCachedStateObjects(bc.lastUpdatedRootHash)
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.
@@ -1029,11 +1092,23 @@ func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *t
 // WriteBlockWithState writes the block and all associated state to the database.
 // If BlockChain.parallelDBWrite is true, it calls writeBlockWithStateParallel.
 // If not, it calls writeBlockWithStateSerial.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteStatus, error) {
+func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteStatus, error) {
+	var status WriteStatus
+	var err error
 	if bc.parallelDBWrite {
-		return bc.writeBlockWithStateParallel(block, receipts, state)
+		status, err = bc.writeBlockWithStateParallel(block, receipts, stateDB)
+	} else {
+		status, err = bc.writeBlockWithStateSerial(block, receipts, stateDB)
 	}
-	return bc.writeBlockWithStateSerial(block, receipts, state)
+
+	// Update lastUpdatedRootHash and cachedStateDB after successful WriteBlockWithState.
+	if err == nil && bc.cacheConfig.StateDBCaching {
+		bc.mu.Lock()
+		defer bc.mu.Unlock()
+		bc.lastUpdatedRootHash = block.Root()
+		stateDB.UpdateCachedStateObjects(block.Root())
+	}
+	return status, err
 }
 
 // writeBlockWithStateSerial writes the block and all associated state to the database in serial manner.
@@ -1391,7 +1466,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			parent = chain[i-1]
 		}
 
-		state, err := state.New(parent.Root(), bc.stateCache)
+		stateDB, err := bc.TryGetCachedStateDB(parent.Root())
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
@@ -1400,7 +1475,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		start := time.Now()
 
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
+		receipts, logs, usedGas, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
@@ -1413,7 +1488,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 
 		// Validate the state using the default validator
-		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
+		err = bc.Validator().ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
 
 			bc.reportBlock(block, receipts, err)
@@ -1421,7 +1496,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 
 		// Write the block to the chain and get the status.
-		status, err := bc.WriteBlockWithState(block, receipts, state)
+		status, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
