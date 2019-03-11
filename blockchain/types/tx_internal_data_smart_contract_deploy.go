@@ -22,6 +22,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -265,7 +266,19 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB) error {
+	to := t.Recipient
+	// Fail if the address is already created.
+	if stateDB.Exist(to) {
+		return kerrors.ErrAccountAlreadyExists
+	}
+	return nil
+}
+
 func (t *TxInternalDataSmartContractDeploy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	if err := t.Validate(stateDB); err != nil {
+		return nil, 0, nil, err
+	}
 	ret, _, usedGas, vmerr = vm.CreateWithAddress(sender, t.Payload, gas, value, t.Recipient, t.HumanReadable)
 
 	return

@@ -334,6 +334,11 @@ func (t *TxInternalDataLegacy) String() string {
 	)
 }
 
+func (t *TxInternalDataLegacy) Validate(stateDB StateDB) error {
+	// No more validation required for TxInternalDataLegacy.
+	return nil
+}
+
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
 	if t.Recipient == nil {
 		ret, _, usedGas, vmerr = vm.Create(sender, t.Payload, gas, value)

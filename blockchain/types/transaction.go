@@ -211,6 +211,7 @@ func (tx *Transaction) ValidatedSender() common.Address       { return tx.valida
 func (tx *Transaction) ValidatedFeePayer() common.Address     { return tx.validatedFeePayer }
 func (tx *Transaction) ValidatedIntrinsicGas() uint64         { return tx.validatedIntrinsicGas }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
+func (tx *Transaction) Validate(db StateDB) error             { return tx.data.Validate(db) }
 
 func (tx *Transaction) GetRoleTypeForValidation() accountkey.RoleType {
 	return tx.data.GetRoleTypeForValidation()

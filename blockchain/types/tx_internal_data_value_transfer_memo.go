@@ -250,6 +250,11 @@ func (t *TxInternalDataValueTransferMemo) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB) error {
+	// No more validation required for TxInternalDataValueTransferMemo.
+	return nil
+}
+
 func (t *TxInternalDataValueTransferMemo) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
 	stateDB.IncNonce(sender.Address())
 	ret, usedGas, vmerr = vm.Call(sender, t.Recipient, t.Payload, gas, value)

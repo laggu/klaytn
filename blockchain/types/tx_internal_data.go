@@ -212,6 +212,11 @@ type TxInternalData interface {
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
 
+	// Validate returns nil if tx is validated with the given stateDB.
+	// Otherwise, it returns an error.
+	// This function is called in TxPool.validateTx() and TxInternalData.Execute().
+	Validate(stateDB StateDB) error
+
 	// IsLegacyTransaction returns true if the tx type is a legacy transaction (TxInternalDataLegacy) object.
 	IsLegacyTransaction() bool
 
@@ -284,6 +289,7 @@ type StateDB interface {
 	Exist(common.Address) bool
 	UpdateKey(addr common.Address, key accountkey.AccountKey) error
 	CreateAccountWithMap(addr common.Address, accountType account.AccountType, values map[account.AccountValueKeyType]interface{})
+	IsProgramAccount(addr common.Address) bool
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {

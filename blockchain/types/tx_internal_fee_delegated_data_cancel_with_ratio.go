@@ -249,6 +249,11 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSign() []interfa
 	}
 }
 
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB) error {
+	// No more validation required for TxTypeCancel for now.
+	return nil
+}
+
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
 	stateDB.IncNonce(sender.Address())
 	return nil, gas, nil, nil

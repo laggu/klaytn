@@ -58,7 +58,10 @@ const (
 	ReceiptStatusErrWriteProtection          = uint(0x08)
 	ReceiptStatusErrExecutionReverted        = uint(0x09)
 	ReceiptStatusErrOpcodeCntLimitReached    = uint(0x0a)
-	ReceiptStatusLast                        = uint(0x0b) // Last value which is not an actual ReceiptStatus
+	ReceiptStatusErrAddressAlreadyExists     = uint(0x0b)
+	ReceiptStatusErrNotAProgramAccount       = uint(0x0c)
+	ReceiptStatusErrNotHumanReadableAddress  = uint(0x0d)
+	ReceiptStatusLast                        = uint(0x0e) // Last value which is not an actual ReceiptStatus
 //	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
 //	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
 //	ReceiptStatusErrStackUnderflow           // Default case, because no static message available

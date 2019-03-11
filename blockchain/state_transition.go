@@ -236,6 +236,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
 		// error and total time limit reached error.
+		// TODO-Klaytn: rename vmerr and err.
 		vmerr error
 		err   error
 	)
@@ -272,15 +273,18 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 }
 
 var vmerr2receiptstatus = map[error]uint{
-	nil:                            types.ReceiptStatusSuccessful,
-	vm.ErrDepth:                    types.ReceiptStatusErrDepth,
-	vm.ErrContractAddressCollision: types.ReceiptStatusErrContractAddressCollision,
-	vm.ErrCodeStoreOutOfGas:        types.ReceiptStatusErrCodeStoreOutOfGas,
-	vm.ErrMaxCodeSizeExceeded:      types.ReceiptStatuserrMaxCodeSizeExceed,
-	kerrors.ErrOutOfGas:            types.ReceiptStatusErrOutOfGas,
-	vm.ErrWriteProtection:          types.ReceiptStatusErrWriteProtection,
-	vm.ErrExecutionReverted:        types.ReceiptStatusErrExecutionReverted,
-	vm.ErrOpcodeCntLimitReached:    types.ReceiptStatusErrOpcodeCntLimitReached,
+	nil:                                types.ReceiptStatusSuccessful,
+	vm.ErrDepth:                        types.ReceiptStatusErrDepth,
+	vm.ErrContractAddressCollision:     types.ReceiptStatusErrContractAddressCollision,
+	vm.ErrCodeStoreOutOfGas:            types.ReceiptStatusErrCodeStoreOutOfGas,
+	vm.ErrMaxCodeSizeExceeded:          types.ReceiptStatuserrMaxCodeSizeExceed,
+	kerrors.ErrOutOfGas:                types.ReceiptStatusErrOutOfGas,
+	vm.ErrWriteProtection:              types.ReceiptStatusErrWriteProtection,
+	vm.ErrExecutionReverted:            types.ReceiptStatusErrExecutionReverted,
+	vm.ErrOpcodeCntLimitReached:        types.ReceiptStatusErrOpcodeCntLimitReached,
+	kerrors.ErrAccountAlreadyExists:    types.ReceiptStatusErrAddressAlreadyExists,
+	kerrors.ErrNotProgramAccount:       types.ReceiptStatusErrNotAProgramAccount,
+	kerrors.ErrNotHumanReadableAddress: types.ReceiptStatusErrNotHumanReadableAddress,
 }
 
 var receiptstatus2vmerr = map[uint]error{
@@ -294,6 +298,9 @@ var receiptstatus2vmerr = map[uint]error{
 	types.ReceiptStatusErrWriteProtection:          vm.ErrWriteProtection,
 	types.ReceiptStatusErrExecutionReverted:        vm.ErrExecutionReverted,
 	types.ReceiptStatusErrOpcodeCntLimitReached:    vm.ErrOpcodeCntLimitReached,
+	types.ReceiptStatusErrAddressAlreadyExists:     kerrors.ErrAccountAlreadyExists,
+	types.ReceiptStatusErrNotAProgramAccount:       kerrors.ErrNotProgramAccount,
+	types.ReceiptStatusErrNotHumanReadableAddress:  kerrors.ErrNotHumanReadableAddress,
 }
 
 // getReceiptStatusFromVMerr returns corresponding ReceiptStatus for VM error.

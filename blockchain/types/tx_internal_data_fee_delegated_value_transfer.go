@@ -260,6 +260,11 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSign() []interface
 	}
 }
 
+func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB) error {
+	// No more validation required for TxInternalDataFeeDelegatedValueTransfer.
+	return nil
+}
+
 func (t *TxInternalDataFeeDelegatedValueTransfer) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
 	stateDB.IncNonce(sender.Address())
 	ret, usedGas, vmerr = vm.Call(sender, t.Recipient, nil, gas, value)

@@ -350,7 +350,7 @@ func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB) error {
 	to := t.Recipient
 	if t.HumanReadable {
 		addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
@@ -360,13 +360,22 @@ func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, state
 			return false
 		}))
 		if err := common.IsHumanReadableAddress(addrString); err != nil {
-			return nil, 0, err, nil
+			return kerrors.ErrNotHumanReadableAddress
 		}
 	}
 	// Fail if the address is already created.
 	if stateDB.Exist(to) {
-		return nil, 0, kerrors.ErrAccountAlreadyExists, nil
+		return kerrors.ErrAccountAlreadyExists
 	}
+
+	return nil
+}
+
+func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	if err := t.Validate(stateDB); err != nil {
+		return nil, 0, nil, err
+	}
+	to := t.Recipient
 	stateDB.CreateAccountWithMap(to, account.ExternallyOwnedAccountType,
 		map[account.AccountValueKeyType]interface{}{
 			account.AccountValueKeyAccountKey:    t.Key,

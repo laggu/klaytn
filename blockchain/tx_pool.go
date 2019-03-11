@@ -621,6 +621,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// If the tx is account creation, need to check the below:
 	// 1. Is it valid for human-readable address?
 	// 2. Is the account already created?
+	if err := tx.Validate(pool.currentState); err != nil {
+		return err
+	}
 
 	// TODO-Klaytn-Issue136
 	intrGas, err := tx.IntrinsicGas()

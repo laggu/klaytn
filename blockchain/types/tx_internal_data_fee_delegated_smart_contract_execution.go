@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -283,7 +284,19 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSign() []
 	}
 }
 
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB) error {
+	// Fail if the target address is not a program account.
+	if stateDB.IsProgramAccount(t.Recipient) == false {
+		return kerrors.ErrNotProgramAccount
+	}
+
+	return nil
+}
+
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+	if err := t.Validate(stateDB); err != nil {
+		return nil, 0, nil, err
+	}
 	stateDB.IncNonce(sender.Address())
 	ret, usedGas, vmerr = vm.Call(sender, t.Recipient, t.Payload, gas, value)
 
