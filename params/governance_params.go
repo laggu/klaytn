@@ -35,6 +35,10 @@ const (
 	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
 
 	defaultMintedKLAYInSton int64 = 9600000000 // Default amount of minted KLAY. 9.6 KLAY for block reward (Unit: ston)
+
+	DefaultCNRewardRatio  = 330 // Default CN reward ratio 33.0%
+	DefaultPoCRewardRatio = 545 // Default PoC ratio 54.5%
+	DefaultKIRRewardRatio = 125 // Default KIR ratio 12.5%
 )
 
 var (

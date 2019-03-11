@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
@@ -126,7 +127,7 @@ func isEmptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
 
-// DistributeBlockReward mints KLAY and distribute newly minted KLAY to proposer, kirAddr and pocAddr. proposer also gets totalTxFee.
+// DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
 func DistributeBlockReward(b BalanceAdder, header *types.Header, config *params.ChainConfig) {
 
 	for i, addr := range header.KlaytnExtra {
@@ -149,51 +150,27 @@ func DistributeBlockReward(b BalanceAdder, header *types.Header, config *params.
 		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
 	}
 
-	distributeBlockReward(b, header.KlaytnExtra, totalTxFee, kirAddr, pocAddr, config)
+	distributeBlockReward(b, header, totalTxFee, kirAddr, pocAddr, config)
 }
 
-// DistributeBlockReward mints KLAY and distribute newly minted KLAY to proposer, kirAddr and pocAddr. proposer also gets totalTxFee.
-func distributeBlockReward(b BalanceAdder, validators []common.Address, totalTxFee *big.Int, kirAddr common.Address, pocAddr common.Address, config *params.ChainConfig) {
-	proposer := validators[0]
-
-	// minting amount
-	var mintingAmount *big.Int
-	if config.Governance.Reward.MintingAmount == nil {
-		mintingAmount = params.DefaultMintedKLAY
-	} else {
-		mintingAmount = config.Governance.Reward.MintingAmount
-	}
-
-	// TODO-Klaytn-Issue1631 Do not parse every time. Improve it!
-	cn, kir, poc, err := parseRewardRatio(config.Governance.Reward.Ratio)
-	if err != nil {
-		logger.Error("Error while parsing reward ratio of governance. Using default ratio", "err", err)
-		cn = 330  // 33.0%
-		poc = 545 // 54.5%
-		kir = 125 // 12.5%
-	}
-	logger.Trace("Block reward ratio", "cn", cn, "poc", poc, "kir", kir)
-
-	var cnRewardsRatio = big.NewInt(int64(cn))
-	var pocRatio = big.NewInt(int64(poc))
-	var kirRatio = big.NewInt(int64(kir))
-
-	var totalRatio = big.NewInt(0).Add(cnRewardsRatio, pocRatio)
-	totalRatio = big.NewInt(0).Add(totalRatio, kirRatio)
+// distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
+func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, kirAddr common.Address, pocAddr common.Address, config *params.ChainConfig) {
+	proposer := header.KlaytnExtra[0]
+	rewardParams := getRewardGovernanceParameters(config, header)
 
 	// Block reward
-	blockReward := big.NewInt(0).Add(mintingAmount, totalTxFee)
+	blockReward := big.NewInt(0).Add(rewardParams.mintingAmount, totalTxFee)
 
 	tmpInt := big.NewInt(0)
 
-	tmpInt = tmpInt.Mul(blockReward, cnRewardsRatio)
-	cnReward := big.NewInt(0).Div(tmpInt, totalRatio)
+	tmpInt = tmpInt.Mul(blockReward, rewardParams.cnRewardRatio)
+	cnReward := big.NewInt(0).Div(tmpInt, rewardParams.totalRatio)
 
-	tmpInt = tmpInt.Mul(blockReward, pocRatio)
-	pocIncentive := big.NewInt(0).Div(tmpInt, totalRatio)
+	tmpInt = tmpInt.Mul(blockReward, rewardParams.pocRatio)
+	pocIncentive := big.NewInt(0).Div(tmpInt, rewardParams.totalRatio)
 
-	tmpInt = tmpInt.Mul(blockReward, kirRatio)
-	kirIncentive := big.NewInt(0).Div(tmpInt, totalRatio)
+	tmpInt = tmpInt.Mul(blockReward, rewardParams.kirRatio)
+	kirIncentive := big.NewInt(0).Div(tmpInt, rewardParams.totalRatio)
 
 	remaining := tmpInt.Sub(blockReward, cnReward)
 	remaining = tmpInt.Sub(remaining, pocIncentive)
@@ -259,6 +236,19 @@ func CalcProposerBlockNumber(blockNum uint64) uint64 {
 	return number
 }
 
+// Cache for parsed reward parameters from governance
+type blockRewardParameters struct {
+	blockNum uint64
+
+	mintingAmount *big.Int
+	cnRewardRatio *big.Int
+	pocRatio      *big.Int
+	kirRatio      *big.Int
+	totalRatio    *big.Int
+}
+
+var blockRewardCache *blockRewardParameters
+
 // StakingCache
 const (
 	// TODO-Klaytn-Issue1166 Decide size of cache
@@ -274,6 +264,17 @@ var blockchainForReward *blockchain.BlockChain
 
 func init() {
 	initStakingCache()
+	allocBlockRewardCache()
+}
+
+func allocBlockRewardCache() {
+	blockRewardCache = new(blockRewardParameters)
+
+	blockRewardCache.mintingAmount = nil // We don't allocate mintingAmount, because we will use allocated mintingAmount in governance.
+	blockRewardCache.cnRewardRatio = new(big.Int)
+	blockRewardCache.pocRatio = new(big.Int)
+	blockRewardCache.kirRatio = new(big.Int)
+	blockRewardCache.totalRatio = new(big.Int)
 }
 
 // Subscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
@@ -511,4 +512,46 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 		CouncilStakingAmounts: stakingAmounts,
 	}
 	return stakingInfo, nil
+}
+
+// getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
+func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Header) *blockRewardParameters {
+	blockNum := header.Number.Uint64()
+	lastGovernanceRefreshedBlock := blockNum - (blockNum % governance.GovernanceRefreshInterval)
+
+	// Cache hit condition
+	// (1) blockNum is a key of cache.
+	// (2) mintingAmount indicates whether cache entry is initialized or not
+	if blockRewardCache.blockNum != lastGovernanceRefreshedBlock || blockRewardCache.mintingAmount == nil {
+		// Cache missed or not initialized yet. Let's parse governance parameters and update cache
+		cn, kir, poc, err := parseRewardRatio(config.Governance.Reward.Ratio)
+		if err != nil {
+			logger.Error("Error while parsing reward ratio of governance. Using default ratio", "err", err)
+
+			cn = params.DefaultCNRewardRatio
+			poc = params.DefaultPoCRewardRatio
+			kir = params.DefaultKIRRewardRatio
+		}
+
+		if config.Governance.Reward.MintingAmount == nil {
+			logger.Error("No minting amount defined in governance. Use default value.", "Default minting amount", params.DefaultMintedKLAY)
+			blockRewardCache.mintingAmount = params.DefaultMintedKLAY
+		} else {
+			blockRewardCache.mintingAmount = config.Governance.Reward.MintingAmount
+		}
+
+		// update cache
+		blockRewardCache.blockNum = lastGovernanceRefreshedBlock
+
+		blockRewardCache.cnRewardRatio.SetInt64(int64(cn))
+		blockRewardCache.pocRatio.SetInt64(int64(poc))
+		blockRewardCache.kirRatio.SetInt64(int64(kir))
+		blockRewardCache.totalRatio.Add(blockRewardCache.cnRewardRatio, blockRewardCache.pocRatio)
+		blockRewardCache.totalRatio.Add(blockRewardCache.totalRatio, blockRewardCache.pocRatio)
+
+		// TODO-Klaytn-RemoveLater Remove below trace later
+		logger.Trace("Reward parameters updated from governance", "blockNum", blockRewardCache.blockNum, "minting amount", blockRewardCache.mintingAmount, "cn ratio", blockRewardCache.cnRewardRatio, "poc ratio", blockRewardCache.pocRatio, "kir ratio", blockRewardCache.kirRatio)
+	}
+
+	return blockRewardCache
 }
