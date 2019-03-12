@@ -25,7 +25,6 @@ import (
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/pkg/errors"
 	"math/big"
-	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
@@ -155,30 +154,22 @@ func NewGovernance(chainConfig *params.ChainConfig) *Governance {
 
 func (g *Governance) GetEncodedVote(addr common.Address) []byte {
 	// TODO-Klaytn-Governance Change this part to add all votes to the header at once
-	// TODO-Klaytn-Governance Random selection can make side effects
-	//  (e.g: Not all votes may not be included).
-	//  Make it more deterministic or remove the vote when it is written in a block.
 	g.voteMapLock.RLock()
 	defer g.voteMapLock.RUnlock()
 
-	mapSize := len(g.voteMap)
-	if mapSize > 0 {
-		index := rand.Intn(mapSize)
-		i := 0
+	if len(g.voteMap) > 0 {
 		for key, val := range g.voteMap {
-			if i == index {
-				vote := new(GovernanceVote)
-				vote.Validator = addr
-				vote.Key = key
-				vote.Value = val
-				encoded, err := rlp.EncodeToBytes(vote)
-				if err != nil {
-					logger.Error("Failed to RLP Encode a vote", "vote", vote)
-					return nil
-				}
-				return encoded
+			vote := new(GovernanceVote)
+			vote.Validator = addr
+			vote.Key = key
+			vote.Value = val
+			encoded, err := rlp.EncodeToBytes(vote)
+			if err != nil {
+				logger.Error("Failed to RLP Encode a vote", "vote", vote)
+				g.RemoveVote(key, val)
+				continue
 			}
-			i++
+			return encoded
 		}
 	}
 	return nil
@@ -328,21 +319,24 @@ func (g *Governance) checkValue(key string, val interface{}) bool {
 	return false
 }
 
-// parsVoteValue parse vote.Value from []uint8 to appropriate type
+// parseVoteValue parse vote.Value from []uint8 to appropriate type
 func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
 	var val interface{}
 	k := GovernanceKeyMap[gVote.Key]
 
 	switch k {
-	case GovernanceMode, MintingAmount, Ratio:
+	case GovernanceMode, GoverningNode, MintingAmount, Ratio, Policy:
 		val = string(gVote.Value.([]uint8))
-	case GoverningNode:
-		val = common.BytesToAddress(gVote.Value.([]uint8))
-	case Epoch, Policy, Sub, UnitPrice:
+	case Epoch, Sub, UnitPrice:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
 	case UseGiniCoeff:
-		val, _ = strconv.ParseBool(string(gVote.Value.([]uint8)))
+		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
+		if binary.BigEndian.Uint64(gVote.Value.([]uint8)) != uint64(0) {
+			val = true
+		} else {
+			val = false
+		}
 	default:
 		logger.Warn("Unknown vote key was given", "key", k)
 	}

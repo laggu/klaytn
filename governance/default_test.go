@@ -19,6 +19,7 @@ package governance
 import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 	"reflect"
 	"testing"
@@ -85,6 +86,18 @@ var tstData = []voteValue{
 	{k: "ratio", v: "30.5/40/30.5", e: false},
 }
 
+var goodVotes = []voteValue{
+	{k: "epoch", v: uint64(20000), e: true},
+	{k: "sub", v: uint64(7), e: true},
+	{k: "policy", v: "sticky", e: true},
+	{k: "governancemode", v: "single", e: true},
+	{k: "governingnode", v: "0x0000000000000000000000000000000000000000", e: true},
+	{k: "unitprice", v: uint64(25000000000), e: true},
+	{k: "useginicoeff", v: false, e: true},
+	{k: "mintingamount", v: "9600000000000000000", e: true},
+	{k: "ratio", v: "10/10/80", e: true},
+}
+
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
 	config.Governance = GetDefaultGovernanceConfig(UseIstanbul)
@@ -95,6 +108,11 @@ func getTestConfig() *params.ChainConfig {
 	}
 	config.UnitPrice = config.Governance.UnitPrice
 	return config
+}
+
+func getGovernance() *Governance {
+	config := getTestConfig()
+	return NewGovernance(config)
 }
 
 func TestNewGovernance(t *testing.T) {
@@ -143,8 +161,7 @@ func TestGetDefaultGovernanceConfig(t *testing.T) {
 }
 
 func TestGovernance_CheckVoteValidity(t *testing.T) {
-	config := getTestConfig()
-	gov := NewGovernance(config)
+	gov := getGovernance()
 
 	for _, val := range tstData {
 		ret := gov.CheckVoteValidity(val.k, val.v)
@@ -155,8 +172,7 @@ func TestGovernance_CheckVoteValidity(t *testing.T) {
 }
 
 func TestGovernance_AddVote(t *testing.T) {
-	config := getTestConfig()
-	gov := NewGovernance(config)
+	gov := getGovernance()
 
 	for _, val := range tstData {
 		ret := gov.AddVote(val.k, val.v)
@@ -172,22 +188,9 @@ func TestGovernance_AddVote(t *testing.T) {
 }
 
 func TestGovernance_RemoveVote(t *testing.T) {
-	config := getTestConfig()
-	gov := NewGovernance(config)
+	gov := getGovernance()
 
-	var votes = []voteValue{
-		{k: "epoch", v: uint64(20000), e: true},
-		{k: "sub", v: uint64(7), e: true},
-		{k: "policy", v: "sticky", e: true},
-		{k: "governancemode", v: "single", e: true},
-		{k: "governingnode", v: "0x0000000000000000000000000000000000000000", e: true},
-		{k: "unitprice", v: uint64(25000000000), e: true},
-		{k: "useginicoeff", v: true, e: true},
-		{k: "mintingamount", v: "9600000000000000000", e: true},
-		{k: "ratio", v: "10/10/80", e: true},
-	}
-
-	for _, val := range votes {
+	for _, val := range goodVotes {
 		ret := gov.AddVote(val.k, val.v)
 		if ret != val.e {
 			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
@@ -195,32 +198,31 @@ func TestGovernance_RemoveVote(t *testing.T) {
 	}
 
 	// Length check. Because []votes has all valid votes, length of voteMap and votes should be equal
-	if len(gov.voteMap) != len(votes) {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(votes), len(gov.voteMap))
+	if len(gov.voteMap) != len(goodVotes) {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
 	}
 
 	// Remove unvoted vote. Length should still be same
 	gov.RemoveVote("Epoch", uint64(10000))
-	if len(gov.voteMap) != len(votes) {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(votes), len(gov.voteMap))
+	if len(gov.voteMap) != len(goodVotes) {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
 	}
 
 	// Remove vote with wrong key. Length should still be same
 	gov.RemoveVote("EpochEpoch", uint64(10000))
-	if len(gov.voteMap) != len(votes) {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(votes), len(gov.voteMap))
+	if len(gov.voteMap) != len(goodVotes) {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
 	}
 
-	// Removed a vote. Length should be len(votes) -1
+	// Removed a vote. Length should be len(goodVotes) -1
 	gov.RemoveVote("epoch", uint64(20000))
-	if len(gov.voteMap) != len(votes)-1 {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(votes), len(gov.voteMap))
+	if len(gov.voteMap) != len(goodVotes)-1 {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
 	}
 }
 
 func TestGovernance_ClearVotes(t *testing.T) {
-	config := getTestConfig()
-	gov := NewGovernance(config)
+	gov := getGovernance()
 
 	for _, val := range tstData {
 		ret := gov.AddVote(val.k, val.v)
@@ -235,5 +237,44 @@ func TestGovernance_ClearVotes(t *testing.T) {
 }
 
 func TestGovernance_GetEncodedVote(t *testing.T) {
-	// Will be added after enhancing GetEncodedVote function
+	gov := getGovernance()
+
+	for _, val := range goodVotes {
+		_ = gov.AddVote(val.k, val.v)
+	}
+
+	for len(gov.voteMap) > 0 {
+		voteData := gov.GetEncodedVote(common.HexToAddress("0x1234567890123456789012345678901234567890"))
+		v := new(GovernanceVote)
+		rlp.DecodeBytes(voteData, &v)
+		v = gov.ParseVoteValue(v)
+
+		if v.Value != gov.voteMap[v.Key] {
+			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap[v.Key], v.Value)
+		}
+		gov.RemoveVote(v.Key, v.Value)
+	}
+}
+
+func TestGovernance_ParseVoteValue(t *testing.T) {
+	gov := getGovernance()
+
+	addr := common.HexToAddress("0x1234567890123456789012345678901234567890")
+	for _, val := range goodVotes {
+		v := &GovernanceVote{
+			Key:       val.k,
+			Value:     val.v,
+			Validator: addr,
+		}
+
+		b, _ := rlp.EncodeToBytes(v)
+
+		d := new(GovernanceVote)
+		rlp.DecodeBytes(b, d)
+		d = gov.ParseVoteValue(d)
+
+		if !reflect.DeepEqual(v, d) {
+			t.Errorf("Parse was not successful! %v %v \n", v, d)
+		}
+	}
 }
