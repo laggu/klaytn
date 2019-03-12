@@ -351,14 +351,14 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
 	}
 
-	return validator.NewValidatorSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize, nil)
+	return validator.NewValidatorSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize, sb.chain)
 }
 
 func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
 	snap, err := sb.snapshot(sb.chain, number, hash, nil)
 	if err != nil {
 		logger.Error("Snapshot not found.", "err", err)
-		return validator.NewValidatorSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize, nil)
+		return validator.NewValidatorSet(nil, sb.config.ProposerPolicy, sb.config.SubGroupSize, sb.chain)
 	}
 	return snap.ValSet
 }

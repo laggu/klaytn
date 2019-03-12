@@ -73,11 +73,12 @@ func (val *weightedValidator) Weight() int {
 	return val.weight
 }
 
-func newWeightedValidator(addr common.Address, reward common.Address, votingpower float64) istanbul.Validator {
+func newWeightedValidator(addr common.Address, reward common.Address, votingpower float64, weight int) istanbul.Validator {
 	return &weightedValidator{
 		address:       addr,
 		rewardAddress: reward,
 		votingPower:   votingpower,
+		weight:        weight,
 	}
 }
 
@@ -141,6 +142,12 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 		}
 	}
 
+	// init weights if necessary
+	if weights == nil {
+		// initialize with 0 weight.
+		weights = make([]int, len(addrs))
+	}
+
 	// init votingPowers if necessary
 	if votingPowers == nil {
 		votingPowers = make([]float64, len(addrs))
@@ -166,7 +173,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	}
 
 	for i, addr := range addrs {
-		valSet.validators[i] = newWeightedValidator(addr, rewards[i], votingPowers[i])
+		valSet.validators[i] = newWeightedValidator(addr, rewards[i], votingPowers[i], weights[i])
 	}
 
 	// sort validator
@@ -298,7 +305,12 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 
 	// shuffle
 	committee := make([]istanbul.Validator, valSet.subSize)
-	committee[0] = New(proposer)
+	_, proposerValidator := valSet.GetByAddress(proposer)
+	if proposerValidator == nil {
+		logger.Error("fail to make sub-list of validators, because proposer is invalid", "address of proposer", proposer)
+		return valSet.validators
+	}
+	committee[0] = proposerValidator
 
 	// next proposer
 	// TODO how to sync next proposer (how to get exact next proposer ?)
@@ -404,7 +416,7 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 	}
 
 	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
-	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 0))
+	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 0, 0))
 
 	// sort validator
 	sort.Sort(valSet.validators)
