@@ -328,11 +328,11 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateD
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if err := t.Validate(stateDB); err != nil {
-		return nil, 0, nil, err
+		return nil, 0, err
 	}
-	ret, _, usedGas, vmerr = vm.CreateWithAddress(sender, t.Payload, gas, value, t.Recipient, t.HumanReadable)
+	ret, _, usedGas, err = vm.CreateWithAddress(sender, t.Payload, gas, value, t.Recipient, t.HumanReadable)
 
 	return
 }

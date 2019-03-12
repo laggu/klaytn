@@ -339,15 +339,15 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB) error {
 	return nil
 }
 
-func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if t.Recipient == nil {
-		ret, _, usedGas, vmerr = vm.Create(sender, t.Payload, gas, value)
+		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value)
 	} else {
 		stateDB.IncNonce(sender.Address())
-		ret, usedGas, vmerr = vm.Call(sender, *t.Recipient, t.Payload, gas, value)
+		ret, usedGas, err = vm.Call(sender, *t.Recipient, t.Payload, gas, value)
 	}
 
-	return
+	return ret, usedGas, err
 }
 
 func (t *TxInternalDataLegacy) MakeRPCOutput() map[string]interface{} {

@@ -50,20 +50,20 @@ func TestGetVMerrFromReceiptStatus(t *testing.T) {
 }
 
 func TestGetReceiptStatusFromVMerr(t *testing.T) {
-	status := getReceiptStatusFromVMerr(nil)
+	status := getReceiptStatusFromErrTxFailed(nil)
 	expectedStatus := types.ReceiptStatusSuccessful
 	if status != expectedStatus {
 		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)
 	}
 
-	status = getReceiptStatusFromVMerr(vm.ErrMaxCodeSizeExceeded)
+	status = getReceiptStatusFromErrTxFailed(vm.ErrMaxCodeSizeExceeded)
 	expectedStatus = types.ReceiptStatuserrMaxCodeSizeExceed
 	if status != expectedStatus {
 		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)
 	}
 
 	// Unknown VM error
-	status = getReceiptStatusFromVMerr(errors.New("Unknown VM error"))
+	status = getReceiptStatusFromErrTxFailed(errors.New("Unknown VM error"))
 	expectedStatus = types.ReceiptStatusErrDefault
 	if status != expectedStatus {
 		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)

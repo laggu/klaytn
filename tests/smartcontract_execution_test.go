@@ -107,7 +107,7 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 	gaspool := new(blockchain.GasPool).AddGas(math.MaxUint64)
 
 	ret, _, kerr := blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
-	err = kerr.Err
+	err = kerr.ErrTxInvalid
 	if err != nil {
 		return nil, err
 	}

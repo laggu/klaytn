@@ -257,11 +257,9 @@ func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB) error {
 	return nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
-	ret, usedGas, vmerr = vm.Call(sender, t.Recipient, nil, gas, value)
-
-	return
+	return vm.Call(sender, t.Recipient, nil, gas, value)
 }
 
 func (t *TxInternalDataChainDataAnchoring) MakeRPCOutput() map[string]interface{} {

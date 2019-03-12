@@ -251,7 +251,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// and apply the message.
 	gp := new(blockchain.GasPool).AddGas(math.MaxUint64) // TODO-Klaytn-Issue136
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gp)
-	err = kerr.Err
+	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
 	}

@@ -287,11 +287,9 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB) 
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
-	ret, usedGas, vmerr = vm.Call(sender, t.Recipient, t.Payload, gas, value)
-
-	return
+	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) MakeRPCOutput() map[string]interface{} {

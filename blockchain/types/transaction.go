@@ -321,7 +321,7 @@ func (tx *Transaction) Size() common.StorageSize {
 
 // Execute performs execution of the transaction. This function will be called from StateTransition.TransitionDb().
 // Since each transaction type performs different execution, this function calls TxInternalData.TransitionDb().
-func (tx *Transaction) Execute(vm VM, stateDB StateDB, gas uint64, value *big.Int) ([]byte, uint64, error, error) {
+func (tx *Transaction) Execute(vm VM, stateDB StateDB, gas uint64, value *big.Int) ([]byte, uint64, error) {
 	sender := NewAccountRefWithFeePayer(tx.validatedSender, tx.validatedFeePayer)
 	return tx.data.Execute(sender, vm, stateDB, gas, value)
 }

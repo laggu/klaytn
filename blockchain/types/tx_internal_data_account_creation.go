@@ -371,9 +371,9 @@ func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB) error {
 	return nil
 }
 
-func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if err := t.Validate(stateDB); err != nil {
-		return nil, 0, nil, err
+		return nil, 0, err
 	}
 	to := t.Recipient
 	stateDB.CreateAccountWithMap(to, account.ExternallyOwnedAccountType,
@@ -383,7 +383,7 @@ func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, state
 		})
 
 	stateDB.IncNonce(sender.Address())
-	ret, usedGas, vmerr = vm.Call(sender, to, []byte{}, gas, value)
+	ret, usedGas, err = vm.Call(sender, to, []byte{}, gas, value)
 
 	return
 }

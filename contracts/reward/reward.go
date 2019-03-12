@@ -461,7 +461,7 @@ func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gaspool)
 	logger.Trace("Call AddressBook contract", "result", res, "used gas", gas, "kerr", kerr)
-	err = kerr.Err
+	err = kerr.ErrTxInvalid
 	if err != nil {
 		logger.Trace("Failed to call AddressBook contract", "err", err)
 		return nil, err

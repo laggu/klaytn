@@ -227,7 +227,7 @@ type TxInternalData interface {
 	String() string
 
 	// Execute performs execution of the transaction according to the transaction type.
-	Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error)
+	Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error)
 
 	MakeRPCOutput() map[string]interface{}
 }

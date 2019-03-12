@@ -201,9 +201,9 @@ func (t *TxInternalDataCancel) Validate(stateDB StateDB) error {
 	return nil
 }
 
-func (t *TxInternalDataCancel) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataCancel) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
-	return nil, gas, nil, nil
+	return nil, gas, nil
 }
 
 func (t *TxInternalDataCancel) MakeRPCOutput() map[string]interface{} {

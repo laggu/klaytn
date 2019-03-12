@@ -254,9 +254,9 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB) er
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err, vmerr error) {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
-	return nil, gas, nil, nil
+	return nil, gas, nil
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) MakeRPCOutput() map[string]interface{} {

@@ -104,7 +104,7 @@ type Message interface {
 	Type() types.TxType
 
 	// Execute performs execution of the transaction according to the transaction type.
-	Execute(vm types.VM, stateDB types.StateDB, gas uint64, value *big.Int) ([]byte, uint64, error, error)
+	Execute(vm types.VM, stateDB types.StateDB, gas uint64, value *big.Int) ([]byte, uint64, error)
 }
 
 // TODO-Klaytn Later we can merge Err and Status into one uniform error.
@@ -112,10 +112,10 @@ type Message interface {
 // Klaytn error type
 // - Status: Indicate status of transaction after execution.
 //           This value will be stored in Receipt if Receipt is available.
-//           Please see getReceiptStatusFromVMerr() how this value is calculated.
+//           Please see getReceiptStatusFromErrTxFailed() how this value is calculated.
 type kerror struct {
-	Err    error
-	Status uint
+	ErrTxInvalid error
+	Status       uint
 }
 
 // NewStateTransition initialises and returns a new state transition object.
@@ -220,15 +220,15 @@ func (st *StateTransition) preCheck() error {
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerror) {
 	// TODO-Klaytn-Issue136
-	if kerr.Err = st.preCheck(); kerr.Err != nil {
+	if kerr.ErrTxInvalid = st.preCheck(); kerr.ErrTxInvalid != nil {
 		return
 	}
 	msg := st.msg
 
 	// TODO-Klaytn-Issue136
 	// Pay intrinsic gas.
-	if kerr.Err = st.useGas(msg.ValidatedIntrinsicGas()); kerr.Err != nil {
-		kerr.Status = getReceiptStatusFromVMerr(nil)
+	if kerr.ErrTxInvalid = st.useGas(msg.ValidatedIntrinsicGas()); kerr.ErrTxInvalid != nil {
+		kerr.Status = getReceiptStatusFromErrTxFailed(nil)
 		return nil, 0, kerr
 	}
 
@@ -236,26 +236,24 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
 		// error and total time limit reached error.
-		// TODO-Klaytn: rename vmerr and err.
-		vmerr error
-		err   error
+		errTxFailed error
 	)
 
-	ret, st.gas, err, vmerr = msg.Execute(st.evm, st.state, st.gas, st.value)
+	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.gas, st.value)
 
 	// TODO-Klaytn-Issue136
-	if vmerr != nil {
-		logger.Debug("VM returned with error", "err", vmerr)
+	if errTxFailed != nil {
+		logger.Debug("VM returned with error", "err", errTxFailed)
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
-		// Another possible vmerr could be a time-limit error that happens
+		// Another possible errTxFailed could be a time-limit error that happens
 		// when the EVM is still running while the block proposer's total
 		// execution time of txs for a candidate block reached the predefined
 		// limit.
-		if vmerr == vm.ErrInsufficientBalance || vmerr == vm.ErrTotalTimeLimitReached {
-			kerr.Err = vmerr
-			kerr.Status = getReceiptStatusFromVMerr(nil)
+		if errTxFailed == vm.ErrInsufficientBalance || errTxFailed == vm.ErrTotalTimeLimitReached {
+			kerr.ErrTxInvalid = errTxFailed
+			kerr.Status = getReceiptStatusFromErrTxFailed(nil)
 			return nil, 0, kerr
 		}
 	}
@@ -267,12 +265,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)) // TODO-Klaytn-Issue136 gasPrice
 	}
 
-	kerr.Err = err
-	kerr.Status = getReceiptStatusFromVMerr(vmerr)
+	kerr.ErrTxInvalid = nil
+	kerr.Status = getReceiptStatusFromErrTxFailed(errTxFailed)
 	return ret, st.gasUsed(), kerr
 }
 
-var vmerr2receiptstatus = map[error]uint{
+var errTxFailed2receiptstatus = map[error]uint{
 	nil:                                types.ReceiptStatusSuccessful,
 	vm.ErrDepth:                        types.ReceiptStatusErrDepth,
 	vm.ErrContractAddressCollision:     types.ReceiptStatusErrContractAddressCollision,
@@ -287,7 +285,7 @@ var vmerr2receiptstatus = map[error]uint{
 	kerrors.ErrNotHumanReadableAddress: types.ReceiptStatusErrNotHumanReadableAddress,
 }
 
-var receiptstatus2vmerr = map[uint]error{
+var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusSuccessful:                  nil,
 	types.ReceiptStatusErrDefault:                  ErrVMDefault,
 	types.ReceiptStatusErrDepth:                    vm.ErrDepth,
@@ -303,12 +301,12 @@ var receiptstatus2vmerr = map[uint]error{
 	types.ReceiptStatusErrNotHumanReadableAddress:  kerrors.ErrNotHumanReadableAddress,
 }
 
-// getReceiptStatusFromVMerr returns corresponding ReceiptStatus for VM error.
-func getReceiptStatusFromVMerr(vmerr error) (status uint) {
+// getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.
+func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
 	// TODO-Klaytn Add more VM error to ReceiptStatus
-	status, ok := vmerr2receiptstatus[vmerr]
+	status, ok := errTxFailed2receiptstatus[errTxFailed]
 	if !ok {
-		// No corresponding receiptStatus available for vmerr
+		// No corresponding receiptStatus available for errTxFailed
 		status = types.ReceiptStatusErrDefault
 	}
 
@@ -316,8 +314,8 @@ func getReceiptStatusFromVMerr(vmerr error) (status uint) {
 }
 
 // GetVMerrFromReceiptStatus returns VM error according to status of receipt.
-func GetVMerrFromReceiptStatus(status uint) (vmerr error) {
-	vmerr, ok := receiptstatus2vmerr[status]
+func GetVMerrFromReceiptStatus(status uint) (errTxFailed error) {
+	errTxFailed, ok := receiptstatus2errTxFailed[status]
 	if !ok {
 		return ErrInvalidReceiptStatus
 	}

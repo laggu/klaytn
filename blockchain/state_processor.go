@@ -114,7 +114,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	_, gas, kerr := ApplyMessage(vmenv, msg, gp)
-	err = kerr.Err
+	err = kerr.ErrTxInvalid
 	if err != nil {
 		return nil, 0, err
 	}

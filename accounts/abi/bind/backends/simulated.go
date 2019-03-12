@@ -293,7 +293,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call klaytn.CallMsg
 	gaspool := new(blockchain.GasPool).AddGas(math.MaxUint64)
 
 	ret, usedGas, kerr := blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
-	return ret, usedGas, kerr.Status != types.ReceiptStatusSuccessful, kerr.Err
+	return ret, usedGas, kerr.Status != types.ReceiptStatusSuccessful, kerr.ErrTxInvalid
 }
 
 // SendTransaction updates the pending block to include the given transaction.

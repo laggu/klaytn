@@ -145,7 +145,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	gaspool := new(blockchain.GasPool)
 	gaspool.AddGas(block.GasLimit())
 	snapshot := statedb.Snapshot()
-	if _, _, kerr := blockchain.ApplyMessage(evm, msg, gaspool); kerr.Err != nil {
+	if _, _, kerr := blockchain.ApplyMessage(evm, msg, gaspool); kerr.ErrTxInvalid != nil {
 		statedb.RevertToSnapshot(snapshot)
 	}
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
