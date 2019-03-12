@@ -35,6 +35,9 @@ const (
 	DefaultCNRewardRatio  = 330 // Default CN reward ratio 33.0%
 	DefaultPoCRewardRatio = 545 // Default PoC ratio 54.5%
 	DefaultKIRRewardRatio = 125 // Default KIR ratio 12.5%
+
+	stakingUpdateInterval  uint64 = 86400 // About 1 day. 86400 blocks = (24 hrs) * (3600 secs/hr) * (1 block/sec)
+	proposerUpdateInterval uint64 = 3600  // About 1 hour. 3600 blocks = (1 hr) * (3600 secs/hr) * (1 block/sec)
 )
 
 var (
@@ -45,3 +48,44 @@ var (
 
 	DefaultMintedKLAY = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
 )
+
+func IsStakingUpdatePossible(blockNum uint64) bool {
+	return (blockNum % stakingUpdateInterval) == 0
+}
+
+// CalcStakingBlockNumber returns number of block which contains staking information required to make a new block with blockNum.
+func CalcStakingBlockNumber(blockNum uint64) uint64 {
+	if blockNum <= 2*stakingUpdateInterval {
+		// Just return genesis block number.
+		return 0
+	}
+
+	var number uint64
+	if IsStakingUpdatePossible(blockNum) {
+		number = blockNum - 2*stakingUpdateInterval
+	} else {
+		number = blockNum - stakingUpdateInterval - (blockNum % stakingUpdateInterval)
+	}
+	return number
+}
+
+func IsProposerUpdateInterval(blockNum uint64) bool {
+	return (blockNum % proposerUpdateInterval) == 0
+}
+
+// CalcProposerBlockNumber returns number of block where list of proposers is updated for block blockNum
+func CalcProposerBlockNumber(blockNum uint64) uint64 {
+	if blockNum <= proposerUpdateInterval {
+		// Just return genesis block number.
+		return 0
+	}
+
+	var number uint64
+	if IsProposerUpdateInterval(blockNum) {
+		number = blockNum - proposerUpdateInterval
+	} else {
+		number = blockNum - (blockNum % proposerUpdateInterval)
+
+	}
+	return number
+}

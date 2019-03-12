@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/contracts/reward"
+	"github.com/ground-x/klaytn/params"
 	"math"
 	"math/big"
 	"math/rand"
@@ -249,7 +250,7 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	// TODO-Klaytn-Issue1166 proposers is already randomly shuffled considering weights.
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
-	picker := (blockNum + round - reward.CalcProposerBlockNumber(blockNum)) % uint64(numProposers)
+	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum)) % uint64(numProposers)
 	proposer := weightedCouncil.proposers[picker]
 
 	// TODO-Klaytn-Issue1166 Disable Trace log later

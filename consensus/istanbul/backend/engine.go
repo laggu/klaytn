@@ -35,6 +35,7 @@ import (
 	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/hashicorp/golang-lru"
 	"math/big"
@@ -48,7 +49,7 @@ const (
 	//inmemoryPeers      = 40
 	//inmemoryMessages   = 1024
 
-	checkpointInterval = 1200 // Number of blocks after which to save the vote snapshot to the database
+	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
 	inmemoryPeers      = 200
 	inmemoryMessages   = 4096
@@ -683,25 +684,28 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return nil, err
 	}
 
-	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+	if params.IsProposerUpdateInterval(snap.Number) {
 		if sb.config.ProposerPolicy == istanbul.WeightedRandom {
 			// Let's use staking information in staking cache
 			blockNum := snap.Number
 			stakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
 			if stakingInfo != nil {
-				logger.Debug("snapshot() Found staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
+				logger.Trace("snapshot() Found staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
 			} else {
-				logger.Debug("snapshot() Can't find staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
+				logger.Trace("snapshot() Can't find staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
 			}
 			snap.ValSet.SetStakingInfo(stakingInfo)
 
 			// Refresh proposers
 			if err = snap.ValSet.Refresh(hash); err != nil {
-				logger.Crit("Error when refreshing proposers", "number", snap.Number, "hash", snap.Hash, "err", err)
+				// There are two error cases, i.e. (1) No validator at all and (2) Invalid formatted hash
+				logger.CritWithStack("Error when refreshing proposers", "number", snap.Number, "hash", snap.Hash, "err", err)
 			}
 		}
+	}
 
+	// If we've generated a new checkpoint snapshot, save to disk
+	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}

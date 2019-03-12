@@ -31,6 +31,7 @@ import (
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/params"
@@ -1055,7 +1056,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			}
 		}
 
-		if block.NumberU64()%uint64(bc.cacheConfig.BlockInterval) == 0 {
+		if isCommitTrieRequired(bc, block.NumberU64()) {
 			logger.Trace("Commit the state trie into the disk", "blocknum", block.NumberU64())
 			trieDB.Commit(block.Header().Root, true)
 		}
@@ -1077,6 +1078,14 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		}
 	}
 	return nil
+}
+
+func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
+	// TODO-Klaytn-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
+	return blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 ||
+		(bc.chainConfig.Governance != nil &&
+			bc.chainConfig.Governance.Istanbul.ProposerPolicy == governance.WeightedRandom &&
+			params.IsStakingUpdatePossible(blockNum))
 }
 
 // isReorganizationRequired returns if reorganization is required or not based on total difficulty.

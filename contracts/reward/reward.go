@@ -39,11 +39,6 @@ import (
 
 var logger = log.NewModuleLogger(log.Reward)
 
-const (
-	// TODO-Klaytn-Issue1166 We use small number for testing. We have to decide staking interval for real network.
-	StakingUpdateInterval uint64 = 3600
-)
-
 type Reward struct {
 	*contract.KlaytnRewardSession
 	contractBackend bind.ContractBackend
@@ -217,25 +212,6 @@ func parseRewardRatio(ratio string) (int, int, int, error) {
 	return cn, kir, poc, nil
 }
 
-func IsStakingUpdatePossible(blockNum uint64) bool {
-	return (blockNum % StakingUpdateInterval) == 0
-}
-
-// CalcStakingBlockNumber returns number of block which contains staking information required to make a new block with blockNum.
-func CalcStakingBlockNumber(blockNum uint64) uint64 {
-	if blockNum < 2*StakingUpdateInterval {
-		// Bootstrapping. Just return genesis block number.
-		return 0
-	}
-	number := blockNum - StakingUpdateInterval - (blockNum % StakingUpdateInterval)
-	return number
-}
-
-func CalcProposerBlockNumber(blockNum uint64) uint64 {
-	number := blockNum - (blockNum % StakingUpdateInterval)
-	return number
-}
-
 // Cache for parsed reward parameters from governance
 type blockRewardParameters struct {
 	blockNum uint64
@@ -300,7 +276,7 @@ func waitHeadChain() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-chainHeadCh:
-			if IsStakingUpdatePossible(ev.Block.NumberU64()) {
+			if params.IsStakingUpdatePossible(ev.Block.NumberU64()) {
 				blockNum := ev.Block.NumberU64()
 				logger.Debug("ChainHeadEvent arrived and try to update staking cache.", "Block number", blockNum)
 				if err := updateStakingCache(blockchainForReward, blockNum); err != nil {
@@ -315,7 +291,7 @@ func waitHeadChain() {
 
 // GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
 func GetStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
-	number := CalcStakingBlockNumber(blockNum)
+	number := params.CalcStakingBlockNumber(blockNum)
 	stakingCacheKey := common.StakingCacheKey(number)
 	value, ok := StakingCache.Get(stakingCacheKey)
 	if !ok {
@@ -433,7 +409,7 @@ func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 	var PoCAddr = common.Address{}
 	var err error
 
-	if !IsStakingUpdatePossible(blockNum) {
+	if !params.IsStakingUpdatePossible(blockNum) {
 		logger.Trace("Invalid block number.", "blockNum", blockNum)
 		return nil, err
 	}
