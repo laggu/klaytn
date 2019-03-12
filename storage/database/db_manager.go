@@ -153,7 +153,7 @@ type DBManager interface {
 	ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts
 	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
 
-	// snapshot in clique(POA) consensus
+	// snapshot in clique(ConsensusClique) consensus
 	WriteCliqueSnapshot(key []byte, value []byte) error
 	ReadCliqueSnapshot(key []byte) ([]byte, error)
 }

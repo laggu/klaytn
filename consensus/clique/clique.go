@@ -68,7 +68,7 @@ var (
 	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
 )
 
-var logger = log.NewModuleLogger(log.POA)
+var logger = log.NewModuleLogger(log.ConsensusClique)
 
 // Various error messages to mark blocks invalid. These should be private to
 // prevent engine specific errors from being referenced in the remainder of the

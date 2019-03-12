@@ -48,6 +48,7 @@ func (mi ModuleID) String() string {
 	return moduleNames[mi]
 }
 
+// NOTE-Klaytn-Log Please add module in lexicographical order.
 const (
 	// 0
 	BaseLogger ModuleID = iota
@@ -62,23 +63,33 @@ const (
 	BlockchainTypes
 	BlockchainTypesAccount
 	BlockchainTypesAccountKey
-	CMDKlay
+	CMDKBN
 
 	// 11~20
-
+	CMDKCN
+	CMDKEN
+	CMDKlay
+	CMDKPN
+	CMDKSCN
 	CMDUtils
+	CMDUtilsNodeCMD
 	Common
+	ConsensusClique
 	ConsensusGxhash
+
+	// 21~30
 	ConsensusIstanbul
 	ConsensusIstanbulBackend
 	ConsensusIstanbulCore
 	ConsensusIstanbulValidator
 	Console
 	DatasyncDownloader
-
-	// 21~30
 	DatasyncFetcher
+	Governance
 	Metrics
+	NetworksGRPC
+
+	// 31~40
 	NetworksP2P
 	NetworksP2PDiscover
 	NetworksP2PNat
@@ -87,30 +98,17 @@ const (
 	NetworksP2PSimulationsCnism
 	NetworksRPC
 	Node
-
-	// 31~40
 	NodeCN
 	NodeCNFilters
-	NodeCNTracers
 
+	// 41~50
+	NodeCNTracers
 	Reward
 	ServiceChain
 	StorageDatabase
 	StorageStateDB
 	VM
 	Work
-
-	// 41~50
-	CMDKBN
-	CMDUtilsNodeCMD
-	CMDKCN
-	CMDKPN
-	CMDKEN
-	NetworksGRPC
-	CMDKSCN
-
-	POA
-	Governance
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -130,23 +128,33 @@ var moduleNames = [ModuleNameLen]string{
 	"blockchain/types",
 	"blockchain/types/account",
 	"blockchain/types/accountkey",
-	"cmd/klay",
+	"cmd/kbn",
 
 	// 11~20
-
+	"cmd/kcn",
+	"cmd/ken",
+	"cmd/klay",
+	"cmd/kpn",
+	"cmd/kscn",
 	"cmd/utils",
+	"cmd/utils/nodecmd",
 	"common",
+	"consensus/clique",
 	"consensus/gxhash",
+
+	// 21~30
 	"consensus/istanbul",
 	"consensus/istanbul/backend",
 	"consensus/istanbul/core",
 	"consensus/istanbul/validator",
 	"console",
 	"datasync/downloader",
-
-	// 21~30
 	"datasync/fetcher",
+	"governance/governance",
 	"metrics",
+	"networks/grpc",
+
+	// 31~40
 	"networks/p2p",
 	"networks/p2p/discover",
 	"networks/p2p/nat",
@@ -155,28 +163,15 @@ var moduleNames = [ModuleNameLen]string{
 	"networks/p2p/simulations/cnism",
 	"networks/rpc",
 	"node",
-
-	// 31~40
 	"node/cn",
 	"node/cn/filters",
-	"node/cn/tracers",
 
+	// 41~50
+	"node/cn/tracers",
 	"contracts/reward",
 	"servicechain",
 	"storage/database",
 	"storage/statedb",
 	"vm",
 	"work",
-
-	// 41~50
-	"cmd/kbn",
-	"cmd/utils/nodecmd",
-	"cmd/kcn",
-	"cmd/kpn",
-	"cmd/ken",
-	"networks/grpc",
-	"cmd/kscn",
-
-	"consensus/clique",
-	"governance/governance",
 }
