@@ -59,7 +59,7 @@ func (val *defaultValidator) Hash() int64 {
 }
 
 func (val *defaultValidator) RewardAddress() common.Address { return common.Address{} }
-func (val *defaultValidator) VotingPower() float64          { return 1 }
+func (val *defaultValidator) VotingPower() uint64           { return 1 }
 func (val *defaultValidator) Weight() int                   { return 0 }
 
 type defaultSet struct {
@@ -402,10 +402,10 @@ func (valSet *defaultSet) Refresh(prevHash common.Hash) error                   
 func (valSet *defaultSet) SetStakingInfo(stakingInfo *reward.StakingInfo) error { return nil }
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)                          { /* Do nothing */ }
 func (valSet *defaultSet) Proposers() []istanbul.Validator                      { return nil }
-func (valSet *defaultSet) TotalVotingPower() float64 {
-	sum := float64(0.0)
+func (valSet *defaultSet) TotalVotingPower() uint64 {
+	sum := uint64(0)
 	for _, v := range valSet.List() {
-		sum += float64(v.VotingPower())
+		sum += v.VotingPower()
 	}
 	return sum
 }

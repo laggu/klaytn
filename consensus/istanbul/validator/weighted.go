@@ -41,7 +41,7 @@ type weightedValidator struct {
 	address common.Address
 
 	rewardAddress common.Address
-	votingPower   float64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
+	votingPower   uint64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
 	weight        int
 }
 
@@ -65,7 +65,7 @@ func (val *weightedValidator) RewardAddress() common.Address {
 	return val.rewardAddress
 }
 
-func (val *weightedValidator) VotingPower() float64 {
+func (val *weightedValidator) VotingPower() uint64 {
 	return val.votingPower
 }
 
@@ -73,7 +73,7 @@ func (val *weightedValidator) Weight() int {
 	return val.weight
 }
 
-func newWeightedValidator(addr common.Address, reward common.Address, votingpower float64, weight int) istanbul.Validator {
+func newWeightedValidator(addr common.Address, reward common.Address, votingpower uint64, weight int) istanbul.Validator {
 	return &weightedValidator{
 		address:       addr,
 		rewardAddress: reward,
@@ -123,7 +123,7 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 	weightedCouncil.proposers = proposers
 }
 
-func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []float64, weights []int, policy istanbul.ProposerPolicy, committeeSize int, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
+func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []int, policy istanbul.ProposerPolicy, committeeSize int, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
 	// TODO-Klaytn-Issue1166 Disable Trace log later
 	valSet := &weightedCouncil{}
 
@@ -150,7 +150,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 
 	// init votingPowers if necessary
 	if votingPowers == nil {
-		votingPowers = make([]float64, len(addrs))
+		votingPowers = make([]uint64, len(addrs))
 		if chain == nil {
 			logger.Crit("Requires chain to initialize voting powers.")
 		}
@@ -195,7 +195,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	return valSet
 }
 
-func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.Address, votingPowers []float64, weights []int, proposers []common.Address, proposersBlockNum uint64) {
+func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.Address, votingPowers []uint64, weights []int, proposers []common.Address, proposersBlockNum uint64) {
 	// TODO-Klaytn-Issue1166 Disable Trace log later
 
 	weightedCouncil, ok := valSet.(*weightedCouncil)
@@ -207,7 +207,7 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.
 	if weightedCouncil.Policy() == istanbul.WeightedRandom {
 		numVals := len(weightedCouncil.validators)
 		rewardAddrs = make([]common.Address, numVals)
-		votingPowers = make([]float64, numVals)
+		votingPowers = make([]uint64, numVals)
 		weights = make([]int, numVals)
 		for i, val := range weightedCouncil.List() {
 			weightedVal := val.(*weightedValidator)
@@ -614,10 +614,10 @@ func (valSet *weightedCouncil) Proposers() []istanbul.Validator {
 	return valSet.proposers
 }
 
-func (valSet *weightedCouncil) TotalVotingPower() float64 {
-	sum := float64(0.0)
+func (valSet *weightedCouncil) TotalVotingPower() uint64 {
+	sum := uint64(0)
 	for _, v := range valSet.List() {
-		sum += float64(v.VotingPower())
+		sum += v.VotingPower()
 	}
 	return sum
 }

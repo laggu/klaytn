@@ -49,8 +49,8 @@ type Vote struct {
 // Tally is a simple vote tally to keep the current score of votes. Votes that
 // go against the proposal aren't counted since it's equivalent to not voting.
 type Tally struct {
-	Authorize bool    `json:"authorize"` // Whether the vote it about authorizing or kicking someone
-	Votes     float64 `json:"votes"`     // Number of votes until now wanting to pass the proposal
+	Authorize bool   `json:"authorize"` // Whether the vote it about authorizing or kicking someone
+	Votes     uint64 `json:"votes"`     // Number of votes until now wanting to pass the proposal
 }
 
 // Snapshot is the state of the authorization voting at a given point in time.
@@ -454,7 +454,7 @@ type snapshotJSON struct {
 
 	// for weighted validator
 	RewardAddrs       []common.Address `json:"rewardAddrs"`
-	VotingPowers      []float64        `json:"votingPower"`
+	VotingPowers      []uint64         `json:"votingPower"`
 	Weights           []int            `json:"weight"`
 	Proposers         []common.Address `json:"proposers"`
 	ProposersBlockNum uint64           `json:"proposersBlockNum"`
@@ -462,7 +462,7 @@ type snapshotJSON struct {
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	var rewardAddrs []common.Address
-	var votingPowers []float64
+	var votingPowers []uint64
 	var weights []int
 	var proposers []common.Address
 	var proposersBlockNum uint64

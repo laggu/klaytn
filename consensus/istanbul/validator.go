@@ -34,7 +34,7 @@ type Validator interface {
 	String() string
 
 	RewardAddress() common.Address
-	VotingPower() float64
+	VotingPower() uint64
 	Weight() int
 }
 
@@ -101,7 +101,7 @@ type ValidatorSet interface {
 
 	Proposers() []Validator // TODO-Klaytn-Issue1166 For debugging
 
-	TotalVotingPower() float64
+	TotalVotingPower() uint64
 }
 
 // ----------------------------------------------------------------------------

@@ -30,7 +30,7 @@ func TestNewWeightedCouncil(t *testing.T) {
 	const ValCnt = 100
 	var validators []istanbul.Validator
 	var rewardAddrs []common.Address
-	var votingPowers []float64
+	var votingPowers []uint64
 
 	// Create 100 validators with random addresses
 	b := []byte{}
@@ -45,7 +45,7 @@ func TestNewWeightedCouncil(t *testing.T) {
 		rewardAddr := crypto.PubkeyToAddress(rewardKey.PublicKey)
 		rewardAddrs = append(rewardAddrs, rewardAddr)
 
-		votingPowers = append(votingPowers, float64(1))
+		votingPowers = append(votingPowers, uint64(1))
 	}
 
 	// Create ValidatorSet
@@ -77,8 +77,8 @@ func TestNormalWeightedCouncil(t *testing.T) {
 	rewardKey2, _ := crypto.GenerateKey()
 	rewardAddr2 := crypto.PubkeyToAddress(rewardKey2.PublicKey)
 
-	votingPower1 := float64(1.1)
-	votingPower2 := float64(1.2)
+	votingPower1 := uint64(1)
+	votingPower2 := uint64(2)
 
 	weight1 := 1
 	weight2 := 2
@@ -86,7 +86,7 @@ func TestNormalWeightedCouncil(t *testing.T) {
 	val1 := newWeightedValidator(addr1, rewardAddr1, votingPower1, weight1)
 	val2 := newWeightedValidator(addr2, rewardAddr2, votingPower2, weight2)
 
-	valSet := NewWeightedCouncil([]common.Address{addr1, addr2}, []common.Address{rewardAddr1, rewardAddr2}, []float64{votingPower1, votingPower2}, []int{weight1, weight2}, istanbul.WeightedRandom, 21, 0, 0, nil)
+	valSet := NewWeightedCouncil([]common.Address{addr1, addr2}, []common.Address{rewardAddr1, rewardAddr2}, []uint64{votingPower1, votingPower2}, []int{weight1, weight2}, istanbul.WeightedRandom, 21, 0, 0, nil)
 	if valSet == nil {
 		t.Errorf("the format of validator set is invalid")
 		t.FailNow()
