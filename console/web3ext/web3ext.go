@@ -31,6 +31,7 @@ var Modules = map[string]string{
 	"txpool":   TxPool_JS,
 	"istanbul": Istanbul_JS,
 	"bridge":   Bridge_JS,
+	"clique":   CliqueJs,
 }
 
 const Admin_JS = `
@@ -770,6 +771,51 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'latestAnchoredBlockNumber',
 			getter: 'bridge_getLatestAnchoredBlockNumber'
+		}),
+	]
+});
+`
+const CliqueJs = `
+web3._extend({
+	property: 'clique',
+	methods: [
+		new web3._extend.Method({
+			name: 'getSnapshot',
+			call: 'clique_getSnapshot',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getSnapshotAtHash',
+			call: 'clique_getSnapshotAtHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getSigners',
+			call: 'clique_getSigners',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getSignersAtHash',
+			call: 'clique_getSignersAtHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'propose',
+			call: 'clique_propose',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'discard',
+			call: 'clique_discard',
+			params: 1
+		}),
+	],
+	properties: [
+		new web3._extend.Property({
+			name: 'proposals',
+			getter: 'clique_proposals'
 		}),
 	]
 });
