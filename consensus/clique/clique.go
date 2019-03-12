@@ -641,22 +641,15 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 			}
 		}
 	}
-	// wait for the timestamp of header, use this to adjust the block period
-	delay := time.Unix(block.Header().Time.Int64(), 0).Sub(time.Now())
-	select {
-	case <-time.After(delay):
-	case <-stop:
-		return nil, nil
-	}
 	// Sweet, the protocol permits us to sign the block, wait for our time
-	//delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
-	//if header.Difficulty.Cmp(diffNoTurn) == 0 {
-	//	// It's not our turn explicitly to sign, delay it a bit
-	//	wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-	//	delay += time.Duration(rand.Int63n(int64(wiggle)))
-	//
-	//	logger.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
-	//}
+	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
+	if header.Difficulty.Cmp(diffNoTurn) == 0 {
+		// It's not our turn explicitly to sign, delay it a bit
+		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
+		delay += time.Duration(rand.Int63n(int64(wiggle)))
+
+		logger.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+	}
 	logger.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 
 	select {
