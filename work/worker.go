@@ -167,17 +167,17 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	}
 
 	// istanbul BFT
-	if _, ok := engine.(consensus.Istanbul); ok {
-		// Subscribe NewTxsEvent for tx pool
-		worker.txsSub = backend.TxPool().SubscribeNewTxsEvent(worker.txsCh)
-		// Subscribe events for blockchain
-		worker.chainHeadSub = backend.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-		worker.chainSideSub = backend.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
-		go worker.update()
+	//	if _, ok := engine.(consensus.Istanbul); ok {
+	// Subscribe NewTxsEvent for tx pool
+	worker.txsSub = backend.TxPool().SubscribeNewTxsEvent(worker.txsCh)
+	// Subscribe events for blockchain
+	worker.chainHeadSub = backend.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+	worker.chainSideSub = backend.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+	go worker.update()
 
-		go worker.wait()
-		worker.commitNewWork()
-	}
+	go worker.wait()
+	worker.commitNewWork()
+	//	}
 
 	return worker
 }
