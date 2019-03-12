@@ -316,6 +316,7 @@ func (g *GovernanceConfig) Copy() *GovernanceConfig {
 	newConfig.Reward.MintingAmount = big.NewInt(0).Set(g.Reward.MintingAmount)
 	newConfig.Reward.Ratio = g.Reward.Ratio
 	newConfig.Reward.UseGiniCoeff = g.Reward.UseGiniCoeff
+	newConfig.Reward.DeferredTxFee = g.Reward.DeferredTxFee
 	newConfig.UnitPrice = g.UnitPrice
 	newConfig.GoverningNode = g.GoverningNode
 	newConfig.Istanbul.SubGroupSize = g.Istanbul.SubGroupSize
