@@ -14,5 +14,5 @@ contract ITokenReceiver {
 // TODO-Klaytn-Servicechain define proper bytes4 value.
 bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
 
-function onTokenReceived(address _from, uint256 amount) public returns(bytes4);
+function onTokenReceived(address _from, uint256 amount, address _to) public returns(bytes4);
 }

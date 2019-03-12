@@ -46,6 +46,7 @@ type TokenReceivedEvent struct {
 	ContractAddr common.Address
 	TokenAddr    common.Address
 	From         common.Address
+	To           common.Address
 	Amount       *big.Int // Amount is UID in NFT
 }
 
@@ -309,6 +310,7 @@ func (gwm *GateWayManager) loop(
 				ContractAddr: addr,
 				TokenAddr:    ev.ContractAddress,
 				From:         ev.From,
+				To:           ev.To,
 				Amount:       ev.Amount,
 			}
 			gwm.tokenReceived.Send(receiveEvent)

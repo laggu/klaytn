@@ -23,15 +23,12 @@ import "github.com/ground-x/klaytn/common"
 type AddressManager struct {
 	gatewayContracts map[common.Address]common.Address
 	tokenContracts   map[common.Address]common.Address
-	//TODO-Klaytn consider too many user mapping
-	users map[common.Address]common.Address
 }
 
 func NewAddressManager() (*AddressManager, error) {
 	return &AddressManager{
 		gatewayContracts: make(map[common.Address]common.Address),
 		tokenContracts:   make(map[common.Address]common.Address),
-		users:            make(map[common.Address]common.Address),
 	}, nil
 }
 
@@ -45,19 +42,6 @@ func (am *AddressManager) DeleteGateway(addr common.Address) {
 	if gateway != (common.Address{}) {
 		delete(am.gatewayContracts, addr)
 		delete(am.gatewayContracts, gateway)
-	}
-}
-
-func (am *AddressManager) AddUser(user1 common.Address, user2 common.Address) {
-	am.users[user1] = user2
-	am.users[user2] = user1
-}
-
-func (am *AddressManager) DeleteUser(addr common.Address) {
-	user := am.GetCounterPartUser(addr)
-	if user != (common.Address{}) {
-		delete(am.gatewayContracts, addr)
-		delete(am.gatewayContracts, user)
 	}
 }
 
@@ -80,15 +64,6 @@ func (am *AddressManager) GetCounterPartGateway(addr common.Address) common.Addr
 		return common.Address{}
 	}
 	return gateway
-}
-
-func (am *AddressManager) GetCounterPartUser(addr common.Address) common.Address {
-	user, ok := am.users[addr]
-	if !ok {
-		// if there is no specific counter part user, it can be its own address.
-		return addr
-	}
-	return user
 }
 
 func (am *AddressManager) GetCounterPartToken(addr common.Address) common.Address {

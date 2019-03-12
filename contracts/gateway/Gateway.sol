@@ -20,9 +20,7 @@ contract Gateway is ITokenReceiver {
 
     Balance balances;
 
-//    event KLAYReceived(address from, uint256 amount); // TODO-Klaytn It will be removed.
-//    event ERC20Received(address from, uint256 amount, address contractAddress); // TODO-Klaytn It will be removed.
-    event TokenReceived(TokenKind kind, address from, uint256 amount, address contractAddress);
+    event TokenReceived(TokenKind kind, address from, uint256 amount, address contractAddress, address to);
 
     enum TokenKind {
         KLAY,
@@ -77,45 +75,50 @@ contract Gateway is ITokenReceiver {
 
     // Approve and Deposit function for 2-step deposits
     // Requires first to have called `approve` on the specified TOKEN contract
-    function depositToken(uint256 amount, address contractAddress) external {
+    function depositToken(uint256 amount, address contractAddress, address to) external {
         IToken(contractAddress).transferFrom(msg.sender, address(this), amount);
         balances.token[contractAddress] = balances.token[contractAddress].add(amount);
-//        emit ERC20Received(msg.sender, amount, contractAddress);    // TODO-Klaytn It will be removed.
-        emit TokenReceived(TokenKind.TOKEN, msg.sender, amount, contractAddress);
+        emit TokenReceived(TokenKind.TOKEN, msg.sender, amount, contractAddress, to);
     }
 
     //////////////////////////////////////////////////////////////////////////////
     // Receiver functions for 1-step deposits to the gateway
 
-    function onTokenReceived(address _from, uint256 amount)
+    function onTokenReceived(address _from, uint256 amount, address _to)
     public
     returns (bytes4)
     {
         // TODO-Klaytn-Servicechain should add allowedToken list in this Gateway.
         //require(allowedTokens[msg.sender], "Not a valid token");
         depositToken(amount);
-//        emit ERC20Received(_from, amount, msg.sender);              // TODO-Klaytn It will be removed.
-        emit TokenReceived(TokenKind.TOKEN, _from, amount, msg.sender);
+        emit TokenReceived(TokenKind.TOKEN, _from, amount, msg.sender, _to);
         return TOKEN_RECEIVED;
     }
 
+    // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
         depositKLAY();
-//        emit KLAYReceived(msg.sender, msg.value);
-        emit TokenReceived(TokenKind.KLAY, msg.sender, msg.value, address(0));
+        emit TokenReceived(TokenKind.KLAY, msg.sender, msg.value, address(0), msg.sender);
     }
 
+    // DepositKLAY requests transfer KLAY to _to on relative chain.
+    function DepositKLAY(address _to) external payable {
+        depositKLAY();
+        emit TokenReceived(TokenKind.KLAY, msg.sender, msg.value, address(0), _to);
+    }
+
+    // DepositWithoutEvent send KLAY to this contract without event for increasing the withdrawal limit.
     function DepositWithoutEvent() external payable {
         depositKLAY();
     }
     //////////////////////////////////////////////////////////////////////////////
 
-    // Returns all the KLAY you own
+    // Returns KLAY withdrawal limit
     function getKLAY() external view returns (uint256) {
         return balances.klay;
     }
 
-    // Returns all the KLAY you own
+    // Returns given Token withdrawal limit
     function getToken(address contractAddress) external view returns (uint256) {
         return balances.token[contractAddress];
     }

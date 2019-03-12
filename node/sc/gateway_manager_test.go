@@ -36,6 +36,15 @@ import (
 	"testing"
 )
 
+// TestGateWayManager tests the following event/method of smart contract.
+// Token Contract
+// - DepositToGateway method
+// Gateway Contract
+// - DepositKLAY method
+// - WithdrawKLAY method
+// - WithdrawToken method
+// - TokenWithdrawn event
+// - TokenReceived event
 func TestGateWayManager(t *testing.T) {
 
 	defer func() {
@@ -45,7 +54,7 @@ func TestGateWayManager(t *testing.T) {
 	}()
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(5)
 
 	// Generate a new random account and a funded simulator
 	key, _ := crypto.GenerateKey()
@@ -53,6 +62,9 @@ func TestGateWayManager(t *testing.T) {
 
 	key2, _ := crypto.GenerateKey()
 	auth2 := bind.NewKeyedTransactor(key2)
+
+	key3, _ := crypto.GenerateKey()
+	auth3 := bind.NewKeyedTransactor(key3)
 
 	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}}
 	sim := backends.NewSimulatedBackend(alloc)
@@ -81,14 +93,34 @@ func TestGateWayManager(t *testing.T) {
 
 	gatewayManager, err := NewGateWayManager(sc)
 
+	testToken := big.NewInt(123)
+	testKLAY := big.NewInt(321)
+
+	// 1. Deploy Gateway Contract
 	addr, err := gatewayManager.DeployGatewayTest(sim, false)
 	if err != nil {
 		log.Fatalf("Failed to deploy new gateway contract: %v", err)
 	}
+	gateway := gatewayManager.GetGateway(addr)
 	fmt.Println("===== GatewayContract Addr ", addr.Hex())
 
-	gatewayManager.SubscribeEvent(addr)
+	// 2. Deploy Token Contract
+	gxtokenaddr, _, gxtoken, err := stoken.DeployGXToken(auth, sim, addr)
+	if err != nil {
+		log.Fatalf("Failed to DeployGXToken: %v", err)
+	}
 
+	balance, _ := sim.BalanceAt(context.Background(), auth.From, nil)
+	fmt.Println("auth KLAY balance :", balance)
+
+	balance, _ = sim.BalanceAt(context.Background(), auth2.From, nil)
+	fmt.Println("auth2 KLAY balance :", balance)
+
+	balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
+	fmt.Println("auth3 KLAY balance :", balance)
+
+	// 3. Subscribe Gateway Contract
+	gatewayManager.SubscribeEvent(addr)
 	tokenCh := make(chan TokenReceivedEvent)
 	tokenSendCh := make(chan TokenTransferEvent)
 	gatewayManager.SubscribeTokenReceived(tokenCh)
@@ -98,55 +130,126 @@ func TestGateWayManager(t *testing.T) {
 		for {
 			select {
 			case ev := <-tokenCh:
-				fmt.Println(" receive token received event ", ev.ContractAddr.Hex())
+				fmt.Println("Deposit Event",
+					"type", ev.TokenType,
+					"amount", ev.Amount,
+					"from", ev.From.String(),
+					"to", ev.To.String(),
+					"contract", ev.ContractAddr.String(),
+					"token", ev.TokenAddr.String())
+
+				switch ev.TokenType {
+				case 0:
+					// WithdrawKLAY by Event
+					tx, err := gateway.WithdrawKLAY(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, ev.To)
+					if err != nil {
+						log.Fatalf("Failed to WithdrawKLAY: %v", err)
+					}
+					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
+					sim.Commit() // block
+
+				case 1:
+					// WithdrawToken by Event
+					tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, ev.To, gxtokenaddr)
+					if err != nil {
+						log.Fatalf("Failed to WithdrawToken: %v", err)
+					}
+					fmt.Println("WithdrawToken Transaction by event ", tx.Hash().Hex())
+					sim.Commit() // block
+				}
+
 				wg.Done()
+
 			case ev := <-tokenSendCh:
-				fmt.Println(" receive token withdraw event ", ev.ContractAddr.Hex())
+				fmt.Println("receive token withdraw event ", ev.ContractAddr.Hex())
+				fmt.Println("Withdraw Event",
+					"type", ev.TokenType,
+					"amount", ev.Amount,
+					"owner", ev.Owner.String(),
+					"contract", ev.ContractAddr.String(),
+					"token", ev.TokenAddr.String())
 				wg.Done()
 			}
 		}
 	}()
 
-	gxtokenaddr, _, gxtoken, err := stoken.DeployGXToken(auth, sim, addr)
-	if err != nil {
-		log.Fatalf("Failed to DeployGXToken: %v", err)
-	}
-
-	// Gateway transfer ERC20 to address
-	gateway := gatewayManager.GetGateway(addr)
-	tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, big.NewInt(200), auth.From, gxtokenaddr)
+	// 4. WithdrawToken to Auth2 for charging
+	tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, testToken, auth.From, gxtokenaddr)
 	if err != nil {
 		log.Fatalf("Failed to WithdrawToken: %v", err)
 	}
-	fmt.Println(" Trasaction ", tx.Hash().Hex())
-	sim.Commit() // block #1
+	fmt.Println("WithdrawToken Transaction", tx.Hash().Hex())
+	sim.Commit() // block
 
-	// address transfer ERC20 to Gateway
-	tx, err = gxtoken.DepositToGateway(&bind.TransactOpts{From: auth.From, Signer: auth.Signer}, big.NewInt(100))
+	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth.From})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("auth token balance", balance.String())
+	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth2.From})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("auth2 token balance", balance.String())
+	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth3.From})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("auth3 token balance", balance.String())
+
+	// 5. DepositToGateway from auth to auth3
+	tx, err = gxtoken.DepositToGateway(&bind.TransactOpts{From: auth.From, Signer: auth.Signer}, testToken, auth3.From)
 	if err != nil {
 		log.Fatalf("Failed to SafeTransferAndCall: %v", err)
 	}
-	fmt.Println(" Trasaction ", tx.Hash().Hex())
-	sim.Commit() // block #2
+	fmt.Println("DepositToGateway Transaction", tx.Hash().Hex())
+	sim.Commit() // block
 
-	balance, _ := sim.BalanceAt(context.Background(), auth.From, big.NewInt(2))
-	fmt.Println("auth balance :", balance)
+	// 6. DepositKLAY from auth to auth3
+	tx, err = gateway.DepositKLAY(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY}, auth3.From)
+	if err != nil {
+		log.Fatalf("Failed to DepositKLAY: %v", err)
+	}
+	fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
 
-	//tx, err = gateway.WithdrawKLAY(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer},big.NewInt(200), auth.From)
-	//if err != nil {
-	//	log.Fatalf("Failed to WithdrawKLAY: %v", err)
-	//}
-	//fmt.Println(" Trasaction ", tx.Hash().Hex())
-
-	sim.Commit() // block #3
-
-	balance, _ = sim.BalanceAt(context.Background(), auth.From, big.NewInt(3))
-	fmt.Println("auth balance :", balance)
+	sim.Commit() // block
 
 	wg.Wait()
 
+	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth.From})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("auth token balance", balance.String())
+	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth2.From})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("auth2 token balance", balance.String())
+	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth3.From})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("auth3 token balance", balance.String())
+
+	if balance.Cmp(testToken) != 0 {
+		t.Fatal("testToken is mismatched,", "expected", testToken.String(), "result", balance.String())
+	}
+
+	balance, _ = sim.BalanceAt(context.Background(), auth.From, nil)
+	fmt.Println("auth KLAY balance :", balance)
+
+	balance, _ = sim.BalanceAt(context.Background(), auth2.From, nil)
+	fmt.Println("auth2 KLAY balance :", balance)
+
+	balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
+	fmt.Println("auth3 KLAY balance :", balance)
+
+	if balance.Cmp(testKLAY) != 0 {
+		t.Fatal("testKLAY is mismatched,", "expected", testKLAY.String(), "result", balance.String())
+	}
+
 	gatewayManager.Stop()
-	fmt.Println("GateWay Contract Addr ", addr.Hex())
 }
 
 // for TestMethod
@@ -168,6 +271,7 @@ func (gwm *GateWayManager) DeployGatewayTest(backend bind.ContractBackend, local
 func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend) (common.Address, *gatewaycontract.Gateway, error) {
 
 	auth := bind.NewKeyedTransactor(accountKey)
+	auth.Value = big.NewInt(10000)
 	addr, tx, contract, err := gatewaycontract.DeployGateway(auth, backend, true)
 	if err != nil {
 		logger.Error("", "err", err)

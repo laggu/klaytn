@@ -47,8 +47,8 @@ contract GXToken {
     emit Transfer(from, to, value);
   }
 
-  function depositToGateway(uint256 amount) external {
-    safeTransferAndCall(gateway, amount);
+  function depositToGateway(uint256 amount, address to) external {
+    safeTransferAndCall(gateway, amount, to);
   }
 
   // Called by the gateway contract to mint tokens that have been deposited to the Mainnet gateway.
@@ -58,13 +58,13 @@ contract GXToken {
     balances[gateway] = balances[gateway].add(_amount);
   }
 
-  function safeTransferAndCall(address _to, uint256 amount) public {
-    transfer(_to, amount);
-    require(checkAndCallSafeTransfer(msg.sender, _to, amount));
+  function safeTransferAndCall(address _gateway, uint256 _amount, address _to) public {
+    transfer(_gateway, _amount);
+    require(checkAndCallSafeTransfer(msg.sender, _gateway, _amount, _to));
   }
 
-  function checkAndCallSafeTransfer(address _from, address _to, uint256 amount) internal returns (bool) {
-    bytes4 retval = ITokenReceiver(_to).onTokenReceived(_from, amount);
+  function checkAndCallSafeTransfer(address _from, address _gateway, uint256 _amount, address _to) internal returns (bool) {
+    bytes4 retval = ITokenReceiver(_gateway).onTokenReceived(_from, _amount, _to);
     return(retval == TOKEN_RECEIVED);
   }
 }

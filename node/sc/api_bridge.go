@@ -148,14 +148,6 @@ func (sbapi *SubBridgeAPI) UnRegisterGateway(gateway common.Address) {
 	sbapi.sc.AddressManager().DeleteGateway(gateway)
 }
 
-func (sbapi *SubBridgeAPI) RegisterAccount(user1 common.Address, user2 common.Address) {
-	sbapi.sc.AddressManager().AddUser(user1, user2)
-}
-
-func (sbapi *SubBridgeAPI) UnRegisterAccount(user common.Address) {
-	sbapi.sc.AddressManager().DeleteUser(user)
-}
-
 func (sbapi *SubBridgeAPI) RegisterToken(token1 common.Address, token2 common.Address) {
 	sbapi.sc.AddressManager().AddToken(token1, token2)
 }

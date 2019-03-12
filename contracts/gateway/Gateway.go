@@ -16,13 +16,13 @@ import (
 )
 
 // GatewayABI is the input ABI used to generate the binding from.
-const GatewayABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_from\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"onTokenReceived\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isChild\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"contractAddress\",\"type\":\"address\"}],\"name\":\"withdrawToken\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getKLAY\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"contractAddress\",\"type\":\"address\"}],\"name\":\"getToken\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"to\",\"type\":\"address\"}],\"name\":\"withdrawKLAY\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"contractAddress\",\"type\":\"address\"}],\"name\":\"depositToken\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"DepositWithoutEvent\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_isChild\",\"type\":\"bool\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"kind\",\"type\":\"uint8\"},{\"indexed\":false,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"contractAddress\",\"type\":\"address\"}],\"name\":\"TokenReceived\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"kind\",\"type\":\"uint8\"},{\"indexed\":false,\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TokenWithdrawn\",\"type\":\"event\"}]"
+const GatewayABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"isChild\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"contractAddress\",\"type\":\"address\"}],\"name\":\"withdrawToken\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getKLAY\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"DepositKLAY\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"contractAddress\",\"type\":\"address\"}],\"name\":\"getToken\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"to\",\"type\":\"address\"}],\"name\":\"withdrawKLAY\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"contractAddress\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"}],\"name\":\"depositToken\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"DepositWithoutEvent\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_from\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"onTokenReceived\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_isChild\",\"type\":\"bool\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"kind\",\"type\":\"uint8\"},{\"indexed\":false,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"to\",\"type\":\"address\"}],\"name\":\"TokenReceived\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"kind\",\"type\":\"uint8\"},{\"indexed\":false,\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TokenWithdrawn\",\"type\":\"event\"}]"
 
 // GatewayBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const GatewayBinRuntime = `0x60806040526004361061008d5763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631035fb5c811461010357806311f2d4941461015c578063258898b3146101855780632980c75b146101b157806359770438146101d8578063840f0145146101f9578063c310b8841461021d578063cd93ee0614610241575b610095610249565b7fdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f9450600033346000604051808560028111156100cc57fe5b60ff168152600160a060020a03948516602082015260408082019490945291909316606082015290519081900360800192509050a1005b34801561010f57600080fd5b50610127600160a060020a0360043516602435610261565b604080517fffffffff000000000000000000000000000000000000000000000000000000009092168252519081900360200190f35b34801561016857600080fd5b506101716102ff565b604080519115158252519081900360200190f35b34801561019157600080fd5b506101af600435600160a060020a0360243581169060443516610308565b005b3480156101bd57600080fd5b506101c6610455565b60408051918252519081900360200190f35b3480156101e457600080fd5b506101c6600160a060020a036004351661045b565b34801561020557600080fd5b506101af600435600160a060020a0360243516610476565b34801561022957600080fd5b506101af600435600160a060020a0360243516610517565b6101af610645565b60015461025c903463ffffffff61064f16565b600155565b600061026c82610668565b7fdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f94506001848433604051808560028111156102a257fe5b60ff168152600160a060020a03948516602082015260408082019490945291909316606082015290519081900360800192509050a1507fbc04f0af0000000000000000000000000000000000000000000000000000000092915050565b60005460ff1681565b60005460ff16151561035757600160a060020a03811660009081526002602052604090205461033d908463ffffffff61069b16565b600160a060020a0382166000908152600260205260409020555b80600160a060020a031663a9059cbb83856040518363ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018083600160a060020a0316600160a060020a0316815260200182815260200192505050602060405180830381600087803b1580156103d357600080fd5b505af11580156103e7573d6000803e3d6000fd5b505050506040513d60208110156103fd57600080fd5b505060408051600160a060020a038481168252600160208301528316818301526060810185905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a1505050565b60015490565b600160a060020a031660009081526002602052604090205490565b600154610489908363ffffffff61069b16565b600155604051600160a060020a0382169083156108fc029084906000818181858888f193505050501580156104c2573d6000803e3d6000fd5b5060408051600160a060020a0383168152600060208201819052818301526060810184905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a15050565b604080517f23b872dd000000000000000000000000000000000000000000000000000000008152336004820152306024820152604481018490529051600160a060020a038316916323b872dd9160648083019260209291908290030181600087803b15801561058557600080fd5b505af1158015610599573d6000803e3d6000fd5b505050506040513d60208110156105af57600080fd5b5050600160a060020a0381166000908152600260205260409020546105da908363ffffffff61064f16565b600160a060020a0382166000818152600260209081526040918290209390935580516001815233938101939093528281018590526060830191909152517fdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f94509181900360800190a15050565b61064d610249565b565b60008282018381101561066157600080fd5b9392505050565b33600090815260026020526040902054610688908263ffffffff61064f16565b3360009081526002602052604090205550565b600080838311156106ab57600080fd5b50509003905600a165627a7a723058208bf9ca0c01f31088618931e459847525683bd119956a0bb22851711503cf78420029`
+const GatewayBinRuntime = `0x6080604052600436106100985763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166311f2d4948114610102578063258898b31461012b5780632980c75b146101575780633d3bfcac1461017e5780635977043814610192578063840f0145146101b3578063c9869112146101d7578063cd93ee0614610201578063f099d9bd14610209575b6100a0610269565b60008051602061072b83398151915260003334600033604051808660028111156100c657fe5b60ff168152600160a060020a0395861660208201526040808201959095529285166060840152509092166080830152519081900360a0019150a1005b34801561010e57600080fd5b50610117610281565b604080519115158252519081900360200190f35b34801561013757600080fd5b50610155600435600160a060020a036024358116906044351661028a565b005b34801561016357600080fd5b5061016c6103d7565b60408051918252519081900360200190f35b610155600160a060020a03600435166103dd565b34801561019e57600080fd5b5061016c600160a060020a0360043516610448565b3480156101bf57600080fd5b50610155600435600160a060020a0360243516610463565b3480156101e357600080fd5b50610155600435600160a060020a0360243581169060443516610504565b61015561062a565b34801561021557600080fd5b50610234600160a060020a036004358116906024359060443516610634565b604080517fffffffff000000000000000000000000000000000000000000000000000000009092168252519081900360200190f35b60015461027c903463ffffffff6106c716565b600155565b60005460ff1681565b60005460ff1615156102d957600160a060020a0381166000908152600260205260409020546102bf908463ffffffff6106e016565b600160a060020a0382166000908152600260205260409020555b80600160a060020a031663a9059cbb83856040518363ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018083600160a060020a0316600160a060020a0316815260200182815260200192505050602060405180830381600087803b15801561035557600080fd5b505af1158015610369573d6000803e3d6000fd5b505050506040513d602081101561037f57600080fd5b505060408051600160a060020a038481168252600160208301528316818301526060810185905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a1505050565b60015490565b6103e5610269565b60008051602061072b833981519152600033346000856040518086600281111561040b57fe5b60ff168152600160a060020a0395861660208201526040808201959095529285166060840152509092166080830152519081900360a0019150a150565b600160a060020a031660009081526002602052604090205490565b600154610476908363ffffffff6106e016565b600155604051600160a060020a0382169083156108fc029084906000818181858888f193505050501580156104af573d6000803e3d6000fd5b5060408051600160a060020a0383168152600060208201819052818301526060810184905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a15050565b604080517f23b872dd000000000000000000000000000000000000000000000000000000008152336004820152306024820152604481018590529051600160a060020a038416916323b872dd9160648083019260209291908290030181600087803b15801561057257600080fd5b505af1158015610586573d6000803e3d6000fd5b505050506040513d602081101561059c57600080fd5b5050600160a060020a0382166000908152600260205260409020546105c7908463ffffffff6106c716565b600160a060020a03838116600081815260026020908152604091829020949094558051600181523394810194909452838101879052606084019190915290831660808301525160008051602061072b8339815191529181900360a00190a1505050565b610632610269565b565b600061063f836106f7565b60008051602061072b8339815191526001858533866040518086600281111561066457fe5b60ff168152600160a060020a0395861660208201526040808201959095529285166060840152509092166080830152519081900360a0019150a1507fbc04f0af000000000000000000000000000000000000000000000000000000009392505050565b6000828201838110156106d957600080fd5b9392505050565b600080838311156106f057600080fd5b5050900390565b33600090815260026020526040902054610717908263ffffffff6106c716565b336000908152600260205260409020555056007aa227299ef73304cb2d958c36b36132e7c82989208d01a1e682a0de94a0888aa165627a7a723058201bb1a6c188a0934da4deeeef4f71c2e8c87dde144dbe97b980e457d4a51799de0029`
 
 // GatewayBin is the compiled bytecode used for deploying new contracts.
-const GatewayBin = `0x608060405260405160208061071583398101604052516000805491151560ff199092169190911790556106de806100376000396000f30060806040526004361061008d5763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631035fb5c811461010357806311f2d4941461015c578063258898b3146101855780632980c75b146101b157806359770438146101d8578063840f0145146101f9578063c310b8841461021d578063cd93ee0614610241575b610095610249565b7fdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f9450600033346000604051808560028111156100cc57fe5b60ff168152600160a060020a03948516602082015260408082019490945291909316606082015290519081900360800192509050a1005b34801561010f57600080fd5b50610127600160a060020a0360043516602435610261565b604080517fffffffff000000000000000000000000000000000000000000000000000000009092168252519081900360200190f35b34801561016857600080fd5b506101716102ff565b604080519115158252519081900360200190f35b34801561019157600080fd5b506101af600435600160a060020a0360243581169060443516610308565b005b3480156101bd57600080fd5b506101c6610455565b60408051918252519081900360200190f35b3480156101e457600080fd5b506101c6600160a060020a036004351661045b565b34801561020557600080fd5b506101af600435600160a060020a0360243516610476565b34801561022957600080fd5b506101af600435600160a060020a0360243516610517565b6101af610645565b60015461025c903463ffffffff61064f16565b600155565b600061026c82610668565b7fdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f94506001848433604051808560028111156102a257fe5b60ff168152600160a060020a03948516602082015260408082019490945291909316606082015290519081900360800192509050a1507fbc04f0af0000000000000000000000000000000000000000000000000000000092915050565b60005460ff1681565b60005460ff16151561035757600160a060020a03811660009081526002602052604090205461033d908463ffffffff61069b16565b600160a060020a0382166000908152600260205260409020555b80600160a060020a031663a9059cbb83856040518363ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018083600160a060020a0316600160a060020a0316815260200182815260200192505050602060405180830381600087803b1580156103d357600080fd5b505af11580156103e7573d6000803e3d6000fd5b505050506040513d60208110156103fd57600080fd5b505060408051600160a060020a038481168252600160208301528316818301526060810185905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a1505050565b60015490565b600160a060020a031660009081526002602052604090205490565b600154610489908363ffffffff61069b16565b600155604051600160a060020a0382169083156108fc029084906000818181858888f193505050501580156104c2573d6000803e3d6000fd5b5060408051600160a060020a0383168152600060208201819052818301526060810184905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a15050565b604080517f23b872dd000000000000000000000000000000000000000000000000000000008152336004820152306024820152604481018490529051600160a060020a038316916323b872dd9160648083019260209291908290030181600087803b15801561058557600080fd5b505af1158015610599573d6000803e3d6000fd5b505050506040513d60208110156105af57600080fd5b5050600160a060020a0381166000908152600260205260409020546105da908363ffffffff61064f16565b600160a060020a0382166000818152600260209081526040918290209390935580516001815233938101939093528281018590526060830191909152517fdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f94509181900360800190a15050565b61064d610249565b565b60008282018381101561066157600080fd5b9392505050565b33600090815260026020526040902054610688908263ffffffff61064f16565b3360009081526002602052604090205550565b600080838311156106ab57600080fd5b50509003905600a165627a7a723058208bf9ca0c01f31088618931e459847525683bd119956a0bb22851711503cf78420029`
+const GatewayBin = `0x60806040526040516020806107ad83398101604052516000805491151560ff19909216919091179055610776806100376000396000f3006080604052600436106100985763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166311f2d4948114610102578063258898b31461012b5780632980c75b146101575780633d3bfcac1461017e5780635977043814610192578063840f0145146101b3578063c9869112146101d7578063cd93ee0614610201578063f099d9bd14610209575b6100a0610269565b60008051602061072b83398151915260003334600033604051808660028111156100c657fe5b60ff168152600160a060020a0395861660208201526040808201959095529285166060840152509092166080830152519081900360a0019150a1005b34801561010e57600080fd5b50610117610281565b604080519115158252519081900360200190f35b34801561013757600080fd5b50610155600435600160a060020a036024358116906044351661028a565b005b34801561016357600080fd5b5061016c6103d7565b60408051918252519081900360200190f35b610155600160a060020a03600435166103dd565b34801561019e57600080fd5b5061016c600160a060020a0360043516610448565b3480156101bf57600080fd5b50610155600435600160a060020a0360243516610463565b3480156101e357600080fd5b50610155600435600160a060020a0360243581169060443516610504565b61015561062a565b34801561021557600080fd5b50610234600160a060020a036004358116906024359060443516610634565b604080517fffffffff000000000000000000000000000000000000000000000000000000009092168252519081900360200190f35b60015461027c903463ffffffff6106c716565b600155565b60005460ff1681565b60005460ff1615156102d957600160a060020a0381166000908152600260205260409020546102bf908463ffffffff6106e016565b600160a060020a0382166000908152600260205260409020555b80600160a060020a031663a9059cbb83856040518363ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018083600160a060020a0316600160a060020a0316815260200182815260200192505050602060405180830381600087803b15801561035557600080fd5b505af1158015610369573d6000803e3d6000fd5b505050506040513d602081101561037f57600080fd5b505060408051600160a060020a038481168252600160208301528316818301526060810185905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a1505050565b60015490565b6103e5610269565b60008051602061072b833981519152600033346000856040518086600281111561040b57fe5b60ff168152600160a060020a0395861660208201526040808201959095529285166060840152509092166080830152519081900360a0019150a150565b600160a060020a031660009081526002602052604090205490565b600154610476908363ffffffff6106e016565b600155604051600160a060020a0382169083156108fc029084906000818181858888f193505050501580156104af573d6000803e3d6000fd5b5060408051600160a060020a0383168152600060208201819052818301526060810184905290517f591f2d33d85291e32c4067b5a497caf3ddb5b1830eba9909e66006ec3a0051b49181900360800190a15050565b604080517f23b872dd000000000000000000000000000000000000000000000000000000008152336004820152306024820152604481018590529051600160a060020a038416916323b872dd9160648083019260209291908290030181600087803b15801561057257600080fd5b505af1158015610586573d6000803e3d6000fd5b505050506040513d602081101561059c57600080fd5b5050600160a060020a0382166000908152600260205260409020546105c7908463ffffffff6106c716565b600160a060020a03838116600081815260026020908152604091829020949094558051600181523394810194909452838101879052606084019190915290831660808301525160008051602061072b8339815191529181900360a00190a1505050565b610632610269565b565b600061063f836106f7565b60008051602061072b8339815191526001858533866040518086600281111561066457fe5b60ff168152600160a060020a0395861660208201526040808201959095529285166060840152509092166080830152519081900360a0019150a1507fbc04f0af000000000000000000000000000000000000000000000000000000009392505050565b6000828201838110156106d957600080fd5b9392505050565b600080838311156106f057600080fd5b5050900390565b33600090815260026020526040902054610717908263ffffffff6106c716565b336000908152600260205260409020555056007aa227299ef73304cb2d958c36b36132e7c82989208d01a1e682a0de94a0888aa165627a7a723058201bb1a6c188a0934da4deeeef4f71c2e8c87dde144dbe97b980e457d4a51799de0029`
 
 // DeployGateway deploys a new klaytn contract, binding an instance of Gateway to it.
 func DeployGateway(auth *bind.TransactOpts, backend bind.ContractBackend, _isChild bool) (common.Address, *types.Transaction, *Gateway, error) {
@@ -257,6 +257,27 @@ func (_Gateway *GatewayCallerSession) IsChild() (bool, error) {
 	return _Gateway.Contract.IsChild(&_Gateway.CallOpts)
 }
 
+// DepositKLAY is a paid mutator transaction binding the contract method 0x3d3bfcac.
+//
+// Solidity: function DepositKLAY(_to address) returns()
+func (_Gateway *GatewayTransactor) DepositKLAY(opts *bind.TransactOpts, _to common.Address) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "DepositKLAY", _to)
+}
+
+// DepositKLAY is a paid mutator transaction binding the contract method 0x3d3bfcac.
+//
+// Solidity: function DepositKLAY(_to address) returns()
+func (_Gateway *GatewaySession) DepositKLAY(_to common.Address) (*types.Transaction, error) {
+	return _Gateway.Contract.DepositKLAY(&_Gateway.TransactOpts, _to)
+}
+
+// DepositKLAY is a paid mutator transaction binding the contract method 0x3d3bfcac.
+//
+// Solidity: function DepositKLAY(_to address) returns()
+func (_Gateway *GatewayTransactorSession) DepositKLAY(_to common.Address) (*types.Transaction, error) {
+	return _Gateway.Contract.DepositKLAY(&_Gateway.TransactOpts, _to)
+}
+
 // DepositWithoutEvent is a paid mutator transaction binding the contract method 0xcd93ee06.
 //
 // Solidity: function DepositWithoutEvent() returns()
@@ -278,46 +299,46 @@ func (_Gateway *GatewayTransactorSession) DepositWithoutEvent() (*types.Transact
 	return _Gateway.Contract.DepositWithoutEvent(&_Gateway.TransactOpts)
 }
 
-// DepositToken is a paid mutator transaction binding the contract method 0xc310b884.
+// DepositToken is a paid mutator transaction binding the contract method 0xc9869112.
 //
-// Solidity: function depositToken(amount uint256, contractAddress address) returns()
-func (_Gateway *GatewayTransactor) DepositToken(opts *bind.TransactOpts, amount *big.Int, contractAddress common.Address) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "depositToken", amount, contractAddress)
+// Solidity: function depositToken(amount uint256, contractAddress address, to address) returns()
+func (_Gateway *GatewayTransactor) DepositToken(opts *bind.TransactOpts, amount *big.Int, contractAddress common.Address, to common.Address) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "depositToken", amount, contractAddress, to)
 }
 
-// DepositToken is a paid mutator transaction binding the contract method 0xc310b884.
+// DepositToken is a paid mutator transaction binding the contract method 0xc9869112.
 //
-// Solidity: function depositToken(amount uint256, contractAddress address) returns()
-func (_Gateway *GatewaySession) DepositToken(amount *big.Int, contractAddress common.Address) (*types.Transaction, error) {
-	return _Gateway.Contract.DepositToken(&_Gateway.TransactOpts, amount, contractAddress)
+// Solidity: function depositToken(amount uint256, contractAddress address, to address) returns()
+func (_Gateway *GatewaySession) DepositToken(amount *big.Int, contractAddress common.Address, to common.Address) (*types.Transaction, error) {
+	return _Gateway.Contract.DepositToken(&_Gateway.TransactOpts, amount, contractAddress, to)
 }
 
-// DepositToken is a paid mutator transaction binding the contract method 0xc310b884.
+// DepositToken is a paid mutator transaction binding the contract method 0xc9869112.
 //
-// Solidity: function depositToken(amount uint256, contractAddress address) returns()
-func (_Gateway *GatewayTransactorSession) DepositToken(amount *big.Int, contractAddress common.Address) (*types.Transaction, error) {
-	return _Gateway.Contract.DepositToken(&_Gateway.TransactOpts, amount, contractAddress)
+// Solidity: function depositToken(amount uint256, contractAddress address, to address) returns()
+func (_Gateway *GatewayTransactorSession) DepositToken(amount *big.Int, contractAddress common.Address, to common.Address) (*types.Transaction, error) {
+	return _Gateway.Contract.DepositToken(&_Gateway.TransactOpts, amount, contractAddress, to)
 }
 
-// OnTokenReceived is a paid mutator transaction binding the contract method 0x1035fb5c.
+// OnTokenReceived is a paid mutator transaction binding the contract method 0xf099d9bd.
 //
-// Solidity: function onTokenReceived(_from address, amount uint256) returns(bytes4)
-func (_Gateway *GatewayTransactor) OnTokenReceived(opts *bind.TransactOpts, _from common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "onTokenReceived", _from, amount)
+// Solidity: function onTokenReceived(_from address, amount uint256, _to address) returns(bytes4)
+func (_Gateway *GatewayTransactor) OnTokenReceived(opts *bind.TransactOpts, _from common.Address, amount *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "onTokenReceived", _from, amount, _to)
 }
 
-// OnTokenReceived is a paid mutator transaction binding the contract method 0x1035fb5c.
+// OnTokenReceived is a paid mutator transaction binding the contract method 0xf099d9bd.
 //
-// Solidity: function onTokenReceived(_from address, amount uint256) returns(bytes4)
-func (_Gateway *GatewaySession) OnTokenReceived(_from common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.OnTokenReceived(&_Gateway.TransactOpts, _from, amount)
+// Solidity: function onTokenReceived(_from address, amount uint256, _to address) returns(bytes4)
+func (_Gateway *GatewaySession) OnTokenReceived(_from common.Address, amount *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _Gateway.Contract.OnTokenReceived(&_Gateway.TransactOpts, _from, amount, _to)
 }
 
-// OnTokenReceived is a paid mutator transaction binding the contract method 0x1035fb5c.
+// OnTokenReceived is a paid mutator transaction binding the contract method 0xf099d9bd.
 //
-// Solidity: function onTokenReceived(_from address, amount uint256) returns(bytes4)
-func (_Gateway *GatewayTransactorSession) OnTokenReceived(_from common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.OnTokenReceived(&_Gateway.TransactOpts, _from, amount)
+// Solidity: function onTokenReceived(_from address, amount uint256, _to address) returns(bytes4)
+func (_Gateway *GatewayTransactorSession) OnTokenReceived(_from common.Address, amount *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _Gateway.Contract.OnTokenReceived(&_Gateway.TransactOpts, _from, amount, _to)
 }
 
 // WithdrawKLAY is a paid mutator transaction binding the contract method 0x840f0145.
@@ -435,12 +456,13 @@ type GatewayTokenReceived struct {
 	From            common.Address
 	Amount          *big.Int
 	ContractAddress common.Address
+	To              common.Address
 	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterTokenReceived is a free log retrieval operation binding the contract event 0xdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f9450.
+// FilterTokenReceived is a free log retrieval operation binding the contract event 0x7aa227299ef73304cb2d958c36b36132e7c82989208d01a1e682a0de94a0888a.
 //
-// Solidity: e TokenReceived(kind uint8, from address, amount uint256, contractAddress address)
+// Solidity: e TokenReceived(kind uint8, from address, amount uint256, contractAddress address, to address)
 func (_Gateway *GatewayFilterer) FilterTokenReceived(opts *bind.FilterOpts) (*GatewayTokenReceivedIterator, error) {
 
 	logs, sub, err := _Gateway.contract.FilterLogs(opts, "TokenReceived")
@@ -450,9 +472,9 @@ func (_Gateway *GatewayFilterer) FilterTokenReceived(opts *bind.FilterOpts) (*Ga
 	return &GatewayTokenReceivedIterator{contract: _Gateway.contract, event: "TokenReceived", logs: logs, sub: sub}, nil
 }
 
-// WatchTokenReceived is a free log subscription operation binding the contract event 0xdc7c212294df6bd196463076e5266b73185c4e7b642293b42de00c1c693f9450.
+// WatchTokenReceived is a free log subscription operation binding the contract event 0x7aa227299ef73304cb2d958c36b36132e7c82989208d01a1e682a0de94a0888a.
 //
-// Solidity: e TokenReceived(kind uint8, from address, amount uint256, contractAddress address)
+// Solidity: e TokenReceived(kind uint8, from address, amount uint256, contractAddress address, to address)
 func (_Gateway *GatewayFilterer) WatchTokenReceived(opts *bind.WatchOpts, sink chan<- *GatewayTokenReceived) (event.Subscription, error) {
 
 	logs, sub, err := _Gateway.contract.WatchLogs(opts, "TokenReceived")
@@ -1202,7 +1224,7 @@ func (_IToken *ITokenFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *
 }
 
 // ITokenReceiverABI is the input ABI used to generate the binding from.
-const ITokenReceiverABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_from\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"onTokenReceived\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ITokenReceiverABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_from\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"onTokenReceived\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ITokenReceiverBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ITokenReceiverBinRuntime = `0x`
@@ -1365,35 +1387,35 @@ func (_ITokenReceiver *ITokenReceiverTransactorRaw) Transact(opts *bind.Transact
 	return _ITokenReceiver.Contract.contract.Transact(opts, method, params...)
 }
 
-// OnTokenReceived is a paid mutator transaction binding the contract method 0x1035fb5c.
+// OnTokenReceived is a paid mutator transaction binding the contract method 0xf099d9bd.
 //
-// Solidity: function onTokenReceived(_from address, amount uint256) returns(bytes4)
-func (_ITokenReceiver *ITokenReceiverTransactor) OnTokenReceived(opts *bind.TransactOpts, _from common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ITokenReceiver.contract.Transact(opts, "onTokenReceived", _from, amount)
+// Solidity: function onTokenReceived(_from address, amount uint256, _to address) returns(bytes4)
+func (_ITokenReceiver *ITokenReceiverTransactor) OnTokenReceived(opts *bind.TransactOpts, _from common.Address, amount *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _ITokenReceiver.contract.Transact(opts, "onTokenReceived", _from, amount, _to)
 }
 
-// OnTokenReceived is a paid mutator transaction binding the contract method 0x1035fb5c.
+// OnTokenReceived is a paid mutator transaction binding the contract method 0xf099d9bd.
 //
-// Solidity: function onTokenReceived(_from address, amount uint256) returns(bytes4)
-func (_ITokenReceiver *ITokenReceiverSession) OnTokenReceived(_from common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ITokenReceiver.Contract.OnTokenReceived(&_ITokenReceiver.TransactOpts, _from, amount)
+// Solidity: function onTokenReceived(_from address, amount uint256, _to address) returns(bytes4)
+func (_ITokenReceiver *ITokenReceiverSession) OnTokenReceived(_from common.Address, amount *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _ITokenReceiver.Contract.OnTokenReceived(&_ITokenReceiver.TransactOpts, _from, amount, _to)
 }
 
-// OnTokenReceived is a paid mutator transaction binding the contract method 0x1035fb5c.
+// OnTokenReceived is a paid mutator transaction binding the contract method 0xf099d9bd.
 //
-// Solidity: function onTokenReceived(_from address, amount uint256) returns(bytes4)
-func (_ITokenReceiver *ITokenReceiverTransactorSession) OnTokenReceived(_from common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ITokenReceiver.Contract.OnTokenReceived(&_ITokenReceiver.TransactOpts, _from, amount)
+// Solidity: function onTokenReceived(_from address, amount uint256, _to address) returns(bytes4)
+func (_ITokenReceiver *ITokenReceiverTransactorSession) OnTokenReceived(_from common.Address, amount *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _ITokenReceiver.Contract.OnTokenReceived(&_ITokenReceiver.TransactOpts, _from, amount, _to)
 }
 
 // SafeMathABI is the input ABI used to generate the binding from.
 const SafeMathABI = "[]"
 
 // SafeMathBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const SafeMathBinRuntime = `0x73000000000000000000000000000000000000000030146080604052600080fd00a165627a7a7230582044bbc6c278982806a1ee9e1138fd41534482b17ec97082e740df6f4465f832bd0029`
+const SafeMathBinRuntime = `0x73000000000000000000000000000000000000000030146080604052600080fd00a165627a7a723058205f8d75cd41e3f54f7abe314a2d6b3324e16bd22c10db3de00d41a06909df6b900029`
 
 // SafeMathBin is the compiled bytecode used for deploying new contracts.
-const SafeMathBin = `0x604c602c600b82828239805160001a60731460008114601c57601e565bfe5b5030600052607381538281f30073000000000000000000000000000000000000000030146080604052600080fd00a165627a7a7230582044bbc6c278982806a1ee9e1138fd41534482b17ec97082e740df6f4465f832bd0029`
+const SafeMathBin = `0x604c602c600b82828239805160001a60731460008114601c57601e565bfe5b5030600052607381538281f30073000000000000000000000000000000000000000030146080604052600080fd00a165627a7a723058205f8d75cd41e3f54f7abe314a2d6b3324e16bd22c10db3de00d41a06909df6b900029`
 
 // DeploySafeMath deploys a new klaytn contract, binding an instance of SafeMath to it.
 func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SafeMath, error) {

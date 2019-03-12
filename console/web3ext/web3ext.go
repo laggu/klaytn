@@ -724,16 +724,6 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'registerAccount',
-			call: 'bridge_registerAccount',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'unRegisterAccount',
-			call: 'bridge_unRegisterAccount',
-			params: 1
-		}),
-		new web3._extend.Method({
 			name: 'registerToken',
 			call: 'bridge_registerToken',
 			params: 2
