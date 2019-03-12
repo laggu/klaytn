@@ -411,6 +411,20 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 	return true
 }
 
+// removeValidatorFromProposers makes new candidate proposers by removing a validator with given address from existing proposers.
+func (valSet *weightedCouncil) removeValidatorFromProposers(address common.Address) {
+	newProposers := make([]istanbul.Validator, 0, len(valSet.proposers))
+
+	for _, v := range valSet.proposers {
+		if v.Address() != address {
+			newProposers = append(newProposers, v)
+		}
+	}
+	logger.Trace("Invalidate a validator from proposers", "num proposers(before)", len(valSet.proposers), "num proposers(after)", len(newProposers))
+
+	valSet.proposers = newProposers
+}
+
 func (valSet *weightedCouncil) RemoveValidator(address common.Address) bool {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
@@ -418,6 +432,7 @@ func (valSet *weightedCouncil) RemoveValidator(address common.Address) bool {
 	for i, v := range valSet.validators {
 		if v.Address() == address {
 			valSet.validators = append(valSet.validators[:i], valSet.validators[i+1:]...)
+			valSet.removeValidatorFromProposers(address)
 			return true
 		}
 	}
