@@ -16,6 +16,7 @@
 
 //go:generate abigen --sol contract/KlaytnReward.sol --pkg contract --out contract/KlaytnReward.go
 //go:generate abigen --sol contract/AddressBook.sol --pkg contract --out contract/AddressBook.go
+//go:generate abigen --sol contract/InitContractForPlatform.sol --pkg contract --out contract/InitContractForPlatform.go
 
 package reward
 
@@ -385,7 +386,7 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) error {
 
 	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
 
-	stakingInfo, err := getAddressBookInfo(bc, blockNum)
+	stakingInfo, err := getInitContractInfo(bc, blockNum)
 	if err != nil {
 		logger.Trace("Failed to get staking info", "blockNum", blockNum, "err", err)
 		return err
@@ -530,4 +531,174 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 	}
 
 	return blockRewardCache
+}
+
+func MakeGetAllAddressFromInitContractMsg() (*types.Transaction, error) {
+	abiStr := contract.InitContractABI
+	abii, err := abi.JSON(strings.NewReader(abiStr))
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := abii.Pack("getAllAddress")
+	if err != nil {
+		return nil, err
+	}
+
+	intrinsicGas, err := types.IntrinsicGas(data, false, true)
+	if err != nil {
+		return nil, err
+	}
+
+	addr := common.HexToAddress(contract.InitContractAddress)
+
+	// Create new call message
+	// TODO-Klaytn-Issue1166 Decide who will be sender(i.e. from)
+	msg := types.NewMessage(common.Address{}, &addr, 0, big.NewInt(0), 10000000, big.NewInt(0), data, false, intrinsicGas)
+
+	return msg, nil
+}
+
+// addressType defined in InitContract
+const (
+	addressTypeNodeID = iota
+	addressTypeStakingAddr
+	addressTypeRewardAddr
+	addressTypePoCAddr
+	addressTypeKIRAddr
+)
+
+func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
+
+	if result == nil {
+		logger.Debug("Got empty result, nothing to parse.", "result", result)
+		return nil, nil, nil, common.Address{}, common.Address{}, nil
+	}
+
+	abiStr := contract.InitContractABI
+	abii, err := abi.JSON(strings.NewReader(abiStr))
+	if err != nil {
+		logger.Trace("Failed to make InitContract ABI interface.")
+		return nil, nil, nil, common.Address{}, common.Address{}, err
+	}
+
+	var (
+		allTypeList    = new([]uint8)
+		allAddressList = new([]common.Address)
+	)
+	out := &[]interface{}{
+		allTypeList,
+		allAddressList,
+	}
+
+	err = abii.Unpack(out, "getAllAddress", result)
+	if err != nil {
+		logger.Trace("abii.Unpack failed for getAllAddress in InitContract")
+		return nil, nil, nil, common.Address{}, common.Address{}, err
+	}
+
+	//
+	if len(*allTypeList) != len(*allAddressList) {
+		logger.Error("Length of type list and address list differ.", "length of type list", len(*allTypeList), "length of address list", len(*allAddressList))
+		return nil, nil, nil, common.Address{}, common.Address{}, err
+	}
+
+	// Parse and construct node information
+	nodeIds := []common.Address{}
+	stakingAddrs := []common.Address{}
+	rewardAddrs := []common.Address{}
+	pocAddr := common.Address{}
+	kirAddr := common.Address{}
+	for i, addrType := range *allTypeList {
+		switch addrType {
+		case addressTypeNodeID:
+			nodeIds = append(nodeIds, (*allAddressList)[i])
+		case addressTypeStakingAddr:
+			stakingAddrs = append(stakingAddrs, (*allAddressList)[i])
+		case addressTypeRewardAddr:
+			rewardAddrs = append(rewardAddrs, (*allAddressList)[i])
+		case addressTypePoCAddr:
+			pocAddr = (*allAddressList)[i]
+		case addressTypeKIRAddr:
+			kirAddr = (*allAddressList)[i]
+		default:
+			logger.Error("Invalid type from InitContract.", "invalid type", addrType)
+			return nil, nil, nil, common.Address{}, common.Address{}, err
+		}
+	}
+
+	// validate parsed node information
+	if len(nodeIds) != len(stakingAddrs) ||
+		len(nodeIds) != len(rewardAddrs) ||
+		isEmptyAddress(pocAddr) ||
+		isEmptyAddress(kirAddr) {
+		logger.Error("Incomplete node information from InitContract.",
+			"# of nodeIds", len(nodeIds),
+			"# of stakingAddrs)", len(stakingAddrs),
+			"# of rewardAddrs", len(rewardAddrs),
+			"PoC address", pocAddr.String(),
+			"KIR address", kirAddr.String())
+
+		return nil, nil, nil, common.Address{}, common.Address{}, err
+	}
+
+	return nodeIds, rewardAddrs, stakingAddrs, kirAddr, pocAddr, nil
+}
+
+func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
+
+	var nodeIds []common.Address
+	var stakingAddrs []common.Address
+	var rewardAddrs []common.Address
+	var KIRAddr = common.Address{}
+	var PoCAddr = common.Address{}
+	var err error
+
+	if !IsStakingUpdatePossible(blockNum) {
+		logger.Trace("Invalid block number.", "blockNum", blockNum)
+		return nil, err
+	}
+
+	// Prepare a message
+	msg, err := MakeGetAllAddressFromInitContractMsg()
+	if err != nil {
+		logger.Trace("Failed to make message for InitContract", "err", err)
+		return nil, err
+	}
+
+	// Prepare
+	chainConfig := bc.Config()
+	intervalBlock := bc.GetBlockByNumber(blockNum)
+	gaspool := new(blockchain.GasPool).AddGas(intervalBlock.GasLimit())
+	statedb, err := bc.StateAt(intervalBlock.Root())
+	if err != nil {
+		logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
+		return nil, err
+	}
+
+	// Create a new context to be used in the EVM environment
+	context := blockchain.NewEVMContext(msg, intervalBlock.Header(), bc, nil)
+	evm := vm.NewEVM(context, statedb, chainConfig, &vm.Config{})
+
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gaspool)
+	logger.Trace("Call InitContract contract", "result", res, "used gas", gas, "kerr", kerr)
+	err = kerr.ErrTxInvalid
+	if err != nil {
+		logger.Trace("Failed to call InitContract contract", "err", err)
+		return nil, err
+	}
+
+	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = ParseGetAllAddressFromInitContract(res)
+	if err != nil {
+		logger.Trace("Failed to parse result from InitContract contract", "err", err)
+		return nil, err
+	}
+
+	// TODO-Klaytn-Issue1166 Disable Trace log later
+	logger.Trace("Result from InitContract contract", "nodeIds", nodeIds)
+	logger.Trace("Result from InitContract contract", "stakingAddrs", stakingAddrs)
+	logger.Trace("Result from InitContract contract", "rewardAddrs", rewardAddrs)
+	logger.Trace("Result from InitContract contract", "KIRAddr", KIRAddr, "PoCAddr", PoCAddr)
+
+	return newStakingInfo(bc, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
 }
