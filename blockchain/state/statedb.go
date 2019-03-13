@@ -50,6 +50,9 @@ var (
 	logger = log.NewModuleLogger(log.BlockchainState)
 )
 
+// TODO-Klaytn-StateDB Need to consider setting this value by command line option.
+const maxCachedStateObjects = 40960
+
 // StateDBs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
@@ -64,7 +67,7 @@ type StateDB struct {
 	stateObjectsDirty map[common.Address]struct{}
 
 	// cachedStateObjects stores the most recent finalized stateObjects.
-	cachedStateObjects map[common.Address]*stateObject
+	cachedStateObjects common.Cache
 	// TODO-Klaytn-StateDB This should be initialized properly.
 	useCachedStateObjects bool
 
@@ -94,6 +97,11 @@ type StateDB struct {
 	lock sync.Mutex
 }
 
+// newCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
+func newCachedStateObjects() common.Cache {
+	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects})
+}
+
 // Create a new state from a given trie.
 func New(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
@@ -105,7 +113,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		trie:                  tr,
 		stateObjects:          make(map[common.Address]*stateObject),
 		stateObjectsDirty:     make(map[common.Address]struct{}),
-		cachedStateObjects:    make(map[common.Address]*stateObject),
+		cachedStateObjects:    newCachedStateObjects(),
 		useCachedStateObjects: false,
 		logs:                  make(map[common.Hash][]*types.Log),
 		preimages:             make(map[common.Hash][]byte),
@@ -144,7 +152,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.trie = tr
 	self.stateObjects = make(map[common.Address]*stateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
-	self.cachedStateObjects = make(map[common.Address]*stateObject)
+	self.cachedStateObjects = newCachedStateObjects()
 	// Leave useCachedStateObjects flag as is.
 	// self.useCachedStateObjects = false
 	self.thash = common.Hash{}
@@ -174,7 +182,7 @@ func (self *StateDB) UpdateCachedStateObjects(root common.Hash) {
 		return
 	}
 	for addr, stateObj := range self.stateObjects {
-		self.cachedStateObjects[addr] = stateObj
+		self.cachedStateObjects.Add(addr, stateObj)
 	}
 
 	// Reset all member variables except for cachedStateObjects.
@@ -445,7 +453,7 @@ func (self *StateDB) deleteStateObject(stateObject *stateObject) {
 }
 
 // Retrieve a state object given by the address. Returns nil if not found.
-func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObject) {
+func (self *StateDB) getStateObject(addr common.Address) *stateObject {
 	// First, check stateObjects if there is "live" object.
 	if obj := self.stateObjects[addr]; obj != nil {
 		if obj.deleted {
@@ -456,12 +464,19 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 
 	// Second, if not found in stateObjects, check cachedStateObjects.
 	if self.useCachedStateObjects {
-		if obj := self.cachedStateObjects[addr]; obj != nil {
-			if obj.deleted {
+		if obj, exist := self.cachedStateObjects.Get(addr); exist && obj != nil {
+			stateObj, ok := obj.(*stateObject)
+			if !ok {
+				logger.Error("cached state object is not *stateObject type!", "addr", addr.String())
 				return nil
 			}
-			self.stateObjects[addr] = obj.deepCopy(self)
-			return obj
+
+			if stateObj.deleted {
+				return nil
+			}
+
+			self.stateObjects[addr] = stateObj.deepCopy(self)
+			return stateObj
 		}
 	}
 
@@ -603,7 +618,7 @@ func (self *StateDB) Copy() *StateDB {
 		trie:                  self.db.CopyTrie(self.trie),
 		stateObjects:          make(map[common.Address]*stateObject, len(self.journal.dirties)),
 		stateObjectsDirty:     make(map[common.Address]struct{}, len(self.journal.dirties)),
-		cachedStateObjects:    make(map[common.Address]*stateObject, len(self.cachedStateObjects)),
+		cachedStateObjects:    newCachedStateObjects(),
 		useCachedStateObjects: self.useCachedStateObjects,
 		refund:                self.refund,
 		logs:                  make(map[common.Hash][]*types.Log, len(self.logs)),
@@ -632,9 +647,7 @@ func (self *StateDB) Copy() *StateDB {
 		}
 	}
 
-	for addr, obj := range self.cachedStateObjects {
-		state.cachedStateObjects[addr] = obj.deepCopy(state)
-	}
+	// NOTE-Klaytn-StateDB cachedStateObject is cache, so not copied to copied StateDB.
 
 	deepCopyLogs(self, state)
 

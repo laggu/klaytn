@@ -210,13 +210,14 @@ func TestCachedStateObjects(t *testing.T) {
 	for i := byte(0); i < 128; i++ {
 		addr := common.BytesToAddress([]byte{i})
 		stateObj := stateDB.GetOrNewStateObject(addr)
-		cachedStateObj := stateDB.cachedStateObjects[addr]
+		cachedStateObj, ok := stateDB.cachedStateObjects.Get(addr)
 
 		assert.Equal(t, uint64(i), stateObj.Balance().Uint64())
-		assert.Equal(t, (*stateObject)(nil), cachedStateObj)
+		assert.Equal(t, false, ok)
+		assert.Equal(t, (interface{})(nil), cachedStateObj)
 	}
+
 	assert.Equal(t, 128, len(stateDB.stateObjects))
-	assert.Equal(t, 0, len(stateDB.cachedStateObjects))
 
 	if root, err := stateDB.Commit(true); err != nil {
 		t.Fatal(err)
@@ -224,16 +225,20 @@ func TestCachedStateObjects(t *testing.T) {
 		stateDB.UpdateCachedStateObjects(root)
 	}
 
-	// After call StateDB.Commit(), now cachedStateObjects has latest data.
+	// After call StateDB.Commit(), now cachedStateObjects has latest data,
+	// whereas stateObjects is empty.
+	assert.Equal(t, 0, len(stateDB.stateObjects))
+
 	for i := byte(0); i < 128; i++ {
 		addr := common.BytesToAddress([]byte{i})
 		obj := stateDB.GetOrNewStateObject(addr)
-		cachedStateObj := stateDB.cachedStateObjects[addr]
+		cachedStateObj, ok := stateDB.cachedStateObjects.Get(addr)
+		cachedObj := cachedStateObj.(*stateObject)
 
 		assert.Equal(t, uint64(i), obj.Balance().Uint64())
-		assert.Equal(t, uint64(i), cachedStateObj.Balance().Uint64())
+		assert.Equal(t, true, ok)
+		assert.Equal(t, uint64(i), cachedObj.Balance().Uint64())
 	}
-	assert.Equal(t, len(stateDB.stateObjects), len(stateDB.cachedStateObjects))
 
 	// Update each account, it will only update StateDB.stateObjects.
 	for i := byte(0); i < 128; i++ {
@@ -245,13 +250,17 @@ func TestCachedStateObjects(t *testing.T) {
 	}
 
 	// Before call StateDB.Commit(), cachedStateObjects has out-dated data.
+	assert.Equal(t, 128, len(stateDB.stateObjects))
+
 	for i := byte(0); i < 128; i++ {
 		addr := common.BytesToAddress([]byte{i})
-		stateObj := stateDB.GetOrNewStateObject(addr)
-		cachedStateObj := stateDB.cachedStateObjects[addr]
+		obj := stateDB.GetOrNewStateObject(addr)
+		cachedStateObj, ok := stateDB.cachedStateObjects.Get(addr)
+		cachedObj := cachedStateObj.(*stateObject)
 
-		assert.Equal(t, 2*uint64(i), stateObj.Balance().Uint64())
-		assert.Equal(t, uint64(i), cachedStateObj.Balance().Uint64())
+		assert.Equal(t, 2*uint64(i), obj.Balance().Uint64())
+		assert.Equal(t, true, ok)
+		assert.Equal(t, uint64(i), cachedObj.Balance().Uint64())
 	}
 
 	if root, err := stateDB.Commit(true); err != nil {
@@ -261,11 +270,19 @@ func TestCachedStateObjects(t *testing.T) {
 	}
 
 	// After call StateDB.Commit(), now cachedStateObjects has latest data.
+	assert.Equal(t, 0, len(stateDB.stateObjects))
+
 	for i := byte(0); i < 128; i++ {
 		addr := common.BytesToAddress([]byte{i})
 		obj := stateDB.GetOrNewStateObject(addr)
-		assert.Equal(t, obj.Balance().Uint64(), stateDB.cachedStateObjects[addr].Balance().Uint64())
+		cachedStateObj, ok := stateDB.cachedStateObjects.Get(addr)
+		cachedObj := cachedStateObj.(*stateObject)
+
+		assert.Equal(t, true, ok)
+		assert.Equal(t, obj.Balance().Uint64(), cachedObj.Balance().Uint64())
 	}
+
+	assert.Equal(t, 128, len(stateDB.stateObjects))
 
 	// Update new accounts, it will only update StateDB.stateObjects.
 	// Please note that below loop starts from byte(128).
@@ -277,17 +294,19 @@ func TestCachedStateObjects(t *testing.T) {
 		stateDB.updateStateObject(stateObj)
 	}
 
+	assert.Equal(t, 255, len(stateDB.stateObjects))
+
 	// Before call StateDB.Commit(), cachedStateObjects does not have data of new accounts.
 	for i := byte(128); i < 255; i++ {
 		addr := common.BytesToAddress([]byte{i})
-		stateObj := stateDB.GetOrNewStateObject(addr)
-		cachedStateObj := stateDB.cachedStateObjects[addr]
+		obj := stateDB.GetOrNewStateObject(addr)
+		cachedStateObj, ok := stateDB.cachedStateObjects.Get(addr)
 
-		assert.Equal(t, uint64(i), stateObj.Balance().Uint64())
-		assert.Equal(t, cachedStateObj, (*stateObject)(nil))
+		assert.Equal(t, uint64(i), obj.Balance().Uint64())
+		assert.Equal(t, false, ok)
+		assert.Equal(t, (interface{})(nil), cachedStateObj)
 	}
 	assert.Equal(t, 255, len(stateDB.stateObjects))
-	assert.Equal(t, 128, len(stateDB.cachedStateObjects))
 
 	if root, err := stateDB.Commit(true); err != nil {
 		t.Fatal(err)
@@ -295,10 +314,87 @@ func TestCachedStateObjects(t *testing.T) {
 		stateDB.UpdateCachedStateObjects(root)
 	}
 
-	// After call StateDB.Commit(), cachedStateObjects has latest data,
-	// whereas stateObjects is empty.
-	assert.Equal(t, 255, len(stateDB.cachedStateObjects))
+	// After call StateDB.Commit(), stateObjects is empty.
 	assert.Equal(t, 0, len(stateDB.stateObjects))
+}
+
+// TestCachedStateObjectsEviction is to ensure that cachedStateObjects does not affect
+// the functionality of stateDB. If a stateObject is evicted from the cachedStateObjects,
+// it should be loaded from underlying state trie or persistent database.
+func TestCachedStateObjectsEviction(t *testing.T) {
+	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	stateDB.useCachedStateObjects = true
+	stateDB.cachedStateObjects = common.NewCache(common.LRUConfig{CacheSize: 1})
+
+	// Update an account with addr1.
+	i1 := byte(1)
+	addr1 := common.BytesToAddress([]byte{i1})
+	stateObj := stateDB.GetOrNewStateObject(addr1)
+	stateObj.AddBalance(big.NewInt(int64(i1)))
+	stateDB.updateStateObject(stateObj)
+
+	if root, err := stateDB.Commit(true); err != nil {
+		t.Fatal(err)
+	} else {
+		stateDB.UpdateCachedStateObjects(root)
+	}
+
+	// After call StateDB.Commit(), now cachedStateObjects has latest data,
+	// whereas stateObjects is empty.
+	assert.Equal(t, 0, len(stateDB.stateObjects))
+
+	// We can find stateObject of addr1 from cachedStateObjects.
+	cachedStateObj, ok := stateDB.cachedStateObjects.Get(addr1)
+	assert.Equal(t, true, ok)
+
+	cachedObj := cachedStateObj.(*stateObject)
+	assert.Equal(t, uint64(i1), cachedObj.Balance().Uint64())
+
+	// Let's update a new account with addr2 to evict addr1 from cachedStateObjects.
+	i2 := byte(2)
+	addr2 := common.BytesToAddress([]byte{i2})
+	stateObj = stateDB.GetOrNewStateObject(addr2)
+
+	stateObj.AddBalance(big.NewInt(int64(i2)))
+	stateDB.updateStateObject(stateObj)
+
+	if root, err := stateDB.Commit(true); err != nil {
+		t.Fatal(err)
+	} else {
+		stateDB.UpdateCachedStateObjects(root)
+	}
+
+	// Below lines are disabled due to cacheScale() changes the size of cache.
+	// stateObject of addr1 should be evicted.
+	// Failed to find stateObject of addr1 from cachedStateObjects since it is evicted.
+	//cachedStateObj, ok = stateDB.cachedStateObjects.Get(addr1)
+	//assert.Equal(t, false, ok)
+	//assert.Equal(t, (interface{})(nil), cachedStateObj)
+
+	// However, stateObject of addr1 can be accessed by StateDB.getStateObject.
+	stateObj = stateDB.getStateObject(addr1)
+	assert.Equal(t, uint64(i1), stateObj.Balance().Uint64())
+
+	// Below lines are disabled due to cacheScale() changes the size of cache.
+	// However, stateObject of addr1 can't be found in cachedStateObjects,
+	// since StateDB.Commit() is not called yet. Only StateDB.Commit() ensures
+	// the finalization of stateObjects.
+	//cachedStateObj, ok = stateDB.cachedStateObjects.Get(addr1)
+	//assert.Equal(t, false, ok)
+	//assert.Equal(t, (interface{})(nil), cachedStateObj)
+
+	if root, err := stateDB.Commit(true); err != nil {
+		t.Fatal(err)
+	} else {
+		stateDB.UpdateCachedStateObjects(root)
+	}
+
+	// Now we can find stateObject of add1 from cachedStateObjects.
+	cachedStateObj, ok = stateDB.cachedStateObjects.Get(addr1)
+	assert.Equal(t, true, ok)
+
+	cachedObj = cachedStateObj.(*stateObject)
+	assert.Equal(t, uint64(i1), cachedObj.Balance().Uint64())
 }
 
 // A snapshotTest checks that reverting StateDB snapshots properly undoes all changes
