@@ -189,11 +189,16 @@ func (cache *lruShardCache) Purge() {
 	}
 }
 
-func NewCache(config CacheConfiger) (Cache, error) {
+func NewCache(config CacheConfiger) Cache {
 	if config == nil {
-		return nil, errors.New("cache config is nil")
+		logger.Crit("config shouldn't be nil!")
 	}
-	return config.newCache()
+
+	cache, err := config.newCache()
+	if err != nil {
+		logger.Crit("Failed to allocate cache!", "err", err)
+	}
+	return cache
 }
 
 type CacheConfiger interface {

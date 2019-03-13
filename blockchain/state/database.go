@@ -90,7 +90,7 @@ func NewDatabase(db database.DBManager) Database {
 	default:
 		cacheConfig = common.FIFOCacheConfig{CacheSize: codeSizeCacheSize}
 	}
-	csc, _ := common.NewCache(cacheConfig)
+	csc := common.NewCache(cacheConfig)
 
 	return &cachingDB{
 		db:            statedb.NewDatabase(db),

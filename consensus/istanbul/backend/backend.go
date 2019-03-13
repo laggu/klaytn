@@ -120,7 +120,7 @@ type backend struct {
 }
 
 func newGovernanceCache() common.Cache {
-	cache, _ := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit})
+	cache := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit})
 	return cache
 }
 

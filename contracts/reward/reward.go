@@ -262,7 +262,7 @@ func Subscribe(bc *blockchain.BlockChain) {
 }
 
 func initStakingCache() {
-	StakingCache, _ = common.NewCache(common.LRUConfig{CacheSize: maxStakingCache})
+	StakingCache = common.NewCache(common.LRUConfig{CacheSize: maxStakingCache})
 	chainHeadCh = make(chan blockchain.ChainHeadEvent, chainHeadChanSize)
 }
 
