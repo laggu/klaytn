@@ -164,7 +164,7 @@ func TestGovernance_CheckVoteValidity(t *testing.T) {
 	gov := getGovernance()
 
 	for _, val := range tstData {
-		ret := gov.CheckVoteValidity(val.k, val.v)
+		_, ret := gov.CheckVoteValidity(val.k, val.v)
 		if ret != val.e {
 			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
 		}

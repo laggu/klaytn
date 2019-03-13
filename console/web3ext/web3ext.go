@@ -21,19 +21,32 @@
 package web3ext
 
 var Modules = map[string]string{
-	"admin":    Admin_JS,
-	"debug":    Debug_JS,
-	"klay":     Klay_JS,
-	"miner":    Miner_JS,
-	"net":      Net_JS,
-	"personal": Personal_JS,
-	"rpc":      RPC_JS,
-	"txpool":   TxPool_JS,
-	"istanbul": Istanbul_JS,
-	"bridge":   Bridge_JS,
-	"clique":   CliqueJs,
+	"admin":      Admin_JS,
+	"debug":      Debug_JS,
+	"klay":       Klay_JS,
+	"miner":      Miner_JS,
+	"net":        Net_JS,
+	"personal":   Personal_JS,
+	"rpc":        RPC_JS,
+	"txpool":     TxPool_JS,
+	"istanbul":   Istanbul_JS,
+	"bridge":     Bridge_JS,
+	"clique":     CliqueJs,
+	"governance": Governance_JS,
 }
 
+const Governance_JS = `
+web3._extend({
+	property: 'governance',
+	methods: [
+		new web3._extend.Method({
+			name: 'vote',
+			call: 'governance_vote',
+			params: 2
+		})
+	]
+});
+`
 const Admin_JS = `
 web3._extend({
 	property: 'admin',
@@ -644,11 +657,6 @@ web3._extend({
 			name: 'discard',
 			call: 'istanbul_discard',
 			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'vote',
-			call: 'istanbul_vote',
-			params: 2
 		})
 	],
 	properties:

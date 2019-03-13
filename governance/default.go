@@ -123,8 +123,8 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 
 	key = g.getKey(key)
 
-	if ok := g.CheckVoteValidity(key, val); ok {
-		g.voteMap[key] = val
+	if v, ok := g.CheckVoteValidity(key, val); ok {
+		g.voteMap[key] = v
 		return true
 	}
 	return false
@@ -188,72 +188,72 @@ func (g *Governance) ClearVotes() {
 }
 
 // CheckVoteValidity checks if the given key and value are appropriate for governance vote
-func (g *Governance) CheckVoteValidity(key string, val interface{}) bool {
+func (g *Governance) CheckVoteValidity(key string, val interface{}) (interface{}, bool) {
 	lowerKey := g.getKey(key)
 
 	// Check if the val's type meets type requirements
 	var passed bool
 	if val, passed = g.checkValueType(lowerKey, val); !passed {
 		logger.Warn("New vote couldn't pass the validity check", "key", key, "val", val)
-		return false
+		return val, false
 	}
 
 	return g.checkValue(key, val)
 }
 
 // checkValue checks if the given value is appropriate
-func (g *Governance) checkValue(key string, val interface{}) bool {
+func (g *Governance) checkValue(key string, val interface{}) (interface{}, bool) {
 	k := GovernanceKeyMap[key]
 
 	// Using type assertion is okay below, because type check was done before calling this method
 	switch k {
 	case params.GoverningNode:
 		if reflect.TypeOf(val).String() == "common.Address" {
-			return true
+			return val, true
 		} else if common.IsHexAddress(val.(string)) {
-			return true
+			return val, true
 		}
 
 	case params.GovernanceMode:
 		if _, ok := GovernanceModeMap[val.(string)]; ok {
-			return true
+			return val, true
 		}
 
 	case params.Epoch, params.Sub, params.UnitPrice, params.UseGiniCoeff:
 		// For Uint64 and bool types, no more check is needed
-		return true
+		return val, true
 
 	case params.Policy:
 		if _, ok := ProposerPolicyMap[val.(string)]; ok {
-			return true
+			return val, true
 		}
 
 	case params.MintingAmount:
 		x := new(big.Int)
 		if _, ok := x.SetString(val.(string), 10); ok {
-			return true
+			return val, true
 		}
 
 	case params.Ratio:
 		x := strings.Split(val.(string), "/")
 		if len(x) != params.RewardSliceCount {
-			return false
+			return val, false
 		}
 		var sum uint64
 		for _, item := range x {
 			v, err := strconv.ParseUint(item, 10, 64)
 			if err != nil {
-				return false
+				return val, false
 			}
 			sum += v
 		}
 		if sum == 100 {
-			return true
+			return val, true
 		}
 	default:
 		logger.Warn("Unknown vote key was given", "key", k)
 	}
-	return false
+	return val, false
 }
 
 // parseVoteValue parse vote.Value from []uint8 to appropriate type

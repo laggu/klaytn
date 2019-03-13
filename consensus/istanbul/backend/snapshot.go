@@ -342,7 +342,7 @@ func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, va
 			gVote = gov.ParseVoteValue(gVote)
 
 			// Check vote's validity
-			if gov.CheckVoteValidity(gVote.Key, gVote.Value) {
+			if _, ok := gov.CheckVoteValidity(gVote.Key, gVote.Value); ok {
 				// Remove old vote with same validator and key
 				s.removePreviousVote(snap, validator, gVote)
 

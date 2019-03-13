@@ -346,6 +346,11 @@ func (s *CN) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   s.netRPCService,
 			Public:    true,
+		}, {
+			Namespace: "governance",
+			Version:   "1.0",
+			Service:   governance.NewGovernanceAPI(s.governance),
+			Public:    true,
 		},
 	}...)
 }
