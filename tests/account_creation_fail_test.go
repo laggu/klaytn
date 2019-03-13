@@ -284,3 +284,110 @@ func TestSmartContractCreationFailTxPool(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 }
+
+// TestAccountCreationFailBlock checks that txs should be failed on already created accounts.
+// It tests the following scenario:
+// 1. Create an account decoupled using TxTypeAccountCreation.
+// 2. Create the same account decoupled using TxTypeAccountCreation again.
+func TestAccountCreationFailBlock(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	reservoir2 := &TestAccountType{
+		Addr:  *bcdata.addrs[1],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[1]},
+		Nonce: uint64(0),
+	}
+
+	// decoupled account
+	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
+	assert.Equal(t, nil, err)
+
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	gasPrice := big.NewInt(0)
+
+	var txs types.Transactions
+	// 1. Create an account decoupled using TxTypeAccountCreation.
+	{
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            decoupled.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    decoupled.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		reservoir.Nonce += 1
+	}
+
+	// 2. Create the same account decoupled using TxTypeAccountCreation again.
+	{
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir2.Nonce,
+			types.TxValueKeyFrom:          reservoir2.Addr,
+			types.TxValueKeyTo:            decoupled.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    decoupled.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir2.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		reservoir2.Nonce += 1
+	}
+
+	_, receipts, err := bcdata.MineABlock(txs, signer, prof)
+	assert.Equal(t, nil, err)
+
+	assert.Equal(t, types.ReceiptStatusSuccessful, receipts[0].Status)
+	// The second transaction should be failed with the error `AddressAlreadyExists`.
+	assert.Equal(t, types.ReceiptStatusErrAddressAlreadyExists, receipts[1].Status)
+}
