@@ -50,9 +50,6 @@ var (
 )
 
 const (
-	// block interval for propagating governance information.
-	// This value shouldn't be changed after a network's launch
-	GovernanceRefreshInterval = 3600 // block interval. Default is about 1 hour (3600 blocks)
 	// Block reward will be separated by three pieces and distributed
 	RewardSliceCount = 3
 	// GovernanceConfig is stored in a cache which has below capacity
@@ -101,7 +98,7 @@ const (
 	// Default Values: Constants used for getting default values for configuration
 	DefaultGovernanceMode = "none"
 	DefaultGoverningNode  = "0x0000000000000000000000000000000000000000"
-	DefaultEpoch          = 30000
+	DefaultEpoch          = 604800
 	DefaultProposerPolicy = 0
 	DefaultSubGroupSize   = 21
 	DefaultMintingAmount  = 0

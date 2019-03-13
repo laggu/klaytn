@@ -493,7 +493,7 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
 func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Header) *blockRewardParameters {
 	blockNum := header.Number.Uint64()
-	lastGovernanceRefreshedBlock := blockNum - (blockNum % params.GovernanceRefreshInterval)
+	lastGovernanceRefreshedBlock := blockNum - (blockNum % config.Istanbul.Epoch)
 
 	// Cache hit condition
 	// (1) blockNum is a key of cache.

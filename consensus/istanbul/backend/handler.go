@@ -137,17 +137,17 @@ func (sb *backend) NewChainHead() error {
 }
 
 // updateGovernance manages GovernanceCache and updates the backend's Governance config
-// To reduce timing issues, we are using GovernanceConfig which was decided at two GovernanceRefreshInterval ago
+// To reduce timing issues, we are using GovernanceConfig which was decided at two Epochs ago
 func (sb *backend) updateGovernance(curr uint64) {
-	rem := curr % params.GovernanceRefreshInterval
+	rem := curr % sb.config.Epoch
 
 	// Current block has new Governance information in it's header
 	if rem == 0 {
 		// Save current header's governance data in cache
 		_ = sb.makeGovernanceCacheFromHeader(curr)
 
-		// Retrieve the cache older by single GovernanceRefreshInterval
-		num := curr - params.GovernanceRefreshInterval
+		// Retrieve the cache older by single Epoch
+		num := curr - sb.config.Epoch
 		if config, ok := sb.getGovernanceCache(num); ok {
 			sb.replaceGovernanceConfig(config)
 		} else {
@@ -161,13 +161,13 @@ func (sb *backend) updateGovernance(curr uint64) {
 		var num uint64
 
 		// To prevent underflow, compare it first
-		if curr > (rem + params.GovernanceRefreshInterval) {
-			num = curr - rem - params.GovernanceRefreshInterval
+		if curr > (rem + sb.config.Epoch) {
+			num = curr - rem - sb.config.Epoch
 		} else {
 			num = 0
 		}
 
-		// If blocks passed more than GovernanceRefreshInterval without making cache
+		// If blocks passed more than an Epoch without making cache
 		if num > sb.lastGovernanceBlock {
 			ret := sb.makeGovernanceCacheFromHeader(num)
 			sb.replaceGovernanceConfig(ret)
