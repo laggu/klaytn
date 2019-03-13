@@ -230,14 +230,6 @@ var AppHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
-		Name: "NODEKEY",
-		Flags: []cli.Flag{
-			utils.GenNodeKeyToFileFlag,
-			utils.GenNodeKeyPortFlag,
-			utils.GenNodeKeyIPFlag,
-		},
-	},
-	{
 		Name: "MISC",
 	},
 }

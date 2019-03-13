@@ -36,6 +36,11 @@ kbn:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kbn\" to launch bootnode."
 
+kgen:
+	build/env.sh go run build/ci.go install ./cmd/kgen
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/kgen\" to launch kgen."
+
 istanbul:
 	build/env.sh go run build/ci.go install ./cmd/istanbul
 	@echo "Done building."

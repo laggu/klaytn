@@ -68,6 +68,7 @@ const (
 	// 11~20
 	CMDKCN
 	CMDKEN
+	CMDKGEN
 	CMDKlay
 	CMDKPN
 	CMDKSCN
@@ -75,9 +76,9 @@ const (
 	CMDUtilsNodeCMD
 	Common
 	ConsensusClique
-	ConsensusGxhash
 
 	// 21~30
+	ConsensusGxhash
 	ConsensusIstanbul
 	ConsensusIstanbulBackend
 	ConsensusIstanbulCore
@@ -87,9 +88,9 @@ const (
 	DatasyncFetcher
 	Governance
 	Metrics
-	NetworksGRPC
 
 	// 31~40
+	NetworksGRPC
 	NetworksP2P
 	NetworksP2PDiscover
 	NetworksP2PNat
@@ -99,9 +100,9 @@ const (
 	NetworksRPC
 	Node
 	NodeCN
-	NodeCNFilters
 
 	// 41~50
+	NodeCNFilters
 	NodeCNTracers
 	Reward
 	ServiceChain
@@ -133,6 +134,7 @@ var moduleNames = [ModuleNameLen]string{
 	// 11~20
 	"cmd/kcn",
 	"cmd/ken",
+	"cmd/kgen",
 	"cmd/klay",
 	"cmd/kpn",
 	"cmd/kscn",
@@ -140,9 +142,9 @@ var moduleNames = [ModuleNameLen]string{
 	"cmd/utils/nodecmd",
 	"common",
 	"consensus/clique",
-	"consensus/gxhash",
 
 	// 21~30
+	"consensus/gxhash",
 	"consensus/istanbul",
 	"consensus/istanbul/backend",
 	"consensus/istanbul/core",
@@ -152,9 +154,9 @@ var moduleNames = [ModuleNameLen]string{
 	"datasync/fetcher",
 	"governance/governance",
 	"metrics",
-	"networks/grpc",
 
 	// 31~40
+	"networks/grpc",
 	"networks/p2p",
 	"networks/p2p/discover",
 	"networks/p2p/nat",
@@ -164,9 +166,9 @@ var moduleNames = [ModuleNameLen]string{
 	"networks/rpc",
 	"node",
 	"node/cn",
-	"node/cn/filters",
 
 	// 41~50
+	"node/cn/filters",
 	"node/cn/tracers",
 	"contracts/reward",
 	"servicechain",

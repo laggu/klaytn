@@ -14,16 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package nodecmd
+package main
 
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/cmd/utils/nodecmd"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -38,24 +39,67 @@ type validatorInfo struct {
 	NodeInfo string
 }
 
-var GenNodeKeyCommand = cli.Command{
-	Action:    utils.MigrateFlags(genNodeKey),
-	Name:      "gennodekey",
-	Usage:     "Generate a klaytn nodekey information containing private key, public key, and uri",
-	ArgsUsage: " ",
-	Category:  "MISCELLANEOUS COMMANDS",
-	Flags: []cli.Flag{
-		utils.GenNodeKeyToFileFlag,
-		utils.GenNodeKeyIPFlag,
-		utils.GenNodeKeyPortFlag,
-	},
-}
-
 const (
 	dirKeys = "keys" // directory name where the created files are stored.
 )
 
-// writeNodeKeyInfoToFile writes `nodekey` and `validator` as files under the `parentDir` folder.
+var (
+	logger   = log.NewModuleLogger(log.CMDKGEN)
+	fileFlag = cli.BoolFlag{
+		Name:  "file",
+		Usage: `Generate a nodekey and a klaytn node information as files`,
+	}
+	portFlag = cli.IntFlag{
+		Name:  "port",
+		Usage: `Specify a tcp port number`,
+		Value: 32323,
+	}
+	ipFlag = cli.StringFlag{
+		Name:  "ip",
+		Usage: `Specify an ip address`,
+		Value: "0.0.0.0",
+	}
+
+	kgenHelper = `NAME:
+   {{.Name}} - {{.Usage}}
+
+USAGE:
+   {{.HelpName}} [options...]{{if .Commands}} [command]{{end}}
+{{if .Commands}}
+COMMANDS:
+   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+   {{end}}{{end}}{{if .Flags}}
+OPTIONS:
+   {{range .Flags}}{{.}}
+   {{end}}{{end}}{{if .Copyright }}
+COPYRIGHT:
+   {{.Copyright}}{{end}}
+`
+)
+
+func main() {
+	app := cli.NewApp()
+	app.Name = "kgen"
+	app.Usage = "The command line interface to generate nodekey information for Klaytn"
+	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Action = genNodeKey
+	app.Flags = []cli.Flag{
+		fileFlag,
+		ipFlag,
+		portFlag,
+	}
+	app.Commands = []cli.Command{
+		nodecmd.VersionCommand,
+	}
+	app.HideVersion = true
+	app.CustomAppHelpTemplate = kgenHelper
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+// writeNodeKeyInfoToFile writes `nodekey` and `node_info.json` as files under the `parentDir` folder.
 // The validator is a json format file containing address, nodekey and nodeinfo.
 func writeNodeKeyInfoToFile(validator *validatorInfo, parentDir string, nodekey string) error {
 	parentPath := path.Join("", parentDir)
@@ -102,16 +146,16 @@ func genNodeKey(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	ip := ctx.String(utils.GenNodeKeyIPFlag.Name)
+	ip := ctx.String(ipFlag.Name)
 	if net.ParseIP(ip).To4() == nil {
 		return fmt.Errorf("IP address is not valid")
 	}
-	port := ctx.Uint(utils.GenNodeKeyPortFlag.Name)
+	port := ctx.Uint(portFlag.Name)
 	if port > 65535 {
 		return fmt.Errorf("invalid port number")
 	}
 	nodeinfo := makeNodeInfo(addr, nk, pk, ip, uint16(port))
-	if ctx.Bool(utils.GenNodeKeyToFileFlag.Name) {
+	if ctx.Bool(fileFlag.Name) {
 		if err := writeNodeKeyInfoToFile(nodeinfo, dirKeys, nk); err != nil {
 			return err
 		}

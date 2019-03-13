@@ -74,9 +74,6 @@ func init() {
 
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
-
-		// See utils/nodecmd/gennodekeycmd.go:
-		nodecmd.GenNodeKeyCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
