@@ -641,7 +641,7 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		return nil, nil, nil, common.Address{}, common.Address{}, err
 	}
 
-	return nodeIds, rewardAddrs, stakingAddrs, kirAddr, pocAddr, nil
+	return nodeIds, stakingAddrs, rewardAddrs, pocAddr, kirAddr, nil
 }
 
 func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
