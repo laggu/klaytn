@@ -654,7 +654,7 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	var PoCAddr = common.Address{}
 	var err error
 
-	if !IsStakingUpdatePossible(blockNum) {
+	if !params.IsStakingUpdatePossible(blockNum) {
 		logger.Trace("Invalid block number.", "blockNum", blockNum)
 		return nil, err
 	}
