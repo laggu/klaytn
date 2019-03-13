@@ -1247,6 +1247,117 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 	}
 }
 
+// TestAccountCreationWithFailKey creates an account with an AccountKeyFail key.
+// AccountKeyFail type is for smart contract accounts, so all txs signed by the account should be failed.
+// Expected result: PASS for account creation
+//                  FAIL for value transfer (commented out now)
+func TestAccountCreationWithFailKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	prvKeyHex := "c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"
+	key, err := crypto.HexToECDSA(prvKeyHex)
+	assert.Equal(t, nil, err)
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+
+	// anon has an AccountKeyFail key
+	anon, err := &TestAccountType{
+		Addr:   addr,
+		Keys:   []*ecdsa.PrivateKey{key},
+		Nonce:  uint64(0),
+		AccKey: accountkey.NewAccountKeyFail(),
+	}, nil
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("anon.AccKey = ", anon.AccKey)
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	// Create anon with a fail-type key
+	{
+
+		var txs types.Transactions
+		amount := new(big.Int).SetUint64(200000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    anon.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+		reservoir.Nonce += 1
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Transfer (anon -> reservoir) should be failed
+	//{
+	//	var txs types.Transactions
+	//	amount := new(big.Int).SetUint64(100000000000)
+	//	values := map[types.TxValueKeyType]interface{}{
+	//		types.TxValueKeyNonce:         anon.Nonce,
+	//		types.TxValueKeyFrom:          anon.Addr,
+	//		types.TxValueKeyTo:            reservoir.Addr,
+	//		types.TxValueKeyAmount:        amount,
+	//		types.TxValueKeyGasLimit:      gasLimit,
+	//		types.TxValueKeyGasPrice:      gasPrice,
+	//	}
+	//	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+	//	assert.Equal(t, nil, err)
+	//	err = tx.SignWithKeys(signer, anon.Keys)
+	//	assert.Equal(t, nil, err)
+	//	txs = append(txs, tx)
+	//	anon.Nonce += 1
+	//
+	//	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+	//		t.Fatal(err)
+	//	}
+	//}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
 // TestAccountCreationWithLegacyKey creates accounts with a legacy type of key and an address derived from a PubKey
 // The test creates an EOA, however the value of AccKey field is not related with a PubKey
 // The PubKey of the account is regenerated from the signature like legacy accounts
