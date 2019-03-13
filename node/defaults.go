@@ -27,6 +27,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 const (
@@ -71,6 +72,24 @@ func DefaultDataDir() string {
 			return filepath.Join(home, "AppData", "Roaming", "Klaytn")
 		} else {
 			return filepath.Join(home, ".klay")
+		}
+	}
+	// As we cannot guess a stable location, return empty and handle later
+	return ""
+}
+
+func DefaultDataDirByType(name string) string {
+	if name == "" {
+		return DefaultDataDir()
+	}
+	home := homeDir()
+	if home != "" {
+		if runtime.GOOS == "darwin" {
+			return filepath.Join(home, "Library", strings.ToUpper(name))
+		} else if runtime.GOOS == "windows" {
+			return filepath.Join(home, "AppData", "Roaming", strings.ToUpper(name))
+		} else {
+			return filepath.Join(home, "."+name)
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later
