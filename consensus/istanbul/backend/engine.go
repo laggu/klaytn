@@ -348,7 +348,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the GovernanceRefreshInterval, governance config will be added to block header
-	if number%governance.GovernanceRefreshInterval == 0 {
+	if number%params.GovernanceRefreshInterval == 0 {
 		if governanceConfig, err := governance.MakeGovernanceData(snap.PendingGovernanceConfig); err != nil {
 			logger.Error("Failed to make governance data and header can't contain updated configuration", "Raw Governance Config", snap.PendingGovernanceConfig)
 		} else {

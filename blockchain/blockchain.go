@@ -31,7 +31,6 @@ import (
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/event"
-	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/params"
@@ -1084,7 +1083,7 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 	// TODO-Klaytn-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
 	return blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 ||
 		(bc.chainConfig.Governance != nil &&
-			bc.chainConfig.Governance.Istanbul.ProposerPolicy == governance.WeightedRandom &&
+			bc.chainConfig.Governance.Istanbul.ProposerPolicy == params.WeightedRandom &&
 			params.IsStakingUpdatePossible(blockNum))
 }
 

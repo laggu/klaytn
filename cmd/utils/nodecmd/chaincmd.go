@@ -104,18 +104,18 @@ func initGenesis(ctx *cli.Context) error {
 }
 
 func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain.Genesis {
-	engine := governance.UseIstanbul
+	engine := params.UseIstanbul
 	valueChanged := false
 
 	// using Clique as a consensus engine
 	if genesis.Config.Istanbul == nil && genesis.Config.Clique != nil {
-		engine = governance.UseClique
+		engine = params.UseClique
 		if genesis.Config.Governance == nil {
 			genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
 		}
 		valueChanged = true
 	} else if genesis.Config.Istanbul == nil && genesis.Config.Clique == nil {
-		engine = governance.UseIstanbul
+		engine = params.UseIstanbul
 		genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
 		valueChanged = true
 	} else if genesis.Config.Istanbul != nil && genesis.Config.Clique != nil {
@@ -126,7 +126,7 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 	// We have governance config
 	if genesis.Config.Governance != nil {
 		// and also we have istanbul config. Then use governance's value prior to istanbul's value
-		if engine == governance.UseIstanbul && genesis.Config.Governance.Istanbul != nil {
+		if engine == params.UseIstanbul && genesis.Config.Governance.Istanbul != nil {
 			if genesis.Config.Istanbul != nil {
 				if genesis.Config.Istanbul.Epoch != genesis.Config.Governance.Istanbul.Epoch ||
 					genesis.Config.Istanbul.ProposerPolicy != genesis.Config.Governance.Istanbul.ProposerPolicy ||
@@ -149,7 +149,7 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
 
 		// We don't have governance config and engine is istanbul
-		if engine == governance.UseIstanbul && genesis.Config.Istanbul != nil {
+		if engine == params.UseIstanbul && genesis.Config.Istanbul != nil {
 			genesis.Config.Governance.UnitPrice = genesis.Config.UnitPrice
 			genesis.Config.Governance.Istanbul.Epoch = genesis.Config.Istanbul.Epoch
 			genesis.Config.Governance.Istanbul.SubGroupSize = genesis.Config.Istanbul.SubGroupSize

@@ -31,92 +31,29 @@ import (
 	"sync"
 )
 
-const (
-	// block interval for propagating governance information.
-	// This value shouldn't be changed after a network's launch
-	GovernanceRefreshInterval = 3600 // block interval. Default is about 1 hour (3600 blocks)
-	// Block reward will be separated by three pieces and distributed
-	RewardSliceCount = 3
-	// GovernanceConfig is stored in a cache which has below capacity
-	GovernanceCacheLimit = 3
-	// The prefix for governance cache
-	GovernanceCachePrefix = "governance"
-)
-
-type EngineType int
-
-const (
-	// Engine type
-	UseIstanbul EngineType = iota
-	UseClique
-)
-
-const (
-	// Governance Key
-	GovernanceMode = iota
-	GoverningNode
-	Epoch
-	Policy
-	Sub
-	UnitPrice
-	MintingAmount
-	Ratio
-	UseGiniCoeff
-)
-
-const (
-	GovernanceMode_None = iota
-	GovernanceMode_Single
-	GovernanceMode_Ballot
-)
-
-const (
-	// Proposer policy
-	// At the moment this is duplicated in istanbul/config.go, not to make a cross reference
-	// TODO-Klatn-Governance: Find a way to manage below constants at single location
-	RoundRobin = iota
-	Sticky
-	WeightedRandom
-)
-
-const (
-	// Default Values: Constants used for getting default values for configuration
-	DefaultGovernanceMode = "none"
-	DefaultGoverningNode  = "0x0000000000000000000000000000000000000000"
-	DefaultEpoch          = 30000
-	DefaultProposerPolicy = 0
-	DefaultSubGroupSize   = 21
-	DefaultMintingAmount  = 0
-	DefaultRatio          = "100/0/0"
-	DefaultUseGiniCoeff   = false
-	DefaultDefferedTxFee  = false
-	DefaultUnitPrice      = 250000000000
-	DefaultPeriod         = 1
-)
-
 var (
 	GovernanceKeyMap = map[string]int{
-		"governancemode": GovernanceMode,
-		"governingnode":  GoverningNode,
-		"epoch":          Epoch,
-		"policy":         Policy,
-		"sub":            Sub,
-		"unitprice":      UnitPrice,
-		"mintingamount":  MintingAmount,
-		"ratio":          Ratio,
-		"useginicoeff":   UseGiniCoeff,
+		"governancemode": params.GovernanceMode,
+		"governingnode":  params.GoverningNode,
+		"epoch":          params.Epoch,
+		"policy":         params.Policy,
+		"sub":            params.Sub,
+		"unitprice":      params.UnitPrice,
+		"mintingamount":  params.MintingAmount,
+		"ratio":          params.Ratio,
+		"useginicoeff":   params.UseGiniCoeff,
 	}
 
 	ProposerPolicyMap = map[string]int{
-		"roundrobin":     RoundRobin,
-		"sticky":         Sticky,
-		"weightedrandom": WeightedRandom,
+		"roundrobin":     params.RoundRobin,
+		"sticky":         params.Sticky,
+		"weightedrandom": params.WeightedRandom,
 	}
 
 	GovernanceModeMap = map[string]int{
-		"none":   GovernanceMode_None,
-		"single": GovernanceMode_Single,
-		"ballot": GovernanceMode_Ballot,
+		"none":   params.GovernanceMode_None,
+		"single": params.GovernanceMode_Single,
+		"ballot": params.GovernanceMode_Ballot,
 	}
 )
 
@@ -197,28 +134,28 @@ func (g *Governance) checkValueType(key string, val interface{}) (interface{}, b
 	keyIdx := GovernanceKeyMap[key]
 	switch t := val.(type) {
 	case uint64:
-		if keyIdx == Epoch || keyIdx == Sub || keyIdx == UnitPrice {
+		if keyIdx == params.Epoch || keyIdx == params.Sub || keyIdx == params.UnitPrice {
 			return val, true
 		}
 	case string:
-		if keyIdx == GovernanceMode || keyIdx == MintingAmount || keyIdx == Ratio || keyIdx == Policy {
+		if keyIdx == params.GovernanceMode || keyIdx == params.MintingAmount || keyIdx == params.Ratio || keyIdx == params.Policy {
 			return strings.ToLower(val.(string)), true
-		} else if keyIdx == GoverningNode {
+		} else if keyIdx == params.GoverningNode {
 			if common.IsHexAddress(val.(string)) {
 				return val, true
 			}
 		}
 	case bool:
-		if keyIdx == UseGiniCoeff {
+		if keyIdx == params.UseGiniCoeff {
 			return val, true
 		}
 	case common.Address:
-		if keyIdx == GoverningNode {
+		if keyIdx == params.GoverningNode {
 			return val, true
 		}
 	case float64:
 		// When value comes from JS console, all numbers come in a form of float64
-		if keyIdx == Epoch || keyIdx == Sub || keyIdx == UnitPrice {
+		if keyIdx == params.Epoch || keyIdx == params.Sub || keyIdx == params.UnitPrice {
 			if val.(float64) >= 0 && val.(float64) == float64(uint64(val.(float64))) {
 				val = uint64(val.(float64))
 				return val, true
@@ -270,36 +207,36 @@ func (g *Governance) checkValue(key string, val interface{}) bool {
 
 	// Using type assertion is okay below, because type check was done before calling this method
 	switch k {
-	case GoverningNode:
+	case params.GoverningNode:
 		if reflect.TypeOf(val).String() == "common.Address" {
 			return true
 		} else if common.IsHexAddress(val.(string)) {
 			return true
 		}
 
-	case GovernanceMode:
+	case params.GovernanceMode:
 		if _, ok := GovernanceModeMap[val.(string)]; ok {
 			return true
 		}
 
-	case Epoch, Sub, UnitPrice, UseGiniCoeff:
+	case params.Epoch, params.Sub, params.UnitPrice, params.UseGiniCoeff:
 		// For Uint64 and bool types, no more check is needed
 		return true
 
-	case Policy:
+	case params.Policy:
 		if _, ok := ProposerPolicyMap[val.(string)]; ok {
 			return true
 		}
 
-	case MintingAmount:
+	case params.MintingAmount:
 		x := new(big.Int)
 		if _, ok := x.SetString(val.(string), 10); ok {
 			return true
 		}
 
-	case Ratio:
+	case params.Ratio:
 		x := strings.Split(val.(string), "/")
-		if len(x) != RewardSliceCount {
+		if len(x) != params.RewardSliceCount {
 			return false
 		}
 		var sum uint64
@@ -325,12 +262,12 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
 	k := GovernanceKeyMap[gVote.Key]
 
 	switch k {
-	case GovernanceMode, GoverningNode, MintingAmount, Ratio, Policy:
+	case params.GovernanceMode, params.GoverningNode, params.MintingAmount, params.Ratio, params.Policy:
 		val = string(gVote.Value.([]uint8))
-	case Epoch, Sub, UnitPrice:
+	case params.Epoch, params.Sub, params.UnitPrice:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
-	case UseGiniCoeff:
+	case params.UseGiniCoeff:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		if binary.BigEndian.Uint64(gVote.Value.([]uint8)) != uint64(0) {
 			val = true
@@ -363,33 +300,33 @@ func ReflectVotes(vote GovernanceVote, governance *params.GovernanceConfig) {
 func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceConfig) bool {
 	// Error check had been done when vote was injected. So no error check is required here.
 	switch GovernanceKeyMap[vote.Key] {
-	case GoverningNode:
+	case params.GoverningNode:
 		// CAUTION: governingnode can be changed at any current mode
 		// If it passed, a mode change have to be followed after setting governingnode
 		governance.GoverningNode = common.HexToAddress(vote.Value.(string))
 		return true
-	case GovernanceMode:
+	case params.GovernanceMode:
 		governance.GovernanceMode = vote.Value.(string)
 		return true
-	case Epoch:
+	case params.Epoch:
 		governance.Istanbul.Epoch = vote.Value.(uint64)
 		return true
-	case Policy:
+	case params.Policy:
 		governance.Istanbul.ProposerPolicy = uint64(ProposerPolicyMap[vote.Value.(string)])
 		return true
-	case UnitPrice:
+	case params.UnitPrice:
 		governance.UnitPrice = vote.Value.(uint64)
 		return true
-	case Sub:
+	case params.Sub:
 		governance.Istanbul.SubGroupSize = int(vote.Value.(uint64))
 		return true
-	case MintingAmount:
+	case params.MintingAmount:
 		governance.Reward.MintingAmount, _ = governance.Reward.MintingAmount.SetString(vote.Value.(string), 10)
 		return true
-	case Ratio:
+	case params.Ratio:
 		governance.Reward.Ratio = vote.Value.(string)
 		return true
-	case UseGiniCoeff:
+	case params.UseGiniCoeff:
 		governance.Reward.UseGiniCoeff = vote.Value.(bool)
 		return true
 	default:
@@ -398,15 +335,15 @@ func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceCo
 	return false
 }
 
-func GetDefaultGovernanceConfig(engine EngineType) *params.GovernanceConfig {
+func GetDefaultGovernanceConfig(engine params.EngineType) *params.GovernanceConfig {
 	gov := &params.GovernanceConfig{
-		GovernanceMode: DefaultGovernanceMode,
-		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
+		GovernanceMode: params.DefaultGovernanceMode,
+		GoverningNode:  common.HexToAddress(params.DefaultGoverningNode),
 		Reward:         GetDefaultRewardConfig(),
-		UnitPrice:      DefaultUnitPrice,
+		UnitPrice:      params.DefaultUnitPrice,
 	}
 
-	if engine == UseIstanbul {
+	if engine == params.UseIstanbul {
 		gov.Istanbul = GetDefaultIstanbulConfig()
 	}
 
@@ -415,24 +352,24 @@ func GetDefaultGovernanceConfig(engine EngineType) *params.GovernanceConfig {
 
 func GetDefaultIstanbulConfig() *params.IstanbulConfig {
 	return &params.IstanbulConfig{
-		Epoch:          DefaultEpoch,
-		ProposerPolicy: DefaultProposerPolicy,
-		SubGroupSize:   DefaultSubGroupSize,
+		Epoch:          params.DefaultEpoch,
+		ProposerPolicy: params.DefaultProposerPolicy,
+		SubGroupSize:   params.DefaultSubGroupSize,
 	}
 }
 
 func GetDefaultRewardConfig() *params.RewardConfig {
 	return &params.RewardConfig{
-		MintingAmount: big.NewInt(DefaultMintingAmount),
-		Ratio:         DefaultRatio,
-		UseGiniCoeff:  DefaultUseGiniCoeff,
-		DeferredTxFee: DefaultDefferedTxFee,
+		MintingAmount: big.NewInt(params.DefaultMintingAmount),
+		Ratio:         params.DefaultRatio,
+		UseGiniCoeff:  params.DefaultUseGiniCoeff,
+		DeferredTxFee: params.DefaultDefferedTxFee,
 	}
 }
 
 func GetDefaultCliqueConfig() *params.CliqueConfig {
 	return &params.CliqueConfig{
-		Epoch:  DefaultEpoch,
-		Period: DefaultPeriod,
+		Epoch:  params.DefaultEpoch,
+		Period: params.DefaultPeriod,
 	}
 }

@@ -287,9 +287,9 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*
 		// If the vote passed, update the list of validators
 		governanceMode := governance.GovernanceModeMap[s.GovernanceConfig.GovernanceMode]
 		governingNode := s.GovernanceConfig.GoverningNode
-		if tally := snap.Tally[header.Coinbase]; governanceMode == governance.GovernanceMode_None ||
-			(governanceMode == governance.GovernanceMode_Single && gVote.Validator == governingNode) ||
-			(governanceMode == governance.GovernanceMode_Ballot && tally.Votes > snap.ValSet.TotalVotingPower()/2) {
+		if tally := snap.Tally[header.Coinbase]; governanceMode == params.GovernanceMode_None ||
+			(governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode) ||
+			(governanceMode == params.GovernanceMode_Ballot && tally.Votes > snap.ValSet.TotalVotingPower()/2) {
 			if tally.Authorize {
 				snap.ValSet.AddValidator(header.Coinbase)
 			} else {
@@ -365,9 +365,9 @@ func (s *Snapshot) addNewVote(snap *Snapshot, gVote *governance.GovernanceVote, 
 	if v != nil {
 		vp := uint64(v.VotingPower())
 		currentVotes := changeGovernanceTally(snap, gVote.Key, gVote.Value, vp, true)
-		if (governanceMode == governance.GovernanceMode_None ||
-			(governanceMode == governance.GovernanceMode_Single && gVote.Validator == governingNode)) ||
-			(governanceMode == governance.GovernanceMode_Ballot && currentVotes > uint64(snap.ValSet.TotalVotingPower())/2) {
+		if (governanceMode == params.GovernanceMode_None ||
+			(governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode)) ||
+			(governanceMode == params.GovernanceMode_Ballot && currentVotes > uint64(snap.ValSet.TotalVotingPower())/2) {
 			governance.ReflectVotes(*gVote, snap.PendingGovernanceConfig)
 		}
 	}

@@ -30,7 +30,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/event"
-	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
@@ -494,7 +493,7 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
 func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Header) *blockRewardParameters {
 	blockNum := header.Number.Uint64()
-	lastGovernanceRefreshedBlock := blockNum - (blockNum % governance.GovernanceRefreshInterval)
+	lastGovernanceRefreshedBlock := blockNum - (blockNum % params.GovernanceRefreshInterval)
 
 	// Cache hit condition
 	// (1) blockNum is a key of cache.

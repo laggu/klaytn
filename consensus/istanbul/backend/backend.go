@@ -33,6 +33,7 @@ import (
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/hashicorp/golang-lru"
 	"math/big"
@@ -119,7 +120,7 @@ type backend struct {
 }
 
 func newGovernanceCache() common.Cache {
-	cache, _ := common.NewCache(common.LRUConfig{CacheSize: governance.GovernanceCacheLimit})
+	cache, _ := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit})
 	return cache
 }
 

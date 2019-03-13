@@ -49,6 +49,69 @@ var (
 	DefaultMintedKLAY = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
 )
 
+const (
+	// block interval for propagating governance information.
+	// This value shouldn't be changed after a network's launch
+	GovernanceRefreshInterval = 3600 // block interval. Default is about 1 hour (3600 blocks)
+	// Block reward will be separated by three pieces and distributed
+	RewardSliceCount = 3
+	// GovernanceConfig is stored in a cache which has below capacity
+	GovernanceCacheLimit = 3
+	// The prefix for governance cache
+	GovernanceCachePrefix = "governance"
+)
+
+type EngineType int
+
+const (
+	// Engine type
+	UseIstanbul EngineType = iota
+	UseClique
+)
+
+const (
+	// Governance Key
+	GovernanceMode = iota
+	GoverningNode
+	Epoch
+	Policy
+	Sub
+	UnitPrice
+	MintingAmount
+	Ratio
+	UseGiniCoeff
+)
+
+const (
+	GovernanceMode_None = iota
+	GovernanceMode_Single
+	GovernanceMode_Ballot
+)
+
+const (
+	// Proposer policy
+	// At the moment this is duplicated in istanbul/config.go, not to make a cross reference
+	// TODO-Klatn-Governance: Find a way to manage below constants at single location
+	RoundRobin = iota
+	Sticky
+	WeightedRandom
+)
+
+const (
+	// Default Values: Constants used for getting default values for configuration
+	DefaultGovernanceMode = "none"
+	DefaultGoverningNode  = "0x0000000000000000000000000000000000000000"
+	DefaultEpoch          = 30000
+	DefaultProposerPolicy = 0
+	DefaultSubGroupSize   = 21
+	DefaultMintingAmount  = 0
+	DefaultRatio          = "100/0/0"
+	DefaultUseGiniCoeff   = false
+	DefaultDefferedTxFee  = false
+	DefaultUnitPrice      = 250000000000
+	DefaultPeriod         = 1
+)
+
 func IsStakingUpdatePossible(blockNum uint64) bool {
 	return (blockNum % stakingUpdateInterval) == 0
 }

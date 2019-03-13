@@ -139,7 +139,7 @@ func (sb *backend) NewChainHead() error {
 // updateGovernance manages GovernanceCache and updates the backend's Governance config
 // To reduce timing issues, we are using GovernanceConfig which was decided at two GovernanceRefreshInterval ago
 func (sb *backend) updateGovernance(curr uint64) {
-	rem := curr % governance.GovernanceRefreshInterval
+	rem := curr % params.GovernanceRefreshInterval
 
 	// Current block has new Governance information in it's header
 	if rem == 0 {
@@ -147,7 +147,7 @@ func (sb *backend) updateGovernance(curr uint64) {
 		_ = sb.makeGovernanceCacheFromHeader(curr)
 
 		// Retrieve the cache older by single GovernanceRefreshInterval
-		num := curr - governance.GovernanceRefreshInterval
+		num := curr - params.GovernanceRefreshInterval
 		if config, ok := sb.getGovernanceCache(num); ok {
 			sb.replaceGovernanceConfig(config)
 		} else {
@@ -161,8 +161,8 @@ func (sb *backend) updateGovernance(curr uint64) {
 		var num uint64
 
 		// To prevent underflow, compare it first
-		if curr > (rem + governance.GovernanceRefreshInterval) {
-			num = curr - rem - governance.GovernanceRefreshInterval
+		if curr > (rem + params.GovernanceRefreshInterval) {
+			num = curr - rem - params.GovernanceRefreshInterval
 		} else {
 			num = 0
 		}
@@ -197,7 +197,7 @@ func (sb *backend) removeDuplicatedVote(rawvote []byte, gov *governance.Governan
 // getGovernanceCacheKey returns cache key of the given block number
 func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
 	v := fmt.Sprintf("%v", num)
-	return common.GovernanceCacheKey(governance.GovernanceCachePrefix + "_" + v)
+	return common.GovernanceCacheKey(params.GovernanceCachePrefix + "_" + v)
 }
 
 // getGovernanceCache returns cached governance config as a byte slice

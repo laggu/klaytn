@@ -100,7 +100,7 @@ var goodVotes = []voteValue{
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
-	config.Governance = GetDefaultGovernanceConfig(UseIstanbul)
+	config.Governance = GetDefaultGovernanceConfig(params.UseIstanbul)
 	config.Istanbul = &params.IstanbulConfig{
 		Epoch:          config.Governance.Istanbul.Epoch,
 		ProposerPolicy: config.Governance.Istanbul.ProposerPolicy,
@@ -125,18 +125,18 @@ func TestNewGovernance(t *testing.T) {
 }
 
 func TestGetDefaultGovernanceConfig(t *testing.T) {
-	tstGovernance := GetDefaultGovernanceConfig(UseIstanbul)
+	tstGovernance := GetDefaultGovernanceConfig(params.UseIstanbul)
 
 	want := []interface{}{
-		uint64(DefaultUnitPrice),
-		DefaultUseGiniCoeff,
-		DefaultRatio,
-		DefaultSubGroupSize,
-		uint64(DefaultProposerPolicy),
-		uint64(DefaultEpoch),
-		common.HexToAddress(DefaultGoverningNode),
-		DefaultGovernanceMode,
-		DefaultDefferedTxFee,
+		uint64(params.DefaultUnitPrice),
+		params.DefaultUseGiniCoeff,
+		params.DefaultRatio,
+		params.DefaultSubGroupSize,
+		uint64(params.DefaultProposerPolicy),
+		uint64(params.DefaultEpoch),
+		common.HexToAddress(params.DefaultGoverningNode),
+		params.DefaultGovernanceMode,
+		params.DefaultDefferedTxFee,
 	}
 
 	got := []interface{}{
@@ -155,7 +155,7 @@ func TestGetDefaultGovernanceConfig(t *testing.T) {
 		t.Fatalf("Want %v, got %v", want, got)
 	}
 
-	if tstGovernance.Reward.MintingAmount.Cmp(big.NewInt(DefaultMintingAmount)) != 0 {
+	if tstGovernance.Reward.MintingAmount.Cmp(big.NewInt(params.DefaultMintingAmount)) != 0 {
 		t.Errorf("Default minting amount is not equal")
 	}
 }

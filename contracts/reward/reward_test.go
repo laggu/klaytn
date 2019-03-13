@@ -74,7 +74,7 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 	header.KlaytnExtra = []common.Address{proposerAddr}
 
 	// chain config
-	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(governance.UseIstanbul)}
+	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
 
 	DistributeBlockReward(accounts, header, config)
 
@@ -97,7 +97,7 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 
 	// chain config
 	config = &params.ChainConfig{}
-	config.Governance = governance.GetDefaultGovernanceConfig(governance.UseIstanbul)
+	config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
 
 	DistributeBlockReward(accounts, header, config)
 
@@ -124,7 +124,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 
 	// chain config
 	config := &params.ChainConfig{}
-	config.Governance = governance.GetDefaultGovernanceConfig(governance.UseIstanbul)
+	config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
 	config.Governance.Reward.DeferredTxFee = true
 
 	DistributeBlockReward(accounts, header, config)
@@ -153,7 +153,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 
 	// chain config
 	config = &params.ChainConfig{}
-	config.Governance = governance.GetDefaultGovernanceConfig(governance.UseIstanbul)
+	config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
 	config.Governance.Reward.DeferredTxFee = true
 	config.Governance.Reward.MintingAmount = params.DefaultMintedKLAY
 
@@ -186,7 +186,7 @@ func TestBlockRewardWithCustomRewardRatio(t *testing.T) {
 
 	// chain config
 	config := &params.ChainConfig{}
-	config.Governance = governance.GetDefaultGovernanceConfig(governance.UseIstanbul)
+	config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
 	config.Governance.Reward.DeferredTxFee = true
 	config.Governance.Reward.MintingAmount = params.DefaultMintedKLAY
 	config.Governance.Reward.Ratio = fmt.Sprintf("%d/%d/%d", params.DefaultCNRewardRatio, params.DefaultKIRRewardRatio, params.DefaultPoCRewardRatio)
