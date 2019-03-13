@@ -21,8 +21,13 @@
 package types
 
 import (
+	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/stretchr/testify/assert"
 	"math/big"
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/ground-x/klaytn/common"
@@ -165,4 +170,179 @@ func TestChainId(t *testing.T) {
 	if err != nil {
 		t.Error("expected no error")
 	}
+}
+
+// AccountKeyPickerForTest is an temporary object for testing.
+// It simulates GetKey() instead of using `StateDB` directly in order to avoid cycle imports.
+type AccountKeyPickerForTest struct {
+	AddrKeyMap map[common.Address]accountkey.AccountKey
+}
+
+func (a *AccountKeyPickerForTest) GetKey(addr common.Address) accountkey.AccountKey {
+	return a.AddrKeyMap[addr]
+}
+
+func (a *AccountKeyPickerForTest) SetKey(addr common.Address, key accountkey.AccountKey) {
+	a.AddrKeyMap[addr] = key
+}
+
+type testTx func(t *testing.T)
+
+// TestValidateTransaction tests validation process of transactions.
+// To check that each tx makes a msg for the signature well,
+// this test generates the msg manually and then performs validation process.
+func TestValidateTransaction(t *testing.T) {
+	testfns := []testTx{
+		testValidateValueTransfer,
+		testValidateFeeDelegatedValueTransfer,
+	}
+
+	for _, fn := range testfns {
+		fnname := getFunctionName(fn)
+		fnname = fnname[strings.LastIndex(fnname, ".")+1:]
+		t.Run(fnname, func(t *testing.T) {
+			t.Parallel()
+			fn(t)
+		})
+	}
+}
+
+func testValidateValueTransfer(t *testing.T) {
+	// Transaction generation
+	internalTx := genValueTransferTransaction().(*TxInternalDataValueTransfer)
+	tx := &Transaction{data: internalTx}
+
+	chainid := big.NewInt(1)
+	signer := NewEIP155Signer(chainid)
+
+	prv, from := defaultTestKey()
+	internalTx.From = from
+
+	// Sign
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from]), chainid, 0, 0 ])
+	b, err := rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.Recipient,
+		internalTx.Amount,
+		internalTx.From,
+	})
+	assert.Equal(t, nil, err)
+
+	h := rlpHash([]interface{}{
+		b,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	assert.Equal(t, nil, err)
+
+	tx.SetSignature(sig)
+
+	// AccountKeyPicker initialization
+	p := &AccountKeyPickerForTest{
+		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
+	}
+	key := accountkey.NewAccountKeyPublicWithValue(&prv.PublicKey)
+	p.SetKey(from, key)
+
+	// Validate
+	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, from, validatedFrom)
+}
+
+func testValidateFeeDelegatedValueTransfer(t *testing.T) {
+	// Transaction generation
+	internalTx := genFeeDelegatedValueTransferTransaction().(*TxInternalDataFeeDelegatedValueTransfer)
+	tx := &Transaction{data: internalTx}
+
+	chainid := big.NewInt(1)
+	signer := NewEIP155Signer(chainid)
+
+	prv, from := defaultTestKey()
+	internalTx.From = from
+
+	feePayerPrv, err := crypto.HexToECDSA("b9d5558443585bca6f225b935950e3f6e69f9da8a5809a83f51c3365dff53936")
+	assert.Equal(t, nil, err)
+	feePayer := crypto.PubkeyToAddress(feePayerPrv.PublicKey)
+	internalTx.FeePayer = feePayer
+
+	// Sign
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from]), chainid, 0, 0 ])
+	b, err := rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.Recipient,
+		internalTx.Amount,
+		internalTx.From,
+	})
+	assert.Equal(t, nil, err)
+
+	h := rlpHash([]interface{}{
+		b,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	assert.Equal(t, nil, err)
+
+	tx.SetSignature(sig)
+
+	// Sign fee payer
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from]), feePayer, chainid, 0, 0 ])
+	b, err = rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.Recipient,
+		internalTx.Amount,
+		internalTx.From,
+	})
+	assert.Equal(t, nil, err)
+
+	h = rlpHash([]interface{}{
+		b,
+		feePayer,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	assert.Equal(t, nil, err)
+
+	tx.SetFeePayerSignature(feePayerSig)
+
+	// AccountKeyPicker initialization
+	p := &AccountKeyPickerForTest{
+		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
+	}
+	key := accountkey.NewAccountKeyPublicWithValue(&prv.PublicKey)
+	p.SetKey(from, key)
+	feePayerKey := accountkey.NewAccountKeyPublicWithValue(&feePayerPrv.PublicKey)
+	p.SetKey(feePayer, feePayerKey)
+
+	// Validate
+	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, from, validatedFrom)
+
+	// Validate fee payer
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, feePayer, validatedFeePayer)
+}
+
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
