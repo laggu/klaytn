@@ -212,6 +212,8 @@ func (c LRUConfig) newCache() (Cache, error) {
 
 type LRUShardConfig struct {
 	CacheSize int
+	// Hash, and Address type can not generate as many shard indexes as the maximum (2 ^ 16 = 65536),
+	// so it is meaningless to set the NumShards larger than this.
 	NumShards int
 }
 

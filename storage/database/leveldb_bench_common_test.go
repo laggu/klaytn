@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -192,4 +193,87 @@ func initCacheData(cache common.Cache, valueSize int) []common.Hash {
 	}
 
 	return hashKeys
+}
+
+// TestLRUShardCacheAddressKey is a test to make sure add and get commands work when using Address as key.
+// Cache hit for all data.
+func TestLRUShardCacheAddressKey(t *testing.T) {
+	cache, _ := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
+
+	for i := 0; i < 4096; i++ {
+		cache.Add(getAddressKey(i), i)
+	}
+
+	for i := 0; i < 4096; i++ {
+		data, ok := cache.Get(getAddressKey(i))
+		assert.True(t, ok)
+		assert.Equal(t, i, data.(int))
+	}
+}
+
+// TestLRUShardCacheHashKey is a test to check whether the add and get commands are working
+// when the Address created by SetBytesFromFront is used as key. Cache hit for all data.
+func TestLRUShardCacheAddressKeyFromFront(t *testing.T) {
+	cache, _ := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
+
+	for i := 0; i < 4096; i++ {
+		cache.Add(getAddressKeyFromFront(i), i)
+	}
+
+	for i := 0; i < 4096; i++ {
+		data, ok := cache.Get(getAddressKeyFromFront(i))
+		assert.True(t, ok)
+		assert.Equal(t, i, data.(int))
+	}
+}
+
+//TestLRUShardCacheHashKey is a test to see if add and get commands work when using Hash as key.
+// Cache hit for all data.
+func TestLRUShardCacheHashKey(t *testing.T) {
+	cache, _ := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
+
+	for i := 0; i < 4096; i++ {
+		cache.Add(getHashKey(i), i)
+	}
+
+	for i := 0; i < 4096; i++ {
+		data, ok := cache.Get(getHashKey(i))
+		assert.True(t, ok)
+		assert.Equal(t, i, data.(int))
+	}
+}
+
+// getHashKey returns an int converted to a Hash.
+func getHashKey(i int) common.Hash {
+	var byteArray interface{}
+	if i>>8 == 0 {
+		byteArray = []byte{byte(i)}
+	} else {
+		byteArray = []byte{byte(i >> 8), byte(i)}
+	}
+	return common.BytesToHash(byteArray.([]byte))
+}
+
+// getAddressKey returns an int converted to a Address.
+func getAddressKey(i int) common.Address {
+	var byteArray interface{}
+	if i>>8 == 0 {
+		byteArray = []byte{byte(i)}
+	} else {
+		byteArray = []byte{byte(i >> 8), byte(i)}
+	}
+	return common.BytesToAddress(byteArray.([]byte))
+}
+
+// getAddressKeyFromFront converts an int to an Address and returns it from 0 in the array.
+func getAddressKeyFromFront(i int) common.Address {
+	var addr common.Address
+	var byteArray interface{}
+	if i>>8 == 0 {
+		byteArray = []byte{byte(i)}
+	} else {
+		byteArray = []byte{byte(i), byte(i >> 8)}
+	}
+	addr.SetBytesFromFront(byteArray.([]byte))
+	return addr
 }

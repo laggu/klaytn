@@ -129,8 +129,14 @@ func (h Hash) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(h)
 }
 
+// getShardIndex returns the index of the shard.
+// The address is arranged in the front or back of the array according to the initialization method.
+// And the opposite is zero. In any case, to calculate the various shard index values,
+// add both values and shift to calculate the shard index.
 func (h Hash) getShardIndex(shardMask int) int {
-	return ((int(h[2]) << 16) + (int(h[1]) << 8) + int(h[0])) & shardMask
+	data1 := int(h[HashLength-1]) + int(h[0])
+	data2 := int(h[HashLength-2]) + int(h[1])
+	return ((data2 << 8) + data1) & shardMask
 }
 
 func EmptyHash(h Hash) bool {
@@ -287,8 +293,14 @@ func (a *Address) UnmarshalJSON(input []byte) error {
 	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
 }
 
+// getShardIndex returns the index of the shard.
+// The address is arranged in the front or back of the array according to the initialization method.
+// And the opposite is zero. In any case, to calculate the various shard index values,
+// add both values and shift to calculate the shard index.
 func (a Address) getShardIndex(shardMask int) int {
-	return ((int(a[2]) << 16) + (int(a[1]) << 8) + int(a[0])) & shardMask
+	data1 := int(a[AddressLength-1]) + int(a[0])
+	data2 := int(a[AddressLength-2]) + int(a[1])
+	return ((data2 << 8) + data1) & shardMask
 }
 
 // UnprefixedAddress allows marshaling an Address without 0x prefix.
