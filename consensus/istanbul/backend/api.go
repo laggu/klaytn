@@ -144,6 +144,7 @@ var (
 	errEndLargetThanLatest     = errors.New("end block number should be smaller than the latest block number")
 	errStartLargerThanEnd      = errors.New("start should be smaller than end")
 	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
+	errRangeNil                = errors.New("range values should not be nil")
 )
 
 // GetValidators retrieves the list of authorized validators at the specified block.
@@ -338,6 +339,11 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 
 func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.BlockNumber, end *rpc.BlockNumber) (map[string]interface{}, error) {
 	blocks := make(map[string]interface{})
+
+	if start == nil || end == nil {
+		logger.Error("the range values should not be nil.", "start", start, "end", end)
+		return nil, errRangeNil
+	}
 
 	// check error status.
 	s := start.Int64()
