@@ -90,9 +90,9 @@ type blockChain interface {
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
 type TxPoolConfig struct {
-	NoLocals  bool          // Whether local transaction handling should be disabled
-	Journal   string        // Journal of local transactions to survive node restarts
-	Rejournal time.Duration // Time interval to regenerate the local transaction journal
+	NoLocals        bool          // Whether local transaction handling should be disabled
+	Journal         string        // Journal of local transactions to survive node restarts
+	JournalInterval time.Duration // Time interval to regenerate the local transaction journal
 
 	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
 	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
@@ -108,8 +108,8 @@ type TxPoolConfig struct {
 // DefaultTxPoolConfig contains the default configurations for the transaction
 // pool.
 var DefaultTxPoolConfig = TxPoolConfig{
-	Journal:   "transactions.rlp",
-	Rejournal: time.Hour,
+	Journal:         "transactions.rlp",
+	JournalInterval: time.Hour,
 
 	PriceLimit: 1,
 	PriceBump:  10,
@@ -126,9 +126,9 @@ var DefaultTxPoolConfig = TxPoolConfig{
 // unreasonable or unworkable.
 func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	conf := *config
-	if conf.Rejournal < time.Second {
-		logger.Error("Sanitizing invalid txpool journal time", "provided", conf.Rejournal, "updated", time.Second)
-		conf.Rejournal = time.Second
+	if conf.JournalInterval < time.Second {
+		logger.Error("Sanitizing invalid txpool journal time", "provided", conf.JournalInterval, "updated", time.Second)
+		conf.JournalInterval = time.Second
 	}
 	if conf.PriceLimit < 1 {
 		logger.Error("Sanitizing invalid txpool price limit", "provided", conf.PriceLimit, "updated", DefaultTxPoolConfig.PriceLimit)
@@ -243,7 +243,7 @@ func (pool *TxPool) loop() {
 	evict := time.NewTicker(evictionInterval)
 	defer evict.Stop()
 
-	journal := time.NewTicker(pool.config.Rejournal)
+	journal := time.NewTicker(pool.config.JournalInterval)
 	defer journal.Stop()
 
 	// Track the previous head headers for transaction reorgs

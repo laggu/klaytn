@@ -106,8 +106,8 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 	profile.Prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	poolConfig := blockchain.TxPoolConfig{
-		Journal:   transactionsJournalFilename,
-		Rejournal: time.Hour,
+		Journal:         transactionsJournalFilename,
+		JournalInterval: time.Hour,
 
 		PriceLimit: 1,
 		PriceBump:  10,

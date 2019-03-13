@@ -145,7 +145,7 @@ func bootnode(c *cli.Context) error {
 		err error
 		ctx = bootnodeConfig{
 			// Config variables
-			addr:         c.GlobalString(utils.AddrFlag.Name),
+			addr:         c.GlobalString(utils.BNAddrFlag.Name),
 			genKeyPath:   c.GlobalString(utils.GenKeyFlag.Name),
 			nodeKeyFile:  c.GlobalString(utils.NodeKeyFileFlag.Name),
 			nodeKeyHex:   c.GlobalString(utils.NodeKeyHexFlag.Name),
@@ -217,7 +217,7 @@ func main() {
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
 			utils.WriteAddressFlag,
-			utils.AddrFlag,
+			utils.BNAddrFlag,
 			utils.NATFlag,
 			utils.NetrestrictFlag,
 		}

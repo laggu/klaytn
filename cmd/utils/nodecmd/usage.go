@@ -111,7 +111,7 @@ var AppHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			utils.TxPoolNoLocalsFlag,
 			utils.TxPoolJournalFlag,
-			utils.TxPoolRejournalFlag,
+			utils.TxPoolJournalIntervalFlag,
 			utils.TxPoolPriceLimitFlag,
 			utils.TxPoolPriceBumpFlag,
 			utils.TxPoolExecSlotsAccountFlag,
@@ -224,7 +224,7 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "BOOTNODE",
 		Flags: []cli.Flag{
-			utils.AddrFlag,
+			utils.BNAddrFlag,
 			utils.GenKeyFlag,
 			utils.WriteAddressFlag,
 		},

@@ -1621,7 +1621,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	config := testTxPoolConfig
 	config.NoLocals = nolocals
 	config.Journal = journal
-	config.Rejournal = time.Second
+	config.JournalInterval = time.Second
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 
@@ -1681,7 +1681,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	// Bump the nonce temporarily and ensure the newly invalidated transaction is removed
 	statedb.SetNonce(crypto.PubkeyToAddress(local.PublicKey), 2)
 	pool.lockedReset(nil, nil)
-	time.Sleep(2 * config.Rejournal)
+	time.Sleep(2 * config.JournalInterval)
 	pool.Stop()
 
 	statedb.SetNonce(crypto.PubkeyToAddress(local.PublicKey), 1)

@@ -171,10 +171,10 @@ var (
 		Usage: "Disk journal for local transaction to survive node restarts",
 		Value: blockchain.DefaultTxPoolConfig.Journal,
 	}
-	TxPoolRejournalFlag = cli.DurationFlag{
-		Name:  "txpool.rejournal",
+	TxPoolJournalIntervalFlag = cli.DurationFlag{
+		Name:  "txpool.journal-interval",
 		Usage: "Time interval to regenerate the local transaction journal",
-		Value: blockchain.DefaultTxPoolConfig.Rejournal,
+		Value: blockchain.DefaultTxPoolConfig.JournalInterval,
 	}
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
@@ -544,10 +544,11 @@ var (
 		Value: node.SBN_PORT,
 	}
 	// Bootnode's settings
-	AddrFlag = cli.StringFlag{
-		Name:  "addr",
-		Usage: `udp listen port`,
-		Value: "32323",
+	//TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
+	BNAddrFlag = cli.StringFlag{
+		Name:  "bnaddr",
+		Usage: `udp address to use node discovery`,
+		Value: ":32323",
 	}
 	GenKeyFlag = cli.StringFlag{
 		Name:  "genkey",
@@ -1003,8 +1004,8 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolRejournalFlag.Name) {
-		cfg.Rejournal = ctx.GlobalDuration(TxPoolRejournalFlag.Name)
+	if ctx.GlobalIsSet(TxPoolJournalIntervalFlag.Name) {
+		cfg.JournalInterval = ctx.GlobalDuration(TxPoolJournalIntervalFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolPriceLimitFlag.Name) {
 		cfg.PriceLimit = ctx.GlobalUint64(TxPoolPriceLimitFlag.Name)
