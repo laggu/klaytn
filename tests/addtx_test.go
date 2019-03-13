@@ -112,10 +112,10 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 		PriceLimit: 1,
 		PriceBump:  10,
 
-		AccountSlots: 16,
-		GlobalSlots:  40000,
-		AccountQueue: 64,
-		GlobalQueue:  40000,
+		ExecSlotsAccount:    16,
+		ExecSlotsAll:        40000,
+		NonExecSlotsAccount: 64,
+		NonExecSlotsAll:     40000,
 
 		Lifetime: 3 * time.Hour,
 	}

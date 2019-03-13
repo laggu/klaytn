@@ -681,7 +681,7 @@ func TestTransactionGapFilling(t *testing.T) {
 	pool.currentState.AddBalance(account, big.NewInt(1000000))
 
 	// Keep track of transaction events to ensure all executables get announced
-	events := make(chan NewTxsEvent, testTxPoolConfig.AccountQueue+5)
+	events := make(chan NewTxsEvent, testTxPoolConfig.NonExecSlotsAccount+5)
 	sub := pool.txFeed.Subscribe(events)
 	defer sub.Unsubscribe()
 
@@ -737,25 +737,25 @@ func TestTransactionQueueAccountLimiting(t *testing.T) {
 	pool.currentState.AddBalance(account, big.NewInt(1000000))
 
 	// Keep queuing up transactions and make sure all above a limit are dropped
-	for i := uint64(1); i <= testTxPoolConfig.AccountQueue+5; i++ {
+	for i := uint64(1); i <= testTxPoolConfig.NonExecSlotsAccount+5; i++ {
 		if err := pool.AddRemote(transaction(i, 100000, key)); err != nil {
 			t.Fatalf("tx %d: failed to add transaction: %v", i, err)
 		}
 		if len(pool.pending) != 0 {
 			t.Errorf("tx %d: pending pool size mismatch: have %d, want %d", i, len(pool.pending), 0)
 		}
-		if i <= testTxPoolConfig.AccountQueue {
+		if i <= testTxPoolConfig.NonExecSlotsAccount {
 			if pool.queue[account].Len() != int(i) {
 				t.Errorf("tx %d: queue size mismatch: have %d, want %d", i, pool.queue[account].Len(), i)
 			}
 		} else {
-			if pool.queue[account].Len() != int(testTxPoolConfig.AccountQueue) {
-				t.Errorf("tx %d: queue limit mismatch: have %d, want %d", i, pool.queue[account].Len(), testTxPoolConfig.AccountQueue)
+			if pool.queue[account].Len() != int(testTxPoolConfig.NonExecSlotsAccount) {
+				t.Errorf("tx %d: queue limit mismatch: have %d, want %d", i, pool.queue[account].Len(), testTxPoolConfig.NonExecSlotsAccount)
 			}
 		}
 	}
-	if len(pool.all) != int(testTxPoolConfig.AccountQueue) {
-		t.Errorf("total transaction mismatch: have %d, want %d", len(pool.all), testTxPoolConfig.AccountQueue)
+	if len(pool.all) != int(testTxPoolConfig.NonExecSlotsAccount) {
+		t.Errorf("total transaction mismatch: have %d, want %d", len(pool.all), testTxPoolConfig.NonExecSlotsAccount)
 	}
 }
 
@@ -780,7 +780,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 
 	config := testTxPoolConfig
 	config.NoLocals = nolocals
-	config.GlobalQueue = config.AccountQueue*3 - 1 // reduce the queue limits to shorten test time (-1 to make it non divisible)
+	config.NonExecSlotsAll = config.NonExecSlotsAccount*3 - 1 // reduce the queue limits to shorten test time (-1 to make it non divisible)
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -796,7 +796,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	// Generate and queue a batch of transactions
 	nonces := make(map[common.Address]uint64)
 
-	txs := make(types.Transactions, 0, 3*config.GlobalQueue)
+	txs := make(types.Transactions, 0, 3*config.NonExecSlotsAll)
 	for len(txs) < cap(txs) {
 		key := keys[rand.Intn(len(keys)-1)] // skip adding transactions with the local account
 		addr := crypto.PubkeyToAddress(key.PublicKey)
@@ -809,17 +809,17 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 
 	queued := 0
 	for addr, list := range pool.queue {
-		if list.Len() > int(config.AccountQueue) {
-			t.Errorf("addr %x: queued accounts overflown allowance: %d > %d", addr, list.Len(), config.AccountQueue)
+		if list.Len() > int(config.NonExecSlotsAccount) {
+			t.Errorf("addr %x: queued accounts overflown allowance: %d > %d", addr, list.Len(), config.NonExecSlotsAccount)
 		}
 		queued += list.Len()
 	}
-	if queued > int(config.GlobalQueue) {
-		t.Fatalf("total transactions overflow allowance: %d > %d", queued, config.GlobalQueue)
+	if queued > int(config.NonExecSlotsAll) {
+		t.Fatalf("total transactions overflow allowance: %d > %d", queued, config.NonExecSlotsAll)
 	}
 	// Generate a batch of transactions from the local account and import them
 	txs = txs[:0]
-	for i := uint64(0); i < 3*config.GlobalQueue; i++ {
+	for i := uint64(0); i < 3*config.NonExecSlotsAll; i++ {
 		txs = append(txs, transaction(i+1, 100000, local))
 	}
 	pool.AddLocals(txs)
@@ -828,13 +828,13 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	if nolocals {
 		queued := 0
 		for addr, list := range pool.queue {
-			if list.Len() > int(config.AccountQueue) {
-				t.Errorf("addr %x: queued accounts overflown allowance: %d > %d", addr, list.Len(), config.AccountQueue)
+			if list.Len() > int(config.NonExecSlotsAccount) {
+				t.Errorf("addr %x: queued accounts overflown allowance: %d > %d", addr, list.Len(), config.NonExecSlotsAccount)
 			}
 			queued += list.Len()
 		}
-		if queued > int(config.GlobalQueue) {
-			t.Fatalf("total transactions overflow allowance: %d > %d", queued, config.GlobalQueue)
+		if queued > int(config.NonExecSlotsAll) {
+			t.Fatalf("total transactions overflow allowance: %d > %d", queued, config.NonExecSlotsAll)
 		}
 	} else {
 		// Local exemptions are enabled, make sure the local account owned the queue
@@ -842,8 +842,8 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 			t.Errorf("multiple accounts in queue: have %v, want %v", len(pool.queue), 1)
 		}
 		// Also ensure no local transactions are ever dropped, even if above global limits
-		if queued := pool.queue[crypto.PubkeyToAddress(local.PublicKey)].Len(); uint64(queued) != 3*config.GlobalQueue {
-			t.Fatalf("local account queued transaction count mismatch: have %v, want %v", queued, 3*config.GlobalQueue)
+		if queued := pool.queue[crypto.PubkeyToAddress(local.PublicKey)].Len(); uint64(queued) != 3*config.NonExecSlotsAll {
+			t.Fatalf("local account queued transaction count mismatch: have %v, want %v", queued, 3*config.NonExecSlotsAll)
 		}
 	}
 }
@@ -932,12 +932,12 @@ func TestTransactionPendingLimiting(t *testing.T) {
 	pool.currentState.AddBalance(account, big.NewInt(1000000))
 
 	// Keep track of transaction events to ensure all executables get announced
-	events := make(chan NewTxsEvent, testTxPoolConfig.AccountQueue+5)
+	events := make(chan NewTxsEvent, testTxPoolConfig.NonExecSlotsAccount+5)
 	sub := pool.txFeed.Subscribe(events)
 	defer sub.Unsubscribe()
 
 	// Keep queuing up transactions and make sure all above a limit are dropped
-	for i := uint64(0); i < testTxPoolConfig.AccountQueue+5; i++ {
+	for i := uint64(0); i < testTxPoolConfig.NonExecSlotsAccount+5; i++ {
 		if err := pool.AddRemote(transaction(i, 100000, key)); err != nil {
 			t.Fatalf("tx %d: failed to add transaction: %v", i, err)
 		}
@@ -948,10 +948,10 @@ func TestTransactionPendingLimiting(t *testing.T) {
 			t.Errorf("tx %d: queue size mismatch: have %d, want %d", i, pool.queue[account].Len(), 0)
 		}
 	}
-	if len(pool.all) != int(testTxPoolConfig.AccountQueue+5) {
-		t.Errorf("total transaction mismatch: have %d, want %d", len(pool.all), testTxPoolConfig.AccountQueue+5)
+	if len(pool.all) != int(testTxPoolConfig.NonExecSlotsAccount+5) {
+		t.Errorf("total transaction mismatch: have %d, want %d", len(pool.all), testTxPoolConfig.NonExecSlotsAccount+5)
 	}
-	if err := validateEvents(events, int(testTxPoolConfig.AccountQueue+5)); err != nil {
+	if err := validateEvents(events, int(testTxPoolConfig.NonExecSlotsAccount+5)); err != nil {
 		t.Fatalf("event firing failed: %v", err)
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
@@ -974,7 +974,7 @@ func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 	account1, _ := deriveSender(transaction(0, 0, key1))
 	pool1.currentState.AddBalance(account1, big.NewInt(1000000))
 
-	for i := uint64(0); i < testTxPoolConfig.AccountQueue+5; i++ {
+	for i := uint64(0); i < testTxPoolConfig.NonExecSlotsAccount+5; i++ {
 		if err := pool1.AddRemote(transaction(origin+i, 100000, key1)); err != nil {
 			t.Fatalf("tx %d: failed to add transaction: %v", i, err)
 		}
@@ -987,7 +987,7 @@ func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 	pool2.currentState.AddBalance(account2, big.NewInt(1000000))
 
 	txs := []*types.Transaction{}
-	for i := uint64(0); i < testTxPoolConfig.AccountQueue+5; i++ {
+	for i := uint64(0); i < testTxPoolConfig.NonExecSlotsAccount+5; i++ {
 		txs = append(txs, transaction(origin+i, 100000, key2))
 	}
 	pool2.AddRemotes(txs)
@@ -1021,7 +1021,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.GlobalSlots = config.AccountSlots * 10
+	config.ExecSlotsAll = config.ExecSlotsAccount * 10
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1038,7 +1038,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	txs := types.Transactions{}
 	for _, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		for j := 0; j < int(config.GlobalSlots)/len(keys)*2; j++ {
+		for j := 0; j < int(config.ExecSlotsAll)/len(keys)*2; j++ {
 			txs = append(txs, transaction(nonces[addr], 100000, key))
 			nonces[addr]++
 		}
@@ -1050,8 +1050,8 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	for _, list := range pool.pending {
 		pending += list.Len()
 	}
-	if pending > int(config.GlobalSlots) {
-		t.Fatalf("total pending transactions overflow allowance: %d > %d", pending, config.GlobalSlots)
+	if pending > int(config.ExecSlotsAll) {
+		t.Fatalf("total pending transactions overflow allowance: %d > %d", pending, config.ExecSlotsAll)
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
@@ -1067,9 +1067,9 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.AccountSlots = 2
-	config.AccountQueue = 2
-	config.GlobalSlots = 8
+	config.ExecSlotsAccount = 2
+	config.NonExecSlotsAccount = 2
+	config.ExecSlotsAll = 8
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1080,7 +1080,7 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 	pool.currentState.AddBalance(addr, big.NewInt(1000000))
 
 	txs := types.Transactions{}
-	for j := 0; j < int(config.GlobalSlots)*2; j++ {
+	for j := 0; j < int(config.ExecSlotsAll)*2; j++ {
 		txs = append(txs, transaction(uint64(j), 100000, key))
 	}
 	// Import the batch and verify that limits have been enforced
@@ -1101,7 +1101,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.GlobalSlots = 0
+	config.ExecSlotsAll = 0
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1118,7 +1118,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	txs := types.Transactions{}
 	for _, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		for j := 0; j < int(config.AccountSlots)*2; j++ {
+		for j := 0; j < int(config.ExecSlotsAccount)*2; j++ {
 			txs = append(txs, transaction(nonces[addr], 100000, key))
 			nonces[addr]++
 		}
@@ -1127,8 +1127,8 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	pool.AddRemotes(txs)
 
 	for addr, list := range pool.pending {
-		if list.Len() != int(config.AccountSlots) {
-			t.Errorf("addr %x: total pending transactions mismatch: have %d, want %d", addr, list.Len(), config.AccountSlots)
+		if list.Len() != int(config.ExecSlotsAccount) {
+			t.Errorf("addr %x: total pending transactions mismatch: have %d, want %d", addr, list.Len(), config.ExecSlotsAccount)
 		}
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
@@ -1345,8 +1345,8 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.GlobalSlots = 2
-	config.GlobalQueue = 2
+	config.ExecSlotsAll = 2
+	config.NonExecSlotsAll = 2
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1455,8 +1455,8 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.GlobalSlots = 128
-	config.GlobalQueue = 0
+	config.ExecSlotsAll = 128
+	config.NonExecSlotsAll = 0
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1474,19 +1474,19 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 	}
 	// Fill up the entire queue with the same transaction price points
 	txs := types.Transactions{}
-	for i := uint64(0); i < config.GlobalSlots; i++ {
+	for i := uint64(0); i < config.ExecSlotsAll; i++ {
 		txs = append(txs, pricedTransaction(i, 100000, big.NewInt(1), keys[0]))
 	}
 	pool.AddRemotes(txs)
 
 	pending, queued := pool.Stats()
-	if pending != int(config.GlobalSlots) {
-		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, config.GlobalSlots)
+	if pending != int(config.ExecSlotsAll) {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, config.ExecSlotsAll)
 	}
 	if queued != 0 {
 		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)
 	}
-	if err := validateEvents(events, int(config.GlobalSlots)); err != nil {
+	if err := validateEvents(events, int(config.ExecSlotsAll)); err != nil {
 		t.Fatalf("original event firing failed: %v", err)
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
@@ -1497,8 +1497,8 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 		t.Fatalf("failed to add well priced transaction: %v", err)
 	}
 	pending, queued = pool.Stats()
-	if pending != int(config.GlobalSlots) {
-		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, config.GlobalSlots)
+	if pending != int(config.ExecSlotsAll) {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, config.ExecSlotsAll)
 	}
 	if queued != 0 {
 		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)

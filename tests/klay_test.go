@@ -467,10 +467,10 @@ func BenchmarkValueTransfer(t *testing.B) {
 	// make txpool
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.AccountSlots = uint64(t.N)
-	txpoolconfig.AccountQueue = uint64(t.N)
-	txpoolconfig.GlobalSlots = 2 * uint64(t.N)
-	txpoolconfig.GlobalQueue = 2 * uint64(t.N)
+	txpoolconfig.ExecSlotsAccount = uint64(t.N)
+	txpoolconfig.NonExecSlotsAccount = uint64(t.N)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(t.N)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(t.N)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
@@ -529,10 +529,10 @@ func BenchmarkNewValueTransfer(t *testing.B) {
 	// make txpool
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.AccountSlots = uint64(t.N)
-	txpoolconfig.AccountQueue = uint64(t.N)
-	txpoolconfig.GlobalSlots = 2 * uint64(t.N)
-	txpoolconfig.GlobalQueue = 2 * uint64(t.N)
+	txpoolconfig.ExecSlotsAccount = uint64(t.N)
+	txpoolconfig.NonExecSlotsAccount = uint64(t.N)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(t.N)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(t.N)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 

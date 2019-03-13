@@ -60,10 +60,10 @@ func TestTxCancel(t *testing.T) {
 	poolSlots := 1000
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.AccountSlots = uint64(poolSlots)
-	txpoolconfig.AccountQueue = uint64(poolSlots)
-	txpoolconfig.GlobalSlots = 2 * uint64(poolSlots)
-	txpoolconfig.GlobalQueue = 2 * uint64(poolSlots)
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
@@ -220,10 +220,10 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 	poolSlots := 1000
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.AccountSlots = uint64(poolSlots)
-	txpoolconfig.AccountQueue = uint64(poolSlots)
-	txpoolconfig.GlobalSlots = 2 * uint64(poolSlots)
-	txpoolconfig.GlobalQueue = 2 * uint64(poolSlots)
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
@@ -388,10 +388,10 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 	poolSlots := 1000
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.AccountSlots = uint64(poolSlots)
-	txpoolconfig.AccountQueue = uint64(poolSlots)
-	txpoolconfig.GlobalSlots = 2 * uint64(poolSlots)
-	txpoolconfig.GlobalQueue = 2 * uint64(poolSlots)
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 

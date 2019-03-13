@@ -106,10 +106,10 @@ func TestAccountCreationFailTxPool(t *testing.T) {
 	poolSlots := 1000
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.AccountSlots = uint64(poolSlots)
-	txpoolconfig.AccountQueue = uint64(poolSlots)
-	txpoolconfig.GlobalSlots = 2 * uint64(poolSlots)
-	txpoolconfig.GlobalQueue = 2 * uint64(poolSlots)
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// 2. Add the same creation tx into the txpool. In this case, it should fail.
@@ -247,10 +247,10 @@ func TestSmartContractCreationFailTxPool(t *testing.T) {
 	poolSlots := 1000
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.AccountSlots = uint64(poolSlots)
-	txpoolconfig.AccountQueue = uint64(poolSlots)
-	txpoolconfig.GlobalSlots = 2 * uint64(poolSlots)
-	txpoolconfig.GlobalQueue = 2 * uint64(poolSlots)
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// 3. Add the same deploy tx into the txpool. In this case, this should fail.

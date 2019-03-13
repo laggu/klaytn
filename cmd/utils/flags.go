@@ -186,25 +186,25 @@ var (
 		Usage: "Price bump percentage to replace an already existing transaction",
 		Value: cn.DefaultConfig.TxPool.PriceBump,
 	}
-	TxPoolAccountSlotsFlag = cli.Uint64Flag{
-		Name:  "txpool.accountslots",
-		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: cn.DefaultConfig.TxPool.AccountSlots,
+	TxPoolExecSlotsAccountFlag = cli.Uint64Flag{
+		Name:  "txpool.exec-slots.account",
+		Usage: "Number of executable transaction slots guaranteed per account",
+		Value: cn.DefaultConfig.TxPool.ExecSlotsAccount,
 	}
-	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
-		Name:  "txpool.globalslots",
+	TxPoolExecSlotsAllFlag = cli.Uint64Flag{
+		Name:  "txpool.exec-slots.all",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: cn.DefaultConfig.TxPool.GlobalSlots,
+		Value: cn.DefaultConfig.TxPool.ExecSlotsAll,
 	}
-	TxPoolAccountQueueFlag = cli.Uint64Flag{
-		Name:  "txpool.accountqueue",
+	TxPoolNonExecSlotsAccountFlag = cli.Uint64Flag{
+		Name:  "txpool.nonexec-slots.account",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: cn.DefaultConfig.TxPool.AccountQueue,
+		Value: cn.DefaultConfig.TxPool.NonExecSlotsAccount,
 	}
-	TxPoolGlobalQueueFlag = cli.Uint64Flag{
-		Name:  "txpool.globalqueue",
+	TxPoolNonExecSlotsAllFlag = cli.Uint64Flag{
+		Name:  "txpool.nonexec-slots.all",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: cn.DefaultConfig.TxPool.GlobalQueue,
+		Value: cn.DefaultConfig.TxPool.NonExecSlotsAll,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
@@ -1012,17 +1012,17 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolPriceBumpFlag.Name) {
 		cfg.PriceBump = ctx.GlobalUint64(TxPoolPriceBumpFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolAccountSlotsFlag.Name) {
-		cfg.AccountSlots = ctx.GlobalUint64(TxPoolAccountSlotsFlag.Name)
+	if ctx.GlobalIsSet(TxPoolExecSlotsAccountFlag.Name) {
+		cfg.ExecSlotsAccount = ctx.GlobalUint64(TxPoolExecSlotsAccountFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolGlobalSlotsFlag.Name) {
-		cfg.GlobalSlots = ctx.GlobalUint64(TxPoolGlobalSlotsFlag.Name)
+	if ctx.GlobalIsSet(TxPoolExecSlotsAllFlag.Name) {
+		cfg.ExecSlotsAll = ctx.GlobalUint64(TxPoolExecSlotsAllFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolAccountQueueFlag.Name) {
-		cfg.AccountQueue = ctx.GlobalUint64(TxPoolAccountQueueFlag.Name)
+	if ctx.GlobalIsSet(TxPoolNonExecSlotsAccountFlag.Name) {
+		cfg.NonExecSlotsAccount = ctx.GlobalUint64(TxPoolNonExecSlotsAccountFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolGlobalQueueFlag.Name) {
-		cfg.GlobalQueue = ctx.GlobalUint64(TxPoolGlobalQueueFlag.Name)
+	if ctx.GlobalIsSet(TxPoolNonExecSlotsAllFlag.Name) {
+		cfg.NonExecSlotsAll = ctx.GlobalUint64(TxPoolNonExecSlotsAllFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)

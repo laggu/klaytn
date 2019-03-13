@@ -97,10 +97,10 @@ type TxPoolConfig struct {
 	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
 	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
 
-	AccountSlots uint64 // Minimum number of executable transaction slots guaranteed per account
-	GlobalSlots  uint64 // Maximum number of executable transaction slots for all accounts
-	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
-	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
+	ExecSlotsAccount    uint64 // Number of executable transaction slots guaranteed per account
+	ExecSlotsAll        uint64 // Maximum number of executable transaction slots for all accounts
+	NonExecSlotsAccount uint64 // Maximum number of non-executable transaction slots permitted per account
+	NonExecSlotsAll     uint64 // Maximum number of non-executable transaction slots for all accounts
 
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
 }
@@ -114,10 +114,10 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	PriceLimit: 1,
 	PriceBump:  10,
 
-	AccountSlots: 16,
-	GlobalSlots:  4096,
-	AccountQueue: 64,
-	GlobalQueue:  1024,
+	ExecSlotsAccount:    16,
+	ExecSlotsAll:        4096,
+	NonExecSlotsAccount: 64,
+	NonExecSlotsAll:     1024,
 
 	Lifetime: 3 * time.Hour,
 }
@@ -683,7 +683,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
 	// (3) discard a new Tx if the new Tx does not have a missing nonce
 	// (4) discard underpriced transactions
-	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
+	if uint64(len(pool.all)) >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		// (1) discard a new Tx if there is no room for the account of the Tx
 		from, _ := types.Sender(pool.signer, tx)
 		if pool.queue[from] == nil {
@@ -714,7 +714,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		}
 		// TODO-Klaytn-Issue136 gasPrice
 		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(len(pool.all)-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1), pool.locals)
+		drop := pool.priced.Discard(len(pool.all)-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll-1), pool.locals)
 		for _, tx := range drop {
 			logger.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
@@ -1049,7 +1049,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 		// Drop all transactions over the allowed limit
 		if !pool.locals.contains(addr) {
-			for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
+			for _, tx := range list.Cap(int(pool.config.NonExecSlotsAccount)) {
 				hash := tx.Hash()
 				delete(pool.all, hash)
 				pool.priced.Removed()
@@ -1072,19 +1072,19 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		pending += uint64(list.Len())
 	}
 
-	if pending > pool.config.GlobalSlots {
+	if pending > pool.config.ExecSlotsAll {
 		pendingBeforeCap := pending
 		// Assemble a spam order to penalize large transactors first
 		spammers := prque.New()
 		for addr, list := range pool.pending {
 			// Only evict transactions from high rollers
-			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.AccountSlots {
+			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.ExecSlotsAccount {
 				spammers.Push(addr, float32(list.Len()))
 			}
 		}
 		// Gradually drop transactions from offenders
 		offenders := []common.Address{}
-		for pending > pool.config.GlobalSlots && !spammers.Empty() {
+		for pending > pool.config.ExecSlotsAll && !spammers.Empty() {
 			// Retrieve the next offender if not local address
 			offender, _ := spammers.Pop()
 			offenders = append(offenders, offender.(common.Address))
@@ -1095,7 +1095,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				threshold := pool.pending[offender.(common.Address)].Len()
 
 				// Iteratively reduce all offenders until below limit or threshold reached
-				for pending > pool.config.GlobalSlots && pool.pending[offenders[len(offenders)-2]].Len() > threshold {
+				for pending > pool.config.ExecSlotsAll && pool.pending[offenders[len(offenders)-2]].Len() > threshold {
 					for i := 0; i < len(offenders)-1; i++ {
 						list := pool.pending[offenders[i]]
 						for _, tx := range list.Cap(list.Len() - 1) {
@@ -1116,8 +1116,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			}
 		}
 		// If still above threshold, reduce to limit or min allowance
-		if pending > pool.config.GlobalSlots && len(offenders) > 0 {
-			for pending > pool.config.GlobalSlots && uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.AccountSlots {
+		if pending > pool.config.ExecSlotsAll && len(offenders) > 0 {
+			for pending > pool.config.ExecSlotsAll && uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.ExecSlotsAccount {
 				for _, addr := range offenders {
 					list := pool.pending[addr]
 					for _, tx := range list.Cap(list.Len() - 1) {
@@ -1144,7 +1144,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		queued += uint64(list.Len())
 	}
 
-	if queued > pool.config.GlobalQueue {
+	if queued > pool.config.NonExecSlotsAll {
 		// Sort all accounts with queued transactions by heartbeat
 		addresses := make(addresssByHeartbeat, 0, len(pool.queue))
 		for addr := range pool.queue {
@@ -1155,7 +1155,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		sort.Sort(addresses)
 
 		// Drop transactions until the total is below the limit or only locals remain
-		for drop := queued - pool.config.GlobalQueue; drop > 0 && len(addresses) > 0; {
+		for drop := queued - pool.config.NonExecSlotsAll; drop > 0 && len(addresses) > 0; {
 			addr := addresses[len(addresses)-1]
 			list := pool.queue[addr.address]
 
