@@ -181,18 +181,18 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 	return header, nil
 }
 
-func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler) (*types.Block, error) {
+func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler) (*types.Block, types.Receipts, error) {
 	// Set the block header
 	start := time.Now()
 	header, err := bcdata.prepareHeader()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	prof.Profile("mine_prepareHeader", time.Now().Sub(start))
 
 	statedb, err := bcdata.bc.State()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Group transactions by the sender address
@@ -201,7 +201,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	for _, tx := range transactions {
 		acc, err := types.Sender(signer, tx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		txs[acc] = append(txs[acc], tx)
 	}
@@ -226,7 +226,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	start = time.Now()
 	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, []*types.Header{}, receipts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	prof.Profile("mine_finalize_block", time.Now().Sub(start))
 
@@ -235,11 +235,11 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	start = time.Now()
 	b, err = sealBlock(b, bcdata.validatorPrivKeys)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	prof.Profile("mine_seal_block", time.Now().Sub(start))
 
-	return b, nil
+	return b, receipts, nil
 }
 
 func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
@@ -358,7 +358,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Mine a block!
 	start = time.Now()
-	b, err := bcdata.MineABlock(transactions, signer, prof)
+	b, _, err := bcdata.MineABlock(transactions, signer, prof)
 	if err != nil {
 		return err
 	}
