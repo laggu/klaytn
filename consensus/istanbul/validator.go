@@ -22,7 +22,6 @@ package istanbul
 
 import (
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/contracts/reward"
 	"strings"
 )
 
@@ -92,10 +91,8 @@ type ValidatorSet interface {
 
 	IsSubSet() bool
 
-	// TODO-Klaytn-Issue1166 V3: Refresh updates Council using staking information
-	Refresh(prevHash common.Hash) error
-
-	SetStakingInfo(stakingInfo *reward.StakingInfo) error
+	// Refreshes a list of candidate proposers with given hash and blockNum
+	Refresh(hash common.Hash, blockNum uint64) error
 
 	SetBlockNum(blockNum uint64)
 

@@ -127,7 +127,7 @@ func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 	validators := makeTestValidators(testZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testZeroWeights)
-	valSet.Refresh(testPrevHash)
+	valSet.Refresh(testPrevHash, 1)
 
 	// Run tests
 
@@ -168,7 +168,7 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	valSet.Refresh(testPrevHash)
+	valSet.Refresh(testPrevHash, 1)
 
 	// Run tests
 

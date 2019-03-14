@@ -496,29 +496,39 @@ func (valSet *weightedCouncil) F() int {
 
 func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
+func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error {
+	valSet.validatorMu.Lock()
+	defer valSet.validatorMu.Unlock()
+
+	if valSet.proposersBlockNum == blockNum {
+		// already refreshed
+		logger.Trace("Refresh() do nothing, already refreshed.", "blockNum", blockNum, "proposers", valSet.proposers)
+		return nil
+	}
+
 	// TODO-Klaytn-Issue1166 Disable trace logs below after all implementation is merged.
-	if valSet.Size() == 0 {
+	if len(valSet.validators) == 0 {
 		return errors.New("No validator")
 	}
 
-	hashString := strings.TrimPrefix(prevHash.Hex(), "0x")
+	hashString := strings.TrimPrefix(hash.Hex(), "0x")
 	if len(hashString) > 15 {
 		hashString = hashString[:15]
 	}
 	seed, err := strconv.ParseInt(hashString, 16, 64)
 	if err != nil {
-		logger.Trace("Parsing error", "prevHash", prevHash, "hashString", hashString, "seed", seed, "err", err)
 		return err
 	}
 
+	valSet.updateStakingInfo(blockNum)
+
 	// TODO-Klaytn-Issue1166 Update weightedValidator information with staking info if available
 	if valSet.stakingInfo != nil {
-		logger.Info("Refresh() - Let's use staking info", "stakingInfo", valSet.stakingInfo)
+		logger.Info("Refresh with staking info", "stakingInfo", valSet.stakingInfo)
 		// (1) Update rewardAddress
 		// (2) Calculate total staking amount
 		totalStaking := big.NewInt(0)
-		for valIdx, val := range valSet.List() {
+		for valIdx, val := range valSet.validators {
 			i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
 			if i != -1 {
 				val.(*weightedValidator).rewardAddress = valSet.stakingInfo.CouncilRewardAddrs[i]
@@ -534,30 +544,30 @@ func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
 			// update weight
 			tmp := big.NewInt(0)
 			tmp100 := big.NewInt(100)
-			for _, val := range valSet.List() {
+			for _, val := range valSet.validators {
 				i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
 				if i != -1 {
 					stakingAmount := valSet.stakingInfo.CouncilStakingAmounts[i]
 					weight := int(tmp.Div(tmp.Mul(stakingAmount, tmp100), totalStaking).Int64()) // No overflow occurs here.
 					val.(*weightedValidator).weight = weight
-					logger.Trace("Refresh() Update weight", "validator", val.(*weightedValidator), "weight", weight)
+					logger.Trace("Refresh updates weight of validator", "validator", val.(*weightedValidator), "weight", weight)
 				} else {
 					val.(*weightedValidator).weight = 0
-					logger.Trace("Refresh() Set weight to 0, because of no staking info.", "validator", val.(*weightedValidator))
+					logger.Trace("Refresh updates weight to 0, due to staking info.", "validator", val.(*weightedValidator))
 				}
 			}
 		} else {
-			for i, val := range valSet.List() {
+			for i, val := range valSet.validators {
 				val.(*weightedValidator).weight = 0
 				logger.Trace("Refresh() Set weight to 0, because total staking value is 0.", "i", i, "validator", val.(*weightedValidator))
 			}
 		}
 	} else {
-		logger.Info("Issue1166-V3: Refresh() - No staking info", "stakingInfo", valSet.stakingInfo)
+		logger.Info("Refresh without staking info", "stakingInfo", valSet.stakingInfo)
 	}
 
 	candidateVals := []istanbul.Validator{}
-	for _, val := range valSet.List() {
+	for _, val := range valSet.validators {
 		weight := val.Weight()
 		for i := 0; i < weight; i++ {
 			candidateVals = append(candidateVals, val)
@@ -565,11 +575,9 @@ func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
 	}
 
 	if len(candidateVals) == 0 {
-		// No validator with weight found. Let's use all validators
-		candidateVals = valSet.List()
-		logger.Trace("Refresh() Use all validators, because there is no weight information", "candidateVals", candidateVals)
-	} else {
-		logger.Trace("Refresh() Candidate validators chosen with weights", "candidateVals", candidateVals)
+		// All validators has zero weight. Let's use all validators as candidate proposers.
+		candidateVals = valSet.validators
+		logger.Trace("Refresh uses all validators as candidate proposers, because all weight is zero.", "candidateVals", candidateVals)
 	}
 
 	proposers := make([]istanbul.Validator, len(candidateVals))
@@ -592,20 +600,18 @@ func (valSet *weightedCouncil) Refresh(prevHash common.Hash) error {
 
 	for i := 0; i < limit; i++ {
 		proposers[i] = candidateVals[indexs[i]]
-		logger.Trace("Refresh() Calculated new proposers", "i", i, "proposers[i]", proposers[i].String())
+		// Below log is too verbose. Use is only when debugging.
+		// logger.Trace("Refresh calculates new proposers", "i", i, "proposers[i]", proposers[i].String())
 	}
 
 	valSet.proposers = proposers
+	valSet.proposersBlockNum = blockNum
 
-	logger.Info("Refresh done.", "valSet", valSet, "new proposers", valSet.proposers)
+	logger.Info("Refresh done.", "blockNum", blockNum, "valSet", valSet, "new proposers", valSet.proposers)
 
 	return nil
 }
 
-func (valSet *weightedCouncil) SetStakingInfo(stakingInfo *reward.StakingInfo) error {
-	valSet.stakingInfo = stakingInfo
-	return nil
-}
 func (valSet *weightedCouncil) SetBlockNum(blockNum uint64) {
 	valSet.blockNum = blockNum
 }
@@ -620,4 +626,15 @@ func (valSet *weightedCouncil) TotalVotingPower() uint64 {
 		sum += v.VotingPower()
 	}
 	return sum
+}
+
+func (valSet *weightedCouncil) updateStakingInfo(blockNum uint64) {
+	// Let's use staking information in staking cache
+	stakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
+	if stakingInfo != nil {
+		logger.Trace("snapshot() Found staking info.", "blockNum", blockNum, "stakingInfo", stakingInfo)
+	} else {
+		logger.Trace("snapshot() Can't find staking info.", "blockNum", blockNum, "stakingInfo", stakingInfo)
+	}
+	valSet.stakingInfo = stakingInfo
 }

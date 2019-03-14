@@ -695,18 +695,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 
 	if params.IsProposerUpdateInterval(snap.Number) {
 		if sb.config.ProposerPolicy == istanbul.WeightedRandom {
-			// Let's use staking information in staking cache
-			blockNum := snap.Number
-			stakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
-			if stakingInfo != nil {
-				logger.Trace("snapshot() Found staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
-			} else {
-				logger.Trace("snapshot() Can't find staking info.", "seq(blockNum)", blockNum, "stakingInfo", stakingInfo)
-			}
-			snap.ValSet.SetStakingInfo(stakingInfo)
-
 			// Refresh proposers
-			if err = snap.ValSet.Refresh(hash); err != nil {
+			if err = snap.ValSet.Refresh(hash, snap.Number); err != nil {
 				// There are two error cases, i.e. (1) No validator at all and (2) Invalid formatted hash
 				logger.CritWithStack("Error when refreshing proposers", "number", snap.Number, "hash", snap.Hash, "err", err)
 			}
