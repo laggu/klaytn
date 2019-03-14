@@ -350,7 +350,7 @@ func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceCo
 		governance.Reward.UseGiniCoeff = vote.Value.(bool)
 		return true
 	default:
-		logger.Error("Unknown vote key was given", "key", vote.Key)
+		logger.Warn("Unknown vote key was given", "key", vote.Key)
 	}
 	return false
 }

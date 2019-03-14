@@ -44,29 +44,31 @@ web3._extend({
 			call: 'governance_vote',
 			params: 2
 		}),
-		new web3._extend.Method({
+	],
+	properties: [
+		new web3._extend.Property({
 			name: 'showTally',
-			call: 'governance_showTally',
+			getter: 'governance_showTally',
 		}),
-		new web3._extend.Method({
+		new web3._extend.Property({
 			name: 'totalVotingPower',
-			call: 'governance_totalVotingPower',
+			getter: 'governance_totalVotingPower',
 		}),
-		new web3._extend.Method({
+		new web3._extend.Property({
 			name: 'myVotes',
-			call: 'governance_myVotes',
+			getter: 'governance_myVotes',
 		}),
-		new web3._extend.Method({
+		new web3._extend.Property({
 			name: 'myVotingPower',
-			call: 'governance_myVotingPower',
+			getter: 'governance_myVotingPower',
 		}),
-		new web3._extend.Method({
-			name: 'getChainConfig',
-			call: 'governance_getChainConfig',
+		new web3._extend.Property({
+			name: 'chainConfig',
+			getter: 'governance_getChainConfig',
 		}),	
-		new web3._extend.Method({
-			name: 'getNodeAddress',
-			call: 'governance_getNodeAddress',
+		new web3._extend.Property({
+			name: 'nodeAddress',
+			getter: 'governance_getNodeAddress',
 		}),	
 	]
 });
