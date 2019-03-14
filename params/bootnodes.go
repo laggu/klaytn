@@ -51,10 +51,10 @@ var BaobabBootnodes = map[int]bootnodesByTypes{
 		},
 	},
 	ENDPOINTNODE: {
-		// EN (formerly known as RN) bootnodes
+		// EN bootnodes
 		[]string{
-			"kni://0971511b988b840a9921e24a6da5cc3cc82111c0459bc85bf993fd20b418c0f19ac9ae07abcb1f26d04d15ed186c643acf1991f36a57b386ab20e3f8d4cfc3ba@boot.baobab.kr.klaytn.net:32323?discport=32323", // Imaginary (KR) bootnode for EN
-			"kni://76251a528cc8d0fea5ec7db67bb5b4e3c3056c82c9b9543b0389e5cc207fb0a4fb8d7b9b165b914b62cf7ad8fde05e6198192b514444014debd47c316e725c15@boot.baobab.jp.klaytn.net:32323?discport=32323", // Imaginary (JP) bootnode for EN
+			"kni://559df4b2fa31c1650d7b0343156c726026613f79966e6af5c9c3c0fd65fc652827f6bf03a690de99a2d82b1acce64fbcc7b1471ee3d994d987a538c1907dec96@13.209.140.55:32323?discport=32323",
+			"kni://5bcd28169dc7444e22c6aa7cf428086e77689aea5fc820e3c973167d4131d6a9efc6a38a93e75a887ac99734c440d3c3c90215ce1b349bd64ed11ee18e4dc265@52.78.141.146:32323?discport=32323",
 		},
 	},
 	PROXYNODE: {
