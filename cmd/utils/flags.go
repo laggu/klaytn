@@ -904,13 +904,21 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NoDiscovery = true
 	}
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
-	if ctx.GlobalIsSet(EnableSBNFlag.Name) {
-		if !ctx.GlobalIsSet(BaobabFlag.Name) && !(ctx.GlobalIsSet(SBNAddrFlag.Name) && ctx.GlobalIsSet(SBNPortFlag.Name)) {
-			Fatalf("SBN host and port number are not specified")
+	if ctx.GlobalIsSet(BaobabFlag.Name) {
+		cfg.EnableSBN = true
+		cfg.SBNHost = ctx.GlobalString(SBNAddrFlag.Name)
+		cfg.SBNPort = ctx.GlobalInt(SBNPortFlag.Name)
+		logger.Info("SBN is enabled.")
+	} else if ctx.GlobalIsSet(EnableSBNFlag.Name) {
+		if !(ctx.GlobalIsSet(SBNAddrFlag.Name) && ctx.GlobalIsSet(SBNPortFlag.Name)) {
+			Fatalf("All the flags --enableSBN, --sbnaddr, and --sbnport must be specified to turn on SBN.")
 		}
 		cfg.EnableSBN = true
 		cfg.SBNHost = ctx.GlobalString(SBNAddrFlag.Name)
 		cfg.SBNPort = ctx.GlobalInt(SBNPortFlag.Name)
+		logger.Info("SBN is enabled.")
+	} else {
+		logger.Info("SBN is disabled.")
 	}
 
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
