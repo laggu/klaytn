@@ -329,10 +329,3 @@ type GovernanceCacheKey string
 func (g GovernanceCacheKey) getShardIndex(shardMask int) int {
 	return 0
 }
-
-type StakingCacheKey uint64
-
-func (s StakingCacheKey) getShardIndex(shardMask int) int {
-	// StakingCache use a lruCache not lruShardCache.
-	return 0
-}

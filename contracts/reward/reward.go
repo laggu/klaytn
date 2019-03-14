@@ -22,6 +22,7 @@ package reward
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/blockchain"
@@ -35,6 +36,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var logger = log.NewModuleLogger(log.Reward)
@@ -220,11 +222,65 @@ var blockRewardCache *blockRewardParameters
 // StakingCache
 const (
 	// TODO-Klaytn-Issue1166 Decide size of cache
-	maxStakingCache   = 3
+	maxStakingCache   = 3 // TODO-Klaytn If you increase this value, please also improve add operation of stakingInfoCache
 	chainHeadChanSize = 10
 )
 
-var StakingCache common.Cache // TODO-Klaytn-Issue1166 Cache for staking information of Council
+type stakingInfoCache struct {
+	cells       map[uint64]*StakingInfo
+	minBlockNum uint64
+	lock        sync.RWMutex
+}
+
+var stakingCache *stakingInfoCache
+
+func (sc *stakingInfoCache) get(blockNum uint64) *StakingInfo {
+	sc.lock.RLock()
+	defer sc.lock.RUnlock()
+
+	if s, ok := sc.cells[blockNum]; ok {
+		return s
+	}
+	return nil
+}
+
+func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) error {
+	sc.lock.Lock()
+	defer sc.lock.Unlock()
+
+	if _, ok := sc.cells[stakingInfo.BlockNum]; ok {
+		return errors.New(fmt.Sprintf("duplicated staking info of block number %d", stakingInfo.BlockNum))
+	}
+
+	if len(sc.cells) < maxStakingCache {
+		// empty room available
+		sc.cells[stakingInfo.BlockNum] = stakingInfo
+		if stakingInfo.BlockNum < sc.minBlockNum || len(sc.cells) == 1 {
+			// new minBlockNum or newly inserted one is the first element
+			sc.minBlockNum = stakingCache.minBlockNum
+		}
+		return nil
+	}
+
+	if stakingInfo.BlockNum < sc.minBlockNum {
+		return errors.New(fmt.Sprintf("no room for staking info of block number %d", stakingInfo.BlockNum))
+	}
+
+	// evict one and insert new one
+	delete(sc.cells, sc.minBlockNum)
+
+	// update minBlockNum
+	min := sc.minBlockNum
+	for _, s := range sc.cells {
+		if s.BlockNum < min {
+			min = s.BlockNum
+		}
+	}
+	sc.minBlockNum = min
+	sc.cells[stakingInfo.BlockNum] = stakingInfo
+
+	return nil
+}
 
 var chainHeadCh chan blockchain.ChainHeadEvent
 var chainHeadSub event.Subscription
@@ -254,7 +310,8 @@ func Subscribe(bc *blockchain.BlockChain) {
 }
 
 func initStakingCache() {
-	StakingCache = common.NewCache(common.LRUConfig{CacheSize: maxStakingCache})
+	stakingCache = new(stakingInfoCache)
+	stakingCache.cells = make(map[uint64]*StakingInfo)
 	chainHeadCh = make(chan blockchain.ChainHeadEvent, chainHeadChanSize)
 }
 
@@ -284,25 +341,19 @@ func waitHeadChain() {
 // GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
 func GetStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
 	number := params.CalcStakingBlockNumber(blockNum)
-	stakingCacheKey := common.StakingCacheKey(number)
-	value, ok := StakingCache.Get(stakingCacheKey)
-	if !ok {
-		logger.Error("Staking cache missed", "Block number", blockNum, "cache key", stakingCacheKey)
-		return nil
-	}
 
-	stakingInfo, ok := value.(*StakingInfo)
-	if !ok {
-		logger.Error("Found staking information is invalid", "Block number", blockNum, "cache key", stakingCacheKey)
+	stakingInfo := stakingCache.get(number)
+	if stakingInfo == nil {
+		logger.Error("Staking cache missed", "Block number", blockNum, "number of staking block", number)
 		return nil
 	}
 
 	if stakingInfo.BlockNum != number {
-		logger.Error("Staking cache hit. But staking information not found", "Block number", blockNum, "cache key", stakingCacheKey)
+		logger.Error("Staking cache hit. But staking information not found", "Block number", blockNum, "number of staking block", number)
 		return nil
 	}
 
-	logger.Debug("Staking cache hit.", "Block number", blockNum, "stakingInfo", stakingInfo, "cache key", stakingCacheKey)
+	logger.Debug("Staking cache hit.", "Block number", blockNum, "stakingInfo", stakingInfo, "number of staking block", number)
 	return stakingInfo
 }
 
@@ -374,18 +425,24 @@ func ParseGetAllAddressInfo(result []byte) ([]common.Address, []common.Address, 
 
 // updateStakingCache updates staking cache with staking information of given block number.
 func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) error {
-
 	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
+
+	if stakingCache.get(blockNum) != nil {
+		// already updated
+		logger.Trace("No need to update staking cache. Already updated.", "blockNum", blockNum)
+		return nil
+	}
 
 	stakingInfo, err := getInitContractInfo(bc, blockNum)
 	if err != nil {
-		logger.Trace("Failed to get staking info", "blockNum", blockNum, "err", err)
 		return err
 	}
 
-	stakingCacheKey := common.StakingCacheKey(blockNum)
-	evicted := StakingCache.Add(stakingCacheKey, stakingInfo)
-	logger.Trace("updateStakingCache() -  add new staking info", "stakingInfo", stakingInfo, "evicted", evicted)
+	if err := stakingCache.add(stakingInfo); err != nil {
+		return err
+	}
+
+	logger.Trace("added new staking info", "stakingInfo", stakingInfo)
 
 	return nil
 }
@@ -647,7 +704,7 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 
 	if !params.IsStakingUpdatePossible(blockNum) {
 		logger.Trace("Invalid block number.", "blockNum", blockNum)
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("not staking block number %d", blockNum))
 	}
 
 	// Prepare a message
