@@ -2746,31 +2746,26 @@ func TestMultisigScenario(t *testing.T) {
 	}
 
 	// 4. FAILED-CASE: Transfer (multisig -> reservoir) using TxTypeValueTransfer with only one key.
-	//{
-	// var txs types.Transactions
-	//
-	// amount := new(big.Int).SetUint64(1000)
-	// values := map[types.TxValueKeyType]interface{}{
-	//   types.TxValueKeyNonce:    multisig.Nonce,
-	//   types.TxValueKeyFrom:     multisig.Addr,
-	//   types.TxValueKeyTo:       reservoir.Addr,
-	//   types.TxValueKeyAmount:   amount,
-	//   types.TxValueKeyGasLimit: gasLimit,
-	//   types.TxValueKeyGasPrice: gasPrice,
-	// }
-	// tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-	// assert.Equal(t, nil, err)
-	//
-	// err = tx.SignWithKeys(signer, multisig.Keys[:1])
-	// assert.Equal(t, nil, err)
-	//
-	// txs = append(txs, tx)
-	//
-	// if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-	//   t.Fatal(err)
-	// }
-	// multisig.Nonce += 1
-	//}
+	{
+		amount := new(big.Int).SetUint64(1000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    multisig.Nonce,
+			types.TxValueKeyFrom:     multisig.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, multisig.Keys[:1])
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+	}
 
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
