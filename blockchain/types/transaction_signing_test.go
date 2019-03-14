@@ -196,6 +196,7 @@ func TestValidateTransaction(t *testing.T) {
 		testValidateValueTransfer,
 		testValidateFeeDelegatedValueTransfer,
 		testValidateFeeDelegatedValueTransferWithRatio,
+		testValidateValueTransferMemo,
 	}
 
 	for _, fn := range testfns {
@@ -431,6 +432,56 @@ func testValidateFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
+}
+
+func testValidateValueTransferMemo(t *testing.T) {
+	// Transaction generation
+	internalTx := genValueTransferMemoTransaction().(*TxInternalDataValueTransferMemo)
+	tx := &Transaction{data: internalTx}
+
+	chainid := big.NewInt(1)
+	signer := NewEIP155Signer(chainid)
+
+	prv, from := defaultTestKey()
+	internalTx.From = from
+
+	// Sign
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from, payload]), chainid, 0, 0 ])
+	b, err := rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.Recipient,
+		internalTx.Amount,
+		internalTx.From,
+		internalTx.Payload,
+	})
+	assert.Equal(t, nil, err)
+
+	h := rlpHash([]interface{}{
+		b,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	assert.Equal(t, nil, err)
+
+	tx.SetSignature(sig)
+
+	// AccountKeyPicker initialization
+	p := &AccountKeyPickerForTest{
+		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
+	}
+	key := accountkey.NewAccountKeyPublicWithValue(&prv.PublicKey)
+	p.SetKey(from, key)
+
+	// Validate
+	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, from, validatedFrom)
 }
 
 func getFunctionName(i interface{}) string {
