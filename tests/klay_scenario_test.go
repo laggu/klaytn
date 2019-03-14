@@ -147,6 +147,168 @@ func createMultisigAccount(threshold uint, weights []uint, prvKeys []string, add
 	}, nil
 }
 
+// TestAccountUpdatedWithExistingKey creates two different accounts which have the same PubKey.
+// A user can sign two different accounts with a private key.
+// Step 1. Create an EOA account
+// Step 2. Create a decoupled EOA account
+// Step 3. Update a pubKey of the decoupled account to the same key with the eoa account
+// Step 4. Sign value transfer transactions of two accounts with the same key
+// Expected result: PASS
+func TestAccountUpdatedWithExistingKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	var txs types.Transactions
+	amount := new(big.Int).SetUint64(100000000000)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// set an eoa account and an decoupled account
+	prvKeyHex := "98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab"
+	key, err := crypto.HexToECDSA(prvKeyHex)
+	assert.Equal(t, nil, err)
+	eoaAddr := crypto.PubkeyToAddress(key.PublicKey)
+	eoa, err := createDecoupledAccount(prvKeyHex, eoaAddr)
+	assert.Equal(t, nil, err)
+
+	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoir Addr = ", reservoir.Addr.String())
+		fmt.Println("EOA decoupled Addr = ", decoupled.Addr.String())
+		fmt.Println("EOA Addr = ", eoa.Addr.String())
+	}
+
+	// Step 1. Create an EOA account
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:         reservoir.Nonce,
+		types.TxValueKeyFrom:          reservoir.Addr,
+		types.TxValueKeyTo:            eoa.Addr,
+		types.TxValueKeyAmount:        amount,
+		types.TxValueKeyGasLimit:      gasLimit,
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyHumanReadable: false,
+		types.TxValueKeyAccountKey:    eoa.AccKey,
+	}
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+	assert.Equal(t, nil, err)
+	err = tx.SignWithKeys(signer, reservoir.Keys)
+	assert.Equal(t, nil, err)
+	txs = append(txs, tx)
+	reservoir.Nonce += 1
+
+	// Step 2. Create a decoupled EOA account
+	values = map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:         reservoir.Nonce,
+		types.TxValueKeyFrom:          reservoir.Addr,
+		types.TxValueKeyTo:            decoupled.Addr,
+		types.TxValueKeyAmount:        amount,
+		types.TxValueKeyGasLimit:      gasLimit,
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyHumanReadable: false,
+		types.TxValueKeyAccountKey:    decoupled.AccKey,
+	}
+	tx, err = types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+	assert.Equal(t, nil, err)
+	err = tx.SignWithKeys(signer, reservoir.Keys)
+	assert.Equal(t, nil, err)
+	txs = append(txs, tx)
+	reservoir.Nonce += 1
+
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// Step 3. Update a pubKey of the decoupled account to the same key with the eoa account
+	txs = txs[:0]
+	values = map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      decoupled.Nonce,
+		types.TxValueKeyFrom:       decoupled.Addr,
+		types.TxValueKeyGasLimit:   gasLimit,
+		types.TxValueKeyGasPrice:   gasPrice,
+		types.TxValueKeyAccountKey: eoa.AccKey,
+	}
+	tx, err = types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+	assert.Equal(t, nil, err)
+	err = tx.SignWithKeys(signer, decoupled.Keys)
+	assert.Equal(t, nil, err)
+	txs = append(txs, tx)
+	decoupled.Nonce += 1
+	decoupled.Keys = eoa.Keys
+	decoupled.AccKey = eoa.AccKey
+
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// Step 4. Deployed transactions signed by two different accounts which have the same key
+	txs = txs[:0]
+	values = map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    eoa.Nonce,
+		types.TxValueKeyFrom:     eoa.Addr,
+		types.TxValueKeyTo:       reservoir.Addr,
+		types.TxValueKeyAmount:   big.NewInt(100000), // smaller than total amount
+		types.TxValueKeyGasLimit: gasLimit,
+		types.TxValueKeyGasPrice: gasPrice,
+	}
+	tx, err = types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+	assert.Equal(t, nil, err)
+	err = tx.SignWithKeys(signer, eoa.Keys)
+	assert.Equal(t, nil, err)
+	txs = append(txs, tx)
+	eoa.Nonce += 1
+
+	values = map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    decoupled.Nonce,
+		types.TxValueKeyFrom:     decoupled.Addr,
+		types.TxValueKeyTo:       reservoir.Addr,
+		types.TxValueKeyAmount:   big.NewInt(100000), // smaller than total amount
+		types.TxValueKeyGasLimit: gasLimit,
+		types.TxValueKeyGasPrice: gasPrice,
+	}
+	tx, err = types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+	assert.Equal(t, nil, err)
+	err = tx.SignWithKeys(signer, eoa.Keys) // eoa.Keys == decoupled.Keys
+	assert.Equal(t, nil, err)
+	txs = append(txs, tx)
+	decoupled.Nonce += 1
+
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
 // Below code failed since it is trying to create an account with a human-readable address "1colin".
 // "1colin" is an invalid human-readable address because it starts with a number "1".
 func TestHumanReadableAddress(t *testing.T) {
