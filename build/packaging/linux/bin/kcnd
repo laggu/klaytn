@@ -38,9 +38,91 @@ start() {
         mkdir -p $RUN_DIR
     fi
 
-    OPTIONS="--networkid $NETWORK_ID --datadir $DATA_DIR --port $PORT --srvtype fasthttp --metrics --prometheus --verbosity 3 \
-    --txpool.globalslots 4096 --txpool.globalqueue 4096 --txpool.accountslots 4096 --txpool.accountqueue 4096 --nodiscover \
-    --syncmode full --mine --maxpeers 5000 --db.leveldb.cache-size 10240"
+    OPTIONS="--mine --nodiscover"
+
+    if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --metrics"
+    fi
+
+    if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --prometheus"
+    fi
+
+    if [[ ! -z $DB_NO_PARALLEL_WRITE ]] && [[ $DB_NO_PARALLEL_WRITE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --db.no-parallel-write"
+    fi
+
+    if [[ ! -z $DB_USE_CACHE ]] && [[ $DB_USE_CACHE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --statedb.use-cache"
+    fi
+
+    if [[ ! -z $MULTICHANNEL ]] && [[ $MULTICHANNEL -eq 1 ]]; then
+        OPTIONS="$OPTIONS --multichannel"
+    fi
+
+    if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --rpc --rpcapi $RPC_API --rpcport $RPC_PORT --rpcaddr $RPC_ADDR --rpccorsdomain $RPC_CORSDOMAIN --rpcvhosts $RPC_VHOSTS"
+    fi
+
+    if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --ws --wsaddr $WS_ADDR --wsport $WS_PORT --wsorigins $WS_ORIGINS"
+    fi
+
+    if [ ! -z $NETWORK_ID ]; then
+        OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+    fi
+
+    if [ ! -z $DATA_DIR ]; then
+        OPTIONS="$OPTIONS --datadir $DATA_DIR"
+    fi
+
+    if [ ! -z $PORT ]; then
+        OPTIONS="$OPTIONS --port $PORT"
+    fi
+
+    if [ ! -z $SERVER_TYPE ]; then
+        OPTIONS="$OPTIONS --srvtype $SERVER_TYPE"
+    fi
+
+    if [ ! -z $VERBOSITY ]; then
+        OPTIONS="$OPTIONS --verbosity $VERBOSITY"
+    fi
+
+    if [ ! -z $TXPOOL_EXEC_SLOTS_ALL ]; then
+        OPTIONS="$OPTIONS --txpool.exec-slots.all $TXPOOL_EXEC_SLOTS_ALL"
+    fi
+
+    if [ ! -z $TXPOOL_NONEXEC_SLOTS_ALL ]; then
+        OPTIONS="$OPTIONS --txpool.nonexec-slots.all $TXPOOL_NONEXEC_SLOTS_ALL"
+    fi
+
+    if [ ! -z $TXPOOL_EXEC_SLOTS_ACCOUNT ]; then
+        OPTIONS="$OPTIONS --txpool.exec-slots.account $TXPOOL_EXEC_SLOTS_ACCOUNT"
+    fi
+
+    if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
+        OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
+    fi
+
+    if [ ! -z $SYNCMODE ]; then
+        OPTIONS="$OPTIONS --syncmode $SYNCMODE"
+    fi
+
+    if [ ! -z $MAXPEERS ]; then
+        OPTIONS="$OPTIONS --maxpeers $MAXPEERS"
+    fi
+
+    if [ ! -z $LDBCACHESIZE ]; then
+        OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
+    fi
+
+    if [[ ! -z $ADDTIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+        OPTIONS="$OPTIONS $ADDTIONAL"
+    fi
+
+    if [[ ! -z $REWARDBASE ]] && [[ $REWARDBASE != "" ]]; then
+        OPTIONS="$OPTIONS --rewardbase $REWARDBASE"
+    fi
 
     set -f
     $BIN/kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &

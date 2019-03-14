@@ -1,10 +1,54 @@
 REM Configuration file for the ken
 
-set NETWORK_ID=1000
+set NETWORK_ID=1001
 
-set RPC_PORT=8551
-set WS_PORT=8552
 set PORT=32323
+
+set SERVER_TYPE="fasthttp"
+set SYNCMODE="full"
+set VERBOSITY=3
+
+REM txpool options setting
+set TXPOOL_EXEC_SLOTS_ALL=1024
+set TXPOOL_NONEXEC_SLOTS_ALL=1024
+set TXPOOL_EXEC_SLOTS_ACCOUNT=1024
+set TXPOOL_NONEXEC_SLOTS_ACCOUNT=1024
+
+REM rpc options setting
+set RPC_ENABLE=1 &:: if this is set, the following options will be used
+set RPC_API="klay" &:: available apis: admin,debug,klay,miner,net,personal,rpc,txpool,web3
+set RPC_PORT=8551
+set RPC_ADDR="0.0.0.0"
+set RPC_CORSDOMAIN="*"
+set RPC_VHOSTS="*"
+
+REM ws options setting
+set WS_ENABLE=1 &:: if this is set, the following options will be used
+set WS_ADDR="0.0.0.0"
+set WS_PORT=8552
+set WS_ORIGINS="*"
+
+REM service chain options setting
+set SC_ENABLE=1 &:: if this is set, the following options will be used.
+set SC_ADDR=0 &:: user must define this option if service chain is enabled.
+set SC_TX_PERIOD=1
+set SC_TX_LIMIT=100
+set SC_BRIDGE_PORT=50505
+set SC_PARENT_CHAIN_WS="ws://0.0.0.0:8546"
+REM service chain boolean options
+set SC_INDEXING=1
+set SC_BRIDGE=1
+
+REM Setting 1 is to enable options, otherwise disabled.
+set METRICS=1
+set PROMETHEUS=1
+set NO_DISCOVER=1
+set DB_NO_PARALLEL_WRITE=1
+set DB_USE_CACHE=1
+set MULTICHANNEL=1
+
+REM Raw options e.g) "--txpool.nolocals"
+set ADDITIONAL=""
 
 set KLAY_HOME=%homepath%\.ken
 

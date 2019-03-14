@@ -19,10 +19,123 @@ IF DEFINED NOT_INIT (
     GOTO end
 )
 
-set OPTIONS=--networkid %NETWORK_ID% --datadir %DATA_DIR% --port %PORT% --rpc --rpcapi klay --rpcport %RPC_PORT% --rpcaddr 0.0.0.0 ^
---rpccorsdomain * --rpcvhosts * --ws --wsaddr 0.0.0.0 --wsport %WS_PORT% --wsorigins * --srvtype fasthttp --metrics --prometheus ^
---verbosity 3 --txpool.globalslots 1024 --txpool.globalqueue 1024 --txpool.accountslots 1024 --txpool.accountqueue 1024 --nodiscover ^
---syncmode full --mine
+set OPTIONS=--mine
+
+IF DEFINED NETWORK_ID (
+    set OPTIONS=%OPTIONS% --networkid %NETWORK_ID%
+)
+
+IF DEFINED DATA_DIR (
+    set OPTIONS=%OPTIONS% --datadir %DATA_DIR%
+)
+
+IF DEFINED PORT (
+    set OPTIONS=%OPTIONS% --port %PORT%
+)
+
+IF DEFINED SERVER_TYPE (
+    set OPTIONS=%OPTIONS% --srvtype %SERVER_TYPE%
+)
+
+IF DEFINED VERBOSITY (
+    set OPTIONS=%OPTIONS% --verbosity %VERBOSITY%
+)
+
+IF DEFINED TXPOOL_EXEC_SLOTS_ALL (
+    set OPTIONS=%OPTIONS% --txpool.exec-slots.all %TXPOOL_EXEC_SLOTS_ALL%
+)
+
+IF DEFINED TXPOOL_NONEXEC_SLOTS_ALL (
+    set OPTIONS=%OPTIONS% --txpool.nonexec-slots.all %TXPOOL_NONEXEC_SLOTS_ALL%
+)
+
+IF DEFINED TXPOOL_EXEC_SLOTS_ACCOUNT (
+    set OPTIONS=%OPTIONS% --txpool.exec-slots.account %TXPOOL_EXEC_SLOTS_ACCOUNT%
+)
+
+IF DEFINED TXPOOL_NONEXEC_SLOTS_ACCOUNT (
+    set OPTIONS=%OPTIONS% --txpool.nonexec-slots.account %TXPOOL_NONEXEC_SLOTS_ACCOUNT%
+)
+
+IF DEFINED SYNCMODE (
+    set OPTIONS=%OPTIONS% --syncmode %SYNCMODE%
+)
+
+IF DEFINED MAXPEERS (
+    set OPTIONS=%OPTIONS% --maxpeers %MAXPEERS%
+)
+
+IF DEFINED LDBCACHESIZE (
+    set OPTIONS=%OPTIONS% --db.leveldb.cache-size %LDBCACHESIZE%
+)
+
+IF DEFINED RPC_ENABLE (
+    IF %RPC_ENABLE%==1 (
+        set OPTIONS=%OPTIONS% --rpc --rpcapi %RPC_API% --rpcport %RPC_PORT% --rpcaddr %RPC_ADDR% --rpccorsdomain ^
+%RPC_CORSDOMAIN% --rpcvhosts %RPC_VHOSTS%
+    )
+)
+
+IF DEFINED WS_ENABLE (
+    IF %WS_ENABLE%==1 (
+        set OPTIONS=%OPTIONS% --ws --wsaddr %WS_ADDR% --wsport %WS_PORT% --wsorigins %WS_ORIGINS%
+    )
+)
+
+IF DEFINED METRICS (
+    IF %METRICS%==1 (
+        set OPTIONS=%OPTIONS% --metrics
+    )
+)
+
+IF DEFINED PROMETHEUS (
+    IF %PROMETHEUS%==1 (
+        set OPTIONS=%OPTIONS% --prometheus
+    )
+)
+
+IF DEFINED NO_DISCOVER (
+    IF %NO_DISCOVER%==1 (
+        set OPTIONS=%OPTIONS% --nodiscover
+    )
+)
+
+IF DEFINED DB_NO_PARALLEL_WRITE (
+    IF %DB_NO_PARALLEL_WRITE%==1 (
+        set OPTIONS=%OPTIONS% --db.no-parallel-write
+    )
+)
+
+IF DEFINED DB_USE_CACHE (
+    IF %DB_USE_CACHE%==1 (
+        set OPTIONS=%OPTIONS% --statedb.use-cache
+    )
+)
+
+IF DEFINED MULTICHANNEL (
+    IF %MULTICHANNEL%==1 (
+        set OPTIONS=%OPTIONS% --multichannel
+    )
+)
+
+IF DEFINED SC_ENABLE (
+    IF %SC_ENABLE%==1 (
+        set OPTIONS=%OPTIONS% --chainaddr %SC_ADDR% --chaintxperiod %SC_TX_PERIOD% --bridgeport %SC_BRIDGE_PORT% ^
+--parentchainws %SC_PARENT_CHAIN_WS% --chaintxlimit %SC_TX_LIMIT%
+        if %SC_INDEXING%==1 (
+            set OPTIONS=%OPTIONS% --childchainindexing
+        )
+        if %SC_BRIDGE%==1 (
+            set OPTIONS=%OPTIONS% --bridge --mainbridge
+        )
+    )
+)
+
+IF DEFINED ADDITIONAL (
+    IF NOT %ADDITIONAL%=="" (
+        set OPTIONS=%OPTIONS% %ADDITIONAL%
+    )
+)
 
 %HOME%\bin\ken.exe %OPTIONS%
 
