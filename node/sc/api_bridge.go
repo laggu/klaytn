@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/contracts/gateway"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/node"
@@ -108,7 +109,6 @@ func (sbapi *SubBridgeAPI) DeployGateway() ([]common.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	sbapi.sc.AddressManager().AddGateway(localAddr, remoteAddr)
 	return []common.Address{localAddr, remoteAddr}, nil
 }
 
@@ -120,8 +120,21 @@ func (sbapi *SubBridgeAPI) DeployGatewayOnParentChain() (common.Address, error) 
 	return sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.remoteBackend, false)
 }
 
-func (sbapi *SubBridgeAPI) SubscribeEventGateway(address common.Address) error {
-	return sbapi.sc.gatewayMgr.SubscribeEvent(address)
+// TODO-Klaytn needs to make unSubscribe() method and enable user can unSubscribeEvent.
+func (sbapi *SubBridgeAPI) SubscribeEventGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) error {
+	cErr := sbapi.sc.gatewayMgr.SubscribeEvent(cGatewayAddr)
+	if cErr != nil {
+		return cErr
+	}
+
+	pErr := sbapi.sc.gatewayMgr.SubscribeEvent(pGatewayAddr)
+	if pErr != nil {
+		return pErr
+	}
+	// TODO-Klaytn needs to make unSubscribe() method and deal with the exception case.
+
+	sbapi.sc.AddressManager().AddGateway(cGatewayAddr, pGatewayAddr)
+	return nil
 }
 
 func (sbapi *SubBridgeAPI) TxPendingCount() int {
@@ -140,8 +153,21 @@ func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 	return sbapi.sc.GetAnchoringTx()
 }
 
-func (sbapi *SubBridgeAPI) RegisterGateway(gateway1 common.Address, gateway2 common.Address) {
-	sbapi.sc.AddressManager().AddGateway(gateway1, gateway2)
+func (sbapi *SubBridgeAPI) RegisterGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) bool {
+	cGateway, cErr := gateway.NewGateway(cGatewayAddr, sbapi.sc.localBackend)
+	pGateway, pErr := gateway.NewGateway(cGatewayAddr, sbapi.sc.remoteBackend)
+
+	if cErr != nil || pErr != nil {
+		return false
+	}
+
+	sbapi.sc.gatewayMgr.localGateWays[cGatewayAddr] = cGateway
+	sbapi.sc.gatewayMgr.all[cGatewayAddr] = true
+
+	sbapi.sc.gatewayMgr.remoteGateWays[pGatewayAddr] = pGateway
+	sbapi.sc.gatewayMgr.all[pGatewayAddr] = false
+
+	return true
 }
 
 func (sbapi *SubBridgeAPI) UnRegisterGateway(gateway common.Address) {

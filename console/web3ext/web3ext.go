@@ -739,7 +739,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'subscribeGateway',
 			call: 'bridge_subscribeEventGateway',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'anchoring',
