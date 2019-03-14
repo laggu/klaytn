@@ -1075,10 +1075,15 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 	// TODO-Klaytn-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
-	return blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 ||
-		(bc.chainConfig.Governance != nil &&
-			bc.chainConfig.Governance.Istanbul.ProposerPolicy == params.WeightedRandom &&
-			params.IsStakingUpdatePossible(blockNum))
+	if blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 {
+		return true
+	}
+
+	if bc.chainConfig.Governance != nil && bc.chainConfig.Governance.Istanbul != nil {
+		return bc.chainConfig.Governance.Istanbul.ProposerPolicy == params.WeightedRandom &&
+			params.IsStakingUpdatePossible(blockNum)
+	}
+	return false
 }
 
 // isReorganizationRequired returns if reorganization is required or not based on total difficulty.
