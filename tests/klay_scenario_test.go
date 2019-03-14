@@ -21,10 +21,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi"
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
+	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/compiler"
 	"github.com/ground-x/klaytn/common/profile"
@@ -2903,4 +2905,27 @@ func compileSolidity(filename string) (code []string, abiStr []string) {
 	}
 
 	return
+}
+
+func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*types.Receipt, uint64, error) {
+	state, err := bcdata.bc.State()
+	assert.Equal(t, nil, err)
+
+	vmConfig := &vm.Config{
+		JumpTable: vm.ConstantinopleInstructionSet,
+	}
+	parent := bcdata.bc.CurrentBlock()
+	num := parent.Number()
+	author := bcdata.addrs[0]
+	gp := new(blockchain.GasPool).AddGas(parent.GasLimit())
+	header := &types.Header{
+		ParentHash: parent.Hash(),
+		Number:     num.Add(num, common.Big1),
+		GasLimit:   blockchain.CalcGasLimit(parent),
+		Extra:      parent.Extra(),
+		Time:       new(big.Int).Add(parent.Time(), common.Big1),
+		Difficulty: big.NewInt(0),
+	}
+	usedGas := uint64(0)
+	return blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, gp, state, header, tx, &usedGas, vmConfig)
 }
