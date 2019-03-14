@@ -414,6 +414,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 		// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
 
+		pocAddr := common.Address{}
+		kirAddr := common.Address{}
+
 		blockNumber := header.Number.Uint64()
 
 		if len(header.KlaytnExtra) != 0 {
@@ -439,13 +442,19 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 				// Let's use RewardBase
 				rewardAddrs[0] = header.Rewardbase
 				logger.Trace("Finalize() Update rewardAddrs[0] with RewardBase. (bootstrapping phase)", "rewardAddrs[0]", rewardAddrs[0])
+			} else {
+				stakingInfo := reward.GetStakingInfoFromStakingCache(header.Number.Uint64())
+				if stakingInfo != nil {
+					kirAddr = stakingInfo.KIRAddr
+					pocAddr = stakingInfo.PoCAddr
+				}
 			}
 			header.Rewardbase = rewardAddrs[0]
 
 			header.KlaytnExtra = rewardAddrs
 		}
 
-		reward.DistributeBlockReward(state, header, chain.Config())
+		reward.DistributeBlockReward(state, header, pocAddr, kirAddr, chain.Config())
 	} else {
 		reward.MintKLAY(state)
 	}

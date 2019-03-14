@@ -123,18 +123,10 @@ func isEmptyAddress(addr common.Address) bool {
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func DistributeBlockReward(b BalanceAdder, header *types.Header, config *params.ChainConfig) {
+func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, config *params.ChainConfig) {
 
 	for i, addr := range header.KlaytnExtra {
 		logger.Trace("header.KlaytnExtra", "i", i, "header.KlaytnExtra[i]", addr)
-	}
-
-	var kirAddr common.Address
-	var pocAddr common.Address
-	stakingInfo := GetStakingInfoFromStakingCache(header.Number.Uint64())
-	if stakingInfo != nil {
-		kirAddr = stakingInfo.KIRAddr
-		pocAddr = stakingInfo.PoCAddr
 	}
 
 	// Calculate total tx fee

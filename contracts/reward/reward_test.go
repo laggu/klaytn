@@ -75,7 +75,7 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 
 	// chain config
 	config := &params.ChainConfig{Istanbul: governance.GetDefaultIstanbulConfig(), Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
-	DistributeBlockReward(accounts, header, config)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
 
 	balance := accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -99,7 +99,7 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 	config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
 	config.Istanbul = governance.GetDefaultIstanbulConfig()
 
-	DistributeBlockReward(accounts, header, config)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
 
 	balance = accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -127,7 +127,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 
 	config.Governance.Reward.DeferredTxFee = true
 
-	DistributeBlockReward(accounts, header, config)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
 
 	balance := accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -157,7 +157,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 	config.Governance.Reward.DeferredTxFee = true
 	config.Governance.Reward.MintingAmount = params.DefaultMintedKLAY
 
-	DistributeBlockReward(accounts, header, config)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
 
 	balance = accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -191,7 +191,7 @@ func TestBlockRewardWithCustomRewardRatio(t *testing.T) {
 	config.Governance.Reward.MintingAmount = params.DefaultMintedKLAY
 	config.Governance.Reward.Ratio = fmt.Sprintf("%d/%d/%d", params.DefaultCNRewardRatio, params.DefaultKIRRewardRatio, params.DefaultPoCRewardRatio)
 
-	DistributeBlockReward(accounts, header, config)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
 
 	balance := accounts.GetBalance(proposerAddr)
 	if balance == nil {
