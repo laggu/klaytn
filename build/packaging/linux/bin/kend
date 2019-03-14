@@ -69,7 +69,7 @@ start() {
     fi
 
     if [ ! -z $NETWORK_ID ]; then
-        OPTIONS="$OPTIONS --network $NETWORK_ID"
+        OPTIONS="$OPTIONS --networkid $NETWORK_ID"
     fi
 
     if [ ! -z $DATA_DIR ]; then
