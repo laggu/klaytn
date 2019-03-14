@@ -1616,116 +1616,110 @@ func TestAccountCreationWithLegacyKey(t *testing.T) {
 // TestAccountCreationWithLegacyKeyNReadableAddr creates accounts with a legacy type of key and a human readable address.
 // The test creates an EOA, but the value of AccKey field is not related with a PubKey.
 // Since there is no information related with a PubKey in Tx, all Txs created by the account should not be validated.
-// Expected result:FAIL
-// TEST FOR ERROR CASE (The function below is commented out since it has a failed result)
-//func TestAccountCreationWithLegacyKeyNReadableAddr (t *testing.T){
-//	if testing.Verbose() {
-//		enableLog()
-//	}
-//	prof := profile.NewProfiler()
-//
-//	// Initialize blockchain
-//	start := time.Now()
-//	bcdata, err := NewBCData(6, 4)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-//	defer bcdata.Shutdown()
-//
-//	// Initialize address-balance map for verification
-//	start = time.Now()
-//	accountMap := NewAccountMap()
-//	if err := accountMap.Initialize(bcdata); err != nil {
-//		t.Fatal(err)
-//	}
-//	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-//
-//	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-//
-//	// reservoir account
-//	reservoir := &TestAccountType{
-//		Addr:  *bcdata.addrs[0],
-//		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-//		Nonce: uint64(0),
-//	}
-//
-//	// an account with Legacy Key
-//	prvKeyHex := "c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"
-//	key, err := crypto.HexToECDSA(prvKeyHex)
-//	assert.Equal(t, nil, err)
-//
-//	// Set human readable address
-//	addr, err := common.FromHumanReadableAddress("addrLegacyKey")
-//	assert.Equal(t, nil, err)
-//
-//	anon, err := &TestAccountType{
-//		Addr:   addr,
-//		Keys:   []*ecdsa.PrivateKey{key},
-//		Nonce:  uint64(0),
-//		AccKey: accountkey.NewAccountKeyLegacy(),
-//	}, nil
-//	assert.Equal(t, nil, err)
-//
-//	if testing.Verbose() {
-//		fmt.Println("anon.AccKey = ", anon.AccKey)
-//		fmt.Println("Addr = ", anon.Addr.String())
-//	}
-//
-//	// Create anon with a legacy key
-//	{
-//		var txs types.Transactions
-//		amount := new(big.Int).SetUint64(300000000000)
-//		values := map[types.TxValueKeyType]interface{}{
-//			types.TxValueKeyNonce:         reservoir.Nonce,
-//			types.TxValueKeyFrom:          reservoir.Addr,
-//			types.TxValueKeyTo:            anon.Addr,
-//			types.TxValueKeyAmount:        amount,
-//			types.TxValueKeyGasLimit:      gasLimit,
-//			types.TxValueKeyGasPrice:      gasPrice,
-//			types.TxValueKeyHumanReadable: true,
-//			types.TxValueKeyAccountKey:    anon.AccKey,
-//		}
-//		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-//		assert.Equal(t, nil, err)
-//		err = tx.SignWithKeys(signer, reservoir.Keys)
-//		assert.Equal(t, nil, err)
-//		txs = append(txs, tx)
-//		reservoir.Nonce += 1
-//
-//		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-//			t.Fatal(err)
-//		}
-//	}
-//
-//	// Transfer (anon -> reservoir) to check validity of the anon's private key
-//	{
-//		var txs types.Transactions
-//		amount := new(big.Int).SetUint64(100000000000)
-//		values := map[types.TxValueKeyType]interface{}{
-//			types.TxValueKeyNonce:         anon.Nonce,
-//			types.TxValueKeyFrom:          anon.Addr,
-//			types.TxValueKeyTo:            reservoir.Addr,
-//			types.TxValueKeyAmount:        amount,
-//			types.TxValueKeyGasLimit:      gasLimit,
-//			types.TxValueKeyGasPrice:      gasPrice,
-//		}
-//		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-//		assert.Equal(t, nil, err)
-//		err = tx.SignWithKeys(signer, anon.Keys)
-//		assert.Equal(t, nil, err)
-//		txs = append(txs, tx)
-//		anon.Nonce += 1
-//
-//		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-//			t.Fatal(err)
-//		}
-//	}
-//
-//	if testing.Verbose() {
-//		prof.PrintProfileInfo()
-//	}
-//}
+func TestAccountCreationWithLegacyKeyNReadableAddr(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// an account with Legacy Key
+	prvKeyHex := "c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"
+	key, err := crypto.HexToECDSA(prvKeyHex)
+	assert.Equal(t, nil, err)
+
+	// Set human readable address
+	addr, err := common.FromHumanReadableAddress("addrLegacyKey")
+	assert.Equal(t, nil, err)
+
+	anon, err := &TestAccountType{
+		Addr:   addr,
+		Keys:   []*ecdsa.PrivateKey{key},
+		Nonce:  uint64(0),
+		AccKey: accountkey.NewAccountKeyLegacy(),
+	}, nil
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("anon.AccKey = ", anon.AccKey)
+		fmt.Println("Addr = ", anon.Addr.String())
+	}
+
+	// Create anon with a legacy key
+	{
+		var txs types.Transactions
+		amount := new(big.Int).SetUint64(300000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    anon.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+		reservoir.Nonce += 1
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Transfer (anon -> reservoir) to check validity of the anon's private key
+	{
+		amount := new(big.Int).SetUint64(100000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		_, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
 
 // TestAccountUpdate tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
