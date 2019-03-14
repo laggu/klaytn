@@ -16,17 +16,89 @@
 
 package governance
 
+import (
+	"github.com/ground-x/klaytn/params"
+	"sync/atomic"
+)
+
 type PublicGovernanceAPI struct {
 	governance *Governance // Node interfaced by this API
 }
 
+type returnTally struct {
+	Key                string
+	Value              interface{}
+	ApprovalPercentage float64
+}
+
 func NewGovernanceAPI(gov *Governance) *PublicGovernanceAPI {
-	logger.Warn("In NewGovernanceAPI", "governance", gov)
 	return &PublicGovernanceAPI{governance: gov}
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
-func (api *PublicGovernanceAPI) Vote(key string, val interface{}) bool {
-	logger.Warn("Address", "governance", api.governance)
-	return api.governance.AddVote(key, val)
+func (api *PublicGovernanceAPI) Vote(key string, val interface{}) interface{} {
+	gMode := api.governance.chainConfig.Governance.GovernanceMode
+	gNode := api.governance.chainConfig.Governance.GoverningNode
+
+	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress {
+		return "You don't have the right to vote"
+	}
+	if api.governance.AddVote(key, val) {
+		return "Your vote was successfully placed."
+	}
+	return "Your vote couldn't be placed. Please check your vote's key and value"
+}
+
+func (api *PublicGovernanceAPI) ShowTally() interface{} {
+	ret := []*returnTally{}
+
+	if !api.isGovernanceModeBallot() {
+		return "In current governance mode, the tally is not available"
+	}
+
+	api.governance.GovernanceTallyLock.RLock()
+	defer api.governance.GovernanceTallyLock.RUnlock()
+	for _, val := range api.governance.GovernanceTally {
+		item := &returnTally{
+			Key:                val.Key,
+			Value:              val.Value,
+			ApprovalPercentage: float64(val.Votes) / float64(atomic.LoadUint64(&api.governance.totalVotingPower)) * 100,
+		}
+		ret = append(ret, item)
+	}
+
+	return ret
+}
+
+func (api *PublicGovernanceAPI) TotalVotingPower() interface{} {
+	if !api.isGovernanceModeBallot() {
+		return "In current governance mode, voting power is not available"
+	}
+	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0
+}
+
+func (api *PublicGovernanceAPI) MyVotes() map[string]interface{} {
+	return api.governance.voteMap
+}
+
+func (api *PublicGovernanceAPI) MyVotingPower() interface{} {
+	if !api.isGovernanceModeBallot() {
+		return "In current governance mode, voting power is not available"
+	}
+	return float64(atomic.LoadUint64(&api.governance.votingPower)) / 1000.0
+}
+
+func (api *PublicGovernanceAPI) GetChainConfig() interface{} {
+	return api.governance.chainConfig
+}
+
+func (api *PublicGovernanceAPI) GetNodeAddress() interface{} {
+	return api.governance.nodeAddress
+}
+
+func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
+	if GovernanceModeMap[api.governance.chainConfig.Governance.GovernanceMode] == params.GovernanceMode_Ballot {
+		return true
+	}
+	return false
 }

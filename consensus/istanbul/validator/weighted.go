@@ -163,7 +163,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 
 		for i := range addrs {
 			// TODO-Klaytn-TokenEconomy: Use default value until the formula to calculate votingpower released
-			votingPowers[i] = 1
+			votingPowers[i] = 1000
 			//staking := stateDB.GetBalance(addr)
 			//if staking.Cmp(common.Big0) == 0 {
 			//	votingPowers[i] = 1

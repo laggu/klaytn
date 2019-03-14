@@ -43,7 +43,31 @@ web3._extend({
 			name: 'vote',
 			call: 'governance_vote',
 			params: 2
-		})
+		}),
+		new web3._extend.Method({
+			name: 'showTally',
+			call: 'governance_showTally',
+		}),
+		new web3._extend.Method({
+			name: 'totalVotingPower',
+			call: 'governance_totalVotingPower',
+		}),
+		new web3._extend.Method({
+			name: 'myVotes',
+			call: 'governance_myVotes',
+		}),
+		new web3._extend.Method({
+			name: 'myVotingPower',
+			call: 'governance_myVotingPower',
+		}),
+		new web3._extend.Method({
+			name: 'getChainConfig',
+			call: 'governance_getChainConfig',
+		}),	
+		new web3._extend.Method({
+			name: 'getNodeAddress',
+			call: 'governance_getNodeAddress',
+		}),	
 	]
 });
 `

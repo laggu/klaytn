@@ -185,11 +185,11 @@ func (sb *backend) updateGovernance(curr uint64) {
 
 func (sb *backend) removeDuplicatedVote(rawvote []byte, gov *governance.Governance) {
 	vote := new(governance.GovernanceVote)
-
 	if err := rlp.DecodeBytes(rawvote, vote); err != nil {
 		// Vote data might be corrupted
 		logger.Error("Failed to decode vote data from header", "vote")
 	} else {
+		vote = gov.ParseVoteValue(vote)
 		gov.RemoveVote(vote.Key, vote.Value)
 	}
 }
@@ -229,8 +229,7 @@ func (sb *backend) replaceGovernanceConfig(g []byte) bool {
 		logger.Error("RLP Decode Failed", "err", err)
 		return false
 	} else {
-		err := json.Unmarshal(j, &newGovernance)
-		if err != nil {
+		if err := json.Unmarshal(j, &newGovernance); err != nil {
 			logger.Error("Failed to replace Governance Config", "err", err)
 			return false
 		} else {
@@ -242,6 +241,7 @@ func (sb *backend) replaceGovernanceConfig(g []byte) bool {
 			sb.config.SubGroupSize = newGovernance.Istanbul.SubGroupSize
 			sb.config.ProposerPolicy = istanbul.ProposerPolicy(newGovernance.Istanbul.ProposerPolicy)
 			sb.chain.Config().UnitPrice = newGovernance.UnitPrice
+			logger.Info("Governance config updated", "config", newGovernance)
 
 			return true
 		}

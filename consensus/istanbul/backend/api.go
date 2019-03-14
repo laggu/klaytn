@@ -117,11 +117,6 @@ func (api *API) Propose(address common.Address, auth bool) {
 	api.istanbul.candidates[address] = auth
 }
 
-// Vote injects a new vote for governance targets such as unitprice and governingnode.
-func (api *API) Vote(key string, val interface{}) bool {
-	return api.istanbul.governance.AddVote(key, val)
-}
-
 // Discard drops a currently running candidate, stopping the validator from casting
 // further votes (either for or against).
 func (api *API) Discard(address common.Address) {

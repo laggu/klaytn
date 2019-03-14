@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 var (
@@ -79,6 +80,13 @@ type Governance struct {
 	// Map used to keep multiple types of votes
 	voteMap     map[string]interface{}
 	voteMapLock sync.RWMutex
+
+	nodeAddress      common.Address
+	totalVotingPower uint64
+	votingPower      uint64
+
+	GovernanceTally     []*GovernanceTally
+	GovernanceTallyLock sync.RWMutex
 }
 
 func NewGovernance(chainConfig *params.ChainConfig) *Governance {
@@ -87,6 +95,18 @@ func NewGovernance(chainConfig *params.ChainConfig) *Governance {
 		voteMap:     make(map[string]interface{}),
 	}
 	return &ret
+}
+
+func (g *Governance) SetNodeAddress(addr common.Address) {
+	g.nodeAddress = addr
+}
+
+func (g *Governance) SetTotalVotingPower(t uint64) {
+	atomic.StoreUint64(&g.totalVotingPower, t)
+}
+
+func (g *Governance) SetMyVotingPower(t uint64) {
+	atomic.StoreUint64(&g.votingPower, t)
 }
 
 func (g *Governance) GetEncodedVote(addr common.Address) []byte {
@@ -330,7 +350,7 @@ func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceCo
 		governance.Reward.UseGiniCoeff = vote.Value.(bool)
 		return true
 	default:
-		logger.Warn("Unknown vote key was given", "key", vote.Key)
+		logger.Error("Unknown vote key was given", "key", vote.Key)
 	}
 	return false
 }

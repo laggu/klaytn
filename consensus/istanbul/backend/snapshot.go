@@ -211,7 +211,7 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -231,6 +231,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
 		number := header.Number.Uint64()
+
 		if number%s.Epoch == 0 {
 			snap.Votes = nil
 			snap.Tally = make(map[common.Address]Tally)
@@ -238,6 +239,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*
 			snap.GovernanceTally = nil
 			gov.ClearVotes()
 		}
+
 		// Resolve the authorization key and check against validators
 		validator, err := ecrecover(header)
 		if err != nil {
@@ -326,7 +328,24 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance) (*
 		snap.ValSet.SetBlockNum(snap.Number)
 	}
 
+	// Save GovernanceTally for APIs
+	gov.GovernanceTallyLock.Lock()
+	gov.GovernanceTally = make([]*governance.GovernanceTally, len(s.GovernanceTally))
+	copy(gov.GovernanceTally, s.GovernanceTally)
+	gov.GovernanceTallyLock.Unlock()
+	gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())
+	gov.SetMyVotingPower(snap.getMyVotingPower(addr))
+
 	return snap, nil
+}
+
+func (s *Snapshot) getMyVotingPower(addr common.Address) uint64 {
+	for _, a := range s.ValSet.List() {
+		if a.Address() == addr {
+			return a.VotingPower()
+		}
+	}
+	return 0
 }
 
 func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, validator common.Address, gVote *governance.GovernanceVote, gov *governance.Governance) {
@@ -336,7 +355,7 @@ func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, va
 
 	if len(header.Vote) > 0 {
 		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
-			logger.Error("Failed to decode a vote. This vote ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
 		} else {
 			// Parse vote.Value and make it has appropriate type
 			gVote = gov.ParseVoteValue(gVote)
@@ -352,7 +371,6 @@ func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, va
 				// Tally up the new vote. This will be cleared when Epoch ended.
 				// Add to GovermanceTally if it doesn't exist
 				s.addNewVote(snap, gVote, governanceMode, governingNode)
-
 			} else {
 				logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
@@ -363,7 +381,7 @@ func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, va
 func (s *Snapshot) addNewVote(snap *Snapshot, gVote *governance.GovernanceVote, governanceMode int, governingNode common.Address) {
 	_, v := snap.ValSet.GetByAddress(gVote.Validator)
 	if v != nil {
-		vp := uint64(v.VotingPower())
+		vp := v.VotingPower()
 		currentVotes := changeGovernanceTally(snap, gVote.Key, gVote.Value, vp, true)
 		if (governanceMode == params.GovernanceMode_None ||
 			(governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode)) ||
@@ -380,7 +398,7 @@ func (s *Snapshot) removePreviousVote(snap *Snapshot, validator common.Address, 
 		if vote.Validator == validator && vote.Key == gVote.Key {
 			// Reduce Tally
 			_, v := snap.ValSet.GetByAddress(vote.Validator)
-			vp := uint64(v.VotingPower())
+			vp := v.VotingPower()
 			changeGovernanceTally(snap, vote.Key, vote.Value, vp, false)
 
 			// Remove the old vote from GovernanceVotes
