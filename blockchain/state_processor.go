@@ -139,6 +139,9 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 		codeHash := crypto.Keccak256Hash(tx.Data())
 		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce(), codeHash)
 	}
+	if msg.Type().IsContractDeploy() {
+		receipt.ContractAddress = *msg.To()
+	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
