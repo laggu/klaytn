@@ -44,7 +44,6 @@ set METRICS=1
 set PROMETHEUS=1
 set NO_DISCOVER=1
 set DB_NO_PARALLEL_WRITE=1
-set DB_USE_CACHE=1
 set MULTICHANNEL=1
 
 REM Raw options e.g) "--txpool.nolocals"

@@ -52,10 +52,6 @@ start() {
         OPTIONS="$OPTIONS --db.no-parallel-write"
     fi
 
-    if [[ ! -z $DB_USE_CACHE ]] && [[ $DB_USE_CACHE -eq 1 ]]; then
-        OPTIONS="$OPTIONS --statedb.use-cache"
-    fi
-
     if [[ ! -z $MULTICHANNEL ]] && [[ $MULTICHANNEL -eq 1 ]]; then
         OPTIONS="$OPTIONS --multichannel"
     fi

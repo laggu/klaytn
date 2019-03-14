@@ -100,12 +100,6 @@ IF DEFINED DB_NO_PARALLEL_WRITE (
     )
 )
 
-IF DEFINED DB_USE_CACHE (
-    IF %DB_USE_CACHE%==1 (
-        set OPTIONS=%OPTIONS% --statedb.use-cache
-    )
-)
-
 IF DEFINED MULTICHANNEL (
     IF %MULTICHANNEL%==1 (
         set OPTIONS=%OPTIONS% --multichannel
