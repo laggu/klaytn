@@ -52,6 +52,7 @@ const (
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, _, _
+	TxTypeLast, _, _
 )
 
 type TxValueKeyType uint

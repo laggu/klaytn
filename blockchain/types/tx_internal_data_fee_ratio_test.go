@@ -21,23 +21,26 @@ import "testing"
 // TestFeeRatioCheck checks the txs with a fee-ratio implement GetFeeRatio() or not.
 // This prohibits the case that GetFeeRatio() is not implemented for TxTypeFeeDelegatedWithRatio types.
 func TestFeeRatioCheck(t *testing.T) {
-	var txs = []struct {
-		Name string
-		tx   TxInternalData
-	}{
-		// Please include only tx types with a fee-ratio.
-		{"FeeDelegatedValueTransferWithRatio", genFeeDelegatedValueTransferWithRatioTransaction()},
-		{"FeeDelegatedValueTransferMemoWithRatio", genFeeDelegatedValueTransferMemoWithRatioTransaction()},
-		{"FeeDelegatedAccountUpdateWithRatio", genFeeDelegatedAccountUpdateWithRatioTransaction()},
-		{"FeeDelegatedSmartContractDeployWithRatio", genFeeDelegatedSmartContractDeployWithRatioTransaction()},
-		{"FeeDelegatedSmartContractExecutionWithRatio", genFeeDelegatedSmartContractExecutionWithRatioTransaction()},
-		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
-	}
-
-	for _, tx := range txs {
-		if _, ok := tx.tx.(TxInternalDataFeeRatio); !ok {
-			t.Fatalf("GetFeeRatio() is not implemented. tx=%s", tx.tx.String())
+	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
+		tx, err := NewTxInternalData(i)
+		if err == nil && (i&TxTypeFeeDelegatedWithRatioTransactions != 0) {
+			if _, ok := tx.(TxInternalDataFeeRatio); !ok {
+				t.Fatalf("GetFeeRatio() is not implemented. tx=%s", tx.String())
+			}
 		}
-
 	}
+}
+
+// TestFeeDelegatedCheck checks that fee-delegated tx types implement GetFeePayer() or not.
+// This prohibits the case that GetFeePayer() is not implemented for TxTypeFeeDelegatedXXX types.
+func TestFeeDelegatedCheck(t *testing.T) {
+	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
+		tx, err := NewTxInternalData(i)
+		if err == nil && (i&TxTypeFeeDelegatedTransactions != 0) {
+			if _, ok := tx.(TxInternalDataFeePayer); !ok {
+				t.Fatalf("GetFeePayer() is not implemented. tx=%s", tx.String())
+			}
+		}
+	}
+
 }
