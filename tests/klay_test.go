@@ -316,8 +316,6 @@ func TestValueTransfer(t *testing.T) {
 			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions}},
 		{"MultipleSenderRandomRecipient",
 			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom}},
-		{"MultipleSenderMultipleRecipientRingTx",
-			testOption{2000, 1000, 4, nBlocks, []byte{}, makeNewTransactionsToRing}},
 
 		// Below test cases execute one transaction per a block.
 		{"SingleSenderMultipleRecipientSingleTxPerBlock",
@@ -369,27 +367,19 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 }
 
 func TestValueTransferRing(t *testing.T) {
-	var valueTransferTests = [...]struct {
-		name string
-		opt  testOption
-	}{
-		{"RingTxValueTransfer2000TxsPerBlock1000Accounts",
-			testOption{2000, 1000, 4, 10, []byte{}, makeNewTransactionsToRing}},
-		{"RingTxValueTransfer3000TxsPerBlock1000Accounts",
-			testOption{3000, 1000, 4, 10, []byte{}, makeNewTransactionsToRing}},
-		{"RingTxValueTransfer4000TxsPerBlock1000Accounts",
-			testOption{4000, 1000, 4, 10, []byte{}, makeNewTransactionsToRing}},
+	if testing.Verbose() {
+		enableLog()
 	}
-
-	for _, test := range valueTransferTests {
-		t.Run(test.name, func(t *testing.T) {
-			testValueTransferRing(t, &test.opt)
-		})
-	}
-}
-
-func testValueTransferRing(t *testing.T, opt *testOption) {
 	prof := profile.NewProfiler()
+
+	numTransactions := 20000
+	numAccounts := 2000
+
+	if numTransactions%numAccounts != 0 {
+		t.Fatalf("numTransactions should be divided by numAccounts! numTransactions: %v, numAccounts: %v", numTransactions, numAccounts)
+	}
+
+	opt := testOption{numTransactions, numAccounts, 4, 1, []byte{}, makeNewTransactionsToRing}
 
 	// Initialize blockchain
 	start := time.Now()
@@ -408,28 +398,25 @@ func testValueTransferRing(t *testing.T, opt *testOption) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	statedb, err := bcdata.bc.State()
+	// make txpool
+	txpool := makeTxPool(bcdata, opt.numTransactions)
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	// make ring transactions
+	txs, err := makeNewTransactionsToRing(bcdata, accountMap, signer, opt.numTransactions, nil, []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	preBalance := statedb.GetBalance(*bcdata.addrs[0])
 
-	for i := 0; i < opt.numGeneratedBlocks; i++ {
-		//fmt.Printf("iteration %d\n", i)
-		err := bcdata.GenABlock(accountMap, opt, opt.numTransactions, prof)
-		if err != nil {
+	txpool.AddRemotes(txs)
+
+	for {
+		if err := bcdata.GenABlockWithTxpool(accountMap, txpool, prof); err != nil {
+			if err == errEmptyPending {
+				break
+			}
 			t.Fatal(err)
 		}
-	}
-
-	statedb, err = bcdata.bc.State()
-	if err != nil {
-		t.Fatal(err)
-	}
-	postBalance := statedb.GetBalance(*bcdata.addrs[0])
-
-	if preBalance.Cmp(postBalance) != 0 {
-		t.Fatal("Different balance after ring transactions")
 	}
 
 	if testing.Verbose() {
@@ -465,13 +452,7 @@ func BenchmarkValueTransfer(t *testing.B) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// make txpool
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(t.N)
-	txpoolconfig.NonExecSlotsAccount = uint64(t.N)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(t.N)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(t.N)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := makeTxPool(bcdata, t.N)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	// make t.N transactions
@@ -527,13 +508,7 @@ func BenchmarkNewValueTransfer(t *testing.B) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// make txpool
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(t.N)
-	txpoolconfig.NonExecSlotsAccount = uint64(t.N)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(t.N)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(t.N)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := makeTxPool(bcdata, t.N)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	// make t.N transactions
@@ -557,4 +532,14 @@ func BenchmarkNewValueTransfer(t *testing.B) {
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
 	}
+}
+
+func makeTxPool(bcdata *BCData, txPoolSize int) *blockchain.TxPool {
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(txPoolSize)
+	txpoolconfig.NonExecSlotsAccount = uint64(txPoolSize)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(txPoolSize)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(txPoolSize)
+	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 }
