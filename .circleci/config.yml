@@ -102,7 +102,7 @@ jobs:
             ~/.local/bin/pip install awscli --upgrade --user
 
       - run:
-          name: "Build kcn, kpn, ken"
+          name: "Build kcn, kpn, ken, kgen"
           command: |
             export GOPATH=~/go
             echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
@@ -110,15 +110,20 @@ jobs:
             make klay-linux-amd64 klay-darwin-amd64 klay-windows-amd64
 
       - run:
-          name: "Packaging kcn, kpn, ken for linux-amd64"
+          name: "Packaging kcn, kpn, ken, kgen for linux-amd64"
           command: |
-            for item in kcn kpn ken
+            for item in kcn kpn ken kgen
             do
               PACK_NAME=${item}-linux-amd64
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-              cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
-              cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              if [ ${item} = kgen ]; then
+                mkdir -p ${PACK_NAME}/bin
+                cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+              else
+                mkdir -p ${PACK_NAME}/{bin,conf}
+                cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+                cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+                cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-linux-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
@@ -126,15 +131,20 @@ jobs:
             done
 
       - run:
-          name: "Packaging kcn, kpn, ken for macOS"
+          name: "Packaging kcn, kpn, ken, kgen for macOS"
           command: |
-            for item in kcn kpn ken
+            for item in kcn kpn ken kgen
             do
               PACK_NAME=${item}-darwin-amd64
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-              cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
-              cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              if [ ${item} = kgen ]; then
+                mkdir -p ${PACK_NAME}/bin
+                cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+              else
+                mkdir -p ${PACK_NAME}/{bin,conf}
+                cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+                cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+                cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
@@ -142,15 +152,20 @@ jobs:
             done
 
       - run:
-          name: "Packaging kcn, kpn, ken for windows"
+          name: "Packaging kcn, kpn, ken, kgen for windows"
           command: |
-            for item in kcn kpn ken
+            for item in kcn kpn ken kgen
             do
               PACK_NAME=${item}-windows-amd64
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
-              cp build/packaging/windows/conf/${item}-conf.cmd ${PACK_NAME}/conf/
-              cp build/packaging/windows/start-${item}.bat ${PACK_NAME}/
+              if [ ${item} = kgen ]; then
+                mkdir -p ${PACK_NAME}/bin
+                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
+              else
+                mkdir -p ${PACK_NAME}/{bin,conf}
+                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
+                cp build/packaging/windows/conf/${item}-conf.cmd ${PACK_NAME}/conf/
+                cp build/packaging/windows/start-${item}.bat ${PACK_NAME}/
+              fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-windows-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/

@@ -117,6 +117,7 @@ klay-linux-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kcn
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kpn
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/ken
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kgen
 	@echo "Linux amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/klay-linux-* $(GOBIN)/k*n-linux-* | grep amd64
 
@@ -205,6 +206,7 @@ klay-darwin-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/kcn
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/kpn
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/ken
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin-10.10/amd64 -v ./cmd/kgen
 	@echo "Darwin amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/klay-darwin-* $(GOBIN)/k*n-darwin-* | grep amd64
 
@@ -225,5 +227,6 @@ klay-windows-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kcn
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kpn
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/ken
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kgen
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/klay-windows-* $(GOBIN)/k*n-windows-* | grep amd64
