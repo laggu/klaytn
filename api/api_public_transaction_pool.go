@@ -154,17 +154,16 @@ func rpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 	from, _ := types.Sender(signer, tx)
 
 	fields := map[string]interface{}{
-		"blockHash":         blockHash,
-		"blockNumber":       hexutil.Uint64(blockNumber),
-		"transactionHash":   receipt.TxHash,
-		"transactionIndex":  hexutil.Uint64(index),
-		"from":              from,
-		"to":                tx.To(),
-		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
-		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
-		"contractAddress":   nil,
-		"logs":              receipt.Logs,
-		"logsBloom":         receipt.Bloom,
+		"blockHash":        blockHash,
+		"blockNumber":      hexutil.Uint64(blockNumber),
+		"transactionHash":  receipt.TxHash,
+		"transactionIndex": hexutil.Uint64(index),
+		"from":             from,
+		"to":               tx.To(),
+		"gasUsed":          hexutil.Uint64(receipt.GasUsed),
+		"contractAddress":  nil,
+		"logs":             receipt.Logs,
+		"logsBloom":        receipt.Bloom,
 	}
 
 	if receipt.Status != types.ReceiptStatusSuccessful {

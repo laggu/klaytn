@@ -97,7 +97,7 @@ func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
 	blockHash := common.HexToHash("0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e")
 	rct := &types.Receipt{}
 	rct.TxHash = common.BigToHash(big.NewInt(12345))
-	rct.CumulativeGasUsed = uint64(12345)
+	rct.GasUsed = uint64(12345)
 	rct.Status = types.ReceiptStatusSuccessful
 
 	rctFromDB := dbm.ReadReceiptFromParentChain(blockHash)
@@ -107,7 +107,7 @@ func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
 	rctFromDB = dbm.ReadReceiptFromParentChain(blockHash)
 
 	assert.Equal(t, rct.Status, rctFromDB.Status)
-	assert.Equal(t, rct.CumulativeGasUsed, rctFromDB.CumulativeGasUsed)
+	assert.Equal(t, rct.GasUsed, rctFromDB.GasUsed)
 	assert.Equal(t, rct.TxHash, rctFromDB.TxHash)
 
 	newBlockHash := common.HexToHash("0x0f0f0e0e0e0e0e0e0e0e0e0e0e0e0f0f")

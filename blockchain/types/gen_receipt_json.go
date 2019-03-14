@@ -15,17 +15,15 @@ var _ = (*receiptMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (r Receipt) MarshalJSON() ([]byte, error) {
 	type Receipt struct {
-		Status            hexutil.Uint   `json:"status"`
-		CumulativeGasUsed hexutil.Uint64 `json:"cumulativeGasUsed" gencodec:"required"`
-		Bloom             Bloom          `json:"logsBloom"         gencodec:"required"`
-		Logs              []*Log         `json:"logs"              gencodec:"required"`
-		TxHash            common.Hash    `json:"transactionHash" gencodec:"required"`
-		ContractAddress   common.Address `json:"contractAddress"`
-		GasUsed           hexutil.Uint64 `json:"gasUsed" gencodec:"required"`
+		Status          hexutil.Uint   `json:"status"`
+		Bloom           Bloom          `json:"logsBloom"         gencodec:"required"`
+		Logs            []*Log         `json:"logs"              gencodec:"required"`
+		TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
+		ContractAddress common.Address `json:"contractAddress"`
+		GasUsed         hexutil.Uint64 `json:"gasUsed" gencodec:"required"`
 	}
 	var enc Receipt
 	enc.Status = hexutil.Uint(r.Status)
-	enc.CumulativeGasUsed = hexutil.Uint64(r.CumulativeGasUsed)
 	enc.Bloom = r.Bloom
 	enc.Logs = r.Logs
 	enc.TxHash = r.TxHash
@@ -37,13 +35,12 @@ func (r Receipt) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (r *Receipt) UnmarshalJSON(input []byte) error {
 	type Receipt struct {
-		Status            *hexutil.Uint   `json:"status"`
-		CumulativeGasUsed *hexutil.Uint64 `json:"cumulativeGasUsed" gencodec:"required"`
-		Bloom             *Bloom          `json:"logsBloom"         gencodec:"required"`
-		Logs              []*Log          `json:"logs"              gencodec:"required"`
-		TxHash            *common.Hash    `json:"transactionHash" gencodec:"required"`
-		ContractAddress   *common.Address `json:"contractAddress"`
-		GasUsed           *hexutil.Uint64 `json:"gasUsed" gencodec:"required"`
+		Status          *hexutil.Uint   `json:"status"`
+		Bloom           *Bloom          `json:"logsBloom"         gencodec:"required"`
+		Logs            []*Log          `json:"logs"              gencodec:"required"`
+		TxHash          *common.Hash    `json:"transactionHash" gencodec:"required"`
+		ContractAddress *common.Address `json:"contractAddress"`
+		GasUsed         *hexutil.Uint64 `json:"gasUsed" gencodec:"required"`
 	}
 	var dec Receipt
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -52,10 +49,6 @@ func (r *Receipt) UnmarshalJSON(input []byte) error {
 	if dec.Status != nil {
 		r.Status = uint(*dec.Status)
 	}
-	if dec.CumulativeGasUsed == nil {
-		return errors.New("missing required field 'cumulativeGasUsed' for Receipt")
-	}
-	r.CumulativeGasUsed = uint64(*dec.CumulativeGasUsed)
 	if dec.Bloom == nil {
 		return errors.New("missing required field 'logsBloom' for Receipt")
 	}

@@ -32,7 +32,7 @@ import (
 func TestEncodeAndDecode_Receipt_Slice_StreamDecoding(t *testing.T) {
 	rct := &Receipt{}
 	rct.TxHash = common.BigToHash(big.NewInt(12345))
-	rct.CumulativeGasUsed = uint64(12345)
+	rct.GasUsed = uint64(12345)
 	rct.Status = ReceiptStatusSuccessful
 
 	var rctList []*Receipt
@@ -54,7 +54,7 @@ func TestEncodeAndDecode_Receipt_Slice_StreamDecoding(t *testing.T) {
 	}
 
 	assert.Equal(t, rct.Status, rctEncAndDec.Status)
-	assert.Equal(t, rct.CumulativeGasUsed, rctEncAndDec.CumulativeGasUsed)
+	assert.Equal(t, rct.GasUsed, rctEncAndDec.GasUsed)
 	assert.Equal(t, common.Hash{}, rctEncAndDec.TxHash) // TxHash should be an empty hash.
 }
 
@@ -64,7 +64,7 @@ func TestEncodeAndDecode_Receipt_Slice_StreamDecoding(t *testing.T) {
 func TestEncodeAndDecode_Receipt_Slice_DirectDecoding(t *testing.T) {
 	rct := &Receipt{}
 	rct.TxHash = common.BigToHash(big.NewInt(12345))
-	rct.CumulativeGasUsed = uint64(12345)
+	rct.GasUsed = uint64(12345)
 	rct.Status = ReceiptStatusSuccessful
 
 	var rctList []*Receipt
@@ -79,7 +79,7 @@ func TestEncodeAndDecode_Receipt_Slice_DirectDecoding(t *testing.T) {
 	rlp.DecodeBytes(bytes, &encAndDecReceipts)
 
 	assert.Equal(t, rct.Status, encAndDecReceipts[0].Status)
-	assert.Equal(t, rct.CumulativeGasUsed, encAndDecReceipts[0].CumulativeGasUsed)
+	assert.Equal(t, rct.GasUsed, encAndDecReceipts[0].GasUsed)
 	assert.Equal(t, common.Hash{}, encAndDecReceipts[0].TxHash) // TxHash should be an empty hash.
 }
 
@@ -91,7 +91,7 @@ func TestEncodeAndDecode_Receipt_Slice_DirectDecoding(t *testing.T) {
 func TestEncodeAndDecode_ReceiptForStorage_Slice_StreamDecoding(t *testing.T) {
 	rct := &Receipt{}
 	rct.TxHash = common.BigToHash(big.NewInt(12345))
-	rct.CumulativeGasUsed = uint64(12345)
+	rct.GasUsed = uint64(12345)
 	rct.Status = ReceiptStatusSuccessful
 
 	// ReceiptForStorage is a simple wrapper to change the way of RLP encoding/decoding.
@@ -116,7 +116,7 @@ func TestEncodeAndDecode_ReceiptForStorage_Slice_StreamDecoding(t *testing.T) {
 	}
 
 	assert.Equal(t, rct.Status, rctfsEndAndDec.Status)
-	assert.Equal(t, rct.CumulativeGasUsed, rctfsEndAndDec.CumulativeGasUsed)
+	assert.Equal(t, rct.GasUsed, rctfsEndAndDec.GasUsed)
 	assert.Equal(t, rct.TxHash, rctfsEndAndDec.TxHash) // TxHash should be equal to the original one.
 }
 
@@ -126,7 +126,7 @@ func TestEncodeAndDecode_ReceiptForStorage_Slice_StreamDecoding(t *testing.T) {
 func TestEncodeAndDecode_ReceiptForStorage_Slice_DirectDecoding(t *testing.T) {
 	rct := &Receipt{}
 	rct.TxHash = common.BigToHash(big.NewInt(12345))
-	rct.CumulativeGasUsed = uint64(12345)
+	rct.GasUsed = uint64(12345)
 	rct.Status = ReceiptStatusSuccessful
 
 	// ReceiptForStorage is a simple wrapper to change the way of RLP encoding/decoding.
@@ -144,6 +144,6 @@ func TestEncodeAndDecode_ReceiptForStorage_Slice_DirectDecoding(t *testing.T) {
 	rlp.DecodeBytes(bytes, &encAndDecReceiptForStorage)
 
 	assert.Equal(t, rct.Status, encAndDecReceiptForStorage[0].Status)
-	assert.Equal(t, rct.CumulativeGasUsed, encAndDecReceiptForStorage[0].CumulativeGasUsed)
+	assert.Equal(t, rct.GasUsed, encAndDecReceiptForStorage[0].GasUsed)
 	assert.Equal(t, rct.TxHash, encAndDecReceiptForStorage[0].TxHash) // TxHash should be equal to the original one.
 }

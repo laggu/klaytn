@@ -859,12 +859,6 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 			codeHash := crypto.Keccak256Hash(transactions[j].Data())
 			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce(), codeHash)
 		}
-		// The used gas can be calculated based on previous receipts
-		if j == 0 {
-			receipts[j].GasUsed = receipts[j].CumulativeGasUsed
-		} else {
-			receipts[j].GasUsed = receipts[j].CumulativeGasUsed - receipts[j-1].CumulativeGasUsed
-		}
 		// The derived log fields can simply be set from the block and transaction
 		for k := 0; k < len(receipts[j].Logs); k++ {
 			receipts[j].Logs[k].BlockNumber = block.NumberU64()

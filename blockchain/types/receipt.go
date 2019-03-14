@@ -75,10 +75,9 @@ const (
 // Receipt represents the results of a transaction.
 type Receipt struct {
 	// Consensus fields
-	Status            uint   `json:"status"`
-	CumulativeGasUsed uint64 `json:"cumulativeGasUsed" gencodec:"required"`
-	Bloom             Bloom  `json:"logsBloom"         gencodec:"required"`
-	Logs              []*Log `json:"logs"              gencodec:"required"`
+	Status uint   `json:"status"`
+	Bloom  Bloom  `json:"logsBloom"         gencodec:"required"`
+	Logs   []*Log `json:"logs"              gencodec:"required"`
 
 	// Implementation fields (don't reorder!)
 	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
@@ -87,38 +86,36 @@ type Receipt struct {
 }
 
 type receiptMarshaling struct {
-	Status            hexutil.Uint
-	CumulativeGasUsed hexutil.Uint64
-	GasUsed           hexutil.Uint64
+	Status  hexutil.Uint
+	GasUsed hexutil.Uint64
 }
 
 // receiptRLP is the consensus encoding of a receipt.
 type receiptRLP struct {
-	Status            uint
-	CumulativeGasUsed uint64
-	Bloom             Bloom
-	Logs              []*Log
+	Status  uint
+	GasUsed uint64
+	Bloom   Bloom
+	Logs    []*Log
 }
 
 type receiptStorageRLP struct {
-	Status            uint
-	CumulativeGasUsed uint64
-	Bloom             Bloom
-	TxHash            common.Hash
-	ContractAddress   common.Address
-	Logs              []*LogForStorage
-	GasUsed           uint64
+	Status          uint
+	Bloom           Bloom
+	TxHash          common.Hash
+	ContractAddress common.Address
+	Logs            []*LogForStorage
+	GasUsed         uint64
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
-func NewReceipt(status uint, cumulativeGasUsed uint64) *Receipt {
-	return &Receipt{CumulativeGasUsed: cumulativeGasUsed, Status: status}
+func NewReceipt(status uint) *Receipt {
+	return &Receipt{Status: status}
 }
 
 // EncodeRLP implements rlp.Encoder, and flattens the consensus fields of a receipt
 // into an RLP stream. If no post state is present, byzantium fork is assumed.
 func (r *Receipt) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, &receiptRLP{r.Status, r.CumulativeGasUsed, r.Bloom, r.Logs})
+	return rlp.Encode(w, &receiptRLP{r.Status, r.GasUsed, r.Bloom, r.Logs})
 }
 
 // DecodeRLP implements rlp.Decoder, and loads the consensus fields of a receipt
@@ -129,7 +126,7 @@ func (r *Receipt) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 	r.Status = dec.Status
-	r.CumulativeGasUsed, r.Bloom, r.Logs = dec.CumulativeGasUsed, dec.Bloom, dec.Logs
+	r.GasUsed, r.Bloom, r.Logs = dec.GasUsed, dec.Bloom, dec.Logs
 	return nil
 }
 
@@ -147,7 +144,7 @@ func (r *Receipt) Size() common.StorageSize {
 
 // String implements the Stringer interface.
 func (r *Receipt) String() string {
-	return fmt.Sprintf("receipt{status=%d cgas=%v bloom=%x logs=%v}", r.Status, r.CumulativeGasUsed, r.Bloom, r.Logs)
+	return fmt.Sprintf("receipt{status=%d gas=%v bloom=%x logs=%v}", r.Status, r.GasUsed, r.Bloom, r.Logs)
 }
 
 // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
@@ -158,13 +155,12 @@ type ReceiptForStorage Receipt
 // into an RLP stream.
 func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 	enc := &receiptStorageRLP{
-		Status:            r.Status,
-		CumulativeGasUsed: r.CumulativeGasUsed,
-		Bloom:             r.Bloom,
-		TxHash:            r.TxHash,
-		ContractAddress:   r.ContractAddress,
-		Logs:              make([]*LogForStorage, len(r.Logs)),
-		GasUsed:           r.GasUsed,
+		Status:          r.Status,
+		Bloom:           r.Bloom,
+		TxHash:          r.TxHash,
+		ContractAddress: r.ContractAddress,
+		Logs:            make([]*LogForStorage, len(r.Logs)),
+		GasUsed:         r.GasUsed,
 	}
 	for i, log := range r.Logs {
 		enc.Logs[i] = (*LogForStorage)(log)
@@ -182,7 +178,7 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 	r.Status = dec.Status
 
 	// Assign the consensus fields
-	r.CumulativeGasUsed, r.Bloom = dec.CumulativeGasUsed, dec.Bloom
+	r.Bloom = dec.Bloom
 	r.Logs = make([]*Log, len(dec.Logs))
 	for i, log := range dec.Logs {
 		r.Logs[i] = (*Log)(log)

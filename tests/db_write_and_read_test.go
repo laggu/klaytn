@@ -342,9 +342,9 @@ func generateReceipt(gasUsed int) *types.Receipt {
 	log := &types.Log{Topics: []common.Hash{}, Data: []uint8{}, BlockNumber: uint64(gasUsed)}
 	log.Topics = append(log.Topics, common.HexToHash(strconv.Itoa(gasUsed)))
 	return &types.Receipt{
-		TxHash:            common.HexToHash(strconv.Itoa(gasUsed)),
-		CumulativeGasUsed: uint64(gasUsed),
-		Status:            types.ReceiptStatusSuccessful,
-		Logs:              []*types.Log{log},
+		TxHash:  common.HexToHash(strconv.Itoa(gasUsed)),
+		GasUsed: uint64(gasUsed),
+		Status:  types.ReceiptStatusSuccessful,
+		Logs:    []*types.Log{log},
 	}
 }

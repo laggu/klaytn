@@ -256,7 +256,6 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 		output["txHash"] = tx.Hash()
 		output["transactionIndex"] = hexutil.Uint(i)
 		output["contractAddress"] = receipts[i].ContractAddress
-		output["cumulativeGasUsed"] = hexutil.Uint64(receipts[i].CumulativeGasUsed)
 		output["logs"] = receipts[i].Logs
 		output["status"] = hexutil.Uint(receipts[i].Status)
 		output["signatures"] = sigs
