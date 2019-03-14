@@ -97,7 +97,6 @@ type weightedCouncil struct {
 	proposersBlockNum uint64 // block number when proposers is determined
 
 	stakingInfo *reward.StakingInfo
-	stakings    []*big.Int
 
 	blockNum uint64 // block number when council is determined
 }
@@ -470,11 +469,11 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	defer valSet.validatorMu.RUnlock()
 
 	var newWeightedCouncil = weightedCouncil{
-		subSize:  valSet.subSize,
-		policy:   valSet.policy,
-		proposer: valSet.proposer,
-		selector: valSet.selector,
-		// stakingInfo:       valSet.stakingInfo, // TODO-Klaytn-Issue1455 Enable this after StakingInfo is introduced
+		subSize:           valSet.subSize,
+		policy:            valSet.policy,
+		proposer:          valSet.proposer,
+		selector:          valSet.selector,
+		stakingInfo:       valSet.stakingInfo,
 		proposersBlockNum: valSet.proposersBlockNum,
 		blockNum:          valSet.blockNum,
 	}
