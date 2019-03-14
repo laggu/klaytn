@@ -137,11 +137,11 @@ func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.
 		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
 	}
 
-	distributeBlockReward(b, header, totalTxFee, kirAddr, pocAddr, config)
+	distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr, config)
 }
 
 // distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
-func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, kirAddr common.Address, pocAddr common.Address, config *params.ChainConfig) {
+func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address, config *params.ChainConfig) {
 	proposer := header.KlaytnExtra[0]
 	rewardParams := getRewardGovernanceParameters(config, header)
 
