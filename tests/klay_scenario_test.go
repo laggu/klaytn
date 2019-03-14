@@ -1454,7 +1454,6 @@ func TestAccountCreationWithFailKey(t *testing.T) {
 
 	// Create anon with a fail-type key
 	{
-
 		var txs types.Transactions
 		amount := new(big.Int).SetUint64(200000000000)
 		values := map[types.TxValueKeyType]interface{}{
@@ -1480,28 +1479,24 @@ func TestAccountCreationWithFailKey(t *testing.T) {
 	}
 
 	// Transfer (anon -> reservoir) should be failed
-	//{
-	//	var txs types.Transactions
-	//	amount := new(big.Int).SetUint64(100000000000)
-	//	values := map[types.TxValueKeyType]interface{}{
-	//		types.TxValueKeyNonce:         anon.Nonce,
-	//		types.TxValueKeyFrom:          anon.Addr,
-	//		types.TxValueKeyTo:            reservoir.Addr,
-	//		types.TxValueKeyAmount:        amount,
-	//		types.TxValueKeyGasLimit:      gasLimit,
-	//		types.TxValueKeyGasPrice:      gasPrice,
-	//	}
-	//	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-	//	assert.Equal(t, nil, err)
-	//	err = tx.SignWithKeys(signer, anon.Keys)
-	//	assert.Equal(t, nil, err)
-	//	txs = append(txs, tx)
-	//	anon.Nonce += 1
-	//
-	//	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//}
+	{
+		amount := new(big.Int).SetUint64(100000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		_, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+	}
 
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
