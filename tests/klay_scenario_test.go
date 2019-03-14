@@ -1801,37 +1801,32 @@ func TestAccountUpdate(t *testing.T) {
 
 	// 2. Key update of anon using AccountUpdate
 	// This test should be failed because a legacy account does not have attribute `key`.
-	//{
-	// var txs types.Transactions
-	//
-	// newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
-	// if err != nil {
-	//   t.Fatal(err)
-	// }
-	//
-	// values := map[types.TxValueKeyType]interface{}{
-	//   types.TxValueKeyNonce:         anon.Nonce,
-	//   types.TxValueKeyFrom:          anon.Addr,
-	//   types.TxValueKeyGasLimit:      gasLimit,
-	//   types.TxValueKeyGasPrice:      gasPrice,
-	//   types.TxValueKeyAccountKey:    types.NewAccountKeyPublicWithValue(&newKey.PublicKey),
-	// }
-	// tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
-	// assert.Equal(t, nil, err)
-	//
-	// err = tx.SignWithKeys(signer, anon.Keys)
-	// assert.Equal(t, nil, err)
-	//
-	// txs = append(txs, tx)
-	//
-	// if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-	//   t.Fatal(err)
-	// }
-	// anon.Nonce += 1
-	//
-	// anon.Key = newKey
-	// // This should be failed.
-	//}
+	{
+		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		r, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		// TODO-Klaytn-Accounts: need to return more detailed status instead of ReceiptStatusErrDefault.
+		assert.Equal(t, types.ReceiptStatusErrDefault, r.Status)
+
+		// This should be failed.
+	}
 
 	// 3. Create an account decoupled using TxTypeAccountCreation.
 	{
