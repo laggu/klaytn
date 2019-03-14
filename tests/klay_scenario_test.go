@@ -958,14 +958,13 @@ func TestSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
-			types.TxValueKeyAmount:        amountToSend,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          data,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyAmount:   amountToSend,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)
@@ -992,14 +991,13 @@ func TestSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          data,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)
@@ -1146,15 +1144,14 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
-			types.TxValueKeyAmount:        amountToSend,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          data,
-			types.TxValueKeyFeePayer:      reservoir2.Addr,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyAmount:   amountToSend,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
+			types.TxValueKeyFeePayer: reservoir2.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, values)
 		assert.Equal(t, nil, err)
@@ -1184,14 +1181,13 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          data,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)
@@ -1345,7 +1341,6 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 			types.TxValueKeyAmount:             amountToSend,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
-			types.TxValueKeyHumanReadable:      true,
 			types.TxValueKeyData:               data,
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
@@ -1378,14 +1373,13 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          data,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)

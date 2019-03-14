@@ -456,7 +456,6 @@ func genFeeDelegatedSmartContractExecutionWithRatioTransaction() TxInternalData 
 func genAccountUpdateTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeAccountUpdate, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
-		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasPrice:   gasPrice,
 		TxValueKeyFrom:       from,
@@ -474,7 +473,6 @@ func genAccountUpdateTransaction() TxInternalData {
 func genFeeDelegatedAccountUpdateTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedAccountUpdate, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
-		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasPrice:   gasPrice,
 		TxValueKeyFrom:       from,
@@ -493,7 +491,6 @@ func genFeeDelegatedAccountUpdateTransaction() TxInternalData {
 func genFeeDelegatedAccountUpdateWithRatioTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedAccountUpdateWithRatio, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:              nonce,
-		TxValueKeyAmount:             amount,
 		TxValueKeyGasLimit:           gasLimit,
 		TxValueKeyGasPrice:           gasPrice,
 		TxValueKeyFrom:               from,
@@ -513,7 +510,6 @@ func genFeeDelegatedAccountUpdateWithRatioTransaction() TxInternalData {
 func genCancelTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeCancel, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:    nonce,
-		TxValueKeyAmount:   amount,
 		TxValueKeyGasLimit: gasLimit,
 		TxValueKeyGasPrice: gasPrice,
 		TxValueKeyFrom:     from,
@@ -530,7 +526,6 @@ func genCancelTransaction() TxInternalData {
 func genFeeDelegatedCancelTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedCancel, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:    nonce,
-		TxValueKeyAmount:   amount,
 		TxValueKeyGasLimit: gasLimit,
 		TxValueKeyGasPrice: gasPrice,
 		TxValueKeyFrom:     from,
@@ -548,7 +543,6 @@ func genFeeDelegatedCancelTransaction() TxInternalData {
 func genFeeDelegatedCancelWithRatioTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedCancelWithRatio, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:              nonce,
-		TxValueKeyAmount:             amount,
 		TxValueKeyGasLimit:           gasLimit,
 		TxValueKeyGasPrice:           gasPrice,
 		TxValueKeyFrom:               from,

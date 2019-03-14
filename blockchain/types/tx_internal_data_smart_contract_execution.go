@@ -58,44 +58,58 @@ func newTxInternalDataSmartContractExecutionWithMap(values map[TxValueKeyType]in
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		t.AccountNonce = v
+		delete(values, TxValueKeyNonce)
 	} else {
 		return nil, errValueKeyNonceMustUint64
 	}
 
 	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
 		t.Price.Set(v)
+		delete(values, TxValueKeyGasPrice)
 	} else {
 		return nil, errValueKeyGasPriceMustBigInt
 	}
 
 	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
 		t.GasLimit = v
+		delete(values, TxValueKeyGasLimit)
 	} else {
 		return nil, errValueKeyGasLimitMustUint64
 	}
 
 	if v, ok := values[TxValueKeyTo].(common.Address); ok {
 		t.Recipient = v
+		delete(values, TxValueKeyTo)
 	} else {
 		return nil, errValueKeyToMustAddress
 	}
 
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
 		t.Amount.Set(v)
+		delete(values, TxValueKeyAmount)
 	} else {
 		return nil, errValueKeyAmountMustBigInt
 	}
 
 	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
 		t.From = v
+		delete(values, TxValueKeyFrom)
 	} else {
 		return nil, errValueKeyFromMustAddress
 	}
 
 	if v, ok := values[TxValueKeyData].([]byte); ok {
 		t.Payload = v
+		delete(values, TxValueKeyData)
 	} else {
 		return nil, errValueKeyDataMustByteSlice
+	}
+
+	if len(values) != 0 {
+		for k := range values {
+			fmt.Println("unnecessary key", k.String())
+		}
+		return nil, errUndefinedKeyRemains
 	}
 
 	return t, nil

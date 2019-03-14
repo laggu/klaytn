@@ -132,11 +132,9 @@ func TestTxCancel(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    uint64(0),
 			types.TxValueKeyFrom:     *bcdata.addrs[0],
-			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: big.NewInt(0),
 		}
@@ -292,11 +290,9 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    uint64(0),
 			types.TxValueKeyFrom:     *bcdata.addrs[0],
-			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: big.NewInt(0),
 			types.TxValueKeyFeePayer: *bcdata.addrs[1],
@@ -460,11 +456,9 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              uint64(0),
 			types.TxValueKeyFrom:               *bcdata.addrs[0],
-			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           big.NewInt(0),
 			types.TxValueKeyFeePayer:           *bcdata.addrs[1],

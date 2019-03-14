@@ -72,38 +72,51 @@ func newTxInternalDataFeeDelegatedAccountUpdateWithMap(values map[TxValueKeyType
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		d.AccountNonce = v
+		delete(values, TxValueKeyNonce)
 	} else {
 		return nil, errValueKeyNonceMustUint64
 	}
 
 	if v, ok := values[TxValueKeyGasLimit].(uint64); ok {
 		d.GasLimit = v
+		delete(values, TxValueKeyGasLimit)
 	} else {
 		return nil, errValueKeyGasLimitMustUint64
 	}
 
 	if v, ok := values[TxValueKeyGasPrice].(*big.Int); ok {
 		d.Price.Set(v)
+		delete(values, TxValueKeyGasPrice)
 	} else {
 		return nil, errValueKeyGasPriceMustBigInt
 	}
 
 	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
 		d.From = v
+		delete(values, TxValueKeyFrom)
 	} else {
 		return nil, errValueKeyFromMustAddress
 	}
 
 	if v, ok := values[TxValueKeyAccountKey].(accountkey.AccountKey); ok {
 		d.Key = v
+		delete(values, TxValueKeyAccountKey)
 	} else {
 		return nil, errValueKeyAccountKeyMustAccountKey
 	}
 
 	if v, ok := values[TxValueKeyFeePayer].(common.Address); ok {
 		d.FeePayer = v
+		delete(values, TxValueKeyFeePayer)
 	} else {
 		return nil, errValueKeyFeePayerMustAddress
+	}
+
+	if len(values) != 0 {
+		for k := range values {
+			fmt.Println("unnecessary key", k.String())
+		}
+		return nil, errUndefinedKeyRemains
 	}
 
 	return d, nil

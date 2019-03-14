@@ -78,6 +78,7 @@ var (
 	errNotTxTypeAccountCreation               = errors.New("not account creation transaction type")
 	errUndefinedTxType                        = errors.New("undefined tx type")
 	errCannotBeSignedByFeeDelegator           = errors.New("this transaction type cannot be signed by a fee delegator")
+	errUndefinedKeyRemains                    = errors.New("undefined key remains")
 
 	errValueKeyHumanReadableMustBool     = errors.New("HumanReadable must be a type of bool")
 	errValueKeyAccountKeyMustAccountKey  = errors.New("AccountKey must be a type of AccountKey")
@@ -92,6 +93,37 @@ var (
 	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 )
+
+func (t TxValueKeyType) String() string {
+	switch t {
+	case TxValueKeyNonce:
+		return "TxValueKeyNonce"
+	case TxValueKeyTo:
+		return "TxValueKeyTo"
+	case TxValueKeyAmount:
+		return "TxValueKeyAmount"
+	case TxValueKeyGasLimit:
+		return "TxValueKeyGasLimit"
+	case TxValueKeyGasPrice:
+		return "TxValueKeyGasPrice"
+	case TxValueKeyData:
+		return "TxValueKeyData"
+	case TxValueKeyFrom:
+		return "TxValueKeyFrom"
+	case TxValueKeyAnchoredData:
+		return "TxValueKeyAnchoredData"
+	case TxValueKeyHumanReadable:
+		return "TxValueKeyHumanReadable"
+	case TxValueKeyAccountKey:
+		return "TxValueKeyAccountKey"
+	case TxValueKeyFeePayer:
+		return "TxValueKeyFeePayer"
+	case TxValueKeyFeeRatioOfFeePayer:
+		return "TxValueKeyFeeRatioOfFeePayer"
+	}
+
+	return "UndefinedTxValueKeyType"
+}
 
 func (t TxType) String() string {
 	switch t {
