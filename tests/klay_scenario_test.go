@@ -1907,6 +1907,26 @@ func TestAccountCreationWithFailKey(t *testing.T) {
 		assert.Equal(t, types.ErrInvalidSigSender, err)
 	}
 
+	// Updating from AccountKeyFail to RoleBasedKey should fail.
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: genAccountKeyRoleBased(),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		r, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+		assert.Equal(t, (*types.Receipt)(nil), r)
+	}
+
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
 	}
@@ -3465,4 +3485,31 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 	}
 	usedGas := uint64(0)
 	return blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, gp, state, header, tx, &usedGas, vmConfig)
+}
+
+func genAccountKeyRoleBased() accountkey.AccountKey {
+	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	if err != nil {
+		panic(err)
+	}
+	txKey := accountkey.NewAccountKeyPublicWithValue(&k1.PublicKey)
+
+	k2, err := crypto.HexToECDSA("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c")
+	if err != nil {
+		panic(err)
+	}
+	threshold := uint(2)
+	keys := accountkey.WeightedPublicKeys{
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k1.PublicKey)),
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k2.PublicKey)),
+	}
+	updateKey := accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
+
+	k3, err := crypto.HexToECDSA("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
+	if err != nil {
+		panic(err)
+	}
+	feeKey := accountkey.NewAccountKeyPublicWithValue(&k3.PublicKey)
+
+	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, updateKey, feeKey})
 }
