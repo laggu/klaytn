@@ -49,19 +49,32 @@ const (
 	// Klaytn specific
 	// NOTE-Klaytn Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
 	//         Add a new ReceiptStatusErrXXX before ReceiptStatusLast
-	ReceiptStatusErrDefault                  = uint(0x02) // Default
-	ReceiptStatusErrDepth                    = uint(0x03)
-	ReceiptStatusErrContractAddressCollision = uint(0x04)
-	ReceiptStatusErrCodeStoreOutOfGas        = uint(0x05)
-	ReceiptStatuserrMaxCodeSizeExceed        = uint(0x06)
-	ReceiptStatusErrOutOfGas                 = uint(0x07)
-	ReceiptStatusErrWriteProtection          = uint(0x08)
-	ReceiptStatusErrExecutionReverted        = uint(0x09)
-	ReceiptStatusErrOpcodeCntLimitReached    = uint(0x0a)
-	ReceiptStatusErrAddressAlreadyExists     = uint(0x0b)
-	ReceiptStatusErrNotAProgramAccount       = uint(0x0c)
-	ReceiptStatusErrNotHumanReadableAddress  = uint(0x0d)
-	ReceiptStatusLast                        = uint(0x0e) // Last value which is not an actual ReceiptStatus
+	ReceiptStatusErrDefault                      = uint(0x02) // Default
+	ReceiptStatusErrDepth                        = uint(0x03)
+	ReceiptStatusErrContractAddressCollision     = uint(0x04)
+	ReceiptStatusErrCodeStoreOutOfGas            = uint(0x05)
+	ReceiptStatuserrMaxCodeSizeExceed            = uint(0x06)
+	ReceiptStatusErrOutOfGas                     = uint(0x07)
+	ReceiptStatusErrWriteProtection              = uint(0x08)
+	ReceiptStatusErrExecutionReverted            = uint(0x09)
+	ReceiptStatusErrOpcodeCntLimitReached        = uint(0x0a)
+	ReceiptStatusErrAddressAlreadyExists         = uint(0x0b)
+	ReceiptStatusErrNotAProgramAccount           = uint(0x0c)
+	ReceiptStatusErrNotHumanReadableAddress      = uint(0x0d)
+	ReceiptStatusErrFeeRatioOutOfRange           = uint(0x0e)
+	ReceiptStatusErrAccountKeyFailNotUpdatable   = uint(0x0f)
+	ReceiptStatusErrDifferentAccountKeyType      = uint(0x10)
+	ReceiptStatusErrAccountKeyNilUninitializable = uint(0x11)
+	ReceiptStatusErrNotOnCurve                   = uint(0x12)
+	ReceiptStatusErrZeroKeyWeight                = uint(0x13)
+	ReceiptStatusErrUnserializableKey            = uint(0x14)
+	ReceiptStatusErrDuplicatedKey                = uint(0x15)
+	ReceiptStatusErrWeightedSumOverflow          = uint(0x16)
+	ReceiptStatusErrUnsatisfiableThreshold       = uint(0x17)
+	ReceiptStatusErrZeroLength                   = uint(0x18)
+	ReceiptStatusErrLengthTooLong                = uint(0x19)
+	ReceiptStatusErrNestedRoleBasedKey           = uint(0x1a)
+	ReceiptStatusLast                            = uint(0x1b) // Last value which is not an actual ReceiptStatus
 //	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
 //	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
 //	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
