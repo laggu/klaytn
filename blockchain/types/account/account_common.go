@@ -176,12 +176,19 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 }
 
 func (e *AccountCommon) UpdateKey(key accountkey.AccountKey) error {
-	if myRoleKey, ok := e.key.(*accountkey.AccountKeyRoleBased); ok {
-		if newRoleKey, ok := key.(*accountkey.AccountKeyRoleBased); ok {
-			myRoleKey.Update(newRoleKey)
+	if e.key.Type() == key.Type() {
+		// If the type is same, call Update() to set fields in key into e.key.
+		if err := e.key.Update(key); err != nil {
+			return err
 		}
+	} else {
+		// If the type is different, check it can be initialized and assigned.
+		if err := key.Init(); err != nil {
+			return err
+		}
+		// If assignable, assign it.
+		e.key = key
 	}
-	e.key = key
 	return nil
 }
 

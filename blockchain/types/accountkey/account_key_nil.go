@@ -18,6 +18,7 @@ package accountkey
 
 import (
 	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -79,4 +80,18 @@ func (a *AccountKeyNil) AccountCreationGas() (uint64, error) {
 func (a *AccountKeyNil) SigValidationGas() (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxValidationGasDefault, nil
+}
+
+func (a *AccountKeyNil) Init() error {
+	// Since AccountKeyNil cannot be assigned to an account, it always returns error.
+	return kerrors.ErrAccountKeyNilUninitializable
+}
+
+func (a *AccountKeyNil) Update(key AccountKey) error {
+	if _, ok := key.(*AccountKeyNil); ok {
+		// Since AccountKeyNil can be updated, it returns nil.
+		// No need to update any value because it does not have a field.
+		return nil
+	}
+	return kerrors.ErrDifferentAccountKeyType
 }

@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 )
@@ -31,6 +32,7 @@ const (
 	RoleAccountUpdate
 	RoleFeePayer
 	// TODO-Klaytn-Accounts: more roles can be listed here.
+	RoleLast
 )
 
 var (
@@ -172,17 +174,6 @@ func (a *AccountKeyRoleBased) String() string {
 	return string(b)
 }
 
-func (a *AccountKeyRoleBased) Update(key *AccountKeyRoleBased) error {
-	for i, k := range *key {
-		// Update only if the key is not an AccountKeyNil object.
-		if kk, ok := k.(*AccountKeyNil); !ok {
-			(*a)[i] = kk
-		}
-	}
-
-	return nil
-}
-
 func (a *AccountKeyRoleBased) AccountCreationGas() (uint64, error) {
 	gas := uint64(0)
 	for _, k := range *a {
@@ -207,4 +198,65 @@ func (a *AccountKeyRoleBased) SigValidationGas() (uint64, error) {
 	}
 
 	return gas, nil
+}
+
+func (a *AccountKeyRoleBased) Init() error {
+	// A zero-role key is not allowed.
+	if len(*a) == 0 {
+		return kerrors.ErrZeroLength
+	}
+	// Do not allow undefined roles.
+	if len(*a) > (int)(RoleLast) {
+		return kerrors.ErrLengthTooLong
+	}
+	for i := 0; i < len(*a); i++ {
+		// A nested role-based key is not allowed.
+		if _, ok := (*a)[i].(*AccountKeyRoleBased); ok {
+			return kerrors.ErrNestedRoleBasedKey
+		}
+
+		// If any key in the role cannot be initialized, return an error.
+		if err := (*a)[i].Init(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (a *AccountKeyRoleBased) Update(key AccountKey) error {
+	if ak, ok := key.(*AccountKeyRoleBased); ok {
+		lenAk := len(*ak)
+		lenA := len(*a)
+		// If no key is to be replaced, it is regarded as a fail.
+		if lenAk == 0 {
+			return kerrors.ErrZeroLength
+		}
+		// Do not allow undefined roles.
+		if lenAk > (int)(RoleLast) {
+			return kerrors.ErrLengthTooLong
+		}
+		if lenA < lenAk {
+			*a = append(*a, (*ak)[lenA:]...)
+		}
+		for i := 0; i < lenAk; i++ {
+			if _, ok := (*ak)[i].(*AccountKeyRoleBased); ok {
+				// A nested role-based key is not allowed.
+				return kerrors.ErrNestedRoleBasedKey
+			}
+			// Skip if AccountKeyNil.
+			if (*ak)[i].Type() == AccountKeyTypeNil {
+				continue
+			}
+			if err := (*ak)[i].Init(); err != nil {
+				return err
+			}
+			(*a)[i] = (*ak)[i]
+		}
+
+		return nil
+	}
+
+	// Update is not possible if the type is different.
+	return kerrors.ErrDifferentAccountKeyType
 }

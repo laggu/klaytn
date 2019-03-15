@@ -382,6 +382,9 @@ func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB) error {
 	if stateDB.Exist(to) {
 		return kerrors.ErrAccountAlreadyExists
 	}
+	if err := t.Key.Init(); err != nil {
+		return err
+	}
 
 	return nil
 }

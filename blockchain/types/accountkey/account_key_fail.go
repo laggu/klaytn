@@ -18,6 +18,7 @@ package accountkey
 
 import (
 	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 )
 
@@ -64,4 +65,14 @@ func (a *AccountKeyFail) AccountCreationGas() (uint64, error) {
 func (a *AccountKeyFail) SigValidationGas() (uint64, error) {
 	// No gas required to make an account with a failed key.
 	return params.TxValidationGasDefault, nil
+}
+
+func (a *AccountKeyFail) Init() error {
+	// AccountKeyFail can be assigned to an account. Since it does not have any value, it returns always nil.
+	return nil
+}
+
+func (a *AccountKeyFail) Update(key AccountKey) error {
+	// AccountKeyFail cannot be updated with any key, hence it returns always an error.
+	return kerrors.ErrAccountKeyFailNotUpdatable
 }

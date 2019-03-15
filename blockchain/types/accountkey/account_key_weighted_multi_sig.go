@@ -130,6 +130,65 @@ func (a *AccountKeyWeightedMultiSig) SigValidationGas() (uint64, error) {
 	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
 }
 
+func (a *AccountKeyWeightedMultiSig) Init() error {
+	sum := uint(0)
+	prevSum := uint(0)
+
+	if len(a.Keys) == 0 {
+		return kerrors.ErrZeroLength
+	}
+
+	if uint64(len(a.Keys)) > MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	keyMap := make(map[string]bool)
+	for _, k := range a.Keys {
+		// Do not allow zero weight.
+		if k.Weight == 0 {
+			return kerrors.ErrZeroKeyWeight
+		}
+		sum += k.Weight
+
+		b, err := rlp.EncodeToBytes(k.Key)
+		if err != nil {
+			// Do not allow unserializable keys.
+			return kerrors.ErrUnserializableKey
+		}
+		if _, ok := keyMap[string(b)]; ok {
+			// Do not allow duplicated keys.
+			return kerrors.ErrDuplicatedKey
+		}
+		keyMap[string(b)] = true
+
+		// Do not allow overflow of weighted sum.
+		if prevSum > sum {
+			return kerrors.ErrWeightedSumOverflow
+		}
+		prevSum = sum
+	}
+	// The weighted sum should be larger than the threshold.
+	if sum < a.Threshold {
+		return kerrors.ErrUnsatisfiableThreshold
+	}
+
+	return nil
+}
+
+func (a *AccountKeyWeightedMultiSig) Update(key AccountKey) error {
+	if ak, ok := key.(*AccountKeyWeightedMultiSig); ok {
+		if err := ak.Init(); err != nil {
+			return err
+		}
+		a.Threshold = ak.Threshold
+		copy(a.Keys, ak.Keys)
+		return nil
+	}
+
+	// Update is not possible if the type is different.
+	return kerrors.ErrDifferentAccountKeyType
+}
+
 // WeightedPublicKey contains a public key and its weight.
 // The weight is used to check whether the weighted sum of public keys are larger than
 // the threshold of the AccountKeyWeightedMultiSig object.

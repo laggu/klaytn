@@ -18,6 +18,7 @@ package accountkey
 
 import (
 	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"runtime"
 )
@@ -73,4 +74,19 @@ func (a *AccountKeyLegacy) AccountCreationGas() (uint64, error) {
 func (a *AccountKeyLegacy) SigValidationGas() (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxValidationGasDefault, nil
+}
+
+func (a *AccountKeyLegacy) Init() error {
+	// Since it has no data and it can be assigned to an account, it always returns nil.
+	return nil
+}
+
+func (a *AccountKeyLegacy) Update(key AccountKey) error {
+	if _, ok := key.(*AccountKeyLegacy); ok {
+		// If `key` is the same type, it returns always nil. No need to set any value.
+		return nil
+	}
+
+	// If `key` is not the type of AccountKeyLegacy, it cannot be assigned.
+	return kerrors.ErrDifferentAccountKeyType
 }

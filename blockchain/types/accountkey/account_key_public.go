@@ -19,6 +19,7 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 )
 
@@ -76,4 +77,27 @@ func (a *AccountKeyPublic) AccountCreationGas() (uint64, error) {
 
 func (a *AccountKeyPublic) SigValidationGas() (uint64, error) {
 	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
+}
+
+func (a *AccountKeyPublic) Init() error {
+	// If the point is not on the curve, return an error.
+	if a.IsOnCurve(a.X, a.Y) == false {
+		return kerrors.ErrNotOnCurve
+	}
+
+	return nil
+}
+
+func (a *AccountKeyPublic) Update(key AccountKey) error {
+	if ak, ok := key.(*AccountKeyPublic); ok {
+		if err := ak.Init(); err != nil {
+			return err
+		}
+		a.X = ak.X
+		a.Y = ak.Y
+		return nil
+	}
+
+	// Update is not possible if the type is different.
+	return kerrors.ErrDifferentAccountKeyType
 }
