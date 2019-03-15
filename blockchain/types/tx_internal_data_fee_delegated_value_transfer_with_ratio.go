@@ -22,6 +22,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -39,7 +40,7 @@ type TxInternalDataFeeDelegatedValueTransferWithRatio struct {
 	Recipient    common.Address
 	Amount       *big.Int
 	From         common.Address
-	FeeRatio     uint8
+	FeeRatio     FeeRatio
 
 	TxSignatures
 
@@ -104,7 +105,7 @@ func newTxInternalDataFeeDelegatedValueTransferWithRatioWithMap(values map[TxVal
 		return nil, errValueKeyFromMustAddress
 	}
 
-	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(uint8); ok {
+	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(FeeRatio); ok {
 		d.FeeRatio = v
 		delete(values, TxValueKeyFeeRatioOfFeePayer)
 	} else {
@@ -158,7 +159,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) IsLegacyTransaction()
 	return false
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) GetFeeRatio() uint8 {
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) GetFeeRatio() FeeRatio {
 	return t.FeeRatio
 }
 
@@ -266,7 +267,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SerializeForSignToByt
 		Recipient    common.Address
 		Amount       *big.Int
 		From         common.Address
-		FeeRatio     uint8
+		FeeRatio     FeeRatio
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -295,7 +296,10 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SerializeForSign() []
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB StateDB) error {
-	// No more validation required for TxInternalDataFeeDelegatedValueTransferWithRatio.
+	if t.FeeRatio.IsValid() == false {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
+
 	return nil
 }
 

@@ -462,7 +462,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           big.NewInt(0),
 			types.TxValueKeyFeePayer:           *bcdata.addrs[1],
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancelWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -493,7 +493,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 			types.TxValueKeyGasLimit:           gasLimit + 10,
 			types.TxValueKeyGasPrice:           big.NewInt(0),
 			types.TxValueKeyFeePayer:           *bcdata.addrs[1],
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(20),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(20),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancelWithRatio, values)
 		assert.Equal(t, nil, err)

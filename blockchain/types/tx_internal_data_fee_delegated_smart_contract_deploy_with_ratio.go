@@ -43,7 +43,7 @@ type TxInternalDataFeeDelegatedSmartContractDeployWithRatio struct {
 	From          common.Address
 	Payload       []byte
 	HumanReadable bool
-	FeeRatio      uint8
+	FeeRatio      FeeRatio
 
 	TxSignatures
 
@@ -129,7 +129,7 @@ func newTxInternalDataFeeDelegatedSmartContractDeployWithRatioWithMap(values map
 		return nil, errValueKeyFeePayerMustAddress
 	}
 
-	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(uint8); ok {
+	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(FeeRatio); ok {
 		t.FeeRatio = v
 		delete(values, TxValueKeyFeeRatioOfFeePayer)
 	} else {
@@ -223,7 +223,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeePayerRawS
 	return t.FeePayerSignature.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeeRatio() uint8 {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeeRatio() FeeRatio {
 	return t.FeeRatio
 }
 
@@ -304,7 +304,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SerializeForSig
 		From          common.Address
 		Payload       []byte
 		HumanReadable bool
-		FeeRatio      uint8
+		FeeRatio      FeeRatio
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -342,6 +342,11 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateD
 	if stateDB.Exist(to) {
 		return kerrors.ErrAccountAlreadyExists
 	}
+
+	if t.FeeRatio.IsValid() == false {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
+
 	return nil
 }
 

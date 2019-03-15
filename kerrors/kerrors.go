@@ -29,4 +29,5 @@ var (
 	ErrEmptySlice                = errors.New("slice is empty")
 	ErrNotProgramAccount         = errors.New("not a program account (e.g., an account having code and storage)")
 	ErrAccountAlreadyExists      = errors.New("account already exists")
+	ErrFeeRatioOutOfRange        = errors.New("fee ratio is out of range [1, 99]")
 )

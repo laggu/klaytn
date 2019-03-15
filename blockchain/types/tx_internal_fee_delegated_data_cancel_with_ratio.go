@@ -22,6 +22,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -40,7 +41,7 @@ type TxInternalDataFeeDelegatedCancelWithRatio struct {
 	Price        *big.Int
 	GasLimit     uint64
 	From         common.Address
-	FeeRatio     uint8
+	FeeRatio     FeeRatio
 
 	TxSignatures
 
@@ -96,7 +97,7 @@ func newTxInternalDataFeeDelegatedCancelWithRatioWithMap(values map[TxValueKeyTy
 		return nil, errValueKeyFeePayerMustAddress
 	}
 
-	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(uint8); ok {
+	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(FeeRatio); ok {
 		d.FeeRatio = v
 		delete(values, TxValueKeyFeeRatioOfFeePayer)
 	} else {
@@ -157,7 +158,7 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFeePayerRawSignatureValue
 	return t.FeePayerSignature.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFeeRatio() uint8 {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFeeRatio() FeeRatio {
 	return t.FeeRatio
 }
 
@@ -238,7 +239,7 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSignToBytes() []
 		Price        *big.Int
 		GasLimit     uint64
 		From         common.Address
-		FeeRatio     uint8
+		FeeRatio     FeeRatio
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -263,7 +264,10 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSign() []interfa
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB) error {
-	// No more validation required for TxTypeCancel for now.
+	if t.FeeRatio.IsValid() == false {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
+
 	return nil
 }
 

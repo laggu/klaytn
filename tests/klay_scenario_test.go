@@ -704,7 +704,7 @@ func TestTransactionScenario(t *testing.T) {
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -810,7 +810,7 @@ func TestTransactionScenario(t *testing.T) {
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyData:               data,
 			types.TxValueKeyFeePayer:           colin.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemoWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -1372,7 +1372,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 			types.TxValueKeyHumanReadable:      true,
 			types.TxValueKeyData:               common.FromHex(code),
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -1421,7 +1421,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyData:               data,
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecutionWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -2485,7 +2485,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
 			types.TxValueKeyFeePayer:           reservoir.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -2549,7 +2549,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
 			types.TxValueKeyFeePayer:           reservoir.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -2642,7 +2642,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
 			types.TxValueKeyFeePayer:           reservoir.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -3058,7 +3058,7 @@ func TestValidateSender(t *testing.T) {
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		})
 		assert.Equal(t, nil, err)
 

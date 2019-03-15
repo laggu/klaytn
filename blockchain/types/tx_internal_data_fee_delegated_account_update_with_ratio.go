@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -40,7 +41,7 @@ type TxInternalDataFeeDelegatedAccountUpdateWithRatio struct {
 	GasLimit     uint64
 	From         common.Address
 	Key          accountkey.AccountKey
-	FeeRatio     uint8
+	FeeRatio     FeeRatio
 
 	TxSignatures
 
@@ -57,7 +58,7 @@ type txInternalDataFeeDelegatedAccountUpdateWithRatioSerializable struct {
 	GasLimit     uint64
 	From         common.Address
 	Key          []byte
-	FeeRatio     uint8
+	FeeRatio     FeeRatio
 
 	TxSignatures
 
@@ -118,7 +119,7 @@ func newTxInternalDataFeeDelegatedAccountUpdateWithRatioWithMap(values map[TxVal
 		return nil, errValueKeyFeePayerMustAddress
 	}
 
-	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(uint8); ok {
+	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(FeeRatio); ok {
 		d.FeeRatio = v
 		delete(values, TxValueKeyFeeRatioOfFeePayer)
 	} else {
@@ -246,7 +247,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeePayerRawSignatu
 	return t.FeePayerSignature.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeeRatio() uint8 {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeeRatio() FeeRatio {
 	return t.FeeRatio
 }
 
@@ -339,7 +340,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSignToByt
 		GasLimit     uint64
 		From         common.Address
 		Key          []byte
-		FeeRatio     uint8
+		FeeRatio     FeeRatio
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -370,6 +371,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSign() []
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB StateDB) error {
 	// TODO-Klaytn-Accounts: need validation of t.key?
+
+	if t.FeeRatio.IsValid() == false {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
+
 	return nil
 }
 

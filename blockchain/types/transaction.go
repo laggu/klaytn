@@ -286,7 +286,7 @@ func (tx *Transaction) FeePayer() (common.Address, error) {
 // FeeRatio returns the fee ratio of a transaction.
 // If the transaction does not implement TxInternalDataFeeRatio,
 // it returns MaxFeeRatio which means the fee payer will be paid all tx fee by default.
-func (tx *Transaction) FeeRatio() uint8 {
+func (tx *Transaction) FeeRatio() FeeRatio {
 	tf, ok := tx.data.(TxInternalDataFeeRatio)
 	if !ok {
 		// default fee ratio is MaxFeeRatio.

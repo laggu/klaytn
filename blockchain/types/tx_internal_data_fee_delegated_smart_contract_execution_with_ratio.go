@@ -42,7 +42,7 @@ type TxInternalDataFeeDelegatedSmartContractExecutionWithRatio struct {
 	Amount       *big.Int
 	From         common.Address
 	Payload      []byte
-	FeeRatio     uint8
+	FeeRatio     FeeRatio
 
 	TxSignatures
 
@@ -121,7 +121,7 @@ func newTxInternalDataFeeDelegatedSmartContractExecutionWithRatioWithMap(values 
 		return nil, errValueKeyFeePayerMustAddress
 	}
 
-	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(uint8); ok {
+	if v, ok := values[TxValueKeyFeeRatioOfFeePayer].(FeeRatio); ok {
 		t.FeeRatio = v
 		delete(values, TxValueKeyFeeRatioOfFeePayer)
 	} else {
@@ -214,7 +214,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeePayerR
 	return t.FeePayerSignature.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeeRatio() uint8 {
+func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeeRatio() FeeRatio {
 	return t.FeeRatio
 }
 
@@ -291,7 +291,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) SerializeFor
 		Amount       *big.Int
 		From         common.Address
 		Payload      []byte
-		FeeRatio     uint8
+		FeeRatio     FeeRatio
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -325,6 +325,10 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) Validate(sta
 	// Fail if the target address is not a program account.
 	if stateDB.IsProgramAccount(t.Recipient) == false {
 		return kerrors.ErrNotProgramAccount
+	}
+
+	if t.FeeRatio.IsValid() == false {
+		return kerrors.ErrFeeRatioOutOfRange
 	}
 
 	return nil

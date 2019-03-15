@@ -221,7 +221,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(20),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(20),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -299,7 +299,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyData:               []byte("hello"),
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemoWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -465,7 +465,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
 			types.TxValueKeyFeePayer:           reservoir.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(11),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(11),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -551,7 +551,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyHumanReadable:      true,
 			types.TxValueKeyData:               common.FromHex(code),
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(33),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(33),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -653,7 +653,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyHumanReadable:      true,
 			types.TxValueKeyData:               data,
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(66),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(66),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecutionWithRatio, values)
 		assert.Equal(t, nil, err)
@@ -719,7 +719,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           big.NewInt(0),
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: uint8(88),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(88),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancelWithRatio, values)
 		assert.Equal(t, nil, err)

@@ -605,7 +605,7 @@ func genNewFeeDelegatedValueTransferWithRatio(signer types.Signer, from *TestAcc
 		types.TxValueKeyGasPrice:           gasPrice,
 		types.TxValueKeyFrom:               from.Addr,
 		types.TxValueKeyFeePayer:           from.Addr,
-		types.TxValueKeyFeeRatioOfFeePayer: uint8(30),
+		types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 	})
 
 	if err != nil {

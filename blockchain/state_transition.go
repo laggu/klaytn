@@ -83,7 +83,7 @@ type Message interface {
 	// FeeRatio returns a ratio of tx fee paid by the fee payer in percentage.
 	// For example, if it is 30, 30% of tx fee will be paid by the fee payer.
 	// 70% will be paid by the sender.
-	FeeRatio() uint8
+	FeeRatio() types.FeeRatio
 
 	//FromFrontier() (common.Address, error)
 	To() *common.Address

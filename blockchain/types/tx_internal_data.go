@@ -30,7 +30,7 @@ import (
 
 // MaxFeeRatio is the maximum value of feeRatio. Since it is represented in percentage,
 // the maximum value is 100.
-const MaxFeeRatio uint8 = 100
+const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
 
@@ -200,6 +200,13 @@ func (t TxType) IsFeeDelegatedTransaction() bool {
 	return (t & (TxTypeFeeDelegatedTransactions | TxTypeFeeDelegatedWithRatioTransactions)) != 0x0
 }
 
+type FeeRatio uint8
+
+// FeeRatio is valid where it is [1,99].
+func (f FeeRatio) IsValid() bool {
+	return 1 <= f && f <= 99
+}
+
 // TxInternalData is an interface for an internal data structure of a Transaction
 type TxInternalData interface {
 	Type() TxType
@@ -289,7 +296,7 @@ type TxInternalDataFeeRatio interface {
 	// GetFeeRatio returns a ratio of tx fee paid by the fee payer in percentage.
 	// For example, if it is 30, 30% of tx fee will be paid by the fee payer.
 	// 70% will be paid by the sender.
-	GetFeeRatio() uint8
+	GetFeeRatio() FeeRatio
 }
 
 // TxInternalDataFrom has a function `GetFrom()`.
@@ -469,7 +476,7 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 
 // CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.
 // For example, if fee = 100 and feeRatio = 30, feePayer = 30 and feeSender = 70.
-func CalcFeeWithRatio(feeRatio uint8, fee *big.Int) (*big.Int, *big.Int) {
+func CalcFeeWithRatio(feeRatio FeeRatio, fee *big.Int) (*big.Int, *big.Int) {
 	// feePayer = fee * ratio / 100
 	feePayer := new(big.Int).Div(new(big.Int).Mul(fee, new(big.Int).SetUint64(uint64(feeRatio))), common.Big100)
 	// feeSender = fee - feePayer
