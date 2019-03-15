@@ -108,14 +108,6 @@
   revision = "f6d5545993d68e9e42df43eb57958f898dea3623"
 
 [[projects]]
-  branch = "develop"
-  digest = "1:d2704bb2dcd6824858adbe7c58b06dd0782be5f483601ee3be01cd22a882453f"
-  name = "github.com/getamis/sirius"
-  packages = ["util"]
-  pruneopts = "UT"
-  revision = "bf4fba386c10858c255fe513a0bdf8ed29164270"
-
-[[projects]]
   digest = "1:c4a2528ccbcabf90f9f3c464a5fc9e302d592861bbfd0b7135a7de8a943d0406"
   name = "github.com/go-stack/stack"
   packages = ["."]
@@ -289,6 +281,14 @@
   version = "v0.1.1"
 
 [[projects]]
+  digest = "1:7c69f3c227b0d085296096a2c7e3185be663c901e8ddad4c95c223aa5cb88bd8"
+  name = "github.com/otiai10/copy"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a15b9cb96cf2f7930107fe0a9a6faf1b91e69df4"
+  version = "v1.0.1"
+
+[[projects]]
   branch = "master"
   digest = "1:5f81e80915d9312397c603b6da6f751a4ae36ae2b4d4f0474a34241d95738686"
   name = "github.com/pbnjay/memory"
@@ -412,14 +412,6 @@
   version = "v1.4.0"
 
 [[projects]]
-  digest = "1:9424f440bba8f7508b69414634aef3b2b3a877e522d8a4624692412805407bb7"
-  name = "github.com/spf13/pflag"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
-  version = "v1.0.1"
-
-[[projects]]
   digest = "1:7e8d267900c7fa7f35129a2a37596e38ed0f11ca746d6d9ba727980ee138f9f6"
   name = "github.com/stretchr/testify"
   packages = [
@@ -478,14 +470,6 @@
   pruneopts = "UT"
   revision = "e5f51c11919d4f66400334047b897ef0a94c6f3c"
   version = "v20180529"
-
-[[projects]]
-  branch = "master"
-  digest = "1:b886794c17707f941b76728135838871463ae154d7aa1385f2230677e669dc16"
-  name = "github.com/zpatrick/go-parser"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "524d1e8c73c1e408fbf2dd5506bd1aa62a473acd"
 
 [[projects]]
   digest = "1:3c1a69cdae3501bf75e76d0d86dc6f2b0a7421bc205c0cb7b96b19eed464a34d"
@@ -737,7 +721,6 @@
     "github.com/edsrzf/mmap-go",
     "github.com/fatih/color",
     "github.com/fjl/memsize/memsizeui",
-    "github.com/getamis/sirius/util",
     "github.com/go-stack/stack",
     "github.com/golang/protobuf/proto",
     "github.com/golang/snappy",
@@ -752,16 +735,17 @@
     "github.com/julienschmidt/httprouter",
     "github.com/mattn/go-colorable",
     "github.com/naoina/toml",
+    "github.com/otiai10/copy",
     "github.com/pbnjay/memory",
     "github.com/pborman/uuid",
     "github.com/peterh/liner",
+    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/prometheus/util/flock",
     "github.com/rjeczalik/notify",
     "github.com/robertkrimen/otto",
     "github.com/rs/cors",
-    "github.com/spf13/pflag",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/syndtr/goleveldb/leveldb",
@@ -774,7 +758,6 @@
     "github.com/urfave/cli",
     "github.com/valyala/fasthttp",
     "github.com/valyala/fasthttp/fasthttpadaptor",
-    "github.com/zpatrick/go-parser",
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "golang.org/x/crypto/openpgp",
