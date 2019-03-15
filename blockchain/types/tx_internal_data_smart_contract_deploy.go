@@ -283,6 +283,17 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 
 func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB) error {
 	to := t.Recipient
+	if t.HumanReadable {
+		addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
+			if r == rune(0x0) {
+				return true
+			}
+			return false
+		}))
+		if err := common.IsHumanReadableAddress(addrString); err != nil {
+			return kerrors.ErrNotHumanReadableAddress
+		}
+	}
 	// Fail if the address is already created.
 	if stateDB.Exist(to) {
 		return kerrors.ErrAccountAlreadyExists

@@ -839,6 +839,178 @@ func TestTransactionScenario(t *testing.T) {
 	}
 }
 
+// TestSmartContractDeployNonHumanReadableAddress checks that the smart contract is deployed to the given address.
+// Since the address is an invalid human-readable address and humanReadable == false, it should succeed.
+func TestSmartContractDeployNonHumanReadableAddressSuccess(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+	}
+
+	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
+		"contract")
+	assert.Equal(t, nil, err)
+
+	// assign invalid human readable address
+	contract.Addr.SetBytesFromFront([]byte("1contract"))
+
+	gasPrice := new(big.Int).SetUint64(0)
+	gasLimit := uint64(250000000)
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	var code string
+
+	if isCompilerAvailable() {
+		filename := string("../contracts/reward/contract/KlaytnReward.sol")
+		codes, _ := compileSolidity(filename)
+		code = codes[0]
+	} else {
+		// Falling back to use compiled code.
+		code = "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
+	}
+
+	// 1. Deploy smart contract (reservoir -> contract)
+	{
+		amount := new(big.Int).SetUint64(0)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// check receipt
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	}
+}
+
+// TestSmartContractDeployNonHumanReadableAddress checks that the smart contract is deployed to the given address.
+// Since the address is an invalid human-readable address, the transaction should fail.
+func TestSmartContractDeployNonHumanReadableAddressFail(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+	}
+
+	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
+		"contract")
+	assert.Equal(t, nil, err)
+
+	// assign invalid human readable address
+	contract.Addr.SetBytesFromFront([]byte("1contract"))
+
+	gasPrice := new(big.Int).SetUint64(0)
+	gasLimit := uint64(250000000)
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	var code string
+
+	if isCompilerAvailable() {
+		filename := string("../contracts/reward/contract/KlaytnReward.sol")
+		codes, _ := compileSolidity(filename)
+		code = codes[0]
+	} else {
+		// Falling back to use compiled code.
+		code = "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
+	}
+
+	// 1. Deploy smart contract (reservoir -> contract)
+	{
+		amount := new(big.Int).SetUint64(0)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// check receipt
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrNotHumanReadableAddress, receipt.Status)
+	}
+}
+
 // TestSmartContractDeployAddress checks that the smart contract is deployed to the given address or not by
 // checking receipt.ContractAddress.
 func TestSmartContractDeployAddress(t *testing.T) {
