@@ -64,32 +64,18 @@ func DefaultDBType() string {
 // persistence requirements.
 func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
-	home := homeDir()
-	if home != "" {
-		if runtime.GOOS == "darwin" {
-			return filepath.Join(home, "Library", "Klaytn")
-		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "Klaytn")
-		} else {
-			return filepath.Join(home, ".klay")
-		}
-	}
-	// As we cannot guess a stable location, return empty and handle later
-	return ""
-}
-
-func DefaultDataDirByType(name string) string {
-	if name == "" {
-		return DefaultDataDir()
+	dirname := filepath.Base(os.Args[0])
+	if dirname == "" {
+		dirname = "klay"
 	}
 	home := homeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
-			return filepath.Join(home, "Library", strings.ToUpper(name))
+			return filepath.Join(home, "Library", strings.ToUpper(dirname))
 		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", strings.ToUpper(name))
+			return filepath.Join(home, "AppData", "Roaming", strings.ToUpper(dirname))
 		} else {
-			return filepath.Join(home, "."+name)
+			return filepath.Join(home, "."+dirname)
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later
