@@ -36,6 +36,11 @@ kbn:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kbn\" to launch bootnode."
 
+kscn:
+	build/env.sh go run build/ci.go install ./cmd/kscn
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/kscn\" to launch ServiceChain Node."
+
 kgen:
 	build/env.sh go run build/ci.go install ./cmd/kgen
 	@echo "Done building."
