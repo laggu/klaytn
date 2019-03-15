@@ -344,12 +344,12 @@ func GetStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
 
 	stakingInfo := stakingCache.get(number)
 	if stakingInfo == nil {
-		logger.Error("Staking cache missed", "Block number", blockNum, "number of staking block", number)
+		logger.Info("Staking cache missed", "Block number", blockNum, "number of staking block", number)
 		return nil
 	}
 
 	if stakingInfo.BlockNum != number {
-		logger.Error("Staking cache hit. But staking information not found", "Block number", blockNum, "number of staking block", number)
+		logger.Info("Staking cache hit. But staking information not found", "Block number", blockNum, "number of staking block", number)
 		return nil
 	}
 
