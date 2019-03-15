@@ -73,12 +73,25 @@ func TestTransactionSerialization(t *testing.T) {
 		{"JSON", testTransactionJSON},
 	}
 
+	txMap := make(map[TxType]TxInternalData)
 	for _, test := range testcases {
 		for _, tx := range txs {
+			txMap[tx.tx.Type()] = tx.tx
 			Name := test.Name + "/" + tx.Name
 			t.Run(Name, func(t *testing.T) {
 				test.fn(t, tx.tx)
 			})
+		}
+	}
+
+	// Below code checks whether serialization for all tx implementations is done or not.
+	// If no serialization, make test failed.
+	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
+		tx, err := NewTxInternalData(i)
+		if err == nil {
+			if _, ok := txMap[tx.Type()]; !ok {
+				t.Errorf("No serialization test for tx %s", tx.Type().String())
+			}
 		}
 	}
 }
