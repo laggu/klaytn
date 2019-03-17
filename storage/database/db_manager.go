@@ -247,6 +247,7 @@ type databaseManager struct {
 	isMemoryDB         bool
 	childChainIndexing bool
 	parallelDBWrite    bool
+	partitioned        bool
 }
 
 func NewMemoryDBManager() DBManager {
@@ -315,6 +316,7 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 			db.Meter("klay/db/chaindata/")
 		}
 	}
+	dbm.partitioned = true
 	return dbm, nil
 }
 
@@ -399,11 +401,16 @@ func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 }
 
 func (dbm *databaseManager) Close() {
-	dbm.dbs[0].Close()
-	//TODO-Klaytn should be enabled after individual databases are integrated.
-	//for _, db := range dbm.dbs {
-	//	db.Close()
-	//}
+	// If not partitioned, only close the first database.
+	if !dbm.partitioned {
+		dbm.dbs[0].Close()
+		return
+	}
+
+	// If partitioned, close all databases.
+	for _, db := range dbm.dbs {
+		db.Close()
+	}
 }
 
 // TODO-Klaytn Some of below need to be invisible outside database package
