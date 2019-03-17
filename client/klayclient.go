@@ -638,6 +638,30 @@ func (ec *Client) GetChainAccountAddr(ctx context.Context) (common.Address, erro
 	return result, err
 }
 
+// GetLatestAnchoredBlockNumber can return the latest anchored block number.
+func (ec *Client) GetLatestAnchoredBlockNumber(ctx context.Context) (uint64, error) {
+	var result uint64
+	err := ec.c.CallContext(ctx, &result, "bridge_getLatestAnchoredBlockNumber")
+	return result, err
+}
+
+// EnableAnchoring can enable anchoring function and return the set value.
+func (ec *Client) EnableAnchoring(ctx context.Context) (bool, error) {
+	return ec.setAnchoring(ctx, true)
+}
+
+// DisableAnchoring can disable anchoring function and return the set value.
+func (ec *Client) DisableAnchoring(ctx context.Context) (bool, error) {
+	return ec.setAnchoring(ctx, false)
+}
+
+// setAnchoring can set if anchoring is enabled or not.
+func (ec *Client) setAnchoring(ctx context.Context, enable bool) (bool, error) {
+	var result bool
+	err := ec.c.CallContext(ctx, &result, "bridge_anchoring", enable)
+	return result, err
+}
+
 // GetAnchoringPeriod can get the block period to anchor chain data.
 func (ec *Client) GetAnchoringPeriod(ctx context.Context) (uint64, error) {
 	var result uint64
