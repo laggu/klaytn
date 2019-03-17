@@ -93,9 +93,9 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
 		Istanbul: &params.IstanbulConfig{
-			Epoch:          30000,
-			ProposerPolicy: 0,
-			SubGroupSize:   21,
+			Epoch:          istanbul.DefaultConfig.Epoch,
+			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
+			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
 		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
 	})

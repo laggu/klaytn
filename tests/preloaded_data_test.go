@@ -26,6 +26,8 @@ import (
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/governance"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/work"
 	"github.com/otiai10/copy"
@@ -419,8 +421,22 @@ func NewBCDataFromPreLoadedData(dbDir string, numValidators int) (*BCData, error
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
+	// Create a governance
+	gov := governance.NewGovernance(&params.ChainConfig{
+		ChainID:       big.NewInt(2018),
+		UnitPrice:     25000000000,
+		DeriveShaImpl: 0,
+		Istanbul: &params.IstanbulConfig{
+			Epoch:          istanbul.DefaultConfig.Epoch,
+			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
+			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
+		},
+		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+	})
+
+	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(genesisAddr, genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, nil)
+	engine := istanbulBackend.New(genesisAddr, genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, gov)
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
