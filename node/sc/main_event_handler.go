@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/ser/rlp"
 )
 
 var (
@@ -38,7 +39,7 @@ func NewMainChainEventHandler(bridge *MainBridge, handler *MainBridgeHandler) (*
 
 func (mce *MainChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
 	logger.Debug("bridgeNode block number", "number", block.Number())
-	//mce.writeChildChainTxHashFromBlock(block)
+	mce.writeChildChainTxHashFromBlock(block)
 	return nil
 }
 
@@ -101,4 +102,28 @@ func (mce *MainChainEventHandler) GetReceiptFromParentChain(blockHash common.Has
 // writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
 // ChainHashes.
 func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {
+	if !mce.GetChildChainIndexingEnabled() {
+		return
+	}
+
+	txs := block.Transactions()
+	for _, tx := range txs {
+		if tx.Type() != types.TxTypeChainDataAnchoring {
+			continue
+		}
+
+		chainHashes := new(types.ChainHashes)
+		data, err := tx.AnchoredData()
+		if err != nil {
+			logger.Error("writeChildChainTxHashFromBlock : failed to get anchoring data from the tx", "txHash", tx.Hash())
+			continue
+		}
+		if err := rlp.DecodeBytes(data, chainHashes); err != nil {
+			logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+			continue
+		}
+		mce.mainbridge.chainDB.WriteChildChainTxHash(chainHashes.BlockHash, tx.Hash())
+
+		logger.Trace("Write anchoring data on chainDB", "blockHash", chainHashes.BlockHash, "txHash", tx.Hash())
+	}
 }
