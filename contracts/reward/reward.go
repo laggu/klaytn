@@ -61,6 +61,55 @@ type StakingInfo struct {
 	CouncilStakingAmounts []*big.Int // Staking amounts of Council
 }
 
+func (s *StakingInfo) String() string {
+	str := make([]string, 0)
+
+	header := fmt.Sprintf("StakingInfo:{BlockNum:%v", s.BlockNum)
+	str = append(str, header)
+
+	// nodeIds
+	nodeIdsHeader := fmt.Sprintf(" CouncilNodeIds:[")
+	str = append(str, nodeIdsHeader)
+	nodeIds := make([]string, 0)
+	for _, nodeId := range s.CouncilNodeIds {
+		nodeIds = append(nodeIds, nodeId.String())
+	}
+	str = append(str, strings.Join(nodeIds, " "))
+	str = append(str, "]")
+
+	// stakingAddrs
+	stakingAddrsHeader := fmt.Sprintf(", CouncilStakingAddrs:[")
+	str = append(str, stakingAddrsHeader)
+	stakingAddrs := make([]string, 0)
+	for _, stakingAddr := range s.CouncilStakingdAddrs {
+		stakingAddrs = append(stakingAddrs, stakingAddr.String())
+	}
+	str = append(str, strings.Join(stakingAddrs, " "))
+	str = append(str, "]")
+
+	// rewardAddrs
+	rewardAddrsHeader := fmt.Sprintf(", CouncilRewardAddrs:[")
+	str = append(str, rewardAddrsHeader)
+	rewardAddrs := make([]string, 0)
+	for _, rewardAddr := range s.CouncilRewardAddrs {
+		rewardAddrs = append(rewardAddrs, rewardAddr.String())
+	}
+	str = append(str, strings.Join(rewardAddrs, " "))
+	str = append(str, "]")
+
+	// pocAddr and kirAddr
+	pocAddr := fmt.Sprintf(", PoCAddr:%v", s.PoCAddr.String())
+	str = append(str, pocAddr)
+	kirAddr := fmt.Sprintf(", KIRAddr:%v", s.KIRAddr.String())
+	str = append(str, kirAddr)
+
+	// stakingAmounts
+	stakingAmounts := fmt.Sprintf(", CouncilStakingAmounts:%v }", s.CouncilStakingAmounts)
+	str = append(str, stakingAmounts)
+
+	return strings.Join(str, " ")
+}
+
 func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) int {
 	for i, addr := range s.CouncilNodeIds {
 		if addr == nodeId {
@@ -349,7 +398,7 @@ func GetStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
 		return nil
 	}
 
-	logger.Debug("Staking cache hit.", "Block number", blockNum, "stakingInfo", stakingInfo, "number of staking block", number)
+	logger.Debug("Staking cache hit.", "Block number", blockNum, "number of staking block", number, "stakingInfo", stakingInfo)
 	return stakingInfo
 }
 
@@ -423,9 +472,9 @@ func ParseGetAllAddressInfo(result []byte) ([]common.Address, []common.Address, 
 func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) error {
 	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
 
-	if stakingCache.get(blockNum) != nil {
+	if cachedStakingInfo := stakingCache.get(blockNum); cachedStakingInfo != nil {
 		// already updated
-		logger.Trace("No need to update staking cache. Already updated.", "blockNum", blockNum)
+		logger.Trace("no need to update staking cache. Already updated.", "blockNum", blockNum, "stakingInfo", cachedStakingInfo)
 		return nil
 	}
 
@@ -438,7 +487,7 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) error {
 		return err
 	}
 
-	logger.Trace("added new staking info", "stakingInfo", stakingInfo)
+	logger.Info("update staking cache with new staking info", "stakingInfo", stakingInfo)
 
 	return nil
 }
@@ -737,12 +786,6 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 		logger.Trace("Failed to parse result from InitContract contract", "err", err)
 		return nil, err
 	}
-
-	// TODO-Klaytn-Issue1166 Disable Trace log later
-	logger.Trace("Result from InitContract contract", "nodeIds", nodeIds)
-	logger.Trace("Result from InitContract contract", "stakingAddrs", stakingAddrs)
-	logger.Trace("Result from InitContract contract", "rewardAddrs", rewardAddrs)
-	logger.Trace("Result from InitContract contract", "KIRAddr", KIRAddr, "PoCAddr", PoCAddr)
 
 	return newStakingInfo(bc, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
 }

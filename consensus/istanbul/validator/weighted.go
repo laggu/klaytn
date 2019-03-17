@@ -196,11 +196,10 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 }
 
 func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.Address, votingPowers []uint64, weights []int, proposers []common.Address, proposersBlockNum uint64) {
-	// TODO-Klaytn-Issue1166 Disable Trace log later
 
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
-		logger.Error("GetWeightedCouncilData() Not weightedCouncil type.")
+		logger.Error("not weightedCouncil type.")
 		return
 	}
 
@@ -214,17 +213,15 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.
 			rewardAddrs[i] = weightedVal.rewardAddress
 			votingPowers[i] = weightedVal.votingPower
 			weights[i] = weightedVal.weight
-			logger.Trace("GetWeightedCouncilData()", "i", i, "rewardAddr", rewardAddrs[i], "votingPower", votingPowers[i], "weight", weights[i])
 		}
 
 		proposers = make([]common.Address, len(weightedCouncil.proposers))
 		for i, proposer := range weightedCouncil.proposers {
 			proposers[i] = proposer.Address()
-			logger.Trace("GetWeightedCouncilData() proposers", "i", i, "addr", proposers[i])
 		}
 		proposersBlockNum = weightedCouncil.proposersBlockNum
 	} else {
-		logger.Error("GetWeightedCouncilData() WeightedCouncil with wrong proposer policy.")
+		logger.Error("invalid proposer policy for weightedCouncil")
 	}
 	return
 }
@@ -246,14 +243,14 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 		return nil
 	}
 
-	// TODO-Klaytn-Issue1166 proposers is already randomly shuffled considering weights.
+	// At Refresh(), proposers is already randomly shuffled considering weights.
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
 	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum)) % uint64(numProposers)
 	proposer := weightedCouncil.proposers[picker]
 
-	// TODO-Klaytn-Issue1166 Disable Trace log later
-	logger.Trace("Issue1166: weightedRandomProposer() returns", "proposer", proposer.String(), "weighedCouncil.blockNum", blockNum, "round", round, "picker", picker, "proposers", weightedCouncil.proposers)
+	// Enable below more detailed log when debugging
+	// logger.Trace("Select a proposer using weighted random", "proposer", proposer.String(), "picker", picker, "blockNum of council", blockNum, "round", round, "blockNum of proposers updated", weightedCouncil.proposersBlockNum, "number of proposers", numProposers, "all proposers", weightedCouncil.proposers)
 
 	return proposer
 }
@@ -402,7 +399,7 @@ func (valSet *weightedCouncil) CalcProposer(lastProposer common.Address, round u
 
 	newProposer := valSet.selector(valSet, lastProposer, round)
 
-	logger.Debug("Update proposer", "old proposer", valSet.proposer, "new proposer", newProposer, "last proposer", lastProposer.String(), "round", round)
+	logger.Debug("Update a proposer", "old", valSet.proposer, "new", newProposer, "last proposer", lastProposer.String(), "round", round, "blockNum of council", valSet.blockNum, "blockNum of proposers", valSet.proposersBlockNum)
 	valSet.proposer = newProposer
 }
 
@@ -502,7 +499,6 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 
 	if valSet.proposersBlockNum == blockNum {
 		// already refreshed
-		logger.Trace("Refresh() do nothing, already refreshed.", "blockNum", blockNum, "proposers", valSet.proposers)
 		return nil
 	}
 
@@ -536,7 +532,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 			} else {
 				val.(*weightedValidator).rewardAddress = common.Address{}
 			}
-			logger.Trace("Refresh() - Update rewardAddr with staking info", "Council index", valIdx, "validator", val.(*weightedValidator))
+			logger.Trace("Refresh updates rewardAddr of validator", "index", valIdx, "validator", val.(*weightedValidator), "rewardAddr", val.RewardAddress().String())
 		}
 
 		// TODO-Klaytn-Issue1400 one of exception cases
@@ -544,22 +540,21 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 			// update weight
 			tmp := big.NewInt(0)
 			tmp100 := big.NewInt(100)
-			for _, val := range valSet.validators {
+			for valIdx, val := range valSet.validators {
 				i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
 				if i != -1 {
 					stakingAmount := valSet.stakingInfo.CouncilStakingAmounts[i]
 					weight := int(tmp.Div(tmp.Mul(stakingAmount, tmp100), totalStaking).Int64()) // No overflow occurs here.
 					val.(*weightedValidator).weight = weight
-					logger.Trace("Refresh updates weight of validator", "validator", val.(*weightedValidator), "weight", weight)
 				} else {
 					val.(*weightedValidator).weight = 0
-					logger.Trace("Refresh updates weight to 0, due to staking info.", "validator", val.(*weightedValidator))
 				}
+				logger.Trace("Refresh updates weight of validator", "index", valIdx, "validator", val, "weight", val.Weight())
 			}
 		} else {
 			for i, val := range valSet.validators {
 				val.(*weightedValidator).weight = 0
-				logger.Trace("Refresh() Set weight to 0, because total staking value is 0.", "i", i, "validator", val.(*weightedValidator))
+				logger.Trace("Refresh updates weight of validator to 0 due to staking value is 0", "index", i, "validator", val, "weight", val.Weight())
 			}
 		}
 	} else {
