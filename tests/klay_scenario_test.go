@@ -384,6 +384,92 @@ func TestHumanReadableAddress(t *testing.T) {
 	}
 }
 
+// TestAccountCreationWithNilKey is for account creation with a Nil Key.
+// An account should not be created with a key type of AccountKeyNil.
+func TestAccountCreationWithNilKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// Create account with Nil key
+	{
+		// an account has a Nil key
+		addr, err := common.FromHumanReadableAddress("addrNilKey")
+		assert.Equal(t, nil, err)
+		prvKeyHex := "c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"
+		key, err := crypto.HexToECDSA(prvKeyHex)
+		assert.Equal(t, nil, err)
+
+		anon, err := &TestAccountType{
+			Addr:   addr,
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyNil(),
+		}, nil
+		assert.Equal(t, nil, err)
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", anon.Addr.String())
+		}
+
+		var txs types.Transactions
+		amount := new(big.Int).SetUint64(100000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    anon.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+
+		reservoir.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
 // TestTransactionScenario tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
 // 2. Create an account decoupled using TxTypeAccountCreation.
