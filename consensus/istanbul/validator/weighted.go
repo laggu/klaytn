@@ -516,7 +516,9 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 		return err
 	}
 
-	valSet.updateStakingInfo(blockNum)
+	newStakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
+	logger.Debug("Update staking to calculate new proposers", "blockNum", blockNum, "old stakingInfo", valSet.stakingInfo, "new stakingInfo", newStakingInfo)
+	valSet.stakingInfo = newStakingInfo
 
 	// TODO-Klaytn-Issue1166 Update weightedValidator information with staking info if available
 	if valSet.stakingInfo != nil {
@@ -621,15 +623,4 @@ func (valSet *weightedCouncil) TotalVotingPower() uint64 {
 		sum += v.VotingPower()
 	}
 	return sum
-}
-
-func (valSet *weightedCouncil) updateStakingInfo(blockNum uint64) {
-	// Let's use staking information in staking cache
-	stakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
-	if stakingInfo != nil {
-		logger.Trace("snapshot() Found staking info.", "blockNum", blockNum, "stakingInfo", stakingInfo)
-	} else {
-		logger.Trace("snapshot() Can't find staking info.", "blockNum", blockNum, "stakingInfo", stakingInfo)
-	}
-	valSet.stakingInfo = stakingInfo
 }
