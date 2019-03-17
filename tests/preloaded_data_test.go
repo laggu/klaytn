@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// +build preloadtest
 
 package tests
 
@@ -29,6 +30,7 @@ import (
 	"github.com/ground-x/klaytn/work"
 	"github.com/otiai10/copy"
 	"math/big"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -43,8 +45,15 @@ import (
 var errNoOriginalDataDir = errors.New("original data directory does not exist, aborting the test")
 
 const (
-	originalDataDirFor10000Accounts   = "testdata1_orig"
-	originalDataDirFor1500000Accounts = "testdata150_orig"
+	dirFor10000Accounts = "testdata1_orig"
+
+	dirForOneMillionAccounts               = "testdata100_orig"
+	dirForOneMillionAccountsPartitioned    = "testdata100_partitioned_orig"
+	dirForOneMillionAccountsPartitioned4MB = "testdata100_partitioned_4mb_orig"
+
+	dirForFiveMillionAccounts               = "testdata500_orig"
+	dirForFiveMillionAccountsPartitioned    = "testdata500_partitioned_orig"
+	dirForFiveMillionAccountsPartitioned4MB = "testdata500_partitioned_4mb_orig"
 )
 
 // makeTxsWithGivenNonce generates transactions with the given nonce.
@@ -153,14 +162,16 @@ func settingUpPreLoadedData(originalDataDir string) (string, error) {
 	if grandParentPath := getOriginalDataDirPath(originalDataDir); grandParentPath == "" {
 		return "", errNoOriginalDataDir
 	} else {
-		readTestDir := strings.Split(originalDataDir, "_")[0]
-		if err := os.RemoveAll(path.Join(grandParentPath, readTestDir)); err != nil {
+		testDir := strings.Split(originalDataDir, "_")[0]
+		os.RemoveAll(path.Join(grandParentPath, testDir))
+
+		originalDataPath := path.Join(grandParentPath, originalDataDir)
+		testDataPath := path.Join(grandParentPath, testDir)
+
+		if err := copy.Copy(originalDataPath, testDataPath); err != nil {
 			return "", err
 		}
-		if err := copy.Copy(path.Join(grandParentPath, originalDataDir), path.Join(grandParentPath, readTestDir)); err != nil {
-			return "", err
-		}
-		return readTestDir, nil
+		return testDataPath, nil
 	}
 }
 
@@ -169,17 +180,16 @@ var numAccountsPerFile = 1 * 10000
 var numValidators = 4
 
 func TestPreLoad10000Accounts(t *testing.T) {
-	preLoadedTest(t, "10000Accounts", originalDataDirFor10000Accounts, numAccountsPerFile*1)
+	preLoadedTest(t, "10000Accounts", dirFor10000Accounts, numAccountsPerFile*1)
 }
 
-func TestPreLoad1500000Accounts(t *testing.T) {
-	preLoadedTest(t, "1500000Accounts", originalDataDirFor1500000Accounts, numAccountsPerFile*1)
+func TestPreLoadOneMillionAccounts(t *testing.T) {
+	preLoadedTest(t, "1500000Accounts", dirForOneMillionAccounts, numAccountsPerFile*1)
 }
 
 // preLoadedTest is to check the performance of Klaytn with pre-loaded data.
 // To run the test, original data directory should be located at "$GOPATH/src/github.com/ground-x/"
 func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactionsPerFile int) {
-
 	readTestDir, err := settingUpPreLoadedData(originalDataDir)
 	if err != nil {
 		// If original data directory does not exist, test does nothing.
@@ -308,16 +318,9 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	return nil
 }
 
-// NOTE-Klaytn-Tests Please change below flag to true to generate data.
-var runTestGenerateTensOfMillionsAccounts = false
-
 // TestGenerateTensOfMillionsAccounts generates given number of 1) accounts which actually
 // are put into state trie, 2) their addresses, and 3) their private keys.
 func TestGenerateTensOfMillionsAccounts(t *testing.T) {
-	// This test should run only if explicitly requested.
-	if !runTestGenerateTensOfMillionsAccounts {
-		return
-	}
 
 	numTransactionsPerTxPool := 10000
 	numAccountsPerFile := 10000
@@ -445,4 +448,75 @@ func NewBCDataFromPreLoadedData(dbDir string, numValidators int) (*BCData, error
 	return &BCData{bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
 		validatorPrivKeys, engine}, nil
+}
+
+// BenchmarkRandomStateTrieRead randomly reads stateObjects
+// to check the read performance for given pre-generated data.
+func BenchmarkRandomStateTrieRead(b *testing.B) {
+	randomStateTrieRead(b, dirForOneMillionAccounts)
+}
+
+func randomStateTrieRead(b *testing.B, originalDataDir string) {
+	readTestDir, err := settingUpPreLoadedData(originalDataDir)
+	if err != nil {
+		// If original data directory does not exist, test does nothing.
+		if err == errNoOriginalDataDir {
+			return
+		}
+		b.Fatal(err)
+	}
+
+	fmt.Println("testDirectoryPath", readTestDir)
+
+	if testing.Verbose() {
+		enableLog()
+	}
+
+	b.ResetTimer()
+
+	// Totally, (b.N x addressSamplingSizeFromAFile x addressFileSamplingSize) of getStateObject occur.
+	// Each run is independent since blockchain is built for each run.
+	addressSamplingSizeFromAFile := 500
+	addressFileSamplingSize := 10
+
+	rand.Seed(time.Now().UnixNano())
+	for run := 0; run < b.N; run++ {
+		b.StopTimer()
+
+		bcData, err := NewBCDataFromPreLoadedData(readTestDir, numValidators)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		stateDB, err := bcData.bc.State()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		for i := 0; i < addressFileSamplingSize; i++ {
+			b.StopTimer()
+
+			// Choose a random file to read addresses from.
+			fileIndex := rand.Intn(numFiles)
+
+			// Read recipient addresses from file.
+			addrs, err := readAddrsFromFile(readTestDir, fileIndex)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			b.StartTimer()
+
+			lenAddrs := len(addrs)
+			for k := 0; k < addressSamplingSizeFromAFile; k++ {
+				if common.Big0.Cmp(stateDB.GetBalance(*addrs[rand.Intn(lenAddrs)])) == 0 {
+					b.Fatal("zero balance!!")
+				}
+			}
+		}
+
+		b.StopTimer()
+		bcData.db.Close()
+		bcData.bc.Stop()
+	}
 }
