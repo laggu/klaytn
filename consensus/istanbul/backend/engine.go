@@ -412,46 +412,29 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	if sb.config.ProposerPolicy == istanbul.WeightedRandom {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
-		// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
-
 		pocAddr := common.Address{}
 		kirAddr := common.Address{}
+		lastHeader := chain.CurrentHeader()
+		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
+		proposer := valSet.GetProposer()
+		proposerRewardAddress := proposer.RewardAddress()
 
-		blockNumber := header.Number.Uint64()
-
-		if len(header.KlaytnExtra) != 0 {
-			logger.Trace("Finalize() Use existing header.KlaytnExtra (validation)", "blockNumer", blockNumber, "header.KlaytnExtra", header.KlaytnExtra)
-		} else {
-			logger.Trace("Finalize() Creating header.KlaytnExtra (mining)", "blockNumer", blockNumber)
-
-			lastHeader := chain.CurrentHeader()
-			valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
-
-			committee := valSet.SubList(lastHeader.Hash())
-			proposer := committee[0]
-			logger.Trace("Finalize() committee", "blockNumber", blockNumber, "committee", committee, "header.rewardBase", header.Rewardbase, "proposer", proposer)
-
-			rewardAddrs := make([]common.Address, len(committee))
-			for i, val := range committee {
-				rewardAddrs[i] = val.RewardAddress()
-				logger.Trace("Finalize() rewardAddrs", "i", i, "validator", val, "rewardAddr[i]", rewardAddrs[i], "weight", val.Weight())
-			}
-
-			if proposer.Weight() == 0 {
-				// bootstrapping phase
-				// Let's use RewardBase
-				rewardAddrs[0] = header.Rewardbase
-				logger.Trace("Finalize() Update rewardAddrs[0] with RewardBase. (bootstrapping phase)", "rewardAddrs[0]", rewardAddrs[0])
+		// Determine and update Rewardbase when mining. When mining, state root is not yet determined and will be determined at the end of this Finalize below.
+		if common.EmptyHash(header.Root) {
+			if (proposerRewardAddress == common.Address{}) {
+				logger.Trace("No reward address for proposer. Use rewardbase of node", "header.Number", header.Number.Uint64(), "Rewardbase", header.Rewardbase)
 			} else {
-				stakingInfo := reward.GetStakingInfoFromStakingCache(header.Number.Uint64())
-				if stakingInfo != nil {
-					kirAddr = stakingInfo.KIRAddr
-					pocAddr = stakingInfo.PoCAddr
-				}
+				logger.Trace("Use reward address for proposer.", "header.Number", header.Number.Uint64(), "proposer", proposer.Address(), "Reward address of proposer", proposerRewardAddress)
+				header.Rewardbase = proposerRewardAddress
 			}
-			header.Rewardbase = rewardAddrs[0]
+		}
 
-			header.KlaytnExtra = rewardAddrs
+		if proposer.Weight() != 0 {
+			stakingInfo := reward.GetStakingInfoFromStakingCache(header.Number.Uint64())
+			if stakingInfo != nil {
+				kirAddr = stakingInfo.KIRAddr
+				pocAddr = stakingInfo.PoCAddr
+			}
 		}
 
 		reward.DistributeBlockReward(state, header, pocAddr, kirAddr, chain.Config())
@@ -459,8 +442,8 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		reward.MintKLAY(state)
 	}
 
-	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(true)
+	// Uncles are dropped in Istanbul
 	header.UncleHash = nilUncleHash
 
 	// Assemble and return the final block for sealing

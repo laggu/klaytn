@@ -71,7 +71,7 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 	// header
 	header := &types.Header{Number: big.NewInt(0)}
 	proposerAddr := addr1
-	header.KlaytnExtra = []common.Address{proposerAddr}
+	header.Rewardbase = proposerAddr
 
 	// chain config
 	config := &params.ChainConfig{Istanbul: governance.GetDefaultIstanbulConfig(), Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
@@ -91,7 +91,7 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 	// header
 	header = &types.Header{Number: big.NewInt(0)}
 	proposerAddr = addr1
-	header.KlaytnExtra = []common.Address{proposerAddr}
+	header.Rewardbase = proposerAddr
 	header.GasUsed = uint64(100000)
 
 	// chain config
@@ -119,7 +119,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 	// header
 	header := &types.Header{Number: big.NewInt(0)}
 	proposerAddr := addr1
-	header.KlaytnExtra = []common.Address{proposerAddr}
+	header.Rewardbase = proposerAddr
 	header.GasUsed = uint64(100000)
 
 	// chain config
@@ -148,7 +148,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 	// header
 	header = &types.Header{Number: big.NewInt(0)}
 	proposerAddr = addr1
-	header.KlaytnExtra = []common.Address{proposerAddr}
+	header.Rewardbase = proposerAddr
 	header.GasUsed = uint64(100000)
 
 	// chain config
@@ -181,7 +181,7 @@ func TestBlockRewardWithCustomRewardRatio(t *testing.T) {
 	// header
 	header := &types.Header{Number: big.NewInt(0)}
 	proposerAddr := addr1
-	header.KlaytnExtra = []common.Address{proposerAddr}
+	header.Rewardbase = proposerAddr
 	header.GasUsed = uint64(100000)
 
 	// chain config

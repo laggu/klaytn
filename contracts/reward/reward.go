@@ -127,10 +127,6 @@ func isEmptyAddress(addr common.Address) bool {
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
 func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, config *params.ChainConfig) {
 
-	for i, addr := range header.KlaytnExtra {
-		logger.Trace("header.KlaytnExtra", "i", i, "header.KlaytnExtra[i]", addr)
-	}
-
 	// Calculate total tx fee
 	totalTxFee := common.Big0
 	if config.Governance.DeferredTxFee() {
@@ -144,7 +140,7 @@ func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.
 
 // distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
 func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address, config *params.ChainConfig) {
-	proposer := header.KlaytnExtra[0]
+	proposer := header.Rewardbase
 	rewardParams := getRewardGovernanceParameters(config, header)
 
 	// Block reward
