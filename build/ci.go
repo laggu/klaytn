@@ -239,6 +239,7 @@ func doTest(cmdline []string) {
 	var (
 		coverage = flag.Bool("coverage", false, "Whether to record code coverage")
 		parallel = flag.Int("p", 0, "The number of parallel test executions (default: the number of CPUs available)")
+		excludes = flag.String("exclude", "", "Comma-separated top-level directories to be excluded in test")
 	)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
@@ -248,6 +249,9 @@ func doTest(cmdline []string) {
 		packages = flag.CommandLine.Args()
 	}
 	packages = build.ExpandPackagesNoVendor(packages)
+	if *excludes != "" {
+		packages = build.ExcludePackages(packages, strings.Split(*excludes, ","))
+	}
 
 	// Run analysis tools before the tests.
 	build.MustRun(goTool("vet", packages...))

@@ -19,17 +19,50 @@ jobs:
             make fmt
             make all
 
-  test:
+  test-datasync:
     docker:
       - image: kjhman21/dev:go1.11.2-solc0.4.24
     working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - run:
-          name: "Run tests"
+          name: "Run test datasync"
+          command: |
+            make test-datasync
+
+  test-networks:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run test networks"
+          command: |
+            make test-networks
+
+  test-tests:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run test tests"
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/klaytn-tests.git tests/testdata
-            make test-seq
+            make test-tests
+
+  test-others:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run test others"
+          command: |
+            make test-others
 
   coverage:
     docker:
@@ -240,13 +273,28 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test:
+      - test-datasync:
+          filters:
+            tags:
+              only: /.*/
+      - test-networks:
+          filters:
+            tags:
+              only: /.*/
+      - test-tests:
+          filters:
+            tags:
+              only: /.*/
+      - test-others:
           filters:
             tags:
               only: /.*/
       - packaging:
           requires:
-            - test
+            - test-datasync
+            - test-networks
+            - test-tests
+            - test-others
           filters:
             tags:
               only: /^v.*/
@@ -254,7 +302,10 @@ workflows:
               ignore: /.*/
       - dockernize:
           requires:
-            - test
+            - test-datasync
+            - test-networks
+            - test-tests
+            - test-others
           filters:
             tags:
               only: /^v.*/
@@ -262,7 +313,10 @@ workflows:
               ignore: /.*/
       - rpm-tagged:
           requires:
-            - test
+            - test-datasync
+            - test-networks
+            - test-tests
+            - test-others
           filters:
             tags:
               only: /^v.*/

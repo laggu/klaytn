@@ -197,3 +197,19 @@ func ExpandPackagesNoVendor(patterns []string) []string {
 	}
 	return patterns
 }
+
+// ExcludePackages excludes packages having patterns from the passed package slice and
+// returns a slice including only the remained packages.
+func ExcludePackages(packages []string, patterns []string) []string {
+	// TODO-Klaytn This exclusion code is a naive implementation. Improve this if it hurts build performance.
+	for _, pattern := range patterns {
+		var newpkgs []string
+		for _, pkg := range packages {
+			if !strings.Contains(pkg, pattern) {
+				newpkgs = append(newpkgs, pkg)
+			}
+		}
+		packages = newpkgs
+	}
+	return packages
+}

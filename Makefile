@@ -70,6 +70,18 @@ test:
 test-seq:
 	build/env.sh go run build/ci.go test -p 1
 
+test-datasync:
+	build/env.sh go run build/ci.go test -p 1 ./datasync/...
+
+test-networks:
+	build/env.sh go run build/ci.go test -p 1 ./networks/...
+
+test-tests:
+	build/env.sh go run build/ci.go test -p 1 ./tests/...
+
+test-others:
+	build/env.sh go run build/ci.go test -p 1 -exclude datasync,networks,tests
+
 cover:
 	build/env.sh go run build/ci.go test -coverage
 	go tool cover -func=coverage.out -o coverage_report.txt
