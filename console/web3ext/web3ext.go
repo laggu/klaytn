@@ -64,11 +64,11 @@ web3._extend({
 		}),
 		new web3._extend.Property({
 			name: 'chainConfig',
-			getter: 'governance_getChainConfig',
+			getter: 'governance_chainConfig',
 		}),	
 		new web3._extend.Property({
 			name: 'nodeAddress',
-			getter: 'governance_getNodeAddress',
+			getter: 'governance_nodeAddress',
 		}),	
 	]
 });

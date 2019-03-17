@@ -88,11 +88,11 @@ func (api *PublicGovernanceAPI) MyVotingPower() interface{} {
 	return float64(atomic.LoadUint64(&api.governance.votingPower)) / 1000.0
 }
 
-func (api *PublicGovernanceAPI) GetChainConfig() interface{} {
+func (api *PublicGovernanceAPI) ChainConfig() interface{} {
 	return api.governance.chainConfig
 }
 
-func (api *PublicGovernanceAPI) GetNodeAddress() interface{} {
+func (api *PublicGovernanceAPI) NodeAddress() interface{} {
 	return api.governance.nodeAddress
 }
 
