@@ -29,7 +29,7 @@ jobs:
           name: "Run tests"
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/ground-x/klaytn-tests.git tests/testdata
-            make test
+            make test-seq
 
   coverage:
     docker:

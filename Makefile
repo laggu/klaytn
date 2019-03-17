@@ -67,6 +67,9 @@ all:
 test:
 	build/env.sh go run build/ci.go test
 
+test-seq:
+	build/env.sh go run build/ci.go test -p 1
+
 cover:
 	build/env.sh go run build/ci.go test -coverage
 	go tool cover -func=coverage.out -o coverage_report.txt
