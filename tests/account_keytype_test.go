@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/kerrors"
@@ -191,6 +192,191 @@ func TestAccountCreationMultiSigKeyBigThreshold(t *testing.T) {
 		assert.Equal(t, types.ReceiptStatusErrUnsatisfiableThreshold, receipt.Status)
 
 		reservoir.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountCreationRoleBasedKeyNested tests account creation with nested RoleBasedKey.
+// Nested RoleBasedKey is not allowed in Klaytn.
+// The test should fail to the account creation
+// 1. A key for the first role, RoleTransaction, is nested
+// 2. A key for the second role, RoleAccountUpdate, is nested.
+// 3. A key for the third role, RoleFeePayer, is nested.
+func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+	anon2, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78990001")
+	assert.Equal(t, nil, err)
+	anon3, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78990002")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// 1. A key for the first role, RoleTransaction, is nested
+	{
+		var txs types.Transactions
+
+		keys := genTestKeys(3)
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
+		})
+
+		keys2 := genTestKeys(2)
+		nestedKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			roleKey,
+			accountkey.NewAccountKeyPublicWithValue(&keys2[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys2[1].PublicKey),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    nestedKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
+	}
+
+	// 2. A key for the second role, RoleAccountUpdate, is nested.
+	{
+		var txs types.Transactions
+
+		keys := genTestKeys(3)
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
+		})
+
+		keys2 := genTestKeys(2)
+		nestedKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys2[0].PublicKey),
+			roleKey,
+			accountkey.NewAccountKeyPublicWithValue(&keys2[1].PublicKey),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon2.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    nestedKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
+
+	}
+
+	// 3. A key for the third role, RoleFeePayer, is nested.
+	{
+		var txs types.Transactions
+
+		keys := genTestKeys(3)
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
+		})
+
+		keys2 := genTestKeys(2)
+		nestedKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys2[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys2[1].PublicKey),
+			roleKey,
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon3.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    nestedKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
 	}
 
 	if testing.Verbose() {
