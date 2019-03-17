@@ -277,6 +277,11 @@ var submitTxCount = 0
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
 	//submitTxCount++
 	//log.Error("### submitTransaction","tx",submitTxCount)
+
+	if tx.Type() == types.TxTypeChainDataAnchoring {
+		return common.Hash{}, errors.New("ChainDataAnchoringTx cannot be submitted via RPC!")
+	}
+
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}
