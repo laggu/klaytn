@@ -19,6 +19,7 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -511,5 +512,196 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, types.ReceiptStatusErrZeroLength, receipt.Status)
+	}
+}
+
+// TestAccountUpdateRoleBasedTransition tests signature validation process of TxPool.
+// It performs the following scenario:
+// 1. Create an account colin using TxTypeAccountCreation.
+// 2. Inserting a tx signed by old key into the pool. It should pass.
+// 3. Inserting a tx signed by new key into the pool. It should fail.
+// 4. Execute TxTypeAccountUpdate
+// 5. Inserting a tx signed by old key into the pool. It should fail.
+// 6. Inserting a tx signed by new key into the pool. It should pass.
+func TestAccountUpdateRoleBasedTransition(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("colinAddr = ", colin.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// 1. Create an account colin using TxTypeAccountCreation.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            colin.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    colin.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	keys := genTestKeys(3)
+	newKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
+	})
+
+	gasPrice := big.NewInt(0)
+	// 2. Inserting a tx signed by old key into the pool. It should pass.
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      colin.Nonce,
+			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: newKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, colin.Keys)
+		assert.Equal(t, nil, err)
+
+		txpool := makeTxPool(bcdata, 10)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+	}
+
+	// 3. Inserting a tx signed by new key into the pool. It should fail.
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      colin.Nonce,
+			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: newKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleAccountUpdate]})
+		assert.Equal(t, nil, err)
+
+		txpool := makeTxPool(bcdata, 10)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, blockchain.ErrInvalidSender, err)
+	}
+
+	// 4. Execute TxTypeAccountUpdate
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      colin.Nonce,
+			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: newKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, colin.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		colin.Nonce += 1
+	}
+
+	// 5. Inserting a tx signed by old key into the pool. It should fail.
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      colin.Nonce,
+			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: newKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, colin.Keys)
+		assert.Equal(t, nil, err)
+
+		txpool := makeTxPool(bcdata, 10)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, blockchain.ErrInvalidSender, err)
+	}
+
+	// 6. Inserting a tx signed by new key into the pool. It should pass.
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      colin.Nonce,
+			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: newKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleAccountUpdate]})
+		assert.Equal(t, nil, err)
+
+		txpool := makeTxPool(bcdata, 10)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
 	}
 }
