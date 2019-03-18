@@ -1045,3 +1045,162 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		prof.PrintProfileInfo()
 	}
 }
+
+// TestAccountUpdateWithRoleBasedKey tests account update with a roleBased key.
+// A roleBased key contains three types of sub-keys, and only RoleAccountUpdate key is used for update.
+// Other sub-keys are not used for the account update.
+// 0. create an account with a roleBased key.
+// 1. try to update the account with a RoleTransaction key. (fail)
+// 2. try to update the account with a RoleAccountUpdate key. (success)
+// 3. try to update the account with a RoleFeePayer key. (fail)
+func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	// generate a roleBased key
+	keys := genTestKeys(3)
+	roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
+	})
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// 0. create an account with a roleBased key.
+	{
+		var txs types.Transactions
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		reservoir.Nonce += 1
+	}
+
+	// 1. try to update the account with a RoleTransaction key. (fail)
+	{
+		var txs types.Transactions
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleTransaction]})
+		assert.Equal(t, nil, err)
+
+		err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+	}
+
+	// 2. try to update the account with a RoleAccountUpdate key. (success)
+	{
+		var txs types.Transactions
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleAccountUpdate]})
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		anon.Nonce += 1
+	}
+
+	// 3. try to update the account with a RoleFeePayer key. (fail)
+	{
+		var txs types.Transactions
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: roleKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleFeePayer]})
+		assert.Equal(t, nil, err)
+
+		err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+
+		anon.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
