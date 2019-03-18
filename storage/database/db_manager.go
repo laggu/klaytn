@@ -278,6 +278,8 @@ type DBConfig struct {
 	ChildChainIndexing bool
 }
 
+const dbMetricPrefix = "klay/db/chaindata/"
+
 // singleDatabaseDBManager returns DBManager which handles one single Database.
 // Each Database will share one common Database.
 func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
@@ -287,7 +289,7 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 		return nil, err
 	}
 
-	db.Meter("klay/db/chaindata/")
+	db.Meter(dbMetricPrefix)
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
 		if i == int(indexSectionsDB) {
 			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
@@ -312,8 +314,8 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 				logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[i], "err", err)
 			}
 			dbm.dbs[i] = db
-			// TODO-Klaytn-Storage Need to decide how to collect LevelDB statistics
-			db.Meter("klay/db/chaindata/")
+			// Each partition collects metrics independently.
+			db.Meter(dbMetricPrefix + dbDirs[i] + "/")
 		}
 	}
 	dbm.partitioned = true
@@ -350,7 +352,6 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 // If Partitioned is true, each Database will have its own LevelDB.
 // If not, each Database will share one common LevelDB.
 func NewDBManager(dbc *DBConfig) DBManager {
-	// TODO-Klaytn-Storage Remove unnecessary error from return value
 	if !dbc.Partitioned {
 		logger.Info("Non-partitioned database is used for persistent storage", "DBType", dbc.DBType)
 		if dbm, err := singleDatabaseDBManager(dbc); err != nil {
