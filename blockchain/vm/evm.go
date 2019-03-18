@@ -68,6 +68,8 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 				return RunVMLogContract(p, input, contract, evm)
 			} else if *contract.CodeAddr == feePayerAddress {
 				return RunFeePayerContract(p, input, contract)
+			} else if *contract.CodeAddr == validateSenderAddress {
+				return RunValidateSenderContract(p, input, contract, evm.StateDB)
 			} else {
 				return RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
 			}

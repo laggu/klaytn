@@ -21,9 +21,12 @@
 package vm
 
 import (
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"errors"
 	"github.com/ground-x/klaytn/api/debug"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/crypto"
@@ -36,6 +39,11 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.VM)
+
+var (
+	errInputTooShort        = errors.New("input length is too short")
+	errWrongSignatureLength = errors.New("wrong signature length")
+)
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
@@ -51,6 +59,9 @@ var vmLogAddress = common.BytesToAddress([]byte{9})
 // feePayerAddress is the address of precompiled contract feePayer.
 var feePayerAddress = common.BytesToAddress([]byte{10})
 
+// validateSenderAddress is the address of precompiled contract ValidateSender.
+var validateSenderAddress = common.BytesToAddress([]byte{11})
+
 // PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
 // contracts used in the Byzantium release.
 var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
@@ -64,6 +75,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 	vmLogAddress:                     &vmLog{},
 	feePayerAddress:                  &feePayer{},
+	validateSenderAddress:            &precompiledValidateSender{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -417,4 +429,76 @@ func RunFeePayerContract(p PrecompiledContract, input []byte, contract *Contract
 		return contract.FeePayerAddress.Bytes(), nil
 	}
 	return nil, kerrors.ErrOutOfGas
+}
+
+type precompiledValidateSender struct{}
+
+func (c *precompiledValidateSender) RequiredGas(input []byte) uint64 {
+	return params.ValidateSenderGas
+}
+
+func (c *precompiledValidateSender) Run(input []byte) ([]byte, error) {
+	// Run function should not be called. Instead of this function, RunValidateSenderContract should be called.
+	logger.Error("should not be reached here")
+	return nil, nil
+}
+
+func RunValidateSenderContract(p PrecompiledContract, input []byte, contract *Contract, picker types.AccountKeyPicker) ([]byte, error) {
+	// input must be (addr, message, signature1, signature2, and more signatures)
+	gas := p.RequiredGas(input)
+	if contract.UseGas(gas) == false {
+		return []byte{0}, kerrors.ErrOutOfGas
+	}
+	if err := validateSender(input, picker); err != nil {
+		// If return error makes contract execution failed, do not return the error.
+		// Instead, print log.
+		logger.Trace("validateSender failed", "err", err)
+		return []byte{0}, nil
+	}
+
+	return []byte{1}, nil
+}
+
+func validateSender(input []byte, picker types.AccountKeyPicker) error {
+	ptr := input
+
+	// Parse the first 20 bytes. They represent an address to be verified.
+	if len(ptr) < common.AddressLength {
+		return errInputTooShort
+	}
+	from := common.BytesToAddress(input[0:common.AddressLength])
+	ptr = ptr[common.AddressLength:]
+
+	// Parse the next 32 bytes. They represent a message which was used to generate signatures.
+	if len(ptr) < common.HashLength {
+		return errInputTooShort
+	}
+	msg := ptr[0:common.HashLength]
+	ptr = ptr[common.HashLength:]
+
+	// Parse remaining bytes. The length should be divided by common.SignatureLength.
+	if len(ptr)%common.SignatureLength != 0 {
+		return errWrongSignatureLength
+	}
+
+	numSigs := len(ptr) / common.SignatureLength
+	pubs := make([]*ecdsa.PublicKey, numSigs)
+	for i := 0; i < numSigs; i++ {
+		p, err := crypto.Ecrecover(msg, ptr[0:common.SignatureLength])
+		if err != nil {
+			return err
+		}
+		pubs[i], err = crypto.UnmarshalPubkey(p)
+		if err != nil {
+			return err
+		}
+		ptr = ptr[common.SignatureLength:]
+	}
+
+	k := picker.GetKey(from)
+	if err := accountkey.ValidateAccountKey(from, k, pubs, accountkey.RoleTransaction); err != nil {
+		return err
+	}
+
+	return nil
 }
