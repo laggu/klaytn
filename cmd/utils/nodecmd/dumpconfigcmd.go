@@ -184,6 +184,7 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 	}
 	scfg := makeServiceChainConfig(ctx)
 	scfg.DataDir = cfg.Node.DataDir
+	scfg.Name = cfg.Node.Name
 	utils.RegisterService(stack, &scfg)
 
 	return stack
