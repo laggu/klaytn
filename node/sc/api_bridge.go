@@ -67,10 +67,6 @@ func (mbapi *MainBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
 	return server.NodeInfo(), nil
 }
 
-func (mbapi *MainBridgeAPI) GetChainAccountAddr() string {
-	return mbapi.sc.config.ChainAccountAddr.Hex()
-}
-
 func (mbapi *MainBridgeAPI) GetAnchoringPeriod() uint64 {
 	return mbapi.sc.config.AnchoringPeriod
 }
