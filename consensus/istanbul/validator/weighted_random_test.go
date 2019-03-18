@@ -191,3 +191,79 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 		assert.Equal(t, weight, appearance)
 	}
 }
+
+func TestWeightedCouncil_RemoveValidator(t *testing.T) {
+
+	validators := makeTestValidators(testNonZeroWeights)
+
+	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+	valSet.Refresh(testPrevHash, 1)
+
+	for _, val := range validators {
+
+		_, removedVal := valSet.GetByAddress(val.Address())
+		if removedVal == nil {
+			t.Errorf("Fail to find validator with address %v", removedVal.Address().String())
+		}
+
+		if !valSet.RemoveValidator(removedVal.Address()) {
+			t.Errorf("Fail to remove validator %v", removedVal.String())
+		}
+
+		// check whether removedVal is really removed from validators
+		for _, v := range valSet.validators {
+			if removedVal.Address() == v.Address() {
+				t.Errorf("Validator(%v) does not removed from validators", removedVal.Address().String())
+			}
+		}
+
+		// check whether removedVal is also removed from proposers immediately
+		for _, p := range valSet.proposers {
+			if removedVal.Address() == p.Address() {
+				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
+			}
+		}
+	}
+
+	assert.Equal(t, 0, valSet.Size())
+	assert.Equal(t, 0, len(valSet.Proposers()))
+}
+
+func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
+
+	validators := makeTestValidators(testNonZeroWeights)
+
+	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+	valSet.Refresh(testPrevHash, 1)
+
+	for _, val := range validators {
+
+		_, removedVal := valSet.GetByAddress(val.Address())
+		if removedVal == nil {
+			t.Errorf("Fail to find validator with address %v", removedVal.Address().String())
+		}
+
+		if !valSet.RemoveValidator(removedVal.Address()) {
+			t.Errorf("Fail to remove validator %v", removedVal.String())
+		}
+
+		// check whether removedVal is really removed from validators
+		for _, v := range valSet.validators {
+			if removedVal.Address() == v.Address() {
+				t.Errorf("Validator(%v) does not removed from validators", removedVal.Address().String())
+			}
+		}
+
+		valSet.Refresh(testPrevHash, 1)
+
+		// check whether removedVal is excluded as expected when refreshing proposers
+		for _, p := range valSet.proposers {
+			if removedVal.Address() == p.Address() {
+				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
+			}
+		}
+	}
+
+	assert.Equal(t, 0, valSet.Size())
+	assert.Equal(t, 0, len(valSet.Proposers()))
+}
