@@ -21,6 +21,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"strings"
 	"testing"
@@ -163,4 +164,57 @@ func TestEmptyWeightedCouncil(t *testing.T) {
 	if valSet == nil {
 		t.Errorf("validator set should not be nil")
 	}
+}
+
+func TestNewWeightedCouncil_InvalidPolicy(t *testing.T) {
+	// Invalid proposer policy
+	valSet := NewWeightedCouncil(ExtractValidators([]byte{}), nil, nil, nil, istanbul.Sticky, 0, 0, 0, &blockchain.BlockChain{})
+	assert.Equal(t, (*weightedCouncil)(nil), valSet)
+
+	valSet = NewWeightedCouncil(ExtractValidators([]byte{}), nil, nil, nil, istanbul.RoundRobin, 0, 0, 0, &blockchain.BlockChain{})
+	assert.Equal(t, (*weightedCouncil)(nil), valSet)
+}
+
+func TestNewWeightedCouncil_IncompleteParams(t *testing.T) {
+	const ValCnt = 3
+	var validators []istanbul.Validator
+	var rewardAddrs []common.Address
+	var votingPowers []uint64
+	var weights []int
+
+	// Create 3 validators with random addresses
+	b := []byte{}
+	for i := 0; i < ValCnt; i++ {
+		key, _ := crypto.GenerateKey()
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		val := New(addr)
+		validators = append(validators, val)
+		b = append(b, val.Address().Bytes()...)
+
+		rewardKey, _ := crypto.GenerateKey()
+		rewardAddr := crypto.PubkeyToAddress(rewardKey.PublicKey)
+		rewardAddrs = append(rewardAddrs, rewardAddr)
+
+		votingPowers = append(votingPowers, uint64(1))
+		weights = append(weights, int(1))
+	}
+
+	// No validator address
+	valSet := NewWeightedCouncil(ExtractValidators([]byte{}), rewardAddrs, votingPowers, weights, istanbul.WeightedRandom, 0, 0, 0, &blockchain.BlockChain{})
+	assert.Equal(t, (*weightedCouncil)(nil), valSet)
+
+	// Incomplete rewardAddrs
+	incompleteRewardAddrs := make([]common.Address, 1)
+	valSet = NewWeightedCouncil(ExtractValidators(b), incompleteRewardAddrs, nil, nil, istanbul.WeightedRandom, 0, 0, 0, &blockchain.BlockChain{})
+	assert.Equal(t, (*weightedCouncil)(nil), valSet)
+
+	// Incomplete rewardAddrs
+	incompleteVotingPowers := make([]uint64, 1)
+	valSet = NewWeightedCouncil(ExtractValidators(b), nil, incompleteVotingPowers, nil, istanbul.WeightedRandom, 0, 0, 0, &blockchain.BlockChain{})
+	assert.Equal(t, (*weightedCouncil)(nil), valSet)
+
+	// Incomplete rewardAddrs
+	incompleteWeights := make([]int, 1)
+	valSet = NewWeightedCouncil(ExtractValidators(b), nil, nil, incompleteWeights, istanbul.WeightedRandom, 0, 0, 0, &blockchain.BlockChain{})
+	assert.Equal(t, (*weightedCouncil)(nil), valSet)
 }

@@ -124,17 +124,17 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 }
 
 func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []int, policy istanbul.ProposerPolicy, committeeSize int, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
-	// TODO-Klaytn-Issue1166 Disable Trace log later
-	valSet := &weightedCouncil{}
 
+	if policy != istanbul.WeightedRandom {
+		logger.Error("unsupported proposer policy for weighted council", "policy", policy)
+		return nil
+	}
+
+	valSet := &weightedCouncil{}
 	valSet.subSize = committeeSize
 	valSet.policy = policy
 
-	// init validators
-	valSet.validators = make([]istanbul.Validator, len(addrs))
-	logger.Trace("NewWeightedCouncil() params", "addrs", addrs, "rewards", rewards, "votingPowers", votingPowers, "weights", weights, "policy", policy)
-
-	// init rewards if necessary
+	// prepare rewards if necessary
 	if rewards == nil {
 		rewards = make([]common.Address, len(addrs))
 		for i := range addrs {
@@ -142,13 +142,13 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 		}
 	}
 
-	// init weights if necessary
+	// prepare weights if necessary
 	if weights == nil {
 		// initialize with 0 weight.
 		weights = make([]int, len(addrs))
 	}
 
-	// init votingPowers if necessary
+	// prepare votingPowers if necessary
 	if votingPowers == nil {
 		votingPowers = make([]uint64, len(addrs))
 		if chain == nil {
@@ -172,6 +172,15 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 		}
 	}
 
+	if len(addrs) != len(rewards) ||
+		len(addrs) != len(votingPowers) ||
+		len(addrs) != len(weights) {
+		logger.Error("incomplete information for weighted council", "num addrs", len(addrs), "num rewards", len(rewards), "num votingPowers", len(votingPowers), "num weights", len(weights))
+		return nil
+	}
+
+	// init validators
+	valSet.validators = make([]istanbul.Validator, len(addrs))
 	for i, addr := range addrs {
 		valSet.validators[i] = newWeightedValidator(addr, rewards[i], votingPowers[i], weights[i])
 	}
@@ -190,7 +199,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	copy(valSet.proposers, valSet.validators)
 	valSet.proposersBlockNum = proposersBlockNum
 
-	logger.Trace("NewWeightedCouncil() New weightedCouncil", "weightedCouncil", valSet)
+	logger.Trace("Allocate new weightedCouncil", "weightedCouncil", valSet)
 
 	return valSet
 }
