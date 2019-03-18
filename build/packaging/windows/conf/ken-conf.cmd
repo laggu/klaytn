@@ -29,7 +29,7 @@ set WS_PORT=8552
 set WS_ORIGINS="*"
 
 REM service chain options setting
-set SC_ENABLE=1 &:: if this is set, the following options will be used.
+set SC_ENABLE=0 &:: if this is set, the following options will be used.
 set SC_ADDR=0 &:: user must define this option if service chain is enabled.
 set SC_TX_PERIOD=1
 set SC_TX_LIMIT=100

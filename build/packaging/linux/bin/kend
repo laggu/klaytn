@@ -38,7 +38,7 @@ start() {
         mkdir -p $RUN_DIR
     fi
 
-    OPTIONS="--mine"
+    OPTIONS=""
 
     if [ ! -z $NO_DISCOVER ]; then
         OPTIONS="$OPTIONS --nodiscover"

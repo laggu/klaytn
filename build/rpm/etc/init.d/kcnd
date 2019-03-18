@@ -24,7 +24,7 @@ pidfile=${PIDFILE-/var/run/kcnd.pid}
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
-OPTIONS="--mine --nodiscover"
+OPTIONS="--nodiscover"
 
 if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
     OPTIONS="$OPTIONS --metrics"

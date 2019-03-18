@@ -19,11 +19,7 @@ IF DEFINED NOT_INIT (
     GOTO end
 )
 
-set OPTIONS=--mine
-
-IF DEFINED NETWORK_ID (
-    set OPTIONS=%OPTIONS% --networkid %NETWORK_ID%
-)
+set OPTIONS=--networkid %NETWORK_ID%
 
 IF DEFINED DATA_DIR (
     set OPTIONS=%OPTIONS% --datadir %DATA_DIR%

@@ -1,6 +1,7 @@
 REM Configuration file for the kcn
 
 set NETWORK_ID=1001
+
 set PORT=32323
 
 set SERVER_TYPE="fasthttp"

@@ -4,8 +4,8 @@ set NETWORK_ID=1001
 
 set PORT=32323
 
-set SERVER_TYPE=fasthttp
-set SYNCMODE=full
+set SERVER_TYPE="fasthttp"
+set SYNCMODE="full"
 set VERBOSITY=3
 set MAXPEERS=5000
 :: set LDBCACHESIZE=10240

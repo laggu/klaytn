@@ -24,7 +24,7 @@ pidfile=${PIDFILE-/var/run/kend.pid}
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
-OPTIONS="--mine"
+OPTIONS=""
 
 if [ ! -z $NO_DISCOVER ]; then
     OPTIONS="$OPTIONS --nodiscover"

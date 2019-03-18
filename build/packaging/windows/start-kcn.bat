@@ -19,7 +19,7 @@ IF DEFINED NOT_INIT (
     GOTO end
 )
 
-set OPTIONS=--mine --nodiscover
+set OPTIONS=--nodiscover
 
 IF DEFINED NETWORK_ID (
     set OPTIONS=%OPTIONS% --networkid %NETWORK_ID%
