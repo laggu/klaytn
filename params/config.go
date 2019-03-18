@@ -137,9 +137,9 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 // RewardConfig stores information about the network's token economy
 type RewardConfig struct {
 	MintingAmount *big.Int `json:"mintingamount"`
-	Ratio         string   `json:"ratio"`                   // Define how much portion of reward be distributed to CN/KIR/PoC
-	UseGiniCoeff  bool     `json:"useginicoeff,omitempty"`  // Decide if Gini Coefficient will be used or not
-	DeferredTxFee bool     `json:"deferredtxfee,omitempty"` // Decide if TX fee will be handled instantly or handled later at block finalization
+	Ratio         string   `json:"ratio"`         // Define how much portion of reward be distributed to CN/KIR/PoC
+	UseGiniCoeff  bool     `json:"useginicoeff"`  // Decide if Gini Coefficient will be used or not
+	DeferredTxFee bool     `json:"deferredtxfee"` // Decide if TX fee will be handled instantly or handled later at block finalization
 }
 
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
@@ -319,9 +319,17 @@ func (g *GovernanceConfig) Copy() *GovernanceConfig {
 	newConfig.Reward.DeferredTxFee = g.Reward.DeferredTxFee
 	newConfig.UnitPrice = g.UnitPrice
 	newConfig.GoverningNode = g.GoverningNode
-	newConfig.Istanbul.SubGroupSize = g.Istanbul.SubGroupSize
-	newConfig.Istanbul.Epoch = g.Istanbul.Epoch
-	newConfig.Istanbul.ProposerPolicy = g.Istanbul.ProposerPolicy
+	newConfig.Istanbul = g.Istanbul.Copy()
 
 	return newConfig
+}
+
+func (c *IstanbulConfig) Copy() *IstanbulConfig {
+	newIC := &IstanbulConfig{}
+
+	newIC.Epoch = c.Epoch
+	newIC.SubGroupSize = c.SubGroupSize
+	newIC.ProposerPolicy = c.ProposerPolicy
+
+	return newIC
 }

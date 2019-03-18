@@ -671,7 +671,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, sb.governance, sb.address)
+	snap, err := snap.apply(headers, sb.governance, sb.address, sb.config.Epoch)
 	if err != nil {
 		return nil, err
 	}

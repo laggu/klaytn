@@ -217,7 +217,6 @@ func (sb *backend) makeGovernanceCacheFromHeader(num uint64) []byte {
 	cKey := getGovernanceCacheKey(num)
 
 	sb.GovernanceCache.Add(cKey, head.Governance)
-
 	return head.Governance
 }
 
@@ -226,7 +225,7 @@ func (sb *backend) replaceGovernanceConfig(g []byte) bool {
 	newGovernance := params.GovernanceConfig{}
 	var j []byte
 	if err := rlp.DecodeBytes(g, &j); err != nil {
-		logger.Error("RLP Decode Failed", "err", err)
+		logger.Error("RLP Decode Failed", "err", err, "g", g)
 		return false
 	} else {
 		if err := json.Unmarshal(j, &newGovernance); err != nil {
@@ -240,8 +239,9 @@ func (sb *backend) replaceGovernanceConfig(g []byte) bool {
 			sb.config.Epoch = newGovernance.Istanbul.Epoch
 			sb.config.SubGroupSize = newGovernance.Istanbul.SubGroupSize
 			sb.config.ProposerPolicy = istanbul.ProposerPolicy(newGovernance.Istanbul.ProposerPolicy)
+			sb.chain.Config().Istanbul = newGovernance.Istanbul.Copy()
 			sb.chain.Config().UnitPrice = newGovernance.UnitPrice
-			logger.Info("Governance config updated", "config", newGovernance)
+			logger.Info("Governance config updated", "config", sb.chain.Config())
 
 			return true
 		}

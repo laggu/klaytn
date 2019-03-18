@@ -52,10 +52,6 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) interface{} {
 func (api *PublicGovernanceAPI) ShowTally() interface{} {
 	ret := []*returnTally{}
 
-	if !api.isGovernanceModeBallot() {
-		return "In current governance mode, the tally is not available"
-	}
-
 	api.governance.GovernanceTallyLock.RLock()
 	defer api.governance.GovernanceTallyLock.RUnlock()
 	for _, val := range api.governance.GovernanceTally {

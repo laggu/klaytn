@@ -211,7 +211,7 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address, epoch uint64) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -225,6 +225,10 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 	if headers[0].Number.Uint64() != s.Number+1 {
 		return nil, errInvalidVotingChain
 	}
+
+	// Copy received epoch to snapshot.Epoch because it might be changed by governance vote
+	s.Epoch = epoch
+
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
 
@@ -237,7 +241,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			snap.Tally = make(map[common.Address]Tally)
 			snap.GovernanceVotes = nil
 			snap.GovernanceTally = nil
-			gov.ClearVotes()
+			gov.ClearVotes(number)
 		}
 
 		// Resolve the authorization key and check against validators
@@ -359,6 +363,21 @@ func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, va
 		} else {
 			// Parse vote.Value and make it has appropriate type
 			gVote = gov.ParseVoteValue(gVote)
+
+			if gVote.Key == "governingnode" {
+				nodeCheckFlag := false
+				for _, addr := range snap.validators() {
+					if addr == gVote.Value {
+						nodeCheckFlag = true
+						break
+					}
+				}
+
+				if !nodeCheckFlag {
+					logger.Warn("Invalid governing node address", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
+					return
+				}
+			}
 
 			// Check vote's validity
 			if _, ok := gov.CheckVoteValidity(gVote.Key, gVote.Value); ok {

@@ -120,7 +120,7 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 		valueChanged = true
 	} else if genesis.Config.Istanbul != nil && genesis.Config.Clique != nil {
 		// Error case. Both istanbul and Clique exists
-		logger.Crit("Both clique and istanbul configuration exists. Only one configuration can be applied. Exiting..ßß")
+		logger.Crit("Both clique and istanbul configuration exists. Only one configuration can be applied. Exiting..")
 	}
 
 	// We have governance config
@@ -137,9 +137,6 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 				genesis.Config.Istanbul = new(params.IstanbulConfig)
 			}
 
-			if genesis.Config.UnitPrice != genesis.Config.Governance.UnitPrice {
-				valueChanged = true
-			}
 			genesis.Config.UnitPrice = genesis.Config.Governance.UnitPrice
 			genesis.Config.Istanbul.Epoch = genesis.Config.Governance.Istanbul.Epoch
 			genesis.Config.Istanbul.SubGroupSize = genesis.Config.Governance.Istanbul.SubGroupSize

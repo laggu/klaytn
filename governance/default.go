@@ -199,12 +199,12 @@ func (g *Governance) RemoveVote(key string, value interface{}) {
 	}
 }
 
-func (g *Governance) ClearVotes() {
+func (g *Governance) ClearVotes(num uint64) {
 	g.voteMapLock.Lock()
 	defer g.voteMapLock.Unlock()
 
 	g.voteMap = make(map[string]interface{})
-	logger.Info("Governance votes are cleared")
+	logger.Info("Governance votes are cleared", "num", num)
 }
 
 // CheckVoteValidity checks if the given key and value are appropriate for governance vote

@@ -230,7 +230,7 @@ func TestGovernance_ClearVotes(t *testing.T) {
 			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
 		}
 	}
-	gov.ClearVotes()
+	gov.ClearVotes(0)
 	if len(gov.voteMap) != 0 {
 		t.Errorf("Want 0, got %v after clearing votes", len(gov.voteMap))
 	}
