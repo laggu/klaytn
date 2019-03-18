@@ -193,6 +193,8 @@ func CreateCliqueEngine(ctx *node.ServiceContext, config *Config, chainConfig *p
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
+	} else {
+		logger.Crit("Clique Engine needs Genesis file with clique information.")
 	}
 	return nil
 }
