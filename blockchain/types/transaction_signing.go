@@ -96,18 +96,7 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 		return common.Address{}, 0, err
 	}
 
-	// Special treatment for AccountKeyLegacy.
-	if accKey.Type().IsLegacyAccountKey() {
-		if len(pubkey) != 1 {
-			return common.Address{}, 0, ErrShouldBeSingleSignature
-		}
-		if crypto.PubkeyToAddress(*pubkey[0]) != from {
-			return common.Address{}, 0, ErrInvalidSigSender
-		}
-		return from, gasKey, nil
-	}
-
-	if !accKey.Validate(tx.GetRoleTypeForValidation(), pubkey) {
+	if err := accountkey.ValidateAccountKey(from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
 		return common.Address{}, 0, ErrInvalidSigSender
 	}
 
@@ -136,18 +125,7 @@ func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (commo
 		return common.Address{}, 0, err
 	}
 
-	// Special treatment for AccountKeyLegacy.
-	if accKey.Type().IsLegacyAccountKey() {
-		if len(pubkey) != 1 {
-			return common.Address{}, 0, ErrShouldBeSingleSignature
-		}
-		if crypto.PubkeyToAddress(*pubkey[0]) != feePayer {
-			return common.Address{}, 0, ErrInvalidSigFeePayer
-		}
-		return feePayer, gasKey, nil
-	}
-
-	if !accKey.Validate(accountkey.RoleFeePayer, pubkey) {
+	if err := accountkey.ValidateAccountKey(feePayer, accKey, pubkey, accountkey.RoleFeePayer); err != nil {
 		return common.Address{}, 0, ErrInvalidSigFeePayer
 	}
 

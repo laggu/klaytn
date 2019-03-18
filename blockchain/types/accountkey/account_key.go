@@ -19,6 +19,8 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"errors"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
 )
 
@@ -35,6 +37,8 @@ const (
 
 var (
 	errUndefinedAccountKeyType = errors.New("undefined account key type")
+	errWrongPubkeyLength       = errors.New("wrong pubkey length")
+	errInvalidSignature        = errors.New("invalid signature")
 )
 
 var logger = log.NewModuleLogger(log.BlockchainTypesAccountKey)
@@ -94,4 +98,19 @@ func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 	}
 
 	return nil, errUndefinedAccountKeyType
+}
+
+func ValidateAccountKey(from common.Address, accKey AccountKey, pubkeys []*ecdsa.PublicKey, roleType RoleType) error {
+	// Special treatment for AccountKeyLegacy.
+	if accKey.Type().IsLegacyAccountKey() {
+		if len(pubkeys) != 1 {
+			return errWrongPubkeyLength
+		}
+		if crypto.PubkeyToAddress(*pubkeys[0]) != from {
+			return errInvalidSignature
+		}
+	} else if !accKey.Validate(roleType, pubkeys) {
+		return errInvalidSignature
+	}
+	return nil
 }
