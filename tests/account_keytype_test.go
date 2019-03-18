@@ -6,10 +6,12 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/stretchr/testify/assert"
 	"math/big"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -77,8 +79,6 @@ func TestAccountCreationMaxMultiSigKey(t *testing.T) {
 
 	// Create a multiSig account with 11 different private keys (more than 10 -> failed)
 	{
-		var txs types.Transactions
-
 		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
@@ -95,8 +95,6 @@ func TestAccountCreationMaxMultiSigKey(t *testing.T) {
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, kerrors.ErrMaxKeysExceed, err)
@@ -166,8 +164,6 @@ func TestAccountCreationMultiSigKeyBigThreshold(t *testing.T) {
 
 	// creates a multisig account with a threshold (10) and the total weight (6). (failed case)
 	{
-		var txs types.Transactions
-
 		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
@@ -184,8 +180,6 @@ func TestAccountCreationMultiSigKeyBigThreshold(t *testing.T) {
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, nil, err)
@@ -251,8 +245,6 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 
 	// 1. A key for the first role, RoleTransaction, is nested
 	{
-		var txs types.Transactions
-
 		keys := genTestKeys(3)
 		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
 			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
@@ -285,8 +277,6 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, tx)
-
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
@@ -294,8 +284,6 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 
 	// 2. A key for the second role, RoleAccountUpdate, is nested.
 	{
-		var txs types.Transactions
-
 		keys := genTestKeys(3)
 		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
 			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
@@ -328,8 +316,6 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, tx)
-
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
@@ -338,8 +324,6 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 
 	// 3. A key for the third role, RoleFeePayer, is nested.
 	{
-		var txs types.Transactions
-
 		keys := genTestKeys(3)
 		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
 			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
@@ -372,8 +356,6 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, tx)
-
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
@@ -384,7 +366,7 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 	}
 }
 
-// TestAccountCreationRoleBasedKeyExceedNum tests account creation with a RoleBased key which contains invalid number of sub-keys.
+// TestAccountCreationRoleBasedKeyInvalidNumKey tests account creation with a RoleBased key which contains invalid number of sub-keys.
 // A RoleBased key can contain 1 ~ 3 sub-keys, otherwise it will fail to the account creation.
 // 1. try to create an account with a RoleBased key which contains 4 sub-keys.
 // 2. try to create an account with a RoleBased key which contains 0 sub-key.
@@ -499,7 +481,7 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 
 // TestAccountCreationMultiSigKeyDupPrvKeys tests multiSig account creation with duplicated private keys.
 // A multisig account has all different private keys, therefore account creation with duplicated private keys should be failed.
-// the case when two same private keys are used in creation processes.
+// The case when two same private keys are used in creation processes.
 func TestAccountCreationMultiSigKeyDupPrvKeys(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -552,8 +534,6 @@ func TestAccountCreationMultiSigKeyDupPrvKeys(t *testing.T) {
 
 	// the case when two same private keys are used in creation processes.
 	{
-		var txs types.Transactions
-
 		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
@@ -571,11 +551,98 @@ func TestAccountCreationMultiSigKeyDupPrvKeys(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		txs = append(txs, tx)
-
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, types.ReceiptStatusErrDuplicatedKey, receipt.Status)
+
+		reservoir.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountCreationMultiSigKeyWeightOverflow tests multiSig account creation with weight overflow.
+// If the sum of weights is overflowed, the test should fail.
+func TestAccountCreationMultiSigKeyWeightOverflow(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// Simply check & set the maximum value of uint
+	MAX := uint(math.MaxUint32)
+	if strconv.IntSize == 64 {
+		MAX = math.MaxUint64
+	}
+
+	// multisig setting
+	threshold := uint(MAX)
+	weights := []uint{MAX / 2, MAX / 2, MAX / 2}
+	multisigAddr := common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea")
+	prvKeys := []string{
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380000",
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380001",
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380002",
+	}
+
+	// multi-sig account
+	multisig, err := createMultisigAccount(threshold, weights, prvKeys, multisigAddr)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("multisigAddr = ", multisig.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// creates a multisig account with a threshold, uint(MAX), and the total weight, uint(MAX/2)*3. (failed case)
+	{
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            multisig.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    multisig.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrWeightedSumOverflow, receipt.Status)
 
 		reservoir.Nonce += 1
 	}
