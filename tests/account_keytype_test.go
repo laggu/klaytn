@@ -8,6 +8,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -443,10 +444,6 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 		assert.Equal(t, types.ReceiptStatusErrLengthTooLong, receipt.Status)
 	}
 
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-
 	// 2. try to create an account with a RoleBased key which contains 0 sub-key.
 	{
 		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{})
@@ -645,6 +642,163 @@ func TestAccountCreationMultiSigKeyWeightOverflow(t *testing.T) {
 		assert.Equal(t, types.ReceiptStatusErrWeightedSumOverflow, receipt.Status)
 
 		reservoir.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountCreationHumanReadableFail tests account creation with an invalid address.
+// For a human-readable account, only alphanumeric characters are allowed in the address.
+// In addition, the first character should be an alphabet.
+// 1. Non-alphanumeric characters in the address.
+// 2. The first character of the address is a number.
+// 3. A valid address, "humanReadable"
+func TestAccountCreationHumanReadableFail(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	key, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// 1. Non-alphanumeric characters in the address.
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("68756d616e5265616461626c655f000000000000"), // humanReadable_
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrNotHumanReadableAddress, receipt.Status)
+	}
+
+	// 2. The first character of the address is a number.
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("3068756d616e5265616461626c65000000000000"), // 0humanReadable
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrNotHumanReadableAddress, receipt.Status)
+	}
+
+	// 3. A valid address, "humanReadable"
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("68756d616e5265616461626c6500000000000000"), // humanReadable
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 	}
 
 	if testing.Verbose() {
