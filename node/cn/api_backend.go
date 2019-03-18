@@ -253,22 +253,6 @@ func (b *CNAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Mat
 	}
 }
 
-func (b *CNAPIBackend) GetChildChainIndexingEnabled() bool {
-	return b.cn.blockchain.GetChildChainIndexingEnabled()
-}
-
-func (b *CNAPIBackend) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
-	return b.cn.blockchain.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
-}
-
-func (b *CNAPIBackend) GetLatestAnchoredBlockNumber() uint64 {
-	return b.cn.blockchain.GetLatestAnchoredBlockNumber()
-}
-
-func (b *CNAPIBackend) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return b.cn.blockchain.GetReceiptFromParentChain(blockHash)
-}
-
 func (b *CNAPIBackend) IsParallelDBWrite() bool {
 	return b.cn.BlockChain().IsParallelDBWrite()
 }

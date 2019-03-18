@@ -1143,9 +1143,6 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 
 	// Write other block data.
 	bc.writeBlock(block)
-	if bc.GetChildChainIndexingEnabled() {
-		bc.writeChildChainTxHashFromBlock(block)
-	}
 
 	if err := bc.writeStateTrie(block, state); err != nil {
 		return NonStatTy, err
@@ -1226,13 +1223,6 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 		defer parallelDBWriteWG.Done()
 		bc.writeBlock(block)
 	}()
-	if bc.GetChildChainIndexingEnabled() {
-		parallelDBWriteWG.Add(1)
-		go func() {
-			defer parallelDBWriteWG.Done()
-			bc.writeChildChainTxHashFromBlock(block)
-		}()
-	}
 
 	go func() {
 		defer parallelDBWriteWG.Done()
@@ -1927,71 +1917,6 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 // cacheConfig.ArchiveMode means trie caching is disabled.
 func (bc *BlockChain) isArchiveMode() bool {
 	return bc.cacheConfig.ArchiveMode
-}
-
-// GetChildChainIndexingEnabled returns the current child chain indexing configuration.
-func (bc *BlockChain) GetChildChainIndexingEnabled() bool {
-	return bc.db.ChildChainIndexingEnabled()
-}
-
-// ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
-// ChainHashes, with the key made with given child chain block hash.
-// Index is built when child chain indexing is enabled.
-func (bc *BlockChain) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
-	return bc.db.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
-}
-
-// WriteChildChainTxHash stores a transaction hash of a transaction which contains
-// ChainHashes, with the key made with given child chain block hash.
-// Index is built when child chain indexing is enabled.
-func (bc *BlockChain) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
-	bc.db.WriteChildChainTxHash(ccBlockHash, ccTxHash)
-}
-
-// GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
-func (bc *BlockChain) GetLatestAnchoredBlockNumber() uint64 {
-	return bc.db.ReadAnchoredBlockNumber()
-}
-
-// WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
-func (bc *BlockChain) WriteAnchoredBlockNumber(blockNum uint64) {
-	bc.db.WriteAnchoredBlockNumber(blockNum)
-}
-
-// WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
-// with corresponding block hash. It assumes that a child chain has only one parent chain.
-func (bc *BlockChain) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
-	bc.db.WriteReceiptFromParentChain(blockHash, receipt)
-}
-
-// GetReceiptFromParentChain returns a receipt received from parent chain to child chain
-// with corresponding block hash. It assumes that a child chain has only one parent chain.
-func (bc *BlockChain) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return bc.db.ReadReceiptFromParentChain(blockHash)
-}
-
-// writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
-// ChainHashes.
-func (bc *BlockChain) writeChildChainTxHashFromBlock(block *types.Block) {
-	txs := block.Transactions()
-	signer := types.MakeSigner(bc.Config(), block.Number())
-	for _, tx := range txs {
-		// TODO-Klaytn-ServiceChain GetChildChainAccountAddr will be removed once new transaction type is introduced.
-		if ccAddr := tx.GetChildChainAccountAddr(signer); ccAddr == nil {
-			continue
-		}
-		chainHashes := new(types.ChainHashes)
-		data, err := tx.AnchoredData()
-		if err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to get anchoring data from the tx", "txHash", tx.Hash())
-			continue
-		}
-		if err := rlp.DecodeBytes(data, chainHashes); err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
-			continue
-		}
-		bc.WriteChildChainTxHash(chainHashes.BlockHash, tx.Hash())
-	}
 }
 
 // IsParallelDBWrite returns if parallel write is enabled or not.
