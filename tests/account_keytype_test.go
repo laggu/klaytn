@@ -805,3 +805,243 @@ func TestAccountCreationHumanReadableFail(t *testing.T) {
 		prof.PrintProfileInfo()
 	}
 }
+
+// TestAccountCreationRoleBasedKeyInvalidTypeKey tests account creation with a RoleBased key contains types of sub-keys.
+// As a sub-key type, a RoleBased key can have AccountKeyFail keys but not AccountKeyNil keys.
+// 1. a RoleBased key contains an AccountKeyNil type sub-key as a first sub-key. (fail)
+// 2. a RoleBased key contains an AccountKeyNil type sub-key as a second sub-key. (fail)
+// 3. a RoleBased key contains an AccountKeyNil type sub-key as a third sub-key. (fail)
+// 4. a RoleBased key contains an AccountKeyFail type sub-key as a first sub-key. (success)
+// 5. a RoleBased key contains an AccountKeyFail type sub-key as a second sub-key. (success)
+// 6. a RoleBased key contains an AccountKeyFail type sub-key as a third sub-key. (success)
+func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	keys := genTestKeys(2)
+
+	// 1. a RoleBased key contains an AccountKeyNil type sub-key as a first sub-key. (fail)
+	{
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyNil(),
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+	}
+
+	// 2. a RoleBased key contains an AccountKeyNil type sub-key as a second sub-key. (fail)
+	{
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyNil(),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+	}
+
+	// 3. a RoleBased key contains an AccountKeyNil type sub-key as a third sub-key. (fail)
+	{
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+			accountkey.NewAccountKeyNil(),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+	}
+
+	// 4. a RoleBased key contains an AccountKeyFail type sub-key as a first sub-key. (success)
+	{
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyFail(),
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	}
+
+	// 5. a RoleBased key contains an AccountKeyFail type sub-key as a second sub-key. (success)
+	{
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyFail(),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	}
+
+	// 6. a RoleBased key contains an AccountKeyFail type sub-key as a third sub-key. (success)
+	{
+		roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+			accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+			accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+			accountkey.NewAccountKeyFail(),
+		})
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
