@@ -51,7 +51,6 @@ var DefaultConfig = Config{
 		DatasetsOnDisk: 2,
 	},
 	NetworkId:         1,
-	LightPeers:        100,
 	LevelDBCacheSize:  768,
 	TrieCacheSize:     256,
 	TrieTimeout:       5 * time.Minute,
@@ -100,8 +99,8 @@ type Config struct {
 	SentChainTxsLimit uint64          // Number of chain transactions stored for resending. Default value is 1000.
 
 	// Light client options
-	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
-	LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
+	//LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
+	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
@@ -116,14 +115,12 @@ type Config struct {
 	StateDBCaching     bool
 
 	// Mining-related options
-	Gxbase       common.Address `toml:",omitempty"`
-	MinerThreads int            `toml:",omitempty"`
-	ExtraData    []byte         `toml:",omitempty"`
-	GasPrice     *big.Int
+	Gxbase    common.Address `toml:",omitempty"`
+	ExtraData []byte         `toml:",omitempty"`
+	GasPrice  *big.Int
 
 	// Reward
-	RewardContract common.Address `toml:",omitempty"`
-	Rewardbase     common.Address `toml:",omitempty"`
+	Rewardbase common.Address `toml:",omitempty"`
 
 	// Gxhash options
 	Gxhash gxhash.Config

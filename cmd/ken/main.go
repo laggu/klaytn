@@ -47,10 +47,164 @@ var (
 	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Klaytn Endpoint Node")
 
 	// flags that configure the node
-	nodeFlags = nodecmd.CommonNodeFlags
+	nodeFlags = append(nodecmd.CommonNodeFlags, nodecmd.KENFlags...)
 
 	rpcFlags = nodecmd.CommonRPCFlags
 )
+
+var enHelpFlagGroups = []nodecmd.FlagGroup{
+	{
+		Name: "KLAY",
+		Flags: []cli.Flag{
+			utils.DbTypeFlag,
+			utils.DataDirFlag,
+			utils.KeyStoreDirFlag,
+			utils.IdentityFlag,
+			utils.SyncModeFlag,
+			utils.GCModeFlag,
+			utils.LightKDFFlag,
+			utils.SrvTypeFlag,
+			utils.ExtraDataFlag,
+			nodecmd.ConfigFileFlag,
+		},
+	},
+	{
+		Name: "SERVICECHAIN",
+		Flags: []cli.Flag{
+			utils.ChildChainIndexingFlag,
+			utils.EnabledBridgeFlag,
+			utils.IsMainBridgeFlag,
+			utils.BridgeListenPortFlag,
+		},
+	},
+	{
+		Name: "ACCOUNT",
+		Flags: []cli.Flag{
+			utils.UnlockedAccountFlag,
+			utils.PasswordFileFlag,
+		},
+	},
+	{
+		Name: "TXPOOL",
+		Flags: []cli.Flag{
+			utils.TxPoolNoLocalsFlag,
+			utils.TxPoolJournalFlag,
+			utils.TxPoolJournalIntervalFlag,
+			utils.TxPoolPriceLimitFlag,
+			utils.TxPoolPriceBumpFlag,
+			utils.TxPoolExecSlotsAccountFlag,
+			utils.TxPoolExecSlotsAllFlag,
+			utils.TxPoolNonExecSlotsAccountFlag,
+			utils.TxPoolNonExecSlotsAllFlag,
+			utils.TxPoolLifetimeFlag,
+		},
+	},
+	{
+		Name: "DATABASE",
+		Flags: []cli.Flag{
+			utils.LevelDBCacheSizeFlag,
+			utils.NoPartitionedDBFlag,
+			utils.NoParallelDBWriteFlag,
+		},
+	},
+	{
+		Name: "STATE",
+		Flags: []cli.Flag{
+			utils.StateDBCachingFlag,
+			utils.TrieMemoryCacheSizeFlag,
+			utils.TrieCacheGenFlag,
+			utils.TrieBlockIntervalFlag,
+		},
+	},
+	{
+		Name: "CACHE",
+		Flags: []cli.Flag{
+			utils.CacheTypeFlag,
+			utils.CacheScaleFlag,
+			utils.CacheUsageLevelFlag,
+			utils.MemorySizeFlag,
+			utils.CacheWriteThroughFlag,
+		},
+	},
+	{
+		Name: "CONSENSUS",
+		Flags: []cli.Flag{
+			utils.CoinbaseFlag,
+		},
+	},
+	{
+		Name: "NETWORKING",
+		Flags: []cli.Flag{
+			utils.BootnodesFlag,
+			utils.ListenPortFlag,
+			utils.SubListenPortFlag,
+			utils.MultiChannelUseFlag,
+			utils.MaxPeersFlag,
+			utils.MaxPendingPeersFlag,
+			utils.TargetGasLimitFlag,
+			utils.NATFlag,
+			utils.NoDiscoverFlag,
+			utils.NetrestrictFlag,
+			utils.NodeKeyFileFlag,
+			utils.NodeKeyHexFlag,
+			utils.NetworkIdFlag,
+			utils.BaobabFlag,
+			utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
+			utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
+			utils.SBNPortFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
+		},
+	},
+	{
+		Name: "METRICS",
+		Flags: []cli.Flag{
+			utils.MetricsEnabledFlag,
+			utils.PrometheusExporterFlag,
+			utils.PrometheusExporterPortFlag,
+		},
+	},
+	{
+		Name: "VIRTUAL MACHINE",
+		Flags: []cli.Flag{
+			utils.VMEnableDebugFlag,
+			utils.VMLogTargetFlag,
+		},
+	},
+	{
+		Name: "API AND CONSOLE",
+		Flags: []cli.Flag{
+			utils.RPCEnabledFlag,
+			utils.RPCListenAddrFlag,
+			utils.RPCPortFlag,
+			utils.RPCCORSDomainFlag,
+			utils.RPCVirtualHostsFlag,
+			utils.RPCApiFlag,
+			utils.IPCDisabledFlag,
+			utils.IPCPathFlag,
+			utils.WSEnabledFlag,
+			utils.WSListenAddrFlag,
+			utils.WSPortFlag,
+			utils.WSApiFlag,
+			utils.WSAllowedOriginsFlag,
+			utils.GRPCEnabledFlag,
+			utils.GRPCListenAddrFlag,
+			utils.GRPCPortFlag,
+			utils.JSpathFlag,
+			utils.ExecFlag,
+			utils.PreloadJSFlag,
+		},
+	},
+	{
+		Name:  "LOGGING AND DEBUGGING",
+		Flags: debug.Flags,
+	},
+	{
+		Name: "MISC",
+		Flags: []cli.Flag{
+			utils.GenKeyFlag,
+			utils.WriteAddressFlag,
+		},
+	},
+}
 
 func init() {
 	// Initialize the CLI app and start ken
@@ -81,6 +235,9 @@ func init() {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+
+	cli.AppHelpTemplate = nodecmd.AppHelpTemplate
+	cli.HelpPrinter = nodecmd.NewHelpPrinter(enHelpFlagGroups)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

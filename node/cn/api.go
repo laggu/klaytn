@@ -52,19 +52,9 @@ func NewPublicKlayAPI(e *CN) *PublicKlayAPI {
 	return &PublicKlayAPI{e}
 }
 
-// Coinbase is the address that mining rewards will be send to
-func (api *PublicKlayAPI) Coinbase() (common.Address, error) {
-	return api.cn.Coinbase()
-}
-
 // Rewardbase is the address that consensus rewards will be send to
 func (api *PublicKlayAPI) Rewardbase() (common.Address, error) {
 	return api.cn.Rewardbase()
-}
-
-// RewardContract returns the address of the reward contract.
-func (api *PublicKlayAPI) RewardContract() (common.Address, error) {
-	return api.cn.RewardContract()
 }
 
 // Hashrate returns the POW hashrate
@@ -213,12 +203,6 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbase common.Address) bool {
 // SetRewardbase sets the rewardbase of the CN.
 func (api *PrivateMinerAPI) SetRewardbase(rewardbase common.Address) bool {
 	api.e.SetRewardbase(rewardbase)
-	return true
-}
-
-// SetRewardContract sets the reward contract of the miner.
-func (api *PrivateMinerAPI) SetRewardContract(addr common.Address) bool {
-	api.e.SetRewardContract(addr)
 	return true
 }
 

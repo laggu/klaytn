@@ -48,7 +48,7 @@ const (
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-func New(rewardbase common.Address, rewardcontract common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance *governance.Governance) consensus.Istanbul {
+func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance *governance.Governance) consensus.Istanbul {
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -67,7 +67,6 @@ func New(rewardbase common.Address, rewardcontract common.Address, config *istan
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
 		rewardbase:       rewardbase,
-		rewardcontract:   rewardcontract,
 		governance:       governance,
 		GovernanceCache:  newGovernanceCache(),
 	}
@@ -109,8 +108,7 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	rewardbase     common.Address
-	rewardcontract common.Address
+	rewardbase common.Address
 
 	// Reference to the governance.Governance
 	governance      *governance.Governance
@@ -126,10 +124,6 @@ func newGovernanceCache() common.Cache {
 
 func (sb *backend) GetRewardBase() common.Address {
 	return sb.rewardbase
-}
-
-func (sb *backend) GetRewardContract() common.Address {
-	return sb.rewardcontract
 }
 
 func (sb *backend) GetSubGroupSize() int {

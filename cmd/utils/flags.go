@@ -45,7 +45,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -110,7 +109,7 @@ var (
 	SrvTypeFlag = cli.StringFlag{
 		Name:  "srvtype",
 		Usage: `json rpc server type ("http", "fasthttp")`,
-		Value: "http",
+		Value: "fasthttp",
 	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
@@ -124,7 +123,7 @@ var (
 	// TODO-Klaytn-Bootnode: redefine networkid
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
+		Usage: "Network identifier (integer, 1=MainNet (Not yet launched), 1000=Aspen, 1001=Baobab)",
 		Value: cn.DefaultConfig.NetworkId,
 	}
 	IdentityFlag = cli.StringFlag{
@@ -146,16 +145,6 @@ var (
 		Name:  "gcmode",
 		Usage: `Blockchain garbage collection mode ("full", "archive")`,
 		Value: "full",
-	}
-	LightServFlag = cli.IntFlag{
-		Name:  "lightserv",
-		Usage: "Maximum percentage of time allowed for serving LES requests (0-90)",
-		Value: 0,
-	}
-	LightPeersFlag = cli.IntFlag{
-		Name:  "lightpeers",
-		Usage: "Maximum number of LES client peers",
-		Value: cn.DefaultConfig.LightPeers,
 	}
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
@@ -269,16 +258,6 @@ var (
 		Name:  "childchainindexing",
 		Usage: "Enables storing transaction hash of child chain transaction for fast access to child chain data",
 	}
-	// Miner settings
-	MiningEnabledFlag = cli.BoolFlag{
-		Name:  "mine",
-		Usage: "Enable mining",
-	}
-	MinerThreadsFlag = cli.IntFlag{
-		Name:  "minerthreads",
-		Usage: "Number of CPU threads to use for mining",
-		Value: runtime.NumCPU(),
-	}
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
@@ -293,17 +272,6 @@ var (
 		Name:  "rewardbase",
 		Usage: "Public address for block consensus rewards (default = first account created)",
 		Value: "0",
-	}
-	RewardContractFlag = cli.StringFlag{
-		Name:  "rewardcontract",
-		Usage: "Public address for rewards contract",
-		Value: "0",
-	}
-	// TODO-Klaytn-Issue136 default gasPrice
-	GasPriceFlag = BigFlag{
-		Name:  "gasprice",
-		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: cn.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
@@ -449,12 +417,12 @@ var (
 	ListenPortFlag = cli.IntFlag{
 		Name:  "port",
 		Usage: "Network listening port",
-		Value: 30303,
+		Value: 32323,
 	}
 	SubListenPortFlag = cli.IntFlag{
 		Name:  "subport",
 		Usage: "Network sub listening port",
-		Value: 30304,
+		Value: 32324,
 	}
 	MultiChannelUseFlag = cli.BoolFlag{
 		Name:  "multichannel",
@@ -462,22 +430,9 @@ var (
 	}
 	BootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
-		Usage: "Comma separated kni URLs for P2P discovery bootstrap (set v4+v5 instead for light servers)",
+		Usage: "Comma separated kni URLs for P2P discovery bootstrap",
 		Value: "",
 	}
-	BootnodesV4Flag = cli.StringFlag{
-		Name:  "bootnodesv4",
-		Usage: "Comma separated kni URLs for P2P v4 discovery bootstrap (light server, full nodes)",
-		Value: "",
-	}
-	// TODO-Klaytn-Bootnode: decide porting or not ethereum's node discovery V5
-	/*
-		BootnodesV5Flag = cli.StringFlag{
-			Name:  "bootnodesv5",
-			Usage: "Comma separated kni URLs for P2P v5 discovery bootstrap (light server, light nodes)",
-			Value: "",
-		}
-	*/
 	NodeKeyFileFlag = cli.StringFlag{
 		Name:  "nodekey",
 		Usage: "P2P node key file",
@@ -528,19 +483,19 @@ var (
 	}
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	EnableSBNFlag = cli.BoolFlag{
-		Name:  "enableSBN",
-		Usage: "enable simple bootnodes in order to retrieve two PNs' URIs",
+		Name:  "sbn",
+		Usage: "Enable the peer discovery mechanism using the simple-bootnode",
 	}
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	SBNAddrFlag = cli.StringFlag{
 		Name:  "sbnaddr",
-		Usage: "SBN server listening interface",
+		Usage: "simple-bootnode server listening interface",
 		Value: node.SBN_ADDR,
 	}
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	SBNPortFlag = cli.IntFlag{
 		Name:  "sbnport",
-		Usage: "SBN server listening port",
+		Usage: "simple-bootnode server listening port",
 		Value: node.SBN_PORT,
 	}
 	// Bootnode's settings
@@ -634,12 +589,8 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	urls := params.MainnetBootnodes
 	switch {
-	case ctx.GlobalIsSet(BootnodesFlag.Name) || ctx.GlobalIsSet(BootnodesV4Flag.Name):
-		if ctx.GlobalIsSet(BootnodesV4Flag.Name) {
-			urls = strings.Split(ctx.GlobalString(BootnodesV4Flag.Name), ",")
-		} else {
-			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
-		}
+	case ctx.GlobalIsSet(BootnodesFlag.Name):
+		urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
 	case ctx.GlobalIsSet(BaobabFlag.Name):
 		// set pre-configured bootnodes when 'baobab' option was enabled
 		urls = getBaobabBootnodesByConnectionType(int(cfg.ConnectionType))
@@ -831,14 +782,6 @@ func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	}
 }
 
-// setRewardbase retrieves the rewardbase either from the directly specified
-// command line flags or from the keystore if CLI indexed.
-func setRewardContract(ctx *cli.Context, cfg *cn.Config) {
-	if ctx.GlobalIsSet(RewardContractFlag.Name) {
-		cfg.RewardContract = common.HexToAddress(ctx.GlobalString(RewardContractFlag.Name))
-	}
-}
-
 // MakePasswordList reads password lines from the file specified by the global --password flag.
 func MakePasswordList(ctx *cli.Context) []string {
 	path := ctx.GlobalString(PasswordFileFlag.Name)
@@ -862,9 +805,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
 
-	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
-	lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
-
 	var nodeType string
 	if ctx.GlobalIsSet(NodeTypeFlag.Name) {
 		nodeType = ctx.GlobalString(NodeTypeFlag.Name)
@@ -883,19 +823,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
-		if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
-			cfg.MaxPeers += lightPeers
-		}
-	} else {
-		if lightServer {
-			cfg.MaxPeers += lightPeers
-		}
 	}
-	if !(lightServer) {
-		lightPeers = 0
-	}
-	ethPeers := cfg.MaxPeers - lightPeers
-	logger.Info("Maximum peer count", "KLAY", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+	logger.Info("Maximum peer count", cfg.MaxPeers)
 
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
@@ -910,8 +839,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.SBNPort = ctx.GlobalInt(SBNPortFlag.Name)
 		logger.Info("SBN is enabled.")
 	} else if ctx.GlobalIsSet(EnableSBNFlag.Name) {
-		if !(ctx.GlobalIsSet(SBNAddrFlag.Name) && ctx.GlobalIsSet(SBNPortFlag.Name)) {
-			Fatalf("All the flags --enableSBN, --sbnaddr, and --sbnport must be specified to turn on SBN.")
+		if !ctx.GlobalIsSet(SBNAddrFlag.Name) {
+			Fatalf("Simple-bootnode's address is not defined. Use --sbnaddr. ex) --sbnaddr sbn.my-simple-bootnode.com")
 		}
 		cfg.EnableSBN = true
 		cfg.SBNHost = ctx.GlobalString(SBNAddrFlag.Name)
@@ -1069,18 +998,12 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setGxbase(ctx, ks, cfg)
 	setRewardbase(ctx, ks, cfg)
-	setRewardContract(ctx, cfg)
 	setTxPool(ctx, &cfg.TxPool)
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
 	}
-	if ctx.GlobalIsSet(LightServFlag.Name) {
-		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)
-	}
-	if ctx.GlobalIsSet(LightPeersFlag.Name) {
-		cfg.LightPeers = ctx.GlobalInt(LightPeersFlag.Name)
-	}
+
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
 	}
@@ -1140,9 +1063,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 	if ctx.GlobalIsSet(CacheWriteThroughFlag.Name) {
 		common.WriteThroughCaching = ctx.GlobalBool(CacheWriteThroughFlag.Name)
-	}
-	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
-		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
 	}
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)

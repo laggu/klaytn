@@ -436,8 +436,7 @@ func NewBCDataFromPreLoadedData(dbDir string, numValidators int) (*BCData, error
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(genesisAddr, genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, gov)
-
+	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, gov)
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
 	trieConfig := &blockchain.CacheConfig{

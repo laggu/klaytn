@@ -23,11 +23,9 @@
 package nodecmd
 
 import (
-	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 	"io"
-	"sort"
 	"strings"
 )
 
@@ -56,208 +54,14 @@ COPYRIGHT:
    {{end}}
 `
 
-// flagGroup is a collection of flags belonging to a single topic.
-type flagGroup struct {
+// FlagGroup is a collection of flags belonging to a single topic.
+type FlagGroup struct {
 	Name  string
 	Flags []cli.Flag
 }
 
-// AppHelpFlagGroups is the application flags, grouped by functionality.
-var AppHelpFlagGroups = []flagGroup{
-	{
-		Name: "KLAY",
-		Flags: []cli.Flag{
-			utils.DbTypeFlag,
-			utils.DataDirFlag,
-			utils.KeyStoreDirFlag,
-			utils.IdentityFlag,
-			utils.SyncModeFlag,
-			utils.GCModeFlag,
-			utils.LightServFlag,
-			utils.LightPeersFlag,
-			utils.LightKDFFlag,
-			utils.NodeTypeFlag,
-			utils.BaobabFlag,
-			utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
-			utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
-			utils.SBNPortFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
-			utils.SrvTypeFlag,
-			utils.ExtraDataFlag,
-			ConfigFileFlag,
-		},
-	},
-	{
-		Name: "SERVICECHAIN",
-		Flags: []cli.Flag{
-			utils.ChainAccountAddrFlag,
-			utils.AnchoringPeriodFlag,
-			utils.ChildChainIndexingFlag,
-			utils.SentChainTxsLimit,
-			utils.EnabledBridgeFlag,
-			utils.IsMainBridgeFlag,
-			utils.BridgeListenPortFlag,
-			utils.ParentChainURLFlag,
-		},
-	},
-	{
-		Name: "ACCOUNT",
-		Flags: []cli.Flag{
-			utils.UnlockedAccountFlag,
-			utils.PasswordFileFlag,
-		},
-	},
-	{
-		Name: "TXPOOL",
-		Flags: []cli.Flag{
-			utils.TxPoolNoLocalsFlag,
-			utils.TxPoolJournalFlag,
-			utils.TxPoolJournalIntervalFlag,
-			utils.TxPoolPriceLimitFlag,
-			utils.TxPoolPriceBumpFlag,
-			utils.TxPoolExecSlotsAccountFlag,
-			utils.TxPoolExecSlotsAllFlag,
-			utils.TxPoolNonExecSlotsAccountFlag,
-			utils.TxPoolNonExecSlotsAllFlag,
-			utils.TxPoolLifetimeFlag,
-		},
-	},
-	{
-		Name: "DATABASE",
-		Flags: []cli.Flag{
-			utils.NoPartitionedDBFlag,
-			utils.LevelDBCacheSizeFlag,
-			utils.NoParallelDBWriteFlag,
-		},
-	},
-	{
-		Name: "STATE",
-		Flags: []cli.Flag{
-			utils.StateDBCachingFlag,
-			utils.TrieMemoryCacheSizeFlag,
-			utils.TrieCacheGenFlag,
-			utils.TrieBlockIntervalFlag,
-		},
-	},
-	{
-		Name: "CACHE",
-		Flags: []cli.Flag{
-			utils.CacheTypeFlag,
-			utils.CacheScaleFlag,
-			utils.CacheUsageLevelFlag,
-			utils.MemorySizeFlag,
-			utils.CacheWriteThroughFlag,
-		},
-	},
-	{
-		Name: "MINER",
-		Flags: []cli.Flag{
-			utils.MiningEnabledFlag,
-			utils.MinerThreadsFlag,
-			utils.CoinbaseFlag,
-			utils.RewardbaseFlag,
-			utils.RewardContractFlag,
-			utils.GasPriceFlag,
-		},
-	},
-	{
-		Name: "NETWORKING",
-		Flags: []cli.Flag{
-			utils.BootnodesFlag,
-			utils.BootnodesV4Flag,
-			utils.ListenPortFlag,
-			utils.SubListenPortFlag,
-			utils.MultiChannelUseFlag,
-			utils.MaxPeersFlag,
-			utils.MaxPendingPeersFlag,
-			utils.TargetGasLimitFlag,
-			utils.NATFlag,
-			utils.NoDiscoverFlag,
-			utils.NetrestrictFlag,
-			utils.NodeKeyFileFlag,
-			utils.NodeKeyHexFlag,
-			utils.NetworkIdFlag,
-		},
-	},
-	{
-		Name: "METRICS",
-		Flags: []cli.Flag{
-			utils.MetricsEnabledFlag,
-			utils.PrometheusExporterFlag,
-			utils.PrometheusExporterPortFlag,
-		},
-	},
-	{
-		Name: "VIRTUAL MACHINE",
-		Flags: []cli.Flag{
-			utils.VMEnableDebugFlag,
-			utils.VMLogTargetFlag,
-		},
-	},
-	{
-		Name: "API AND CONSOLE",
-		Flags: []cli.Flag{
-			utils.RPCEnabledFlag,
-			utils.RPCListenAddrFlag,
-			utils.RPCPortFlag,
-			utils.RPCCORSDomainFlag,
-			utils.RPCVirtualHostsFlag,
-			utils.RPCApiFlag,
-			utils.IPCDisabledFlag,
-			utils.IPCPathFlag,
-			utils.WSEnabledFlag,
-			utils.WSListenAddrFlag,
-			utils.WSPortFlag,
-			utils.WSApiFlag,
-			utils.WSAllowedOriginsFlag,
-			utils.GRPCEnabledFlag,
-			utils.GRPCListenAddrFlag,
-			utils.GRPCPortFlag,
-			utils.JSpathFlag,
-			utils.ExecFlag,
-			utils.PreloadJSFlag,
-		},
-	},
-	{
-		Name:  "LOGGING AND DEBUGGING",
-		Flags: debug.Flags,
-	},
-	{
-		Name: "BOOTNODE",
-		Flags: []cli.Flag{
-			utils.BNAddrFlag,
-			utils.GenKeyFlag,
-			utils.WriteAddressFlag,
-		},
-	},
-	{
-		Name: "MISC",
-	},
-}
-
-// byCategory sorts an array of flagGroup by Name in the order
-// defined in AppHelpFlagGroups.
-type byCategory []flagGroup
-
-func (a byCategory) Len() int      { return len(a) }
-func (a byCategory) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a byCategory) Less(i, j int) bool {
-	iCat, jCat := a[i].Name, a[j].Name
-	iIdx, jIdx := len(AppHelpFlagGroups), len(AppHelpFlagGroups) // ensure non categorized flags come last
-
-	for i, group := range AppHelpFlagGroups {
-		if iCat == group.Name {
-			iIdx = i
-		}
-		if jCat == group.Name {
-			jIdx = i
-		}
-	}
-
-	return iIdx < jIdx
-}
-
-func flagCategory(flag cli.Flag) string {
-	for _, category := range AppHelpFlagGroups {
+func flagCategory(flag cli.Flag, fg []FlagGroup) string {
+	for _, category := range fg {
 		for _, flg := range category.Flags {
 			if flg.GetName() == flag.GetName() {
 				return category.Name
@@ -267,23 +71,18 @@ func flagCategory(flag cli.Flag) string {
 	return "MISC"
 }
 
-func init() {
-	// Override the default app help template
-	cli.AppHelpTemplate = AppHelpTemplate
-
-	// Define a one shot struct to pass to the usage template
-	type helpData struct {
-		App        interface{}
-		FlagGroups []flagGroup
-	}
-
-	// Override the default app help printer, but only for the global app help
+func NewHelpPrinter(fg []FlagGroup) func(w io.Writer, tmp string, data interface{}) {
 	originalHelpPrinter := cli.HelpPrinter
-	cli.HelpPrinter = func(w io.Writer, tmpl string, data interface{}) {
+	return func(w io.Writer, tmpl string, data interface{}) {
+		type helpData struct {
+			App        interface{}
+			FlagGroups []FlagGroup
+		}
+
 		if tmpl == AppHelpTemplate {
 			// Iterate over all the flags and add any uncategorized ones
 			categorized := make(map[string]struct{})
-			for _, group := range AppHelpFlagGroups {
+			for _, group := range fg {
 				for _, flag := range group.Flags {
 					categorized[flag.String()] = struct{}{}
 				}
@@ -299,31 +98,30 @@ func init() {
 			}
 			if len(uncategorized) > 0 {
 				// Append all ungategorized options to the misc group
-				miscs := len(AppHelpFlagGroups[len(AppHelpFlagGroups)-1].Flags)
-				AppHelpFlagGroups[len(AppHelpFlagGroups)-1].Flags = append(AppHelpFlagGroups[len(AppHelpFlagGroups)-1].Flags, uncategorized...)
+				miscs := len(fg[len(fg)-1].Flags)
+				fg[len(fg)-1].Flags = append(fg[len(fg)-1].Flags, uncategorized...)
 
 				// Make sure they are removed afterwards
 				defer func() {
-					AppHelpFlagGroups[len(AppHelpFlagGroups)-1].Flags = AppHelpFlagGroups[len(AppHelpFlagGroups)-1].Flags[:miscs]
+					fg[len(fg)-1].Flags = fg[len(fg)-1].Flags[:miscs]
 				}()
 			}
 			// Render out custom usage screen
-			originalHelpPrinter(w, tmpl, helpData{data, AppHelpFlagGroups})
+			originalHelpPrinter(w, tmpl, helpData{data, fg})
 		} else if tmpl == utils.CommandHelpTemplate {
 			// Iterate over all command specific flags and categorize them
 			categorized := make(map[string][]cli.Flag)
 			for _, flag := range data.(cli.Command).Flags {
 				if _, ok := categorized[flag.String()]; !ok {
-					categorized[flagCategory(flag)] = append(categorized[flagCategory(flag)], flag)
+					categorized[flagCategory(flag, fg)] = append(categorized[flagCategory(flag, fg)], flag)
 				}
 			}
 
 			// sort to get a stable ordering
-			sorted := make([]flagGroup, 0, len(categorized))
+			sorted := make([]FlagGroup, 0, len(categorized))
 			for cat, flgs := range categorized {
-				sorted = append(sorted, flagGroup{cat, flgs})
+				sorted = append(sorted, FlagGroup{cat, flgs})
 			}
-			sort.Sort(byCategory(sorted))
 
 			// add sorted array to data and render with default printer
 			originalHelpPrinter(w, tmpl, map[string]interface{}{

@@ -487,11 +487,6 @@ web3._extend({
             getter: 'klay_rewardbase',
            
         }),
-        new web3._extend.Property({
-            name : 'rewardcontract',
-            getter: 'klay_rewardContract',
-           
-        }),
 	]
 });
 `

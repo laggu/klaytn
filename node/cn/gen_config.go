@@ -27,20 +27,19 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		ChainAccountAddr        *common.Address
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
-		LightServ               int  `toml:",omitempty"`
-		LightPeers              int  `toml:",omitempty"`
 		SkipBcVersionCheck      bool `toml:"-"`
 		DatabaseHandles         int  `toml:"-"`
+		PartitionedDB           bool
 		LevelDBCacheSize        int
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
 		ChildChainIndexing      bool
+		ParallelDBWrite         bool
+		StateDBCaching          bool
 		Gxbase                  common.Address `toml:",omitempty"`
-		MinerThreads            int            `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
-		RewardContract          common.Address `toml:",omitempty"`
 		Rewardbase              common.Address `toml:",omitempty"`
 		Gxhash                  gxhash.Config
 		TxPool                  blockchain.TxPoolConfig
@@ -58,20 +57,19 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.ChainAccountAddr = c.ChainAccountAddr
 	enc.AnchoringPeriod = c.AnchoringPeriod
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
-	enc.LightServ = c.LightServ
-	enc.LightPeers = c.LightPeers
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.DatabaseHandles = c.DatabaseHandles
+	enc.PartitionedDB = c.PartitionedDB
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
 	enc.ChildChainIndexing = c.ChildChainIndexing
+	enc.ParallelDBWrite = c.ParallelDBWrite
+	enc.StateDBCaching = c.StateDBCaching
 	enc.Gxbase = c.Gxbase
-	enc.MinerThreads = c.MinerThreads
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
-	enc.RewardContract = c.RewardContract
 	enc.Rewardbase = c.Rewardbase
 	enc.Gxhash = c.Gxhash
 	enc.TxPool = c.TxPool
@@ -93,20 +91,19 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ChainAccountAddr        *common.Address
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
-		LightServ               *int  `toml:",omitempty"`
-		LightPeers              *int  `toml:",omitempty"`
 		SkipBcVersionCheck      *bool `toml:"-"`
 		DatabaseHandles         *int  `toml:"-"`
+		PartitionedDB           *bool
 		LevelDBCacheSize        *int
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
 		ChildChainIndexing      *bool
+		ParallelDBWrite         *bool
+		StateDBCaching          *bool
 		Gxbase                  *common.Address `toml:",omitempty"`
-		MinerThreads            *int            `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
-		RewardContract          *common.Address `toml:",omitempty"`
 		Rewardbase              *common.Address `toml:",omitempty"`
 		Gxhash                  *gxhash.Config
 		TxPool                  *blockchain.TxPoolConfig
@@ -141,17 +138,14 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SentChainTxsLimit != nil {
 		c.SentChainTxsLimit = *dec.SentChainTxsLimit
 	}
-	if dec.LightServ != nil {
-		c.LightServ = *dec.LightServ
-	}
-	if dec.LightPeers != nil {
-		c.LightPeers = *dec.LightPeers
-	}
 	if dec.SkipBcVersionCheck != nil {
 		c.SkipBcVersionCheck = *dec.SkipBcVersionCheck
 	}
 	if dec.DatabaseHandles != nil {
 		c.DatabaseHandles = *dec.DatabaseHandles
+	}
+	if dec.PartitionedDB != nil {
+		c.PartitionedDB = *dec.PartitionedDB
 	}
 	if dec.LevelDBCacheSize != nil {
 		c.LevelDBCacheSize = *dec.LevelDBCacheSize
@@ -168,20 +162,20 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.ChildChainIndexing != nil {
 		c.ChildChainIndexing = *dec.ChildChainIndexing
 	}
+	if dec.ParallelDBWrite != nil {
+		c.ParallelDBWrite = *dec.ParallelDBWrite
+	}
+	if dec.StateDBCaching != nil {
+		c.StateDBCaching = *dec.StateDBCaching
+	}
 	if dec.Gxbase != nil {
 		c.Gxbase = *dec.Gxbase
-	}
-	if dec.MinerThreads != nil {
-		c.MinerThreads = *dec.MinerThreads
 	}
 	if dec.ExtraData != nil {
 		c.ExtraData = *dec.ExtraData
 	}
 	if dec.GasPrice != nil {
 		c.GasPrice = dec.GasPrice
-	}
-	if dec.RewardContract != nil {
-		c.RewardContract = *dec.RewardContract
 	}
 	if dec.Rewardbase != nil {
 		c.Rewardbase = *dec.Rewardbase

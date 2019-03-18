@@ -78,7 +78,5 @@ type Backend interface {
 
 	GetRewardBase() common.Address
 
-	GetRewardContract() common.Address
-
 	GetSubGroupSize() int
 }

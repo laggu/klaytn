@@ -47,7 +47,7 @@ var (
 	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Klaytn ServiceChain Node")
 
 	// flags that configure the node
-	nodeFlags = nodecmd.CommonNodeFlags
+	nodeFlags = append(nodecmd.CommonNodeFlags, nodecmd.KSCNFlags...)
 
 	rpcFlags = nodecmd.CommonRPCFlags
 )

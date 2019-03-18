@@ -30,8 +30,6 @@ var CommonNodeFlags = []cli.Flag{
 	utils.IdentityFlag,
 	utils.UnlockedAccountFlag,
 	utils.PasswordFileFlag,
-	utils.BootnodesFlag,
-	utils.BootnodesV4Flag,
 	utils.DbTypeFlag,
 	utils.DataDirFlag,
 	utils.KeyStoreDirFlag,
@@ -47,8 +45,6 @@ var CommonNodeFlags = []cli.Flag{
 	utils.TxPoolLifetimeFlag,
 	utils.SyncModeFlag,
 	utils.GCModeFlag,
-	utils.LightServFlag,
-	utils.LightPeersFlag,
 	utils.LightKDFFlag,
 	utils.StateDBCachingFlag,
 	utils.NoPartitionedDBFlag,
@@ -61,19 +57,12 @@ var CommonNodeFlags = []cli.Flag{
 	utils.CacheScaleFlag,
 	utils.CacheUsageLevelFlag,
 	utils.MemorySizeFlag,
-	utils.ChildChainIndexingFlag,
 	utils.CacheWriteThroughFlag,
 	utils.ListenPortFlag,
 	utils.SubListenPortFlag,
 	utils.MultiChannelUseFlag,
 	utils.MaxPeersFlag,
 	utils.MaxPendingPeersFlag,
-	utils.CoinbaseFlag,
-	utils.RewardbaseFlag,
-	utils.RewardContractFlag,
-	utils.GasPriceFlag,
-	utils.MinerThreadsFlag,
-	utils.MiningEnabledFlag,
 	utils.TargetGasLimitFlag,
 	utils.NATFlag,
 	utils.NoDiscoverFlag,
@@ -90,18 +79,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.PrometheusExporterPortFlag,
 	utils.ExtraDataFlag,
 	utils.SrvTypeFlag,
-	utils.ChainAccountAddrFlag,
-	utils.AnchoringPeriodFlag,
-	utils.SentChainTxsLimit,
-	utils.BaobabFlag,
 	ConfigFileFlag,
-	utils.EnabledBridgeFlag,
-	utils.IsMainBridgeFlag,
-	utils.BridgeListenPortFlag,
-	utils.ParentChainURLFlag,
-	utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
-	utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
-	utils.SBNPortFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
 }
 
 // Common RPC flags
@@ -120,4 +98,32 @@ var CommonRPCFlags = []cli.Flag{
 	utils.WSAllowedOriginsFlag,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
+}
+
+var KCNFlags = []cli.Flag{
+	utils.RewardbaseFlag,
+}
+
+var KPNFlags = []cli.Flag{}
+
+var KENFlags = []cli.Flag{
+	utils.CoinbaseFlag,
+	utils.BaobabFlag,
+	utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
+	utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
+	utils.SBNPortFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
+	utils.ChildChainIndexingFlag,
+	utils.EnabledBridgeFlag,
+	utils.IsMainBridgeFlag,
+	utils.BridgeListenPortFlag,
+	utils.BootnodesFlag,
+}
+
+var KSCNFlags = []cli.Flag{
+	utils.ChainAccountAddrFlag,
+	utils.AnchoringPeriodFlag,
+	utils.SentChainTxsLimit,
+	utils.EnabledBridgeFlag,
+	utils.BridgeListenPortFlag,
+	utils.ParentChainURLFlag,
 }

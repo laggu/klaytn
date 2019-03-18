@@ -91,8 +91,7 @@ type CN struct {
 	gasPrice *big.Int
 	coinbase common.Address
 
-	rewardbase     common.Address
-	rewardcontract common.Address
+	rewardbase common.Address
 
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
@@ -144,7 +143,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Gxbase,
 		rewardbase:     config.Rewardbase,
-		rewardcontract: config.RewardContract,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		governance:     governance,
@@ -212,7 +210,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		cn.protocolManager.SetRewardbaseWallet(wallet)
 	}
 	cn.protocolManager.SetRewardbase(cn.rewardbase)
-	cn.protocolManager.SetRewardContract(cn.rewardcontract)
 
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
 	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
@@ -291,7 +288,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 			chainConfig.Governance.Istanbul = governance.GetDefaultIstanbulConfig()
 		}
 	}
-	return istanbulBackend.New(config.Rewardbase, config.RewardContract, &config.Istanbul, ctx.NodeKey(), db, gov)
+	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov)
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
@@ -360,29 +357,6 @@ func (s *CN) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *CN) Coinbase() (eb common.Address, err error) {
-	s.lock.RLock()
-	coinbase := s.coinbase
-	s.lock.RUnlock()
-
-	if coinbase != (common.Address{}) {
-		return coinbase, nil
-	}
-	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
-		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			coinbase := accounts[0].Address
-
-			s.lock.Lock()
-			s.coinbase = coinbase
-			s.lock.Unlock()
-
-			logger.Info("Coinbase automatically configured", "address", coinbase)
-			return coinbase, nil
-		}
-	}
-	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
-}
-
 func (s *CN) Rewardbase() (eb common.Address, err error) {
 	s.lock.RLock()
 	rewardbase := s.rewardbase
@@ -405,17 +379,6 @@ func (s *CN) Rewardbase() (eb common.Address, err error) {
 	}
 
 	return common.Address{}, fmt.Errorf("rewardbase must be explicitly specified")
-}
-
-func (s *CN) RewardContract() (addr common.Address, err error) {
-	s.lock.RLock()
-	rewardcontract := s.rewardcontract
-	s.lock.RUnlock()
-
-	if rewardcontract != (common.Address{}) {
-		return rewardcontract, nil
-	}
-	return common.Address{}, nil
 }
 
 func (s *CN) RewardbaseWallet() (accounts.Wallet, error) {
@@ -459,30 +422,7 @@ func (s *CN) SetRewardbase(rewardbase common.Address) {
 	s.protocolManager.SetRewardbaseWallet(wallet)
 }
 
-func (s *CN) SetRewardContract(addr common.Address) {
-	s.lock.Lock()
-	s.rewardcontract = addr
-	s.lock.Unlock()
-
-	s.protocolManager.SetRewardContract(s.rewardcontract)
-	//TODO-Klaytn broadcast another CN with authentication rule
-	//TODO-Klaytn add governance feature
-}
-
 func (s *CN) StartMining(local bool) error {
-	eb, err := s.Coinbase()
-	if err != nil {
-		logger.Error("Cannot start mining without coinbase", "err", err)
-		return fmt.Errorf("coinbase missing: %v", err)
-	}
-	//if clique, ok := s.engine.(*clique.Clique); ok {
-	//	rewardwallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-	//	if rewardwallet == nil || err != nil {
-	//		logger.Error("Coinbase account unavailable locally", "err", err)
-	//		return fmt.Errorf("signer missing: %v", err)
-	//	}
-	//	clique.Authorize(eb, rewardwallet.SignHash)
-	//}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
@@ -490,7 +430,7 @@ func (s *CN) StartMining(local bool) error {
 		// will ensure that private networks work in single miner mode too.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 	}
-	go s.miner.Start(eb)
+	go s.miner.Start(common.StringToAddress("0x0000000000000000000000000000000000000000"))
 	return nil
 }
 
@@ -532,12 +472,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers()
-	if s.config.LightServ > 0 {
-		if s.config.LightPeers >= maxPeers {
-			return fmt.Errorf("invalid peer config: light peer count (%d) >= total peer count (%d)", s.config.LightPeers, maxPeers)
-		}
-		maxPeers -= s.config.LightPeers
-	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
 	if s.lesServer != nil {

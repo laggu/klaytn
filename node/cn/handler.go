@@ -108,9 +108,8 @@ type ProtocolManager struct {
 	// istanbul BFT
 	engine consensus.Engine
 
-	rewardcontract common.Address
-	rewardbase     common.Address
-	rewardwallet   accounts.Wallet
+	rewardbase   common.Address
+	rewardwallet accounts.Wallet
 
 	wsendpoint string
 
@@ -254,10 +253,6 @@ func (pm *ProtocolManager) RegisterValidator(conType p2p.ConnType, validator p2p
 
 func (pm *ProtocolManager) getWSEndPoint() string {
 	return pm.wsendpoint
-}
-
-func (pm *ProtocolManager) SetRewardContract(addr common.Address) {
-	pm.rewardcontract = addr
 }
 
 func (pm *ProtocolManager) SetRewardbase(addr common.Address) {
