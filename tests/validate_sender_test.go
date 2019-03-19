@@ -18,6 +18,7 @@ package tests
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -32,6 +33,13 @@ import (
 
 func TestValidateSenderContract(t *testing.T) {
 	prof := profile.NewProfiler()
+
+	if isCompilerAvailable() == false {
+		if testing.Verbose() {
+			fmt.Printf("TestFeePayerContract is skipped due to the lack of solc.")
+		}
+		return
+	}
 
 	if testing.Verbose() {
 		enableLog()
