@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/cmd/utils/nodecmd"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
@@ -59,23 +60,12 @@ var (
 		Usage: `Specify an ip address`,
 		Value: "0.0.0.0",
 	}
-
-	kgenHelper = `NAME:
-   {{.Name}} - {{.Usage}}
-
-USAGE:
-   {{.HelpName}} [options...]{{if .Commands}} [command]{{end}}
-{{if .Commands}}
-COMMANDS:
-   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}{{end}}{{if .Flags}}
-OPTIONS:
-   {{range .Flags}}{{.}}
-   {{end}}{{end}}{{if .Copyright }}
-COPYRIGHT:
-   {{.Copyright}}{{end}}
-`
 )
+
+func init() {
+	cli.AppHelpTemplate = utils.KgenHelpTemplate
+	cli.HelpPrinter = utils.NewHelpPrinter(nil)
+}
 
 func main() {
 	app := cli.NewApp()
@@ -92,7 +82,7 @@ func main() {
 		nodecmd.VersionCommand,
 	}
 	app.HideVersion = true
-	app.CustomAppHelpTemplate = kgenHelper
+	//app.CustomAppHelpTemplate = kgenHelper
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

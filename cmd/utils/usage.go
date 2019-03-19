@@ -20,39 +20,13 @@
 
 // Contains the Klaytn node command usage template and generator.
 
-package nodecmd
+package utils
 
 import (
-	"github.com/ground-x/klaytn/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 	"io"
 	"strings"
 )
-
-// AppHelpTemplate is the test template for the default, global app help topic.
-var AppHelpTemplate = `NAME:
-   {{.App.Name}} - {{.App.Usage}}
-
-USAGE:
-   {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
-   {{if .App.Version}}
-VERSION:
-   {{.App.Version}}
-   {{end}}{{if len .App.Authors}}
-AUTHOR(S):
-   {{range .App.Authors}}{{ . }}{{end}}
-   {{end}}{{if .App.Commands}}
-COMMANDS:
-   {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}{{end}}{{if .FlagGroups}}
-{{range .FlagGroups}}{{.Name}} OPTIONS:
-  {{range .Flags}}{{.}}
-  {{end}}
-{{end}}{{end}}{{if .App.Copyright }}
-COPYRIGHT:
-   {{.App.Copyright}}
-   {{end}}
-`
 
 // FlagGroup is a collection of flags belonging to a single topic.
 type FlagGroup struct {
@@ -79,7 +53,7 @@ func NewHelpPrinter(fg []FlagGroup) func(w io.Writer, tmp string, data interface
 			FlagGroups []FlagGroup
 		}
 
-		if tmpl == AppHelpTemplate {
+		if tmpl == GlobalAppHelpTemplate {
 			// Iterate over all the flags and add any uncategorized ones
 			categorized := make(map[string]struct{})
 			for _, group := range fg {
@@ -108,7 +82,7 @@ func NewHelpPrinter(fg []FlagGroup) func(w io.Writer, tmp string, data interface
 			}
 			// Render out custom usage screen
 			originalHelpPrinter(w, tmpl, helpData{data, fg})
-		} else if tmpl == utils.CommandHelpTemplate {
+		} else if tmpl == CommandHelpTemplate {
 			// Iterate over all command specific flags and categorize them
 			categorized := make(map[string][]cli.Flag)
 			for _, flag := range data.(cli.Command).Flags {

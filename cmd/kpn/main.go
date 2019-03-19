@@ -52,7 +52,7 @@ var (
 	rpcFlags = nodecmd.CommonRPCFlags
 )
 
-var pnHelpFlagGroups = []nodecmd.FlagGroup{
+var pnHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "KLAY",
 		Flags: []cli.Flag{
@@ -216,8 +216,8 @@ func init() {
 	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 
-	cli.AppHelpTemplate = nodecmd.AppHelpTemplate
-	cli.HelpPrinter = nodecmd.NewHelpPrinter(pnHelpFlagGroups)
+	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
+	cli.HelpPrinter = utils.NewHelpPrinter(pnHelpFlagGroups)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
