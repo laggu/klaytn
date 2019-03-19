@@ -37,6 +37,28 @@ import (
 
 var OpenFileLimit = 64
 
+const (
+	minWriteBufferSize        = 4 * opt.MiB
+	minBlockCacheCapacity     = 2 * minWriteBufferSize
+	MinOpenFilesCacheCapacity = 16
+	minBitsPerKeyForFilter    = 10
+)
+
+var defaultLevelDBOption = &opt.Options{
+	WriteBuffer:            minWriteBufferSize,
+	BlockCacheCapacity:     minBlockCacheCapacity,
+	OpenFilesCacheCapacity: MinOpenFilesCacheCapacity,
+	Filter:                 filter.NewBloomFilter(minBitsPerKeyForFilter),
+	DisableBufferPool:      true,
+}
+
+// GetDefaultLevelDBOption returns default LevelDB option copied from defaultLevelDBOption.
+// defaultLevelDBOption has fields with minimum values.
+func GetDefaultLevelDBOption() *opt.Options {
+	copiedOption := *defaultLevelDBOption
+	return &copiedOption
+}
+
 type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
@@ -92,20 +114,47 @@ func NewLDBDatabase(file string, ldbCacheSize, numHandles int) (*levelDB, error)
 	}, nil
 }
 
-func NewLDBDatabaseWithOptions(file string, opt *opt.Options) (*levelDB, error) {
-	localLogger := logger.NewWith("path", file)
+// setMinLevelDBOption sets some value of options if they are smaller than minimum value.
+func setMinLevelDBOption(ldbOption *opt.Options) {
+
+	if ldbOption.WriteBuffer < minWriteBufferSize {
+		ldbOption.WriteBuffer = minWriteBufferSize
+	}
+
+	if ldbOption.BlockCacheCapacity < minBlockCacheCapacity {
+		ldbOption.BlockCacheCapacity = minBlockCacheCapacity
+	}
+
+	if ldbOption.OpenFilesCacheCapacity < MinOpenFilesCacheCapacity {
+		ldbOption.OpenFilesCacheCapacity = MinOpenFilesCacheCapacity
+	}
+
+	ldbOption.DisableBufferPool = true
+}
+
+// NewLevelDBWithOption explicitly receives LevelDB option to construct a LevelDB object.
+func NewLevelDBWithOption(dbPath string, ldbOption *opt.Options) (*levelDB, error) {
+	// TODO-Klaytn-Database Replace `NewLDBDatabase` with `NewLevelDBWithOption`
+
+	localLogger := logger.NewWith("path", dbPath)
+
+	setMinLevelDBOption(ldbOption)
+
+	localLogger.Info("Allocated LevelDB",
+		"WriteBuffer (MB)", ldbOption.WriteBuffer/opt.MiB, "OpenFilesCacheCapacity", ldbOption.OpenFilesCacheCapacity, "BlockCacheCapacity (MB)", ldbOption.BlockCacheCapacity/opt.MiB,
+		"CompactionTableSize (MB)", ldbOption.CompactionTableSize/opt.MiB, "CompactionTableSizeMultiplier", ldbOption.CompactionTableSizeMultiplier, "DisableBufferPool", ldbOption.DisableBufferPool)
 
 	// Open the db and recover any potential corruptions
-	db, err := leveldb.OpenFile(file, opt)
+	db, err := leveldb.OpenFile(dbPath, ldbOption)
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
-		db, err = leveldb.RecoverFile(file, nil)
+		db, err = leveldb.RecoverFile(dbPath, nil)
 	}
 	// (Re)check for errors and abort if opening of the db failed
 	if err != nil {
 		return nil, err
 	}
 	return &levelDB{
-		fn:     file,
+		fn:     dbPath,
 		db:     db,
 		logger: localLogger,
 	}, nil

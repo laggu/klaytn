@@ -242,20 +242,18 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType) *DBConfig {
 }
 
 type databaseManager struct {
-	dbs                []Database
-	cm                 *cacheManager
-	isMemoryDB         bool
-	childChainIndexing bool
-	parallelDBWrite    bool
-	partitioned        bool
+	config *DBConfig
+	dbs    []Database
+	cm     *cacheManager
 }
 
 func NewMemoryDBManager() DBManager {
+	dbc := &DBConfig{DBType: MemoryDB}
+
 	dbm := databaseManager{
-		dbs:                make([]Database, 1, 1),
-		cm:                 newCacheManager(),
-		isMemoryDB:         true,
-		childChainIndexing: false,
+		config: dbc,
+		dbs:    make([]Database, 1, 1),
+		cm:     newCacheManager(),
 	}
 	dbm.dbs[0] = NewMemDatabase()
 
@@ -318,7 +316,6 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 			db.Meter(dbMetricPrefix + dbDirs[i] + "/")
 		}
 	}
-	dbm.partitioned = true
 	return dbm, nil
 }
 
@@ -340,11 +337,9 @@ func newDatabase(dbc *DBConfig) (Database, error) {
 // newDatabaseManager returns the pointer of databaseManager with default configuration.
 func newDatabaseManager(dbc *DBConfig) *databaseManager {
 	return &databaseManager{
-		dbs:                make([]Database, databaseEntryTypeSize),
-		cm:                 newCacheManager(),
-		isMemoryDB:         false,
-		childChainIndexing: dbc.ChildChainIndexing,
-		parallelDBWrite:    dbc.ParallelDBWrite,
+		config: dbc,
+		dbs:    make([]Database, databaseEntryTypeSize),
+		cm:     newCacheManager(),
 	}
 }
 
@@ -373,7 +368,7 @@ func NewDBManager(dbc *DBConfig) DBManager {
 }
 
 func (dbm *databaseManager) IsParallelDBWrite() bool {
-	return dbm.parallelDBWrite
+	return dbm.config.ParallelDBWrite
 }
 
 func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
@@ -381,7 +376,7 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDatabase {
-	if dbm.isMemoryDB {
+	if dbm.config.DBType == MemoryDB {
 		if memDB, ok := dbm.dbs[0].(*MemDatabase); ok {
 			return memDB
 		} else {
@@ -394,7 +389,7 @@ func (dbm *databaseManager) GetMemDB() *MemDatabase {
 }
 
 func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
-	if dbm.isMemoryDB {
+	if dbm.config.DBType == MemoryDB {
 		return dbm.dbs[0]
 	} else {
 		return dbm.dbs[dbEntryType]
@@ -403,7 +398,7 @@ func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 
 func (dbm *databaseManager) Close() {
 	// If not partitioned, only close the first database.
-	if !dbm.partitioned {
+	if !dbm.config.Partitioned {
 		dbm.dbs[0].Close()
 		return
 	}
@@ -1288,7 +1283,7 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 
 // ChildChainIndexingEnabled returns the current child chain indexing configuration.
 func (dbm *databaseManager) ChildChainIndexingEnabled() bool {
-	return dbm.childChainIndexing
+	return dbm.config.ChildChainIndexing
 }
 
 // WriteChildChainTxHash writes stores a transaction hash of a transaction which contains

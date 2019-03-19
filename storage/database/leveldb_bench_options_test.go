@@ -92,7 +92,7 @@ func benchmarkKlayOptionsGet(b *testing.B, opts *opt.Options, valueLength, numIn
 	dir := genTempDirForTestDB(b)
 	defer os.RemoveAll(dir)
 
-	db, err := NewLDBDatabaseWithOptions(dir, opts)
+	db, err := NewLevelDBWithOption(dir, opts)
 	require.NoError(b, err)
 	defer db.Close()
 
@@ -185,7 +185,7 @@ func benchmarkKlayOptionsPut(b *testing.B, opts *opt.Options, valueLength, numIn
 	dir := genTempDirForTestDB(b)
 	defer os.RemoveAll(dir)
 
-	db, err := NewLDBDatabaseWithOptions(dir, opts)
+	db, err := NewLevelDBWithOption(dir, opts)
 	require.NoError(b, err)
 	defer db.Close()
 
@@ -243,7 +243,7 @@ func removeDirs(dirs []string) {
 func genDatabases(b *testing.B, dirs []string, opts *opt.Options) []*levelDB {
 	databases := make([]*levelDB, len(dirs), len(dirs))
 	for i := 0; i < len(dirs); i++ {
-		databases[i], _ = NewLDBDatabaseWithOptions(dirs[i], opts)
+		databases[i], _ = NewLevelDBWithOption(dirs[i], opts)
 	}
 	return databases
 }
@@ -273,7 +273,7 @@ func benchmarkKlayOptionsBatch(b *testing.B, opts *opt.Options, valueLength, num
 	dir := genTempDirForTestDB(b)
 	defer os.RemoveAll(dir)
 
-	db, err := NewLDBDatabaseWithOptions(dir, opts)
+	db, err := NewLevelDBWithOption(dir, opts)
 	require.NoError(b, err)
 	defer db.Close()
 
@@ -343,7 +343,7 @@ func benchmarkIdealBatchSize(b *testing.B, bm idealBatchBM) {
 	defer os.RemoveAll(dir)
 
 	opts := getKlayLDBOptions()
-	db, err := NewLDBDatabaseWithOptions(dir, opts)
+	db, err := NewLevelDBWithOption(dir, opts)
 	require.NoError(b, err)
 	defer db.Close()
 

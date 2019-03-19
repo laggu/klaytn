@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/stretchr/testify/assert"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -278,55 +276,4 @@ func getAddressKeyFromFront(i int) common.Address {
 	}
 	addr.SetBytesFromFront(byteArray.([]byte))
 	return addr
-}
-
-// NewLevelDBManagerForTest returns a DBManager, consisted of only LevelDB.
-// It also accepts LevelDB option, opt.Options.
-func NewLevelDBManagerForTest(dbc *DBConfig, levelDBOption *opt.Options) (DBManager, error) {
-	dbm := newDatabaseManager(dbc)
-
-	checkDBEntryConfigRatio()
-
-	var ldb *levelDB
-	var err error
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		if i == int(indexSectionsDB) {
-			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
-			continue
-		}
-
-		if !dbm.partitioned {
-			if i == 0 {
-				ldb, err = NewLDBDatabaseWithOptions(dbc.Dir, levelDBOption)
-			}
-		} else {
-			partitionDir := filepath.Join(dbc.Dir, dbDirs[i])
-			partitionLDBOption := getLevelDBOptionByPartition(levelDBOption, DBEntryType(i))
-
-			ldb, err = NewLDBDatabaseWithOptions(partitionDir, partitionLDBOption)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new LevelDB with options. err: %v", err)
-		}
-
-		dbm.dbs[i] = ldb
-	}
-
-	if dbm.partitioned {
-		dbm.partitioned = true
-	}
-
-	return dbm, nil
-}
-
-// getLevelDBOptionByPartition returns scaled LevelDB option from the given LevelDB option.
-// Some settings are not changed since they are not globally shared resources.
-// e.g., NoSync or CompactionTableSizeMultiplier
-func getLevelDBOptionByPartition(levelDBOption *opt.Options, i DBEntryType) *opt.Options {
-	copiedLevelDBOption := *levelDBOption
-	ratio := dbConfigRatio[i]
-	copiedLevelDBOption.WriteBuffer = levelDBOption.WriteBuffer * ratio / 100
-
-	return &copiedLevelDBOption
 }
