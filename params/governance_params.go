@@ -98,14 +98,14 @@ const (
 	// Default Values: Constants used for getting default values for configuration
 	DefaultGovernanceMode = "none"
 	DefaultGoverningNode  = "0x0000000000000000000000000000000000000000"
-	DefaultEpoch          = 604800
-	DefaultProposerPolicy = 0
-	DefaultSubGroupSize   = 21
+	DefaultEpoch          = uint64(604800)
+	DefaultProposerPolicy = uint64(0)
+	DefaultSubGroupSize   = uint64(21)
 	DefaultMintingAmount  = 0
 	DefaultRatio          = "100/0/0"
 	DefaultUseGiniCoeff   = false
 	DefaultDefferedTxFee  = false
-	DefaultUnitPrice      = 250000000000
+	DefaultUnitPrice      = uint64(250000000000)
 	DefaultPeriod         = 1
 )
 

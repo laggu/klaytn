@@ -338,7 +338,7 @@ func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceCo
 		governance.UnitPrice = vote.Value.(uint64)
 		return true
 	case params.Sub:
-		governance.Istanbul.SubGroupSize = int(vote.Value.(uint64))
+		governance.Istanbul.SubGroupSize = vote.Value.(uint64)
 		return true
 	case params.MintingAmount:
 		governance.Reward.MintingAmount, _ = governance.Reward.MintingAmount.SetString(vote.Value.(string), 10)

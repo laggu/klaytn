@@ -225,7 +225,7 @@ func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 0, valSet.Size())
+	assert.Equal(t, uint64(0), valSet.Size())
 	assert.Equal(t, 0, len(valSet.Proposers()))
 }
 
@@ -264,6 +264,6 @@ func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 0, valSet.Size())
+	assert.Equal(t, uint64(0), valSet.Size())
 	assert.Equal(t, 0, len(valSet.Proposers()))
 }

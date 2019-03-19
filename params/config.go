@@ -146,7 +146,7 @@ type RewardConfig struct {
 type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
-	SubGroupSize   int    `json:"sub"`
+	SubGroupSize   uint64 `json:"sub"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.

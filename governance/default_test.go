@@ -128,12 +128,12 @@ func TestGetDefaultGovernanceConfig(t *testing.T) {
 	tstGovernance := GetDefaultGovernanceConfig(params.UseIstanbul)
 
 	want := []interface{}{
-		uint64(params.DefaultUnitPrice),
+		params.DefaultUnitPrice,
 		params.DefaultUseGiniCoeff,
 		params.DefaultRatio,
 		params.DefaultSubGroupSize,
-		uint64(params.DefaultProposerPolicy),
-		uint64(params.DefaultEpoch),
+		params.DefaultProposerPolicy,
+		params.DefaultEpoch,
 		common.HexToAddress(params.DefaultGoverningNode),
 		params.DefaultGovernanceMode,
 		params.DefaultDefferedTxFee,

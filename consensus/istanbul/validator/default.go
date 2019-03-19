@@ -62,7 +62,7 @@ func (val *defaultValidator) VotingPower() uint64           { return 1 }
 func (val *defaultValidator) Weight() int                   { return 0 }
 
 type defaultSet struct {
-	subSize int
+	subSize uint64
 
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
@@ -96,7 +96,7 @@ func newDefaultSet(addrs []common.Address, policy istanbul.ProposerPolicy) *defa
 	return valSet
 }
 
-func newDefaultSubSet(addrs []common.Address, policy istanbul.ProposerPolicy, subSize int) *defaultSet {
+func newDefaultSubSet(addrs []common.Address, policy istanbul.ProposerPolicy, subSize uint64) *defaultSet {
 	valSet := &defaultSet{}
 
 	valSet.subSize = subSize
@@ -120,17 +120,17 @@ func newDefaultSubSet(addrs []common.Address, policy istanbul.ProposerPolicy, su
 	return valSet
 }
 
-func (valSet *defaultSet) Size() int {
+func (valSet *defaultSet) Size() uint64 {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-	return len(valSet.validators)
+	return uint64(len(valSet.validators))
 }
 
-func (valSet *defaultSet) SubGroupSize() int {
+func (valSet *defaultSet) SubGroupSize() uint64 {
 	return valSet.subSize
 }
 
-func (valSet *defaultSet) SetSubGroupSize(size int) {
+func (valSet *defaultSet) SetSubGroupSize(size uint64) {
 	valSet.subSize = size
 }
 
@@ -144,7 +144,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	if len(valSet.validators) <= valSet.subSize {
+	if uint64(len(valSet.validators)) <= valSet.subSize {
 		return valSet.validators
 	}
 	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
@@ -189,7 +189,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
 	}
 
-	for i := 0; i < valSet.subSize-2; i++ {
+	for i := uint64(0); i < valSet.subSize-2; i++ {
 		subset[i+2] = valSet.validators[indexs[i]]
 	}
 
@@ -204,7 +204,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	if len(valSet.validators) <= valSet.subSize {
+	if uint64(len(valSet.validators)) <= valSet.subSize {
 		return valSet.validators
 	}
 	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
@@ -260,7 +260,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
 	}
 
-	for i := 0; i < valSet.subSize-2; i++ {
+	for i := uint64(0); i < valSet.subSize-2; i++ {
 		subset[i+2] = valSet.validators[indexs[i]]
 	}
 

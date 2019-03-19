@@ -126,7 +126,7 @@ func (sb *backend) GetRewardBase() common.Address {
 	return sb.rewardbase
 }
 
-func (sb *backend) GetSubGroupSize() int {
+func (sb *backend) GetSubGroupSize() uint64 {
 	return sb.config.SubGroupSize
 }
 

@@ -59,11 +59,11 @@ type ValidatorSet interface {
 	// Calculate the proposer
 	CalcProposer(lastProposer common.Address, round uint64)
 	// Return the validator size
-	Size() int
+	Size() uint64
 	// Return the sub validator group size
-	SubGroupSize() int
+	SubGroupSize() uint64
 	// Set the sub validator group size
-	SetSubGroupSize(size int)
+	SetSubGroupSize(size uint64)
 	// Return the validator array
 	List() []Validator
 	// Return the sub validator array

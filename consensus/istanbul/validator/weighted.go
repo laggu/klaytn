@@ -84,8 +84,7 @@ func newWeightedValidator(addr common.Address, reward common.Address, votingpowe
 }
 
 type weightedCouncil struct {
-	subSize int
-
+	subSize    uint64
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
 
@@ -123,7 +122,7 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 	weightedCouncil.proposers = proposers
 }
 
-func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []int, policy istanbul.ProposerPolicy, committeeSize int, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
+func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []int, policy istanbul.ProposerPolicy, committeeSize uint64, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
 
 	if policy != istanbul.WeightedRandom {
 		logger.Error("unsupported proposer policy for weighted council", "policy", policy)
@@ -264,17 +263,17 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	return proposer
 }
 
-func (valSet *weightedCouncil) Size() int {
+func (valSet *weightedCouncil) Size() uint64 {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-	return len(valSet.validators)
+	return uint64(len(valSet.validators))
 }
 
-func (valSet *weightedCouncil) SubGroupSize() int {
+func (valSet *weightedCouncil) SubGroupSize() uint64 {
 	return valSet.subSize
 }
 
-func (valSet *weightedCouncil) SetSubGroupSize(size int) {
+func (valSet *weightedCouncil) SetSubGroupSize(size uint64) {
 	valSet.subSize = size
 }
 
@@ -292,7 +291,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	if len(valSet.validators) <= valSet.subSize {
+	if uint64(len(valSet.validators)) <= valSet.subSize {
 		// logger.Trace("Choose all validators", "prevHash", prevHash, "proposer", proposer, "committee", valSet.validators)
 		return valSet.validators
 	}
@@ -357,7 +356,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
 	}
 
-	for i := 0; i < valSet.subSize-2; i++ {
+	for i := uint64(0); i < valSet.subSize-2; i++ {
 		committee[i+2] = valSet.validators[indexs[i]]
 	}
 

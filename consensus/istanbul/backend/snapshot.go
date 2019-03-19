@@ -111,7 +111,7 @@ func copyGovernanceConfig(src *params.GovernanceConfig, dst *params.GovernanceCo
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, subSize int, db database.DBManager, hash common.Hash, gconfig *params.GovernanceConfig) (*Snapshot, error) {
+func loadSnapshot(epoch uint64, subSize uint64, db database.DBManager, hash common.Hash, gconfig *params.GovernanceConfig) (*Snapshot, error) {
 	blob, err := db.ReadIstanbulSnapshot(hash)
 	if err != nil {
 		return nil, err
@@ -487,7 +487,7 @@ type snapshotJSON struct {
 	// for validator set
 	Validators   []common.Address        `json:"validators"`
 	Policy       istanbul.ProposerPolicy `json:"policy"`
-	SubGroupSize int                     `json:"subgroupsize"`
+	SubGroupSize uint64                  `json:"subgroupsize"`
 
 	// for weighted validator
 	RewardAddrs       []common.Address `json:"rewardAddrs"`

@@ -33,7 +33,7 @@ type Config struct {
 	BlockPeriod    uint64         `toml:",omitempty"` // Default minimum difference between two consecutive block's timestamps in second
 	ProposerPolicy ProposerPolicy `toml:",omitempty"` // The policy for proposer selection
 	Epoch          uint64         `toml:",omitempty"` // The number of blocks after which to checkpoint and reset the pending votes
-	SubGroupSize   int            `toml:",omitempty"`
+	SubGroupSize   uint64         `toml:",omitempty"`
 }
 
 var DefaultConfig = &Config{

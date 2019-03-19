@@ -78,5 +78,5 @@ type Backend interface {
 
 	GetRewardBase() common.Address
 
-	GetSubGroupSize() int
+	GetSubGroupSize() uint64
 }
