@@ -63,9 +63,10 @@ const (
 	BlockchainTypes
 	BlockchainTypesAccount
 	BlockchainTypesAccountKey
-	CMDKBN
+	CMDIstanbul
 
 	// 11~20
+	CMDKBN
 	CMDKCN
 	CMDKEN
 	CMDKGEN
@@ -75,9 +76,9 @@ const (
 	CMDUtils
 	CMDUtilsNodeCMD
 	Common
-	ConsensusClique
 
 	// 21~30
+	ConsensusClique
 	ConsensusGxhash
 	ConsensusIstanbul
 	ConsensusIstanbulBackend
@@ -87,9 +88,9 @@ const (
 	DatasyncDownloader
 	DatasyncFetcher
 	Governance
-	Metrics
 
 	// 31~40
+	Metrics
 	NetworksGRPC
 	NetworksP2P
 	NetworksP2PDiscover
@@ -99,9 +100,9 @@ const (
 	NetworksP2PSimulationsCnism
 	NetworksRPC
 	Node
-	NodeCN
 
 	// 41~50
+	NodeCN
 	NodeCNFilters
 	NodeCNTracers
 	Reward
@@ -129,9 +130,10 @@ var moduleNames = [ModuleNameLen]string{
 	"blockchain/types",
 	"blockchain/types/account",
 	"blockchain/types/accountkey",
-	"cmd/kbn",
+	"cmd/istanbul",
 
 	// 11~20
+	"cmd/kbn",
 	"cmd/kcn",
 	"cmd/ken",
 	"cmd/kgen",
@@ -141,9 +143,9 @@ var moduleNames = [ModuleNameLen]string{
 	"cmd/utils",
 	"cmd/utils/nodecmd",
 	"common",
-	"consensus/clique",
 
 	// 21~30
+	"consensus/clique",
 	"consensus/gxhash",
 	"consensus/istanbul",
 	"consensus/istanbul/backend",
@@ -153,9 +155,9 @@ var moduleNames = [ModuleNameLen]string{
 	"datasync/downloader",
 	"datasync/fetcher",
 	"governance/governance",
-	"metrics",
 
 	// 31~40
+	"metrics",
 	"networks/grpc",
 	"networks/p2p",
 	"networks/p2p/discover",
@@ -165,9 +167,9 @@ var moduleNames = [ModuleNameLen]string{
 	"networks/p2p/simulations/cnism",
 	"networks/rpc",
 	"node",
-	"node/cn",
 
 	// 41~50
+	"node/cn",
 	"node/cn/filters",
 	"node/cn/tracers",
 	"contracts/reward",
