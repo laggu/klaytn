@@ -21,7 +21,6 @@
 package backend
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
@@ -223,27 +222,22 @@ func (sb *backend) makeGovernanceCacheFromHeader(num uint64) []byte {
 // replaceGovernanceConfig updates backend's governance with rlp decoded governance information
 func (sb *backend) replaceGovernanceConfig(g []byte) bool {
 	newGovernance := params.GovernanceConfig{}
-	var j []byte
-	if err := rlp.DecodeBytes(g, &j); err != nil {
-		logger.Error("RLP Decode Failed", "err", err, "g", g)
+	if err := rlp.DecodeBytes(g, &newGovernance); err != nil {
+		logger.Error("Failed to replace Governance Config", "err", err)
 		return false
-	} else {
-		if err := json.Unmarshal(j, &newGovernance); err != nil {
-			logger.Error("Failed to replace Governance Config", "err", err)
-			return false
-		} else {
-			// deep copy new governance
-			sb.chain.Config().Governance = newGovernance.Copy()
-			// TODO-Klaytn-Governance Code for compatibility
-			// Need to be cleaned up when developers use same template for genesis.json
-			sb.config.Epoch = newGovernance.Istanbul.Epoch
-			sb.config.SubGroupSize = newGovernance.Istanbul.SubGroupSize
-			sb.config.ProposerPolicy = istanbul.ProposerPolicy(newGovernance.Istanbul.ProposerPolicy)
-			sb.chain.Config().Istanbul = newGovernance.Istanbul.Copy()
-			sb.chain.Config().UnitPrice = newGovernance.UnitPrice
-			logger.Info("Governance config updated", "config", sb.chain.Config())
 
-			return true
-		}
+	} else {
+		// deep copy new governance
+		sb.chain.Config().Governance = newGovernance.Copy()
+		// TODO-Klaytn-Governance Code for compatibility
+		// Need to be cleaned up when developers use same template for genesis.json
+		sb.config.Epoch = newGovernance.Istanbul.Epoch
+		sb.config.SubGroupSize = newGovernance.Istanbul.SubGroupSize
+		sb.config.ProposerPolicy = istanbul.ProposerPolicy(newGovernance.Istanbul.ProposerPolicy)
+		sb.chain.Config().Istanbul = newGovernance.Istanbul.Copy()
+		sb.chain.Config().UnitPrice = newGovernance.UnitPrice
+		logger.Info("Governance config updated", "config", sb.chain.Config())
+
+		return true
 	}
 }

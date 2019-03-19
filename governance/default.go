@@ -18,7 +18,6 @@ package governance
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
@@ -303,8 +302,8 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
 
 // MakeGovernanceData returns rlp encoded json retrieved from GovernanceConfig
 func MakeGovernanceData(governance *params.GovernanceConfig) ([]byte, error) {
-	j, _ := json.Marshal(governance)
-	payload, err := rlp.EncodeToBytes(j)
+	payload, err := rlp.EncodeToBytes(governance)
+
 	if err != nil {
 		return nil, errors.New("Failed to encode governance data")
 	}
