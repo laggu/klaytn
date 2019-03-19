@@ -116,14 +116,10 @@ start() {
         OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
     fi
 
-    if [[ ! -z $SC_ENABLE ]] && [[ $SC_ENABLE -eq 1 ]]; then
-        OPTIONS="$OPTIONS --chainaddr $SC_ADDR --chaintxperiod $SC_TX_PERIOD --bridgeport $SC_BRIDGE_PORT \
-    --parentchainws $SC_PARENT_CHAIN_WS --chaintxlimit $SC_TX_LIMIT"
+    if [[ ! -z $SC_BRIDGE ]] && [[ $SC_BRIDGE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --bridge --mainbridge --bridgeport $SC_BRIDGE_PORT"
         if [[ ! -z $SC_INDEXING ]] && [[ $SC_INDEXING -eq 1 ]]; then
             OPTIONS="$OPTIONS --childchainindexing"
-        fi
-        if [[ ! -z $SC_BRIDGE ]] && [[ $SC_BRIDGE -eq 1 ]]; then
-            OPTIONS="$OPTIONS --bridge --mainbridge"
         fi
     fi
 

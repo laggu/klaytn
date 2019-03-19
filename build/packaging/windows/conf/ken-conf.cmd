@@ -29,15 +29,9 @@ set WS_PORT=8552
 set WS_ORIGINS="*"
 
 REM service chain options setting
-set SC_ENABLE=0 &:: if this is set, the following options will be used.
-set SC_ADDR=0 &:: user must define this option if service chain is enabled.
-set SC_TX_PERIOD=1
-set SC_TX_LIMIT=100
+set SC_BRIDGE=0 &:: if this is set, the following options will be used.
 set SC_BRIDGE_PORT=50505
-set SC_PARENT_CHAIN_WS="ws://0.0.0.0:8546"
-REM service chain boolean options
 set SC_INDEXING=1
-set SC_BRIDGE=1
 
 REM Setting 1 is to enable options, otherwise disabled.
 set METRICS=1

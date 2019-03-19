@@ -108,15 +108,11 @@ IF DEFINED MULTICHANNEL (
     )
 )
 
-IF DEFINED SC_ENABLE (
-    IF %SC_ENABLE%==1 (
-        set OPTIONS=%OPTIONS% --chainaddr %SC_ADDR% --chaintxperiod %SC_TX_PERIOD% --bridgeport %SC_BRIDGE_PORT% ^
---parentchainws %SC_PARENT_CHAIN_WS% --chaintxlimit %SC_TX_LIMIT%
+IF DEFINED SC_BRIDGE (
+    IF %SC_BRIDGE%==1 (
+        set OPTIONS=%OPTIONS% --bridge --mainbridge --bridgeport %SC_BRIDGE_PORT%
         if %SC_INDEXING%==1 (
             set OPTIONS=%OPTIONS% --childchainindexing
-        )
-        if %SC_BRIDGE%==1 (
-            set OPTIONS=%OPTIONS% --bridge --mainbridge
         )
     )
 )
