@@ -539,13 +539,7 @@ func (self *StateDB) createObjectWithMap(addr common.Address, accountType accoun
 	prev = self.getStateObject(addr)
 	acc, err := account.NewAccountWithMap(accountType, values)
 	if err != nil {
-		// falling back to create a legacy account if an error occurs.
-		logger.Warn("falling back to create a legacy account", "accountType", accountType,
-			"values", values, "err", err, "acc", acc.String())
-		acc, err = account.NewAccountWithMap(account.LegacyAccountType, values)
-		if err != nil {
-			logger.Error("failed on NewAccountWithMap", "err", err)
-		}
+		logger.Error("An error occurred on call NewAccountWithMap", "err", err)
 	}
 	newobj = newObject(self, addr, acc)
 	newobj.setNonce(0) // sets the object to dirty
