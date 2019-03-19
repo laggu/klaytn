@@ -67,7 +67,7 @@ library SafeMath {
     }
 }
 
-// File: contracts/MultisigBase.sol from commit c71315e
+// File: contracts/MultisigBase.sol from commit cbe6e15
 
 pragma solidity ^0.4.24;
 
@@ -83,6 +83,7 @@ contract MultisigBase {
     event AddAdmin (address indexed admin);
     event DeleteAdmin(address indexed admin);
     event UpdateRequirement(uint requirement);
+    event ClearRequest(uint timestamp);
     event SubmitRequest(uint indexed index, address indexed from, address to, uint value, bytes data, uint timestamp);
     event ConfirmRequest(uint indexed index, address indexed from, uint timestamp);
     event RevokeConfirmation(uint indexed index, address indexed from, uint timestamp);
@@ -103,9 +104,10 @@ contract MultisigBase {
     address[] adminList;
     uint public requirement;
     uint public requestCount;
+    uint public lastClearedIndex;
     mapping (address => bool) isAdmin;
 
-    mapping(uint => Request) requestMap; //멀티시그 리퀘스트의 index를 기준으로 mapping
+    mapping(uint => Request) requestMap;
     struct Request {
         address to;
         uint value;
@@ -212,6 +214,7 @@ contract MultisigBase {
     validRequirement(adminList.length.add(1), requirement) {
         isAdmin[_admin] = true;
         adminList.push(_admin);
+        clearRequest();
         emit AddAdmin(_admin);
     }
 
@@ -227,7 +230,7 @@ contract MultisigBase {
                 break;
             }
         adminList.length -= 1;
-        
+        clearRequest();
         emit DeleteAdmin(_admin);
     }
 
@@ -235,9 +238,19 @@ contract MultisigBase {
     onlyMultisigTx
     validRequirement(adminList.length, _requirement) {
         requirement = _requirement;
+        clearRequest();
         emit UpdateRequirement(_requirement);
     }
 
+    function clearRequest() public onlyMultisigTx {
+        for (uint i = lastClearedIndex; i < requestCount; i++){
+            if (!requestMap[i].executed && !requestMap[i].canceled) {
+                requestMap[i].canceled = true;
+            }
+        }
+        lastClearedIndex = requestCount;
+        emit ClearRequest(now);
+    }
 
     /*
      *  Public functions
@@ -338,17 +351,18 @@ contract MultisigBase {
     /*
      * Getter functions
      */
+    /// @dev 현재 adminList 반환
     function getAdminInfo() public view returns(address[]) {
         return (adminList);
     }
 
+    /// @return Returns corresponding request index list.
     function getRequestIndexes(uint _from, uint _to, bool _pending, bool _executed, bool _canceled) public view returns(uint[]) {
         if (_to == 0 || _to >= requestCount) {
             _to = requestCount;
         }
         uint cnt = 0;
         uint i;
-        //dynamic memory array를 생성할 수 없는 solidity의 특성 때문에 우선 해당되는 ID의 개수를 먼저 구한 후 array 생성
         for (i = _from; i < _to; i++) {
             if ( requestMap[i].to != 0
             && _pending == requestMap[i].pending
@@ -373,7 +387,14 @@ contract MultisigBase {
         return requestIndexes;
     }
 
-    function getRequestInfo(uint _index) public view returns(address, uint, bytes, uint, bool, bool, bool) {
+    function getRequestInfo(uint _index) public view returns(
+        address To,
+        uint Value,
+        bytes Data,
+        uint ConfirmationCount,
+        bool Pending,
+        bool Executed,
+        bool Canceled) {
         return(
             requestMap[_index].to,
             requestMap[_index].value,
@@ -386,7 +407,7 @@ contract MultisigBase {
     }
 }
 
-// File: contracts/InitContract.sol from commit 2791caf
+// File: contracts/InitContract.sol from commit cbe6e15
 
 pragma solidity ^0.4.24;
 
@@ -450,15 +471,24 @@ contract InitContract is MultisigBase {
         _;
     }
 
+    modifier branchNameCheck(string branchName, address branchAddress) {
+        require(keccak256(abi.encodePacked(branchName)) == keccak256(abi.encodePacked(branchContract(branchAddress).THIS_CONTRACT_NAME())));
+        _;
+    }
+
 
     /*
      * Constructor
      */
     constructor(address[] dummyArray, uint dummyUint) public MultisigBase(dummyArray, dummyUint) {}
 
-    function initialize(address[] _adminList, uint _requirement) public validRequirement(_adminList.length, _requirement) {
-        require(msg.sender == 0x95611200d726defd14cd1e3b29ed3048de363b4c);
+    function initialize(address[] _adminList, uint _requirement, string _branchName, address _contractAddress) public 
+    validRequirement(_adminList.length, _requirement)
+    branchNameCheck(_branchName, _contractAddress)
+    {
+        require(msg.sender == 0x79deccfacd0599d3166eb76972be7bb20f51b46f);
         require(isInitialized == false); 
+        require(bytes(_branchName).length > 0);
 
         //adminList 검증
         for (uint i = 0; i < _adminList.length; i++) {
@@ -468,7 +498,17 @@ contract InitContract is MultisigBase {
         adminList = _adminList;
         requirement = _requirement;
 
+        uint index = branchContractCount;
+        branchContractMap[index] = BranchContract({
+            branchName : _branchName,
+            contractAddress : _contractAddress
+        });
+        isBranchName[_branchName] = true;
+        isActiveBranch[_contractAddress] = true;
+        branchContractCount += 1;
+
         isInitialized = true;
+        emit RegisterBranchContract(index, _branchName, _contractAddress);
         emit Initialize(adminList, requirement);
     }
 
@@ -477,6 +517,7 @@ contract InitContract is MultisigBase {
     notNull(_contractAddress)
     notActiveBranch(_contractAddress)
     branchNameDoesNotExist(_branchName)
+    branchNameCheck(_branchName, _contractAddress)
     onlyMultisigTx
     afterInit {
         require(bytes(_branchName).length > 0);
@@ -530,7 +571,6 @@ contract InitContract is MultisigBase {
         emit UpdateLeafContract(_branchAddress, _addressType, _prevLeafAddress, _curLeafAddress, _extraLeafAddress);
     }
 
-    /// @dev Branch Contract의 initialization을 알리는 함수
     function completeInitialization(string _branchName) external branchNameExists(_branchName) activeBranch(msg.sender) {
         emit CompleteInitialization(_branchName, msg.sender);
     }
@@ -586,4 +626,5 @@ interface branchContract {
     function getAllAddress() external view returns(uint8[], address[]);
     function getAllAddressCount() external view returns(uint);
     function getAllAddressInNiceForm() external view returns(address[], address[], address[], address, address);
+    function THIS_CONTRACT_NAME() external view returns(string);
 }
