@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"math"
 	"os"
 	"path"
 	"strconv"
@@ -141,4 +142,52 @@ func readAddrsAndPrivateKeysFromFile(dir string, num int) ([]*common.Address, []
 	}
 
 	return addrs, privateKeys, nil
+}
+
+// makeAddrsFromFile extracts the address stored in file by numAccounts.
+func makeAddrsFromFile(numAccounts int, fileDir string) ([]*common.Address, error) {
+	addrs := make([]*common.Address, 0, numAccounts)
+
+	remain := numAccounts
+	fileIndex := 0
+	for remain > 0 {
+		// Read recipient addresses from file.
+		addrsPerFile, err := readAddrsFromFile(fileDir, fileIndex)
+
+		if err != nil {
+			return nil, err
+		}
+
+		partSize := int(math.Min(float64(len(addrsPerFile)), float64(remain)))
+		addrs = append(addrs, addrsPerFile[:partSize]...)
+		remain -= partSize
+		fileIndex++
+	}
+
+	return addrs, nil
+}
+
+// makeAddrsAndPrivKeysFromFile extracts the address and private key stored in file by numAccounts.
+func makeAddrsAndPrivKeysFromFile(numAccounts int, fileDir string) ([]*common.Address, []*ecdsa.PrivateKey, error) {
+	addrs := make([]*common.Address, 0, numAccounts)
+	privKeys := make([]*ecdsa.PrivateKey, 0, numAccounts)
+
+	remain := numAccounts
+	fileIndex := 0
+	for remain > 0 {
+		// Read addresses and private keys from file.
+		addrsPerFile, privKeysPerFile, err := readAddrsAndPrivateKeysFromFile(fileDir, fileIndex)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		partSize := int(math.Min(float64(len(addrsPerFile)), float64(remain)))
+		addrs = append(addrs, addrsPerFile[:partSize]...)
+		privKeys = append(privKeys, privKeysPerFile[:partSize]...)
+		remain -= partSize
+		fileIndex++
+	}
+
+	return addrs, privKeys, nil
 }

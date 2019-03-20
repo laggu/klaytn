@@ -96,7 +96,7 @@ func makeTxsWithGivenNonce(bcdata *BCData, toAddrs []*common.Address, signer typ
 
 // makeTxsWithStateDB generates transactions with the nonce retrieved from stateDB.
 // stateDB is used only once to initialize nonceMap, and then nonceMap is used instead of stateDB.
-func makeTxsWithStateDB(bcdata *BCData, toAddrs []*common.Address, signer types.Signer, numTransactions int) (types.Transactions, error) {
+func makeTxsWithStateDB(bcdata *BCData, toAddrs []*common.Address, signer types.Signer, numTransactions int, isRandomToPickAddr bool) (types.Transactions, error) {
 	fromAddrs := bcdata.addrs
 	if len(fromAddrs) != len(toAddrs) {
 		return nil, fmt.Errorf("len(fromAddrs) %v != len(toAddrs) %v", len(fromAddrs), len(toAddrs))
@@ -118,7 +118,12 @@ func makeTxsWithStateDB(bcdata *BCData, toAddrs []*common.Address, signer types.
 	txs := make(types.Transactions, 0, numTransactions)
 	lenAddrs := len(fromAddrs)
 	for i := 0; i < numTransactions; i++ {
-		idx := i % lenAddrs
+		var idx int
+		if isRandomToPickAddr {
+			idx = rand.Intn(lenAddrs)
+		} else {
+			idx = i % lenAddrs
+		}
 		fromAddr := *fromAddrs[idx]
 		toAddr := *toAddrs[idx]
 		nonce := nonceMap[fromAddr]
@@ -178,20 +183,26 @@ func settingUpPreLoadedData(originalDataDir string) (string, error) {
 }
 
 var numFiles = 25
-var numAccountsPerFile = 1 * 10000
+var numAccountsPerFile = 1 * 10000 // numAccountsPerFile is the number of accounts per file to create the pre-prepared data for the preload test.
 var numValidators = 4
+var sumTx = 0
 
 func TestPreLoad10000Accounts(t *testing.T) {
-	preLoadedTest(t, "10000Accounts", dirFor10000Accounts, numAccountsPerFile*1)
+	preLoadedTest(t, "10000Accounts", dirFor10000Accounts, 10000, 10000, false)
 }
 
 func TestPreLoadOneMillionAccounts(t *testing.T) {
-	preLoadedTest(t, "1500000Accounts", dirForOneMillionAccounts, numAccountsPerFile*1)
+	preLoadedTest(t, "1500000Accounts", dirForOneMillionAccounts, 10000, 10000, false)
 }
 
-// preLoadedTest is to check the performance of Klaytn with pre-loaded data.
+func TestPreLoadOneMillionRandomAccounts(t *testing.T) {
+	preLoadedTest(t, "1000000AccountsRandom", dirForOneMillionAccounts, 20000, 20000, true)
+}
+
+// preLoadedRandomTest is to check the performance of Klaytn with pre-loaded data.
+// In this test, a transaction is sent from any address to any address.
 // To run the test, original data directory should be located at "$GOPATH/src/github.com/ground-x/"
-func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactionsPerFile int) {
+func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactions int, numTotalAccounts int, isRandomToPickAddr bool) {
 	readTestDir, err := settingUpPreLoadedData(originalDataDir)
 	if err != nil {
 		// If original data directory does not exist, test does nothing.
@@ -205,14 +216,14 @@ func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactio
 		enableLog()
 	}
 
-	bcData, err := NewBCDataFromPreLoadedData(readTestDir, numValidators)
+	bcData, err := NewBCDataFromPreLoadedData(readTestDir, numValidators, numTotalAccounts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer bcData.db.Close()
 	defer bcData.bc.Stop()
 
-	txPool := makeTxPool(bcData, numTransactionsPerFile)
+	txPool := makeTxPool(bcData, numTransactions)
 	signer := types.MakeSigner(bcData.bc.Config(), bcData.bc.CurrentHeader().Number)
 
 	timeNow := time.Now()
@@ -221,40 +232,38 @@ func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactio
 		t.Fatal(err)
 	}
 
-	for i := 1; i <= numFiles; i++ {
-		// Read recipient addresses from file.
-		toAddrs, err := readAddrsFromFile(readTestDir, i)
-		if err != nil {
-			t.Fatal(err)
-		}
+	toAddrs, err := makeAddrsFromFile(numTotalAccounts, readTestDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		// Generate transactions
-		txs, err := makeTxsWithStateDB(bcData, toAddrs, signer, numTransactionsPerFile)
-		if err != nil {
-			t.Fatal(err)
-		}
+	// Generate transactions
+	txs, err := makeTxsWithStateDB(bcData, toAddrs, signer, numTransactions, isRandomToPickAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		state, err := bcData.bc.State()
-		if err != nil {
-			t.Fatal(err)
-		}
+	state, err := bcData.bc.State()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		for _, tx := range txs {
-			tx.AsMessageWithAccountKeyPicker(signer, state)
-		}
+	for _, tx := range txs {
+		tx.AsMessageWithAccountKeyPicker(signer, state)
+	}
 
-		// NOTE-Klaytn-Tests If you want to get profile, please set numFiles as 1, to start profile only once.
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+	// NOTE-Klaytn-Tests If you want to get profile, please set numFiles as 1, to start profile only once.
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
 
-		txPool.AddRemotes(txs)
-		for {
-			if err := bcData.GenABlockWithTxPoolWithoutAccountMap(txPool); err != nil {
-				if err == errEmptyPending {
-					break
-				}
-				t.Fatal(err)
+	txPool.AddRemotes(txs)
+	for {
+		if err := bcData.GenABlockWithTxPoolWithoutAccountMap(txPool); err != nil {
+			if err == errEmptyPending {
+				fmt.Println("sumTx", sumTx)
+				break
 			}
+			t.Fatal(err)
 		}
 	}
 }
@@ -316,6 +325,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	fmt.Println("blockNum", b.NumberU64(), "numTransactions", len(newtxs))
+	sumTx += len(newtxs)
 
 	return nil
 }
@@ -392,7 +402,7 @@ func TestGenerateTensOfMillionsAccounts(t *testing.T) {
 }
 
 // NewBCDataFromPreLoadedData returns a new BCData pointer constructed from the existing data.
-func NewBCDataFromPreLoadedData(dbDir string, numValidators int) (*BCData, error) {
+func NewBCDataFromPreLoadedData(dbDir string, numValidators int, numTotalAccounts int) (*BCData, error) {
 	// Remove transactions.rlp if exists
 	if _, err := os.Stat(transactionsJournalFilename); err == nil {
 		os.RemoveAll(transactionsJournalFilename)
@@ -402,7 +412,7 @@ func NewBCDataFromPreLoadedData(dbDir string, numValidators int) (*BCData, error
 	// Create a database
 	chainDB := NewDatabase(path.Join(dbDir, "chaindata"), database.LevelDB)
 
-	addrs, privKeys, err := readAddrsAndPrivateKeysFromFile(dbDir, 0)
+	addrs, privKeys, err := makeAddrsAndPrivKeysFromFile(numTotalAccounts, dbDir)
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +508,7 @@ func randomStateTrieRead(b *testing.B, originalDataDir string) {
 	for run := 0; run < b.N; run++ {
 		b.StopTimer()
 
-		bcData, err := NewBCDataFromPreLoadedData(readTestDir, numValidators)
+		bcData, err := NewBCDataFromPreLoadedData(readTestDir, numValidators, numAccountsPerFile)
 		if err != nil {
 			b.Fatal(err)
 		}
