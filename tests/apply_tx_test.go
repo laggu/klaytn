@@ -96,10 +96,94 @@ func BenchmarkTxPerformanceSmartContractExecution(b *testing.B) {
 func BenchmarkTxPerformanceNew(b *testing.B) {
 	testfns := []genTx{
 		genNewAccountCreation,
+		genNewAccountCreationMultisig3,
+		genNewAccountCreationRoleBasedSingle,
+		genNewAccountCreationRoleBasedMultisig3,
 		genNewAccountUpdateAccountKeyPublic,
 		genNewFeeDelegatedValueTransfer,
 		genNewFeeDelegatedValueTransferWithRatio,
 		genNewCancel,
+	}
+
+	// sender account
+	sender, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
+	assert.Equal(b, nil, err)
+
+	for _, fn := range testfns {
+		fnname := getFunctionName(fn)
+		fnname = fnname[strings.LastIndex(fnname, ".")+1:]
+		if strings.Contains(fnname, "New") {
+			benchName = "New/" + strings.Split(fnname, "New")[1]
+		} else {
+			benchName = "Legacy/" + strings.Split(fnname, "Legacy")[1]
+		}
+		b.Run(benchName, func(b *testing.B) {
+			sender.Nonce = 0
+			benchmarkTxPerformanceNew(b, fn, sender)
+		})
+	}
+}
+
+func BenchmarkTxPerformanceNewMultisig(b *testing.B) {
+	testfns := []genTx{
+		genNewAccountCreation,
+		genNewAccountCreationMultisig3,
+		genNewAccountCreationRoleBasedSingle,
+		genNewAccountCreationRoleBasedMultisig3,
+		genNewAccountUpdateAccountKeyPublic,
+		genNewFeeDelegatedValueTransfer,
+		genNewFeeDelegatedValueTransferWithRatio,
+		genNewCancel,
+	}
+
+	// sender account
+	sender, err := createMultisigAccount(uint(2),
+		[]uint{1, 1, 1},
+		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
+		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
+	assert.Equal(b, nil, err)
+
+	for _, fn := range testfns {
+		fnname := getFunctionName(fn)
+		fnname = fnname[strings.LastIndex(fnname, ".")+1:]
+		if strings.Contains(fnname, "New") {
+			benchName = "New/" + strings.Split(fnname, "New")[1]
+		} else {
+			benchName = "Legacy/" + strings.Split(fnname, "Legacy")[1]
+		}
+		b.Run(benchName, func(b *testing.B) {
+			sender.Nonce = 0
+			benchmarkTxPerformanceNew(b, fn, sender)
+		})
+	}
+}
+
+func BenchmarkTxPerformanceNewRoleBasedSingle(b *testing.B) {
+	testfns := []genTx{
+		genNewAccountCreation,
+		genNewAccountCreationMultisig3,
+		genNewAccountCreationRoleBasedSingle,
+		genNewAccountCreationRoleBasedMultisig3,
+		genNewAccountUpdateAccountKeyPublic,
+		genNewFeeDelegatedValueTransfer,
+		genNewFeeDelegatedValueTransferWithRatio,
+		genNewCancel,
+	}
+
+	// sender account
+	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	if err != nil {
+		panic(err)
+	}
+	pubkey := accountkey.NewAccountKeyPublicWithValue(&k1.PublicKey)
+	sender := &TestAccountType{
+		Addr:   common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"),
+		Keys:   []*ecdsa.PrivateKey{k1},
+		Nonce:  uint64(0),
+		AccKey: accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{pubkey, pubkey, pubkey}),
 	}
 
 	for _, fn := range testfns {
@@ -111,7 +195,63 @@ func BenchmarkTxPerformanceNew(b *testing.B) {
 			benchName = "Legacy/" + strings.Split(fnname, "Legacy")[1]
 		}
 		b.Run(benchName, func(b *testing.B) {
-			benchmarkTxPerformanceNew(b, fn)
+			sender.Nonce = 0
+			benchmarkTxPerformanceNew(b, fn, sender)
+		})
+	}
+}
+
+func BenchmarkTxPerformanceNewRoleBasedMultisig3(b *testing.B) {
+	testfns := []genTx{
+		genNewAccountCreation,
+		genNewAccountCreationMultisig3,
+		genNewAccountCreationRoleBasedSingle,
+		genNewAccountCreationRoleBasedMultisig3,
+		genNewAccountUpdateAccountKeyPublic,
+		genNewFeeDelegatedValueTransfer,
+		genNewFeeDelegatedValueTransferWithRatio,
+		genNewCancel,
+	}
+
+	// sender account
+	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	if err != nil {
+		panic(err)
+	}
+	k2, err := crypto.HexToECDSA("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c")
+	if err != nil {
+		panic(err)
+	}
+	k3, err := crypto.HexToECDSA("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
+	if err != nil {
+		panic(err)
+	}
+
+	keys := accountkey.WeightedPublicKeys{
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k1.PublicKey)),
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k2.PublicKey)),
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k3.PublicKey)),
+	}
+	threshold := uint(2)
+	pubkey := accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
+	sender := &TestAccountType{
+		Addr:   common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"),
+		Keys:   []*ecdsa.PrivateKey{k1, k2, k3},
+		Nonce:  uint64(0),
+		AccKey: accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{pubkey, pubkey, pubkey}),
+	}
+
+	for _, fn := range testfns {
+		fnname := getFunctionName(fn)
+		fnname = fnname[strings.LastIndex(fnname, ".")+1:]
+		if strings.Contains(fnname, "New") {
+			benchName = "New/" + strings.Split(fnname, "New")[1]
+		} else {
+			benchName = "Legacy/" + strings.Split(fnname, "Legacy")[1]
+		}
+		b.Run(benchName, func(b *testing.B) {
+			sender.Nonce = 0
+			benchmarkTxPerformanceNew(b, fn, sender)
 		})
 	}
 }
@@ -344,7 +484,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	}
 }
 
-func benchmarkTxPerformanceNew(b *testing.B, genTx genTx) {
+func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountType) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -370,23 +510,18 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx) {
 		Nonce: uint64(0),
 	}
 
-	// decoupled account
-	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
-	assert.Equal(b, nil, err)
-
 	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
 	assert.Equal(b, nil, err)
 
 	if testing.Verbose() {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
+		fmt.Println("decoupledAddr = ", sender.Addr.String())
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 
-	// Create an account decoupled using TxTypeAccountCreation.
+	// Create an account sender using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
@@ -394,12 +529,12 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            decoupled.Addr,
+			types.TxValueKeyTo:            sender.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    decoupled.AccKey,
+			types.TxValueKeyAccountKey:    sender.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(b, nil, err)
@@ -443,11 +578,11 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx) {
 
 	// Generate transactions.
 	for i := 0; i < b.N; i++ {
-		tx := genTx(signer, decoupled, colin)
+		tx := genTx(signer, sender, colin)
 
 		txs[i] = tx
 
-		decoupled.Nonce += 1
+		sender.Nonce += 1
 
 		tx.AsMessageWithAccountKeyPicker(signer, state)
 	}
@@ -568,6 +703,129 @@ func genNewAccountCreation(signer types.Signer, from *TestAccountType, to *TestA
 	return tx
 }
 
+func genAccountKeyWeightedMultisig() accountkey.AccountKey {
+	threshold := uint(2)
+	numKeys := 3
+	keys := make(accountkey.WeightedPublicKeys, numKeys)
+
+	for i := 0; i < numKeys; i++ {
+		k, _ := crypto.GenerateKey()
+		keys[i] = accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k.PublicKey))
+	}
+
+	return accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
+}
+
+func genNewAccountCreationMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
+	addr := common.BytesToAddress(genRandomHash().Bytes())
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:         from.Nonce,
+		types.TxValueKeyTo:            addr,
+		types.TxValueKeyAmount:        amount,
+		types.TxValueKeyGasLimit:      gasLimit,
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyFrom:          from.Addr,
+		types.TxValueKeyHumanReadable: false,
+		types.TxValueKeyAccountKey:    genAccountKeyWeightedMultisig(),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = tx.SignWithKeys(signer, from.Keys)
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func genAccountKeyRoleBasedSingle() accountkey.AccountKey {
+	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	if err != nil {
+		panic(err)
+	}
+	txKey := accountkey.NewAccountKeyPublicWithValue(&k1.PublicKey)
+
+	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, txKey, txKey})
+}
+
+func genNewAccountCreationRoleBasedSingle(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
+	addr := common.BytesToAddress(genRandomHash().Bytes())
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:         from.Nonce,
+		types.TxValueKeyTo:            addr,
+		types.TxValueKeyAmount:        amount,
+		types.TxValueKeyGasLimit:      gasLimit,
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyFrom:          from.Addr,
+		types.TxValueKeyHumanReadable: false,
+		types.TxValueKeyAccountKey:    genAccountKeyRoleBasedSingle(),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = tx.SignWithKeys(signer, from.Keys)
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func genAccountKeyRoleBasedMultisig3() accountkey.AccountKey {
+	threshold := uint(2)
+
+	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	if err != nil {
+		panic(err)
+	}
+	k2, err := crypto.HexToECDSA("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c")
+	if err != nil {
+		panic(err)
+	}
+	k3, err := crypto.HexToECDSA("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
+	if err != nil {
+		panic(err)
+	}
+
+	keys := accountkey.WeightedPublicKeys{
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k1.PublicKey)),
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k2.PublicKey)),
+		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k3.PublicKey)),
+	}
+	txKey := accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
+
+	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, txKey, txKey})
+}
+
+func genNewAccountCreationRoleBasedMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
+	addr := common.BytesToAddress(genRandomHash().Bytes())
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:         from.Nonce,
+		types.TxValueKeyTo:            addr,
+		types.TxValueKeyAmount:        amount,
+		types.TxValueKeyGasLimit:      gasLimit,
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyFrom:          from.Addr,
+		types.TxValueKeyHumanReadable: false,
+		types.TxValueKeyAccountKey:    genAccountKeyRoleBasedMultisig3(),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = tx.SignWithKeys(signer, from.Keys)
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
 func genNewFeeDelegatedValueTransfer(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.Nonce,
@@ -664,7 +922,6 @@ func genNewAccountUpdateAccountKeyPublic(signer types.Signer, from *TestAccountT
 	k, _ := crypto.GenerateKey()
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.Nonce,
-		types.TxValueKeyAmount:     amount,
 		types.TxValueKeyGasLimit:   gasLimit,
 		types.TxValueKeyGasPrice:   gasPrice,
 		types.TxValueKeyFrom:       from.Addr,
