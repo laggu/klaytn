@@ -2035,7 +2035,8 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// decoupled account
-	decoupled, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78990000")
+	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
 	assert.Equal(t, nil, err)
 
 	// smart contract account
@@ -2577,7 +2578,8 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// decoupled account
-	decoupled, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78990000")
+	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
 	assert.Equal(t, nil, err)
 
 	// smart contract account
