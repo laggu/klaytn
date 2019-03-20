@@ -361,9 +361,6 @@ func (self *worker) wait() {
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
-				// If miner fails to write its own block,
-				// reset StateDB updates generated during mining process.
-				self.chain.ResetStateDBUpdatesWhileMining()
 				continue
 			}
 

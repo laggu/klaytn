@@ -68,8 +68,6 @@ type StateDB struct {
 
 	// cachedStateObjects stores the most recent finalized stateObjects.
 	cachedStateObjects common.Cache
-	// TODO-Klaytn-StateDB This should be initialized properly.
-	useCachedStateObjects bool
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -97,8 +95,8 @@ type StateDB struct {
 	lock sync.Mutex
 }
 
-// newCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
-func newCachedStateObjects() common.Cache {
+// NewCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
+func NewCachedStateObjects() common.Cache {
 	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects})
 }
 
@@ -109,24 +107,23 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:                    db,
-		trie:                  tr,
-		stateObjects:          make(map[common.Address]*stateObject),
-		stateObjectsDirty:     make(map[common.Address]struct{}),
-		cachedStateObjects:    newCachedStateObjects(),
-		useCachedStateObjects: false,
-		logs:                  make(map[common.Hash][]*types.Log),
-		preimages:             make(map[common.Hash][]byte),
-		journal:               newJournal(),
+		db:                 db,
+		trie:               tr,
+		stateObjects:       make(map[common.Address]*stateObject),
+		stateObjectsDirty:  make(map[common.Address]struct{}),
+		cachedStateObjects: nil,
+		logs:               make(map[common.Hash][]*types.Log),
+		preimages:          make(map[common.Hash][]byte),
+		journal:            newJournal(),
 	}, nil
 }
 
 // NewWithCache creates a new state from a given trie with state object caching enabled.
-func NewWithCache(root common.Hash, db Database) (*StateDB, error) {
+func NewWithCache(root common.Hash, db Database, cachedStateObjects common.Cache) (*StateDB, error) {
 	if stateDB, err := New(root, db); err != nil {
 		return nil, err
 	} else {
-		stateDB.useCachedStateObjects = true
+		stateDB.cachedStateObjects = cachedStateObjects
 		return stateDB, nil
 	}
 }
@@ -152,9 +149,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.trie = tr
 	self.stateObjects = make(map[common.Address]*stateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
-	self.cachedStateObjects = newCachedStateObjects()
-	// Leave useCachedStateObjects flag as is.
-	// self.useCachedStateObjects = false
+	self.cachedStateObjects = NewCachedStateObjects()
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
@@ -177,7 +172,7 @@ func (self *StateDB) ResetExceptCachedStateObjects(root common.Hash) {
 // And then, call ResetExceptCachedStateObjects() to clear out all ephemeral state objects,
 // except for 1) underlying state trie and 2) cachedStateObjects.
 func (self *StateDB) UpdateCachedStateObjects(root common.Hash) {
-	if !self.useCachedStateObjects {
+	if !self.UseCachedStateObjects() {
 		logger.ErrorWithStack("UpdateCachedStateObjects should not be called! It is disabled!")
 		return
 	}
@@ -187,6 +182,16 @@ func (self *StateDB) UpdateCachedStateObjects(root common.Hash) {
 
 	// Reset all member variables except for cachedStateObjects.
 	self.ResetExceptCachedStateObjects(root)
+}
+
+// GetCachedStateObjects returns its cachedStateObjects.
+func (self *StateDB) GetCachedStateObjects() common.Cache {
+	return self.cachedStateObjects
+}
+
+// UseCachedStateObjects returns if it uses cachedStateObjects or not.
+func (self *StateDB) UseCachedStateObjects() bool {
+	return self.cachedStateObjects != nil
 }
 
 func (self *StateDB) AddLog(log *types.Log) {
@@ -463,7 +468,7 @@ func (self *StateDB) getStateObject(addr common.Address) *stateObject {
 	}
 
 	// Second, if not found in stateObjects, check cachedStateObjects.
-	if self.useCachedStateObjects {
+	if self.UseCachedStateObjects() {
 		if obj, exist := self.cachedStateObjects.Get(addr); exist && obj != nil {
 			stateObj, ok := obj.(*stateObject)
 			if !ok {
@@ -608,17 +613,16 @@ func (self *StateDB) Copy() *StateDB {
 
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
-		db:                    self.db,
-		trie:                  self.db.CopyTrie(self.trie),
-		stateObjects:          make(map[common.Address]*stateObject, len(self.journal.dirties)),
-		stateObjectsDirty:     make(map[common.Address]struct{}, len(self.journal.dirties)),
-		cachedStateObjects:    newCachedStateObjects(),
-		useCachedStateObjects: self.useCachedStateObjects,
-		refund:                self.refund,
-		logs:                  make(map[common.Hash][]*types.Log, len(self.logs)),
-		logSize:               self.logSize,
-		preimages:             make(map[common.Hash][]byte),
-		journal:               newJournal(),
+		db:                 self.db,
+		trie:               self.db.CopyTrie(self.trie),
+		stateObjects:       make(map[common.Address]*stateObject, len(self.journal.dirties)),
+		stateObjectsDirty:  make(map[common.Address]struct{}, len(self.journal.dirties)),
+		cachedStateObjects: nil,
+		refund:             self.refund,
+		logs:               make(map[common.Hash][]*types.Log, len(self.logs)),
+		logSize:            self.logSize,
+		preimages:          make(map[common.Hash][]byte),
+		journal:            newJournal(),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
@@ -647,6 +651,12 @@ func (self *StateDB) Copy() *StateDB {
 
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage
+	}
+
+	// Use cachedStateObjects only if original StateDB uses.
+	// However, cached values are not copied.
+	if self.cachedStateObjects != nil {
+		state.cachedStateObjects = NewCachedStateObjects()
 	}
 	return state
 }

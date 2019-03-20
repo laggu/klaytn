@@ -194,8 +194,7 @@ func TestSnapshotRandom(t *testing.T) {
 // TestCachedStateObjects tests basic functional operations of cachedStateObjects.
 // It will be updated by StateDB.Commit() with state objects in StateDB.stateObjects.
 func TestCachedStateObjects(t *testing.T) {
-	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
-	stateDB.useCachedStateObjects = true
+	stateDB, _ := NewWithCache(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), NewCachedStateObjects())
 
 	// Update each account, it will only update StateDB.stateObjects.
 	for i := byte(0); i < 128; i++ {
@@ -323,7 +322,6 @@ func TestCachedStateObjects(t *testing.T) {
 // it should be loaded from underlying state trie or persistent database.
 func TestCachedStateObjectsEviction(t *testing.T) {
 	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
-	stateDB.useCachedStateObjects = true
 	stateDB.cachedStateObjects = common.NewCache(common.LRUConfig{CacheSize: 1})
 
 	// Update an account with addr1.

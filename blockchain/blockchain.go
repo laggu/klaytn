@@ -396,14 +396,18 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 // StateAtWithCache returns a new mutable state based on a particular point in time.
 // If different from StateAt() in that it uses state object caching.
 func (bc *BlockChain) StateAtWithCache(root common.Hash) (*state.StateDB, error) {
-	return state.NewWithCache(root, bc.stateCache)
+	if bc.cachedStateDB == nil {
+		return state.NewWithCache(root, bc.stateCache, state.NewCachedStateObjects())
+	} else {
+		return state.NewWithCache(root, bc.stateCache, bc.cachedStateDB.GetCachedStateObjects())
+	}
 }
 
 // TryGetCachedStateDB tries to get cachedStateDB, if StateDBCaching flag is true and it exists.
 // It checks the validity of cachedStateDB by comparing saved lastUpdatedRootHash and passed headRootHash.
-func (bc *BlockChain) TryGetCachedStateDB(headRootHash common.Hash) (*state.StateDB, error) {
+func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error) {
 	if !bc.cacheConfig.StateDBCaching {
-		return bc.StateAt(headRootHash)
+		return bc.StateAt(rootHash)
 	}
 
 	bc.mu.Lock()
@@ -416,41 +420,19 @@ func (bc *BlockChain) TryGetCachedStateDB(headRootHash common.Hash) (*state.Stat
 				"lastUpdatedRootHash", bc.lastUpdatedRootHash.String())
 			bc.lastUpdatedRootHash = common.Hash{}
 		}
-
-		stateDB, err := bc.StateAtWithCache(headRootHash)
-		if err != nil {
-			return nil, err
-		}
-		bc.cachedStateDB, bc.lastUpdatedRootHash = stateDB, headRootHash
-		return stateDB, nil
+		return bc.StateAtWithCache(rootHash)
 	}
 
-	// If cachedStateDB exists, check the validity of cachedStateDB by lastUpdatedRootHash.
-	if headRootHash != bc.lastUpdatedRootHash {
-		// Must not reach here!
-		logger.CritWithStack("cachedStateDB is invalid! lastUpdatedRootHash is different from given headRootHash.",
-			"savedRootHash", bc.lastUpdatedRootHash.String(), "givenRootHash", headRootHash.String())
+	// If cachedStateDB exists, check if we can use cachedStateDB.
+	// If given rootHash is different from lastUpdatedRootHash, return stateDB without cache.
+	if rootHash != bc.lastUpdatedRootHash {
+		logger.Trace("Given rootHash is different from lastUpdatedRootHash",
+			"givenRootHash", rootHash, "lastUpdatedRootHash", bc.lastUpdatedRootHash)
+
+		return bc.StateAt(rootHash)
 	}
 
-	return bc.cachedStateDB, nil
-}
-
-// ResetStateDBUpdatesWhileMining clears out all ephemeral state objects from the state db,
-// but keeps 1) underlying state trie and 2) cachedStateObjects to avoid reloading data.
-func (bc *BlockChain) ResetStateDBUpdatesWhileMining() {
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-
-	if bc.cachedStateDB == nil {
-		if !common.EmptyHash(bc.lastUpdatedRootHash) {
-			logger.Error("cachedStateDB is nil, but lastUpdatedRootHash is not common.Hash{}!",
-				"lastUpdatedRootHash", bc.lastUpdatedRootHash.String())
-			bc.lastUpdatedRootHash = common.Hash{}
-		}
-		return
-	}
-
-	bc.cachedStateDB.ResetExceptCachedStateObjects(bc.lastUpdatedRootHash)
+	return bc.StateAtWithCache(rootHash)
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.
@@ -1112,8 +1094,13 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	if err == nil && bc.cacheConfig.StateDBCaching {
 		bc.mu.Lock()
 		defer bc.mu.Unlock()
+
+		logger.Trace("Update cached StateDB information", "prevRootHash", bc.lastUpdatedRootHash.String(),
+			"newRootHash", block.Root().String(), "newBlockNum", block.NumberU64())
+
 		bc.lastUpdatedRootHash = block.Root()
 		stateDB.UpdateCachedStateObjects(block.Root())
+		bc.cachedStateDB = stateDB
 	}
 	return status, err
 }
