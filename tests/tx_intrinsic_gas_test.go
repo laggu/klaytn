@@ -321,7 +321,7 @@ func TestTransactionGas(t *testing.T) {
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
@@ -336,7 +336,7 @@ func TestTransactionGas(t *testing.T) {
 		intrinsicGas, err := types.IntrinsicGas(common.FromHex(code), true, true)
 		assert.Equal(t, nil, err)
 
-		executionGas := uint64(0x3B9982BF)
+		executionGas := uint64(0x175fd)
 		assert.Equal(t, intrinsicGas+executionGas, gas)
 	}
 
