@@ -70,6 +70,10 @@ type BCData struct {
 var dir = "chaindata"
 
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
+	if numValidators > maxAccounts {
+		return nil, errors.New("maxAccounts should be bigger numValidators!!")
+	}
+
 	conf := node.DefaultConfig
 
 	// Remove leveldb dir if exists
@@ -88,23 +92,10 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a governance
-	gov := governance.NewGovernance(&params.ChainConfig{
-		ChainID:       big.NewInt(2018),
-		UnitPrice:     25000000000,
-		DeriveShaImpl: 0,
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          istanbul.DefaultConfig.Epoch,
-			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
-			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
-		},
-		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
-	})
+	gov := generateGovernaceDataForTest()
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create accounts as many as maxAccounts
-	if numValidators > maxAccounts {
-		return nil, errors.New("maxAccounts should be bigger numValidators!!")
-	}
 	addrs, privKeys, err := createAccounts(maxAccounts)
 	if err != nil {
 		return nil, err
@@ -115,13 +106,8 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	genesisAddr := *addrs[0]
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Use first 4 accounts as validators
-	validatorPrivKeys := make([]*ecdsa.PrivateKey, numValidators)
-	validatorAddresses := make([]common.Address, numValidators)
-	for i := 0; i < numValidators; i++ {
-		validatorPrivKeys[i] = privKeys[i]
-		validatorAddresses[i] = *addrs[i]
-	}
+	// Use the first `numValidators` accounts as validators
+	validatorAddresses, validatorPrivKeys := getValidatorAddrsAndKeys(addrs, privKeys, numValidators)
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend

@@ -22,8 +22,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/governance"
+	"github.com/ground-x/klaytn/params"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"math"
+	"math/big"
 	"os"
 	"path"
 	"strconv"
@@ -31,19 +36,41 @@ import (
 )
 
 const (
-	addressDirectory     = "addrs"
-	privateKeyDirectory  = "privatekeys"
+	addressDirectory    = "addrs"
+	privateKeyDirectory = "privatekeys"
+
 	addressFilePrefix    = "addrs_"
 	privateKeyFilePrefix = "privateKeys_"
 )
 
-func writeToFile(addrs []*common.Address, privKeys []*ecdsa.PrivateKey, num int) error {
-	addrsFile, err := os.Create(addressFilePrefix + strconv.Itoa(num))
+// getDataDirName returns a name of directory from the given parameters.
+func getDataDirName(numFilesToGenerate int, ldbOption *opt.Options) string {
+	dataDirectory := fmt.Sprintf("testdata%v", numFilesToGenerate)
+
+	if ldbOption == nil {
+		return dataDirectory
+	}
+
+	dataDirectory += fmt.Sprintf("NoSyncIs%s", strconv.FormatBool(ldbOption.NoSync))
+
+	// Below codes can be used if necessary.
+	//dataDirectory += fmt.Sprintf("_BlockCacheCapacity%vMB", ldbOption.BlockCacheCapacity / opt.MiB)
+	//dataDirectory += fmt.Sprintf("_CompactionTableSize%vMB", ldbOption.CompactionTableSize / opt.MiB)
+	//dataDirectory += fmt.Sprintf("_CompactionTableSizeMultiplier%v", int(ldbOption.CompactionTableSizeMultiplier))
+
+	return dataDirectory
+}
+
+func writeToFile(addrs []*common.Address, privKeys []*ecdsa.PrivateKey, num int, dir string) error {
+	_ = os.Mkdir(path.Join(dir, addressDirectory), os.ModePerm)
+	_ = os.Mkdir(path.Join(dir, privateKeyDirectory), os.ModePerm)
+
+	addrsFile, err := os.Create(path.Join(dir, addressDirectory, addressFilePrefix+strconv.Itoa(num)))
 	if err != nil {
 		return err
 	}
 
-	privateKeysFile, err := os.Create(privateKeyFilePrefix + strconv.Itoa(num))
+	privateKeysFile, err := os.Create(path.Join(dir, privateKeyDirectory, privateKeyFilePrefix+strconv.Itoa(num)))
 	if err != nil {
 		return err
 	}
@@ -190,4 +217,33 @@ func makeAddrsAndPrivKeysFromFile(numAccounts int, fileDir string) ([]*common.Ad
 	}
 
 	return addrs, privKeys, nil
+}
+
+// generateGovernaceDataForTest returns *governance.Governance for test.
+func generateGovernaceDataForTest() *governance.Governance {
+	return governance.NewGovernance(&params.ChainConfig{
+		ChainID:       big.NewInt(2018),
+		UnitPrice:     25000000000,
+		DeriveShaImpl: 0,
+		Istanbul: &params.IstanbulConfig{
+			Epoch:          istanbul.DefaultConfig.Epoch,
+			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
+			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
+		},
+		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+	})
+}
+
+// getValidatorAddrsAndKeys returns the first `numValidators` addresses and private keys
+// for validators.
+func getValidatorAddrsAndKeys(addrs []*common.Address, privateKeys []*ecdsa.PrivateKey, numValidators int) ([]common.Address, []*ecdsa.PrivateKey) {
+	validatorAddresses := make([]common.Address, numValidators)
+	validatorPrivateKeys := make([]*ecdsa.PrivateKey, numValidators)
+
+	for i := 0; i < numValidators; i++ {
+		validatorPrivateKeys[i] = privateKeys[i]
+		validatorAddresses[i] = *addrs[i]
+	}
+
+	return validatorAddresses, validatorPrivateKeys
 }

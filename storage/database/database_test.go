@@ -38,7 +38,7 @@ func newTestLDB() (*levelDB, func()) {
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
-	db, err := NewLDBDatabase(dirName, 0, 0)
+	db, err := NewLevelDBWithOption(dirName, GetDefaultLevelDBOption())
 	if err != nil {
 		panic("failed to create test database: " + err.Error())
 	}

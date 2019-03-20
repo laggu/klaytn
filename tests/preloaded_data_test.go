@@ -13,12 +13,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
-// +build preloadtest
 
 package tests
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
@@ -26,8 +24,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
-	"github.com/ground-x/klaytn/governance"
-	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/work"
 	"github.com/otiai10/copy"
@@ -56,6 +52,8 @@ const (
 	dirForFiveMillionAccounts               = "testdata500_orig"
 	dirForFiveMillionAccountsPartitioned    = "testdata500_partitioned_orig"
 	dirForFiveMillionAccountsPartitioned4MB = "testdata500_partitioned_4mb_orig"
+
+	chainDataDir = "chaindata"
 )
 
 // makeTxsWithGivenNonce generates transactions with the given nonce.
@@ -330,9 +328,9 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	return nil
 }
 
-// TestGenerateTensOfMillionsAccounts generates given number of 1) accounts which actually
+// BenchmarkGenerateTensOfMillionsAccounts generates given number of 1) accounts which actually
 // are put into state trie, 2) their addresses, and 3) their private keys.
-func TestGenerateTensOfMillionsAccounts(t *testing.T) {
+func BenchmarkGenerateTensOfMillionsAccounts(b *testing.B) {
 
 	numTransactionsPerTxPool := 10000
 	numAccountsPerFile := 10000
@@ -342,13 +340,13 @@ func TestGenerateTensOfMillionsAccounts(t *testing.T) {
 		numAccountsPerFile, numFilesToGenerate, numAccountsPerFile*numFilesToGenerate)
 
 	if numAccountsPerFile%numTransactionsPerTxPool != 0 {
-		t.Fatal("numAccountsPerFile % numTransactionsPerTxPool != 0")
+		b.Fatal("numAccountsPerFile % numTransactionsPerTxPool != 0")
 	}
 
 	// Make a new blockchain.
 	bcData, err := NewBCData(numAccountsPerFile, numValidators)
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	defer bcData.db.Close()
@@ -356,8 +354,13 @@ func TestGenerateTensOfMillionsAccounts(t *testing.T) {
 
 	// Write Initial "numAccountsPerFile" accounts to file.
 	// These accounts will transfer klay to other accounts.
-	if err := writeToFile(bcData.addrs, bcData.privKeys, 0); err != nil {
-		t.Fatal(err)
+	currDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := writeToFile(bcData.addrs, bcData.privKeys, 0, currDir); err != nil {
+		b.Fatal(err)
 	}
 
 	// make txPool.
@@ -369,21 +372,29 @@ func TestGenerateTensOfMillionsAccounts(t *testing.T) {
 	// Nonce here is globally managed since initial "numAccountsPerFile" will send
 	// the same number of transactions to the newly created accounts.
 	nonce := 0
-	for i := 1; i <= numFilesToGenerate; i++ {
+
+	b.ResetTimer()
+	for i := 1; i < numFilesToGenerate; i++ {
+		b.StopTimer()
+
 		newAddresses, newPrivateKeys, err := createAccounts(numAccountsPerFile)
 		if err != nil {
-			t.Fatal(err)
+			b.Fatal(err)
 		}
-		writeToFile(newAddresses, newPrivateKeys, i)
+		writeToFile(newAddresses, newPrivateKeys, i, currDir)
 
 		// Send seed money to newAddresses,
 		// to 1) actually create accounts at state trie and 2) charge the balance.
 		for k := 0; k < numTxGenerationRunsPerFile; k++ {
+			b.StopTimer()
+
 			// make t.N transactions
 			txs, err := makeTxsWithGivenNonce(bcData, newAddresses, signer, numTransactionsPerTxPool, k*numTransactionsPerTxPool, nonce)
 			if err != nil {
-				t.Fatal(err)
+				b.Fatal(err)
 			}
+
+			b.StartTimer()
 
 			txPool.AddRemotes(txs)
 
@@ -392,7 +403,7 @@ func TestGenerateTensOfMillionsAccounts(t *testing.T) {
 					if err == errEmptyPending {
 						break
 					}
-					t.Fatal(err)
+					b.Fatal(err)
 				}
 			}
 
@@ -403,6 +414,10 @@ func TestGenerateTensOfMillionsAccounts(t *testing.T) {
 
 // NewBCDataFromPreLoadedData returns a new BCData pointer constructed from the existing data.
 func NewBCDataFromPreLoadedData(dbDir string, numValidators int, numTotalAccounts int) (*BCData, error) {
+	if numValidators > numTotalAccounts {
+		return nil, errors.New("numTotalAccounts should be bigger numValidators")
+	}
+
 	// Remove transactions.rlp if exists
 	if _, err := os.Stat(transactionsJournalFilename); err == nil {
 		os.RemoveAll(transactionsJournalFilename)
@@ -410,7 +425,7 @@ func NewBCDataFromPreLoadedData(dbDir string, numValidators int, numTotalAccount
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
-	chainDB := NewDatabase(path.Join(dbDir, "chaindata"), database.LevelDB)
+	chainDB := NewDatabase(path.Join(dbDir, chainDataDir), database.LevelDB)
 
 	addrs, privKeys, err := makeAddrsAndPrivKeysFromFile(numTotalAccounts, dbDir)
 	if err != nil {
@@ -422,27 +437,12 @@ func NewBCDataFromPreLoadedData(dbDir string, numValidators int, numTotalAccount
 	genesisAddr := *addrs[0]
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Use first 4 accounts as validators
-	validatorPrivKeys := make([]*ecdsa.PrivateKey, numValidators)
-	validatorAddresses := make([]common.Address, numValidators)
-	for i := 0; i < numValidators; i++ {
-		validatorPrivKeys[i] = privKeys[i]
-		validatorAddresses[i] = *addrs[i]
-	}
+	// Use the first `numValidators` accounts as validators
+	validatorAddresses, validatorPrivKeys := getValidatorAddrsAndKeys(addrs, privKeys, numValidators)
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a governance
-	gov := governance.NewGovernance(&params.ChainConfig{
-		ChainID:       big.NewInt(2018),
-		UnitPrice:     25000000000,
-		DeriveShaImpl: 0,
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          istanbul.DefaultConfig.Epoch,
-			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
-			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
-		},
-		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
-	})
+	gov := generateGovernaceDataForTest()
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
@@ -519,8 +519,6 @@ func randomStateTrieRead(b *testing.B, originalDataDir string) {
 		}
 
 		for i := 0; i < addressFileSamplingSize; i++ {
-			b.StopTimer()
-
 			// Choose a random file to read addresses from.
 			fileIndex := rand.Intn(numFiles)
 
@@ -538,6 +536,8 @@ func randomStateTrieRead(b *testing.B, originalDataDir string) {
 					b.Fatal("zero balance!!")
 				}
 			}
+
+			b.StopTimer()
 		}
 
 		b.StopTimer()
