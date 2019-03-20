@@ -137,7 +137,7 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 // RewardConfig stores information about the network's token economy
 type RewardConfig struct {
 	MintingAmount *big.Int `json:"mintingamount"`
-	Ratio         string   `json:"ratio"`         // Define how much portion of reward be distributed to CN/KIR/PoC
+	Ratio         string   `json:"ratio"`         // Define how much portion of reward be distributed to CN/PoC/KIR
 	UseGiniCoeff  bool     `json:"useginicoeff"`  // Decide if Gini Coefficient will be used or not
 	DeferredTxFee bool     `json:"deferredtxfee"` // Decide if TX fee will be handled instantly or handled later at block finalization
 }
