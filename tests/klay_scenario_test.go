@@ -2243,7 +2243,7 @@ func TestAccountCreationWithLegacyKeyNReadableAddr(t *testing.T) {
 // 4. Key update of decoupled using AccountUpdate
 // 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
 // 6. Create an account colin using TxTypeAccountCreation.
-// 7. Key update of colin using AccountUpdate
+// 7. Key update of colin using AccountUpdate with multisig keys.
 // 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 func TestAccountUpdate(t *testing.T) {
 	if testing.Verbose() {
@@ -2460,21 +2460,31 @@ func TestAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 7. Key update of colin using AccountUpdate
+	// 7. Key update of colin using AccountUpdate with multisig keys.
 	{
 		var txs types.Transactions
 
-		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
+		k1, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
 		if err != nil {
 			t.Fatal(err)
 		}
+		k2, err := crypto.HexToECDSA("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c")
+		if err != nil {
+			panic(err)
+		}
+		threshold := uint(2)
+		keys := accountkey.WeightedPublicKeys{
+			accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k1.PublicKey)),
+			accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k2.PublicKey)),
+		}
+		newKey := accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
 
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:      colin.Nonce,
 			types.TxValueKeyFrom:       colin.Addr,
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+			types.TxValueKeyAccountKey: newKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
@@ -2489,7 +2499,8 @@ func TestAccountUpdate(t *testing.T) {
 		}
 		colin.Nonce += 1
 
-		colin.Keys = []*ecdsa.PrivateKey{newKey}
+		colin.Keys = []*ecdsa.PrivateKey{k1, k2}
+		colin.AccKey = newKey
 	}
 
 	// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
