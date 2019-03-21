@@ -19,6 +19,7 @@ package genesis
 
 import (
 	"github.com/ground-x/klaytn/cmd/istanbul/extra"
+	"github.com/ground-x/klaytn/consensus/clique"
 	"github.com/ground-x/klaytn/log"
 	"math/big"
 
@@ -49,7 +50,7 @@ func Validators(addrs ...common.Address) Option {
 
 func ValidatorsOfClique(signers ...common.Address) Option {
 	return func(genesis *blockchain.Genesis) {
-		genesis.ExtraData = make([]byte, 32+len(signers)*common.AddressLength+65)
+		genesis.ExtraData = make([]byte, clique.ExtraVanity+len(signers)*common.AddressLength+clique.ExtraSeal)
 		for i, signer := range signers {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
