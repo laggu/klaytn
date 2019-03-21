@@ -19,7 +19,6 @@ package genesis
 
 import (
 	"encoding/json"
-	"github.com/ground-x/klaytn/governance"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
@@ -28,7 +27,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	istcommon "github.com/ground-x/klaytn/cmd/istanbul/common"
-	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/params"
 )
 
@@ -45,15 +43,9 @@ func New(options ...Option) *blockchain.Genesis {
 		Difficulty: big.NewInt(InitDifficulty),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{
-			ChainID: big.NewInt(2018),
-			Istanbul: &params.IstanbulConfig{
-				ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
-				Epoch:          istanbul.DefaultConfig.Epoch,
-				SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
-			},
+			ChainID:       big.NewInt(2018),
 			UnitPrice:     0,
 			DeriveShaImpl: 0,
-			Governance:    governance.GetDefaultGovernanceConfig(params.UseIstanbul),
 		},
 		Mixhash: types.IstanbulDigest,
 	}
@@ -73,10 +65,6 @@ func NewClique(options ...Option) *blockchain.Genesis {
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{
 			ChainID: big.NewInt(3000), // TODO-Klaytn Needs Optional chainID
-			Clique: &params.CliqueConfig{
-				Period: 1,
-				Epoch:  30000,
-			},
 		},
 	}
 

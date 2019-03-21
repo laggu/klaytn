@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/cmd/istanbul/docker/compose"
 	"github.com/ground-x/klaytn/cmd/istanbul/docker/service"
 	"github.com/ground-x/klaytn/cmd/istanbul/genesis"
+	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"math/big"
@@ -79,7 +80,6 @@ Args :
 			networkIdFlag,
 			nografanaFlag,
 			numOfPNsFlag,
-			subGroupSizeFlag,
 			useTxGenFlag,
 			txGenRateFlag,
 			txGenThFlag,
@@ -90,6 +90,18 @@ Args :
 			p2pPortFlag,
 			dataDirFlag,
 			logDirFlag,
+			govModeFlag,
+			governingNodeFlag,
+			govUnitPriceFlag,
+			rewardMintAmountFlag,
+			rewardRatioFlag,
+			rewardGiniCoeffFlag,
+			rewardDeferredTxFeeFlag,
+			istEpochFlag,
+			istProposerPolicyFlag,
+			istSubGroupFlag,
+			cliqueEpochFlag,
+			cliquePeriodFlag,
 		},
 		ArgsUsage: "type",
 	}
@@ -124,6 +136,56 @@ var GrafanaFiles = [...]GrafanaFile{
 
 var lastIssuedPortNum = DefaultTcpPort
 
+func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
+	mintingAmount := ctx.Int64(rewardMintAmountFlag.Name)
+	ratio := ctx.String(rewardRatioFlag.Name)
+	giniCoeff := ctx.Bool(rewardGiniCoeffFlag.Name)
+	deferredTxFee := ctx.Bool(rewardDeferredTxFeeFlag.Name)
+
+	return &params.RewardConfig{
+		MintingAmount: big.NewInt(mintingAmount),
+		Ratio:         ratio,
+		UseGiniCoeff:  giniCoeff,
+		DeferredTxFee: deferredTxFee,
+	}
+}
+
+func genIstanbulConfig(ctx *cli.Context) *params.IstanbulConfig {
+	epoch := ctx.Uint64(istEpochFlag.Name)
+	policy := ctx.Uint64(istProposerPolicyFlag.Name)
+	subGroup := ctx.Uint64(istSubGroupFlag.Name)
+
+	return &params.IstanbulConfig{
+		Epoch:          epoch,
+		ProposerPolicy: policy,
+		SubGroupSize:   subGroup,
+	}
+}
+
+func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
+	govMode := ctx.String(govModeFlag.Name)
+	governingNode := ctx.String(governingNodeFlag.Name)
+	govUnitPrice := ctx.Uint64(govUnitPriceFlag.Name)
+
+	return &params.GovernanceConfig{
+		GoverningNode:  common.HexToAddress(governingNode),
+		GovernanceMode: govMode,
+		Reward:         genRewardConfig(ctx),
+		Istanbul:       genIstanbulConfig(ctx),
+		UnitPrice:      govUnitPrice,
+	}
+}
+
+func genCliqueConfig(ctx *cli.Context) *params.CliqueConfig {
+	epoch := ctx.Uint64(cliqueEpochFlag.Name)
+	period := ctx.Uint64(cliquePeriodFlag.Name)
+
+	return &params.CliqueConfig{
+		Period: period,
+		Epoch:  epoch,
+	}
+}
+
 func gen(ctx *cli.Context) error {
 	genType := findGenType(ctx)
 
@@ -132,26 +194,18 @@ func gen(ctx *cli.Context) error {
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	deriveShaImpl := ctx.Int(deriveShaImplFlag.Name)
-	subGroupSize := ctx.Uint64(subGroupSizeFlag.Name)
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var genesisJsonBytes []byte
-	if !cliqueFlag {
-		// Istanbul BFT
-		genesisJsonBytes, _ = json.MarshalIndent(genesis.New(
-			genesis.Validators(nodeAddrs...),
-			genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
-			genesis.UnitPrice(unitPrice),
-			genesis.SubGroup(subGroupSize),
-			genesis.DeriveShaImpl(deriveShaImpl),
-		), "", "    ")
-	} else {
+	if cliqueFlag {
+		config := genCliqueConfig(ctx)
 		// Clique
 		genesisJsonBytes, _ = json.MarshalIndent(genesis.NewClique(
 			genesis.ValidatorsOfClique(nodeAddrs...),
 			genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 			genesis.UnitPrice(unitPrice),
+			genesis.Clique(config),
 		), "", "    ")
 
 		path := path.Join(outputPath, DirKeys)
@@ -160,6 +214,16 @@ func gen(ctx *cli.Context) error {
 		for _, pk := range privKeys {
 			ks.ImportECDSA(pk, "")
 		}
+	} else {
+		config := genGovernanceConfig(ctx)
+		// Istanbul BFT
+		genesisJsonBytes, _ = json.MarshalIndent(genesis.New(
+			genesis.Validators(nodeAddrs...),
+			genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
+			genesis.UnitPrice(unitPrice),
+			genesis.DeriveShaImpl(deriveShaImpl),
+			genesis.Governance(config),
+		), "", "    ")
 	}
 
 	switch genType {

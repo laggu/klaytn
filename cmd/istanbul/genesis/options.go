@@ -21,6 +21,7 @@ import (
 	"github.com/ground-x/klaytn/cmd/istanbul/extra"
 	"github.com/ground-x/klaytn/consensus/clique"
 	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 
 	"github.com/ground-x/klaytn/blockchain"
@@ -92,8 +93,14 @@ func DeriveShaImpl(impl int) Option {
 	}
 }
 
-func SubGroup(subGroupSize uint64) Option {
+func Governance(config *params.GovernanceConfig) Option {
 	return func(genesis *blockchain.Genesis) {
-		genesis.Config.Istanbul.SubGroupSize = subGroupSize
+		genesis.Config.Governance = config
+	}
+}
+
+func Clique(config *params.CliqueConfig) Option {
+	return func(genesis *blockchain.Genesis) {
+		genesis.Config.Clique = config
 	}
 }

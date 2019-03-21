@@ -17,7 +17,10 @@
 
 package setup
 
-import "gopkg.in/urfave/cli.v1"
+import (
+	"github.com/ground-x/klaytn/params"
+	"gopkg.in/urfave/cli.v1"
+)
 
 var fundingAddr string
 var dockerImageId string
@@ -153,5 +156,76 @@ var (
 		Name:  "log-dir",
 		Usage: "klay.conf - klaytn node's log directory path [default : /var/klay/log]",
 		Value: "/var/klay/log",
+	}
+
+	// Governance flags
+	govModeFlag = cli.StringFlag{
+		Name:  "gov-mode",
+		Usage: "governance mode (none, single, ballot) [default: none]",
+		Value: params.DefaultGovernanceMode,
+	}
+
+	governingNodeFlag = cli.StringFlag{
+		Name:  "governing-node",
+		Usage: "the governing node [default: 0x0000000000000000000000000000000000000000]",
+		Value: params.DefaultGoverningNode,
+	}
+
+	govUnitPriceFlag = cli.Uint64Flag{
+		Name:  "gov-unit-price",
+		Usage: "governance unit price [default: 250000000000]",
+		Value: params.DefaultUnitPrice,
+	}
+
+	rewardMintAmountFlag = cli.Int64Flag{
+		Name:  "reward-mint-amount",
+		Usage: "governance minting amount [default: 0]",
+		Value: params.DefaultMintingAmount,
+	}
+
+	rewardRatioFlag = cli.StringFlag{
+		Name:  "reward-ratio",
+		Usage: "governance ratio [default: 100/0/0]",
+		Value: params.DefaultRatio,
+	}
+
+	rewardGiniCoeffFlag = cli.BoolFlag{
+		Name:  "reward-gini-coeff",
+		Usage: "governance gini-coefficient",
+	}
+
+	rewardDeferredTxFeeFlag = cli.BoolFlag{
+		Name:  "reward-deferred-tx",
+		Usage: "governance deferred transaction",
+	}
+
+	istEpochFlag = cli.Uint64Flag{
+		Name:  "ist-epoch",
+		Usage: "governance epoch [default: 604800]",
+		Value: params.DefaultEpoch,
+	}
+
+	istProposerPolicyFlag = cli.Uint64Flag{
+		Name:  "ist-proposer-policy",
+		Usage: "governance proposer policy (0: RoundRobin, 1: Sticky, 2: WeightedRandom) [default: 0]",
+		Value: params.DefaultProposerPolicy,
+	}
+
+	istSubGroupFlag = cli.Uint64Flag{
+		Name:  "ist-subgroup",
+		Usage: "governance subgroup size [default: 21]",
+		Value: params.DefaultSubGroupSize,
+	}
+
+	cliqueEpochFlag = cli.Uint64Flag{
+		Name:  "clique-epoch",
+		Usage: "clique epoch",
+		Value: params.DefaultEpoch,
+	}
+
+	cliquePeriodFlag = cli.IntFlag{
+		Name:  "clique-period",
+		Usage: "clique period",
+		Value: params.DefaultPeriod,
 	}
 )
