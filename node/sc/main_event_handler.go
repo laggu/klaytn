@@ -77,28 +77,6 @@ func (mce *MainChainEventHandler) WriteChildChainTxHash(ccBlockHash common.Hash,
 	mce.mainbridge.chainDB.WriteChildChainTxHash(ccBlockHash, ccTxHash)
 }
 
-// GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
-func (mce *MainChainEventHandler) GetLatestAnchoredBlockNumber() uint64 {
-	return mce.mainbridge.chainDB.ReadAnchoredBlockNumber()
-}
-
-// WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
-func (mce *MainChainEventHandler) WriteAnchoredBlockNumber(blockNum uint64) {
-	mce.mainbridge.chainDB.WriteAnchoredBlockNumber(blockNum)
-}
-
-// WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
-// with corresponding block hash. It assumes that a child chain has only one parent chain.
-func (mce *MainChainEventHandler) WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt) {
-	mce.mainbridge.chainDB.WriteReceiptFromParentChain(blockHash, receipt)
-}
-
-// GetReceiptFromParentChain returns a receipt received from parent chain to child chain
-// with corresponding block hash. It assumes that a child chain has only one parent chain.
-func (mce *MainChainEventHandler) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return mce.mainbridge.chainDB.ReadReceiptFromParentChain(blockHash)
-}
-
 // writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
 // ChainHashes.
 func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {

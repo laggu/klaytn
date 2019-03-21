@@ -39,14 +39,6 @@ func (mbapi *MainBridgeAPI) ConvertChildChainBlockHashToParentChainTxHash(ccBloc
 	return mbapi.sc.eventhandler.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 }
 
-func (mbapi *MainBridgeAPI) GetLatestAnchoredBlockNumber() uint64 {
-	return mbapi.sc.eventhandler.GetLatestAnchoredBlockNumber()
-}
-
-func (mbapi *MainBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return mbapi.sc.eventhandler.GetReceiptFromParentChain(blockHash)
-}
-
 // Peers retrieves all the information we know about each individual peer at the
 // protocol granularity.
 func (mbapi *MainBridgeAPI) Peers() ([]*p2p.PeerInfo, error) {
@@ -65,14 +57,6 @@ func (mbapi *MainBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
 		return nil, node.ErrNodeStopped
 	}
 	return server.NodeInfo(), nil
-}
-
-func (mbapi *MainBridgeAPI) GetAnchoringPeriod() uint64 {
-	return mbapi.sc.config.AnchoringPeriod
-}
-
-func (mbapi *MainBridgeAPI) GetSentChainTxsLimit() uint64 {
-	return mbapi.sc.config.SentChainTxsLimit
 }
 
 // SubBridgeAPI Implementation for sub-bridge node
