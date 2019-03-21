@@ -78,7 +78,7 @@ IF DEFINED RPC_ENABLE (
 
 IF DEFINED WS_ENABLE (
     IF %WS_ENABLE%==1 (
-        set OPTIONS=%OPTIONS% --ws --wsaddr %WS_ADDR% --wsport %WS_PORT% --wsorigins %WS_ORIGINS%
+        set OPTIONS=%OPTIONS% --ws --wsapi %WS_API% --wsaddr %WS_ADDR% --wsport %WS_PORT% --wsorigins %WS_ORIGINS%
     )
 )
 

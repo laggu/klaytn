@@ -65,7 +65,7 @@ start() {
     fi
 
     if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
-        OPTIONS="$OPTIONS --ws --wsaddr $WS_ADDR --wsport $WS_PORT --wsorigins $WS_ORIGINS"
+        OPTIONS="$OPTIONS --ws --wsapi $WS_API --wsaddr $WS_ADDR --wsport $WS_PORT --wsorigins $WS_ORIGINS"
     fi
 
     if [ ! -z $NETWORK_ID ]; then

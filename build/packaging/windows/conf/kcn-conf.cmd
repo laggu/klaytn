@@ -27,6 +27,7 @@ set RPC_VHOSTS="*"
 
 REM ws options setting
 set WS_ENABLE=0 &:: if this is set, the following options will be used
+set WS_API="klay" &:: available apis: admin,debug,klay,miner,net,personal,rpc,txpool,web3
 set WS_ADDR="0.0.0.0"
 set WS_PORT=8552
 set WS_ORIGINS="*"
