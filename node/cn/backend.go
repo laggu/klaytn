@@ -211,6 +211,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	cn.protocolManager.SetRewardbase(cn.rewardbase)
 
+	if chainConfig.Istanbul != nil && cn.chainConfig.Governance.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
+		reward.Subscribe(cn.blockchain)
+	}
+
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
 	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
 	// istanbul BFT
@@ -225,9 +229,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	gpoParams.Default = config.GasPrice
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams)
-	if chainConfig.Istanbul != nil && cn.chainConfig.Governance.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
-		reward.Subscribe(cn.blockchain)
-	}
 	//@TODO Klaytn add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
