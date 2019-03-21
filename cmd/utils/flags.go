@@ -593,11 +593,8 @@ func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.GlobalBool(MultiChannelUseFlag.Name) {
 		cfg.EnableMultiChannelServer = true
-		if ctx.GlobalIsSet(SubListenPortFlag.Name) {
-			cfg.SubListenAddr = nil
-			SubListenAddr := fmt.Sprintf(":%d", ctx.GlobalInt(SubListenPortFlag.Name))
-			cfg.SubListenAddr = append(cfg.SubListenAddr, SubListenAddr)
-		}
+		SubListenAddr := fmt.Sprintf(":%d", ctx.GlobalInt(SubListenPortFlag.Name))
+		cfg.SubListenAddr = []string{SubListenAddr}
 	}
 }
 
