@@ -109,8 +109,8 @@ if [[ ! -z $SC_BRIDGE ]] && [[ $SC_BRIDGE -eq 1 ]]; then
     fi
 fi
 
-if [[ ! -z $ADDTIONAL ]] && [[ $ADDITIONAL != "" ]]; then
-    OPTIONS="$OPTIONS $ADDTIONAL"
+if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+    OPTIONS="$OPTIONS $ADDITIONAL"
 fi
 
 start() {

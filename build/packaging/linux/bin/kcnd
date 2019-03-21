@@ -112,8 +112,8 @@ start() {
         OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
     fi
 
-    if [[ ! -z $ADDTIONAL ]] && [[ $ADDITIONAL != "" ]]; then
-        OPTIONS="$OPTIONS $ADDTIONAL"
+    if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+        OPTIONS="$OPTIONS $ADDITIONAL"
     fi
 
     if [[ ! -z $REWARDBASE ]] && [[ $REWARDBASE != "" ]]; then
