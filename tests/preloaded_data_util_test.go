@@ -21,27 +21,33 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/work"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"math"
 	"math/big"
 	"os"
 	"path"
 	"strconv"
-	"sync"
 )
 
 const (
+	numValidators = 4
+
 	addressDirectory    = "addrs"
 	privateKeyDirectory = "privatekeys"
 
 	addressFilePrefix    = "addrs_"
 	privateKeyFilePrefix = "privateKeys_"
 )
+
+var sumTx = 0
 
 // getDataDirName returns a name of directory from the given parameters.
 func getDataDirName(numFilesToGenerate int, ldbOption *opt.Options) string {
@@ -59,54 +65,6 @@ func getDataDirName(numFilesToGenerate int, ldbOption *opt.Options) string {
 	//dataDirectory += fmt.Sprintf("_CompactionTableSizeMultiplier%v", int(ldbOption.CompactionTableSizeMultiplier))
 
 	return dataDirectory
-}
-
-func writeToFile(addrs []*common.Address, privKeys []*ecdsa.PrivateKey, num int, dir string) error {
-	_ = os.Mkdir(path.Join(dir, addressDirectory), os.ModePerm)
-	_ = os.Mkdir(path.Join(dir, privateKeyDirectory), os.ModePerm)
-
-	addrsFile, err := os.Create(path.Join(dir, addressDirectory, addressFilePrefix+strconv.Itoa(num)))
-	if err != nil {
-		return err
-	}
-
-	privateKeysFile, err := os.Create(path.Join(dir, privateKeyDirectory, privateKeyFilePrefix+strconv.Itoa(num)))
-	if err != nil {
-		return err
-	}
-
-	wg := sync.WaitGroup{}
-
-	wg.Add(2)
-
-	syncSize := len(addrs) / 2
-
-	go func() {
-		for i, b := range addrs {
-			addrsFile.WriteString(b.String() + "\n")
-			if (i+1)%syncSize == 0 {
-				addrsFile.Sync()
-			}
-		}
-
-		addrsFile.Close()
-		wg.Done()
-	}()
-
-	go func() {
-		for i, key := range privKeys {
-			privateKeysFile.WriteString(hex.EncodeToString(crypto.FromECDSA(key)) + "\n")
-			if (i+1)%syncSize == 0 {
-				privateKeysFile.Sync()
-			}
-		}
-
-		privateKeysFile.Close()
-		wg.Done()
-	}()
-
-	wg.Wait()
-	return nil
 }
 
 func readAddrsFromFile(dir string, num int) ([]*common.Address, error) {
@@ -246,4 +204,66 @@ func getValidatorAddrsAndKeys(addrs []*common.Address, privateKeys []*ecdsa.Priv
 	}
 
 	return validatorAddresses, validatorPrivateKeys
+}
+
+// GenABlockWithTxPoolWithoutAccountMap basically does the same thing with GenABlockWithTxPool,
+// however, it does not accept AccountMap which validates the outcome with stateDB.
+// This is to remove the overhead of AccountMap management.
+func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.TxPool) error {
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	pending, err := txPool.Pending()
+	if err != nil {
+		return err
+	}
+	if len(pending) == 0 {
+		return errEmptyPending
+	}
+
+	// TODO-Klaytn-Issue136 gasPrice
+	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending)
+
+	// Set the block header
+	header, err := bcdata.prepareHeader()
+	if err != nil {
+		return err
+	}
+
+	stateDB, err := bcdata.bc.State()
+	if err != nil {
+		return err
+	}
+
+	gp := new(blockchain.GasPool)
+	gp = gp.AddGas(GasLimit)
+	task := work.NewTask(bcdata.bc.Config(), signer, stateDB, gp, header)
+	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
+	newtxs := task.Transactions()
+	receipts := task.Receipts()
+
+	if len(newtxs) == 0 {
+		return errEmptyPending
+	}
+
+	// Finalize the block.
+	b, err := bcdata.engine.Finalize(bcdata.bc, header, stateDB, newtxs, []*types.Header{}, receipts)
+	if err != nil {
+		return err
+	}
+
+	// Seal the block.
+	b, err = sealBlock(b, bcdata.validatorPrivKeys)
+	if err != nil {
+		return err
+	}
+
+	// Insert the block into the blockchain.
+	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
+		return fmt.Errorf("err = %s, n = %d\n", err, n)
+	}
+
+	fmt.Println("blockNum", b.NumberU64(), "numTransactions", len(newtxs))
+	sumTx += len(newtxs)
+
+	return nil
 }

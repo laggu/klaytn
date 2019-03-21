@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// +build preloadtest
 
 package tests
 
@@ -25,7 +26,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/storage/database"
-	"github.com/ground-x/klaytn/work"
 	"github.com/otiai10/copy"
 	"math/big"
 	"math/rand"
@@ -55,42 +55,6 @@ const (
 
 	chainDataDir = "chaindata"
 )
-
-// makeTxsWithGivenNonce generates transactions with the given nonce.
-// It assumes that all accounts of fromAddrs have the same nonce.
-func makeTxsWithGivenNonce(bcdata *BCData, toAddrs []*common.Address, signer types.Signer, numTransactions, startIndex, nonce int) (types.Transactions, error) {
-	fromAddrs := bcdata.addrs
-
-	if len(fromAddrs) != len(toAddrs) {
-		return nil, errors.New("len(fromAddrs) != len(toAddrs)")
-	}
-
-	if len(fromAddrs) != numTransactions {
-		return nil, errors.New("len(fromAddrs) != numTransactions")
-	}
-
-	fromAddrs = bcdata.addrs[startIndex : startIndex+numTransactions]
-	toAddrs = toAddrs[startIndex : startIndex+numTransactions]
-
-	txs := make(types.Transactions, 0, numTransactions)
-
-	for i := 0; i < numTransactions; i++ {
-		idx := i
-
-		var gasLimit uint64 = 1000000
-		gasPrice := new(big.Int).SetInt64(0)
-
-		tx := types.NewTransaction(uint64(nonce), *toAddrs[idx], big.NewInt(10000), gasLimit, gasPrice, nil)
-		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx+startIndex])
-		if err != nil {
-			return nil, err
-		}
-
-		txs = append(txs, signedTx)
-	}
-
-	return txs, nil
-}
 
 // makeTxsWithStateDB generates transactions with the nonce retrieved from stateDB.
 // stateDB is used only once to initialize nonceMap, and then nonceMap is used instead of stateDB.
@@ -180,10 +144,7 @@ func settingUpPreLoadedData(originalDataDir string) (string, error) {
 	}
 }
 
-var numFiles = 25
 var numAccountsPerFile = 1 * 10000 // numAccountsPerFile is the number of accounts per file to create the pre-prepared data for the preload test.
-var numValidators = 4
-var sumTx = 0
 
 func TestPreLoad10000Accounts(t *testing.T) {
 	preLoadedTest(t, "10000Accounts", dirFor10000Accounts, 10000, 10000, false)
@@ -266,152 +227,6 @@ func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactio
 	}
 }
 
-// GenABlockWithTxPoolWithoutAccountMap basically does the same thing with GenABlockWithTxPool,
-// however, it does not accept AccountMap which validates the outcome with stateDB.
-// This is to remove the overhead of AccountMap management.
-func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.TxPool) error {
-	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-
-	pending, err := txPool.Pending()
-	if err != nil {
-		return err
-	}
-	if len(pending) == 0 {
-		return errEmptyPending
-	}
-
-	// TODO-Klaytn-Issue136 gasPrice
-	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending)
-
-	// Set the block header
-	header, err := bcdata.prepareHeader()
-	if err != nil {
-		return err
-	}
-
-	stateDB, err := bcdata.bc.State()
-	if err != nil {
-		return err
-	}
-
-	gp := new(blockchain.GasPool)
-	gp = gp.AddGas(GasLimit)
-	task := work.NewTask(bcdata.bc.Config(), signer, stateDB, gp, header)
-	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
-	newtxs := task.Transactions()
-	receipts := task.Receipts()
-
-	if len(newtxs) == 0 {
-		return errEmptyPending
-	}
-
-	// Finalize the block.
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, stateDB, newtxs, []*types.Header{}, receipts)
-	if err != nil {
-		return err
-	}
-
-	// Seal the block.
-	b, err = sealBlock(b, bcdata.validatorPrivKeys)
-	if err != nil {
-		return err
-	}
-
-	// Insert the block into the blockchain.
-	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
-		return fmt.Errorf("err = %s, n = %d\n", err, n)
-	}
-
-	fmt.Println("blockNum", b.NumberU64(), "numTransactions", len(newtxs))
-	sumTx += len(newtxs)
-
-	return nil
-}
-
-// BenchmarkGenerateTensOfMillionsAccounts generates given number of 1) accounts which actually
-// are put into state trie, 2) their addresses, and 3) their private keys.
-func BenchmarkGenerateTensOfMillionsAccounts(b *testing.B) {
-
-	numTransactionsPerTxPool := 10000
-	numAccountsPerFile := 10000
-	numFilesToGenerate := 5000
-
-	fmt.Printf("numAccountsPerFile: %v, numFilesToGenerate: %v, totalAccountsToGenerate: %v \n",
-		numAccountsPerFile, numFilesToGenerate, numAccountsPerFile*numFilesToGenerate)
-
-	if numAccountsPerFile%numTransactionsPerTxPool != 0 {
-		b.Fatal("numAccountsPerFile % numTransactionsPerTxPool != 0")
-	}
-
-	// Make a new blockchain.
-	bcData, err := NewBCData(numAccountsPerFile, numValidators)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	defer bcData.db.Close()
-	defer bcData.bc.Stop()
-
-	// Write Initial "numAccountsPerFile" accounts to file.
-	// These accounts will transfer klay to other accounts.
-	currDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	if err := writeToFile(bcData.addrs, bcData.privKeys, 0, currDir); err != nil {
-		b.Fatal(err)
-	}
-
-	// make txPool.
-	txPool := makeTxPool(bcData, numTransactionsPerTxPool)
-	signer := types.MakeSigner(bcData.bc.Config(), bcData.bc.CurrentHeader().Number)
-
-	numTxGenerationRunsPerFile := numAccountsPerFile / numTransactionsPerTxPool
-
-	// Nonce here is globally managed since initial "numAccountsPerFile" will send
-	// the same number of transactions to the newly created accounts.
-	nonce := 0
-
-	b.ResetTimer()
-	for i := 1; i < numFilesToGenerate; i++ {
-		b.StopTimer()
-
-		newAddresses, newPrivateKeys, err := createAccounts(numAccountsPerFile)
-		if err != nil {
-			b.Fatal(err)
-		}
-		writeToFile(newAddresses, newPrivateKeys, i, currDir)
-
-		// Send seed money to newAddresses,
-		// to 1) actually create accounts at state trie and 2) charge the balance.
-		for k := 0; k < numTxGenerationRunsPerFile; k++ {
-			b.StopTimer()
-
-			// make t.N transactions
-			txs, err := makeTxsWithGivenNonce(bcData, newAddresses, signer, numTransactionsPerTxPool, k*numTransactionsPerTxPool, nonce)
-			if err != nil {
-				b.Fatal(err)
-			}
-
-			b.StartTimer()
-
-			txPool.AddRemotes(txs)
-
-			for {
-				if err := bcData.GenABlockWithTxPoolWithoutAccountMap(txPool); err != nil {
-					if err == errEmptyPending {
-						break
-					}
-					b.Fatal(err)
-				}
-			}
-
-			nonce++
-		}
-	}
-}
-
 // NewBCDataFromPreLoadedData returns a new BCData pointer constructed from the existing data.
 func NewBCDataFromPreLoadedData(dbDir string, numValidators int, numTotalAccounts int) (*BCData, error) {
 	if numValidators > numTotalAccounts {
@@ -478,10 +293,10 @@ func NewBCDataFromPreLoadedData(dbDir string, numValidators int, numTotalAccount
 // BenchmarkRandomStateTrieRead randomly reads stateObjects
 // to check the read performance for given pre-generated data.
 func BenchmarkRandomStateTrieRead(b *testing.B) {
-	randomStateTrieRead(b, dirForOneMillionAccounts)
+	randomStateTrieRead(b, dirForOneMillionAccounts, 25)
 }
 
-func randomStateTrieRead(b *testing.B, originalDataDir string) {
+func randomStateTrieRead(b *testing.B, originalDataDir string, numFiles int) {
 	readTestDir, err := settingUpPreLoadedData(originalDataDir)
 	if err != nil {
 		// If original data directory does not exist, test does nothing.
