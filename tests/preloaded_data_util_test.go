@@ -20,14 +20,17 @@ import (
 	"bufio"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/work"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"math"
@@ -35,16 +38,20 @@ import (
 	"os"
 	"path"
 	"strconv"
+
+	istanbulBackend "github.com/ground-x/klaytn/consensus/istanbul/backend"
 )
 
 const (
-	numValidators = 4
+	numValidatorsForTest = 4
 
 	addressDirectory    = "addrs"
 	privateKeyDirectory = "privatekeys"
 
 	addressFilePrefix    = "addrs_"
 	privateKeyFilePrefix = "privateKeys_"
+
+	chainDataDir = "chaindata"
 )
 
 var sumTx = 0
@@ -192,6 +199,16 @@ func generateGovernaceDataForTest() *governance.Governance {
 	})
 }
 
+// generateDefaultLevelDBOption returns default LevelDB option for pre-loaded tests.
+func generateDefaultLevelDBOption() *opt.Options {
+	return &opt.Options{WriteBuffer: 1024 * opt.MiB, CompactionTableSize: 4 * opt.MiB, CompactionTableSizeMultiplier: 2}
+}
+
+// generateDefaultDBConfig returns default database.DBConfig for pre-loaded tests.
+func generateDefaultDBConfig() *database.DBConfig {
+	return &database.DBConfig{Partitioned: true, ParallelDBWrite: true}
+}
+
 // getValidatorAddrsAndKeys returns the first `numValidators` addresses and private keys
 // for validators.
 func getValidatorAddrsAndKeys(addrs []*common.Address, privateKeys []*ecdsa.PrivateKey, numValidators int) ([]common.Address, []*ecdsa.PrivateKey) {
@@ -266,4 +283,105 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	sumTx += len(newtxs)
 
 	return nil
+}
+
+// NewBCDataForPreLoadedTest returns a new BCData pointer constructed either 1) from the scratch or 2) from the existing data.
+func NewBCDataForPreLoadedTest(testDataDir string, numTotalSenders int, dbc *database.DBConfig, levelDBOption *opt.Options, generateTest bool) (*BCData, error) {
+	if numValidatorsForTest > numTotalSenders {
+		return nil, errors.New("numTotalSenders should be bigger numValidatorsForTest")
+	}
+
+	// Remove test data directory if 1) exists and and 2) generating test.
+	if _, err := os.Stat(dir); err == nil && generateTest {
+		os.RemoveAll(dir)
+	}
+
+	// Remove transactions.rlp if exists
+	if _, err := os.Stat(transactionsJournalFilename); err == nil {
+		os.RemoveAll(transactionsJournalFilename)
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Create a database
+	dbc.Dir = path.Join(testDataDir, chainDataDir)
+	chainDB, err := database.NewLevelDBManagerForTest(dbc, levelDBOption)
+	if err != nil {
+		return nil, err
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Create a governance
+	gov := generateGovernaceDataForTest()
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Prepare sender addresses and private keys
+	// 1) If generating test, create accounts and private keys as many as numTotalSenders
+	// 2) If executing test, load accounts and private keys from file as many as numTotalSenders
+	var addrs []*common.Address
+	var privKeys []*ecdsa.PrivateKey
+	if generateTest {
+		addrs, privKeys, err = createAccounts(numTotalSenders)
+	} else {
+		addrs, privKeys, err = makeAddrsAndPrivKeysFromFile(numTotalSenders, testDataDir)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Set the genesis address
+	genesisAddr := *addrs[0]
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Use the first `numValidatorsForTest` accounts as validators
+	validatorAddresses, validatorPrivKeys := getValidatorAddrsAndKeys(addrs, privKeys, numValidatorsForTest)
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Setup istanbul consensus backend
+	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, gov)
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Make a BlockChain
+	// 1) If generating test, call initBlockChain
+	// 2) If executing test, call blockchain.NewBlockChain
+	var bc *blockchain.BlockChain
+	if generateTest {
+		bc, err = initBlockChain(nil, chainDB, addrs, validatorAddresses, engine)
+	} else {
+		cacheConfig, chainConfig, err := getCacheAndChainConfig(chainDB)
+		if err != nil {
+			return nil, err
+		}
+		bc, err = blockchain.NewBlockChain(chainDB, cacheConfig, chainConfig, engine, vm.Config{})
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &BCData{bc, addrs, privKeys, chainDB,
+		&genesisAddr, validatorAddresses,
+		validatorPrivKeys, engine}, nil
+}
+
+// getCacheAndChainConfig returns configs needed to call blockchain.NewBlockChain().
+func getCacheAndChainConfig(chainDB database.DBManager) (*blockchain.CacheConfig, *params.ChainConfig, error) {
+	cacheConfig := &blockchain.CacheConfig{
+		ArchiveMode:   true,
+		CacheSize:     256 * 1024 * 1024,
+		BlockInterval: blockchain.DefaultBlockInterval,
+	}
+
+	stored := chainDB.ReadBlockByNumber(0)
+	if stored == nil {
+		return nil, nil, errors.New("chainDB.ReadBlockByNumber(0) == nil")
+	}
+
+	chainConfig := chainDB.ReadChainConfig(stored.Hash())
+	if chainConfig == nil {
+		return nil, nil, errors.New("chainConfig == nil")
+	}
+
+	return cacheConfig, chainConfig, nil
 }

@@ -115,7 +115,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, err := initBlockchain(&conf, chainDb, addrs, validatorAddresses, engine)
+	bc, err := initBlockChain(&conf, chainDb, addrs, validatorAddresses, engine)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +406,7 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 	return append(buf.Bytes(), payload...), nil
 }
 
-func initBlockchain(conf *node.Config, db database.DBManager, coinbaseAddrs []*common.Address, validators []common.Address,
+func initBlockChain(conf *node.Config, db database.DBManager, coinbaseAddrs []*common.Address, validators []common.Address,
 	engine consensus.Engine) (*blockchain.BlockChain, error) {
 
 	extraData, err := prepareIstanbulExtra(validators)

@@ -18,15 +18,15 @@
 package tests
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/otiai10/copy"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"math/big"
 	"math/rand"
 	"os"
@@ -36,9 +36,11 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	istanbulBackend "github.com/ground-x/klaytn/consensus/istanbul/backend"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 var errNoOriginalDataDir = errors.New("original data directory does not exist, aborting the test")
 
@@ -52,21 +54,23 @@ const (
 	dirForFiveMillionAccounts               = "testdata500_orig"
 	dirForFiveMillionAccountsPartitioned    = "testdata500_partitioned_orig"
 	dirForFiveMillionAccountsPartitioned4MB = "testdata500_partitioned_4mb_orig"
-
-	chainDataDir = "chaindata"
 )
+
+// randomIndex is used to access data with random index.
+func randomIndex(index, lenAddrs int) int {
+	return rand.Intn(lenAddrs)
+}
+
+// sequentialIndex is used to access data with sequential index.
+func sequentialIndex(index, lenAddrs int) int {
+	return index % lenAddrs
+}
 
 // makeTxsWithStateDB generates transactions with the nonce retrieved from stateDB.
 // stateDB is used only once to initialize nonceMap, and then nonceMap is used instead of stateDB.
-func makeTxsWithStateDB(bcdata *BCData, toAddrs []*common.Address, signer types.Signer, numTransactions int, isRandomToPickAddr bool) (types.Transactions, error) {
-	fromAddrs := bcdata.addrs
-	if len(fromAddrs) != len(toAddrs) {
-		return nil, fmt.Errorf("len(fromAddrs) %v != len(toAddrs) %v", len(fromAddrs), len(toAddrs))
-	}
-
-	stateDB, err := bcdata.bc.State()
-	if err != nil {
-		return nil, err
+func makeTxsWithStateDB(stateDB *state.StateDB, fromAddrs []*common.Address, fromKeys []*ecdsa.PrivateKey, toAddrs []*common.Address, signer types.Signer, numTransactions int, addrPicker func(int, int) int) (types.Transactions, error) {
+	if len(fromAddrs) != len(fromKeys) {
+		return nil, fmt.Errorf("len(fromAddrs) %v != len(fromKeys) %v", len(fromAddrs), len(fromKeys))
 	}
 
 	// Use nonceMap, not to change the nonce of stateDB.
@@ -78,23 +82,20 @@ func makeTxsWithStateDB(bcdata *BCData, toAddrs []*common.Address, signer types.
 
 	// Generate value transfer transactions from initial account to the given "toAddrs".
 	txs := make(types.Transactions, 0, numTransactions)
-	lenAddrs := len(fromAddrs)
+	lenFromAddrs := len(fromAddrs)
+	lenToAddrs := len(toAddrs)
 	for i := 0; i < numTransactions; i++ {
-		var idx int
-		if isRandomToPickAddr {
-			idx = rand.Intn(lenAddrs)
-		} else {
-			idx = i % lenAddrs
-		}
-		fromAddr := *fromAddrs[idx]
-		toAddr := *toAddrs[idx]
-		nonce := nonceMap[fromAddr]
+		fromIdx := addrPicker(i, lenFromAddrs)
+		toIdx := addrPicker(i, lenToAddrs)
 
-		var gasLimit uint64 = 1000000
-		gasPrice := new(big.Int).SetInt64(0)
+		fromAddr := *fromAddrs[fromIdx]
+		fromKey := fromKeys[fromIdx]
+		fromNonce := nonceMap[fromAddr]
 
-		tx := types.NewTransaction(nonce, toAddr, big.NewInt(10000), gasLimit, gasPrice, nil)
-		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		toAddr := *toAddrs[toIdx]
+
+		tx := types.NewTransaction(fromNonce, toAddr, big.NewInt(10000), 1000000, new(big.Int).SetInt64(0), nil)
+		signedTx, err := types.SignTx(tx, signer, fromKey)
 		if err != nil {
 			return nil, err
 		}
@@ -146,23 +147,30 @@ func settingUpPreLoadedData(originalDataDir string) (string, error) {
 
 var numAccountsPerFile = 1 * 10000 // numAccountsPerFile is the number of accounts per file to create the pre-prepared data for the preload test.
 
-func TestPreLoad10000Accounts(t *testing.T) {
-	preLoadedTest(t, "10000Accounts", dirFor10000Accounts, 10000, 10000, false)
+type preLoadedProfilingTC struct {
+	testName          string
+	originalDataDir   string
+	numTotalTxs       int
+	numTotalSenders   int
+	numTotalReceivers int
+	addrPicker        func(int, int) int
 }
 
-func TestPreLoadOneMillionAccounts(t *testing.T) {
-	preLoadedTest(t, "1500000Accounts", dirForOneMillionAccounts, 10000, 10000, false)
+func TestPreLoadedProfiling(t *testing.T) {
+	tc1 := &preLoadedProfilingTC{"100AccountsRandom", dirForOneMillionAccounts,
+		20000, 20000, 20000, randomIndex}
+
+	tc2 := &preLoadedProfilingTC{"100AccountsRandom", dirForOneMillionAccounts,
+		20000, 20000, 20000, sequentialIndex}
+
+	preLoadedProfilingTest(t, tc1, generateDefaultDBConfig(), generateDefaultLevelDBOption())
+	preLoadedProfilingTest(t, tc2, generateDefaultDBConfig(), generateDefaultLevelDBOption())
 }
 
-func TestPreLoadOneMillionRandomAccounts(t *testing.T) {
-	preLoadedTest(t, "1000000AccountsRandom", dirForOneMillionAccounts, 20000, 20000, true)
-}
-
-// preLoadedRandomTest is to check the performance of Klaytn with pre-loaded data.
-// In this test, a transaction is sent from any address to any address.
+// preLoadedProfilingTest is to check the performance of Klaytn with pre-generated data.
 // To run the test, original data directory should be located at "$GOPATH/src/github.com/ground-x/"
-func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactions int, numTotalAccounts int, isRandomToPickAddr bool) {
-	readTestDir, err := settingUpPreLoadedData(originalDataDir)
+func preLoadedProfilingTest(t *testing.T, tc *preLoadedProfilingTC, dbc *database.DBConfig, levelDBOption *opt.Options) {
+	testDataDir, err := settingUpPreLoadedData(tc.originalDataDir)
 	if err != nil {
 		// If original data directory does not exist, test does nothing.
 		if err == errNoOriginalDataDir {
@@ -175,29 +183,29 @@ func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactio
 		enableLog()
 	}
 
-	bcData, err := NewBCDataFromPreLoadedData(readTestDir, numValidators, numTotalAccounts)
+	bcData, err := NewBCDataForPreLoadedTest(testDataDir, tc.numTotalSenders, dbc, levelDBOption, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	defer bcData.db.Close()
 	defer bcData.bc.Stop()
 
-	txPool := makeTxPool(bcData, numTransactions)
+	txPool := makeTxPool(bcData, tc.numTotalTxs)
 	signer := types.MakeSigner(bcData.bc.Config(), bcData.bc.CurrentHeader().Number)
 
-	timeNow := time.Now()
-	f, err := os.Create(testName + "_" + timeNow.Format("2006-01-02 15:04:05") + ".cpu.out")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	toAddrs, err := makeAddrsFromFile(numTotalAccounts, readTestDir)
+	toAddrs, err := makeAddrsFromFile(tc.numTotalReceivers, testDataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Generate transactions
-	txs, err := makeTxsWithStateDB(bcData, toAddrs, signer, numTransactions, isRandomToPickAddr)
+	stateDB, err := bcData.bc.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txs, err := makeTxsWithStateDB(stateDB, bcData.addrs, bcData.privKeys, toAddrs, signer, tc.numTotalTxs, tc.addrPicker)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +219,12 @@ func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactio
 		tx.AsMessageWithAccountKeyPicker(signer, state)
 	}
 
-	// NOTE-Klaytn-Tests If you want to get profile, please set numFiles as 1, to start profile only once.
+	timeNow := time.Now()
+	f, err := os.Create(tc.testName + "_" + timeNow.Format("2006-01-02 15:04:05") + ".cpu.out")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	pprof.StartCPUProfile(f)
 	defer pprof.StopCPUProfile()
 
@@ -227,76 +240,13 @@ func preLoadedTest(t *testing.T, testName, originalDataDir string, numTransactio
 	}
 }
 
-// NewBCDataFromPreLoadedData returns a new BCData pointer constructed from the existing data.
-func NewBCDataFromPreLoadedData(dbDir string, numValidators int, numTotalAccounts int) (*BCData, error) {
-	if numValidators > numTotalAccounts {
-		return nil, errors.New("numTotalAccounts should be bigger numValidators")
-	}
-
-	// Remove transactions.rlp if exists
-	if _, err := os.Stat(transactionsJournalFilename); err == nil {
-		os.RemoveAll(transactionsJournalFilename)
-	}
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Create a database
-	chainDB := NewDatabase(path.Join(dbDir, chainDataDir), database.LevelDB)
-
-	addrs, privKeys, err := makeAddrsAndPrivKeysFromFile(numTotalAccounts, dbDir)
-	if err != nil {
-		return nil, err
-	}
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Set the genesis address
-	genesisAddr := *addrs[0]
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Use the first `numValidators` accounts as validators
-	validatorAddresses, validatorPrivKeys := getValidatorAddrsAndKeys(addrs, privKeys, numValidators)
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Create a governance
-	gov := generateGovernaceDataForTest()
-
-	////////////////////////////////////////////////////////////////////////////////
-	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, gov)
-	////////////////////////////////////////////////////////////////////////////////
-	// Make a blockchain
-	trieConfig := &blockchain.CacheConfig{
-		ArchiveMode:   true,
-		CacheSize:     256 * 1024 * 1024,
-		BlockInterval: blockchain.DefaultBlockInterval,
-	}
-
-	stored := chainDB.ReadBlockByNumber(0)
-	if stored == nil {
-		return nil, errors.New("chainDB.ReadBlockByNumber(0) == nil")
-	}
-
-	storedcfg := chainDB.ReadChainConfig(stored.Hash())
-	if storedcfg == nil {
-		return nil, errors.New("storedcfg == nil")
-	}
-
-	bc, err := blockchain.NewBlockChain(chainDB, trieConfig, storedcfg, engine, vm.Config{})
-	if err != nil {
-		return nil, err
-	}
-
-	return &BCData{bc, addrs, privKeys, chainDB,
-		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine}, nil
-}
-
 // BenchmarkRandomStateTrieRead randomly reads stateObjects
 // to check the read performance for given pre-generated data.
 func BenchmarkRandomStateTrieRead(b *testing.B) {
-	randomStateTrieRead(b, dirForOneMillionAccounts, 25)
+	randomStateTrieRead(b, dirForOneMillionAccounts, 25, generateDefaultDBConfig(), generateDefaultLevelDBOption())
 }
 
-func randomStateTrieRead(b *testing.B, originalDataDir string, numFiles int) {
+func randomStateTrieRead(b *testing.B, originalDataDir string, numFiles int, dbc *database.DBConfig, levelDBOption *opt.Options) {
 	readTestDir, err := settingUpPreLoadedData(originalDataDir)
 	if err != nil {
 		// If original data directory does not exist, test does nothing.
@@ -323,7 +273,7 @@ func randomStateTrieRead(b *testing.B, originalDataDir string, numFiles int) {
 	for run := 0; run < b.N; run++ {
 		b.StopTimer()
 
-		bcData, err := NewBCDataFromPreLoadedData(readTestDir, numValidators, numAccountsPerFile)
+		bcData, err := NewBCDataForPreLoadedTest(readTestDir, numValidatorsForTest, dbc, levelDBOption, false)
 		if err != nil {
 			b.Fatal(err)
 		}

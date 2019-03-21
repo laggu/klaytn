@@ -48,7 +48,7 @@ func BenchmarkGenerateTensOfMillionsAccounts(b *testing.B) {
 	}
 
 	// Make a new blockchain.
-	bcData, err := NewBCData(numAccountsPerFile, numValidators)
+	bcData, err := NewBCData(numAccountsPerFile, numValidatorsForTest)
 	if err != nil {
 		b.Fatal(err)
 	}
