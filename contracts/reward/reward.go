@@ -267,7 +267,7 @@ var blockRewardCache *blockRewardParameters
 // StakingCache
 const (
 	// TODO-Klaytn-Issue1166 Decide size of cache
-	maxStakingCache   = 3 // TODO-Klaytn If you increase this value, please also improve add operation of stakingInfoCache
+	maxStakingCache   = 4 // TODO-Klaytn If you increase this value, please also improve add operation of stakingInfoCache
 	chainHeadChanSize = 10
 )
 
@@ -289,12 +289,14 @@ func (sc *stakingInfoCache) get(blockNum uint64) *StakingInfo {
 	return nil
 }
 
-func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) error {
+func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 
+	// Assumption: stakingInfo should not be nil.
+
 	if _, ok := sc.cells[stakingInfo.BlockNum]; ok {
-		return nil
+		return
 	}
 
 	if len(sc.cells) < maxStakingCache {
@@ -304,27 +306,26 @@ func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) error {
 			// new minBlockNum or newly inserted one is the first element
 			sc.minBlockNum = stakingInfo.BlockNum
 		}
-		return nil
-	}
-
-	if stakingInfo.BlockNum < sc.minBlockNum {
-		return errors.New(fmt.Sprintf("no room for staking info of block number %d", stakingInfo.BlockNum))
+		return
 	}
 
 	// evict one and insert new one
 	delete(sc.cells, sc.minBlockNum)
 
 	// update minBlockNum
-	min := sc.minBlockNum
-	for _, s := range sc.cells {
-		if s.BlockNum < min {
-			min = s.BlockNum
+	if stakingInfo.BlockNum < sc.minBlockNum {
+		sc.minBlockNum = stakingInfo.BlockNum
+	} else {
+		min := sc.minBlockNum
+		for _, s := range sc.cells {
+			if s.BlockNum < min {
+				min = s.BlockNum
+			}
 		}
+		sc.minBlockNum = min
 	}
-	sc.minBlockNum = min
 	sc.cells[stakingInfo.BlockNum] = stakingInfo
 
-	return nil
 }
 
 var chainHeadCh chan blockchain.ChainHeadEvent
@@ -481,9 +482,7 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 		return nil, err
 	}
 
-	if err := stakingCache.add(stakingInfo); err != nil {
-		return nil, err
-	}
+	stakingCache.add(stakingInfo)
 
 	logger.Info("Add new staking information to staking cache", "stakingInfo", stakingInfo)
 
