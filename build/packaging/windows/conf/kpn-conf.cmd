@@ -11,13 +11,13 @@ set MAXPEERS=5000
 :: set LDBCACHESIZE=10240
 
 REM txpool options setting
-set TXPOOL_EXEC_SLOTS_ALL=2048
-set TXPOOL_NONEXEC_SLOTS_ALL=2048
-set TXPOOL_EXEC_SLOTS_ACCOUNT=2048
-set TXPOOL_NONEXEC_SLOTS_ACCOUNT=2048
+set TXPOOL_EXEC_SLOTS_ALL=65535
+set TXPOOL_NONEXEC_SLOTS_ALL=65535
+set TXPOOL_EXEC_SLOTS_ACCOUNT=65535
+set TXPOOL_NONEXEC_SLOTS_ACCOUNT=65535
 
 REM rpc options setting
-set RPC_ENABLE=1 &:: if this is set, the following options will be used
+set RPC_ENABLE=0 &:: if this is set, the following options will be used
 set RPC_API="klay" &:: available apis: admin,debug,klay,miner,net,personal,rpc,txpool,web3
 set RPC_PORT=8551
 set RPC_ADDR="0.0.0.0"
@@ -25,7 +25,7 @@ set RPC_CORSDOMAIN="*"
 set RPC_VHOSTS="*"
 
 REM ws options setting
-set WS_ENABLE=1 &:: if this is set, the following options will be used
+set WS_ENABLE=0 &:: if this is set, the following options will be used
 set WS_ADDR="0.0.0.0"
 set WS_PORT=8552
 set WS_ORIGINS="*"
