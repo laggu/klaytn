@@ -33,9 +33,9 @@ const (
 
 	defaultMintedKLAYInSton int64 = 9600000000 // Default amount of minted KLAY. 9.6 KLAY for block reward (Unit: ston)
 
-	DefaultCNRewardRatio  = 330 // Default CN reward ratio 33.0%
-	DefaultPoCRewardRatio = 545 // Default PoC ratio 54.5%
-	DefaultKIRRewardRatio = 125 // Default KIR ratio 12.5%
+	DefaultCNRewardRatio  = 34 // Default CN reward ratio 34%
+	DefaultPoCRewardRatio = 54 // Default PoC ratio 54%
+	DefaultKIRRewardRatio = 12 // Default KIR ratio 12%
 )
 
 var (

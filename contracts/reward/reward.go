@@ -627,7 +627,7 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 		blockRewardCache.pocRatio.SetInt64(int64(poc))
 		blockRewardCache.kirRatio.SetInt64(int64(kir))
 		blockRewardCache.totalRatio.Add(blockRewardCache.cnRewardRatio, blockRewardCache.pocRatio)
-		blockRewardCache.totalRatio.Add(blockRewardCache.totalRatio, blockRewardCache.pocRatio)
+		blockRewardCache.totalRatio.Add(blockRewardCache.totalRatio, blockRewardCache.kirRatio)
 
 		// TODO-Klaytn-RemoveLater Remove below trace later
 		logger.Trace("Reward parameters updated from governance", "blockNum", blockRewardCache.blockNum, "minting amount", blockRewardCache.mintingAmount, "cn ratio", blockRewardCache.cnRewardRatio, "poc ratio", blockRewardCache.pocRatio, "kir ratio", blockRewardCache.kirRatio)
