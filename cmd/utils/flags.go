@@ -43,6 +43,7 @@ import (
 	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -772,6 +773,34 @@ func MakePasswordList(ctx *cli.Context) []string {
 	return lines
 }
 
+func trimHttpScheme(url string) string {
+	if len(url) > 7 && url[:7] == "http://" {
+		return url[7:]
+	} else if len(url) > 8 && url[:8] == "https://" {
+		return url[8:]
+	}
+	return url
+}
+
+func setupSBNURL(ctx *cli.Context, cfg *p2p.Config) {
+	cfg.EnableSBN = true
+	rawaddr := ctx.GlobalString(SBNAddrFlag.Name)
+	addr := trimHttpScheme(rawaddr)
+	if ip := net.ParseIP(addr); ip != nil {
+		logger.Debug("SBN addr is an IP address", "ip", addr)
+		cfg.SBNHost = addr
+	} else {
+		logger.Debug("SBN addr is a domain", "domain", addr)
+		cfg.SBNHost = addr
+	}
+	port := ctx.GlobalInt(SBNPortFlag.Name)
+	if port > 65535 {
+		Fatalf("SBN port number is not valid")
+	}
+	cfg.SBNPort = port
+	logger.Info("SBN is enabled. The address: http://%s:%d", cfg.SBNHost, cfg.SBNPort)
+}
+
 func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
@@ -806,18 +835,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	if ctx.GlobalIsSet(BaobabFlag.Name) {
-		cfg.EnableSBN = true
-		cfg.SBNHost = ctx.GlobalString(SBNAddrFlag.Name)
-		cfg.SBNPort = ctx.GlobalInt(SBNPortFlag.Name)
-		logger.Info("SBN is enabled.")
+		setupSBNURL(ctx, cfg)
 	} else if ctx.GlobalIsSet(EnableSBNFlag.Name) {
 		if !ctx.GlobalIsSet(SBNAddrFlag.Name) {
 			Fatalf("Simple-bootnode's address is not defined. Use --sbnaddr. ex) --sbnaddr sbn.my-simple-bootnode.com")
 		}
-		cfg.EnableSBN = true
-		cfg.SBNHost = ctx.GlobalString(SBNAddrFlag.Name)
-		cfg.SBNPort = ctx.GlobalInt(SBNPortFlag.Name)
-		logger.Info("SBN is enabled.")
+		setupSBNURL(ctx, cfg)
 	} else {
 		logger.Info("SBN is disabled.")
 	}
