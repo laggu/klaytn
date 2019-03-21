@@ -30,11 +30,12 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 )
+
+// TODO-Klaytn Needs to separate APIs along with each namespaces.
 
 // Client defines typed wrappers for the Ethereum RPC API.
 type Client struct {
@@ -585,93 +586,5 @@ func (ec *Client) AddPeer(ctx context.Context, url string) (bool, error) {
 func (ec *Client) RemovePeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_removePeer", url)
-	return result, err
-}
-
-// AddPeerOnParentChain can add a static peer on bridge node for service chain.
-func (ec *Client) AddPeerOnBridge(ctx context.Context, url string) (bool, error) {
-	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_addPeer", url)
-	return result, err
-}
-
-// RemovePeerOnParentChain can remove a static peer on bridge node.
-func (ec *Client) RemovePeerOnBridge(ctx context.Context, url string) (bool, error) {
-	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_removePeer", url)
-	return result, err
-}
-
-// PeersOnBridge returns the peer list of bridge node for service chain.
-func (ec *Client) PeersOnBridge(ctx context.Context) ([]*p2p.PeerInfo, error) {
-	var result []*p2p.PeerInfo
-	err := ec.c.CallContext(ctx, &result, "bridge_peers")
-	return result, err
-}
-
-// GetChildChainIndexingEnabled can get if child chain indexing is enabled or not.
-func (ec *Client) GetChildChainIndexingEnabled(ctx context.Context) (bool, error) {
-	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_getChildChainIndexingEnabled")
-	return result, err
-}
-
-// ConvertChildChainBlockHashToParentChainTxHash can convert child chain block hash to
-// anchoring tx hash which contain anchored data.
-func (ec *Client) ConvertChildChainBlockHashToParentChainTxHash(ctx context.Context, ccBlockHash common.Hash) (common.Hash, error) {
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "bridge_convertChildChainBlockHashToParentChainTxHash", ccBlockHash)
-	return txHash, err
-}
-
-// GetReceiptFromParentChain can get the receipt of child chain tx from parent node.
-func (ec *Client) GetReceiptFromParentChain(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
-	var result types.Receipt
-	err := ec.c.CallContext(ctx, &result, "bridge_getReceiptFromParentChain", hash)
-	return &result, err
-}
-
-// GetChainAccountAddr can get the chain address to sign chain transaction in service chain.
-func (ec *Client) GetChainAccountAddr(ctx context.Context) (common.Address, error) {
-	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "bridge_getChainAccountAddr")
-	return result, err
-}
-
-// GetLatestAnchoredBlockNumber can return the latest anchored block number.
-func (ec *Client) GetLatestAnchoredBlockNumber(ctx context.Context) (uint64, error) {
-	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getLatestAnchoredBlockNumber")
-	return result, err
-}
-
-// EnableAnchoring can enable anchoring function and return the set value.
-func (ec *Client) EnableAnchoring(ctx context.Context) (bool, error) {
-	return ec.setAnchoring(ctx, true)
-}
-
-// DisableAnchoring can disable anchoring function and return the set value.
-func (ec *Client) DisableAnchoring(ctx context.Context) (bool, error) {
-	return ec.setAnchoring(ctx, false)
-}
-
-// setAnchoring can set if anchoring is enabled or not.
-func (ec *Client) setAnchoring(ctx context.Context, enable bool) (bool, error) {
-	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_anchoring", enable)
-	return result, err
-}
-
-// GetAnchoringPeriod can get the block period to anchor chain data.
-func (ec *Client) GetAnchoringPeriod(ctx context.Context) (uint64, error) {
-	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getAnchoringPeriod")
-	return result, err
-}
-
-// GetSentChainTxsLimit can get the maximum number of transaction which child peer can send to parent peer once.
-func (ec *Client) GetSentChainTxsLimit(ctx context.Context) (uint64, error) {
-	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getSentChainTxsLimit")
 	return result, err
 }
