@@ -23,6 +23,7 @@ package backend
 import (
 	"errors"
 	"fmt"
+	klaytnApi "github.com/ground-x/klaytn/api"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -229,38 +230,7 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 	numTxs := len(transactions)
 	rpcTransactions := make([]map[string]interface{}, numTxs)
 	for i, tx := range transactions {
-		var from common.Address
-		if tx.IsLegacyTransaction() {
-			var signer types.Signer = types.FrontierSigner{}
-			if tx.Protected() {
-				signer = types.NewEIP155Signer(tx.ChainId())
-			}
-			from, _ = types.Sender(signer, tx)
-		} else {
-			from, _ = tx.From()
-		}
-
-		output := tx.MakeRPCOutput()
-
-		sigRaw := tx.RawSignatureValues()
-
-		sigs := make([]*hexutil.Big, len(sigRaw))
-		for i := 0; i < len(sigRaw); i++ {
-			sigs[i] = (*hexutil.Big)(sigRaw[i])
-		}
-
-		output["blockHash"] = hash
-		output["blockNumber"] = (*hexutil.Big)(b.Number())
-		output["from"] = from
-		output["gasUsed"] = hexutil.Uint64(receipts[i].GasUsed)
-		output["txHash"] = tx.Hash()
-		output["transactionIndex"] = hexutil.Uint(i)
-		output["contractAddress"] = receipts[i].ContractAddress
-		output["logs"] = receipts[i].Logs
-		output["status"] = hexutil.Uint(receipts[i].Status)
-		output["signatures"] = sigs
-
-		rpcTransactions[i] = output
+		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
 	}
 
 	return map[string]interface{}{

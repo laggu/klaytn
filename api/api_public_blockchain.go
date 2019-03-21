@@ -71,7 +71,7 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash co
 	}
 	fieldsList := make([]map[string]interface{}, 0, len(receipts))
 	for index, receipt := range receipts {
-		fields := rpcOutputReceipt(txs[index], blockHash, block.NumberU64(), uint64(index), receipt)
+		fields := RpcOutputReceipt(txs[index], blockHash, block.NumberU64(), uint64(index), receipt)
 		fieldsList = append(fieldsList, fields)
 	}
 	return fieldsList, nil
@@ -436,64 +436,46 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	return fields, nil
 }
 
-// RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
-type RPCTransaction struct {
-	BlockHash        common.Hash     `json:"blockHash"`
-	BlockNumber      *hexutil.Big    `json:"blockNumber"`
-	From             common.Address  `json:"from"`
-	Gas              hexutil.Uint64  `json:"gas"`
-	GasPrice         *hexutil.Big    `json:"gasPrice"`
-	Hash             common.Hash     `json:"hash"`
-	Input            hexutil.Bytes   `json:"input"`
-	Nonce            hexutil.Uint64  `json:"nonce"`
-	To               *common.Address `json:"to"`
-	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
-	Value            *hexutil.Big    `json:"value"`
-	V                *hexutil.Big    `json:"v"`
-	R                *hexutil.Big    `json:"r"`
-	S                *hexutil.Big    `json:"s"`
-}
-
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
-func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
-	var signer types.Signer = types.FrontierSigner{}
-	if tx.Protected() {
-		signer = types.NewEIP155Signer(tx.ChainId())
+func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+	var from common.Address
+	if tx.IsLegacyTransaction() {
+		var signer types.Signer = types.FrontierSigner{}
+		if tx.Protected() {
+			signer = types.NewEIP155Signer(tx.ChainId())
+		}
+		from, _ = types.Sender(signer, tx)
+	} else {
+		from, _ = tx.From()
 	}
-	from, _ := types.Sender(signer, tx)
-	sigs := tx.RawSignatureValues()
-	// TODO-Klaytn-Multisig: this interpretation will be changed to []*big.Int after multisig implementation is done.
-	v, r, s := sigs[0], sigs[1], sigs[2]
 
-	result := &RPCTransaction{
-		From:     from,
-		Gas:      hexutil.Uint64(tx.Gas()),
-		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
+	output := tx.MakeRPCOutput()
+
+	sigRaw := tx.RawSignatureValues()
+
+	sigs := make([]*hexutil.Big, len(sigRaw))
+	for i := 0; i < len(sigRaw); i++ {
+		sigs[i] = (*hexutil.Big)(sigRaw[i])
 	}
-	if blockHash != (common.Hash{}) {
-		result.BlockHash = blockHash
-		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
-		result.TransactionIndex = hexutil.Uint(index)
-	}
-	return result
+
+	output["blockHash"] = blockHash
+	output["blockNumber"] = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+	output["from"] = from
+	output["txHash"] = tx.Hash()
+	output["transactionIndex"] = hexutil.Uint(index)
+	output["signatures"] = sigs
+
+	return output
 }
 
 // newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
-func newRPCPendingTransaction(tx *types.Transaction) *RPCTransaction {
+func newRPCPendingTransaction(tx *types.Transaction) map[string]interface{} {
 	return newRPCTransaction(tx, common.Hash{}, 0, 0)
 }
 
 // newRPCTransactionFromBlockIndex returns a transaction that will serialize to the RPC representation.
-func newRPCTransactionFromBlockIndex(b *types.Block, index uint64) *RPCTransaction {
+func newRPCTransactionFromBlockIndex(b *types.Block, index uint64) map[string]interface{} {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
 		return nil
@@ -512,7 +494,7 @@ func newRPCRawTransactionFromBlockIndex(b *types.Block, index uint64) hexutil.By
 }
 
 // newRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
-func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) *RPCTransaction {
+func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) map[string]interface{} {
 	for idx, tx := range b.Transactions() {
 		if tx.Hash() == hash {
 			return newRPCTransactionFromBlockIndex(b, uint64(idx))
