@@ -134,12 +134,15 @@ type DBManager interface {
 	ReadPreimage(hash common.Hash) []byte
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
-	// below three operations are used in parent chain side, not child chain side.
+	// below operations are used in parent chain side, not child chain side.
 	ChildChainIndexingEnabled() bool
 	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
 	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
 
-	// below two operations are used in child chain side, not parent chain side.
+	WriteLastIndexedBlockNumber(blockNum uint64)
+	GetLastIndexedBlockNumber() uint64
+
+	// below operations are used in child chain side, not parent chain side.
 	WriteAnchoredBlockNumber(blockNum uint64)
 	ReadAnchoredBlockNumber() uint64
 
@@ -1306,6 +1309,26 @@ func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBloc
 		return common.Hash{}
 	}
 	return common.BytesToHash(data)
+}
+
+// WriteLastIndexedBlockNumber writes the block number which is indexed lastly.
+func (dbm *databaseManager) WriteLastIndexedBlockNumber(blockNum uint64) {
+	key := lastIndexedBlockKey
+	db := dbm.getDatabase(bridgeServiceDB)
+	if err := db.Put(key, encodeBlockNumber(blockNum)); err != nil {
+		logger.Crit("Failed to store LastIndexedBlockNumber", "blockNumber", blockNum, "err", err)
+	}
+}
+
+// GetLastIndexedBlockNumber returns the last block number which is indexed.
+func (dbm *databaseManager) GetLastIndexedBlockNumber() uint64 {
+	key := lastIndexedBlockKey
+	db := dbm.getDatabase(bridgeServiceDB)
+	data, _ := db.Get(key)
+	if len(data) != 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(data)
 }
 
 // WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.

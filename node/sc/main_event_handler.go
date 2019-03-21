@@ -63,6 +63,16 @@ func (mce *MainChainEventHandler) GetChildChainIndexingEnabled() bool {
 	return mce.mainbridge.chainDB.ChildChainIndexingEnabled()
 }
 
+// GetLastIndexedBlockNumber returns the last child block number indexed to chain DB.
+func (mce *MainChainEventHandler) GetLastIndexedBlockNumber() uint64 {
+	return mce.mainbridge.chainDB.GetLastIndexedBlockNumber()
+}
+
+// WriteLastIndexedBlockNumber writes the last child block number indexed to chain DB.
+func (mce *MainChainEventHandler) WriteLastIndexedBlockNumber(blockNum uint64) {
+	mce.mainbridge.chainDB.WriteLastIndexedBlockNumber(blockNum)
+}
+
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
 // ChainHashes, with the key made with given child chain block hash.
 // Index is built when child chain indexing is enabled.
@@ -81,27 +91,37 @@ func (mce *MainChainEventHandler) WriteChildChainTxHash(ccBlockHash common.Hash,
 // ChainHashes.
 func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {
 	if !mce.GetChildChainIndexingEnabled() {
+		logger.Trace("ChildChainIndexing is disabled. Skipped to write anchoring data on chainDB", "Head block", block.NumberU64())
 		return
 	}
 
-	txs := block.Transactions()
-	for _, tx := range txs {
-		if tx.Type() != types.TxTypeChainDataAnchoring {
-			continue
-		}
+	lastIndexedBlkNum := mce.GetLastIndexedBlockNumber()
+	chainHeadBlkNum := block.NumberU64()
 
-		chainHashes := new(types.ChainHashes)
-		data, err := tx.AnchoredData()
-		if err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to get anchoring data from the tx", "txHash", tx.Hash())
-			continue
-		}
-		if err := rlp.DecodeBytes(data, chainHashes); err != nil {
-			logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
-			continue
-		}
-		mce.mainbridge.chainDB.WriteChildChainTxHash(chainHashes.BlockHash, tx.Hash())
+	for i := lastIndexedBlkNum + 1; i <= chainHeadBlkNum; i++ {
+		blk := mce.mainbridge.blockchain.GetBlockByNumber(i)
 
-		logger.Trace("Write anchoring data on chainDB", "blockHash", chainHashes.BlockHash, "txHash", tx.Hash())
+		txs := blk.Transactions()
+		for _, tx := range txs {
+			if tx.Type() != types.TxTypeChainDataAnchoring {
+				continue
+			}
+
+			chainHashes := new(types.ChainHashes)
+			data, err := tx.AnchoredData()
+			if err != nil {
+				logger.Error("writeChildChainTxHashFromBlock : failed to get anchoring data from the tx", "txHash", tx.Hash())
+				continue
+			}
+			if err := rlp.DecodeBytes(data, chainHashes); err != nil {
+				logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+				continue
+			}
+			mce.mainbridge.chainDB.WriteChildChainTxHash(chainHashes.BlockHash, tx.Hash())
+
+			logger.Trace("Write anchoring data on chainDB", "blockHash", chainHashes.BlockHash, "txHash", tx.Hash())
+		}
 	}
+	logger.Trace("Done indexing Blocks", "begin", lastIndexedBlkNum+1, "end", chainHeadBlkNum)
+	mce.WriteLastIndexedBlockNumber(chainHeadBlkNum)
 }

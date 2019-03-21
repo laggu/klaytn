@@ -71,6 +71,7 @@ var (
 
 	childChainTxHashPrefix          = []byte("ccTxHash")
 	lastServiceChainTxReceiptKey    = []byte("LastServiceChainTxReceipt")
+	lastIndexedBlockKey             = []byte("LastIndexedBlockKey")
 	receiptFromParentChainKeyPrefix = []byte("receiptFromParentChain")
 )
 

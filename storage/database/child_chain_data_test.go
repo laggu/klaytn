@@ -56,6 +56,32 @@ func TestChildChainData_ReadAndWrite_ChildChainTxHash(t *testing.T) {
 	assert.Equal(t, common.Hash{}, ccTxHashFromDB)
 }
 
+func TestLastIndexedBlockData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
+	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, LevelDBHandles: 32, ChildChainIndexing: false}
+	dbm := NewDBManager(dbc)
+	defer dbm.Close()
+
+	blockNum := uint64(123)
+
+	blockNumFromDB := dbm.GetLastIndexedBlockNumber()
+	assert.Equal(t, uint64(0), blockNumFromDB)
+
+	dbm.WriteLastIndexedBlockNumber(blockNum)
+	blockNumFromDB = dbm.GetLastIndexedBlockNumber()
+	assert.Equal(t, blockNum, blockNumFromDB)
+
+	newBlockNum := uint64(321)
+	dbm.WriteLastIndexedBlockNumber(newBlockNum)
+	blockNumFromDB = dbm.GetLastIndexedBlockNumber()
+	assert.Equal(t, newBlockNum, blockNumFromDB)
+}
+
 func TestChildChainData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
 	if err != nil {
@@ -80,7 +106,6 @@ func TestChildChainData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 	dbm.WriteAnchoredBlockNumber(newBlockNum)
 	blockNumFromDB = dbm.ReadAnchoredBlockNumber()
 	assert.Equal(t, newBlockNum, blockNumFromDB)
-
 }
 
 func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
@@ -113,5 +138,4 @@ func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
 	newBlockHash := common.HexToHash("0x0f0f0e0e0e0e0e0e0e0e0e0e0e0e0f0f")
 	rctFromDB = dbm.ReadReceiptFromParentChain(newBlockHash)
 	assert.Nil(t, rctFromDB)
-
 }
