@@ -26,7 +26,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus"
-	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 )
 
@@ -122,26 +121,9 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	statedb.Finalise(true)
 	*usedGas += gas
 
-	// NOTE-Klaytn The immediate root is not saved according to EIP-658.
-	// Create a new receipt for the transaction, storing the gas used by the tx
-	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(kerr.Status)
-	receipt.TxHash = tx.Hash()
-	receipt.GasUsed = gas
+	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
 	// if the transaction created a contract, store the creation address in the receipt.
-	if msg.To() == nil {
-		// TODO-Klaytn-Accounts: Do we need to compute hash multiple times? We can reduce codeHash computation.
-		//   codeHash computed at
-		//   1. ApplyTransaction()
-		//   2. EVM.Create()
-		//   3. EVM.CreateWithAddress()
-		//   4. StateDB.SetCode()
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce(), codeHash)
-	}
-	if msg.Type().IsContractDeploy() {
-		receipt.ContractAddress = *msg.To()
-	}
+	msg.FillContractAddress(vmenv.Context.Origin, receipt)
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})

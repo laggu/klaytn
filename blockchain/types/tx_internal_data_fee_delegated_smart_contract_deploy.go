@@ -334,6 +334,10 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	return nil
 }
 
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) FillContractAddress(from common.Address, r *Receipt) {
+	r.ContractAddress = t.Recipient
+}
+
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if err := t.Validate(stateDB); err != nil {
 		return nil, 0, err

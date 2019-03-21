@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 )
@@ -350,6 +351,11 @@ func (t *TxInternalDataLegacy) String() string {
 func (t *TxInternalDataLegacy) Validate(stateDB StateDB) error {
 	// No more validation required for TxInternalDataLegacy.
 	return nil
+}
+
+func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {
+	codeHash := crypto.Keccak256Hash(t.Payload)
+	r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce, codeHash)
 }
 
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

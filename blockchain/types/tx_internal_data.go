@@ -272,6 +272,11 @@ type TxInternalData interface {
 	MakeRPCOutput() map[string]interface{}
 }
 
+type TxInternalDataContractAddressFiller interface {
+	// FillContractAddress fills contract address to receipt. This only works for types deploying a smart contract.
+	FillContractAddress(from common.Address, r *Receipt)
+}
+
 type TxInternalDataSerializeForSignToByte interface {
 	SerializeForSignToBytes() []byte
 }

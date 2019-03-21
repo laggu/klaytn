@@ -319,6 +319,13 @@ func (tx *Transaction) Size() common.StorageSize {
 	return common.StorageSize(c)
 }
 
+// FillContractAddress fills contract address to receipt. This only works for types deploying a smart contract.
+func (tx *Transaction) FillContractAddress(from common.Address, r *Receipt) {
+	if filler, ok := tx.data.(TxInternalDataContractAddressFiller); ok {
+		filler.FillContractAddress(from, r)
+	}
+}
+
 // Execute performs execution of the transaction. This function will be called from StateTransition.TransitionDb().
 // Since each transaction type performs different execution, this function calls TxInternalData.TransitionDb().
 func (tx *Transaction) Execute(vm VM, stateDB StateDB, gas uint64, value *big.Int) ([]byte, uint64, error) {
