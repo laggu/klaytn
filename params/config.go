@@ -116,9 +116,11 @@ type ChainConfig struct {
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
-	UnitPrice     uint64            `json:"unitPrice"`
-	DeriveShaImpl int               `json:"deriveShaImpl"`
-	Governance    *GovernanceConfig `json:"governance"`
+	UnitPrice              uint64            `json:"unitPrice"`
+	DeriveShaImpl          int               `json:"deriveShaImpl"`
+	Governance             *GovernanceConfig `json:"governance"`
+	StakingUpdateInterval  uint64            `json:"stakingupdateinterval"`
+	ProposerUpdateInterval uint64            `json:"proposerupdateinterval"`
 }
 
 // GovernanceConfig stores governance information for a network

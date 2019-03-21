@@ -185,6 +185,13 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		logger.Info("Found genesis block without chain config")
 		db.WriteChainConfig(stored, newcfg)
 		return newcfg, stored, nil
+	} else {
+		if storedcfg.StakingUpdateInterval != 0 {
+			params.SetStakingUpdateInterval(storedcfg.StakingUpdateInterval)
+		}
+		if storedcfg.ProposerUpdateInterval != 0 {
+			params.SetProposerUpdateInterval(storedcfg.ProposerUpdateInterval)
+		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)

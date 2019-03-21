@@ -18,6 +18,7 @@ package params
 
 import (
 	"math/big"
+	"sync/atomic"
 )
 
 const (
@@ -35,9 +36,6 @@ const (
 	DefaultCNRewardRatio  = 330 // Default CN reward ratio 33.0%
 	DefaultPoCRewardRatio = 545 // Default PoC ratio 54.5%
 	DefaultKIRRewardRatio = 125 // Default KIR ratio 12.5%
-
-	stakingUpdateInterval  uint64 = 86400 // About 1 day. 86400 blocks = (24 hrs) * (3600 secs/hr) * (1 block/sec)
-	proposerUpdateInterval uint64 = 3600  // About 1 hour. 3600 blocks = (1 hr) * (3600 secs/hr) * (1 block/sec)
 )
 
 var (
@@ -47,6 +45,9 @@ var (
 	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))
 
 	DefaultMintedKLAY = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
+
+	stakingUpdateInterval  uint64 = 86400 // About 1 day. 86400 blocks = (24 hrs) * (3600 secs/hr) * (1 block/sec)
+	proposerUpdateInterval uint64 = 3600  // About 1 hour. 3600 blocks = (1 hr) * (3600 secs/hr) * (1 block/sec)
 )
 
 const (
@@ -148,4 +149,22 @@ func CalcProposerBlockNumber(blockNum uint64) uint64 {
 
 	}
 	return number
+}
+
+func SetStakingUpdateInterval(num uint64) {
+	atomic.StoreUint64(&stakingUpdateInterval, num)
+}
+
+func StakingUpdateInterval() uint64 {
+	ret := atomic.LoadUint64(&stakingUpdateInterval)
+	return ret
+}
+
+func SetProposerUpdateInterval(num uint64) {
+	atomic.StoreUint64(&proposerUpdateInterval, num)
+}
+
+func ProposerUpdateInterval() uint64 {
+	ret := atomic.LoadUint64(&proposerUpdateInterval)
+	return ret
 }

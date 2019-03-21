@@ -77,6 +77,19 @@ func initGenesis(ctx *cli.Context) error {
 
 	genesis = checkGenesisAndFillDefaultIfNeeded(genesis)
 	genesis.Governance, err = governance.MakeGovernanceData(genesis.Config.Governance)
+
+	if genesis.Config.StakingUpdateInterval != 0 {
+		params.SetStakingUpdateInterval(genesis.Config.StakingUpdateInterval)
+	} else {
+		genesis.Config.StakingUpdateInterval = params.StakingUpdateInterval()
+	}
+
+	if genesis.Config.ProposerUpdateInterval != 0 {
+		params.SetProposerUpdateInterval(genesis.Config.ProposerUpdateInterval)
+	} else {
+		genesis.Config.ProposerUpdateInterval = params.ProposerUpdateInterval()
+	}
+
 	if err != nil {
 		logger.Crit("Error in making governance data", "err", err)
 	}
