@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"math/big"
 	"math/rand"
+	"reflect"
 	"time"
 )
 
@@ -195,7 +196,30 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
+	// At every epoch governance data will come in block header. Verify it.
+	if number%sb.config.Epoch == 0 {
+		return sb.verifyGovernance(header.Governance, snap.PendingGovernanceConfig)
+	}
 	return sb.verifyCommittedSeals(chain, header, parents)
+}
+
+// verifyGovernance verifies if received governance configuration is same as what the node has
+func (sb *backend) verifyGovernance(src []byte, pending *params.GovernanceConfig) error {
+	rcv := params.GovernanceConfig{}
+
+	if err := rlp.DecodeBytes(src, &rcv); err != nil {
+		return errors.New("Received governance config coulnd't be decoded")
+	}
+
+	if reflect.DeepEqual(rcv.Reward, pending.Reward) &&
+		reflect.DeepEqual(rcv.Istanbul, pending.Istanbul) &&
+		rcv.GovernanceMode == pending.GovernanceMode &&
+		rcv.GoverningNode == pending.GoverningNode &&
+		rcv.UnitPrice == pending.UnitPrice {
+		return nil
+	} else {
+		return errors.New("Received governance config is different from that this node has")
+	}
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
