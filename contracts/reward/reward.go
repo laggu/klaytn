@@ -294,7 +294,7 @@ func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) error {
 	defer sc.lock.Unlock()
 
 	if _, ok := sc.cells[stakingInfo.BlockNum]; ok {
-		return errors.New(fmt.Sprintf("duplicated staking info of block number %d", stakingInfo.BlockNum))
+		return nil
 	}
 
 	if len(sc.cells) < maxStakingCache {
@@ -302,7 +302,7 @@ func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) error {
 		sc.cells[stakingInfo.BlockNum] = stakingInfo
 		if stakingInfo.BlockNum < sc.minBlockNum || len(sc.cells) == 1 {
 			// new minBlockNum or newly inserted one is the first element
-			sc.minBlockNum = stakingCache.minBlockNum
+			sc.minBlockNum = stakingInfo.BlockNum
 		}
 		return nil
 	}
@@ -373,8 +373,8 @@ func waitHeadChain() {
 			if params.IsStakingUpdatePossible(ev.Block.NumberU64()) {
 				blockNum := ev.Block.NumberU64()
 				logger.Debug("ChainHeadEvent arrived and try to update staking cache.", "Block number", blockNum)
-				if err := updateStakingCache(blockchainForReward, blockNum); err != nil {
-					logger.Error("Failed to update staking cache", err)
+				if _, err := updateStakingCache(blockchainForReward, blockNum); err != nil {
+					logger.Error("Failed to update staking cache", "err", err)
 				}
 			}
 		case <-chainHeadSub.Err():
@@ -385,16 +385,17 @@ func waitHeadChain() {
 
 // GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
 func GetStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
+	var stakingInfo *StakingInfo
 	number := params.CalcStakingBlockNumber(blockNum)
 
-	stakingInfo := stakingCache.get(number)
-	if stakingInfo == nil {
-		logger.Info("Staking cache missed", "Block number", blockNum, "number of staking block", number)
+	stakingInfo, err := updateStakingCache(blockchainForReward, number)
+	if err != nil {
+		logger.Error("Failed to get staking information", "Block number", blockNum, "number of staking block", number, "err", err)
 		return nil
 	}
 
 	if stakingInfo.BlockNum != number {
-		logger.Info("Staking cache hit. But staking information not found", "Block number", blockNum, "number of staking block", number)
+		logger.Error("Invalid staking info from staking cache", "Block number", blockNum, "expected staking block number", number, "actual staking block number", stakingInfo.BlockNum)
 		return nil
 	}
 
@@ -469,27 +470,24 @@ func ParseGetAllAddressInfo(result []byte) ([]common.Address, []common.Address, 
 }
 
 // updateStakingCache updates staking cache with staking information of given block number.
-func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) error {
-	// TODO-Klaytn-Issue1166 Disable all below Trace log later after all block reward implementation merged
-
+func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
 	if cachedStakingInfo := stakingCache.get(blockNum); cachedStakingInfo != nil {
 		// already updated
-		logger.Trace("no need to update staking cache. Already updated.", "blockNum", blockNum, "stakingInfo", cachedStakingInfo)
-		return nil
+		return cachedStakingInfo, nil
 	}
 
 	stakingInfo, err := getInitContractInfo(bc, blockNum)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := stakingCache.add(stakingInfo); err != nil {
-		return err
+		return nil, err
 	}
 
-	logger.Info("update staking cache with new staking info", "stakingInfo", stakingInfo)
+	logger.Info("Add new staking information to staking cache", "stakingInfo", stakingInfo)
 
-	return nil
+	return stakingInfo, nil
 }
 
 func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
@@ -550,6 +548,19 @@ func getAddressBookInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 	logger.Trace("Result from AddressBook contract", "KIRAddr", KIRAddr, "PoCAddr", PoCAddr)
 
 	return newStakingInfo(bc, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
+}
+
+func newEmptyStakingInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
+	stakingInfo := &StakingInfo{
+		BlockNum:              blockNum,
+		CouncilNodeIds:        make([]common.Address, 0, 0),
+		CouncilStakingdAddrs:  make([]common.Address, 0, 0),
+		CouncilRewardAddrs:    make([]common.Address, 0, 0),
+		KIRAddr:               common.Address{},
+		PoCAddr:               common.Address{},
+		CouncilStakingAmounts: make([]*big.Int, 0, 0),
+	}
+	return stakingInfo, nil
 }
 
 func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
@@ -664,14 +675,12 @@ const (
 func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 
 	if result == nil {
-		logger.Debug("Got empty result, nothing to parse.", "result", result)
-		return nil, nil, nil, common.Address{}, common.Address{}, nil
+		return nil, nil, nil, common.Address{}, common.Address{}, errors.New("got empty result, nothing to parse")
 	}
 
 	abiStr := contract.InitContractABI
 	abii, err := abi.JSON(strings.NewReader(abiStr))
 	if err != nil {
-		logger.Trace("Failed to make InitContract ABI interface.")
 		return nil, nil, nil, common.Address{}, common.Address{}, err
 	}
 
@@ -690,10 +699,8 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		return nil, nil, nil, common.Address{}, common.Address{}, err
 	}
 
-	//
 	if len(*allTypeList) != len(*allAddressList) {
-		logger.Error("Length of type list and address list differ.", "length of type list", len(*allTypeList), "length of address list", len(*allAddressList))
-		return nil, nil, nil, common.Address{}, common.Address{}, err
+		return nil, nil, nil, common.Address{}, common.Address{}, errors.New(fmt.Sprintf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(*allTypeList), len(*allAddressList)))
 	}
 
 	// Parse and construct node information
@@ -715,8 +722,7 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		case addressTypeKIRAddr:
 			kirAddr = (*allAddressList)[i]
 		default:
-			logger.Error("Invalid type from InitContract.", "invalid type", addrType)
-			return nil, nil, nil, common.Address{}, common.Address{}, err
+			return nil, nil, nil, common.Address{}, common.Address{}, errors.New(fmt.Sprintf("invalid type from InitContract: %d", addrType))
 		}
 	}
 
@@ -725,19 +731,22 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		len(nodeIds) != len(rewardAddrs) ||
 		isEmptyAddress(pocAddr) ||
 		isEmptyAddress(kirAddr) {
-		logger.Error("Incomplete node information from InitContract.",
-			"# of nodeIds", len(nodeIds),
-			"# of stakingAddrs)", len(stakingAddrs),
-			"# of rewardAddrs", len(rewardAddrs),
-			"PoC address", pocAddr.String(),
-			"KIR address", kirAddr.String())
+		// This is expected behavior when bootstrapping
+		//logger.Trace("Incomplete node information from InitContract.",
+		//	"# of nodeIds", len(nodeIds),
+		//	"# of stakingAddrs", len(stakingAddrs),
+		//	"# of rewardAddrs", len(rewardAddrs),
+		//	"PoC address", pocAddr.String(),
+		//	"KIR address", kirAddr.String())
 
-		return nil, nil, nil, common.Address{}, common.Address{}, err
+		return nil, nil, nil, common.Address{}, common.Address{}, errors.New("incomplete node information from InitContract")
 	}
 
 	return nodeIds, stakingAddrs, rewardAddrs, pocAddr, kirAddr, nil
 }
 
+// getInitContractInfo returns staking info when calling InitContract
+// succeeded. It returns an error otherwise.
 func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
 
 	var nodeIds []common.Address
@@ -748,25 +757,28 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	var err error
 
 	if !params.IsStakingUpdatePossible(blockNum) {
-		logger.Trace("Invalid block number.", "blockNum", blockNum)
-		return nil, errors.New(fmt.Sprintf("not staking block number %d", blockNum))
+		return nil, errors.New(fmt.Sprintf("not staking block number. blockNum: %d", blockNum))
 	}
 
 	// Prepare a message
 	msg, err := MakeGetAllAddressFromInitContractMsg()
 	if err != nil {
-		logger.Trace("Failed to make message for InitContract", "err", err)
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("failed to make message for InitContract. root err: %s", err))
 	}
 
 	// Prepare
+	if bc == nil {
+		return nil, errors.New(fmt.Sprintf("blockchain is not ready for staking info. blockNum: %d", blockNum))
+	}
 	chainConfig := bc.Config()
 	intervalBlock := bc.GetBlockByNumber(blockNum)
+	if intervalBlock == nil {
+		return nil, errors.New("stateDB is not ready for staking info")
+	}
 	gaspool := new(blockchain.GasPool).AddGas(intervalBlock.GasLimit())
 	statedb, err := bc.StateAt(intervalBlock.Root())
 	if err != nil {
-		logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("failed to make a state for interval block. blockNum: %d, root err: %s", blockNum, err))
 	}
 
 	// Create a new context to be used in the EVM environment
@@ -777,14 +789,14 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	logger.Trace("Call InitContract contract", "result", res, "used gas", gas, "kerr", kerr)
 	err = kerr.ErrTxInvalid
 	if err != nil {
-		logger.Trace("Failed to call InitContract contract", "err", err)
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("failed to call InitContract contract. root err: %s", err))
 	}
 
 	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = ParseGetAllAddressFromInitContract(res)
 	if err != nil {
-		logger.Trace("Failed to parse result from InitContract contract", "err", err)
-		return nil, err
+		// This is expected behavior when smart contract is not setup yet.
+		logger.Info("Failed to parse result from InitContract contract. Use empty staking info", "err", err)
+		return newEmptyStakingInfo(bc, blockNum)
 	}
 
 	return newStakingInfo(bc, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)

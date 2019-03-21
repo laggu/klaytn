@@ -409,7 +409,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	if sb.config.ProposerPolicy == istanbul.WeightedRandom {
+	// If sb.chain is nil, it means backend is not initialized yet.
+	if sb.chain != nil && sb.config.ProposerPolicy == istanbul.WeightedRandom {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		pocAddr := common.Address{}
@@ -430,7 +431,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 
 		if proposer.Weight() != 0 {
-			stakingInfo := reward.GetStakingInfoFromStakingCache(header.Number.Uint64())
+			stakingInfo := reward.GetStakingInfoFromStakingCache(params.CalcProposerBlockNumber(header.Number.Uint64()))
 			if stakingInfo != nil {
 				kirAddr = stakingInfo.KIRAddr
 				pocAddr = stakingInfo.PoCAddr
@@ -676,13 +677,22 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return nil, err
 	}
 
-	if params.IsProposerUpdateInterval(snap.Number) {
-		if sb.config.ProposerPolicy == istanbul.WeightedRandom {
-			// Refresh proposers
-			if err = snap.ValSet.Refresh(hash, snap.Number); err != nil {
-				// There are two error cases, i.e. (1) No validator at all and (2) Invalid formatted hash
-				logger.CritWithStack("Error when refreshing proposers", "number", snap.Number, "hash", snap.Hash, "err", err)
+	if sb.config.ProposerPolicy == istanbul.WeightedRandom {
+		// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
+		// And proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
+		// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
+		pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(snap.Number + 1))
+		if pHeader != nil {
+			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64()); err != nil {
+				// There are four error cases and they just don't refresh proposers
+				// (1) no validator at all
+				// (2) invalid formatted hash
+				// (3) block number is not proposer update interval
+				// (4) no staking info available
+				logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
 			}
+		} else {
+			logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
 		}
 	}
 

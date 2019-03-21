@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -127,7 +129,7 @@ func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 	validators := makeTestValidators(testZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testZeroWeights)
-	valSet.Refresh(testPrevHash, 1)
+	runRefreshForTest(valSet)
 
 	// Run tests
 
@@ -168,7 +170,7 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	valSet.Refresh(testPrevHash, 1)
+	runRefreshForTest(valSet)
 
 	// Run tests
 
@@ -266,4 +268,13 @@ func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 
 	assert.Equal(t, uint64(0), valSet.Size())
 	assert.Equal(t, 0, len(valSet.Proposers()))
+}
+
+func runRefreshForTest(valSet *weightedCouncil) {
+	hashString := strings.TrimPrefix(testPrevHash.Hex(), "0x")
+	if len(hashString) > 15 {
+		hashString = hashString[:15]
+	}
+	seed, _ := strconv.ParseInt(hashString, 16, 64)
+	valSet.refreshProposers(seed, 0)
 }
