@@ -170,14 +170,19 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 	return (validator != nil && !authorize) || (validator == nil && authorize)
 }
 
-// cast adds a new vote into the tally.
-func (s *Snapshot) cast(address common.Address, authorize bool) bool {
+// cast adds a new vote into the tally
+// address : a node's address which is a target of this vote
+// voter : Have to be one of current validators. Actually a block proposer's address is delivered
+func (s *Snapshot) cast(address common.Address, authorize bool, voter common.Address) bool {
 	// Ensure the vote is meaningful
 	if !s.checkVote(address, authorize) {
 		return false
 	}
+
+	// Check the voter is one of current validator
+	_, validator := s.ValSet.GetByAddress(voter)
+
 	// Cast the vote into an existing or new tally
-	_, validator := s.ValSet.GetByAddress(address)
 	if old, ok := s.Tally[address]; ok {
 		old.Votes += validator.VotingPower()
 		s.Tally[address] = old
@@ -188,9 +193,13 @@ func (s *Snapshot) cast(address common.Address, authorize bool) bool {
 }
 
 // uncast removes a previously cast vote from the tally.
-func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
+// address : a node's address which is a target of this vote
+// voter : Have to be one of current validators. Actually a block proposer's address is delivered
+func (s *Snapshot) uncast(address common.Address, authorize bool, voter common.Address) bool {
+	// Check the voter is one of current validator
+	_, validator := s.ValSet.GetByAddress(voter)
+
 	// If there's no tally, it's a dangling vote, just drop
-	_, validator := s.ValSet.GetByAddress(address)
 	tally, ok := s.Tally[address]
 	if !ok {
 		return false
@@ -257,7 +266,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		for i, vote := range snap.Votes {
 			if vote.Validator == validator && vote.Address == header.Coinbase {
 				// Uncast the vote from the cached tally
-				snap.uncast(vote.Address, vote.Authorize)
+				snap.uncast(vote.Address, vote.Authorize, validator)
 
 				// Uncast the vote from the chronological list
 				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
@@ -282,7 +291,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		default:
 			return nil, errInvalidVote
 		}
-		if snap.cast(header.Coinbase, authorize) {
+		if snap.cast(header.Coinbase, authorize, validator) {
 			snap.Votes = append(snap.Votes, &Vote{
 				Validator: validator,
 				Block:     number,
@@ -305,7 +314,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 				for i := 0; i < len(snap.Votes); i++ {
 					if snap.Votes[i].Validator == header.Coinbase {
 						// Uncast the vote from the cached tally
-						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
+						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize, validator)
 
 						// Uncast the vote from the chronological list
 						snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
