@@ -25,7 +25,7 @@ start() {
 
     echo -n "Starting kend: "
     
-    if [ ! -d $KLAY_HOME ] || [ ! -d $DATA_DIR ]; then
+    if [ ! -d $DATA_DIR ]; then
         echo 
         echo "  [ERROR] : kend is not initiated, Initiate kend with genesis file first."
         exit 1
@@ -33,9 +33,6 @@ start() {
 
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
-    fi
-    if [ ! -d $RUN_DIR ]; then
-        mkdir -p $RUN_DIR
     fi
 
     OPTIONS=""

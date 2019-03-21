@@ -107,9 +107,6 @@ start() {
         if [ ! -d ${LOG_DIR} ]; then
                 mkdir -p ${LOG_DIR}
         fi
-        if [ ! -d ${RUN_DIR} ]; then
-                mkdir -p ${RUN_DIR}
-        fi
 
         __pids_var_run "$prog" "$pidfile"
         [ -n "$pid" ] && echo && return
