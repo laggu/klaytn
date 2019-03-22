@@ -5536,10 +5536,6 @@ var methods = function () {
 var properties = function () {
     return [
         new Property({
-            name: 'coinbase',
-            getter: 'klay_coinbase'
-        }),
-        new Property({
             name: 'mining',
             getter: 'klay_mining'
         }),
