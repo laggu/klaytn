@@ -993,16 +993,10 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 		go p.ReadMsg(rw, messageChannel, errChannel, &wg, closed)
 	}
 
-	// main loop. handle error.
-	for {
-		select {
-		case err := <-errChannel:
-			close(closed)
-			wg.Wait()
-			return err
-		default:
-		}
-	}
+	err = <-errChannel
+	close(closed)
+	wg.Wait()
+	return err
 }
 
 type ByPassValidator struct{}
