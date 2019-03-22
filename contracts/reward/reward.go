@@ -242,13 +242,13 @@ func parseRewardRatio(ratio string) (int, int, int, error) {
 		return 0, 0, 0, errors.New("Invalid format")
 	}
 	cn, err1 := strconv.Atoi(s[0])
-	kir, err2 := strconv.Atoi(s[1])
-	poc, err3 := strconv.Atoi(s[2])
+	poc, err2 := strconv.Atoi(s[1])
+	kir, err3 := strconv.Atoi(s[2])
 
 	if err1 != nil || err2 != nil || err3 != nil {
 		return 0, 0, 0, errors.New("Parsing error")
 	}
-	return cn, kir, poc, nil
+	return cn, poc, kir, nil
 }
 
 // Cache for parsed reward parameters from governance
@@ -604,7 +604,7 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 	// (2) mintingAmount indicates whether cache entry is initialized or not
 	if blockRewardCache.blockNum != lastGovernanceRefreshedBlock || blockRewardCache.mintingAmount == nil {
 		// Cache missed or not initialized yet. Let's parse governance parameters and update cache
-		cn, kir, poc, err := parseRewardRatio(config.Governance.Reward.Ratio)
+		cn, poc, kir, err := parseRewardRatio(config.Governance.Reward.Ratio)
 		if err != nil {
 			logger.Error("Error while parsing reward ratio of governance. Using default ratio", "err", err)
 
