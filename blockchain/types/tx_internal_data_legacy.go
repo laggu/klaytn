@@ -354,8 +354,10 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB) error {
 }
 
 func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {
-	codeHash := crypto.Keccak256Hash(t.Payload)
-	r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce, codeHash)
+	if t.Recipient == nil {
+		codeHash := crypto.Keccak256Hash(t.Payload)
+		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce, codeHash)
+	}
 }
 
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
