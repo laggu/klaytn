@@ -78,6 +78,7 @@ const (
 	MintingAmount
 	Ratio
 	UseGiniCoeff
+	DeferredTxFee
 )
 
 const (

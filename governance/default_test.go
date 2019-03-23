@@ -84,6 +84,11 @@ var tstData = []voteValue{
 	{k: "ratio", v: "30/70", e: false},
 	{k: "ratio", v: "30.5/40/29.5", e: false},
 	{k: "ratio", v: "30.5/40/30.5", e: false},
+	{k: "deferredtxfee", v: true, e: true},
+	{k: "deferredtxfee", v: false, e: true},
+	{k: "deferredtxfee", v: 0, e: false},
+	{k: "deferredtxfee", v: 1, e: false},
+	{k: "deferredtxfee", v: "true", e: false},
 }
 
 var goodVotes = []voteValue{
@@ -182,8 +187,8 @@ func TestGovernance_AddVote(t *testing.T) {
 	}
 
 	// Added 9 types of various votes and at least one of those are right value
-	if len(gov.voteMap) != 9 {
-		t.Errorf("Want 9, got %v", len(gov.voteMap))
+	if len(gov.voteMap) != 10 {
+		t.Errorf("Want 10, got %v", len(gov.voteMap))
 	}
 }
 

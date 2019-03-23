@@ -76,6 +76,9 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	genesis = checkGenesisAndFillDefaultIfNeeded(genesis)
+	if err := governance.CheckGenesisValues(genesis.Config); err != nil {
+		logger.Crit("Error in genesis json values", "err", err)
+	}
 	genesis.Governance, err = governance.MakeGovernanceData(genesis.Config.Governance)
 
 	if genesis.Config.StakingUpdateInterval != 0 {

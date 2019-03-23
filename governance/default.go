@@ -42,12 +42,19 @@ var (
 		"mintingamount":  params.MintingAmount,
 		"ratio":          params.Ratio,
 		"useginicoeff":   params.UseGiniCoeff,
+		"deferredtxfee":  params.DeferredTxFee,
 	}
 
 	ProposerPolicyMap = map[string]int{
 		"roundrobin":     params.RoundRobin,
 		"sticky":         params.Sticky,
 		"weightedrandom": params.WeightedRandom,
+	}
+
+	ProposerPolicyMapReverse = map[int]string{
+		params.RoundRobin:     "roundrobin",
+		params.Sticky:         "sticky",
+		params.WeightedRandom: "weightedrandom",
 	}
 
 	GovernanceModeMap = map[string]int{
@@ -165,7 +172,7 @@ func (g *Governance) checkValueType(key string, val interface{}) (interface{}, b
 			}
 		}
 	case bool:
-		if keyIdx == params.UseGiniCoeff {
+		if keyIdx == params.UseGiniCoeff || keyIdx == params.DeferredTxFee {
 			return val, true
 		}
 	case common.Address:
@@ -213,7 +220,7 @@ func (g *Governance) CheckVoteValidity(key string, val interface{}) (interface{}
 	// Check if the val's type meets type requirements
 	var passed bool
 	if val, passed = g.checkValueType(lowerKey, val); !passed {
-		logger.Warn("New vote couldn't pass the validity check", "key", key, "val", val)
+		logger.Warn("Couldn't pass the validity check", "key", key, "val", val)
 		return val, false
 	}
 
@@ -238,7 +245,7 @@ func (g *Governance) checkValue(key string, val interface{}) (interface{}, bool)
 			return val, true
 		}
 
-	case params.Epoch, params.Sub, params.UnitPrice, params.UseGiniCoeff:
+	case params.Epoch, params.Sub, params.UnitPrice, params.UseGiniCoeff, params.DeferredTxFee:
 		// For Uint64 and bool types, no more check is needed
 		return val, true
 
@@ -270,7 +277,7 @@ func (g *Governance) checkValue(key string, val interface{}) (interface{}, bool)
 			return val, true
 		}
 	default:
-		logger.Warn("Unknown vote key was given", "key", k)
+		logger.Warn("Unknown key was given", "key", k)
 	}
 	return val, false
 }
@@ -294,7 +301,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
 			val = false
 		}
 	default:
-		logger.Warn("Unknown vote key was given", "key", k)
+		logger.Warn("Unknown key was given", "key", k)
 	}
 	gVote.Value = val
 	return gVote
@@ -349,7 +356,7 @@ func updateGovernanceConfig(vote GovernanceVote, governance *params.GovernanceCo
 		governance.Reward.UseGiniCoeff = vote.Value.(bool)
 		return true
 	default:
-		logger.Warn("Unknown vote key was given", "key", vote.Key)
+		logger.Warn("Unknown key was given", "key", vote.Key)
 	}
 	return false
 }
@@ -391,4 +398,27 @@ func GetDefaultCliqueConfig() *params.CliqueConfig {
 		Epoch:  params.DefaultEpoch,
 		Period: params.DefaultPeriod,
 	}
+}
+
+func CheckGenesisValues(c *params.ChainConfig) error {
+	gov := NewGovernance(c)
+
+	var tstMap = map[string]interface{}{
+		"epoch":          c.Istanbul.Epoch,
+		"sub":            c.Istanbul.SubGroupSize,
+		"policy":         ProposerPolicyMapReverse[int(c.Istanbul.ProposerPolicy)],
+		"governancemode": c.Governance.GovernanceMode,
+		"governingnode":  c.Governance.GoverningNode,
+		"ratio":          c.Governance.Reward.Ratio,
+		"useginicoeff":   c.Governance.Reward.UseGiniCoeff,
+		"deferredtxfee":  c.Governance.Reward.DeferredTxFee,
+		"mintingamount":  c.Governance.Reward.MintingAmount.String(),
+	}
+
+	for k, v := range tstMap {
+		if _, ok := gov.CheckVoteValidity(k, v); !ok {
+			return errors.New(k + " value is wrong")
+		}
+	}
+	return nil
 }
