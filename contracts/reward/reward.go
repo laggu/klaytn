@@ -213,27 +213,24 @@ func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big
 
 	// CN reward
 	b.AddBalance(proposer, cnReward)
-	logger.Debug("Block reward - CN reward", "reward address of proposer", proposer, "Amount", cnReward)
 
+	// Proposer gets PoC incentive and KIR incentive, if there is no PoC/KIR address.
 	// PoC
 	if isEmptyAddress(pocAddr) {
-		// Consider bootstrapping
-		b.AddBalance(proposer, pocIncentive)
-		logger.Debug("Block reward - PoC. No PoC address.", "reward address of proposer", proposer, "Amount", pocIncentive)
-	} else {
-		b.AddBalance(pocAddr, pocIncentive)
-		logger.Debug("Block reward - PoC", "PoC address", pocAddr, "Amount", pocIncentive)
+		pocAddr = proposer
 	}
+	b.AddBalance(pocAddr, pocIncentive)
 
 	// KIR
 	if isEmptyAddress(kirAddr) {
-		// Consider bootstrapping
-		b.AddBalance(proposer, kirIncentive)
-		logger.Debug("Block reward - KIR. No KIR address.", "reward address of proposer", proposer, "Amount", kirIncentive)
-	} else {
-		b.AddBalance(kirAddr, kirIncentive)
-		logger.Debug("Block reward - KIR", "KIR address", kirAddr, "Amount", kirIncentive)
+		kirAddr = proposer
 	}
+	b.AddBalance(kirAddr, kirIncentive)
+
+	logger.Debug("Block reward",
+		"Reward address of a proposer", proposer, "CN reward amount", cnReward,
+		"PoC address", pocAddr, "Poc incentive", pocIncentive,
+		"KIR address", kirAddr, "KIR incentive", kirIncentive)
 }
 
 func parseRewardRatio(ratio string) (int, int, int, error) {
