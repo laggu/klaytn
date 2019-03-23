@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/cmd/istanbul/docker/compose"
 	"github.com/ground-x/klaytn/cmd/istanbul/docker/service"
 	"github.com/ground-x/klaytn/cmd/istanbul/genesis"
+	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -165,6 +166,9 @@ func genIstanbulConfig(ctx *cli.Context) *params.IstanbulConfig {
 func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	govMode := ctx.String(govModeFlag.Name)
 	governingNode := ctx.String(governingNodeFlag.Name)
+	if !common.IsHexAddress(governingNode) {
+		utils.Fatalf("Governing Node is invalid hex address", "value", governingNode)
+	}
 	govUnitPrice := ctx.Uint64(govUnitPriceFlag.Name)
 
 	return &params.GovernanceConfig{
@@ -217,6 +221,9 @@ func gen(ctx *cli.Context) error {
 	} else {
 		config := genGovernanceConfig(ctx)
 		// Istanbul BFT
+		if len(nodeAddrs) > 0 && config.GoverningNode.String() == params.DefaultGoverningNode {
+			config.GoverningNode = nodeAddrs[0]
+		}
 		genesisJsonBytes, _ = json.MarshalIndent(genesis.New(
 			genesis.Validators(nodeAddrs...),
 			genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
