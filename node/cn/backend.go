@@ -137,7 +137,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance),
+		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, ctx.NodeType()),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
@@ -276,7 +276,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a klaytn service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype p2p.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
@@ -289,7 +289,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 			chainConfig.Governance.Istanbul = governance.GetDefaultIstanbulConfig()
 		}
 	}
-	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov)
+	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.

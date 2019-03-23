@@ -23,6 +23,7 @@ package core
 import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/node"
 )
 
 // Start implements core.Engine.Start
@@ -149,7 +150,9 @@ func (c *core) handleMsg(payload []byte) error {
 	// Decode message and check its signature
 	msg := new(message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
-		logger.Error("Failed to decode message from payload", "err", err)
+		if c.backend.NodeType() == node.CONSENSUSNODE {
+			logger.Error("Failed to decode message from payload", "err", err)
+		}
 		return err
 	}
 

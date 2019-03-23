@@ -23,6 +23,7 @@ package istanbul
 import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/networks/p2p"
 	"math/big"
 	"time"
 )
@@ -79,4 +80,6 @@ type Backend interface {
 	GetRewardBase() common.Address
 
 	GetSubGroupSize() uint64
+
+	NodeType() p2p.ConnType
 }
