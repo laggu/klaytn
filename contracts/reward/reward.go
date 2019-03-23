@@ -399,7 +399,7 @@ func GetStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
 		return nil
 	}
 
-	logger.Debug("Staking cache hit.", "Block number", blockNum, "number of staking block", number, "stakingInfo", stakingInfo)
+	logger.Debug("Staking cache hit.", "Block number", blockNum, "number of staking block", number)
 	return stakingInfo
 }
 
@@ -578,7 +578,6 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 	stakingAmounts = make([]*big.Int, len(stakingAddrs))
 	for i, stakingAddr := range stakingAddrs {
 		stakingAmounts[i] = statedb.GetBalance(stakingAddr)
-		logger.Trace("Get staking amounts", "i", i, "stakingAddr", stakingAddr.String(), "stakingAmount", stakingAmounts[i])
 	}
 
 	stakingInfo := &StakingInfo{
@@ -796,7 +795,7 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	evm := vm.NewEVM(context, statedb, chainConfig, &vm.Config{})
 
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gaspool)
-	logger.Trace("Call InitContract contract", "result", res, "used gas", gas, "kerr", kerr)
+	logger.Trace("Call InitContract contract", "used gas", gas, "kerr", kerr)
 	err = kerr.ErrTxInvalid
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("failed to call InitContract contract. root err: %s", err))

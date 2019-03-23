@@ -438,7 +438,6 @@ func (valSet *weightedCouncil) removeValidatorFromProposers(address common.Addre
 			newProposers = append(newProposers, v)
 		}
 	}
-	logger.Trace("Invalidate a validator from proposers", "num proposers(before)", len(valSet.proposers), "num proposers(after)", len(newProposers))
 
 	valSet.proposers = newProposers
 }
@@ -534,20 +533,18 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 
 	// Fetch staking information required by next blocks from blockNum which is proposer interval
 	newStakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
-	logger.Debug("refresh fetch new staking info to calculate next proposers", "blockNum(proposer interval)", blockNum, "old stakingInfo", valSet.stakingInfo, "new stakingInfo", newStakingInfo)
 	valSet.stakingInfo = newStakingInfo
 	if valSet.stakingInfo == nil {
 		// Just return without updating proposer
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
 
-	// Try to calculate proposers with staking information
-	logger.Info("refresh with staking info", "stakingInfo", valSet.stakingInfo)
-	// Update weightedValidator information with staking info
+	// Before calculate proposers with staking information,
+	// let's update weightedValidator information with staking info
 	// (1) Update rewardAddress
 	// (2) Calculate total staking amount
 	totalStaking := big.NewInt(0)
-	for valIdx, val := range valSet.validators {
+	for _, val := range valSet.validators {
 		i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
 		weightedVal, ok := val.(*weightedValidator)
 		if !ok {
@@ -559,7 +556,6 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 		} else {
 			weightedVal.rewardAddress = common.Address{}
 		}
-		logger.Trace("refresh updates rewardAddr of validator", "index", valIdx, "validator", val.(*weightedValidator), "rewardAddr", val.RewardAddress().String())
 	}
 
 	// one of exception cases (issue #1400)
@@ -567,7 +563,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 		// update weight
 		tmp := big.NewInt(0)
 		tmp100 := big.NewInt(100)
-		for valIdx, val := range valSet.validators {
+		for _, val := range valSet.validators {
 			i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
 			weightedVal, ok := val.(*weightedValidator)
 			if !ok {
@@ -581,22 +577,20 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 				// Let's give a minimum opportunity to be selected as a proposer even for validator without staking value (Issue #2060)
 				weightedVal.weight = 1
 			}
-			logger.Trace("refresh updates weight of validator", "index", valIdx, "validator", val, "weight", val.Weight())
 		}
 	} else {
-		for i, val := range valSet.validators {
+		for _, val := range valSet.validators {
 			weightedVal, ok := val.(*weightedValidator)
 			if !ok {
 				return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
 			}
 			weightedVal.weight = 0
-			logger.Trace("refresh updates weight of validator to 0 due to staking value is 0", "index", i, "validator", val, "weight", val.Weight())
 		}
 	}
 
 	valSet.refreshProposers(seed, blockNum)
 
-	logger.Info("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet", valSet, "new proposers", valSet.proposers)
+	logger.Info("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum, "new proposers", valSet.proposers)
 	return nil
 }
 
