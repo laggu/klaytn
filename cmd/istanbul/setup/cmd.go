@@ -198,6 +198,8 @@ func gen(ctx *cli.Context) error {
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	deriveShaImpl := ctx.Int(deriveShaImplFlag.Name)
+	stakingInterval := ctx.Uint64(stakingFlag.Name)
+	proposerInterval := ctx.Uint64(proposerFlag.Name)
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
@@ -210,6 +212,8 @@ func gen(ctx *cli.Context) error {
 			genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 			genesis.UnitPrice(unitPrice),
 			genesis.Clique(config),
+			genesis.StakingInterval(stakingInterval),
+			genesis.ProposerInterval(proposerInterval),
 		), "", "    ")
 
 		path := path.Join(outputPath, DirKeys)
@@ -230,6 +234,8 @@ func gen(ctx *cli.Context) error {
 			genesis.UnitPrice(unitPrice),
 			genesis.DeriveShaImpl(deriveShaImpl),
 			genesis.Governance(config),
+			genesis.StakingInterval(stakingInterval),
+			genesis.ProposerInterval(proposerInterval),
 		), "", "    ")
 	}
 

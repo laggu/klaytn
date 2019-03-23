@@ -158,6 +158,18 @@ var (
 		Value: "/var/klay/log",
 	}
 
+	stakingFlag = cli.Uint64Flag{
+		Name:  "staking-interval",
+		Usage: "staking update interval flag",
+		Value: 86400,
+	}
+
+	proposerFlag = cli.Uint64Flag{
+		Name:  "proposer-interval",
+		Usage: "proposer update interval flag",
+		Value: 3600,
+	}
+
 	// Governance flags
 	govModeFlag = cli.StringFlag{
 		Name:  "gov-mode",
