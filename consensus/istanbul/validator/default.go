@@ -278,7 +278,7 @@ func (valSet *defaultSet) IsSubSet() bool {
 func (valSet *defaultSet) GetByIndex(i uint64) istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-	if i < uint64(valSet.Size()) {
+	if i < uint64(len(valSet.validators)) {
 		return valSet.validators[i]
 	}
 	return nil
@@ -305,6 +305,12 @@ func (valSet *defaultSet) IsProposer(address common.Address) bool {
 func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64) {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
+
+	if len(valSet.validators) == 0 {
+		valSet.proposer = nil
+		return
+	}
+
 	valSet.proposer = valSet.selector(valSet, lastProposer, round)
 }
 
@@ -321,9 +327,6 @@ func emptyAddress(addr common.Address) bool {
 }
 
 func roundRobinProposer(valSet istanbul.ValidatorSet, proposer common.Address, round uint64) istanbul.Validator {
-	if valSet.Size() == 0 {
-		return nil
-	}
 	seed := uint64(0)
 	if emptyAddress(proposer) {
 		seed = round
@@ -335,9 +338,6 @@ func roundRobinProposer(valSet istanbul.ValidatorSet, proposer common.Address, r
 }
 
 func stickyProposer(valSet istanbul.ValidatorSet, proposer common.Address, round uint64) istanbul.Validator {
-	if valSet.Size() == 0 {
-		return nil
-	}
 	seed := uint64(0)
 	if emptyAddress(proposer) {
 		seed = round
