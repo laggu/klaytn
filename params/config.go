@@ -119,14 +119,14 @@ type ChainConfig struct {
 	UnitPrice              uint64            `json:"unitPrice"`
 	DeriveShaImpl          int               `json:"deriveShaImpl"`
 	Governance             *GovernanceConfig `json:"governance"`
-	StakingUpdateInterval  uint64            `json:"stakingupdateinterval"`
-	ProposerUpdateInterval uint64            `json:"proposerupdateinterval"`
+	StakingUpdateInterval  uint64            `json:"stakingUpdateInterval"`
+	ProposerUpdateInterval uint64            `json:"proposerUpdateInterval"`
 }
 
 // GovernanceConfig stores governance information for a network
 type GovernanceConfig struct {
-	GoverningNode  common.Address  `json:"governingnode"`
-	GovernanceMode string          `json:"governancemode"`
+	GoverningNode  common.Address  `json:"governingNode"`
+	GovernanceMode string          `json:"governanceMode"`
 	Reward         *RewardConfig   `json:"reward,omitempty"`
 	Istanbul       *IstanbulConfig `json:"bft,omitempty"`
 	UnitPrice      uint64          `json:"unitPrice"`
@@ -138,10 +138,10 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 
 // RewardConfig stores information about the network's token economy
 type RewardConfig struct {
-	MintingAmount *big.Int `json:"mintingamount"`
+	MintingAmount *big.Int `json:"mintingAmount"`
 	Ratio         string   `json:"ratio"`         // Define how much portion of reward be distributed to CN/PoC/KIR
-	UseGiniCoeff  bool     `json:"useginicoeff"`  // Decide if Gini Coefficient will be used or not
-	DeferredTxFee bool     `json:"deferredtxfee"` // Decide if TX fee will be handled instantly or handled later at block finalization
+	UseGiniCoeff  bool     `json:"useGiniCoeff"`  // Decide if Gini Coefficient will be used or not
+	DeferredTxFee bool     `json:"deferredTxFee"` // Decide if TX fee will be handled instantly or handled later at block finalization
 }
 
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
