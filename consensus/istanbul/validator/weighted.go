@@ -577,7 +577,8 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 				weight := int(tmp.Div(tmp.Mul(stakingAmount, tmp100), totalStaking).Int64()) // No overflow occurs here.
 				weightedVal.weight = weight
 			} else {
-				weightedVal.weight = 0
+				// Let's give a minimum opportunity to be selected as a proposer even for validator without staking value (Issue #2060)
+				weightedVal.weight = 1
 			}
 			logger.Trace("refresh updates weight of validator", "index", valIdx, "validator", val, "weight", val.Weight())
 		}
