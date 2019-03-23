@@ -110,7 +110,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "STATE",
 		Flags: []cli.Flag{
-			utils.StateDBCachingFlag,
+			utils.DisableStateDBCachingFlag,
 			utils.TrieMemoryCacheSizeFlag,
 			utils.TrieCacheGenFlag,
 			utils.TrieBlockIntervalFlag,

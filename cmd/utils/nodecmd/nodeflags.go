@@ -46,7 +46,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.SyncModeFlag,
 	utils.GCModeFlag,
 	utils.LightKDFFlag,
-	utils.StateDBCachingFlag,
+	utils.DisableStateDBCachingFlag,
 	utils.NoPartitionedDBFlag,
 	utils.LevelDBCacheSizeFlag,
 	utils.NoParallelDBWriteFlag,
