@@ -253,6 +253,8 @@ func parseRewardRatio(ratio string) (int, int, int, error) {
 
 // Cache for parsed reward parameters from governance
 type blockRewardParameters struct {
+	lock sync.Mutex
+
 	blockNum uint64
 
 	mintingAmount *big.Int
@@ -596,6 +598,9 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
 func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Header) *blockRewardParameters {
+	blockRewardCache.lock.Lock()
+	defer blockRewardCache.lock.Unlock()
+
 	blockNum := header.Number.Uint64()
 	lastGovernanceRefreshedBlock := blockNum - (blockNum % config.Istanbul.Epoch)
 
@@ -613,24 +618,33 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 			kir = params.DefaultKIRRewardRatio
 		}
 
+		// allocate new cache entry
+		newBlockRewardCache := new(blockRewardParameters)
+		newBlockRewardCache.cnRewardRatio = new(big.Int)
+		newBlockRewardCache.pocRatio = new(big.Int)
+		newBlockRewardCache.kirRatio = new(big.Int)
+		newBlockRewardCache.totalRatio = new(big.Int)
+
+		// update new cache entry
 		if config.Governance.Reward.MintingAmount == nil {
 			logger.Error("No minting amount defined in governance. Use default value.", "Default minting amount", params.DefaultMintedKLAY)
-			blockRewardCache.mintingAmount = params.DefaultMintedKLAY
+			newBlockRewardCache.mintingAmount = params.DefaultMintedKLAY
 		} else {
-			blockRewardCache.mintingAmount = config.Governance.Reward.MintingAmount
+			newBlockRewardCache.mintingAmount = config.Governance.Reward.MintingAmount
 		}
 
-		// update cache
-		blockRewardCache.blockNum = lastGovernanceRefreshedBlock
+		newBlockRewardCache.blockNum = lastGovernanceRefreshedBlock
+		newBlockRewardCache.cnRewardRatio.SetInt64(int64(cn))
+		newBlockRewardCache.pocRatio.SetInt64(int64(poc))
+		newBlockRewardCache.kirRatio.SetInt64(int64(kir))
+		newBlockRewardCache.totalRatio.Add(newBlockRewardCache.cnRewardRatio, newBlockRewardCache.pocRatio)
+		newBlockRewardCache.totalRatio.Add(newBlockRewardCache.totalRatio, newBlockRewardCache.kirRatio)
 
-		blockRewardCache.cnRewardRatio.SetInt64(int64(cn))
-		blockRewardCache.pocRatio.SetInt64(int64(poc))
-		blockRewardCache.kirRatio.SetInt64(int64(kir))
-		blockRewardCache.totalRatio.Add(blockRewardCache.cnRewardRatio, blockRewardCache.pocRatio)
-		blockRewardCache.totalRatio.Add(blockRewardCache.totalRatio, blockRewardCache.kirRatio)
+		// update cache
+		blockRewardCache = newBlockRewardCache
 
 		// TODO-Klaytn-RemoveLater Remove below trace later
-		logger.Trace("Reward parameters updated from governance", "blockNum", blockRewardCache.blockNum, "minting amount", blockRewardCache.mintingAmount, "cn ratio", blockRewardCache.cnRewardRatio, "poc ratio", blockRewardCache.pocRatio, "kir ratio", blockRewardCache.kirRatio)
+		logger.Trace("Reward parameters updated from governance", "blockNum", newBlockRewardCache.blockNum, "minting amount", newBlockRewardCache.mintingAmount, "cn ratio", newBlockRewardCache.cnRewardRatio, "poc ratio", newBlockRewardCache.pocRatio, "kir ratio", newBlockRewardCache.kirRatio)
 	}
 
 	return blockRewardCache
