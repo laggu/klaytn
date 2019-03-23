@@ -101,7 +101,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "STATE",
 		Flags: []cli.Flag{
-			utils.DisableStateDBCachingFlag,
+			utils.StateDBCachingFlag,
 			utils.TrieMemoryCacheSizeFlag,
 			utils.TrieCacheGenFlag,
 			utils.TrieBlockIntervalFlag,

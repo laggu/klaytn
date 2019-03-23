@@ -177,9 +177,9 @@ var (
 		Value: cn.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
-	DisableStateDBCachingFlag = cli.BoolFlag{
-		Name:  "statedb.disable-cache",
-		Usage: "Disables caching of state objects in stateDB",
+	StateDBCachingFlag = cli.BoolFlag{
+		Name:  "statedb.use-cache",
+		Usage: "Enables caching of state objects in stateDB",
 	}
 	NoPartitionedDBFlag = cli.BoolFlag{
 		Name:  "db.no-partitioning",
@@ -1070,7 +1070,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
-	cfg.StateDBCaching = !ctx.GlobalIsSet(DisableStateDBCachingFlag.Name)
+
+	if ctx.GlobalIsSet(StateDBCachingFlag.Name) {
+		cfg.StateDBCaching = true
+	}
 
 	// TODO-Klaytn-RemoveLater Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
 	/*
