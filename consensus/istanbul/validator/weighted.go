@@ -235,10 +235,6 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.
 }
 
 func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Address, round uint64) istanbul.Validator {
-	if valSet.Size() == 0 {
-		return nil
-	}
-
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
 		logger.Error("weightedRandomProposer() Not weightedCouncil type.")
@@ -376,7 +372,7 @@ func (valSet *weightedCouncil) IsSubSet() bool {
 func (valSet *weightedCouncil) GetByIndex(i uint64) istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-	if i < uint64(valSet.Size()) {
+	if i < uint64(len(valSet.validators)) {
 		return valSet.validators[i]
 	}
 	return nil
@@ -404,6 +400,11 @@ func (valSet *weightedCouncil) IsProposer(address common.Address) bool {
 func (valSet *weightedCouncil) CalcProposer(lastProposer common.Address, round uint64) {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
+
+	if len(valSet.validators) == 0 {
+		valSet.proposer = nil
+		return
+	}
 
 	newProposer := valSet.selector(valSet, lastProposer, round)
 
