@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/keystore"
 	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/cmd/homi/docker/compose"
 	"github.com/ground-x/klaytn/cmd/homi/docker/service"
 	"github.com/ground-x/klaytn/cmd/homi/genesis"
@@ -73,6 +74,7 @@ Args :
 `,
 		Action: gen,
 		Flags: []cli.Flag{
+			baobabFlag,
 			cliqueFlag,
 			numOfCNsFlag,
 			unitPriceFlag,
@@ -259,6 +261,42 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 	return genesisJson
 }
 
+func genBaobabLikeGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
+	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
+	genesisJson := &blockchain.Genesis{
+		Timestamp:  uint64(time.Now().Unix()),
+		GasLimit:   genesis.InitGasLimit,
+		Difficulty: big.NewInt(genesis.InitDifficulty),
+		Alloc:      make(blockchain.GenesisAlloc),
+		Config: &params.ChainConfig{
+			ChainID:       big.NewInt(2019),
+			DeriveShaImpl: 2,
+			Governance: &params.GovernanceConfig{
+				GoverningNode:  nodeAddrs[0],
+				GovernanceMode: "single",
+				Istanbul: &params.IstanbulConfig{
+					Epoch:          604800,
+					ProposerPolicy: 2,
+					SubGroupSize:   13,
+				},
+				Reward: &params.RewardConfig{
+					MintingAmount: mintingAmount,
+					Ratio:         "34/54/12",
+					UseGiniCoeff:  false,
+					DeferredTxFee: true,
+				},
+				UnitPrice: 25000000000,
+			},
+		},
+		Mixhash: types.IstanbulDigest,
+	}
+	assignExtraData := genesis.Validators(nodeAddrs...)
+	assignExtraData(genesisJson)
+	allocationFunction := genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction(genesisJson)
+	return genesisJson
+}
+
 func RandStringRunes(n int) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -277,11 +315,15 @@ func gen(ctx *cli.Context) error {
 	cliqueFlag := ctx.Bool(cliqueFlag.Name)
 	num := ctx.Int(numOfCNsFlag.Name)
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
+	baobab := ctx.Bool(baobabFlag.Name)
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var genesisJsonBytes []byte
-	if cliqueFlag {
+
+	if baobab {
+		genesisJsonBytes, _ = json.MarshalIndent(genBaobabLikeGenesis(nodeAddrs), "", "    ")
+	} else if cliqueFlag {
 		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, nodeAddrs, privKeys), "", "    ")
 	} else {
 		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, nodeAddrs), "", "    ")

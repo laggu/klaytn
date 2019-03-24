@@ -27,6 +27,11 @@ var dockerImageId string
 var outputPath string
 
 var (
+	baobabFlag = cli.BoolFlag{
+		Name:  "baobab",
+		Usage: "Generate genesis.json similar to the one used for Baobab",
+	}
+
 	cliqueFlag = cli.BoolFlag{
 		Name:  "clique",
 		Usage: "Use Clique consensus",
