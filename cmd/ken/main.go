@@ -207,6 +207,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 }
 
 func init() {
+	utils.InitHelper()
 	// Initialize the CLI app and start ken
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version

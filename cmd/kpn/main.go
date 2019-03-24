@@ -187,6 +187,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 }
 
 func init() {
+	utils.InitHelper()
 	// Initialize the CLI app and start kpn
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version

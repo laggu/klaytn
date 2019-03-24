@@ -50,7 +50,7 @@ import (
 	"strings"
 )
 
-func init() {
+func InitHelper() {
 	cli.AppHelpTemplate = AppHelpTemplate
 	cli.CommandHelpTemplate = CommandHelpTemplate
 }
