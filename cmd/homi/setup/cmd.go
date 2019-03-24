@@ -96,6 +96,7 @@ Args :
 			logDirFlag,
 			stakingFlag,
 			proposerFlag,
+			governanceFlag,
 			govModeFlag,
 			governingNodeFlag,
 			govUnitPriceFlag,
@@ -207,15 +208,21 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchai
 		config.GoverningNode = nodeAddrs[0]
 	}
 
-	return genesis.New(
+	options := []genesis.Option{
 		genesis.Validators(nodeAddrs...),
 		genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
-		genesis.UnitPrice(unitPrice),
 		genesis.DeriveShaImpl(deriveShaImpl),
-		genesis.Governance(config),
 		genesis.StakingInterval(stakingInterval),
 		genesis.ProposerInterval(proposerInterval),
-	)
+	}
+
+	if ok := ctx.Bool(governanceFlag.Name); ok {
+		options = append(options, genesis.Governance(config))
+	} else {
+		options = append(options, genesis.UnitPrice(unitPrice), genesis.Istanbul(genIstanbulConfig(ctx)))
+	}
+
+	return genesis.New(options...)
 }
 
 func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*ecdsa.PrivateKey) *blockchain.Genesis {
@@ -223,6 +230,9 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	stakingInterval := ctx.Uint64(stakingFlag.Name)
 	proposerInterval := ctx.Uint64(proposerFlag.Name)
+	if ok := ctx.Bool(governanceFlag.Name); ok {
+		utils.Fatalf("Currently, governance is not supported for clique consensus", "--governance", ok)
+	}
 
 	genesisJson := genesis.NewClique(
 		genesis.ValidatorsOfClique(nodeAddrs...),

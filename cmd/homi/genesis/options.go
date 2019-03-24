@@ -87,6 +87,12 @@ func UnitPrice(price uint64) Option {
 	}
 }
 
+func Istanbul(config *params.IstanbulConfig) Option {
+	return func(genesis *blockchain.Genesis) {
+		genesis.Config.Istanbul = config
+	}
+}
+
 func DeriveShaImpl(impl int) Option {
 	return func(genesis *blockchain.Genesis) {
 		genesis.Config.DeriveShaImpl = impl

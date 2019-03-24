@@ -171,6 +171,11 @@ var (
 	}
 
 	// Governance flags
+	governanceFlag = cli.BoolFlag{
+		Name:  "governance",
+		Usage: "governance field is added in the genesis file if this flag is set",
+	}
+
 	govModeFlag = cli.StringFlag{
 		Name:  "gov-mode",
 		Usage: "governance mode (none, single, ballot) [default: none]",
