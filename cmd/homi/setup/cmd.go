@@ -119,6 +119,7 @@ const (
 	TypeDeploy            = 3
 	DirScript             = "scripts"
 	DirKeys               = "keys"
+	DirPnKeys             = "keys_pn"
 	CNIpNetwork           = "10.11.2"
 	PNIpNetwork1          = "10.11.10"
 	PNIpNetwork2          = "10.11.11"
@@ -287,10 +288,10 @@ func gen(ctx *cli.Context) error {
 		fmt.Println("Created : ", path.Join(outputPath, "prometheus.yml"))
 		downLoadGrafanaJson()
 	case TypeLocal:
-		writeNodeFiles(true, num, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(true, num, proxyNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		downLoadGrafanaJson()
 	case TypeRemote:
-		writeNodeFiles(false, num, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(false, num, proxyNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		downLoadGrafanaJson()
 	case TypeDeploy:
 		writeCNInfoKey(num, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
@@ -372,14 +373,23 @@ func writePrometheusConfig(cnNum int, pnNum int) {
 	writeFile([]byte(pConf.String()), "monitoring", "prometheus.yml")
 }
 
-func writeNodeFiles(isWorkOnSingleHost bool, num int, nodeAddrs []common.Address, nodeKeys []string,
+func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
 	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte) {
+	writeFile(genesisJsonBytes, DirScript, "genesis.json")
+
 	validators := makeValidators(num, isWorkOnSingleHost, nodeAddrs, nodeKeys, privKeys)
 	nodeInfos := filterNodeInfo(validators)
 	staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
-	writeFile(genesisJsonBytes, DirScript, "genesis.json")
 	writeValidatorsAndNodesToFile(validators, DirKeys, nodeKeys)
 	writeFile(staticNodesJsonBytes, DirScript, "static-nodes.json")
+
+	if pnum > 0 {
+		proxys, proxyNodeKeys := makeProxys(pnum, isWorkOnSingleHost)
+		pNodeInfos := filterNodeInfo(proxys)
+		staticPNodesJsonBytes, _ := json.MarshalIndent(pNodeInfos, "", "\t")
+		writeValidatorsAndNodesToFile(proxys, DirPnKeys, proxyNodeKeys)
+		writeFile(staticPNodesJsonBytes, DirPnKeys, "static-nodes.json")
+	}
 }
 
 func filterNodeInfo(validatorInfos []*ValidatorInfo) []string {

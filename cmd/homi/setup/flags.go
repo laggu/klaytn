@@ -95,8 +95,8 @@ var (
 
 	numOfPNsFlag = cli.IntFlag{
 		Name:  "pn-num",
-		Usage: "(docker, deploy only) Number of proxy node",
-		Value: 1,
+		Usage: "Number of proxy node",
+		Value: 0,
 	}
 
 	useTxGenFlag = cli.BoolFlag{
