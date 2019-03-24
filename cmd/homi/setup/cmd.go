@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/keystore"
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/cmd/homi/docker/compose"
 	"github.com/ground-x/klaytn/cmd/homi/docker/service"
 	"github.com/ground-x/klaytn/cmd/homi/genesis"
@@ -195,6 +196,54 @@ func genCliqueConfig(ctx *cli.Context) *params.CliqueConfig {
 	}
 }
 
+func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchain.Genesis {
+	unitPrice := ctx.Uint64(unitPriceFlag.Name)
+	deriveShaImpl := ctx.Int(deriveShaImplFlag.Name)
+	stakingInterval := ctx.Uint64(stakingFlag.Name)
+	proposerInterval := ctx.Uint64(proposerFlag.Name)
+
+	config := genGovernanceConfig(ctx)
+	if len(nodeAddrs) > 0 && config.GoverningNode.String() == params.DefaultGoverningNode {
+		config.GoverningNode = nodeAddrs[0]
+	}
+
+	return genesis.New(
+		genesis.Validators(nodeAddrs...),
+		genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
+		genesis.UnitPrice(unitPrice),
+		genesis.DeriveShaImpl(deriveShaImpl),
+		genesis.Governance(config),
+		genesis.StakingInterval(stakingInterval),
+		genesis.ProposerInterval(proposerInterval),
+	)
+}
+
+func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*ecdsa.PrivateKey) *blockchain.Genesis {
+	config := genCliqueConfig(ctx)
+	unitPrice := ctx.Uint64(unitPriceFlag.Name)
+	stakingInterval := ctx.Uint64(stakingFlag.Name)
+	proposerInterval := ctx.Uint64(proposerFlag.Name)
+
+	genesisJson := genesis.NewClique(
+		genesis.ValidatorsOfClique(nodeAddrs...),
+		genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
+		genesis.UnitPrice(unitPrice),
+		genesis.Clique(config),
+		genesis.StakingInterval(stakingInterval),
+		genesis.ProposerInterval(proposerInterval),
+	)
+
+	path := path.Join(outputPath, DirKeys)
+	ks := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	for i, pk := range privKeys {
+		pwdStr := RandStringRunes(100)
+		ks.ImportECDSA(pk, pwdStr)
+		writeFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
+	}
+	return genesisJson
+}
+
 func RandStringRunes(n int) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -213,49 +262,14 @@ func gen(ctx *cli.Context) error {
 	cliqueFlag := ctx.Bool(cliqueFlag.Name)
 	num := ctx.Int(numOfCNsFlag.Name)
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
-	unitPrice := ctx.Uint64(unitPriceFlag.Name)
-	deriveShaImpl := ctx.Int(deriveShaImplFlag.Name)
-	stakingInterval := ctx.Uint64(stakingFlag.Name)
-	proposerInterval := ctx.Uint64(proposerFlag.Name)
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var genesisJsonBytes []byte
 	if cliqueFlag {
-		config := genCliqueConfig(ctx)
-		// Clique
-		genesisJsonBytes, _ = json.MarshalIndent(genesis.NewClique(
-			genesis.ValidatorsOfClique(nodeAddrs...),
-			genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
-			genesis.UnitPrice(unitPrice),
-			genesis.Clique(config),
-			genesis.StakingInterval(stakingInterval),
-			genesis.ProposerInterval(proposerInterval),
-		), "", "    ")
-
-		path := path.Join(outputPath, DirKeys)
-		ks := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
-
-		for i, pk := range privKeys {
-			pwdStr := RandStringRunes(100)
-			ks.ImportECDSA(pk, pwdStr)
-			writeFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
-		}
+		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, nodeAddrs, privKeys), "", "    ")
 	} else {
-		config := genGovernanceConfig(ctx)
-		// Istanbul BFT
-		if len(nodeAddrs) > 0 && config.GoverningNode.String() == params.DefaultGoverningNode {
-			config.GoverningNode = nodeAddrs[0]
-		}
-		genesisJsonBytes, _ = json.MarshalIndent(genesis.New(
-			genesis.Validators(nodeAddrs...),
-			genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
-			genesis.UnitPrice(unitPrice),
-			genesis.DeriveShaImpl(deriveShaImpl),
-			genesis.Governance(config),
-			genesis.StakingInterval(stakingInterval),
-			genesis.ProposerInterval(proposerInterval),
-		), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, nodeAddrs), "", "    ")
 	}
 
 	switch genType {
