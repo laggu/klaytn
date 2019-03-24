@@ -92,13 +92,13 @@ var validatorTemplate = `{{ .Name }}:
         mkdir -p /klaytn
         echo '{{ .Genesis }}' > /klaytn/genesis.json
         echo '{{ .StaticNodes }}' > /klaytn/static-nodes.json
-        klay --datadir "/klaytn" init "/klaytn/genesis.json"
+        k{{ .NodeType }} --datadir "/klaytn" init "/klaytn/genesis.json"
 
 {{- if .AddPrivKey}}
         echo '{"address":"75a59b94889a05c03c66c3c84e9d2f8308ca4abd","crypto":{"cipher":"aes-128-ctr","ciphertext":"347fef8ab9aaf9d41b6114dfc0d9fd6ecab9d660fa86f687dc7aa1e094b76184","cipherparams":{"iv":"5070268dfc64ced716cf407bee943def"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"2cf44cb912515c5de2aacf4d133fd97a56efece5a8fc691381296300b42fb6c8"},"mac":"ea20c0019321f2a91f1ca51bc99d58c8f7cf1f37cff5cc47ae17ad747c060046"},"id":"a122a8da-a787-4d3d-a627-02034553e674","version":1}' > /klaytn/keystore/mykey
         echo "SuperSecret1231" > /klaytn/password.txt
 {{- end}}
-        klay \
+        k{{ .NodeType }} \
         --identity "{{ .Name }}" \
         --rpc \
         --rpcaddr "0.0.0.0" \
