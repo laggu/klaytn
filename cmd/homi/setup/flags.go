@@ -194,10 +194,10 @@ var (
 		Value: params.DefaultUnitPrice,
 	}
 
-	rewardMintAmountFlag = cli.Int64Flag{
+	rewardMintAmountFlag = cli.StringFlag{
 		Name:  "reward-mint-amount",
-		Usage: "governance minting amount [default: 0]",
-		Value: params.DefaultMintingAmount,
+		Usage: "governance minting amount",
+		Value: "9600000000000000000",
 	}
 
 	rewardRatioFlag = cli.StringFlag{

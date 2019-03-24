@@ -145,13 +145,17 @@ var GrafanaFiles = [...]GrafanaFile{
 var lastIssuedPortNum = DefaultTcpPort
 
 func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
-	mintingAmount := ctx.Int64(rewardMintAmountFlag.Name)
+	mintingAmount := new(big.Int)
+	mintingAmountString := ctx.String(rewardMintAmountFlag.Name)
+	if _, ok := mintingAmount.SetString(mintingAmountString, 10); !ok {
+		utils.Fatalf("Minting amount must be a number", "value", mintingAmountString)
+	}
 	ratio := ctx.String(rewardRatioFlag.Name)
 	giniCoeff := ctx.Bool(rewardGiniCoeffFlag.Name)
 	deferredTxFee := ctx.Bool(rewardDeferredTxFeeFlag.Name)
 
 	return &params.RewardConfig{
-		MintingAmount: big.NewInt(mintingAmount),
+		MintingAmount: mintingAmount,
 		Ratio:         ratio,
 		UseGiniCoeff:  giniCoeff,
 		DeferredTxFee: deferredTxFee,
