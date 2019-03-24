@@ -93,6 +93,8 @@ Args :
 			p2pPortFlag,
 			dataDirFlag,
 			logDirFlag,
+			stakingFlag,
+			proposerFlag,
 			govModeFlag,
 			governingNodeFlag,
 			govUnitPriceFlag,
