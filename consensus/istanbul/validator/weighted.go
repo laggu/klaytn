@@ -572,6 +572,10 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 			if i != -1 {
 				stakingAmount := valSet.stakingInfo.CouncilStakingAmounts[i]
 				weight := int(tmp.Div(tmp.Mul(stakingAmount, tmp100), totalStaking).Int64()) // No overflow occurs here.
+				if weight <= 0 {
+					// A validator, who holds small stake, has minimum weight, 1.
+					weight = 1
+				}
 				weightedVal.weight = weight
 			} else {
 				// Let's give a minimum opportunity to be selected as a proposer even for validator without staking value (Issue #2060)
