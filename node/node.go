@@ -48,7 +48,7 @@ var logger = log.NewModuleLogger(log.Node)
 
 //TODO-Klaytn-Node remove after the real bootnode is implemented
 const (
-	SBN_ADDR = "http://sbn-baobab.klaytn.net"
+	SBN_ADDR = "http://sbn.baobab.klaytn.net"
 	SBN_PORT = 32423
 )
 
