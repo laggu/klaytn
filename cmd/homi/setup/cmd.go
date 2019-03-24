@@ -123,6 +123,7 @@ const (
 	TypeDeploy            = 3
 	DirScript             = "scripts"
 	DirKeys               = "keys"
+	DirPnScript           = "scripts_pn"
 	DirPnKeys             = "keys_pn"
 	CNIpNetwork           = "10.11.2"
 	PNIpNetwork1          = "10.11.10"
@@ -418,7 +419,7 @@ func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []comm
 		pNodeInfos := filterNodeInfo(proxys)
 		staticPNodesJsonBytes, _ := json.MarshalIndent(pNodeInfos, "", "\t")
 		writeValidatorsAndNodesToFile(proxys, DirPnKeys, proxyNodeKeys)
-		writeFile(staticPNodesJsonBytes, DirPnKeys, "static-nodes.json")
+		writeFile(staticPNodesJsonBytes, DirPnScript, "static-nodes.json")
 	}
 }
 
