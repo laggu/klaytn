@@ -36,6 +36,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type weightedValidator struct {
@@ -88,7 +89,7 @@ type weightedCouncil struct {
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
 
-	proposer    istanbul.Validator
+	proposer    atomic.Value // istanbul.Validator
 	validatorMu sync.RWMutex
 	selector    istanbul.ProposalSelector
 
@@ -189,7 +190,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 
 	// init proposer
 	if valSet.Size() > 0 {
-		valSet.proposer = valSet.GetByIndex(0)
+		valSet.proposer.Store(valSet.GetByIndex(0))
 	}
 	valSet.selector = weightedRandomProposer
 
@@ -395,7 +396,7 @@ func (valSet *weightedCouncil) GetByAddress(addr common.Address) (int, istanbul.
 
 func (valSet *weightedCouncil) GetProposer() istanbul.Validator {
 	//logger.Trace("GetProposer()", "proposer", valSet.proposer)
-	return valSet.proposer
+	return valSet.proposer.Load().(istanbul.Validator)
 }
 
 func (valSet *weightedCouncil) IsProposer(address common.Address) bool {
@@ -435,7 +436,7 @@ func (valSet *weightedCouncil) CalcProposer(lastProposer common.Address, round u
 	}
 
 	logger.Debug("Update a proposer", "old", valSet.proposer, "new", newProposer, "last proposer", lastProposer.String(), "round", round, "blockNum of council", valSet.blockNum, "blockNum of proposers", valSet.proposersBlockNum)
-	valSet.proposer = newProposer
+	valSet.proposer.Store(newProposer)
 }
 
 func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
