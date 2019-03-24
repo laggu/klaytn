@@ -58,6 +58,14 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 	return header.Number
 }
 
+// ChainID returns the chain ID of the chain from genesis file.
+func (s *PublicBlockChainAPI) ChainID() *big.Int {
+	if s.b.ChainConfig() != nil {
+		return s.b.ChainConfig().ChainID
+	}
+	return nil
+}
+
 // GetBlockReceipts returns all the transaction receipts for the given block hash.
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
 	receipts := s.b.GetBlockReceipts(ctx, blockHash)

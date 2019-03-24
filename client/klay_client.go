@@ -575,6 +575,13 @@ func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	return (*big.Int)(&result), err
 }
 
+// ChainID can return the chain ID of the chain.
+func (ec *Client) ChainID(ctx context.Context) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "klay_chainID")
+	return (*big.Int)(&result), err
+}
+
 // AddPeer can add a static peer on klay node.
 func (ec *Client) AddPeer(ctx context.Context, url string) (bool, error) {
 	var result bool
