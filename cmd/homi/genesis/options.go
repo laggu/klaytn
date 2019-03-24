@@ -18,7 +18,7 @@
 package genesis
 
 import (
-	"github.com/ground-x/klaytn/cmd/istanbul/extra"
+	"github.com/ground-x/klaytn/cmd/homi/extra"
 	"github.com/ground-x/klaytn/consensus/clique"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"

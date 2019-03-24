@@ -19,8 +19,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/ground-x/klaytn/cmd/istanbul/extra"
-	"github.com/ground-x/klaytn/cmd/istanbul/setup"
+	"github.com/ground-x/klaytn/cmd/homi/extra"
+	"github.com/ground-x/klaytn/cmd/homi/setup"
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"path/filepath"

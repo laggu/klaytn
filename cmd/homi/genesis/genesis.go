@@ -26,7 +26,7 @@ import (
 
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
-	istcommon "github.com/ground-x/klaytn/cmd/istanbul/common"
+	istcommon "github.com/ground-x/klaytn/cmd/homi/common"
 	"github.com/ground-x/klaytn/params"
 )
 

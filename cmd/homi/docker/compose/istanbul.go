@@ -20,12 +20,12 @@ package compose
 import (
 	"bytes"
 	"fmt"
-	"github.com/ground-x/klaytn/cmd/istanbul/docker/service"
+	"github.com/ground-x/klaytn/cmd/homi/docker/service"
 	"strings"
 	"text/template"
 )
 
-type Istanbul struct {
+type Homi struct {
 	IPPrefix          string
 	EthStats          *service.EthStats
 	Services          []*service.Validator
@@ -40,8 +40,8 @@ type Istanbul struct {
 
 func New(ipPrefix string, number int, secret string, nodeKeys []string,
 	genesis string, staticNodes string, dockerImageId string, useFastHttp bool, networkId int, useGrafana bool,
-	proxyNodeKeys []string, useTxGen bool, txGenOpt service.TxGenOption) *Istanbul {
-	ist := &Istanbul{
+	proxyNodeKeys []string, useTxGen bool, txGenOpt service.TxGenOption) *Homi {
+	ist := &Homi{
 		IPPrefix:   ipPrefix,
 		EthStats:   service.NewEthStats(fmt.Sprintf("%v.9", ipPrefix), secret),
 		UseGrafana: useGrafana,
@@ -51,7 +51,7 @@ func New(ipPrefix string, number int, secret string, nodeKeys []string,
 	return ist
 }
 
-func (ist *Istanbul) init(number int, nodeKeys []string, genesis string, staticNodes string, dockerImageId string,
+func (ist *Homi) init(number int, nodeKeys []string, genesis string, staticNodes string, dockerImageId string,
 	useFastHttp bool, networkId int, proxyNodeKeys []string, txGenOpt service.TxGenOption) {
 	var validatorNames []string
 	for i := 0; i < number; i++ {
@@ -121,7 +121,7 @@ func (ist *Istanbul) init(number int, nodeKeys []string, genesis string, staticN
 		txGenOpt)
 }
 
-func (ist Istanbul) String() string {
+func (ist Homi) String() string {
 	tmpl, err := template.New("istanbul").Parse(istanbulTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template, %v", err)

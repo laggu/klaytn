@@ -52,8 +52,8 @@ var (
 
 	outputPathFlag = cli.StringFlag{
 		Name:        "output, o",
-		Usage:       "istanbul's result saved at this output folder",
-		Value:       "istanbul-output",
+		Usage:       "homi's result saved at this output folder",
+		Value:       "homi-output",
 		Destination: &outputPath,
 	}
 

@@ -21,9 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/keystore"
-	"github.com/ground-x/klaytn/cmd/istanbul/docker/compose"
-	"github.com/ground-x/klaytn/cmd/istanbul/docker/service"
-	"github.com/ground-x/klaytn/cmd/istanbul/genesis"
+	"github.com/ground-x/klaytn/cmd/homi/docker/compose"
+	"github.com/ground-x/klaytn/cmd/homi/docker/service"
+	"github.com/ground-x/klaytn/cmd/homi/genesis"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
@@ -37,7 +37,7 @@ import (
 	"strings"
 
 	"crypto/ecdsa"
-	istcommon "github.com/ground-x/klaytn/cmd/istanbul/common"
+	istcommon "github.com/ground-x/klaytn/cmd/homi/common"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 )

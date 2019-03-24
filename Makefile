@@ -46,10 +46,10 @@ kgen:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kgen\" to launch kgen."
 
-istanbul:
-	build/env.sh go run build/ci.go install ./cmd/istanbul
+homi:
+	build/env.sh go run build/ci.go install ./cmd/homi
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/istanbul\" to launch istanbul."
+	@echo "Run \"$(GOBIN)/homi\" to launch homi."
 
 abigen:
 	build/env.sh go run build/ci.go install ./cmd/abigen
