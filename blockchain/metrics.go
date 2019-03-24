@@ -31,6 +31,9 @@ var (
 	cacheGetBadBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/badblock/miss", nil)
 	cacheGetBadBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/badblock/hit", nil)
 
+	cacheGetStateDBMissMeter = metrics.NewRegisteredMeter("klay/cache/get/statedb/miss", nil)
+	cacheGetStateDBHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/statedb/hit", nil)
+
 	headBlockNumberGauge = metrics.NewRegisteredGauge("blockchain/head/blocknumber", nil)
 	blockTxCountsMeter   = metrics.NewRegisteredMeter("blockchain/block/tx/rate", nil)
 	blockTxCountsCounter = metrics.NewRegisteredCounter("blockchain/block/tx/counter", nil)

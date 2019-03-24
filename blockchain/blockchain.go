@@ -420,6 +420,7 @@ func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB,
 				"lastUpdatedRootHash", bc.lastUpdatedRootHash.String())
 			bc.lastUpdatedRootHash = common.Hash{}
 		}
+		cacheGetStateDBMissMeter.Mark(1)
 		return bc.StateAtWithCache(rootHash)
 	}
 
@@ -428,10 +429,10 @@ func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB,
 	if rootHash != bc.lastUpdatedRootHash {
 		logger.Trace("Given rootHash is different from lastUpdatedRootHash",
 			"givenRootHash", rootHash, "lastUpdatedRootHash", bc.lastUpdatedRootHash)
-
+		cacheGetStateDBMissMeter.Mark(1)
 		return bc.StateAt(rootHash)
 	}
-
+	cacheGetStateDBHitMeter.Mark(1)
 	return bc.StateAtWithCache(rootHash)
 }
 
