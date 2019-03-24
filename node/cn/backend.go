@@ -358,6 +358,29 @@ func (s *CN) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
+func (s *CN) Coinbase() (eb common.Address, err error) {
+	s.lock.RLock()
+	coinbase := s.coinbase
+	s.lock.RUnlock()
+
+	if coinbase != (common.Address{}) {
+		return coinbase, nil
+	}
+	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
+		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
+			coinbase := accounts[0].Address
+
+			s.lock.Lock()
+			s.coinbase = coinbase
+			s.lock.Unlock()
+
+			logger.Info("Coinbase automatically configured", "address", coinbase)
+			return coinbase, nil
+		}
+	}
+	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
+}
+
 func (s *CN) Rewardbase() (eb common.Address, err error) {
 	s.lock.RLock()
 	rewardbase := s.rewardbase
@@ -424,6 +447,14 @@ func (s *CN) SetRewardbase(rewardbase common.Address) {
 }
 
 func (s *CN) StartMining(local bool) error {
+	eb, err := s.Coinbase()
+	if eb == (common.Address{}) {
+		// TODO-Klaytn This zero address is only for the test code that uses gxhash.
+		//             Remove this when cleaning up the gxhash code and its test code.
+		eb = common.HexToAddress("0x0000000000000000000000000000000000000000")
+	} else if err != nil {
+		return fmt.Errorf("error on getting coinbase: %v", err)
+	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
@@ -431,7 +462,7 @@ func (s *CN) StartMining(local bool) error {
 		// will ensure that private networks work in single miner mode too.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 	}
-	go s.miner.Start(common.StringToAddress("0x0000000000000000000000000000000000000000"))
+	go s.miner.Start(eb)
 	return nil
 }
 
