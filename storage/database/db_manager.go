@@ -157,8 +157,8 @@ type DBManager interface {
 	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
 
 	// snapshot in clique(ConsensusClique) consensus
-	WriteCliqueSnapshot(key []byte, value []byte) error
-	ReadCliqueSnapshot(key []byte) ([]byte, error)
+	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error
+	ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
 }
 
 type DBEntryType uint8
@@ -169,8 +169,6 @@ const (
 	tdDB
 	ReceiptsDB
 
-	istanbulSnapshotDB
-
 	StateTrieDB
 	TxLookUpEntryDB
 
@@ -180,7 +178,7 @@ const (
 
 	bridgeServiceDB
 
-	CliqueSnapshotDB
+	snapshotDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -190,14 +188,13 @@ var dbDirs = [databaseEntryTypeSize]string{
 	"body",
 	"td",
 	"receipts",
-	"istanbul",
 	"statetrie",
 	"txlookup",
 	"misc",
 	// indexSectionsDB is not a DB, it is a table.
 	"",
 	"bridgeservice",
-	"cliquesnapshot",
+	"snapshot",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -207,14 +204,13 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	21, // BodyDB
 	1,  // tdDB
 	21, // ReceiptsDB
-	1,  // istanbulSnapshotDB
 	21, // StateTrieDB
 	21, // TXLookUpEntryDB
 	2,  // MiscDB
 	// indexSectionsDB is not a DB, it is a table.
 	0, // indexSectionsDB
-	4, // bridgeServiceDB
-	2, // CliqueSnapshot
+	5, // bridgeServiceDB
+	2, // snapshotDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -1021,13 +1017,13 @@ func (dbm *databaseManager) FindCommonAncestor(a, b *types.Header) *types.Header
 
 // Istanbul Snapshot operations.
 func (dbm *databaseManager) ReadIstanbulSnapshot(hash common.Hash) ([]byte, error) {
-	db := dbm.getDatabase(istanbulSnapshotDB)
-	return db.Get(istanbulSnapshotKey(hash))
+	db := dbm.getDatabase(snapshotDB)
+	return db.Get(snapshotKey(hash))
 }
 
 func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) error {
-	db := dbm.getDatabase(istanbulSnapshotDB)
-	return db.Put(istanbulSnapshotKey(hash), blob)
+	db := dbm.getDatabase(snapshotDB)
+	return db.Put(snapshotKey(hash), blob)
 }
 
 // Merkle Proof operation.
@@ -1405,25 +1401,12 @@ func (dbm *databaseManager) ReadTxReceiptInCache(txHash common.Hash) *types.Rece
 	return dbm.cm.readTxReceiptInCache(txHash)
 }
 
-// bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
-var bloomBitsPrefix = []byte("B")
-
-// bloomBitsKey = bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash
-func BloomBitsKey(bit uint, section uint64, hash common.Hash) []byte {
-	key := append(append(bloomBitsPrefix, make([]byte, 10)...), hash.Bytes()...)
-
-	binary.BigEndian.PutUint16(key[1:], uint16(bit))
-	binary.BigEndian.PutUint64(key[3:], section)
-
-	return key
+func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error {
+	db := dbm.getDatabase(snapshotDB)
+	return db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot)
 }
 
-func (dbm *databaseManager) WriteCliqueSnapshot(key []byte, value []byte) error {
-	db := dbm.getDatabase(CliqueSnapshotDB)
-	return db.Put(append([]byte("clique-"), key...), value)
-}
-
-func (dbm *databaseManager) ReadCliqueSnapshot(key []byte) ([]byte, error) {
-	db := dbm.getDatabase(CliqueSnapshotDB)
-	return db.Get(append([]byte("clique-"), key...))
+func (dbm *databaseManager) ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error) {
+	db := dbm.getDatabase(snapshotDB)
+	return db.Get(snapshotKey(snapshotBlockHash))
 }

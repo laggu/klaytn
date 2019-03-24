@@ -87,7 +87,7 @@ func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uin
 
 // loadSnapshot loads an existing snapshot from the database.
 func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db database.DBManager, hash common.Hash) (*Snapshot, error) {
-	blob, err := db.ReadCliqueSnapshot(hash[:])
+	blob, err := db.ReadCliqueSnapshot(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (s *Snapshot) store(db database.DBManager) error {
 	if err != nil {
 		return err
 	}
-	return db.WriteCliqueSnapshot(s.Hash[:], blob)
+	return db.WriteCliqueSnapshot(s.Hash, blob)
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.

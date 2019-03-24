@@ -47,7 +47,7 @@ var (
 
 	sectionHeadKeyPrefix = []byte("shead")
 
-	istanbulSnapshotKeyPrefix = []byte("istanbul-snapshot")
+	snapshotKeyPrefix = []byte("snapshot")
 
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`, used for indexes).
 	headerPrefix       = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
@@ -73,6 +73,9 @@ var (
 	lastServiceChainTxReceiptKey    = []byte("LastServiceChainTxReceipt")
 	lastIndexedBlockKey             = []byte("LastIndexedBlockKey")
 	receiptFromParentChainKeyPrefix = []byte("receiptFromParentChain")
+
+	// bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
+	bloomBitsPrefix = []byte("B")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
@@ -139,8 +142,8 @@ func sectionHeadKey(encodedSection []byte) []byte {
 	return append(sectionHeadKeyPrefix, encodedSection...)
 }
 
-func istanbulSnapshotKey(hash common.Hash) []byte {
-	return append(istanbulSnapshotKeyPrefix, hash[:]...)
+func snapshotKey(hash common.Hash) []byte {
+	return append(snapshotKeyPrefix, hash[:]...)
 }
 
 func childChainTxHashKey(ccBlockHash common.Hash) []byte {
@@ -149,4 +152,14 @@ func childChainTxHashKey(ccBlockHash common.Hash) []byte {
 
 func receiptFromParentChainKey(blockHash common.Hash) []byte {
 	return append(receiptFromParentChainKeyPrefix, blockHash.Bytes()...)
+}
+
+// bloomBitsKey = bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash
+func BloomBitsKey(bit uint, section uint64, hash common.Hash) []byte {
+	key := append(append(bloomBitsPrefix, make([]byte, 10)...), hash.Bytes()...)
+
+	binary.BigEndian.PutUint16(key[1:], uint16(bit))
+	binary.BigEndian.PutUint64(key[3:], section)
+
+	return key
 }
