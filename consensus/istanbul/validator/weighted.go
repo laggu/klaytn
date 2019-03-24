@@ -378,13 +378,19 @@ func (valSet *weightedCouncil) GetByIndex(i uint64) istanbul.Validator {
 	return nil
 }
 
-func (valSet *weightedCouncil) GetByAddress(addr common.Address) (int, istanbul.Validator) {
-	for i, val := range valSet.List() {
+func (valSet *weightedCouncil) getByAddress(addr common.Address) (int, istanbul.Validator) {
+	for i, val := range valSet.validators {
 		if addr == val.Address() {
 			return i, val
 		}
 	}
 	return -1, nil
+}
+
+func (valSet *weightedCouncil) GetByAddress(addr common.Address) (int, istanbul.Validator) {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+	return valSet.getByAddress(addr)
 }
 
 func (valSet *weightedCouncil) GetProposer() istanbul.Validator {
@@ -397,16 +403,36 @@ func (valSet *weightedCouncil) IsProposer(address common.Address) bool {
 	return reflect.DeepEqual(valSet.GetProposer(), val)
 }
 
+func (valSet *weightedCouncil) chooseProposerByRoundRobin(lastProposer common.Address, round uint64) istanbul.Validator {
+	seed := uint64(0)
+	if emptyAddress(lastProposer) {
+		seed = round
+	} else {
+		offset := 0
+		if idx, val := valSet.getByAddress(lastProposer); val != nil {
+			offset = idx
+		}
+		seed = uint64(offset) + round
+	}
+	pick := seed % uint64(len(valSet.validators))
+	return valSet.validators[pick]
+}
+
 func (valSet *weightedCouncil) CalcProposer(lastProposer common.Address, round uint64) {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	if len(valSet.validators) == 0 {
-		valSet.proposer = nil
-		return
-	}
-
 	newProposer := valSet.selector(valSet, lastProposer, round)
+	if newProposer == nil {
+		if len(valSet.validators) == 0 {
+			// TODO-Klaytn We must make a policy about the mininum number of validators, which can prevent this case.
+			logger.Error("NO VALIDATOR! Use lastProposer as a workaround")
+			newProposer = newWeightedValidator(lastProposer, common.Address{}, 0, 0)
+		} else {
+			logger.Warn("Failed to select a new proposer, thus fall back to roundRobinProposer")
+			newProposer = valSet.chooseProposerByRoundRobin(lastProposer, round)
+		}
+	}
 
 	logger.Debug("Update a proposer", "old", valSet.proposer, "new", newProposer, "last proposer", lastProposer.String(), "round", round, "blockNum of council", valSet.blockNum, "blockNum of proposers", valSet.proposersBlockNum)
 	valSet.proposer = newProposer
