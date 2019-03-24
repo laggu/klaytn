@@ -29,12 +29,14 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"crypto/ecdsa"
 	istcommon "github.com/ground-x/klaytn/cmd/homi/common"
@@ -190,6 +192,18 @@ func genCliqueConfig(ctx *cli.Context) *params.CliqueConfig {
 	}
 }
 
+func RandStringRunes(n int) string {
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
+
+	rand.Seed(time.Now().UnixNano())
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
 func gen(ctx *cli.Context) error {
 	genType := findGenType(ctx)
 
@@ -219,8 +233,10 @@ func gen(ctx *cli.Context) error {
 		path := path.Join(outputPath, DirKeys)
 		ks := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
 
-		for _, pk := range privKeys {
-			ks.ImportECDSA(pk, "")
+		for i, pk := range privKeys {
+			pwdStr := RandStringRunes(100)
+			ks.ImportECDSA(pk, pwdStr)
+			writeFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
 		}
 	} else {
 		config := genGovernanceConfig(ctx)
