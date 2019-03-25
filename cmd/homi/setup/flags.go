@@ -27,6 +27,11 @@ var dockerImageId string
 var outputPath string
 
 var (
+	baobabTestFlag = cli.BoolFlag{
+		Name:  "baobab-test",
+		Usage: "Generate genesis.json similar to the one used for Baobab with shorter intervals for testing",
+	}
+
 	baobabFlag = cli.BoolFlag{
 		Name:  "baobab",
 		Usage: "Generate genesis.json similar to the one used for Baobab",

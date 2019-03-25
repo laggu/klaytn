@@ -74,6 +74,7 @@ Args :
 `,
 		Action: gen,
 		Flags: []cli.Flag{
+			baobabTestFlag,
 			baobabFlag,
 			cliqueFlag,
 			numOfCNsFlag,
@@ -261,7 +262,7 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 	return genesisJson
 }
 
-func genBaobabLikeGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
+func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -287,6 +288,8 @@ func genBaobabLikeGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 				},
 				UnitPrice: 25000000000,
 			},
+			StakingUpdateInterval:  86400,
+			ProposerUpdateInterval: 3600,
 		},
 		Mixhash: types.IstanbulDigest,
 	}
@@ -295,6 +298,14 @@ func genBaobabLikeGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	allocationFunction := genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
+}
+
+func genBaobabTestGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
+	testGenesis := genBaobabGenesis(nodeAddrs)
+	testGenesis.Config.Governance.Istanbul.Epoch = 30
+	testGenesis.Config.StakingUpdateInterval = 60
+	testGenesis.Config.ProposerUpdateInterval = 30
+	return testGenesis
 }
 
 func RandStringRunes(n int) string {
@@ -316,13 +327,16 @@ func gen(ctx *cli.Context) error {
 	num := ctx.Int(numOfCNsFlag.Name)
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
 	baobab := ctx.Bool(baobabFlag.Name)
+	baobabTest := ctx.Bool(baobabTestFlag.Name)
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var genesisJsonBytes []byte
 
-	if baobab {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabLikeGenesis(nodeAddrs), "", "    ")
+	if baobabTest {
+		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(nodeAddrs), "", "    ")
+	} else if baobab {
+		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(nodeAddrs), "", "    ")
 	} else if cliqueFlag {
 		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, nodeAddrs, privKeys), "", "    ")
 	} else {
