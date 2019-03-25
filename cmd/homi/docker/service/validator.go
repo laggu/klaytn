@@ -26,6 +26,7 @@ import (
 type Validator struct {
 	Identity       int
 	Genesis        string
+	Address        string
 	NodeKey        string
 	StaticNodes    string
 	Port           int
@@ -41,12 +42,13 @@ type Validator struct {
 	AddPrivKey     bool
 }
 
-func NewValidator(identity int, genesis string, nodeKey string, staticNodes string, port int, rpcPort int,
+func NewValidator(identity int, genesis string, nodeAddress string, nodeKey string, staticNodes string, port int, rpcPort int,
 	prometheusPort int, ethStats string, ip string, dockerImageId string, useFastHttp bool, networkId int,
 	namePrefix string, nodeType string, addPrivKey bool) *Validator {
 	return &Validator{
 		Identity:       identity,
 		Genesis:        genesis,
+		Address:        nodeAddress,
 		NodeKey:        nodeKey,
 		Port:           port,
 		RPCPort:        rpcPort,
@@ -123,10 +125,13 @@ var validatorTemplate = `{{ .Name }}:
 {{- if .UseFastHttp}}
         --srvtype fasthttp \
 {{- end}}
-        --gasprice 0 \
-        --nodetype "{{ .NodeType }}" \
-{{- if eq .NodeType "gn" }}
+{{- if eq .NodeType "cn" }}
+        --rewardbase {{ .Address }}
+{{- end}}
+{{- if eq .NodeType "pn" }}
         --txpool.nolocals
+{{- end}}
+{{- if eq .NodeType "en" }}
 {{- end}}
 
     networks:

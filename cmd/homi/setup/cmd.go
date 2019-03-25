@@ -349,10 +349,12 @@ func gen(ctx *cli.Context) error {
 		_, proxyNodeKeys := makeProxys(proxyNum, false)
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
+		address := filterAddresses(validators)
 		compose := compose.New(
 			"172.16.239",
 			num,
 			"bb98a0b6442386d0cdf8a31b267892c1",
+			address,
 			nodeKeys,
 			removeSpacesAndLines(genesisJsonBytes),
 			removeSpacesAndLines(staticNodesJsonBytes),
@@ -477,6 +479,14 @@ func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []comm
 		writeValidatorsAndNodesToFile(proxys, DirPnKeys, proxyNodeKeys)
 		writeFile(staticPNodesJsonBytes, DirPnScript, "static-nodes.json")
 	}
+}
+
+func filterAddresses(validatorInfos []*ValidatorInfo) []string {
+	var address []string
+	for _, v := range validatorInfos {
+		address = append(address, v.Address.String())
+	}
+	return address
 }
 
 func filterNodeInfo(validatorInfos []*ValidatorInfo) []string {

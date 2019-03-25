@@ -38,7 +38,7 @@ type Homi struct {
 	TxGenOpt          service.TxGenOption
 }
 
-func New(ipPrefix string, number int, secret string, nodeKeys []string,
+func New(ipPrefix string, number int, secret string, addresses []string, nodeKeys []string,
 	genesis string, staticNodes string, dockerImageId string, useFastHttp bool, networkId int, useGrafana bool,
 	proxyNodeKeys []string, useTxGen bool, txGenOpt service.TxGenOption) *Homi {
 	ist := &Homi{
@@ -47,16 +47,17 @@ func New(ipPrefix string, number int, secret string, nodeKeys []string,
 		UseGrafana: useGrafana,
 		UseTxGen:   useTxGen,
 	}
-	ist.init(number, nodeKeys, genesis, staticNodes, dockerImageId, useFastHttp, networkId, proxyNodeKeys, txGenOpt)
+	ist.init(number, addresses, nodeKeys, genesis, staticNodes, dockerImageId, useFastHttp, networkId, proxyNodeKeys, txGenOpt)
 	return ist
 }
 
-func (ist *Homi) init(number int, nodeKeys []string, genesis string, staticNodes string, dockerImageId string,
+func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis string, staticNodes string, dockerImageId string,
 	useFastHttp bool, networkId int, proxyNodeKeys []string, txGenOpt service.TxGenOption) {
 	var validatorNames []string
 	for i := 0; i < number; i++ {
 		s := service.NewValidator(i,
 			genesis,
+			addresses[i],
 			nodeKeys[i],
 			"",
 			32323+i,
@@ -81,6 +82,7 @@ func (ist *Homi) init(number int, nodeKeys []string, genesis string, staticNodes
 	for i := 0; i < len(proxyNodeKeys); i++ {
 		s := service.NewValidator(i,
 			genesis,
+			"",
 			proxyNodeKeys[i],
 			"",
 			32323+number+i,
