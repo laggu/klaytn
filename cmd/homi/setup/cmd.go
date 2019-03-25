@@ -119,6 +119,10 @@ Args :
 )
 
 const (
+	baobabOperatorAddress = "0x79deccfacd0599d3166eb76972be7bb20f51b46f"
+	baobabOperatorKey     = "199fd187fdb2ce5f577797e1abaf4dd50e62275949c021f0112be40c9721e1a2"
+)
+const (
 	DefaultTcpPort uint16 = 32323
 	TypeNotDefined        = -1
 	TypeDocker            = 0
@@ -263,7 +267,7 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 	return genesisJson
 }
 
-func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
+func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -277,7 +281,6 @@ func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 				GoverningNode:  nodeAddrs[0],
 				GovernanceMode: "single",
 				Istanbul: &params.IstanbulConfig{
-					Epoch:          604800,
 					ProposerPolicy: 2,
 					SubGroupSize:   13,
 				},
@@ -289,23 +292,34 @@ func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 				},
 				UnitPrice: 25000000000,
 			},
-			StakingUpdateInterval:  86400,
-			ProposerUpdateInterval: 3600,
 		},
 		Mixhash: types.IstanbulDigest,
 	}
 	assignExtraData := genesis.Validators(nodeAddrs...)
 	assignExtraData(genesisJson)
-	allocationFunction := genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+
+	return genesisJson
+}
+
+func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genBaobabCommonGenesis(nodeAddrs)
+	genesisJson.Config.Governance.Istanbul.Epoch = 604800
+	genesisJson.Config.StakingUpdateInterval = 86400
+	genesisJson.Config.ProposerUpdateInterval = 3600
+	allocationFunction := genesis.AllocWithBaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
 
 func genBaobabTestGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
-	testGenesis := genBaobabGenesis(nodeAddrs)
+	testGenesis := genBaobabCommonGenesis(nodeAddrs)
 	testGenesis.Config.Governance.Istanbul.Epoch = 30
 	testGenesis.Config.StakingUpdateInterval = 60
 	testGenesis.Config.ProposerUpdateInterval = 30
+	allocationFunction := genesis.AllocWithPrebaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction(testGenesis)
+	writeFile([]byte(baobabOperatorAddress), "baobab_operator", "address")
+	writeFile([]byte(baobabOperatorKey), "baobab_operator", "private")
 	return testGenesis
 }
 
