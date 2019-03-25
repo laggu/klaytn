@@ -382,18 +382,21 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 }
 
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
-	latestAnchoredBlockNumber := sbh.GetLatestAnchoredBlockNumber()
+	startBlkNum := sbh.GetNextAnchoringBlockNumber()
+
 	var successCnt, cnt, blkNum uint64
-	for cnt, blkNum = 0, latestAnchoredBlockNumber+1; cnt <= sbh.sentServiceChainTxsLimit && blkNum <= block.Number().Uint64(); cnt, blkNum = cnt+1, blkNum+1 {
+	latestBlkNum := block.Number().Uint64()
+
+	for cnt, blkNum = 0, startBlkNum; cnt <= sbh.sentServiceChainTxsLimit && blkNum <= latestBlkNum; cnt, blkNum = cnt+1, blkNum+1 {
 		if err := sbh.generateAndAddAnchoringTxIntoTxPool(sbh.subbridge.blockchain.GetBlockByNumber(blkNum)); err == nil {
 			sbh.WriteAnchoredBlockNumber(blkNum)
 			successCnt++
 		} else {
-			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", latestAnchoredBlockNumber+1, "FaildBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
+			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FaildBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
 			break
 		}
 	}
-	logger.Info("blockAnchoringManager: Success to generate anchoring txs", "successCnt", successCnt, "startBlockNumber", latestAnchoredBlockNumber+1, "latestBlockNum", block.NumberU64())
+	logger.Info("blockAnchoringManager: Success to generate anchoring txs", "successCnt", successCnt, "startBlockNumber", startBlkNum, "latestBlockNum", block.NumberU64())
 }
 
 func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Block) error {
@@ -421,6 +424,9 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		logger.Error("failed to add signed tx into txpool", "err", err)
 		return err
 	}
+
+	logger.Info("blockAnchoringManager: Success to generate anchoring tx", "blockNum", block.NumberU64(), "blockhash", block.Hash().String(), "txHash", signedTx.Hash().String())
+
 	return nil
 }
 
@@ -435,6 +441,23 @@ func (scpm *SubBridgeHandler) SyncNonceAndGasPrice() {
 // GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
 func (sbh *SubBridgeHandler) GetLatestAnchoredBlockNumber() uint64 {
 	return sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
+}
+
+// GetNextAnchoringBlockNumber returns the next block number which is needed to be anchored.
+func (sbh *SubBridgeHandler) GetNextAnchoringBlockNumber() uint64 {
+	latestAnchoredBlockNumber := sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
+
+	// If latestAnchoredBlockNumber == 0, there are two cases below.
+	// 1) The last block number anchored is 0 block(genesis block).
+	// 2) There is no block anchored, so this is the 1st time. (If there is no value in DB, it returns 0.)
+	// To cover all cases without complex DB routine, the condition below is added.
+	// Even if genesis block can be anchored more than 2 times,
+	// this routine can guarantee anchoring genesis block.
+	if latestAnchoredBlockNumber != 0 {
+		latestAnchoredBlockNumber++
+	}
+
+	return latestAnchoredBlockNumber
 }
 
 // WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
