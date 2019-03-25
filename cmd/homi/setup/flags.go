@@ -48,6 +48,18 @@ var (
 		Value: 4,
 	}
 
+	numOfPNsFlag = cli.IntFlag{
+		Name:  "pn-num",
+		Usage: "Number of proxy node",
+		Value: 0,
+	}
+
+	numOfENsFlag = cli.IntFlag{
+		Name:  "en-num",
+		Usage: "Number of end-point node",
+		Value: 0,
+	}
+
 	unitPriceFlag = cli.Uint64Flag{
 		Name:  "unitPrice",
 		Usage: "Price of unit",
@@ -101,12 +113,6 @@ var (
 	nografanaFlag = cli.BoolFlag{
 		Name:  "no-grafana",
 		Usage: "(docker only) Do not make grafana container",
-	}
-
-	numOfPNsFlag = cli.IntFlag{
-		Name:  "pn-num",
-		Usage: "Number of proxy node",
-		Value: 0,
 	}
 
 	useTxGenFlag = cli.BoolFlag{

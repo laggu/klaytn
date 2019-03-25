@@ -130,8 +130,6 @@ var validatorTemplate = `{{ .Name }}:
         --txpool.nolocals
 {{- else }}
 {{- end}}
-{{- if eq .NodeType "en" }}
-{{- end}}
 
     networks:
       app_net:

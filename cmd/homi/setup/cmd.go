@@ -78,6 +78,8 @@ Args :
 			baobabFlag,
 			cliqueFlag,
 			numOfCNsFlag,
+			numOfPNsFlag,
+			numOfENsFlag,
 			unitPriceFlag,
 			deriveShaImplFlag,
 			fundingAddrFlag,
@@ -86,7 +88,6 @@ Args :
 			fasthttpFlag,
 			networkIdFlag,
 			nografanaFlag,
-			numOfPNsFlag,
 			useTxGenFlag,
 			txGenRateFlag,
 			txGenThFlag,
@@ -326,6 +327,7 @@ func gen(ctx *cli.Context) error {
 	cliqueFlag := ctx.Bool(cliqueFlag.Name)
 	num := ctx.Int(numOfCNsFlag.Name)
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
+	enNum := ctx.Int(numOfENsFlag.Name)
 	baobab := ctx.Bool(baobabFlag.Name)
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
 
@@ -346,10 +348,13 @@ func gen(ctx *cli.Context) error {
 	switch genType {
 	case TypeDocker:
 		validators := makeValidators(num, false, nodeAddrs, nodeKeys, privKeys)
-		_, proxyNodeKeys := makeProxys(proxyNum, false)
+		pnValidators, proxyNodeKeys := makeProxys(proxyNum, false)
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 		address := filterAddresses(validators)
+		pnNodeInfos := filterNodeInfo(pnValidators)
+		_, enNodeKeys := makeProxys(enNum, false)
+		staticPNNodesJsonBytes, _ := json.MarshalIndent(pnNodeInfos, "", "\t")
 		compose := compose.New(
 			"172.16.239",
 			num,
@@ -358,11 +363,13 @@ func gen(ctx *cli.Context) error {
 			nodeKeys,
 			removeSpacesAndLines(genesisJsonBytes),
 			removeSpacesAndLines(staticNodesJsonBytes),
+			removeSpacesAndLines(staticPNNodesJsonBytes),
 			ctx.String(dockerImageIdFlag.Name),
 			ctx.Bool(fasthttpFlag.Name),
 			ctx.Int(networkIdFlag.Name),
 			!ctx.BoolT(nografanaFlag.Name),
 			proxyNodeKeys,
+			enNodeKeys,
 			ctx.Bool(useTxGenFlag.Name),
 			service.TxGenOption{
 				TxGenRate:       ctx.Int(txGenRateFlag.Name),

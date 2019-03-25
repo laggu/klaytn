@@ -39,20 +39,19 @@ type Homi struct {
 }
 
 func New(ipPrefix string, number int, secret string, addresses []string, nodeKeys []string,
-	genesis string, staticNodes string, dockerImageId string, useFastHttp bool, networkId int, useGrafana bool,
-	proxyNodeKeys []string, useTxGen bool, txGenOpt service.TxGenOption) *Homi {
+	genesis string, staticCNNodes string, staticPNnodes string, dockerImageId string, useFastHttp bool, networkId int,
+	useGrafana bool, proxyNodeKeys []string, enNodeKeys []string, useTxGen bool, txGenOpt service.TxGenOption) *Homi {
 	ist := &Homi{
 		IPPrefix:   ipPrefix,
 		EthStats:   service.NewEthStats(fmt.Sprintf("%v.9", ipPrefix), secret),
 		UseGrafana: useGrafana,
 		UseTxGen:   useTxGen,
 	}
-	ist.init(number, addresses, nodeKeys, genesis, staticNodes, dockerImageId, useFastHttp, networkId, proxyNodeKeys, txGenOpt)
+	ist.init(number, addresses, nodeKeys, genesis, staticCNNodes, staticPNnodes, dockerImageId, useFastHttp, networkId, proxyNodeKeys, enNodeKeys, txGenOpt)
 	return ist
 }
 
-func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis string, staticNodes string, dockerImageId string,
-	useFastHttp bool, networkId int, proxyNodeKeys []string, txGenOpt service.TxGenOption) {
+func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis string, staticCNNodes string, staticPNNodes string, dockerImageId string, useFastHttp bool, networkId int, proxyNodeKeys []string, enNodeKeys []string, txGenOpt service.TxGenOption) {
 	var validatorNames []string
 	for i := 0; i < number; i++ {
 		s := service.NewValidator(i,
@@ -74,12 +73,13 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 			false,
 		)
 
-		staticNodes = strings.Replace(staticNodes, "0.0.0.0", s.IP, 1)
+		staticCNNodes = strings.Replace(staticCNNodes, "0.0.0.0", s.IP, 1)
 		ist.Services = append(ist.Services, s)
 		validatorNames = append(validatorNames, s.Name)
 	}
 
-	for i := 0; i < len(proxyNodeKeys); i++ {
+	numPNs := len(proxyNodeKeys)
+	for i := 0; i < numPNs; i++ {
 		s := service.NewValidator(i,
 			genesis,
 			"",
@@ -99,14 +99,39 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 			false,
 		)
 
-		staticNodes = strings.Replace(staticNodes, "0.0.0.0", s.IP, 1)
+		staticCNNodes = strings.Replace(staticCNNodes, "0.0.0.0", s.IP, 1)
+		ist.Services = append(ist.Services, s)
+		validatorNames = append(validatorNames, s.Name)
+	}
+
+	for i := 0; i < len(enNodeKeys); i++ {
+		s := service.NewValidator(i,
+			genesis,
+			"",
+			enNodeKeys[i],
+			"",
+			32323+number+numPNs+i,
+			8551+number+numPNs+i,
+			61001+number+numPNs+i,
+			ist.EthStats.Host(),
+			// from subnet ip 10
+			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numPNs+i+10),
+			dockerImageId,
+			useFastHttp,
+			networkId,
+			"EN",
+			"en",
+			false,
+		)
+
+		staticPNNodes = strings.Replace(staticPNNodes, "0.0.0.0", s.IP, 1)
 		ist.Services = append(ist.Services, s)
 		validatorNames = append(validatorNames, s.Name)
 	}
 
 	// update static nodes
 	for i := range ist.Services {
-		ist.Services[i].StaticNodes = staticNodes
+		ist.Services[i].StaticNodes = staticCNNodes
 	}
 
 	ist.PrometheusService = service.NewPrometheusService(
