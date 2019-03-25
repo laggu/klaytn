@@ -307,7 +307,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 
 	// shuffle
 	committee := make([]istanbul.Validator, valSet.subSize)
-	_, proposerValidator := valSet.GetByAddress(proposer)
+	_, proposerValidator := valSet.getByAddress(proposer)
 	if proposerValidator == nil {
 		logger.Error("fail to make sub-list of validators, because proposer is invalid", "address of proposer", proposer)
 		return valSet.validators
@@ -318,8 +318,8 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	// TODO how to sync next proposer (how to get exact next proposer ?)
 	committee[1] = valSet.selector(valSet, committee[0].Address(), uint64(0))
 
-	proposerIdx, _ := valSet.GetByAddress(committee[0].Address())
-	nextproposerIdx, _ := valSet.GetByAddress(committee[1].Address())
+	proposerIdx, _ := valSet.getByAddress(committee[0].Address())
+	nextproposerIdx, _ := valSet.getByAddress(committee[1].Address())
 
 	// TODO-Klaytn-RemoveLater remove this check code if the implementation is stable.
 	if proposerIdx < 0 || nextproposerIdx < 0 {
