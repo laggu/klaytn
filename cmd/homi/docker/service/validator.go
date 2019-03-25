@@ -85,7 +85,7 @@ var validatorTemplate = `{{ .Name }}:
     image: {{ .DockerImageId }}
     ports:
       - '{{ .Port }}:32323'
-      - '{{ .RPCPort }}:8545'
+      - '{{ .RPCPort }}:8551'
       - '{{ .PrometheusPort }}:61001'
     entrypoint:
       - /bin/sh
@@ -104,7 +104,7 @@ var validatorTemplate = `{{ .Name }}:
         --identity "{{ .Name }}" \
         --rpc \
         --rpcaddr "0.0.0.0" \
-        --rpcport "8545" \
+        --rpcport "8551" \
         --rpccorsdomain "*" \
         --datadir "/klaytn" \
         --port "32323" \
@@ -113,7 +113,6 @@ var validatorTemplate = `{{ .Name }}:
         --nat "any" \
         --nodekeyhex "{{ .NodeKey }}" \
         --nodiscover \
-        --mine \
         --debug \
         --metrics \
         --prometheus \
@@ -127,9 +126,9 @@ var validatorTemplate = `{{ .Name }}:
 {{- end}}
 {{- if eq .NodeType "cn" }}
         --rewardbase {{ .Address }}
-{{- end}}
-{{- if eq .NodeType "pn" }}
+{{- else if eq .NodeType "pn" }}
         --txpool.nolocals
+{{- else }}
 {{- end}}
 {{- if eq .NodeType "en" }}
 {{- end}}

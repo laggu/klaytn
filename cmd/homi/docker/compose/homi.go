@@ -61,7 +61,7 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 			nodeKeys[i],
 			"",
 			32323+i,
-			8545+i,
+			8551+i,
 			61001+i,
 			ist.EthStats.Host(),
 			// from subnet ip 10
@@ -86,7 +86,7 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 			proxyNodeKeys[i],
 			"",
 			32323+number+i,
-			8545+number+i,
+			8551+number+i,
 			61001+number+i,
 			ist.EthStats.Host(),
 			// from subnet ip 10
@@ -95,8 +95,8 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 			useFastHttp,
 			networkId,
 			"PN",
-			"gn",
-			true,
+			"pn",
+			false,
 		)
 
 		staticNodes = strings.Replace(staticNodes, "0.0.0.0", s.IP, 1)
@@ -119,7 +119,7 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 
 	ist.TxGenService = service.NewTxGenService(
 		fmt.Sprintf("%v.%v", ist.IPPrefix, 7),
-		fmt.Sprintf("http://%v.%v:8545", ist.IPPrefix, number+10),
+		fmt.Sprintf("http://%v.%v:8551", ist.IPPrefix, number+10),
 		txGenOpt)
 }
 
