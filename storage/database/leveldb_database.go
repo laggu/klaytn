@@ -78,11 +78,13 @@ type levelDB struct {
 
 func getLDBOptions(ldbCacheSize, numHandles int) *opt.Options {
 	return &opt.Options{
-		OpenFilesCacheCapacity: numHandles,
-		BlockCacheCapacity:     ldbCacheSize / 2 * opt.MiB,
-		WriteBuffer:            ldbCacheSize / 4 * opt.MiB, // Two of these are used internally
-		Filter:                 filter.NewBloomFilter(10),
-		DisableBufferPool:      true,
+		OpenFilesCacheCapacity:        numHandles,
+		BlockCacheCapacity:            ldbCacheSize / 2 * opt.MiB,
+		WriteBuffer:                   ldbCacheSize / 4 * opt.MiB, // Two of these are used internally
+		Filter:                        filter.NewBloomFilter(10),
+		DisableBufferPool:             true,
+		CompactionTableSize:           4 * opt.MiB,
+		CompactionTableSizeMultiplier: 2.0,
 	}
 }
 
