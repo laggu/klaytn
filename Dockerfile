@@ -8,19 +8,21 @@ RUN mkdir -p $PKG_DIR/bin
 RUN mkdir -p $PKG_DIR/conf
 
 ADD . $SRC_DIR
-RUN cd $SRC_DIR && make klay kcn kpn ken kscn
+RUN cd $SRC_DIR && make all
 
 RUN cp $SRC_DIR/build/bin/klay /usr/bin/
 RUN cp $SRC_DIR/build/bin/kcn /usr/bin/
 RUN cp $SRC_DIR/build/bin/kpn /usr/bin/
 RUN cp $SRC_DIR/build/bin/ken /usr/bin/
 RUN cp $SRC_DIR/build/bin/kscn /usr/bin/
+RUN cp $SRC_DIR/build/bin/kbn /usr/bin/
 
 # packaging
 RUN cp $SRC_DIR/build/bin/kcn $PKG_DIR/bin/
 RUN cp $SRC_DIR/build/bin/kpn $PKG_DIR/bin/
 RUN cp $SRC_DIR/build/bin/ken $PKG_DIR/bin/
 RUN cp $SRC_DIR/build/bin/kscn $PKG_DIR/bin/
+RUN cp $SRC_DIR/build/bin/kbn $PKG_DIR/bin/
 
 RUN cp $SRC_DIR/build/packaging/linux/bin/kcnd $PKG_DIR/bin/
 RUN cp $SRC_DIR/build/packaging/linux/bin/kpnd $PKG_DIR/bin/
