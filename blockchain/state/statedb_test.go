@@ -218,7 +218,7 @@ func TestCachedStateObjects(t *testing.T) {
 
 	assert.Equal(t, 128, len(stateDB.stateObjects))
 
-	if root, err := stateDB.Commit(true); err != nil {
+	if root, err := stateDB.Commit(false); err != nil {
 		t.Fatal(err)
 	} else {
 		stateDB.UpdateCachedStateObjects(root)
@@ -262,7 +262,7 @@ func TestCachedStateObjects(t *testing.T) {
 		assert.Equal(t, uint64(i), cachedObj.Balance().Uint64())
 	}
 
-	if root, err := stateDB.Commit(true); err != nil {
+	if root, err := stateDB.Commit(false); err != nil {
 		t.Fatal(err)
 	} else {
 		stateDB.UpdateCachedStateObjects(root)
@@ -307,7 +307,7 @@ func TestCachedStateObjects(t *testing.T) {
 	}
 	assert.Equal(t, 255, len(stateDB.stateObjects))
 
-	if root, err := stateDB.Commit(true); err != nil {
+	if root, err := stateDB.Commit(false); err != nil {
 		t.Fatal(err)
 	} else {
 		stateDB.UpdateCachedStateObjects(root)

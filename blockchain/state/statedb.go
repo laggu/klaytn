@@ -177,7 +177,15 @@ func (self *StateDB) UpdateCachedStateObjects(root common.Hash) {
 		return
 	}
 	for addr, stateObj := range self.stateObjects {
-		self.cachedStateObjects.Add(addr, stateObj)
+		if stateObj.suicided || stateObj.deleted || stateObj.dbErr != nil {
+			self.cachedStateObjects.Add(addr, nil)
+		} else {
+			// TODO-Klaytn-StateDB cachedStorage also can be reused, but needs to be tested.
+			newObj := newObject(self, addr, stateObj.account)
+			newObj.storageTrie = stateObj.storageTrie
+			newObj.code = stateObj.code
+			self.cachedStateObjects.Add(addr, newObj)
+		}
 	}
 
 	// Reset all member variables except for cachedStateObjects.
@@ -476,12 +484,8 @@ func (self *StateDB) getStateObject(addr common.Address) *stateObject {
 				return nil
 			}
 
-			if stateObj.deleted {
-				return nil
-			}
-
 			self.stateObjects[addr] = stateObj.deepCopy(self)
-			return stateObj
+			return self.stateObjects[addr]
 		}
 	}
 
