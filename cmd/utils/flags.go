@@ -393,12 +393,12 @@ var (
 	ListenPortFlag = cli.IntFlag{
 		Name:  "port",
 		Usage: "Network listening port",
-		Value: 32323,
+		Value: node.DefaultP2PPort,
 	}
 	SubListenPortFlag = cli.IntFlag{
 		Name:  "subport",
 		Usage: "Network sub listening port",
-		Value: 32324,
+		Value: node.DefaultP2PSubPort,
 	}
 	MultiChannelUseFlag = cli.BoolFlag{
 		Name:  "multichannel",

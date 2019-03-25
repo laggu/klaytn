@@ -21,6 +21,7 @@
 package node
 
 import (
+	"fmt"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/nat"
 	"os"
@@ -31,12 +32,14 @@ import (
 )
 
 const (
-	DefaultHTTPHost = "localhost" // Default host interface for the HTTP RPC server
-	DefaultHTTPPort = 8551        // Default TCP port for the HTTP RPC server
-	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
-	DefaultWSPort   = 8552        // Default TCP port for the websocket RPC server
-	DefaultGRPCHost = "localhost" // Default host interface for the gRPC server
-	DefaultGRPCPort = 8553        // Default TCP port for the gRPC server
+	DefaultHTTPHost   = "localhost" // Default host interface for the HTTP RPC server
+	DefaultHTTPPort   = 8551        // Default TCP port for the HTTP RPC server
+	DefaultWSHost     = "localhost" // Default host interface for the websocket RPC server
+	DefaultWSPort     = 8552        // Default TCP port for the websocket RPC server
+	DefaultGRPCHost   = "localhost" // Default host interface for the gRPC server
+	DefaultGRPCPort   = 8553        // Default TCP port for the gRPC server
+	DefaultP2PPort    = 32323
+	DefaultP2PSubPort = 32324
 )
 
 // DefaultConfig contains reasonable default settings.
@@ -50,7 +53,7 @@ var DefaultConfig = Config{
 	WSModules:        []string{"net", "web3"},
 	GRPCPort:         DefaultGRPCPort,
 	P2P: p2p.Config{
-		ListenAddr: ":30303",
+		ListenAddr: fmt.Sprintf(":%d", DefaultP2PPort),
 		MaxPeers:   25,
 		NAT:        nat.Any(),
 	},
