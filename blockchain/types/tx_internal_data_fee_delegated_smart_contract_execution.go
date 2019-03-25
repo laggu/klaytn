@@ -310,6 +310,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB Stat
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if err := t.Validate(stateDB); err != nil {
+		stateDB.IncNonce(sender.Address())
 		return nil, 0, err
 	}
 	stateDB.IncNonce(sender.Address())

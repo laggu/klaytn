@@ -367,6 +367,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) FillContractAdd
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if err := t.Validate(stateDB); err != nil {
+		stateDB.IncNonce(sender.Address())
 		return nil, 0, err
 	}
 	ret, _, usedGas, err = vm.CreateWithAddress(sender, t.Payload, gas, value, t.Recipient, t.HumanReadable)
