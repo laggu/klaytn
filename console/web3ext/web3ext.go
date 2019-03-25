@@ -552,6 +552,10 @@ web3._extend({
 			name: 'version',
 			getter: 'net_version'
 		}),
+		new web3._extend.Property({
+			name: 'networkID',
+			getter: 'net_networkID'
+		}),
 	]
 });
 `

@@ -51,3 +51,8 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 func (s *PublicNetAPI) Version() string {
 	return fmt.Sprintf("%d", s.networkVersion)
 }
+
+// NetworkID returns the network identifier set by the command-line option --networkid.
+func (s *PublicNetAPI) NetworkID() uint64 {
+	return s.networkVersion
+}
