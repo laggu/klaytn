@@ -99,7 +99,7 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 			false,
 		)
 
-		staticCNNodes = strings.Replace(staticCNNodes, "0.0.0.0", s.IP, 1)
+		staticPNNodes = strings.Replace(staticPNNodes, "0.0.0.0", s.IP, 1)
 		ist.Services = append(ist.Services, s)
 		validatorNames = append(validatorNames, s.Name)
 	}
@@ -124,14 +124,17 @@ func (ist *Homi) init(number int, addresses []string, nodeKeys []string, genesis
 			false,
 		)
 
-		staticPNNodes = strings.Replace(staticPNNodes, "0.0.0.0", s.IP, 1)
 		ist.Services = append(ist.Services, s)
 		validatorNames = append(validatorNames, s.Name)
 	}
 
 	// update static nodes
 	for i := range ist.Services {
-		ist.Services[i].StaticNodes = staticCNNodes
+		if ist.Services[i].NodeType == "en" {
+			ist.Services[i].StaticNodes = staticPNNodes
+		} else {
+			ist.Services[i].StaticNodes = staticCNNodes
+		}
 	}
 
 	ist.PrometheusService = service.NewPrometheusService(
