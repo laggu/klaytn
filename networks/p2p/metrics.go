@@ -34,9 +34,16 @@ var (
 	egressConnectMeter  = metrics.NewRegisteredMeter("p2p/OutboundConnects", nil)
 	egressTrafficMeter  = metrics.NewRegisteredMeter("p2p/OutboundTraffic", nil)
 
+	// The peer can be connected to one or more network ports.
+	// Therefore, the connection state with the abstracted peer is measured by peerXXXCountGauge
+	// and the connection at the network port level is measured by connectionXXXCountGauge.
 	peerCountGauge    = metrics.NewRegisteredGauge("p2p/PeerCountGauge", nil)
 	peerInCountGauge  = metrics.NewRegisteredGauge("p2p/PeerInCountGauge", nil)
 	peerOutCountGauge = metrics.NewRegisteredGauge("p2p/PeerOutCountGauge", nil)
+
+	connectionCountGauge    = metrics.NewRegisteredGauge("p2p/ConnectionCountGauge", nil)
+	connectionInCountGauge  = metrics.NewRegisteredGauge("p2p/ConnectionInCountGauge", nil)
+	connectionOutCountGauge = metrics.NewRegisteredGauge("p2p/ConnectionOutCountGauge", nil)
 
 	dialTryCounter  = metrics.NewRegisteredCounter("p2p/DialTryCounter", nil)
 	dialFailCounter = metrics.NewRegisteredCounter("p2p/DialFailCounter", nil)

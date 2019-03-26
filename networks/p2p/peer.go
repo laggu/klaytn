@@ -187,6 +187,20 @@ func (p *Peer) Inbound() bool {
 	return p.rws[ConnDefault].flags&inboundConn != 0
 }
 
+// GetNumberInboundAndOutbound returns the number of
+// inbound and outbound connections connected to the peer.
+func (p *Peer) GetNumberInboundAndOutbound() (int, int) {
+	inbound, outbound := 0, 0
+	for _, rw := range p.rws {
+		if rw.flags&inboundConn != 0 {
+			inbound++
+		} else {
+			outbound++
+		}
+	}
+	return inbound, outbound
+}
+
 // newPeer should be called to create a peer.
 func newPeer(conns []*conn, protocols []Protocol) (*Peer, error) {
 	if conns == nil || len(conns) < 1 || conns[ConnDefault] == nil {

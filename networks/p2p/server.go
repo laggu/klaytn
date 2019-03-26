@@ -588,12 +588,13 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 func (srv *MultiChannelServer) run(dialstate dialer) {
 	defer srv.loopWG.Done()
 	var (
-		peers        = make(map[discover.NodeID]*Peer)
-		inboundCount = 0
-		trusted      = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
-		taskdone     = make(chan task, maxActiveDialTasks)
-		runningTasks []task
-		queuedTasks  []task // tasks that can't run yet
+		peers         = make(map[discover.NodeID]*Peer)
+		inboundCount  = 0
+		outboundCount = 0
+		trusted       = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
+		taskdone      = make(chan task, maxActiveDialTasks)
+		runningTasks  []task
+		queuedTasks   []task // tasks that can't run yet
 	)
 	// Put trusted nodes into a map to speed up checks.
 	// Trusted peers are loaded on startup and cannot be
@@ -726,13 +727,8 @@ running:
 					go srv.runPeer(p)
 					peers[c.id] = p
 
-					if p.Inbound() {
-						inboundCount++
-					}
-
 					peerCountGauge.Update(int64(len(peers)))
-					peerInCountGauge.Update(int64(inboundCount))
-					peerOutCountGauge.Update(int64(len(peers) - inboundCount))
+					inboundCount, outboundCount = increasesConnectionMetric(inboundCount, outboundCount, p)
 				}
 			}
 			// The dialer logic relies on the assumption that
@@ -749,13 +745,8 @@ running:
 			pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
 			delete(peers, pd.ID())
 
-			if pd.Inbound() {
-				inboundCount--
-			}
-
 			peerCountGauge.Update(int64(len(peers)))
-			peerInCountGauge.Update(int64(inboundCount))
-			peerOutCountGauge.Update(int64(len(peers) - inboundCount))
+			inboundCount, outboundCount = decreasesConnectionMetric(inboundCount, outboundCount, pd.Peer)
 		case nid := <-srv.discpeer:
 			if p, ok := peers[nid]; ok {
 				p.Disconnect(DiscRequested)
@@ -785,6 +776,33 @@ running:
 		p.logger.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
 		delete(peers, p.ID())
 	}
+}
+
+// decreasesConnectionMetric decreases the metric of the number of peer connections.
+func decreasesConnectionMetric(inboundCount int, outboundCount int, p *Peer) (int, int) {
+	pInbound, pOutbound := p.GetNumberInboundAndOutbound()
+	inboundCount -= pInbound
+	outboundCount -= pOutbound
+
+	updatesConnectionMetric(inboundCount, outboundCount)
+	return inboundCount, outboundCount
+}
+
+// increasesConnectionMetric increases the metric of the number of peer connections.
+func increasesConnectionMetric(inboundCount int, outboundCount int, p *Peer) (int, int) {
+	pInbound, pOutbound := p.GetNumberInboundAndOutbound()
+	inboundCount += pInbound
+	outboundCount += pOutbound
+
+	updatesConnectionMetric(inboundCount, outboundCount)
+	return inboundCount, outboundCount
+}
+
+// updatesConnectionMetric updates the metric of the number of peer connections.
+func updatesConnectionMetric(inboundCount int, outboundCount int) {
+	connectionCountGauge.Update(int64(outboundCount + inboundCount))
+	connectionInCountGauge.Update(int64(inboundCount))
+	connectionOutCountGauge.Update(int64(outboundCount))
 }
 
 // runPeer runs in its own goroutine for each peer.
