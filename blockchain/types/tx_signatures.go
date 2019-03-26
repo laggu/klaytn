@@ -97,6 +97,10 @@ func (t TxSignatures) RawSignatureValues() []*big.Int {
 }
 
 func (t TxSignatures) ValidateSignature() bool {
+	if t.empty() {
+		return false
+	}
+
 	cid := t.getDefaultSig().ChainId()
 	for _, s := range t {
 		if s.ValidateSignature() == false {

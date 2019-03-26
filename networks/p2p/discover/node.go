@@ -186,6 +186,10 @@ func parseComplete(rawurl string) (*Node, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid host: %v", err)
 	}
+	if len(host) == 0 {
+		return nil, fmt.Errorf("invalid host: host is empty")
+	}
+
 	// TODO-Klaytn-Bootnode: Have to solve following issues
 	//  1. `klay` ignore local hostfile(/etc/hosts) and use nameservers which are received from dhcp server or manually specified in `/etc/resolve.conf`.
 	//  2. Domain may have many CNAME IP address and sometimes changes it, but, we only stored a IP address which was resolved at `klay` started.
