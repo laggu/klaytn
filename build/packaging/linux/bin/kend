@@ -41,7 +41,7 @@ start() {
 
     OPTIONS=""
 
-    if [ ! -z $NO_DISCOVER ]; then
+    if [[ ! -z $NO_DISCOVER ]] && [[ $NO_DISCOVER -eq 1 ]]; then
         OPTIONS="$OPTIONS --nodiscover"
     fi
 
