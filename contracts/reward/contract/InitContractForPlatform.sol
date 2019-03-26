@@ -486,7 +486,7 @@ contract InitContract is MultisigBase {
     validRequirement(_adminList.length, _requirement)
     branchNameCheck(_branchName, _contractAddress)
     {
-        require(msg.sender == 0x79deccfacd0599d3166eb76972be7bb20f51b46f);
+        require(msg.sender == 0x83fdd31030e6cc6a527fb8923801ef843d8488be);
         require(isInitialized == false); 
         require(bytes(_branchName).length > 0);
 
