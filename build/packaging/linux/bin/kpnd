@@ -118,7 +118,7 @@ start() {
     fi
 
     set -f
-    $BIN/kpn $OPTIONS >> ${LOG_DIR}/klay.out 2>&1 &
+    $BIN/kpn $OPTIONS >> ${LOG_DIR}/kpnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f
