@@ -23,6 +23,4 @@ const (
 	RewardContractAddress = "0x00000000000000000441"
 	KIRContractAddress    = "0x00000000000000000442"
 	PoCContractAddress    = "0x00000000000000000443"
-
-	AddressBookAddress = "0x000000000000000000450"
 )
