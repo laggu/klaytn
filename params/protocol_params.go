@@ -110,6 +110,10 @@ const (
 	TxGasFeeDelegated          uint64 = 1000
 	TxGasFeeDelegatedWithRatio uint64 = 3000
 	TxGasCancel                uint64 = 1000
+
+	// Network Id
+	AspenNetworkId  uint64 = 1000
+	BaobabNetworkId uint64 = 1001
 )
 
 var (
