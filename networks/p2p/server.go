@@ -396,6 +396,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 	srv.loopWG.Add(1)
 	go srv.run(dialer)
 	srv.running = true
+	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", true)
 	return nil
 }
 
@@ -569,7 +570,7 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 			dialDest.TCPs = append(dialDest.TCPs, uint16(listenPort))
 		}
 		srv.AddPeer(dialDest, false)
-		logger.Error("Update dialDest for multichannel", "TCPs", dialDest.TCPs) // TODO-GXP logger.Error is for debuging, It have to be changed logger.Trace
+		logger.Info("[Dial] Try to update dial candidate with a multichannel peer", "id", dialDest.ID, "addr", dialDest.IP, "port", dialDest.TCPs)
 		return nil
 	}
 
@@ -1299,6 +1300,7 @@ func (srv *BaseServer) Start() (err error) {
 	srv.loopWG.Add(1)
 	go srv.run(dialer)
 	srv.running = true
+	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", false)
 	return nil
 }
 

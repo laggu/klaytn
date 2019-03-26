@@ -238,7 +238,11 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		case nil:
 			s.dialing[id] = t.flags
 			newtasks = append(newtasks, t)
-			logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
+			if len(t.dest.TCPs) > 0 {
+				logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID, "ip", t.dest.IP, "port", t.dest.TCPs)
+			} else {
+				logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID, "ip", t.dest.IP, "port", t.dest.TCP)
+			}
 		}
 	}
 	// If we don't have any peers whatsoever, try to dial a random bootnode. This

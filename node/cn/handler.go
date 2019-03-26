@@ -381,7 +381,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	// after this will be sent via broadcasts.
 	pm.syncTransactions(p)
 
-	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
+	p.GetP2PPeer().Log().Info("Added a single channel P2P Peer", "peerID", p.GetP2PPeerID())
 
 	pubKey, err := p.GetP2PPeerID().Pubkey()
 	if err != nil {
