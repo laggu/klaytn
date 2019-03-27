@@ -19,6 +19,7 @@ package tests
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/blockchain"
@@ -59,6 +60,12 @@ type TestAccountType struct {
 	Keys   []*ecdsa.PrivateKey
 	Nonce  uint64
 	AccKey accountkey.AccountKey
+}
+
+type TestCreateMultisigAccountParam struct {
+	Threshold uint
+	Weights   []uint
+	PrvKeys   []string
 }
 
 func genRandomHash() (h common.Hash) {
@@ -144,6 +151,77 @@ func createMultisigAccount(threshold uint, weights []uint, prvKeys []string, add
 		Keys:   keys,
 		Nonce:  uint64(0),
 		AccKey: accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, weightedKeys),
+	}, nil
+}
+
+// createRoleBasedAccountWithAccountKeyPublic creates an account having keys that have role with AccountKeyPublic.
+func createRoleBasedAccountWithAccountKeyPublic(prvKeys []string, addr common.Address) (*TestRoleBasedAccountType, error) {
+	var err error
+
+	if len(prvKeys) != 3 {
+		return nil, errors.New("Need three key value for create role-based account")
+	}
+
+	keys := make([]*ecdsa.PrivateKey, len(prvKeys))
+
+	for i, p := range prvKeys {
+		keys[i], err = crypto.HexToECDSA(p)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	accKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[1].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
+	})
+
+	return &TestRoleBasedAccountType{
+		Addr:       addr,
+		TxKeys:     []*ecdsa.PrivateKey{keys[0]},
+		UpdateKeys: []*ecdsa.PrivateKey{keys[1]},
+		FeeKeys:    []*ecdsa.PrivateKey{keys[2]},
+		Nonce:      uint64(0),
+		AccKey:     accKey,
+	}, nil
+}
+
+// createRoleBasedAccountWithAccountKeyWeightedMultisig creates an account having keys that have role with AccountKeyWeightedMultisig.
+func createRoleBasedAccountWithAccountKeyWeightedMultiSig(multisigs []TestCreateMultisigAccountParam, addr common.Address) (*TestRoleBasedAccountType, error) {
+	var err error
+
+	if len(multisigs) != 3 {
+		return nil, errors.New("Need three key value for create role-based account")
+	}
+
+	prvKeys := make([][]*ecdsa.PrivateKey, len(multisigs))
+	multisigKeys := make([]*accountkey.AccountKeyWeightedMultiSig, len(multisigs))
+
+	for idx, multisig := range multisigs {
+		keys := make([]*ecdsa.PrivateKey, len(multisig.PrvKeys))
+		weightedKeys := make(accountkey.WeightedPublicKeys, len(multisig.PrvKeys))
+
+		for i, p := range multisig.PrvKeys {
+			keys[i], err = crypto.HexToECDSA(p)
+			if err != nil {
+				return nil, err
+			}
+			weightedKeys[i] = accountkey.NewWeightedPublicKey(multisig.Weights[i], (*accountkey.PublicKeySerializable)(&keys[i].PublicKey))
+		}
+		prvKeys[idx] = keys
+		multisigKeys[idx] = accountkey.NewAccountKeyWeightedMultiSigWithValues(multisig.Threshold, weightedKeys)
+	}
+
+	accKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{multisigKeys[0], multisigKeys[1], multisigKeys[2]})
+
+	return &TestRoleBasedAccountType{
+		Addr:       addr,
+		TxKeys:     prvKeys[0],
+		UpdateKeys: prvKeys[1],
+		FeeKeys:    prvKeys[2],
+		Nonce:      uint64(0),
+		AccKey:     accKey,
 	}, nil
 }
 
