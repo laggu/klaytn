@@ -187,7 +187,9 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		assert.Equal(t, params.TxGas, gas)
+		intrinsicGas := params.TxGas
+
+		assert.Equal(t, intrinsicGas, gas)
 	}
 
 	// 2. TxTypeValueTransfer
@@ -211,7 +213,11 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		assert.Equal(t, params.TxGas, gas)
+		intrinsicGas := params.TxGas
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
 	// 3. TxTypeValueTransferMemo with non-zero values.
@@ -237,7 +243,12 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		assert.Equal(t, params.TxGas+uint64(len(data))*params.TxDataNonZeroGas, gas)
+		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
+		intrinsicGas := params.TxGas + gasPayload
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
 	// 4. TxTypeValueTransferMemo with zero values.
@@ -263,7 +274,12 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		assert.Equal(t, params.TxGas+uint64(len(data))*params.TxDataZeroGas, gas)
+		gasPayload := uint64(len(data)) * params.TxDataZeroGas
+		intrinsicGas := params.TxGas + gasPayload
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
 	// 5. TxTypeAccountCreation
@@ -290,7 +306,12 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		assert.Equal(t, params.TxGasAccountCreation+params.TxAccountCreationGasDefault+uint64(len(colin.Keys))*params.TxAccountCreationGasPerKey, gas)
+		gasKey := params.TxAccountCreationGasDefault + uint64(len(colin.Keys))*params.TxAccountCreationGasPerKey
+		intrinsicGas := params.TxGasAccountCreation + gasKey
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
 	// 6. TxTypeAccountUpdate
@@ -317,10 +338,11 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		numKeys := uint64(len(decoupled.Keys))
-		validationGas := params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey
+		gasKey := params.TxAccountCreationGasDefault + 1*params.TxAccountCreationGasPerKey
+		intrinsicGas := params.TxGasAccountUpdate + gasKey
+		gasFrom := params.TxValidationGasDefault + uint64(len(decoupled.Keys))*params.TxValidationGasPerKey
 
-		assert.Equal(t, params.TxGasAccountUpdate+validationGas+params.TxAccountCreationGasDefault+numKeys*params.TxAccountCreationGasPerKey, gas)
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
 	// 7. TxTypeSmartContractDeploy
@@ -351,8 +373,12 @@ func TestTransactionGas(t *testing.T) {
 		intrinsicGas, err := types.IntrinsicGas(common.FromHex(code), true, true)
 		assert.Equal(t, nil, err)
 
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
 		executionGas := uint64(0x175fd)
-		assert.Equal(t, intrinsicGas+executionGas, gas)
+
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas, gas)
 	}
 
 	// 8. TxTypeSmartContractExecution
@@ -387,8 +413,12 @@ func TestTransactionGas(t *testing.T) {
 		intrinsicGas, err := types.IntrinsicGas(data, false, true)
 		assert.Equal(t, nil, err)
 
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
 		executionGas := uint64(0x9ec4)
-		assert.Equal(t, intrinsicGas+executionGas, gas)
+
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas, gas)
 	}
 
 	// 9. TxTypeCancel
@@ -410,7 +440,11 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		assert.Equal(t, params.TxGasCancel, gas)
+		intrinsicGas := params.TxGasCancel
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
 	// 10. TxTypeChainDataAnchoring
@@ -436,7 +470,11 @@ func TestTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		assert.Equal(t, params.TxChainDataAnchoringGas+params.ChainDataAnchoringGas*(uint64)(len(anchoredData)), gas)
+		intrinsicGas := params.TxChainDataAnchoringGas + params.ChainDataAnchoringGas*uint64(len(anchoredData))
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 }
 
@@ -603,9 +641,11 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
@@ -637,9 +677,11 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
@@ -671,9 +713,11 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 4. TxTypeFeeDelegatedAccountUpdate
@@ -745,10 +789,12 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x175fd)
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 6. TxTypeFeeDelegatedSmartContractExecution
@@ -788,10 +834,12 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x9ec4)
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 7. TxTypeFeeDelegatedCancel
@@ -818,9 +866,11 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 }
 
@@ -988,9 +1038,11 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGas + params.TxGasFeeDelegatedWithRatio
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 2. TxTypeFeeDelegatedValueTransferMemoWithRatio with non-zero values.
@@ -1023,9 +1075,11 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegatedWithRatio
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 3. TxTypeFeeDelegatedValueTransferMemoWithRatio with zero values.
@@ -1058,9 +1112,11 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegatedWithRatio
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 4. TxTypeFeeDelegatedAccountUpdateWithRatio
@@ -1134,10 +1190,12 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegatedWithRatio
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x175fd)
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 6. TxTypeFeeDelegatedSmartContractExecutionWithRatio
@@ -1178,10 +1236,12 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegatedWithRatio
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x9ec4)
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 7. TxTypeFeeDelegatedCancelWithRatio
@@ -1209,9 +1269,11 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegatedWithRatio
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 }
 
@@ -2332,7 +2394,8 @@ func TestTransactionGasWithAccountKeyRoleBasedWithAccountKeyPublic(t *testing.T)
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		gasKey := params.TxAccountCreationGasDefault + 3*params.TxAccountCreationGasPerKey
+		creationGasPerPublic := params.TxAccountCreationGasDefault + 1*params.TxAccountCreationGasPerKey
+		gasKey := 3 * creationGasPerPublic
 		intrinsicGas := params.TxGasAccountUpdate + gasKey
 		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
@@ -3241,9 +3304,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
@@ -3275,9 +3340,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
@@ -3309,9 +3376,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 4. TxTypeFeeDelegatedSmartContractDeploy
@@ -3347,10 +3416,12 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x175fd)
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 5. TxTypeFeeDelegatedSmartContractExecution
@@ -3390,10 +3461,12 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x9ec4)
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 6. TxTypeFeeDelegatedCancel
@@ -3420,9 +3493,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 }
 
@@ -3577,9 +3652,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndMultiSigPayer(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + uint64(len(multisig.Keys))*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
@@ -3611,9 +3688,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndMultiSigPayer(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + uint64(len(multisig.Keys))*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
@@ -3645,9 +3724,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndMultiSigPayer(t *testing.T) {
 
 		gasPayload := uint64(len(data)) * params.TxDataZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + uint64(len(multisig.Keys))*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 4. TxTypeFeeDelegatedSmartContractDeploy
@@ -3683,10 +3764,12 @@ func TestFeeDelegatedTransactionGasWithLegacyAndMultiSigPayer(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x175fd)
 		gasFeePayer := params.TxValidationGasDefault + uint64(len(multisig.Keys))*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 5. TxTypeFeeDelegatedSmartContractExecution
@@ -3726,10 +3809,12 @@ func TestFeeDelegatedTransactionGasWithLegacyAndMultiSigPayer(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x9ec4)
 		gasFeePayer := params.TxValidationGasDefault + uint64(len(multisig.Keys))*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 6. TxTypeFeeDelegatedCancel
@@ -3756,9 +3841,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAndMultiSigPayer(t *testing.T) {
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		gasFeePayer := params.TxValidationGasDefault + uint64(len(multisig.Keys))*params.TxValidationGasPerKey
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 }
 
@@ -3917,13 +4004,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
@@ -3955,13 +4044,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 
 		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
@@ -3993,13 +4084,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 
 		gasPayload := uint64(len(data)) * params.TxDataZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 4. TxTypeFeeDelegatedSmartContractDeploy
@@ -4035,6 +4128,8 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x175fd)
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
@@ -4042,7 +4137,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 5. TxTypeFeeDelegatedSmartContractExecution
@@ -4082,6 +4177,8 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x9ec4)
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
@@ -4089,7 +4186,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 6. TxTypeFeeDelegatedCancel
@@ -4116,13 +4213,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 }
 
@@ -4303,13 +4402,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
@@ -4341,13 +4442,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 
 		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
@@ -4379,13 +4482,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 
 		gasPayload := uint64(len(data)) * params.TxDataZeroGas
 		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 4. TxTypeFeeDelegatedSmartContractDeploy
@@ -4421,6 +4526,8 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x175fd)
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
@@ -4428,7 +4535,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 5. TxTypeFeeDelegatedSmartContractExecution
@@ -4468,6 +4575,8 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 		assert.Equal(t, nil, err)
 
 		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		executionGas := uint64(0x9ec4)
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
@@ -4475,7 +4584,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
 	// 6. TxTypeFeeDelegatedCancel
@@ -4502,13 +4611,15 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegated
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
 		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
 		sigValidationGasWithTxKeys := params.TxValidationGasDefault + uint64(len(roleBased.TxKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithUpdateKeys := params.TxValidationGasDefault + uint64(len(roleBased.UpdateKeys))*params.TxValidationGasPerKey
 		sigValidationGasWithFeeKeys := params.TxValidationGasDefault + uint64(len(roleBased.FeeKeys))*params.TxValidationGasPerKey
 		gasFeePayer := sigValidationGasWithTxKeys + sigValidationGasWithUpdateKeys + sigValidationGasWithFeeKeys
 
-		assert.Equal(t, intrinsicGas+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 }
 
