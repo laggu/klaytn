@@ -423,7 +423,7 @@ func initBlockChain(conf *node.Config, db database.DBManager, coinbaseAddrs []*c
 
 	alloc := make(blockchain.GenesisAlloc)
 	for _, a := range coinbaseAddrs {
-		alloc[*a] = blockchain.GenesisAccount{Balance: big.NewInt(params.KLAY)}
+		alloc[*a] = blockchain.GenesisAccount{Balance: new(big.Int).Mul(big.NewInt(1e9), big.NewInt(params.KLAY))}
 	}
 
 	genesis.Alloc = alloc
