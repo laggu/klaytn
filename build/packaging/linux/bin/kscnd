@@ -158,7 +158,7 @@ stop() {
     __pid_run
     [ -z "$pid" ] && echo "kscnd is not running" && return
     echo -n "Shutting down kscnd: "
-    kill -3 $(eval "cat ${pidfile}")
+    kill $(eval "cat ${pidfile}")
     RETVAL=$?
     [ $RETVAL = 0 ] && rm -f ${pidfile} && echo "OK" && return
     echo "Failed"

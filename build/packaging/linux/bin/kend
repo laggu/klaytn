@@ -148,7 +148,7 @@ stop() {
     __pid_run
     [ -z "$pid" ] && echo "kend is not running" && return
     echo -n "Shutting down kend: "
-    kill -3 $(eval "cat ${pidfile}")
+    kill $(eval "cat ${pidfile}")
     RETVAL=$?
     [ $RETVAL = 0 ] && rm -f ${pidfile} && echo "OK" && return
     echo "Failed"
