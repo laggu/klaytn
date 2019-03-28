@@ -1,0 +1,172 @@
+#!/bin/bash
+#
+# kscnd         Startup script for the kscnd
+#
+# chkconifg: - 85 15
+# description : kscnd is klaytn consensus node daemon
+#
+# processname: kscnd
+# config:  /etc/kscnd/conf/kscnd.conf
+# pidfile: /var/run/kscnd.pid
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+if [ -f /etc/kscnd/conf/kscnd.conf ]; then
+        . /etc/kscnd/conf/kscnd.conf
+fi
+
+kscn=/usr/bin/kscn
+prog=kscnd
+lockfile=${LOCKFILE-/var/lock/subsys/kscnd}
+pidfile=${PIDFILE-/var/run/kscnd.pid}
+RETVAL=0
+STOP_TIMEOUT=${STOP_TIMEOUT-10}
+
+OPTIONS="--nodiscover"
+
+if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+    OPTIONS="$OPTIONS --metrics"
+fi
+
+if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+    OPTIONS="$OPTIONS --prometheus"
+fi
+
+if [[ ! -z $DB_NO_PARALLEL_WRITE ]] && [[ $DB_NO_PARALLEL_WRITE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --db.no-parallel-write"
+fi
+
+if [[ ! -z $MULTICHANNEL ]] && [[ $MULTICHANNEL -eq 1 ]]; then
+    OPTIONS="$OPTIONS --multichannel"
+fi
+
+if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --rpc --rpcapi $RPC_API --rpcport $RPC_PORT --rpcaddr $RPC_ADDR --rpccorsdomain $RPC_CORSDOMAIN --rpcvhosts $RPC_VHOSTS"
+fi
+
+if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --ws --wsapi $WS_API --wsaddr $WS_ADDR --wsport $WS_PORT --wsorigins $WS_ORIGINS"
+fi
+
+if [ ! -z $NETWORK_ID ]; then
+    OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+fi
+
+if [ ! -z $DATA_DIR ]; then
+    OPTIONS="$OPTIONS --datadir $DATA_DIR"
+fi
+
+if [ ! -z $PORT ]; then
+    OPTIONS="$OPTIONS --port $PORT"
+fi
+
+if [ ! -z $SERVER_TYPE ]; then
+    OPTIONS="$OPTIONS --srvtype $SERVER_TYPE"
+fi
+
+if [ ! -z $VERBOSITY ]; then
+    OPTIONS="$OPTIONS --verbosity $VERBOSITY"
+fi
+
+if [ ! -z $TXPOOL_EXEC_SLOTS_ALL ]; then
+    OPTIONS="$OPTIONS --txpool.exec-slots.all $TXPOOL_EXEC_SLOTS_ALL"
+fi
+
+if [ ! -z $TXPOOL_NONEXEC_SLOTS_ALL ]; then
+    OPTIONS="$OPTIONS --txpool.nonexec-slots.all $TXPOOL_NONEXEC_SLOTS_ALL"
+fi
+
+if [ ! -z $TXPOOL_EXEC_SLOTS_ACCOUNT ]; then
+    OPTIONS="$OPTIONS --txpool.exec-slots.account $TXPOOL_EXEC_SLOTS_ACCOUNT"
+fi
+
+if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
+    OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
+fi
+
+if [ ! -z $SYNCMODE ]; then
+    OPTIONS="$OPTIONS --syncmode $SYNCMODE"
+fi
+
+if [ ! -z $MAXPEERS ]; then
+    OPTIONS="$OPTIONS --maxpeers $MAXPEERS"
+fi
+
+if [ ! -z $LDBCACHESIZE ]; then
+    OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
+fi
+
+if [[ ! -z $COINBASE ]] && [[ $COINBASE != "" ]]; then
+    OPTIONS="$OPTIONS --coinbase $COINBASE --unlock $COINBASE"
+fi
+
+if [[ ! -z $COINBASE_PASSWD_FILE ]] && [[ $COINBASE_PASSWD_FILE != "" ]]; then
+    OPTIONS="$OPTIONS --password $COINBASE_PASSWD_FILE"
+fi
+
+if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --bridge --bridgeport $SC_BRIDGE_PORT --chaintxperiod $SC_TX_PERIOD --chaintxlimit $SC_TX_LIMIT "
+    if [[ ! -z $SC_PARENT_CHAIN_WS ]] && [[ $SC_PARENT_CHAIN_WS != "" ]]; then
+      OPTIONS="$OPTIONS --parentchainws $SC_PARENT_CHAIN_WS"
+    fi
+fi
+
+if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+    OPTIONS="$OPTIONS $ADDITIONAL"
+fi
+
+start() {
+        echo -n "Starting $prog: "
+        if [ ! -d ${LOG_DIR} ]; then
+                mkdir -p ${LOG_DIR}
+        fi
+
+        __pids_var_run "$prog" "$pidfile"
+        [ -n "$pid" ] && echo && return
+
+        set -f
+        $kscn $OPTIONS >> ${LOG_DIR}/kscnd.out 2>&1 &
+        RETVAL=$?
+        PIDNUM=$!
+        set +f
+        if [ $RETVAL = 0 ]; then
+                echo $PIDNUM > ${pidfile}
+                touch ${lockfile}
+                success "$prog startup"
+        else
+                failure "$prog startup"
+        fi
+        echo
+        return $RETVAL
+}
+
+stop() {
+        echo -n "Shutting down $prog: "
+        killproc -p ${pidfile} -d ${STOP_TIMEOUT} kscn
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status -p ${pidfile} -l ${lockfile} $kscn
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit $?

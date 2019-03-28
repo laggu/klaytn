@@ -145,7 +145,7 @@ jobs:
       - run:
           name: "Packaging kcn, kpn, ken, kgen for linux-amd64"
           command: |
-            for item in kcn kpn ken kgen
+            for item in kcn kpn ken kgen kscn
             do
               PACK_NAME=${item}-linux-amd64
               if [ ${item} = kgen ]; then
@@ -166,7 +166,7 @@ jobs:
       - run:
           name: "Packaging kcn, kpn, ken, kgen for macOS"
           command: |
-            for item in kcn kpn ken kgen
+            for item in kcn kpn ken kgen kscn
             do
               PACK_NAME=${item}-darwin-amd64
               if [ ${item} = kgen ]; then
@@ -246,7 +246,7 @@ jobs:
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
-            for item in kcn kpn ken
+            for item in kcn kpn ken kscn
             do
               cd /go/src/github.com/ground-x/klaytn
               go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild_home/SPECS/${item}d-$KLAYTN_VERSION.spec

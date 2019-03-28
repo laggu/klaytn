@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+
+BIN=$(cd "$(dirname $0)"; pwd)
+CMD_HOME=$(dirname $BIN)
+CONF=$CMD_HOME/conf
+
+source $CONF/kscnd.conf
+
+if [ -z $DATA_DIR ]; then
+     echo
+     echo "  [ERROR] : DATA_DIR in conf/kscnd.conf is not defined."
+     exit 1
+fi
+
+if [ ! -d $DATA_DIR ]; then
+    echo
+    echo "  [ERROR] : Genesis block is not initiated: [conf/kscnd.conf - DATA_DIR=$DATA_DIR]"
+    exit 1
+fi
+
+pidfile=$DATA_DIR/kscnd.pid
+
+__pid_run() {
+    unset pid
+    if [ ! -f $pidfile ]; then
+        return
+    fi
+    PID_NUM=$(eval "cat $pidfile")
+    if [[ ! -z "$PID_NUM" ]]; then
+        export pid=$(eval "ps -p $PID_NUM -o pid=")
+    fi
+}
+
+start() {
+    __pid_run
+    [ -n "$pid" ] && echo "kscnd already running...[$pid]" && return
+
+    echo -n "Starting kscnd: "
+
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
+
+    if [ -z $COINBASE_PASSWD_FILE ] || [ ! -f $COINBASE_PASSWD_FILE ]; then
+        echo
+        echo "  [ERROR] : Coinbase's wallet password file is not exist. [conf/kscnd.conf - COINBASE_PASSWD_FILE=$COINBASE_PASSWD_FILE ]"
+        exit 1
+    fi
+
+    OPTIONS="--nodiscover"
+
+    if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --metrics"
+    fi
+
+    if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --prometheus"
+    fi
+
+    if [[ ! -z $DB_NO_PARALLEL_WRITE ]] && [[ $DB_NO_PARALLEL_WRITE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --db.no-parallel-write"
+    fi
+
+    if [[ ! -z $MULTICHANNEL ]] && [[ $MULTICHANNEL -eq 1 ]]; then
+        OPTIONS="$OPTIONS --multichannel"
+    fi
+
+    if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --rpc --rpcapi $RPC_API --rpcport $RPC_PORT --rpcaddr $RPC_ADDR --rpccorsdomain $RPC_CORSDOMAIN --rpcvhosts $RPC_VHOSTS"
+    fi
+
+    if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --ws --wsapi $WS_API --wsaddr $WS_ADDR --wsport $WS_PORT --wsorigins $WS_ORIGINS"
+    fi
+
+    if [ ! -z $NETWORK_ID ]; then
+        OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+    fi
+
+    if [ ! -z $DATA_DIR ]; then
+        OPTIONS="$OPTIONS --datadir $DATA_DIR"
+    fi
+
+    if [ ! -z $PORT ]; then
+        OPTIONS="$OPTIONS --port $PORT"
+    fi
+
+    if [ ! -z $SERVER_TYPE ]; then
+        OPTIONS="$OPTIONS --srvtype $SERVER_TYPE"
+    fi
+
+    if [ ! -z $VERBOSITY ]; then
+        OPTIONS="$OPTIONS --verbosity $VERBOSITY"
+    fi
+
+    if [ ! -z $TXPOOL_EXEC_SLOTS_ALL ]; then
+        OPTIONS="$OPTIONS --txpool.exec-slots.all $TXPOOL_EXEC_SLOTS_ALL"
+    fi
+
+    if [ ! -z $TXPOOL_NONEXEC_SLOTS_ALL ]; then
+        OPTIONS="$OPTIONS --txpool.nonexec-slots.all $TXPOOL_NONEXEC_SLOTS_ALL"
+    fi
+
+    if [ ! -z $TXPOOL_EXEC_SLOTS_ACCOUNT ]; then
+        OPTIONS="$OPTIONS --txpool.exec-slots.account $TXPOOL_EXEC_SLOTS_ACCOUNT"
+    fi
+
+    if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
+        OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
+    fi
+
+    if [ ! -z $SYNCMODE ]; then
+        OPTIONS="$OPTIONS --syncmode $SYNCMODE"
+    fi
+
+    if [ ! -z $MAXPEERS ]; then
+        OPTIONS="$OPTIONS --maxpeers $MAXPEERS"
+    fi
+
+    if [ ! -z $LDBCACHESIZE ]; then
+        OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
+    fi
+
+    if [[ ! -z $COINBASE ]] && [[ $COINBASE != "" ]]; then
+        OPTIONS="$OPTIONS --coinbase $COINBASE --unlock $COINBASE"
+    fi
+
+    if [[ ! -z $COINBASE_PASSWD_FILE ]] && [[ $COINBASE_PASSWD_FILE != "" ]]; then
+        OPTIONS="$OPTIONS --password $COINBASE_PASSWD_FILE"
+    fi
+
+    if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --bridge --bridgeport $SC_BRIDGE_PORT --chaintxperiod $SC_TX_PERIOD --chaintxlimit $SC_TX_LIMIT "
+        if [[ ! -z $SC_PARENT_CHAIN_WS ]] && [[ $SC_PARENT_CHAIN_WS != "" ]]; then
+          OPTIONS="$OPTIONS --parentchainws $SC_PARENT_CHAIN_WS"
+        fi
+    fi
+
+    if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+        OPTIONS="$OPTIONS $ADDITIONAL"
+    fi
+
+    set -f
+    $BIN/kscn $OPTIONS >> ${LOG_DIR}/kscnd.out 2>&1 &
+    RETVAL=$?
+    PIDNUM=$!
+    set +f
+    if [ $RETVAL = 0 ]; then
+        echo $PIDNUM > ${pidfile}
+        echo "OK"
+    else
+        echo "Fail"
+    fi
+    return $RETVAL
+}
+
+stop() {
+    __pid_run
+    [ -z "$pid" ] && echo "kscnd is not running" && return
+    echo -n "Shutting down kscnd: "
+    kill -3 $(eval "cat ${pidfile}")
+    RETVAL=$?
+    [ $RETVAL = 0 ] && rm -f ${pidfile} && echo "OK" && return
+    echo "Failed"
+}
+
+status() {
+    __pid_run
+    if [ -n "$pid" ]; then
+        echo "kscnd is running"
+    else
+        echo "kscnd is down"
+    fi
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        restart
+        ;;
+    *)
+        echo "Usages: kscnd {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit 0

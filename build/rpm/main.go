@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	CN = "kcn"
-	PN = "kpn"
-	EN = "ken"
+	CN  = "kcn"
+	PN  = "kpn"
+	EN  = "ken"
+	SCN = "kscn"
 )
 
 type NodeInfo struct {
@@ -22,9 +23,10 @@ type NodeInfo struct {
 }
 
 var NODE_TYPE = map[string]NodeInfo{
-	CN: {"kcnd", "kcnd is klaytn consensus node daemon"},
-	PN: {"kpnd", "kpnd is klaytn proxy node daemon"},
-	EN: {"kend", "kend is klaytn endpoint node daemon"},
+	CN:  {"kcnd", "kcnd is klaytn consensus node daemon"},
+	PN:  {"kpnd", "kpnd is klaytn proxy node daemon"},
+	EN:  {"kend", "kend is klaytn endpoint node daemon"},
+	SCN: {"kscnd", "kscnd is klaytn servicechain node daemon"},
 }
 
 type RpmSpec struct {
@@ -109,7 +111,7 @@ func genspec(c *cli.Context) error {
 
 	nodeType := c.String("node_type")
 	if _, ok := NODE_TYPE[nodeType]; ok != true {
-		return fmt.Errorf("node_type[\"%s\"] is not supported. Use --node_type [kcn, kpn, ken]", nodeType)
+		return fmt.Errorf("node_type[\"%s\"] is not supported. Use --node_type [kcn, kpn, ken, kscn]", nodeType)
 	}
 
 	rpmSpec.ProgramName = strings.ToLower(nodeType)
