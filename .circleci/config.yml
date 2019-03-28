@@ -258,12 +258,10 @@ jobs:
               rpmbuild -ba /rpmbuild_home/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild_home/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
-              if [ $item == 'ken' ]; then
-                scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
-                ssh -o StrictHostKeyChecking=no ec2-user@packages.klaytn.net createrepo --update /data/packages/rhel/7/prod
-              fi
+              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
             done
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+            ssh -o StrictHostKeyChecking=no ec2-user@packages.klaytn.net createrepo --update /data/packages/rhel/7/prod
 
 workflows:
   version: 2
