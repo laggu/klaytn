@@ -93,24 +93,31 @@ func (a *AccountKeyRoleBased) Equal(b AccountKey) bool {
 }
 
 func (a *AccountKeyRoleBased) EncodeRLP(w io.Writer) error {
-	serializers := make([]*AccountKeySerializer, len(*a))
+	enc := make([][]byte, len(*a))
 
 	for i, k := range *a {
-		serializers[i] = NewAccountKeySerializerWithAccountKey(k)
+		enc[i], _ = rlp.EncodeToBytes(NewAccountKeySerializerWithAccountKey(k))
 	}
 
-	return rlp.Encode(w, serializers)
+	return rlp.Encode(w, enc)
 }
 
 func (a *AccountKeyRoleBased) DecodeRLP(s *rlp.Stream) error {
-	serializers := []*AccountKeySerializer{}
-	if err := s.Decode(&serializers); err != nil {
+	enc := [][]byte{}
+	if err := s.Decode(&enc); err != nil {
 		return err
 	}
-	*a = make(AccountKeyRoleBased, len(serializers))
-	for i, s := range serializers {
-		(*a)[i] = s.key
+
+	keys := make([]AccountKey, len(enc))
+	for i, b := range enc {
+		serializer := NewAccountKeySerializer()
+		if err := rlp.DecodeBytes(b, &serializer); err != nil {
+			return err
+		}
+		keys[i] = serializer.key
 	}
+
+	*a = (AccountKeyRoleBased)(keys)
 
 	return nil
 }
