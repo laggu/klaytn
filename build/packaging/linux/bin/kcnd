@@ -6,8 +6,16 @@ CONF=$CMD_HOME/conf
 
 source $CONF/kcnd.conf
 
+if [ -z $DATA_DIR ]; then
+    echo
+    echo "  [ERROR] : DATA_DIR in conf/kcnd.conf is not defined."
+    exit 1
+fi
+
 if [ ! -d $DATA_DIR ]; then
-    mkdir -p $DATA_DIR
+    echo
+    echo "  [ERROR] : Genesis block is not initiated: [conf/kcnd.conf - DATA_DIR=$DATA_DIR]"
+    exit 1
 fi
 
 pidfile=$DATA_DIR/kcnd.pid
@@ -29,12 +37,6 @@ start() {
 
     echo -n "Starting kcnd: "
     
-    if [ ! -d $DATA_DIR ]; then
-        echo 
-        echo "  [ERROR] : kcnd is not initiated, Initiate kcnd with genesis file first."
-        exit 1
-    fi
-
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
     fi
