@@ -103,7 +103,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
-	gasPrice = big.NewInt(0)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. TxTypeFeeDelegatedValueTransferWithRatio
 	{

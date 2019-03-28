@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -107,12 +108,13 @@ func TestRoleBasedAccount(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account `colin` with a role-key.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -305,12 +307,13 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -434,12 +437,13 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -562,12 +566,13 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -599,7 +604,6 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
 	})
 
-	gasPrice := big.NewInt(0)
 	// 2. Inserting a tx signed by old key into the pool. It should pass.
 	{
 		values := map[types.TxValueKeyType]interface{}{
@@ -750,12 +754,13 @@ func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,

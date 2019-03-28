@@ -84,6 +84,7 @@ func TestValidateSenderContract(t *testing.T) {
 		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ec"))
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account multisig using TxTypeAccountCreation.
 	{

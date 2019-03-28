@@ -65,7 +65,9 @@ func TestTxCancel(t *testing.T) {
 	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
 	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Insert a value transfer transaction with nonce 0.
 	{
@@ -78,7 +80,7 @@ func TestTxCancel(t *testing.T) {
 			types.TxValueKeyTo:       *bcdata.addrs[0],
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
@@ -110,7 +112,7 @@ func TestTxCancel(t *testing.T) {
 			types.TxValueKeyTo:       *bcdata.addrs[1],
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
@@ -136,7 +138,7 @@ func TestTxCancel(t *testing.T) {
 			types.TxValueKeyNonce:    uint64(0),
 			types.TxValueKeyFrom:     *bcdata.addrs[0],
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeCancel, values)
 		assert.Equal(t, nil, err)
@@ -162,7 +164,7 @@ func TestTxCancel(t *testing.T) {
 			types.TxValueKeyNonce:    uint64(0),
 			types.TxValueKeyFrom:     *bcdata.addrs[0],
 			types.TxValueKeyGasLimit: gasLimit + 10,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeCancel, values)
 		assert.Equal(t, nil, err)
@@ -223,7 +225,9 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
 	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Insert a value transfer transaction with nonce 0.
 	{
@@ -236,7 +240,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 			types.TxValueKeyTo:       *bcdata.addrs[0],
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
@@ -268,7 +272,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 			types.TxValueKeyTo:       *bcdata.addrs[1],
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
@@ -294,7 +298,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 			types.TxValueKeyNonce:    uint64(0),
 			types.TxValueKeyFrom:     *bcdata.addrs[0],
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 			types.TxValueKeyFeePayer: *bcdata.addrs[1],
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancel, values)
@@ -324,7 +328,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 			types.TxValueKeyNonce:    uint64(0),
 			types.TxValueKeyFrom:     *bcdata.addrs[0],
 			types.TxValueKeyGasLimit: gasLimit + 10,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 			types.TxValueKeyFeePayer: *bcdata.addrs[1],
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancel, values)
@@ -390,6 +394,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
 	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Insert a value transfer transaction with nonce 0.
 	{
@@ -402,7 +407,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 			types.TxValueKeyTo:       *bcdata.addrs[0],
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
@@ -434,7 +439,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 			types.TxValueKeyTo:       *bcdata.addrs[1],
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(0),
+			types.TxValueKeyGasPrice: gasPrice,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
@@ -460,7 +465,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 			types.TxValueKeyNonce:              uint64(0),
 			types.TxValueKeyFrom:               *bcdata.addrs[0],
 			types.TxValueKeyGasLimit:           gasLimit,
-			types.TxValueKeyGasPrice:           big.NewInt(0),
+			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyFeePayer:           *bcdata.addrs[1],
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
@@ -491,7 +496,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 			types.TxValueKeyNonce:              uint64(0),
 			types.TxValueKeyFrom:               *bcdata.addrs[0],
 			types.TxValueKeyGasLimit:           gasLimit + 10,
-			types.TxValueKeyGasPrice:           big.NewInt(0),
+			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyFeePayer:           *bcdata.addrs[1],
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(20),
 		}

@@ -48,11 +48,7 @@ var (
 	to       = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
 	feePayer = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
 	nonce    = uint64(1234)
-	amount   = big.NewInt(10)
-	gasLimit = uint64(999999999)
-
-	// TODO-Klaytn-Gas: When we have a configuration of Baobab or something, use gasPrice in that configuration.
-	gasPrice = big.NewInt(25)
+	gasLimit = uint64(1000000)
 )
 
 type TestAccountType struct {
@@ -257,7 +253,7 @@ func TestAccountUpdatedWithExistingKey(t *testing.T) {
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	var txs types.Transactions
-	amount := new(big.Int).SetUint64(100000000000)
+	amount := new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.KLAY))
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -283,6 +279,8 @@ func TestAccountUpdatedWithExistingKey(t *testing.T) {
 		fmt.Println("EOA decoupled Addr = ", decoupled.Addr.String())
 		fmt.Println("EOA Addr = ", eoa.Addr.String())
 	}
+
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Step 1. Create an EOA account
 	values := map[types.TxValueKeyType]interface{}{
@@ -430,6 +428,7 @@ func TestHumanReadableAddress(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Create an account "1colin" using TxTypeAccountCreation.
 	{
@@ -488,6 +487,7 @@ func TestAccountCreationWithNilKey(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -611,12 +611,13 @@ func TestTransactionScenario(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+	amount := new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.KLAY))
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(100000000000)
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -687,7 +688,7 @@ func TestTransactionScenario(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(10000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -741,7 +742,7 @@ func TestTransactionScenario(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -1998,6 +1999,7 @@ func TestAccountCreationWithFailKey(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -2124,6 +2126,7 @@ func TestAccountCreationWithLegacyKey(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -2154,7 +2157,7 @@ func TestAccountCreationWithLegacyKey(t *testing.T) {
 	// Create anon with a legacy key
 	{
 		var txs types.Transactions
-		amount := new(big.Int).SetUint64(300000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -2233,6 +2236,7 @@ func TestAccountCreationWithLegacyKeyNReadableAddr(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -2373,12 +2377,13 @@ func TestAccountUpdate(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(100000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -2425,7 +2430,7 @@ func TestAccountUpdate(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -2513,7 +2518,7 @@ func TestAccountUpdate(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -2672,6 +2677,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
 	{
@@ -2728,7 +2734,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -2820,7 +2826,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -2972,12 +2978,13 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(100000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -3029,7 +3036,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -3122,7 +3129,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -3265,12 +3272,13 @@ func TestMultisigScenario(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account multisig using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,

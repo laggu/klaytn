@@ -11,6 +11,7 @@ import (
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
+	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strconv"
@@ -79,6 +80,7 @@ func TestAccountCreationMaxMultiSigKey(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Create a multiSig account with 11 different private keys (more than 10 -> failed)
 	{
@@ -164,6 +166,7 @@ func TestAccountCreationMultiSigKeyBigThreshold(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// creates a multisig account with a threshold (10) and the total weight (6). (failed case)
 	{
@@ -245,6 +248,7 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. A key for the first role, RoleTransaction, is nested
 	{
@@ -412,6 +416,7 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. try to create an account with a RoleBased key which contains 4 sub-keys.
 	{
@@ -530,6 +535,7 @@ func TestAccountCreationMultiSigKeyDupPrvKeys(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// the case when two same private keys are used in creation processes.
 	{
@@ -619,6 +625,7 @@ func TestAccountCreationMultiSigKeyWeightOverflow(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// creates a multisig account with a threshold, uint(MAX), and the total weight, uint(MAX/2)*3. (failed case)
 	{
@@ -691,6 +698,7 @@ func TestAccountCreationHumanReadableFail(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Non-alphanumeric characters in the address.
 	{
@@ -855,6 +863,7 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 	keys := genTestKeys(2)
 
 	// 1. a RoleBased key contains an AccountKeyNil type sub-key as a first sub-key. (fail)
@@ -1102,11 +1111,12 @@ func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 0. create an account with a roleBased key.
 	{
 		var txs types.Transactions
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,

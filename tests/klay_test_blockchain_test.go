@@ -420,6 +420,7 @@ func initBlockChain(conf *node.Config, db database.DBManager, coinbaseAddrs []*c
 	genesis.Mixhash = types.IstanbulDigest
 	genesis.Difficulty = big.NewInt(1)
 	genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.UnitPrice = 25 * params.Ston
 
 	alloc := make(blockchain.GenesisAlloc)
 	for _, a := range coinbaseAddrs {

@@ -71,7 +71,7 @@ func TestAccountCreationFailTxPool(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-	gasPrice := big.NewInt(0)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account decoupled using TxTypeAccountCreation.
 	{
@@ -187,7 +187,7 @@ func TestSmartContractCreationFailTxPool(t *testing.T) {
 		"contract")
 	assert.Equal(t, nil, err)
 
-	gasPrice := new(big.Int).SetUint64(0)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 	gasLimit := uint64(250000000)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
@@ -331,7 +331,7 @@ func TestAccountCreationFailBlock(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
-	gasPrice := big.NewInt(0)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	var txs types.Transactions
 	// 1. Create an account decoupled using TxTypeAccountCreation.

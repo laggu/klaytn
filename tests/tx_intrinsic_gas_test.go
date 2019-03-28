@@ -98,12 +98,13 @@ func TestTransactionGas(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an account decoupled.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -174,7 +175,7 @@ func TestTransactionGas(t *testing.T) {
 
 	// 1. LegacyTransaction
 	{
-		amount := new(big.Int).SetUint64(100000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -267,7 +268,7 @@ func TestTransactionGas(t *testing.T) {
 
 	// 5. TxTypeAccountCreation
 	{
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -501,12 +502,13 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an account decoupled.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -884,12 +886,13 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an account decoupled.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -1269,12 +1272,13 @@ func TestTransactionGasWithAccountKeyPublic(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an account decoupled.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -1646,12 +1650,13 @@ func TestTransactionGasWithAccountKeyWeightedMultiSig(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an account multisig.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -2080,12 +2085,13 @@ func TestTransactionGasWithAccountKeyRoleBasedWithAccountKeyPublic(t *testing.T)
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an role based account.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -2597,12 +2603,13 @@ func TestTransactionGasWithAccountKeyRoleBasedWithAccountKeyWeightedMultiSig(t *
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an role based account.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -3107,6 +3114,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Send Klay to anon account.
 	{
@@ -3116,7 +3124,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAndLegacyPayer(t *testing.T) {
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
 			types.TxValueKeyTo:       anon.Addr,
-			types.TxValueKeyAmount:   big.NewInt(1000000000000),
+			types.TxValueKeyAmount:   big.NewInt(params.KLAY),
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
 		}
@@ -3468,12 +3476,13 @@ func TestFeeDelegatedTransactionGasWithLegacyAndMultiSigPayer(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create a multiSig account.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -3807,12 +3816,13 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithPublicPayer(t *test
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create a role based account with accountKeyPublic.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -4192,12 +4202,13 @@ func TestFeeDelegatedTransactionGasWithLegacyAndRoleBasedWithdMultiSigPayer(t *t
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create a role based account with accountKeyPublic.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -4552,12 +4563,13 @@ func TestFeeDelegatedTransactionGasWithMultiSigAndLegacyPayer(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create a multiSig account.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -4947,12 +4959,13 @@ func TestFeeDelegatedTransactionGasWithMultiSigAndPublicPayer(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create an account decoupled.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -5367,12 +5380,13 @@ func TestFeeDelegatedTransactionGasWithMultiSigAndMultiSigPayer(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create a multiSig account for fee payer.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -5790,12 +5804,13 @@ func TestFeeDelegatedTransactionGasWithMultiSigAndRoleBasedWithPublicPayer(t *te
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create a role based with accountKeyPublic account.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -6249,12 +6264,13 @@ func TestFeeDelegatedTransactionGasWithMultiSigAndRoleBasedWithMultiSigPayer(t *
 	assert.Equal(t, nil, err)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Preparing step. Create a role based with accountKeyPublic account.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
