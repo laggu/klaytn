@@ -79,6 +79,10 @@ type AccountKey interface {
 
 	// Update returns an error if `key` cannot be assigned to itself.
 	Update(key AccountKey) error
+
+	// IsCompositeType returns true if the account type is a composite type.
+	// Composite types are AccountKeyRoleBased and AccountKeyRoleBasedRLPBytes.
+	IsCompositeType() bool
 }
 
 func NewAccountKey(t AccountKeyType) (AccountKey, error) {

@@ -295,7 +295,7 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrUnsatisfiableThreshold:       types.ReceiptStatusErrUnsatisfiableThreshold,
 	kerrors.ErrZeroLength:                   types.ReceiptStatusErrZeroLength,
 	kerrors.ErrLengthTooLong:                types.ReceiptStatusErrLengthTooLong,
-	kerrors.ErrNestedRoleBasedKey:           types.ReceiptStatusErrNestedRoleBasedKey,
+	kerrors.ErrNestedCompositeType:          types.ReceiptStatusErrNestedRoleBasedKey,
 }
 
 var receiptstatus2errTxFailed = map[uint]error{
@@ -324,7 +324,7 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrUnsatisfiableThreshold:       kerrors.ErrUnsatisfiableThreshold,
 	types.ReceiptStatusErrZeroLength:                   kerrors.ErrZeroLength,
 	types.ReceiptStatusErrLengthTooLong:                kerrors.ErrLengthTooLong,
-	types.ReceiptStatusErrNestedRoleBasedKey:           kerrors.ErrNestedRoleBasedKey,
+	types.ReceiptStatusErrNestedRoleBasedKey:           kerrors.ErrNestedCompositeType,
 }
 
 // getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.

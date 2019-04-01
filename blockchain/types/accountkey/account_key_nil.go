@@ -42,6 +42,10 @@ func (a *AccountKeyNil) Type() AccountKeyType {
 	return AccountKeyTypeNil
 }
 
+func (a *AccountKeyNil) IsCompositeType() bool {
+	return false
+}
+
 func (a *AccountKeyNil) Equal(b AccountKey) bool {
 	if _, ok := b.(*AccountKeyNil); !ok {
 		return false

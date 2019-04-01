@@ -39,6 +39,10 @@ func (a *AccountKeyFail) Type() AccountKeyType {
 	return AccountKeyTypeFail
 }
 
+func (a *AccountKeyFail) IsCompositeType() bool {
+	return false
+}
+
 func (a *AccountKeyFail) Equal(b AccountKey) bool {
 	// This type of account key always returns false.
 	return false

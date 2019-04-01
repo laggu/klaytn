@@ -41,6 +41,10 @@ func (a *AccountKeyLegacy) Type() AccountKeyType {
 	return AccountKeyTypeLegacy
 }
 
+func (a *AccountKeyLegacy) IsCompositeType() bool {
+	return false
+}
+
 func (a *AccountKeyLegacy) Equal(b AccountKey) bool {
 	if _, ok := b.(*AccountKeyLegacy); !ok {
 		return false

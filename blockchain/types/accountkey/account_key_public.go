@@ -45,6 +45,10 @@ func (a *AccountKeyPublic) Type() AccountKeyType {
 	return AccountKeyTypePublic
 }
 
+func (a *AccountKeyPublic) IsCompositeType() bool {
+	return false
+}
+
 func (a *AccountKeyPublic) DeepCopy() AccountKey {
 	return &AccountKeyPublic{
 		a.PublicKeySerializable.DeepCopy(),

@@ -53,6 +53,10 @@ func (a *AccountKeyWeightedMultiSig) Type() AccountKeyType {
 	return AccountKeyTypeWeightedMultiSig
 }
 
+func (a *AccountKeyWeightedMultiSig) IsCompositeType() bool {
+	return false
+}
+
 func (a *AccountKeyWeightedMultiSig) DeepCopy() AccountKey {
 	return &AccountKeyWeightedMultiSig{
 		a.Threshold, a.Keys.DeepCopy(),

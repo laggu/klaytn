@@ -36,8 +36,8 @@ const (
 )
 
 var (
-	errKeyLengthZero                = errors.New("key length is zero")
-	errKeyShouldNotBeNilOrRoleBased = errors.New("key should not be nil or rolebased")
+	errKeyLengthZero                    = errors.New("key length is zero")
+	errKeyShouldNotBeNilOrCompositeType = errors.New("key should not be nil or a composite type")
 )
 
 // AccountKeyRoleBased represents a role-based key.
@@ -61,6 +61,10 @@ func NewAccountKeyRoleBasedWithValues(keys []AccountKey) *AccountKeyRoleBased {
 
 func (a *AccountKeyRoleBased) Type() AccountKeyType {
 	return AccountKeyTypeRoleBased
+}
+
+func (a *AccountKeyRoleBased) IsCompositeType() bool {
+	return true
 }
 
 func (a *AccountKeyRoleBased) DeepCopy() AccountKey {
@@ -156,8 +160,8 @@ func (a *AccountKeyRoleBased) ValidateAccountCreation() error {
 	// 2. Prohibited key types are: Nil and RoleBased.
 	for _, k := range *a {
 		if k.Type() == AccountKeyTypeNil ||
-			k.Type() == AccountKeyTypeRoleBased {
-			return errKeyShouldNotBeNilOrRoleBased
+			k.IsCompositeType() {
+			return errKeyShouldNotBeNilOrCompositeType
 		}
 	}
 
@@ -210,9 +214,9 @@ func (a *AccountKeyRoleBased) Init() error {
 		return kerrors.ErrLengthTooLong
 	}
 	for i := 0; i < len(*a); i++ {
-		// A nested role-based key is not allowed.
-		if _, ok := (*a)[i].(*AccountKeyRoleBased); ok {
-			return kerrors.ErrNestedRoleBasedKey
+		// A composite key is not allowed.
+		if (*a)[i].IsCompositeType() {
+			return kerrors.ErrNestedCompositeType
 		}
 
 		// If any key in the role cannot be initialized, return an error.
@@ -240,9 +244,9 @@ func (a *AccountKeyRoleBased) Update(key AccountKey) error {
 			*a = append(*a, (*ak)[lenA:]...)
 		}
 		for i := 0; i < lenAk; i++ {
-			if _, ok := (*ak)[i].(*AccountKeyRoleBased); ok {
-				// A nested role-based key is not allowed.
-				return kerrors.ErrNestedRoleBasedKey
+			// A composite key is not allowed.
+			if (*a)[i].IsCompositeType() {
+				return kerrors.ErrNestedCompositeType
 			}
 			// Skip if AccountKeyNil.
 			if (*ak)[i].Type() == AccountKeyTypeNil {

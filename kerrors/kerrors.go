@@ -43,5 +43,5 @@ var (
 	ErrUnsatisfiableThreshold       = errors.New("unsatisfiable threshold. Weighted sum of keys is less than the threshold.")
 	ErrZeroLength                   = errors.New("length is zero")
 	ErrLengthTooLong                = errors.New("length too long")
-	ErrNestedRoleBasedKey           = errors.New("nested role-based key")
+	ErrNestedCompositeType          = errors.New("nested composite type")
 )
