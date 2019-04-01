@@ -64,11 +64,38 @@ start() {
     fi
 
     if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
-        OPTIONS="$OPTIONS --rpc --rpcapi $RPC_API --rpcport $RPC_PORT --rpcaddr $RPC_ADDR --rpccorsdomain $RPC_CORSDOMAIN --rpcvhosts $RPC_VHOSTS"
+        OPTIONS="$OPTIONS --rpc"
+        if [ ! -z $RPC_API ]; then
+            OPTIONS="$OPTIONS --rpcapi $RPC_API"
+        fi
+        if [ ! -z $RPC_PORT ]; then
+            OPTIONS="$OPTIONS --rpcport $RPC_PORT"
+        fi
+        if [ ! -z $RPC_ADDR ]; then
+            OPTIONS="$OPTIONS --rpcaddr $RPC_ADDR"
+        fi
+        if [ ! -z $RPC_CORSDOMAIN ]; then
+            OPTIONS="$OPTIONS --rpccorsdomain $RPC_CORSDOMAIN"
+        fi
+        if [ ! -z $RPC_VHOSTS ]; then
+            OPTIONS="$OPTIONS --rpcvhosts $RPC_VHOSTS"
+        fi
     fi
 
     if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
-        OPTIONS="$OPTIONS --ws --wsapi $WS_API --wsaddr $WS_ADDR --wsport $WS_PORT --wsorigins $WS_ORIGINS"
+        OPTIONS="$OPTIONS --ws"
+        if [ ! -z $WS_API ]; then
+            OPTIONS="$OPTIONS --wsapi $WS_API"
+        fi
+        if [ ! -z $WS_PORT ]; then
+            OPTIONS="$OPTIONS --wsport $WS_PORT"
+        fi
+        if [ ! -z $WS_ADDR ]; then
+            OPTIONS="$OPTIONS --wsaddr $WS_ADDR"
+        fi
+        if [ ! -z $WS_ORIGINS ]; then
+            OPTIONS="$OPTIONS --wsorigins $WS_ORIGINS"
+        fi
     fi
 
     if [ ! -z $NETWORK_ID ]; then
