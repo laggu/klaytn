@@ -210,6 +210,18 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		pend.Add(1)
 
 		go func(reqs []*serverRequest, batch bool) {
+			defer func() {
+				if err := recover(); err != nil {
+					const size = 64 << 10
+					buf := make([]byte, size)
+					buf = buf[:runtime.Stack(buf, false)]
+					logger.Error(string(buf))
+				}
+				s.codecsMu.Lock()
+				s.codecs.Remove()
+				s.codecsMu.Unlock()
+			}()
+
 			defer pend.Done()
 			if batch {
 				s.execBatch(ctx, codec, reqs)
