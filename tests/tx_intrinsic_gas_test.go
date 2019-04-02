@@ -748,12 +748,13 @@ func TestFeeDelegatedTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		numKeys := uint64(len(decoupled.Keys))
-		gasKey := params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey
+		gasKey := params.TxAccountCreationGasDefault + 1*params.TxAccountCreationGasPerKey
 		intrinsicGas := params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegated
-		gasFrom := params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey
+		gasFrom := params.TxValidationGasDefault + uint64(len(decoupled.Keys))*params.TxValidationGasPerKey
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+gasFrom, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 5. TxTypeFeeDelegatedSmartContractDeploy
@@ -1148,12 +1149,13 @@ func TestFeeDelegatedWithRatioTransactionGas(t *testing.T) {
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		numKeys := uint64(len(decoupled.Keys))
-		gasKey := params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey
+		gasKey := params.TxAccountCreationGasDefault + 1*params.TxAccountCreationGasPerKey
 		intrinsicGas := params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio
-		gasFrom := params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey
+		gasFrom := params.TxValidationGasDefault + uint64(len(decoupled.Keys))*params.TxValidationGasPerKey
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+gasFrom, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
 	// 5. TxTypeFeeDelegatedSmartContractDeployWithRatio
