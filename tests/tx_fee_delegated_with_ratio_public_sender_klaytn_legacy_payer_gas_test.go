@@ -20,8 +20,10 @@ import (
 	"crypto/ecdsa"
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -30,16 +32,16 @@ import (
 	"time"
 )
 
-// TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer checks gas calculations
-// using AccountKeyRoleBased with AccountKeyPublic sender and KlaytnAccount with AccountKeyLegacy fee payer for fee delegated transaction types such as:
-// 1. TxTypeFeeDelegatedValueTransfer
-// 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
-// 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
-// 4. TxTypeFeeDelegatedAccountUpdate
-// 5. TxTypeFeeDelegatedSmartContractDeploy
-// 6. TxTypeFeeDelegatedSmartContractExecution
-// 7. TxTypeFeeDelegatedCancel
-func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t *testing.T) {
+// TestFeeDelegatedWithRatioTransactionGasWithPublicAndKlaytnLegacyPayer checks gas calculations of fee delegated with ratio transaction
+// using AccountKeyPublic sender and KlaytnAccount with AccountKeyLegacy fee payer for fee delegated transaction types such as:
+// 1. TxTypeFeeDelegatedValueTransferWithRatio
+// 2. TxTypeFeeDelegatedValueTransferMemoWithRatio with non-zero values.
+// 3. TxTypeFeeDelegatedValueTransferMemoWithRatio with zero values.
+// 4. TxTypeFeeDelegatedAccountUpdateWithRatio
+// 5. TxTypeFeeDelegatedSmartContractDeployWithRatio
+// 6. TxTypeFeeDelegatedSmartContractExecutionWithRatio
+// 7. TxTypeFeeDelegatedCancelWithRatio
+func TestFeeDelegatedWithRatioTransactionGasWithPublicAndKlaytnLegacyPayer(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -73,15 +75,9 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	assert.Equal(t, nil, err)
 
-	// get humanreadable address for role based account
-	roleBasedAddr, err := common.FromHumanReadableAddress("roleBasedAddr")
-	assert.Equal(t, nil, err)
-
-	// role based account
-	roleBased, err := createRoleBasedAccountWithAccountKeyPublic(
-		[]string{"98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab",
-			"c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-			"41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867"}, roleBasedAddr)
+	// decoupled account
+	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
+		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
 	assert.Equal(t, nil, err)
 
 	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
@@ -120,20 +116,20 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 		reservoir.Nonce += 1
 	}
 
-	// Preparing step. Create a role based with accountKeyPublic account.
+	// Preparing step. Create an account decoupled.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            roleBased.Addr,
+			types.TxValueKeyTo:            decoupled.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    roleBased.AccKey,
+			types.TxValueKeyAccountKey:    decoupled.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
@@ -193,21 +189,22 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 		reservoir.Nonce += 1
 	}
 
-	// 1. TxTypeFeeDelegatedValueTransfer
+	// 1. TxTypeFeeDelegatedValueTransferWithRatio
 	{
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    roleBased.Nonce,
-			types.TxValueKeyFrom:     roleBased.Addr,
-			types.TxValueKeyTo:       anon.Addr,
-			types.TxValueKeyAmount:   big.NewInt(100000),
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyFeePayer: anon.Addr,
+			types.TxValueKeyNonce:              decoupled.Nonce,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyTo:                 anon.Addr,
+			types.TxValueKeyAmount:             big.NewInt(100000),
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, roleBased.TxKeys)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
@@ -218,33 +215,32 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		intrinsicGas := params.TxGas + params.TxGasFeeDelegated
-		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
-		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
-		gasFrom := 3 * gasAccountKeyPublicForSigValidation
+		intrinsicGas := params.TxGas + params.TxGasFeeDelegatedWithRatio
+		gasFrom := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Need to revise gas fee calculation.
 		gasFeePayer := params.TxValidationGasDefault
 
 		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
-	// 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
+	// 2. TxTypeFeeDelegatedValueTransferMemoWithRatio with non-zero values.
 	{
 		data := []byte{1, 2, 3, 4}
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    roleBased.Nonce,
-			types.TxValueKeyFrom:     roleBased.Addr,
-			types.TxValueKeyTo:       anon.Addr,
-			types.TxValueKeyAmount:   big.NewInt(100000),
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyData:     data,
-			types.TxValueKeyFeePayer: anon.Addr,
+			types.TxValueKeyNonce:              decoupled.Nonce,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyTo:                 anon.Addr,
+			types.TxValueKeyAmount:             big.NewInt(100000),
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyData:               data,
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemo, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemoWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, roleBased.TxKeys)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
@@ -256,33 +252,32 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		gasPayload := uint64(len(data)) * params.TxDataNonZeroGas
-		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
-		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
-		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
-		gasFrom := 3 * gasAccountKeyPublicForSigValidation
+		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegatedWithRatio
+		gasFrom := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Need to revise gas fee calculation.
 		gasFeePayer := params.TxValidationGasDefault
 
 		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
-	// 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
+	// 3. TxTypeFeeDelegatedValueTransferMemoWithRatio with zero values.
 	{
 		data := []byte{0, 0, 0, 0}
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    roleBased.Nonce,
-			types.TxValueKeyFrom:     roleBased.Addr,
-			types.TxValueKeyTo:       anon.Addr,
-			types.TxValueKeyAmount:   big.NewInt(100000),
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyData:     data,
-			types.TxValueKeyFeePayer: anon.Addr,
+			types.TxValueKeyNonce:              decoupled.Nonce,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyTo:                 anon.Addr,
+			types.TxValueKeyAmount:             big.NewInt(100000),
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyData:               data,
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemo, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemoWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, roleBased.TxKeys)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
@@ -294,41 +289,32 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
 		gasPayload := uint64(len(data)) * params.TxDataZeroGas
-		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegated
-		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
-		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
-		gasFrom := 3 * gasAccountKeyPublicForSigValidation
+		intrinsicGas := params.TxGas + gasPayload + params.TxGasFeeDelegatedWithRatio
+		gasFrom := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Need to revise gas fee calculation.
 		gasFeePayer := params.TxValidationGasDefault
 
 		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
-	// 4. TxTypeFeeDelegatedAccountUpdate
+	// 4. TxTypeFeeDelegatedAccountUpdateWithRatio
 	{
-		// get humanreadable address for role based account
-		newRoleBasedAddr, err := common.FromHumanReadableAddress("roleBasedAddr")
-		assert.Equal(t, nil, err)
-
-		// role based account
-		newRoleBased, err := createRoleBasedAccountWithAccountKeyPublic(
-			[]string{"41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867",
-				"98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab",
-				"c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"}, newRoleBasedAddr)
+		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      roleBased.Nonce,
-			types.TxValueKeyFrom:       roleBased.Addr,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: newRoleBased.AccKey,
-			types.TxValueKeyFeePayer:   anon.Addr,
+			types.TxValueKeyNonce:              decoupled.Nonce,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, roleBased.UpdateKeys)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
@@ -339,37 +325,35 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		creationGasWithPublicKey := params.TxAccountCreationGasDefault + 1*params.TxAccountCreationGasPerKey
-		gasKey := 3 * creationGasWithPublicKey
-		intrinsicGas := params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegated
-		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
-		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
-		gasFrom := 3 * gasAccountKeyPublicForSigValidation
+		gasKey := params.TxAccountCreationGasDefault + 1*params.TxAccountCreationGasPerKey
+		intrinsicGas := params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio
+		gasFrom := params.TxValidationGasDefault + uint64(len(decoupled.Keys))*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Need to revise gas fee calculation.
 		gasFeePayer := params.TxValidationGasDefault
 
 		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
-	// 5. TxTypeFeeDelegatedSmartContractDeploy
+	// 5. TxTypeFeeDelegatedSmartContractDeployWithRatio
 	{
 		amount := new(big.Int).SetUint64(0)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         roleBased.Nonce,
-			types.TxValueKeyFrom:          roleBased.Addr,
-			types.TxValueKeyTo:            common.HexToAddress("12345678"),
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyData:          common.FromHex(code),
-			types.TxValueKeyFeePayer:      anon.Addr,
+			types.TxValueKeyNonce:              decoupled.Nonce,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyTo:                 common.HexToAddress("12345678"),
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyHumanReadable:      false,
+			types.TxValueKeyData:               common.FromHex(code),
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, roleBased.TxKeys)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
@@ -383,40 +367,39 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 		intrinsicGas, err := types.IntrinsicGas(common.FromHex(code), true, true)
 		assert.Equal(t, nil, err)
 
-		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		intrinsicGas = intrinsicGas + params.TxGasFeeDelegatedWithRatio
 		executionGas := uint64(0x175fd)
-		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
-		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
-		gasFrom := 3 * gasAccountKeyPublicForSigValidation
+		gasFrom := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Need to revise gas fee calculation.
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFrom+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
-	// 6. TxTypeFeeDelegatedSmartContractExecution
+	// 6. TxTypeFeeDelegatedSmartContractExecutionWithRatio
 	{
 		amount := new(big.Int).SetUint64(10)
 		abii, err := abi.JSON(strings.NewReader(string(abiStr)))
 		assert.Equal(t, nil, err)
 
-		data, err := abii.Pack("reward", roleBased.Addr)
+		data, err := abii.Pack("reward", anon.Addr)
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    roleBased.Nonce,
-			types.TxValueKeyFrom:     roleBased.Addr,
-			types.TxValueKeyTo:       contract.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyData:     data,
-			types.TxValueKeyFeePayer: anon.Addr,
+			types.TxValueKeyNonce:              decoupled.Nonce,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyTo:                 contract.Addr,
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyData:               data,
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecutionWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, roleBased.TxKeys)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
@@ -430,30 +413,29 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 		intrinsicGas, err := types.IntrinsicGas(data, false, true)
 		assert.Equal(t, nil, err)
 
-		intrinsicGas = intrinsicGas + params.TxGasFeeDelegated
+		intrinsicGas = intrinsicGas + params.TxGasFeeDelegatedWithRatio
 		executionGas := uint64(0x9ec4)
-		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
-		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
-		gasFrom := 3 * gasAccountKeyPublicForSigValidation
+		gasFrom := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Need to revise gas fee calculation.
 		gasFeePayer := params.TxValidationGasDefault
 
-		assert.Equal(t, intrinsicGas+executionGas+gasFrom+gasFeePayer, gas)
+		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
-	// 7. TxTypeFeeDelegatedCancel
+	// 7. TxTypeFeeDelegatedCancelWithRatio
 	{
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    roleBased.Nonce,
-			types.TxValueKeyFrom:     roleBased.Addr,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyFeePayer: anon.Addr,
+			types.TxValueKeyNonce:              decoupled.Nonce,
+			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyFeePayer:           anon.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancel, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancelWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, roleBased.TxKeys)
+		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
@@ -464,10 +446,8 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithPublicAndKlaytnLegacyPayer(t
 
 		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegated
-		gasAccountKeyPublicForSigValidation := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
-		// TODO-Klaytn-Gas Gas calculation logic has to be changed to calculate only the gas value for the key used in signing.
-		gasFrom := 3 * gasAccountKeyPublicForSigValidation
+		intrinsicGas := params.TxGasCancel + params.TxGasFeeDelegatedWithRatio
+		gasFrom := params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
 		// TODO-Klaytn-Gas Need to revise gas fee calculation.
 		gasFeePayer := params.TxValidationGasDefault
 

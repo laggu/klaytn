@@ -113,7 +113,7 @@ func TestFeeDelegatedTransactionGasWithRoleBasedWithMultiSigAndKlaytnLegacyPayer
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// Preparing step. Create an Klaytn Legacy Account.
+	// Preparing step. Create a Klaytn Legacy Account.
 	{
 		var txs types.Transactions
 
