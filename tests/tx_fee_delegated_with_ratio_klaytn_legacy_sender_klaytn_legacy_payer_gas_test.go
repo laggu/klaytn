@@ -35,9 +35,10 @@ import (
 // 1. TxTypeFeeDelegatedValueTransferWithRatio
 // 2. TxTypeFeeDelegatedValueTransferMemoWithRatio with non-zero values.
 // 3. TxTypeFeeDelegatedValueTransferMemoWithRatio with zero values.
-// 4. TxTypeFeeDelegatedSmartContractDeployWithRatio
-// 5. TxTypeFeeDelegatedSmartContractExecutionWithRatio
-// 6. TxTypeFeeDelegatedCancelWithRatio
+// 4. TxTypeFeeDelegatedAccountUpdateWithRatio
+// 5. TxTypeFeeDelegatedSmartContractDeployWithRatio
+// 6. TxTypeFeeDelegatedSmartContractExecutionWithRatio
+// 7. TxTypeFeeDelegatedCancelWithRatio
 func TestFeeDelegatedWithRatioTransactionGasWithKlaytnLegacyAndKlaytnLegacyPayer(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -293,7 +294,48 @@ func TestFeeDelegatedWithRatioTransactionGasWithKlaytnLegacyAndKlaytnLegacyPayer
 		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
 	}
 
-	// 4. TxTypeFeeDelegatedSmartContractDeployWithRatio
+	// 4. TxTypeFeeDelegatedAccountUpdateWithRatio
+	{
+		newKey, err := createMultisigAccount(uint(2),
+			[]uint{1, 1, 1},
+			[]string{"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
+				"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+				"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989"},
+			common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              anon.Nonce,
+			types.TxValueKeyFrom:               anon.Addr,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyAccountKey:         newKey.AccKey,
+			types.TxValueKeyFeePayer:           klaytnLegacy.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, klaytnLegacy.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, gas, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+
+		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
+
+		gasKey := params.TxAccountCreationGasDefault + uint64(len(newKey.Keys))*params.TxAccountCreationGasPerKey
+		intrinsicGas := params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+		gasFeePayer := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom+gasFeePayer, gas)
+	}
+
+	// 5. TxTypeFeeDelegatedSmartContractDeployWithRatio
 	{
 		amount := new(big.Int).SetUint64(0)
 
@@ -335,7 +377,7 @@ func TestFeeDelegatedWithRatioTransactionGasWithKlaytnLegacyAndKlaytnLegacyPayer
 		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
-	// 5. TxTypeFeeDelegatedSmartContractExecutionWithRatio
+	// 6. TxTypeFeeDelegatedSmartContractExecutionWithRatio
 	{
 		amount := new(big.Int).SetUint64(10)
 		abii, err := abi.JSON(strings.NewReader(string(abiStr)))
@@ -381,7 +423,7 @@ func TestFeeDelegatedWithRatioTransactionGasWithKlaytnLegacyAndKlaytnLegacyPayer
 		assert.Equal(t, intrinsicGas+gasFrom+executionGas+gasFeePayer, gas)
 	}
 
-	// 6. TxTypeFeeDelegatedCancelWithRatio
+	// 7. TxTypeFeeDelegatedCancelWithRatio
 	{
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              anon.Nonce,

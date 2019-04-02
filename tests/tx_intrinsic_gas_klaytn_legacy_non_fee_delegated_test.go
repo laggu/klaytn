@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -33,15 +35,16 @@ import (
 
 // TestTransactionGasWithKlaytnLegacy checks gas calculations
 // using KlaytnAccount with AccountKeyLegacy sender for non fee delegated transaction types such as:
-// 1. LegacyTransaction
-// 2. TxTypeValueTransfer
-// 3. TxTypeValueTransferMemo with non-zero values.
-// 4. TxTypeValueTransferMemo with zero values.
-// 5. TxTypeAccountCreation
-// 6. TxTypeSmartContractDeploy
-// 7. TxTypeSmartContractExecution
-// 8. TxTypeCancel
-// 9. TxTypeChainDataAnchoring
+// 1.  LegacyTransaction
+// 2.  TxTypeValueTransfer
+// 3.  TxTypeValueTransferMemo with non-zero values.
+// 4.  TxTypeValueTransferMemo with zero values.
+// 5.  TxTypeAccountCreation
+// 6.  TxTypeAccountUpdate
+// 7.  TxTypeSmartContractDeploy
+// 8.  TxTypeSmartContractExecution
+// 9.  TxTypeCancel
+// 10. TxTypeChainDataAnchoring
 func TestTransactionGasWithKlaytnLegacy(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -306,7 +309,38 @@ func TestTransactionGasWithKlaytnLegacy(t *testing.T) {
 		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
-	// 6. TxTypeSmartContractDeploy
+	// 6. TxTypeAccountUpdate
+	{
+		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
+		assert.Equal(t, nil, err)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, gas, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+
+		assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
+
+		gasKey := params.TxAccountCreationGasDefault + 1*params.TxAccountCreationGasPerKey
+		intrinsicGas := params.TxGasAccountUpdate + gasKey
+		// TODO-Klaytn-Gas Need to revise gas fee calculation.
+		gasFrom := params.TxValidationGasDefault
+
+		assert.Equal(t, intrinsicGas+gasFrom, gas)
+	}
+
+	// 7. TxTypeSmartContractDeploy
 	{
 		amount := new(big.Int).SetUint64(0)
 
@@ -342,7 +376,7 @@ func TestTransactionGasWithKlaytnLegacy(t *testing.T) {
 		assert.Equal(t, intrinsicGas+gasFrom+executionGas, gas)
 	}
 
-	// 7. TxTypeSmartContractExecution
+	// 8. TxTypeSmartContractExecution
 	{
 		amountToSend := new(big.Int).SetUint64(10)
 		abii, err := abi.JSON(strings.NewReader(string(abiStr)))
@@ -382,7 +416,7 @@ func TestTransactionGasWithKlaytnLegacy(t *testing.T) {
 		assert.Equal(t, intrinsicGas+gasFrom+executionGas, gas)
 	}
 
-	// 8. TxTypeCancel
+	// 9. TxTypeCancel
 	{
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    anon.Nonce,
@@ -408,7 +442,7 @@ func TestTransactionGasWithKlaytnLegacy(t *testing.T) {
 		assert.Equal(t, intrinsicGas+gasFrom, gas)
 	}
 
-	// 9. TxTypeChainDataAnchoring
+	// 10. TxTypeChainDataAnchoring
 	{
 		anchoredData := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 		values := map[types.TxValueKeyType]interface{}{
