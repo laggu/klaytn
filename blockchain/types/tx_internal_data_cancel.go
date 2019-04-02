@@ -207,12 +207,12 @@ func (t *TxInternalDataCancel) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataCancel) Validate(stateDB StateDB) error {
+func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No more validation required for TxTypeCancel for now.
 	return nil
 }
 
-func (t *TxInternalDataCancel) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataCancel) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return nil, gas, nil
 }

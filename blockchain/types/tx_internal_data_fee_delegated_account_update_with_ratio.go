@@ -369,7 +369,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSign() []
 	}
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB StateDB) error {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// TODO-Klaytn-Accounts: need validation of t.key?
 
 	if t.FeeRatio.IsValid() == false {
@@ -379,7 +379,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB Stat
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	err = stateDB.UpdateKey(sender.Address(), t.Key)
 

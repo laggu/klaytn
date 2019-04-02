@@ -320,7 +320,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSign(
 	}
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB StateDB) error {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if t.FeeRatio.IsValid() == false {
 		return kerrors.ErrFeeRatioOutOfRange
 	}
@@ -328,7 +328,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB 
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
 }

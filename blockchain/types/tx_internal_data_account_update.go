@@ -312,12 +312,12 @@ func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
 	return []interface{}{b}
 }
 
-func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB) error {
+func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// TODO-Klaytn-Accounts: need validation of t.key?
 	return nil
 }
 
-func (t *TxInternalDataAccountUpdate) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataAccountUpdate) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	err = stateDB.UpdateKey(sender.Address(), t.Key)
 	return nil, gas, err

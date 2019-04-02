@@ -257,10 +257,10 @@ type TxInternalData interface {
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
 
-	// Validate returns nil if tx is validated with the given stateDB.
+	// Validate returns nil if tx is validated with the given stateDB and currentBlockNumber.
 	// Otherwise, it returns an error.
 	// This function is called in TxPool.validateTx() and TxInternalData.Execute().
-	Validate(stateDB StateDB) error
+	Validate(stateDB StateDB, currentBlockNumber uint64) error
 
 	// IsLegacyTransaction returns true if the tx type is a legacy transaction (TxInternalDataLegacy) object.
 	IsLegacyTransaction() bool
@@ -272,7 +272,7 @@ type TxInternalData interface {
 	String() string
 
 	// Execute performs execution of the transaction according to the transaction type.
-	Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error)
+	Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error)
 
 	MakeRPCOutput() map[string]interface{}
 }

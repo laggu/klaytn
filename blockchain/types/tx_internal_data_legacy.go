@@ -348,7 +348,7 @@ func (t *TxInternalDataLegacy) String() string {
 	)
 }
 
-func (t *TxInternalDataLegacy) Validate(stateDB StateDB) error {
+func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No more validation required for TxInternalDataLegacy.
 	return nil
 }
@@ -360,7 +360,7 @@ func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Recei
 	}
 }
 
-func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if t.Recipient == nil {
 		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value)
 	} else {

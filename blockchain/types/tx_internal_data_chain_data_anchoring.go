@@ -266,12 +266,12 @@ func (t *TxInternalDataChainDataAnchoring) IntrinsicGas() (uint64, error) {
 	return params.TxChainDataAnchoringGas + params.ChainDataAnchoringGas*nByte, nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB) error {
+func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No validation for TxInternalDataChainDataAnchoring
 	return nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return vm.Call(sender, t.Recipient, nil, gas, value)
 }

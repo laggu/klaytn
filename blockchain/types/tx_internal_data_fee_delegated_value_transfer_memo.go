@@ -297,12 +297,12 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) SerializeForSign() []inter
 	}
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB) error {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No more validation required for TxInternalDataFeeDelegatedValueTransferMemo.
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
 }

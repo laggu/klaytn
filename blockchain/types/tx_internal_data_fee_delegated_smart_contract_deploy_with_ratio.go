@@ -336,7 +336,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SerializeForSig
 	}
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateDB StateDB) error {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	to := t.Recipient
 	if t.HumanReadable {
 		addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
@@ -365,8 +365,8 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) FillContractAdd
 	r.ContractAddress = t.Recipient
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
-	if err := t.Validate(stateDB); err != nil {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+	if err := t.Validate(stateDB, currentBlockNumber); err != nil {
 		stateDB.IncNonce(sender.Address())
 		return nil, 0, err
 	}

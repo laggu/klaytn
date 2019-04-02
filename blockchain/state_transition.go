@@ -104,7 +104,7 @@ type Message interface {
 	Type() types.TxType
 
 	// Execute performs execution of the transaction according to the transaction type.
-	Execute(vm types.VM, stateDB types.StateDB, gas uint64, value *big.Int) ([]byte, uint64, error)
+	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 }
 
 // TODO-Klaytn Later we can merge Err and Status into one uniform error.
@@ -239,7 +239,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		errTxFailed error
 	)
 
-	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.gas, st.value)
+	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
 
 	// TODO-Klaytn-Issue136
 	if errTxFailed != nil {

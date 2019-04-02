@@ -263,7 +263,7 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSign() []interfa
 	}
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB) error {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if t.FeeRatio.IsValid() == false {
 		return kerrors.ErrFeeRatioOutOfRange
 	}
@@ -271,7 +271,7 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB) er
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return nil, gas, nil
 }

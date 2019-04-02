@@ -211,7 +211,9 @@ func (tx *Transaction) ValidatedSender() common.Address       { return tx.valida
 func (tx *Transaction) ValidatedFeePayer() common.Address     { return tx.validatedFeePayer }
 func (tx *Transaction) ValidatedIntrinsicGas() uint64         { return tx.validatedIntrinsicGas }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
-func (tx *Transaction) Validate(db StateDB) error             { return tx.data.Validate(db) }
+func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
+	return tx.data.Validate(db, blockNumber)
+}
 
 func (tx *Transaction) GetRoleTypeForValidation() accountkey.RoleType {
 	return tx.data.GetRoleTypeForValidation()
@@ -328,9 +330,9 @@ func (tx *Transaction) FillContractAddress(from common.Address, r *Receipt) {
 
 // Execute performs execution of the transaction. This function will be called from StateTransition.TransitionDb().
 // Since each transaction type performs different execution, this function calls TxInternalData.TransitionDb().
-func (tx *Transaction) Execute(vm VM, stateDB StateDB, gas uint64, value *big.Int) ([]byte, uint64, error) {
+func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error) {
 	sender := NewAccountRefWithFeePayer(tx.validatedSender, tx.validatedFeePayer)
-	return tx.data.Execute(sender, vm, stateDB, gas, value)
+	return tx.data.Execute(sender, vm, stateDB, currentBlockNumber, gas, value)
 }
 
 // AsMessageWithAccountKeyPicker returns the transaction as a blockchain.Message.

@@ -244,12 +244,12 @@ func (t *TxInternalDataValueTransfer) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataValueTransfer) Validate(stateDB StateDB) error {
+func (t *TxInternalDataValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No more validation required for TxInternalDataValueTransfer.
 	return nil
 }
 
-func (t *TxInternalDataValueTransfer) Execute(sender ContractRef, vm VM, stateDB StateDB, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataValueTransfer) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return vm.Call(sender, t.Recipient, nil, gas, value)
 }

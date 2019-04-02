@@ -160,9 +160,10 @@ type TxPool struct {
 	signer       types.Signer
 	mu           sync.RWMutex
 
-	currentState  *state.StateDB      // Current state in the blockchain head
-	pendingState  *state.ManagedState // Pending state tracking virtual nonces
-	currentMaxGas uint64              // Current gas limit for transaction caps
+	currentBlockNumber uint64              // Current block number
+	currentState       *state.StateDB      // Current state in the blockchain head
+	pendingState       *state.ManagedState // Pending state tracking virtual nonces
+	currentMaxGas      uint64              // Current gas limit for transaction caps
 
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
@@ -381,6 +382,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	}
 	pool.currentState = statedb
 	pool.pendingState = state.ManageState(statedb)
+	pool.currentBlockNumber = newHead.Number.Uint64()
 	pool.currentMaxGas = newHead.GasLimit
 
 	// Inject any transactions discarded due to reorgs
@@ -621,7 +623,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// If the tx is account creation, need to check the below:
 	// 1. Is it valid for human-readable address?
 	// 2. Is the account already created?
-	if err := tx.Validate(pool.currentState); err != nil {
+	if err := tx.Validate(pool.currentState, pool.currentBlockNumber); err != nil {
 		return err
 	}
 
