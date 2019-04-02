@@ -35,7 +35,6 @@ const (
 	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
 	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
 	fetchTimeout  = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
-	maxUncleDist  = 7                      // Maximum allowed backward distance from the chain head
 	// TODO-Klaytn klaytn is 20 times faster than ethereum, so check block height is 20 times
 	maxQueueDist = 32 * 20  // Maximum allowed distance from the chain head to queue
 	hashLimit    = 256 * 20 // Maximum number of unique blocks a peer may have announced
@@ -316,7 +315,7 @@ func (f *Fetcher) loop() {
 			}
 			// Otherwise if fresh and still unknown, try and import
 			hash := op.block.Hash()
-			if number+maxUncleDist < height || f.getBlock(hash) != nil {
+			if number <= height || f.getBlock(hash) != nil {
 				f.forgetBlock(hash)
 				continue
 			}
@@ -340,7 +339,7 @@ func (f *Fetcher) loop() {
 			}
 			// If we have a valid block number, check that it's potentially useful
 			if notification.number > 0 {
-				if dist := int64(notification.number) - int64(f.chainHeight()); dist < -maxUncleDist || dist > maxQueueDist {
+				if dist := int64(notification.number) - int64(f.chainHeight()); dist <= 0 || dist > maxQueueDist {
 					logger.Debug("Peer discarded announcement", "peer", notification.origin, "number", notification.number, "hash", notification.hash, "distance", dist)
 					propAnnounceDropMeter.Mark(1)
 					break
@@ -620,7 +619,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		return
 	}
 	// Discard any past or too distant blocks
-	if dist := int64(block.NumberU64()) - int64(f.chainHeight()); dist < -maxUncleDist || dist > maxQueueDist {
+	if dist := int64(block.NumberU64()) - int64(f.chainHeight()); dist <= 0 || dist > maxQueueDist {
 		logger.Debug("Discarded propagated block, too far away", "peer", peer, "number", block.Number(), "hash", hash, "distance", dist)
 		propBroadcastDropMeter.Mark(1)
 		f.forgetHash(hash)
