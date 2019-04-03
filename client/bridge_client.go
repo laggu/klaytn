@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/networks/p2p"
+	"github.com/pkg/errors"
 )
 
 // BridgeAddPeerOnParentChain can add a static peer on bridge node for service chain.
@@ -119,5 +120,35 @@ func (ec *Client) BridgeGetAnchoringPeriod(ctx context.Context) (uint64, error) 
 func (ec *Client) BridgeGetSentChainTxsLimit(ctx context.Context) (uint64, error) {
 	var result uint64
 	err := ec.c.CallContext(ctx, &result, "bridge_getSentChainTxsLimit")
+	return result, err
+}
+
+// BridgeDeployGateway can deploy the pair of gateway for parent/child chain.
+func (ec *Client) BridgeDeployGateway(ctx context.Context) (common.Address, common.Address, error) {
+	var result []common.Address
+
+	err := ec.c.CallContext(ctx, &result, "bridge_deployGateway")
+	if err != nil {
+		return common.Address{}, common.Address{}, err
+	}
+
+	if len(result) != 2 {
+		return common.Address{}, common.Address{}, errors.New("output arguments length err")
+	}
+
+	return result[0], result[1], nil
+}
+
+// BridgeRegisterGateway can register the pair of deployed gateways.
+func (ec *Client) BridgeRegisterGateway(ctx context.Context, cGateway common.Address, pGateway common.Address) (bool, error) {
+	var result bool
+	err := ec.c.CallContext(ctx, &result, "bridge_registerGateway", cGateway, pGateway)
+	return result, err
+}
+
+// BridgeSubscribeGateway can enable for sub-bridge to subscribe the event of given gateways.
+func (ec *Client) BridgeSubscribeGateway(ctx context.Context, cGateway common.Address, pGateway common.Address) (bool, error) {
+	var result bool
+	err := ec.c.CallContext(ctx, &result, "bridge_subscribeEventGateway", cGateway, pGateway)
 	return result, err
 }
