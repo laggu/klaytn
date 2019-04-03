@@ -70,7 +70,7 @@ func (self Storage) Copy() Storage {
 // The usage pattern is as follows:
 // First you need to obtain a state object.
 // Account values can be accessed and modified through the object.
-// Finally, call CommitTrie to write the modified storage trie into a database.
+// Finally, call CommitStorageTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address common.Address
 	account account.Account
@@ -213,8 +213,8 @@ func (self *stateObject) UpdateKey(key accountkey.AccountKey) error {
 	return self.account.UpdateKey(key)
 }
 
-// updateTrie writes cached storage modifications into the object's storage trie.
-func (self *stateObject) updateTrie(db Database) Trie {
+// updateStorageTrie writes cached storage modifications into the object's storage trie.
+func (self *stateObject) updateStorageTrie(db Database) Trie {
 	tr := self.getStorageTrie(db)
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
@@ -229,18 +229,19 @@ func (self *stateObject) updateTrie(db Database) Trie {
 	return tr
 }
 
-// UpdateRoot sets the trie root to the current root hash of
-func (self *stateObject) updateRoot(db Database) {
-	self.updateTrie(db)
+// UpdateRoot calls updateStorageTrie to get the latest root hash of the object's storage trie
+// and sets the storage trie root to the newly updated one.
+func (self *stateObject) updateStorageRoot(db Database) {
+	self.updateStorageTrie(db)
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		acc.SetStorageRoot(self.storageTrie.Hash())
 	}
 }
 
-// CommitTrie the storage trie of the object to dwb.
-// This updates the trie root.
-func (self *stateObject) CommitTrie(db Database) error {
-	self.updateTrie(db)
+// CommitStorageTrie writes the storage trie of the object to db.
+// This updates the storage trie root.
+func (self *stateObject) CommitStorageTrie(db Database) error {
+	self.updateStorageTrie(db)
 	if self.dbErr != nil {
 		return self.dbErr
 	}

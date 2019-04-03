@@ -362,7 +362,7 @@ func (self *StateDB) StorageTrie(addr common.Address) Trie {
 		return nil
 	}
 	cpy := stateObject.deepCopy(self)
-	return cpy.updateTrie(self.db)
+	return cpy.updateStorageTrie(self.db)
 }
 
 func (self *StateDB) HasSuicided(addr common.Address) bool {
@@ -742,7 +742,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
 			s.deleteStateObject(stateObject)
 		} else {
-			stateObject.updateRoot(s.db)
+			stateObject.updateStorageRoot(s.db)
 			s.updateStateObject(stateObject)
 		}
 		s.stateObjectsDirty[addr] = struct{}{}
@@ -795,7 +795,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 				stateObject.dirtyCode = false
 			}
 			// Write any storage changes in the state object to its storage trie.
-			if err := stateObject.CommitTrie(s.db); err != nil {
+			if err := stateObject.CommitStorageTrie(s.db); err != nil {
 				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
