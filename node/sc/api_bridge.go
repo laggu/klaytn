@@ -135,7 +135,7 @@ func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 
 func (sbapi *SubBridgeAPI) RegisterGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) bool {
 	cGateway, cErr := gateway.NewGateway(cGatewayAddr, sbapi.sc.localBackend)
-	pGateway, pErr := gateway.NewGateway(cGatewayAddr, sbapi.sc.remoteBackend)
+	pGateway, pErr := gateway.NewGateway(pGatewayAddr, sbapi.sc.remoteBackend)
 
 	if cErr != nil || pErr != nil {
 		return false
