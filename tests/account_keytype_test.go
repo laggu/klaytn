@@ -20,6 +20,561 @@ import (
 	"time"
 )
 
+// createDefaultAccount creates a default account with a specific account key type.
+func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccountType, error) {
+	var err error
+
+	// prepare  keys
+	prvKeysHex := []string{
+		"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
+		"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
+	}
+
+	keys := make([]*ecdsa.PrivateKey, len(prvKeysHex))
+	weights := []uint{1, 1, 1}
+	weightedKeys := make(accountkey.WeightedPublicKeys, len(prvKeysHex))
+	threshold := uint(2)
+
+	for i, p := range prvKeysHex {
+		keys[i], err = crypto.HexToECDSA(p)
+		if err != nil {
+			return nil, err
+		}
+		weightedKeys[i] = accountkey.NewWeightedPublicKey(weights[i], (*accountkey.PublicKeySerializable)(&keys[i].PublicKey))
+	}
+
+	// a role-based key
+	roleAccKey := accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleTransaction].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleAccountUpdate].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleFeePayer].PublicKey),
+	}
+
+	// default account setting
+	account := &TestAccountType{
+		Addr:   crypto.PubkeyToAddress(keys[0].PublicKey), // default
+		Keys:   []*ecdsa.PrivateKey{keys[0]},              // default
+		Nonce:  uint64(0),                                 // default
+		AccKey: nil,
+	}
+
+	// set an account key and a private key
+	switch accountKeyType {
+	case accountkey.AccountKeyTypeNil:
+		account.AccKey, err = accountkey.NewAccountKey(accountKeyType)
+	case accountkey.AccountKeyTypeLegacy:
+		account.AccKey, err = accountkey.NewAccountKey(accountKeyType)
+	case accountkey.AccountKeyTypePublic:
+		account.AccKey = accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey)
+	case accountkey.AccountKeyTypeFail:
+		account.AccKey, err = accountkey.NewAccountKey(accountKeyType)
+	case accountkey.AccountKeyTypeWeightedMultiSig:
+		account.Keys = keys
+		account.AccKey = accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, weightedKeys)
+	case accountkey.AccountKeyTypeRoleBased:
+		account.Keys = keys
+		account.AccKey = accountkey.NewAccountKeyRoleBasedWithValues(roleAccKey)
+	default:
+		return nil, kerrors.ErrDifferentAccountKeyType
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return account, err
+}
+
+// generateDefaultTx returns a Tx with default values of txTypes.
+// If txType is a kind of account update, it will return a updatedKey value.
+// Otherwise, it will return (tx, nil, nil).
+// For contract execution Txs, TxValueKeyTo value is set to "contract" as a default.
+// The address "contact" should exist before calling this function.
+func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType) (*types.Transaction, *ecdsa.PrivateKey, error) {
+	gasPrice := new(big.Int).SetUint64(25)
+	gasLimit := uint64(1000000000)
+	amount := new(big.Int).SetUint64(1000000000)
+
+	// generate a random private key for account creation/update Txs or contract deploy Txs
+	newKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newAccKey := accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey)
+	newAddr := crypto.PubkeyToAddress(newKey.PublicKey)
+
+	// a new private key will be returned
+	var retNewKey *ecdsa.PrivateKey = nil
+
+	// a default recipient address of smart contract execution to "contract"
+	var contractAddr common.Address
+	contractAddr.SetBytesFromFront([]byte("contract"))
+
+	// Smart contract data for TxTypeSmartContractDeploy, TxTypeSmartContractExecution Txs
+	var code string
+	var abiStr string
+
+	if isCompilerAvailable() {
+		filename := string("../contracts/reward/contract/KlaytnReward.sol")
+		codes, abistrings := compileSolidity(filename)
+		code = codes[0]
+		abiStr = abistrings[0]
+	} else {
+		// Falling back to use compiled code.
+		code = "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
+		abiStr = `[{"constant":true,"inputs":[],"name":"totalAmount","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"receiver","type":"address"}],"name":"reward","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"safeWithdrawal","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"}]`
+	}
+
+	abii, err := abi.JSON(strings.NewReader(string(abiStr)))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dataABI, err := abii.Pack("reward", recipient.Addr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// generate a legacy tx
+	if txType == types.TxTypeLegacyTransaction {
+		tx := types.NewTransaction(sender.Nonce, recipient.Addr, amount, gasLimit, gasPrice, []byte{})
+		return tx, nil, nil
+	}
+
+	// Default valuesMap setting
+	amountZero := new(big.Int).SetUint64(0)
+	ratio := types.FeeRatio(30)
+	dataMemo := []byte("hello")
+	dataCode := common.FromHex(code)
+	values := map[types.TxValueKeyType]interface{}{}
+
+	switch txType {
+	case types.TxTypeValueTransfer:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+	case types.TxTypeFeeDelegatedValueTransfer:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+	case types.TxTypeFeeDelegatedValueTransferWithRatio:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeValueTransferMemo:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyData] = dataMemo
+	case types.TxTypeFeeDelegatedValueTransferMemo:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyData] = dataMemo
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+	case types.TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyData] = dataMemo
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeAccountCreation:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyHumanReadable] = false
+		values[types.TxValueKeyAccountKey] = newAccKey
+	case types.TxTypeAccountUpdate:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyAccountKey] = newAccKey
+	case types.TxTypeFeeDelegatedAccountUpdate:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyAccountKey] = newAccKey
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+	case types.TxTypeFeeDelegatedAccountUpdateWithRatio:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyAccountKey] = newAccKey
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeSmartContractDeploy:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyAmount] = amountZero
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = amountZero
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueKeyHumanReadable] = false
+	case types.TxTypeFeeDelegatedSmartContractDeploy:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyAmount] = amountZero
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = amountZero
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueKeyHumanReadable] = false
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+	case types.TxTypeFeeDelegatedSmartContractDeployWithRatio:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyAmount] = amountZero
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = amountZero
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueKeyHumanReadable] = false
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeSmartContractExecution:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = contractAddr
+		values[types.TxValueKeyAmount] = amountZero
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = amountZero
+		values[types.TxValueKeyData] = dataABI
+	case types.TxTypeFeeDelegatedSmartContractExecution:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = contractAddr
+		values[types.TxValueKeyAmount] = amountZero
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = amountZero
+		values[types.TxValueKeyData] = dataABI
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+	case types.TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyTo] = contractAddr
+		values[types.TxValueKeyAmount] = amountZero
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = amountZero
+		values[types.TxValueKeyData] = dataABI
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeCancel:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+	case types.TxTypeFeeDelegatedCancel:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+	case types.TxTypeFeeDelegatedCancelWithRatio:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	}
+
+	tx, err := types.NewTransactionWithMap(txType, values)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// the function returns a private key for account update Txs
+	if txType.IsAccountUpdate() {
+		retNewKey = newKey
+	}
+
+	return tx, retNewKey, err
+}
+
+// expectedTestResultForDefaultTx returns expected validity of tx which generated from (accountKeyType, txType) pair.
+func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, txType types.TxType) bool {
+	// TODO-Klaytn-Core. legacy tx will be prohibited to all account types execpt legacy account type
+	switch accountKeyType {
+	//case accountkey.AccountKeyTypeNil:                     // not supported type
+	case accountkey.AccountKeyTypeLegacy:
+		return true
+	case accountkey.AccountKeyTypePublic:
+		return true
+	case accountkey.AccountKeyTypeFail:
+		if txType.IsLegacyTransaction() {
+			return true
+		}
+		return false
+	case accountkey.AccountKeyTypeWeightedMultiSig:
+		return true
+	case accountkey.AccountKeyTypeRoleBased:
+		return true
+	}
+
+	return false
+}
+
+// TestDefaultTxsWithDefaultAccountKey tests most of transactions types with most of account key types.
+// The test creates a default account for each account key type, and generates default Tx for each Tx type.
+// AccountKeyTypeNil is excluded because it cannot be used for account creation.
+// TxTypeChainDataAnchoring is excluded because it is not fully developed.
+func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
+	gasPrice := new(big.Int).SetUint64(25)
+	gasLimit := uint64(1000000000)
+
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// select account key types to be tested
+	accountKeyTypes := []accountkey.AccountKeyType{
+		//accountkey.AccountKeyTypeNil,               // not supported type
+		accountkey.AccountKeyTypeLegacy,
+		accountkey.AccountKeyTypePublic,
+		accountkey.AccountKeyTypeFail,
+		accountkey.AccountKeyTypeWeightedMultiSig,
+		accountkey.AccountKeyTypeRoleBased,
+	}
+
+	// select txtypes to be tested
+	txTypes := []types.TxType{
+		types.TxTypeLegacyTransaction,
+
+		types.TxTypeValueTransfer,
+		types.TxTypeValueTransferMemo,
+		types.TxTypeSmartContractDeploy,
+		types.TxTypeSmartContractExecution,
+		types.TxTypeAccountCreation,
+		types.TxTypeAccountUpdate,
+		types.TxTypeCancel,
+
+		types.TxTypeFeeDelegatedValueTransfer,
+		types.TxTypeFeeDelegatedValueTransferMemo,
+		types.TxTypeFeeDelegatedSmartContractDeploy,
+		types.TxTypeFeeDelegatedSmartContractExecution,
+		types.TxTypeFeeDelegatedAccountUpdate,
+		types.TxTypeFeeDelegatedCancel,
+
+		types.TxTypeFeeDelegatedValueTransferWithRatio,
+		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
+		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
+		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
+		types.TxTypeFeeDelegatedCancelWithRatio,
+
+		// types.TxTypeChainDataAnchoring,             // not supported type
+	}
+
+	// tests for all accountKeyTypes
+	for _, accountKeyType := range accountKeyTypes {
+		// Initialize blockchain
+		start := time.Now()
+		bcdata, err := NewBCData(6, 4)
+		if err != nil {
+			t.Fatal(err)
+		}
+		prof.Profile("main_init_blockchain", time.Now().Sub(start))
+		defer bcdata.Shutdown()
+
+		// Initialize address-balance map for verification
+		start = time.Now()
+		accountMap := NewAccountMap()
+		if err := accountMap.Initialize(bcdata); err != nil {
+			t.Fatal(err)
+		}
+		prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+		// reservoir account
+		reservoir := &TestAccountType{
+			Addr:  *bcdata.addrs[0],
+			Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+			Nonce: uint64(0),
+		}
+
+		// a sender account
+		sender, err := createDefaultAccount(accountKeyType)
+		assert.Equal(t, nil, err)
+
+		// smart contact account
+		contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
+			"contract")
+		assert.Equal(t, nil, err)
+
+		// smart contract code
+		var code string
+
+		if isCompilerAvailable() {
+			filename := string("../contracts/reward/contract/KlaytnReward.sol")
+			codes, _ := compileSolidity(filename)
+			code = codes[0]
+		} else {
+			// Falling back to use compiled code.
+			code = "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("senderAddr = ", sender.Addr.String())
+		}
+
+		signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+		// create an account decoupled using TxTypeAccountCreation.
+		{
+			var txs types.Transactions
+
+			amount := new(big.Int).SetUint64(1000000000000)
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:         reservoir.Nonce,
+				types.TxValueKeyFrom:          reservoir.Addr,
+				types.TxValueKeyTo:            sender.Addr,
+				types.TxValueKeyAmount:        amount,
+				types.TxValueKeyGasLimit:      gasLimit,
+				types.TxValueKeyGasPrice:      gasPrice,
+				types.TxValueKeyHumanReadable: false,
+				types.TxValueKeyAccountKey:    sender.AccKey,
+			}
+			tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			txs = append(txs, tx)
+
+			if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+				t.Fatal(err)
+			}
+			reservoir.Nonce += 1
+		}
+
+		// create a smart contract account for contract execution test
+		{
+			var txs types.Transactions
+
+			amount := new(big.Int).SetUint64(0)
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:         reservoir.Nonce,
+				types.TxValueKeyFrom:          reservoir.Addr,
+				types.TxValueKeyTo:            contract.Addr,
+				types.TxValueKeyAmount:        amount,
+				types.TxValueKeyGasLimit:      gasLimit,
+				types.TxValueKeyGasPrice:      gasPrice,
+				types.TxValueKeyHumanReadable: true,
+				types.TxValueKeyData:          common.FromHex(code),
+			}
+			tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			txs = append(txs, tx)
+
+			err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
+			assert.Equal(t, nil, err)
+
+			reservoir.Nonce += 1
+		}
+
+		{
+			// tests for all txTypes
+			for _, txType := range txTypes {
+				var txs types.Transactions
+				var tx *types.Transaction
+				var newKey *ecdsa.PrivateKey = nil
+
+				// generate a default transaction
+				tx, newKey, err = generateDefaultTx(sender, reservoir, txType)
+				assert.Equal(t, nil, err)
+
+				// sign a tx
+				if accountKeyType == accountkey.AccountKeyTypeWeightedMultiSig {
+					if txType == types.TxTypeLegacyTransaction {
+						err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[0]})
+					} else {
+						err = tx.SignWithKeys(signer, sender.Keys)
+					}
+				} else if accountKeyType == accountkey.AccountKeyTypeRoleBased {
+					if txType == types.TxTypeAccountUpdate {
+						err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleAccountUpdate]})
+					} else {
+						err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleTransaction]})
+					}
+				} else {
+					err = tx.SignWithKeys(signer, sender.Keys)
+				}
+				assert.Equal(t, nil, err)
+
+				// isFeePay to notice outside of this function that the tx required delegator's signature
+				if txType.IsFeeDelegatedTransaction() {
+					err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+					assert.Equal(t, nil, err)
+				}
+
+				txs = append(txs, tx)
+
+				isSuccess := expectedTestResultForDefaultTx(accountKeyType, txType)
+
+				if testing.Verbose() {
+					fmt.Println("Testing... accountKeyType: ", accountKeyType, ", txType: ", txType, "isSuccess: ", isSuccess)
+				}
+
+				if isSuccess {
+					err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
+					assert.Equal(t, nil, err)
+
+					// update sender's key
+					if newKey != nil {
+						sender.AccKey = accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey)
+						sender.Keys = []*ecdsa.PrivateKey{newKey}
+					}
+					sender.Nonce += 1
+				} else {
+					receipt, _, err := applyTransaction(t, bcdata, tx)
+					assert.Equal(t, types.ErrInvalidSigSender, err)
+					assert.Equal(t, (*types.Receipt)(nil), receipt)
+				}
+			}
+		}
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
 // TestAccountCreationMaxMultiSigKey tests multiSig account creation with maximum private keys.
 // A multiSig account supports maximum 10 different private keys.
 // Create a multiSig account with 11 different private keys (more than 10 -> failed)
