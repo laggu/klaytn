@@ -163,16 +163,17 @@ type TxPool struct {
 	signer       types.Signer
 	mu           sync.RWMutex
 
-	currentBlockNumber uint64              // Current block number
-	currentState       *state.StateDB      // Current state in the blockchain head
-	pendingState       *state.ManagedState // Pending state tracking virtual nonces
-	currentMaxGas      uint64              // Current gas limit for transaction caps
+	currentBlockNumber uint64                    // Current block number
+	currentState       *state.StateDB            // Current state in the blockchain head
+	pendingNonce       map[common.Address]uint64 // Pending nonce tracking virtual nonces
+	currentMaxGas      uint64                    // Current gas limit for transaction caps
 
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
 	//TODO-Klaytn
 	txMu sync.RWMutex
+	pnMu sync.RWMutex // pnMu is mutex lock used by pendingNonce.
 
 	pending map[common.Address]*txList         // All currently processable transactions
 	queue   map[common.Address]*txList         // Queued but non-processable transactions
@@ -196,15 +197,16 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 
 	// Create the transaction pool with its initial settings
 	pool := &TxPool{
-		config:      config,
-		chainconfig: chainconfig,
-		chain:       chain,
-		signer:      types.NewEIP155Signer(chainconfig.ChainID),
-		pending:     make(map[common.Address]*txList),
-		queue:       make(map[common.Address]*txList),
-		beats:       make(map[common.Address]time.Time),
-		all:         make(map[common.Hash]*types.Transaction),
-		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
+		config:       config,
+		chainconfig:  chainconfig,
+		chain:        chain,
+		signer:       types.NewEIP155Signer(chainconfig.ChainID),
+		pending:      make(map[common.Address]*txList),
+		queue:        make(map[common.Address]*txList),
+		beats:        make(map[common.Address]time.Time),
+		all:          make(map[common.Hash]*types.Transaction),
+		pendingNonce: make(map[common.Address]uint64),
+		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
 		// TODO-Klaytn We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
 		//         later we have to change this rule when governance of UnitPrice is determined.
 		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
@@ -388,7 +390,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		return
 	}
 	pool.currentState = statedb
-	pool.pendingState = state.ManageState(statedb)
+	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
 	pool.currentMaxGas = newHead.GasLimit
 
@@ -411,7 +413,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Update all accounts to the latest known pending nonce
 	for addr, list := range pool.pending {
 		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
-		pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
+		pool.setPendingNonce(addr, txs[len(txs)-1].Nonce()+1)
 	}
 	pool.txMu.Unlock()
 	// Check the queue and move transactions over to the pending if possible
@@ -461,14 +463,6 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 		pool.removeTx(tx.Hash(), false)
 	}
 	logger.Info("Transaction pool price threshold updated", "price", price)
-}
-
-// State returns the virtual managed state of the transaction pool.
-func (pool *TxPool) State() *state.ManagedState {
-	pool.mu.RLock()
-	defer pool.mu.RUnlock()
-
-	return pool.pendingState
 }
 
 // Stats retrieves the current pool stats, namely the number of pending and the
@@ -847,7 +841,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	}
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats[addr] = time.Now()
-	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
+	pool.setPendingNonce(addr, tx.Nonce()+1)
 
 	return true
 }
@@ -994,10 +988,7 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 			for _, tx := range invalids {
 				pool.enqueueTx(tx.Hash(), tx)
 			}
-			// Update the account nonce if needed
-			if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
-				pool.pendingState.SetNonce(addr, nonce)
-			}
+			pool.updatePendingNonce(addr, tx.Nonce())
 			return
 		}
 	}
@@ -1051,7 +1042,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Gather all executable transactions and promote them
-		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
+		for _, tx := range list.Ready(pool.GetPendingNonce(addr)) {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
 				logger.Trace("Promoting queued transaction", "hash", hash)
@@ -1116,9 +1107,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 							pool.priced.Removed()
 
 							// Update the account nonce to the dropped transaction
-							if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
-								pool.pendingState.SetNonce(offenders[i], nonce)
-							}
+							pool.updatePendingNonce(offenders[i], tx.Nonce())
 							logger.Trace("Removed fairness-exceeding pending transaction", "hash", hash)
 						}
 						pending--
@@ -1138,9 +1127,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 						pool.priced.Removed()
 
 						// Update the account nonce to the dropped transaction
-						if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
-							pool.pendingState.SetNonce(addr, nonce)
-						}
+						pool.updatePendingNonce(addr, tx.Nonce())
 						logger.Trace("Removed fairness-exceeding pending transaction", "hash", hash)
 					}
 					pending--
@@ -1259,6 +1246,32 @@ func (pool *TxPool) getBalance(addr common.Address) *big.Int {
 		}
 	}
 	return pool.currentState.GetBalance(addr)
+}
+
+// GetPendingNonce returns the canonical nonce for the managed or unmanaged account.
+func (pool *TxPool) GetPendingNonce(addr common.Address) uint64 {
+	pool.pnMu.Lock()
+	defer pool.pnMu.Unlock()
+	cNonce := pool.getNonce(addr)
+	if pNonce, exist := pool.pendingNonce[addr]; !exist || pNonce < cNonce {
+		pool.pendingNonce[addr] = cNonce
+	}
+
+	return pool.pendingNonce[addr]
+}
+
+// setPendingNonce sets the new canonical nonce for the managed state.
+func (pool *TxPool) setPendingNonce(addr common.Address, nonce uint64) {
+	pool.pnMu.Lock()
+	defer pool.pnMu.Unlock()
+	pool.pendingNonce[addr] = nonce
+}
+
+// updatePendingNonce updates the account nonce to the dropped transaction.
+func (pool *TxPool) updatePendingNonce(addr common.Address, nonce uint64) {
+	if pool.GetPendingNonce(addr) > nonce {
+		pool.setPendingNonce(addr, nonce)
+	}
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.

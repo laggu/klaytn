@@ -203,7 +203,7 @@ func (b *CNAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
 }
 
 func (b *CNAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) uint64 {
-	return b.cn.txPool.State().GetNonce(addr)
+	return b.cn.txPool.GetPendingNonce(addr)
 }
 
 func (b *CNAPIBackend) Stats() (pending int, queued int) {

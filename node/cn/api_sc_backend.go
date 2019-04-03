@@ -203,7 +203,7 @@ func (b *ServiceChainAPIBackend) GetPoolTransaction(hash common.Hash) *types.Tra
 }
 
 func (b *ServiceChainAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) uint64 {
-	return b.sc.txPool.State().GetNonce(addr)
+	return b.sc.txPool.GetPendingNonce(addr)
 }
 
 func (b *ServiceChainAPIBackend) Stats() (pending int, queued int) {

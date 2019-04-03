@@ -150,7 +150,7 @@ func (lb *LocalBackend) PendingCodeAt(ctx context.Context, contract common.Addre
 }
 
 func (lb *LocalBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	return lb.subbrige.txPool.State().GetNonce(account), nil
+	return lb.subbrige.txPool.GetPendingNonce(account), nil
 }
 
 func (lb *LocalBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {

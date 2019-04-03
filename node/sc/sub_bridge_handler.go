@@ -142,7 +142,7 @@ func (sbh *SubBridgeHandler) setChainAccountNonceSynced(synced bool) {
 }
 
 func (sbh *SubBridgeHandler) getNodeAccountNonce() uint64 {
-	return sbh.subbridge.txPool.State().GetNonce(*sbh.NodeAccountAddr)
+	return sbh.subbridge.txPool.GetPendingNonce(*sbh.NodeAccountAddr)
 }
 
 func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
