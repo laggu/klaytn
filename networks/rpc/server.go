@@ -217,9 +217,6 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 					buf = buf[:runtime.Stack(buf, false)]
 					logger.Error(string(buf))
 				}
-				s.codecsMu.Lock()
-				s.codecs.Remove()
-				s.codecsMu.Unlock()
 			}()
 
 			defer pend.Done()
