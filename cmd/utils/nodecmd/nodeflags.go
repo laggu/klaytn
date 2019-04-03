@@ -27,6 +27,7 @@ import (
 
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
+	utils.BootnodesFlag,
 	utils.IdentityFlag,
 	utils.UnlockedAccountFlag,
 	utils.PasswordFileFlag,
@@ -117,7 +118,6 @@ var KENFlags = []cli.Flag{
 	utils.EnabledBridgeFlag,
 	utils.IsMainBridgeFlag,
 	utils.BridgeListenPortFlag,
-	utils.BootnodesFlag,
 }
 
 var KSCNFlags = []cli.Flag{

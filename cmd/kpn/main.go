@@ -121,6 +121,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "NETWORKING",
 		Flags: []cli.Flag{
+			utils.BootnodesFlag,
 			utils.ListenPortFlag,
 			utils.SubListenPortFlag,
 			utils.MultiChannelUseFlag,

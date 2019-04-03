@@ -127,6 +127,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "NETWORKING",
 		Flags: []cli.Flag{
+			utils.BootnodesFlag,
 			utils.ListenPortFlag,
 			utils.SubListenPortFlag,
 			utils.MultiChannelUseFlag,
