@@ -56,6 +56,7 @@ func NewRemoteBackend(main *SubBridge, rawUrl string) (*RemoteBackend, error) {
 
 func (rb *RemoteBackend) checkConnection() bool {
 	if rb.klayClient == nil {
+		logger.Error("klayclient is nil so try connect")
 		return rb.tryConnect()
 	}
 	return true
@@ -67,6 +68,8 @@ func (rb *RemoteBackend) tryConnect() bool {
 		logger.Error("fail to connect RemoteChain", "url", rb.targetUrl, "err", err)
 		return false
 	}
+	logger.Info("success to tryConnect RemoteChain", "url", rb.targetUrl)
+
 	rb.klayClient = client
 	return true
 }
@@ -118,6 +121,10 @@ func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transact
 		return ConnectionFailErr
 	}
 	return rb.klayClient.SendTransaction(ctx, tx)
+}
+
+func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	return rb.klayClient.TransactionReceipt(ctx, txHash)
 }
 
 func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {

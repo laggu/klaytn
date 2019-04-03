@@ -208,6 +208,14 @@ func (lb *LocalBackend) SendTransaction(ctx context.Context, tx *types.Transacti
 	return lb.subbrige.txPool.AddLocal(tx)
 }
 
+func (lb *LocalBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	receipt := lb.subbrige.blockchain.GetReceiptByTxHash(txHash)
+	if receipt != nil {
+		return receipt, nil
+	}
+	return nil, errors.New("receipt is not exist")
+}
+
 func (lb *LocalBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
 	// Convert the RPC block numbers into internal representations
 	if query.FromBlock == nil {
