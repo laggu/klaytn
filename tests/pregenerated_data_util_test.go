@@ -34,11 +34,13 @@ import (
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/work"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"io/ioutil"
 	"math"
 	"math/big"
 	"os"
 	"path"
 	"strconv"
+	"sync"
 
 	istanbulBackend "github.com/ground-x/klaytn/consensus/istanbul/backend"
 )
@@ -55,7 +57,7 @@ const (
 	chainDataDir = "chaindata"
 )
 
-var sumTx = 0
+var totalTxs = 0
 
 // getDataDirName returns a name of directory from the given parameters.
 func getDataDirName(numFilesToGenerate int, ldbOption *opt.Options) string {
@@ -73,6 +75,55 @@ func getDataDirName(numFilesToGenerate int, ldbOption *opt.Options) string {
 	//dataDirectory += fmt.Sprintf("_CompactionTableSizeMultiplier%v", int(ldbOption.CompactionTableSizeMultiplier))
 
 	return dataDirectory
+}
+
+// writeToFile writes addresses and private keys to designated directories with given fileNum.
+// Addresses are stored in a file like `addrs_0` and private keys are stored in a file like `privateKeys_0`.
+func writeToFile(addrs []*common.Address, privKeys []*ecdsa.PrivateKey, fileNum int, dir string) {
+	_ = os.Mkdir(path.Join(dir, addressDirectory), os.ModePerm)
+	_ = os.Mkdir(path.Join(dir, privateKeyDirectory), os.ModePerm)
+
+	addrsFile, err := os.Create(path.Join(dir, addressDirectory, addressFilePrefix+strconv.Itoa(fileNum)))
+	if err != nil {
+		panic(err)
+	}
+
+	privateKeysFile, err := os.Create(path.Join(dir, privateKeyDirectory, privateKeyFilePrefix+strconv.Itoa(fileNum)))
+	if err != nil {
+		panic(err)
+	}
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(2)
+
+	syncSize := len(addrs) / 2
+
+	go func() {
+		for i, b := range addrs {
+			addrsFile.WriteString(b.String() + "\n")
+			if (i+1)%syncSize == 0 {
+				addrsFile.Sync()
+			}
+		}
+
+		addrsFile.Close()
+		wg.Done()
+	}()
+
+	go func() {
+		for i, key := range privKeys {
+			privateKeysFile.WriteString(hex.EncodeToString(crypto.FromECDSA(key)) + "\n")
+			if (i+1)%syncSize == 0 {
+				privateKeysFile.Sync()
+			}
+		}
+
+		privateKeysFile.Close()
+		wg.Done()
+	}()
+
+	wg.Wait()
 }
 
 func readAddrsFromFile(dir string, num int) ([]*common.Address, error) {
@@ -138,14 +189,22 @@ func readAddrsAndPrivateKeysFromFile(dir string, num int) ([]*common.Address, []
 }
 
 // makeAddrsFromFile extracts the address stored in file by numAccounts.
-func makeAddrsFromFile(numAccounts int, fileDir string) ([]*common.Address, error) {
+func makeAddrsFromFile(numAccounts int, testDataDir string, indexPicker func(int, int) int) ([]*common.Address, error) {
 	addrs := make([]*common.Address, 0, numAccounts)
 
+	files, err := ioutil.ReadDir(path.Join(testDataDir, addressDirectory))
+	if err != nil {
+		return nil, err
+	}
+
+	numFiles := len(files)
 	remain := numAccounts
-	fileIndex := 0
-	for remain > 0 {
+	for i := 1; remain > 0; i++ {
+		fileIndex := indexPicker(i, numFiles)
+
+		fmt.Println("Read addresses", "fileIndex", fileIndex)
 		// Read recipient addresses from file.
-		addrsPerFile, err := readAddrsFromFile(fileDir, fileIndex)
+		addrsPerFile, err := readAddrsFromFile(testDataDir, fileIndex)
 
 		if err != nil {
 			return nil, err
@@ -154,7 +213,6 @@ func makeAddrsFromFile(numAccounts int, fileDir string) ([]*common.Address, erro
 		partSize := int(math.Min(float64(len(addrsPerFile)), float64(remain)))
 		addrs = append(addrs, addrsPerFile[:partSize]...)
 		remain -= partSize
-		fileIndex++
 	}
 
 	return addrs, nil
@@ -200,12 +258,12 @@ func generateGovernaceDataForTest() *governance.Governance {
 	})
 }
 
-// generateDefaultLevelDBOption returns default LevelDB option for pre-loaded tests.
+// generateDefaultLevelDBOption returns default LevelDB option for pre-generated tests.
 func generateDefaultLevelDBOption() *opt.Options {
-	return &opt.Options{WriteBuffer: 1024 * opt.MiB, CompactionTableSize: 4 * opt.MiB, CompactionTableSizeMultiplier: 2}
+	return &opt.Options{WriteBuffer: 256 * opt.MiB, CompactionTableSize: 4 * opt.MiB, CompactionTableSizeMultiplier: 2}
 }
 
-// generateDefaultDBConfig returns default database.DBConfig for pre-loaded tests.
+// generateDefaultDBConfig returns default database.DBConfig for pre-generated tests.
 func generateDefaultDBConfig() *database.DBConfig {
 	return &database.DBConfig{Partitioned: true, ParallelDBWrite: true}
 }
@@ -247,7 +305,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return err
 	}
 
-	stateDB, err := bcdata.bc.State()
+	stateDB, err := bcdata.bc.TryGetCachedStateDB(bcdata.bc.CurrentBlock().Root())
 	if err != nil {
 		return err
 	}
@@ -280,21 +338,21 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return fmt.Errorf("err = %s, n = %d\n", err, n)
 	}
 
-	fmt.Println("blockNum", b.NumberU64(), "numTransactions", len(newtxs))
-	sumTx += len(newtxs)
+	totalTxs += len(newtxs)
+	fmt.Println("blockNum", b.NumberU64(), "numTxs", len(newtxs), "totalTxs", totalTxs)
 
 	return nil
 }
 
-// NewBCDataForPreLoadedTest returns a new BCData pointer constructed either 1) from the scratch or 2) from the existing data.
-func NewBCDataForPreLoadedTest(testDataDir string, numTotalSenders int, dbc *database.DBConfig, levelDBOption *opt.Options, generateTest bool) (*BCData, error) {
-	if numValidatorsForTest > numTotalSenders {
+// NewBCDataForPreGeneratedTest returns a new BCData pointer constructed either 1) from the scratch or 2) from the existing data.
+func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCData, error) {
+	if numValidatorsForTest > tc.numTotalSenders {
 		return nil, errors.New("numTotalSenders should be bigger numValidatorsForTest")
 	}
 
 	// Remove test data directory if 1) exists and and 2) generating test.
-	if _, err := os.Stat(dir); err == nil && generateTest {
-		os.RemoveAll(dir)
+	if _, err := os.Stat(testDataDir); err == nil && tc.isGenerateTest {
+		os.RemoveAll(testDataDir)
 	}
 
 	// Remove transactions.rlp if exists
@@ -304,8 +362,8 @@ func NewBCDataForPreLoadedTest(testDataDir string, numTotalSenders int, dbc *dat
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
-	dbc.Dir = path.Join(testDataDir, chainDataDir)
-	chainDB, err := database.NewLevelDBManagerForTest(dbc, levelDBOption)
+	tc.dbc.Dir = path.Join(testDataDir, chainDataDir)
+	chainDB, err := database.NewLevelDBManagerForTest(tc.dbc, tc.levelDBOption)
 	if err != nil {
 		return nil, err
 	}
@@ -320,10 +378,11 @@ func NewBCDataForPreLoadedTest(testDataDir string, numTotalSenders int, dbc *dat
 	// 2) If executing test, load accounts and private keys from file as many as numTotalSenders
 	var addrs []*common.Address
 	var privKeys []*ecdsa.PrivateKey
-	if generateTest {
-		addrs, privKeys, err = createAccounts(numTotalSenders)
+	if tc.isGenerateTest {
+		addrs, privKeys, err = createAccounts(tc.numTotalSenders)
+		writeToFile(addrs, privKeys, 0, testDataDir)
 	} else {
-		addrs, privKeys, err = makeAddrsAndPrivKeysFromFile(numTotalSenders, testDataDir)
+		addrs, privKeys, err = makeAddrsAndPrivKeysFromFile(tc.numTotalSenders, testDataDir)
 	}
 
 	if err != nil {
@@ -347,14 +406,14 @@ func NewBCDataForPreLoadedTest(testDataDir string, numTotalSenders int, dbc *dat
 	// 1) If generating test, call initBlockChain
 	// 2) If executing test, call blockchain.NewBlockChain
 	var bc *blockchain.BlockChain
-	if generateTest {
+	if tc.isGenerateTest {
 		bc, err = initBlockChain(nil, chainDB, addrs, validatorAddresses, engine)
 	} else {
-		cacheConfig, chainConfig, err := getCacheAndChainConfig(chainDB)
+		chainConfig, err := getChainConfig(chainDB)
 		if err != nil {
 			return nil, err
 		}
-		bc, err = blockchain.NewBlockChain(chainDB, cacheConfig, chainConfig, engine, vm.Config{})
+		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, engine, vm.Config{})
 	}
 
 	if err != nil {
@@ -366,23 +425,17 @@ func NewBCDataForPreLoadedTest(testDataDir string, numTotalSenders int, dbc *dat
 		validatorPrivKeys, engine}, nil
 }
 
-// getCacheAndChainConfig returns configs needed to call blockchain.NewBlockChain().
-func getCacheAndChainConfig(chainDB database.DBManager) (*blockchain.CacheConfig, *params.ChainConfig, error) {
-	cacheConfig := &blockchain.CacheConfig{
-		ArchiveMode:   true,
-		CacheSize:     256 * 1024 * 1024,
-		BlockInterval: blockchain.DefaultBlockInterval,
-	}
-
+// getChainConfig returns chain config from chainDB.
+func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 	stored := chainDB.ReadBlockByNumber(0)
 	if stored == nil {
-		return nil, nil, errors.New("chainDB.ReadBlockByNumber(0) == nil")
+		return nil, errors.New("chainDB.ReadBlockByNumber(0) == nil")
 	}
 
 	chainConfig := chainDB.ReadChainConfig(stored.Hash())
 	if chainConfig == nil {
-		return nil, nil, errors.New("chainConfig == nil")
+		return nil, errors.New("chainConfig == nil")
 	}
 
-	return cacheConfig, chainConfig, nil
+	return chainConfig, nil
 }
