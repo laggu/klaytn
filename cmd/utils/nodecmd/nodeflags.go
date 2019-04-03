@@ -58,6 +58,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.CacheUsageLevelFlag,
 	utils.MemorySizeFlag,
 	utils.CacheWriteThroughFlag,
+	utils.TxPoolStateCacheFlag,
 	utils.ListenPortFlag,
 	utils.SubListenPortFlag,
 	utils.MultiChannelUseFlag,

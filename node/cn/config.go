@@ -113,6 +113,7 @@ type Config struct {
 	ChildChainIndexing bool
 	ParallelDBWrite    bool
 	StateDBCaching     bool
+	TxPoolStateCache   bool
 
 	// Mining-related options
 	Gxbase    common.Address `toml:",omitempty"`

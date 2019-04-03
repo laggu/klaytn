@@ -124,6 +124,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 			utils.CacheUsageLevelFlag,
 			utils.MemorySizeFlag,
 			utils.CacheWriteThroughFlag,
+			utils.TxPoolStateCacheFlag,
 		},
 	},
 	{

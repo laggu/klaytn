@@ -86,6 +86,9 @@ type blockChain interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
+
+	GetNonceCache() common.Cache
+	GetBalanceCache() common.Cache
 }
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
@@ -180,7 +183,9 @@ type TxPool struct {
 	wg sync.WaitGroup // for shutdown sync
 
 	// TODO-Klaytn-RemoveLater Remove homestead field
-	homestead bool
+	homestead    bool
+	nonceCache   common.Cache
+	balanceCache common.Cache
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -202,7 +207,9 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
 		// TODO-Klaytn We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
 		//         later we have to change this rule when governance of UnitPrice is determined.
-		gasPrice: new(big.Int).SetUint64(chainconfig.UnitPrice),
+		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
+		nonceCache:   chain.GetNonceCache(),
+		balanceCache: chain.GetBalanceCache(),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -578,38 +585,40 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// 	return ErrUnderpriced
 	// }
 	// Ensure the transaction adheres to nonce ordering
-	if pool.currentState.GetNonce(from) > tx.Nonce() {
+	if pool.getNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
 	}
 	// TODO-Klaytn-Issue136
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
+	senderBalance := pool.getBalance(from)
 	if from == feePayer {
-		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-			logger.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", pool.currentState.GetBalance(from), "cost", tx.Cost())
+		if senderBalance.Cmp(tx.Cost()) < 0 {
+			logger.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFunds
 		}
 	} else {
-		if pool.currentState.GetBalance(from).Cmp(tx.Value()) < 0 {
-			logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", pool.currentState.GetBalance(from), "value", tx.Value())
+		if senderBalance.Cmp(tx.Value()) < 0 {
+			logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
 			return ErrInsufficientFundsFrom
 		}
 
 		feeRatio := tx.FeeRatio()
+		feePayerBalance := pool.getBalance(feePayer)
 		switch {
 		case feeRatio == types.MaxFeeRatio:
-			if pool.currentState.GetBalance(feePayer).Cmp(tx.Fee()) < 0 {
-				logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", pool.currentState.GetBalance(feePayer), "fee", tx.Fee())
+			if feePayerBalance.Cmp(tx.Fee()) < 0 {
+				logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
 				return ErrInsufficientFundsFeePayer
 			}
 		case feeRatio < types.MaxFeeRatio:
 			feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
-			if pool.currentState.GetBalance(feePayer).Cmp(feeByFeePayer) < 0 {
-				logger.Error("[tx_pool] insufficient funds for feeByFeePayer", "feePayer", feePayer, "balance", pool.currentState.GetBalance(feePayer), "feeByFeePayer", feeByFeePayer)
+			if feePayerBalance.Cmp(feeByFeePayer) < 0 {
+				logger.Error("[tx_pool] insufficient funds for feeByFeePayer", "feePayer", feePayer, "balance", feePayerBalance, "feeByFeePayer", feeByFeePayer)
 				return ErrInsufficientFundsFeePayer
 			}
-			if pool.currentState.GetBalance(from).Cmp(feeBySender) < 0 {
-				logger.Error("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", pool.currentState.GetBalance(from), "feeBySender", feeBySender)
+			if senderBalance.Cmp(feeBySender) < 0 {
+				logger.Error("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", senderBalance, "feeBySender", feeBySender)
 				return ErrInsufficientFundsFeePayer
 			}
 		default:
@@ -1025,14 +1034,14 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			continue // Just in case someone calls with a non existing account
 		}
 		// Drop all transactions that are deemed too old (low nonce)
-		for _, tx := range list.Forward(pool.currentState.GetNonce(addr)) {
+		for _, tx := range list.Forward(pool.getNonce(addr)) {
 			hash := tx.Hash()
 			logger.Trace("Removed old queued transaction", "hash", hash)
 			delete(pool.all, hash)
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, _ := list.Filter(pool.getBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			logger.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -1191,7 +1200,7 @@ func (pool *TxPool) demoteUnexecutables() {
 	defer pool.txMu.Unlock()
 	// Iterate over all accounts and demote any non-executable transactions
 	for addr, list := range pool.pending {
-		nonce := pool.currentState.GetNonce(addr)
+		nonce := pool.getNonce(addr)
 
 		// Drop all transactions that are deemed too old (low nonce)
 		for _, tx := range list.Forward(nonce) {
@@ -1201,7 +1210,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, invalids := list.Filter(pool.getBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			logger.Trace("Removed unpayable pending transaction", "hash", hash)
@@ -1228,6 +1237,28 @@ func (pool *TxPool) demoteUnexecutables() {
 			delete(pool.beats, addr)
 		}
 	}
+}
+
+// getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.
+func (pool *TxPool) getNonce(addr common.Address) uint64 {
+	if pool.nonceCache != nil {
+		if obj, exist := pool.nonceCache.Get(addr); exist && obj != nil {
+			nonce, _ := obj.(uint64)
+			return nonce
+		}
+	}
+	return pool.currentState.GetNonce(addr)
+}
+
+// getBalance returns the balance of the account from the cache. If it is not in the cache, it gets the balance from the stateDB.
+func (pool *TxPool) getBalance(addr common.Address) *big.Int {
+	if pool.balanceCache != nil {
+		if obj, exist := pool.balanceCache.Get(addr); exist && obj != nil {
+			balance, _ := obj.(*big.Int)
+			return balance
+		}
+	}
+	return pool.currentState.GetBalance(addr)
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.

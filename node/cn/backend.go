@@ -165,7 +165,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	var (
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching, ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
+		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching, ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval, TxPoolStateCache: config.TxPoolStateCache}
 	)
 	var err error
 	cn.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)

@@ -230,6 +230,11 @@ var (
 		Name:  "cache.writethrough",
 		Usage: "Enables write-through writing to database and cache for certain types of cache.",
 	}
+	TxPoolStateCacheFlag = cli.BoolFlag{
+		Name:  "statedb.use-txpool-cache",
+		Usage: "Enables caching of nonce and balance for txpool.",
+	}
+
 	ChildChainIndexingFlag = cli.BoolFlag{
 		Name:  "childchainindexing",
 		Usage: "Enables storing transaction hash of child chain transaction for fast access to child chain data",
@@ -1063,6 +1068,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(CacheWriteThroughFlag.Name) {
 		common.WriteThroughCaching = ctx.GlobalBool(CacheWriteThroughFlag.Name)
 	}
+	cfg.TxPoolStateCache = ctx.GlobalIsSet(TxPoolStateCacheFlag.Name)
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}

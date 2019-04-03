@@ -60,6 +60,10 @@ const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
 	maxBadBlocks        = 10
+	// TODO-Klaytn-Issue1911  This flag needs to be adjusted to the appropriate value.
+	//  Currently, this value is taken to cache all 10 million accounts
+	//  and should be optimized considering memory size and performance.
+	maxAccountForCache = 10000000
 )
 
 const (
@@ -73,10 +77,11 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching bool // Enables caching of state objects in stateDB.
-	ArchiveMode    bool // If true, state trie is not pruned and always written to database.
-	CacheSize      int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval  uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+	StateDBCaching   bool // Enables caching of state objects in stateDB.
+	TxPoolStateCache bool // Enables caching of nonce and balance for txpool.
+	ArchiveMode      bool // If true, state trie is not pruned and always written to database.
+	CacheSize        int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval    uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -137,6 +142,9 @@ type BlockChain struct {
 
 	cachedStateDB       *state.StateDB
 	lastUpdatedRootHash common.Hash
+
+	nonceCache   common.Cache
+	balanceCache common.Cache
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -157,6 +165,13 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(maxBadBlocks)
 
+	var nonceCache common.Cache
+	var balanceCache common.Cache
+	if cacheConfig.TxPoolStateCache {
+		nonceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
+		balanceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
+	}
+
 	bc := &BlockChain{
 		chainConfig:     chainConfig,
 		cacheConfig:     cacheConfig,
@@ -169,6 +184,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		vmConfig:        vmConfig,
 		badBlocks:       badBlocks,
 		parallelDBWrite: db.IsParallelDBWrite(),
+		nonceCache:      nonceCache,
+		balanceCache:    balanceCache,
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -1091,6 +1108,11 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		status, err = bc.writeBlockWithStateSerial(block, receipts, stateDB)
 	}
 
+	// TODO-klaytn-Issue1911 After reviewing the behavior and performance, change the UpdateCacheStateObjects to update at the same time.
+	if err == nil && bc.cacheConfig.TxPoolStateCache {
+		stateDB.UpdateTxPoolStateCache(bc.nonceCache, bc.balanceCache)
+	}
+
 	// Update lastUpdatedRootHash and cachedStateDB after successful WriteBlockWithState.
 	if err == nil && bc.cacheConfig.StateDBCaching {
 		bc.mu.Lock()
@@ -1103,6 +1125,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		stateDB.UpdateCachedStateObjects(block.Root())
 		bc.cachedStateDB = stateDB
 	}
+
 	return status, err
 }
 
@@ -1911,4 +1934,14 @@ func (bc *BlockChain) isArchiveMode() bool {
 // If enabled, data written in WriteBlockWithState is being written in parallel manner.
 func (bc *BlockChain) IsParallelDBWrite() bool {
 	return bc.parallelDBWrite
+}
+
+// GetNonceCache returns a nonceCache.
+func (bc *BlockChain) GetNonceCache() common.Cache {
+	return bc.nonceCache
+}
+
+// GetBalanceCache returns a balanceCache.
+func (bc *BlockChain) GetBalanceCache() common.Cache {
+	return bc.balanceCache
 }
