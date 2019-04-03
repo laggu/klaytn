@@ -18,6 +18,7 @@ package sc
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/common"
@@ -224,12 +225,16 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 	} else {
 		gwm.subBridge.handler.LockChainAccount()
 		defer gwm.subBridge.handler.UnLockChainAccount()
-
 		addr, gateway, err := gwm.deployGateway(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.getChainAccountNonce())), gwm.subBridge.handler.chainKey, backend, new(big.Int).SetUint64(gwm.subBridge.handler.remoteGasPrice))
+		if err != nil {
+			logger.Error("fail to deploy gateway", "err", err)
+			return common.Address{}, err
+		}
 		gwm.remoteGateWays[addr] = gateway
 		gwm.all[addr] = false
 		if err := gwm.journal.insert(addr, local); err != nil {
 			logger.Error("fail to journal address", "err", err)
+			return common.Address{}, err
 		}
 		gwm.subBridge.handler.addChainAccountNonce(1)
 		return addr, err
@@ -239,11 +244,15 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *gatewaycontract.Gateway, error) {
 
 	// TODO-Klaytn change config
+
+	if accountKey == nil {
+		return common.Address{}, nil, errors.New("nil accountKey")
+	}
+
 	auth := MakeTransactOpts(accountKey, nonce, chainID, gasPrice)
 
 	addr, tx, contract, err := gatewaycontract.DeployGateway(auth, backend, true)
 	if err != nil {
-		logger.Error("", "err", err)
 		return common.Address{}, nil, err
 	}
 	logger.Info("Gateway is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())

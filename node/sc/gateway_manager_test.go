@@ -28,6 +28,7 @@ import (
 	stoken "github.com/ground-x/klaytn/contracts/token"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"os"
@@ -45,6 +46,7 @@ import (
 // - WithdrawToken method
 // - TokenWithdrawn event
 // - TokenReceived event
+// - [Error Case] check nonce on gateway deploy (#2284)
 func TestGateWayManager(t *testing.T) {
 
 	defer func() {
@@ -249,6 +251,12 @@ func TestGateWayManager(t *testing.T) {
 		t.Fatal("testKLAY is mismatched,", "expected", testKLAY.String(), "result", balance.String())
 	}
 
+	// Nonce check on deploy error
+	addr2, err := gatewayManager.DeployGatewayNonceTest(sim)
+	if err != nil {
+		log.Fatalf("Failed to deploy new gateway contract: %v %v", err, addr2)
+	}
+
 	gatewayManager.Stop()
 }
 
@@ -279,4 +287,19 @@ func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, a
 	}
 	logger.Info("Gateway is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
 	return addr, contract, nil
+}
+
+// Nonce should not be increased when error occurs
+func (gwm *GateWayManager) DeployGatewayNonceTest(backend bind.ContractBackend) (common.Address, error) {
+	key := gwm.subBridge.handler.chainKey
+	nonce := gwm.subBridge.handler.getChainAccountNonce()
+	gwm.subBridge.handler.chainKey = nil
+	addr, _ := gwm.DeployGateway(backend, false)
+	gwm.subBridge.handler.chainKey = key
+
+	if nonce != gwm.subBridge.handler.getChainAccountNonce() {
+		return addr, errors.New("nonce is accidentally increased")
+	}
+
+	return addr, nil
 }
