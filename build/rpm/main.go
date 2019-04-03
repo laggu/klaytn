@@ -15,6 +15,7 @@ const (
 	PN  = "kpn"
 	EN  = "ken"
 	SCN = "kscn"
+	BN  = "kbn"
 )
 
 type NodeInfo struct {
@@ -27,6 +28,7 @@ var NODE_TYPE = map[string]NodeInfo{
 	PN:  {"kpnd", "kpnd is klaytn proxy node daemon"},
 	EN:  {"kend", "kend is klaytn endpoint node daemon"},
 	SCN: {"kscnd", "kscnd is klaytn servicechain node daemon"},
+	BN:  {"kbnd", "kbnd is klaytn boot node daemon"},
 }
 
 type RpmSpec struct {
@@ -35,8 +37,8 @@ type RpmSpec struct {
 	Name        string
 	Summary     string
 	MakeTarget  string
-	ProgramName string // kcn, kpn, ken
-	DaemonName  string // kcnd, kpnd, kend
+	ProgramName string // kcn, kpn, ken, kscn, kbn
+	DaemonName  string // kcnd, kpnd, kend, kscn, kbn
 }
 
 func (r RpmSpec) String() string {
@@ -67,7 +69,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "node_type",
-					Usage: "Klaytn node type (cn, pn, en)",
+					Usage: "Klaytn node type (kcn, kpn, ken, kscn, kbn)",
 				},
 				cli.BoolFlag{
 					Name:  "devel",
@@ -111,7 +113,7 @@ func genspec(c *cli.Context) error {
 
 	nodeType := c.String("node_type")
 	if _, ok := NODE_TYPE[nodeType]; ok != true {
-		return fmt.Errorf("node_type[\"%s\"] is not supported. Use --node_type [kcn, kpn, ken, kscn]", nodeType)
+		return fmt.Errorf("node_type[\"%s\"] is not supported. Use --node_type [kcn, kpn, ken, kscn, kbn]", nodeType)
 	}
 
 	rpmSpec.ProgramName = strings.ToLower(nodeType)

@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+BIN=$(cd "$(dirname $0)"; pwd)
+CMD_HOME=$(dirname $BIN)
+CONF=$CMD_HOME/conf
+
+source $CONF/kbnd.conf
+
+pidfile=$CMD_HOME/kbnd.pid
+
+__pid_run() {
+    unset pid
+    if [ ! -f $pidfile ]; then
+        return
+    fi
+    PID_NUM=$(eval "cat $pidfile")
+    if [[ ! -z "$PID_NUM" ]]; then
+        export pid=$(eval "ps -p $PID_NUM -o pid=")
+    fi
+}
+
+start() {
+    __pid_run
+    [ -n "$pid" ] && echo "kbnd already running...[$pid]" && return
+
+    if [ ! -f $KEY_PATH ]; then
+        echo
+        echo "  [ERROR] : KEY_PATH is not defined in $CONF/kbnd.conf"
+        exit 1
+    fi
+
+    echo -n "Starting kbnd: "
+
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
+
+    set -f
+    $BIN/kbn --nodekey ${KEY_PATH} >> ${LOG_DIR}/kbnd.out 2>&1 &
+    RETVAL=$?
+    PIDNUM=$!
+    set +f
+    if [ $RETVAL = 0 ]; then
+        echo $PIDNUM > ${pidfile}
+        echo "OK"
+    else
+        echo "Fail"
+    fi
+    return $RETVAL
+}
+
+stop() {
+    __pid_run
+    [ -z "$pid" ] && echo "kbnd is not running" && return
+    echo -n "Shutting down kbnd:  "
+    kill $(eval "cat ${pidfile}")
+    RETVAL=$?
+    [ $RETVAL = 0 ] && rm -f ${pidfile} && echo "OK" && return
+    echo "Failed"
+}
+
+status() {
+    __pid_run
+    if [ -n "$pid" ]; then
+        echo "kbnd is running"
+    else
+        echo "kbnd is down"
+    fi
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        restart
+        ;;
+    *)
+        echo "Usages: kbnd {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit 0
