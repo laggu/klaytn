@@ -172,6 +172,10 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 
 	}
 
+	// Rename field name `hash` to `transactionHash` since this function returns a JSON object of a receipt.
+	fields["transactionHash"] = fields["hash"]
+	delete(fields, "hash")
+
 	return fields
 }
 

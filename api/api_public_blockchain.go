@@ -470,7 +470,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	output["blockHash"] = blockHash
 	output["blockNumber"] = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
 	output["from"] = from
-	output["txHash"] = tx.Hash()
+	output["hash"] = tx.Hash()
 	output["transactionIndex"] = hexutil.Uint(index)
 	output["signatures"] = sigs
 
