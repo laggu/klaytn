@@ -204,7 +204,7 @@ func (a *AccountKeyRoleBased) SigValidationGas() (uint64, error) {
 	return gas, nil
 }
 
-func (a *AccountKeyRoleBased) Init() error {
+func (a *AccountKeyRoleBased) Init(currentBlockNumber uint64) error {
 	// A zero-role key is not allowed.
 	if len(*a) == 0 {
 		return kerrors.ErrZeroLength
@@ -220,7 +220,7 @@ func (a *AccountKeyRoleBased) Init() error {
 		}
 
 		// If any key in the role cannot be initialized, return an error.
-		if err := (*a)[i].Init(); err != nil {
+		if err := (*a)[i].Init(currentBlockNumber); err != nil {
 			return err
 		}
 	}
@@ -228,7 +228,7 @@ func (a *AccountKeyRoleBased) Init() error {
 	return nil
 }
 
-func (a *AccountKeyRoleBased) Update(key AccountKey) error {
+func (a *AccountKeyRoleBased) Update(key AccountKey, currentBlockNumber uint64) error {
 	if ak, ok := key.(*AccountKeyRoleBased); ok {
 		lenAk := len(*ak)
 		lenA := len(*a)
@@ -252,7 +252,7 @@ func (a *AccountKeyRoleBased) Update(key AccountKey) error {
 			if (*ak)[i].Type() == AccountKeyTypeNil {
 				continue
 			}
-			if err := (*ak)[i].Init(); err != nil {
+			if err := (*ak)[i].Init(currentBlockNumber); err != nil {
 				return err
 			}
 			(*a)[i] = (*ak)[i]

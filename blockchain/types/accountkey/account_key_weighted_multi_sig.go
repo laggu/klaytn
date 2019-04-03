@@ -134,7 +134,7 @@ func (a *AccountKeyWeightedMultiSig) SigValidationGas() (uint64, error) {
 	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
 }
 
-func (a *AccountKeyWeightedMultiSig) Init() error {
+func (a *AccountKeyWeightedMultiSig) Init(currentBlockNumber uint64) error {
 	sum := uint(0)
 	prevSum := uint(0)
 
@@ -179,9 +179,9 @@ func (a *AccountKeyWeightedMultiSig) Init() error {
 	return nil
 }
 
-func (a *AccountKeyWeightedMultiSig) Update(key AccountKey) error {
+func (a *AccountKeyWeightedMultiSig) Update(key AccountKey, currentBlockNumber uint64) error {
 	if ak, ok := key.(*AccountKeyWeightedMultiSig); ok {
-		if err := ak.Init(); err != nil {
+		if err := ak.Init(currentBlockNumber); err != nil {
 			return err
 		}
 		a.Threshold = ak.Threshold

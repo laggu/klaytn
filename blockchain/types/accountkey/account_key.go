@@ -75,10 +75,10 @@ type AccountKey interface {
 
 	// Init returns an error if all data in the key is invalid.
 	// This checks that the key is ready to be assigned to an account.
-	Init() error
+	Init(currentBlockNumber uint64) error
 
 	// Update returns an error if `key` cannot be assigned to itself.
-	Update(key AccountKey) error
+	Update(key AccountKey, currentBlockNumber uint64) error
 
 	// IsCompositeType returns true if the account type is a composite type.
 	// Composite types are AccountKeyRoleBased and AccountKeyRoleBasedRLPBytes.

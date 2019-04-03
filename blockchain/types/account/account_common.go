@@ -175,15 +175,15 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 		key:           e.key.DeepCopy()}
 }
 
-func (e *AccountCommon) UpdateKey(key accountkey.AccountKey) error {
+func (e *AccountCommon) UpdateKey(key accountkey.AccountKey, currentBlockNumber uint64) error {
 	if e.key.Type() == key.Type() {
 		// If the type is same, call Update() to set fields in key into e.key.
-		if err := e.key.Update(key); err != nil {
+		if err := e.key.Update(key, currentBlockNumber); err != nil {
 			return err
 		}
 	} else {
 		// If the type is different, check it can be initialized and assigned.
-		if err := key.Init(); err != nil {
+		if err := key.Init(currentBlockNumber); err != nil {
 			return err
 		}
 		// If assignable, assign it.

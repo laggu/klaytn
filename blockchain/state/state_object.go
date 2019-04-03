@@ -209,8 +209,8 @@ func (self *stateObject) setState(key, value common.Hash) {
 	self.dirtyStorage[key] = value
 }
 
-func (self *stateObject) UpdateKey(key accountkey.AccountKey) error {
-	return self.account.UpdateKey(key)
+func (self *stateObject) UpdateKey(key accountkey.AccountKey, currentBlockNumber uint64) error {
+	return self.account.UpdateKey(key, currentBlockNumber)
 }
 
 // updateStorageTrie writes cached storage modifications into the object's storage trie.

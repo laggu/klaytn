@@ -337,7 +337,7 @@ type VM interface {
 type StateDB interface {
 	IncNonce(common.Address)
 	Exist(common.Address) bool
-	UpdateKey(addr common.Address, key accountkey.AccountKey) error
+	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
 	CreateAccountWithMap(addr common.Address, accountType account.AccountType, values map[account.AccountValueKeyType]interface{})
 	IsProgramAccount(addr common.Address) bool
 }

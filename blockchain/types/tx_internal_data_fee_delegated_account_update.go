@@ -350,7 +350,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, curr
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
-	err = stateDB.UpdateKey(sender.Address(), t.Key)
+	err = stateDB.UpdateKey(sender.Address(), t.Key, currentBlockNumber)
 
 	return nil, gas, err
 }

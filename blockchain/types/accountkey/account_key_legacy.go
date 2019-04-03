@@ -80,12 +80,12 @@ func (a *AccountKeyLegacy) SigValidationGas() (uint64, error) {
 	return params.TxValidationGasDefault, nil
 }
 
-func (a *AccountKeyLegacy) Init() error {
+func (a *AccountKeyLegacy) Init(currentBlockNumber uint64) error {
 	// Since it has no data and it can be assigned to an account, it always returns nil.
 	return nil
 }
 
-func (a *AccountKeyLegacy) Update(key AccountKey) error {
+func (a *AccountKeyLegacy) Update(key AccountKey, currentBlockNumber uint64) error {
 	if _, ok := key.(*AccountKeyLegacy); ok {
 		// If `key` is the same type, it returns always nil. No need to set any value.
 		return nil

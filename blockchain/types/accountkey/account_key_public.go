@@ -83,7 +83,7 @@ func (a *AccountKeyPublic) SigValidationGas() (uint64, error) {
 	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
 }
 
-func (a *AccountKeyPublic) Init() error {
+func (a *AccountKeyPublic) Init(currentBlockNumber uint64) error {
 	// If the point is not on the curve, return an error.
 	if a.IsOnCurve(a.X, a.Y) == false {
 		return kerrors.ErrNotOnCurve
@@ -92,9 +92,9 @@ func (a *AccountKeyPublic) Init() error {
 	return nil
 }
 
-func (a *AccountKeyPublic) Update(key AccountKey) error {
+func (a *AccountKeyPublic) Update(key AccountKey, currentBlockNumber uint64) error {
 	if ak, ok := key.(*AccountKeyPublic); ok {
-		if err := ak.Init(); err != nil {
+		if err := ak.Init(currentBlockNumber); err != nil {
 			return err
 		}
 		a.X = ak.X

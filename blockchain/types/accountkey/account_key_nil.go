@@ -86,12 +86,12 @@ func (a *AccountKeyNil) SigValidationGas() (uint64, error) {
 	return params.TxValidationGasDefault, nil
 }
 
-func (a *AccountKeyNil) Init() error {
+func (a *AccountKeyNil) Init(currentBlockNumber uint64) error {
 	// Since AccountKeyNil cannot be assigned to an account, it always returns error.
 	return kerrors.ErrAccountKeyNilUninitializable
 }
 
-func (a *AccountKeyNil) Update(key AccountKey) error {
+func (a *AccountKeyNil) Update(key AccountKey, currentBlockNumber uint64) error {
 	if _, ok := key.(*AccountKeyNil); ok {
 		// Since AccountKeyNil can be updated, it returns nil.
 		// No need to update any value because it does not have a field.

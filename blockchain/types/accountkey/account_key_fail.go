@@ -71,12 +71,12 @@ func (a *AccountKeyFail) SigValidationGas() (uint64, error) {
 	return params.TxValidationGasDefault, nil
 }
 
-func (a *AccountKeyFail) Init() error {
+func (a *AccountKeyFail) Init(currentBlockNumber uint64) error {
 	// AccountKeyFail can be assigned to an account. Since it does not have any value, it returns always nil.
 	return nil
 }
 
-func (a *AccountKeyFail) Update(key AccountKey) error {
+func (a *AccountKeyFail) Update(key AccountKey, currentBlockNumber uint64) error {
 	// AccountKeyFail cannot be updated with any key, hence it returns always an error.
 	return kerrors.ErrAccountKeyFailNotUpdatable
 }
