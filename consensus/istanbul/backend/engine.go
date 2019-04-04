@@ -188,10 +188,6 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	if err != nil {
 		return err
 	}
-	validators := make([]byte, len(snap.validators())*common.AddressLength)
-	for i, validator := range snap.validators() {
-		copy(validators[i*common.AddressLength:], validator[:])
-	}
 	if err := sb.verifySigner(chain, header, parents); err != nil {
 		return err
 	}
