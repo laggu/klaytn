@@ -27,7 +27,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
-	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync"
 	"time"
@@ -65,7 +64,7 @@ type BridgePeer interface {
 
 	Head() (hash common.Hash, td *big.Int)
 
-	// AddToKnownTxs adds a transaction to knownTxs for the peer, ensuring that it
+	// AddToKnownTxs adds a transaction hash to knownTxsCache for the peer, ensuring that it
 	// will never be propagated to this particular peer.
 	AddToKnownTxs(hash common.Hash)
 
@@ -99,8 +98,8 @@ type BridgePeer interface {
 	// GetVersion returns the version of the peer.
 	GetVersion() int
 
-	// GetKnownTxs returns the knownBlocks of the peer.
-	GetKnownTxs() *set.Set
+	// KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.
+	KnowsTx(hash common.Hash) bool
 
 	// GetP2PPeer returns the p2p.
 	GetP2PPeer() *p2p.Peer
@@ -144,10 +143,15 @@ type baseBridgePeer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxs *set.Set      // Set of transaction hashes known to be known by this peer
-	term     chan struct{} // Termination channel to stop the broadcaster
+	knownTxsCache common.Cache  // FIFO cache of transaction hashes known to be known by this peer
+	term          chan struct{} // Termination channel to stop the broadcaster
 
 	chainID *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
+}
+
+// newKnownTxCache returns an empty cache for knownTxsCache.
+func newKnownTxCache() common.Cache {
+	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs})
 }
 
 // newPeer returns new Peer interface.
@@ -156,12 +160,12 @@ func newBridgePeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 
 	return &singleChannelPeer{
 		baseBridgePeer: &baseBridgePeer{
-			Peer:     p,
-			rw:       rw,
-			version:  version,
-			id:       fmt.Sprintf("%x", id[:8]),
-			knownTxs: set.New(),
-			term:     make(chan struct{}),
+			Peer:          p,
+			rw:            rw,
+			version:       version,
+			id:            fmt.Sprintf("%x", id[:8]),
+			knownTxsCache: newKnownTxCache(),
+			term:          make(chan struct{}),
 		},
 	}
 }
@@ -200,16 +204,10 @@ func (p *baseBridgePeer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
-// AddToKnownTxs adds a transaction to knownTxs for the peer, ensuring that it
+// AddToKnownTxs adds a transaction hash to knownTxsCache for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (p *baseBridgePeer) AddToKnownTxs(hash common.Hash) {
-	if !p.knownTxs.Has(hash) {
-		// If we reached the memory allowance, drop a previously known transaction hash
-		for p.knownTxs.Size() >= maxKnownTxs {
-			p.knownTxs.Pop()
-		}
-		p.knownTxs.Add(hash)
-	}
+	p.knownTxsCache.Add(hash, struct{}{})
 }
 
 // Send writes an RLP-encoded message with the given code.
@@ -344,9 +342,10 @@ func (p *baseBridgePeer) GetVersion() int {
 	return p.version
 }
 
-// GetKnownTxs returns the knownBlocks of the peer.
-func (p *baseBridgePeer) GetKnownTxs() *set.Set {
-	return p.knownTxs
+// KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.
+func (p *baseBridgePeer) KnowsTx(hash common.Hash) bool {
+	_, ok := p.knownTxsCache.Get(hash)
+	return ok
 }
 
 // GetP2PPeer returns the p2p.Peer.
@@ -456,7 +455,7 @@ func (ps *bridgePeerSet) PeersWithoutTx(hash common.Hash) []BridgePeer {
 
 	list := make([]BridgePeer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.GetKnownTxs().Has(hash) {
+		if !p.KnowsTx(hash) {
 			list = append(list, p)
 		}
 	}

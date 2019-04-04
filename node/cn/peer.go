@@ -30,7 +30,6 @@ import (
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/ser/rlp"
-	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync"
 	"time"
@@ -95,11 +94,11 @@ type Peer interface {
 	// SetHead updates the head hash and total difficulty of the peer.
 	SetHead(hash common.Hash, td *big.Int)
 
-	// AddToKnownBlocks adds a block to knownBlocks for the peer, ensuring that the block will
+	// AddToKnownBlocks adds a block hash to knownBlocksCache for the peer, ensuring that the block will
 	// never be propagated to this particular peer.
 	AddToKnownBlocks(hash common.Hash)
 
-	// AddToKnownTxs adds a transaction to knownTxs for the peer, ensuring that it
+	// AddToKnownTxs adds a transaction hash to knownTxsCache for the peer, ensuring that it
 	// will never be propagated to this particular peer.
 	AddToKnownTxs(hash common.Hash)
 
@@ -192,11 +191,11 @@ type Peer interface {
 	// GetVersion returns the version of the peer.
 	GetVersion() int
 
-	// GetKnownBlocks returns the knownBlocks of the peer.
-	GetKnownBlocks() *set.Set
+	// KnowsBlock returns if the peer is known to have the block, based on knownBlocksCache.
+	KnowsBlock(hash common.Hash) bool
 
-	// GetKnownTxs returns the knownBlocks of the peer.
-	GetKnownTxs() *set.Set
+	// KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.
+	KnowsTx(hash common.Hash) bool
 
 	// GetP2PPeer returns the p2p.
 	GetP2PPeer() *p2p.Peer
@@ -231,14 +230,24 @@ type basePeer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxs    *set.Set                  // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set                  // Set of block hashes known to be known by this peer
-	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
-	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
-	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
-	term        chan struct{}             // Termination channel to stop the broadcaster
+	knownTxsCache    common.Cache              // FIFO cache of transaction hashes known to be known by this peer
+	knownBlocksCache common.Cache              // FIFO cache of block hashes known to be known by this peer
+	queuedTxs        chan []*types.Transaction // Queue of transactions to broadcast to the peer
+	queuedProps      chan *propEvent           // Queue of blocks to broadcast to the peer
+	queuedAnns       chan *types.Block         // Queue of blocks to announce to the peer
+	term             chan struct{}             // Termination channel to stop the broadcaster
 
 	chainID *big.Int // ChainID to sign a transaction
+}
+
+// newKnownBlockCache returns an empty cache for knownBlocksCache.
+func newKnownBlockCache() common.Cache {
+	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownBlocks})
+}
+
+// newKnownTxCache returns an empty cache for knownTxsCache.
+func newKnownTxCache() common.Cache {
+	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs})
 }
 
 // newPeer returns new Peer interface.
@@ -247,16 +256,16 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 
 	return &singleChannelPeer{
 		basePeer: &basePeer{
-			Peer:        p,
-			rw:          rw,
-			version:     version,
-			id:          fmt.Sprintf("%x", id[:8]),
-			knownTxs:    set.New(),
-			knownBlocks: set.New(),
-			queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
-			queuedProps: make(chan *propEvent, maxQueuedProps),
-			queuedAnns:  make(chan *types.Block, maxQueuedAnns),
-			term:        make(chan struct{}),
+			Peer:             p,
+			rw:               rw,
+			version:          version,
+			id:               fmt.Sprintf("%x", id[:8]),
+			knownTxsCache:    newKnownTxCache(),
+			knownBlocksCache: newKnownBlockCache(),
+			queuedTxs:        make(chan []*types.Transaction, maxQueuedTxs),
+			queuedProps:      make(chan *propEvent, maxQueuedProps),
+			queuedAnns:       make(chan *types.Block, maxQueuedAnns),
+			term:             make(chan struct{}),
 		},
 	}
 }
@@ -292,16 +301,16 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 		return newPeer(version, p, rws[p2p.ConnDefault]), nil
 	} else if lenRWs > 1 {
 		bPeer := &basePeer{
-			Peer:        p,
-			rw:          rws[p2p.ConnDefault],
-			version:     version,
-			id:          fmt.Sprintf("%x", id[:8]),
-			knownTxs:    set.New(),
-			knownBlocks: set.New(),
-			queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
-			queuedProps: make(chan *propEvent, maxQueuedProps),
-			queuedAnns:  make(chan *types.Block, maxQueuedAnns),
-			term:        make(chan struct{}),
+			Peer:             p,
+			rw:               rws[p2p.ConnDefault],
+			version:          version,
+			id:               fmt.Sprintf("%x", id[:8]),
+			knownTxsCache:    newKnownTxCache(),
+			knownBlocksCache: newKnownBlockCache(),
+			queuedTxs:        make(chan []*types.Transaction, maxQueuedTxs),
+			queuedProps:      make(chan *propEvent, maxQueuedProps),
+			queuedAnns:       make(chan *types.Block, maxQueuedAnns),
+			term:             make(chan struct{}),
 		}
 		return &multiChannelPeer{
 			basePeer: bPeer,
@@ -384,28 +393,16 @@ func (p *basePeer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
-// AddToKnownBlocks adds a block to knownBlocks for the peer, ensuring that the block will
+// AddToKnownBlocks adds a block hash to knownBlocksCache for the peer, ensuring that the block will
 // never be propagated to this particular peer.
 func (p *basePeer) AddToKnownBlocks(hash common.Hash) {
-	if !p.knownBlocks.Has(hash) {
-		// If we reached the memory allowance, drop a previously known block hash
-		for p.knownBlocks.Size() >= maxKnownBlocks {
-			p.knownBlocks.Pop()
-		}
-		p.knownBlocks.Add(hash)
-	}
+	p.knownBlocksCache.Add(hash, struct{}{})
 }
 
-// AddToKnownTxs adds a transaction to knownTxs for the peer, ensuring that it
+// AddToKnownTxs adds a transaction hash to knownTxsCache for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (p *basePeer) AddToKnownTxs(hash common.Hash) {
-	if !p.knownTxs.Has(hash) {
-		// If we reached the memory allowance, drop a previously known transaction hash
-		for p.knownTxs.Size() >= maxKnownTxs {
-			p.knownTxs.Pop()
-		}
-		p.knownTxs.Add(hash)
-	}
+	p.knownTxsCache.Add(hash, struct{}{})
 }
 
 // Send writes an RLP-encoded message with the given code.
@@ -443,7 +440,7 @@ func (p *basePeer) AsyncSendTransactions(txs []*types.Transaction) {
 // a hash notification.
 func (p *basePeer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) error {
 	for _, hash := range hashes {
-		p.knownBlocks.Add(hash)
+		p.AddToKnownBlocks(hash)
 	}
 	request := make(newBlockHashesData, len(hashes))
 	for i := 0; i < len(hashes); i++ {
@@ -459,7 +456,7 @@ func (p *basePeer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) er
 func (p *basePeer) AsyncSendNewBlockHash(block *types.Block) {
 	select {
 	case p.queuedAnns <- block:
-		p.knownBlocks.Add(block.Hash())
+		p.AddToKnownBlocks(block.Hash())
 	default:
 		p.Log().Debug("Dropping block announcement", "number", block.NumberU64(), "hash", block.Hash())
 	}
@@ -467,7 +464,7 @@ func (p *basePeer) AsyncSendNewBlockHash(block *types.Block) {
 
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *basePeer) SendNewBlock(block *types.Block, td *big.Int) error {
-	p.knownBlocks.Add(block.Hash())
+	p.AddToKnownBlocks(block.Hash())
 	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
 }
 
@@ -476,7 +473,7 @@ func (p *basePeer) SendNewBlock(block *types.Block, td *big.Int) error {
 func (p *basePeer) AsyncSendNewBlock(block *types.Block, td *big.Int) {
 	select {
 	case p.queuedProps <- &propEvent{block: block, td: td}:
-		p.knownBlocks.Add(block.Hash())
+		p.AddToKnownBlocks(block.Hash())
 	default:
 		p.Log().Debug("Dropping block propagation", "number", block.NumberU64(), "hash", block.Hash())
 	}
@@ -677,14 +674,16 @@ func (p *basePeer) GetVersion() int {
 	return p.version
 }
 
-// GetKnownBlocks returns the knownBlocks of the peer.
-func (p *basePeer) GetKnownBlocks() *set.Set {
-	return p.knownBlocks
+// KnowsBlock returns if the peer is known to have the block, based on knownBlocksCache.
+func (p *basePeer) KnowsBlock(hash common.Hash) bool {
+	_, ok := p.knownBlocksCache.Get(hash)
+	return ok
 }
 
-// GetKnownTxs returns the knownBlocks of the peer.
-func (p *basePeer) GetKnownTxs() *set.Set {
-	return p.knownTxs
+// KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.
+func (p *basePeer) KnowsTx(hash common.Hash) bool {
+	_, ok := p.knownTxsCache.Get(hash)
+	return ok
 }
 
 // GetP2PPeer returns the p2p.Peer.
@@ -776,7 +775,7 @@ func (p *multiChannelPeer) ReSendTransactions(txs types.Transactions) error {
 // a hash notification.
 func (p *multiChannelPeer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) error {
 	for _, hash := range hashes {
-		p.knownBlocks.Add(hash)
+		p.AddToKnownBlocks(hash)
 	}
 	request := make(newBlockHashesData, len(hashes))
 	for i := 0; i < len(hashes); i++ {
@@ -788,7 +787,7 @@ func (p *multiChannelPeer) SendNewBlockHashes(hashes []common.Hash, numbers []ui
 
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *multiChannelPeer) SendNewBlock(block *types.Block, td *big.Int) error {
-	p.knownBlocks.Add(block.Hash())
+	p.AddToKnownBlocks(block.Hash())
 	return p.msgSender(NewBlockMsg, []interface{}{block, td})
 }
 
@@ -1173,7 +1172,7 @@ func (ps *peerSet) PeersWithoutBlock(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.GetKnownBlocks().Has(hash) {
+		if !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1186,7 +1185,7 @@ func (ps *peerSet) TypePeersWithoutBlock(hash common.Hash, nodetype p2p.ConnType
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() == nodetype && !p.GetKnownBlocks().Has(hash) {
+		if p.ConnType() == nodetype && !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1199,7 +1198,7 @@ func (ps *peerSet) PeersWithoutBlockExceptCN(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() != node.CONSENSUSNODE && !p.GetKnownBlocks().Has(hash) {
+		if p.ConnType() != node.CONSENSUSNODE && !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1212,7 +1211,7 @@ func (ps *peerSet) CNWithoutBlock(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.cnpeers))
 	for _, p := range ps.cnpeers {
-		if !p.GetKnownBlocks().Has(hash) {
+		if !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1225,7 +1224,7 @@ func (ps *peerSet) PNWithoutBlock(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.pnpeers))
 	for _, p := range ps.pnpeers {
-		if !p.GetKnownBlocks().Has(hash) {
+		if !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1238,7 +1237,7 @@ func (ps *peerSet) ENWithoutBlock(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.enpeers))
 	for _, p := range ps.enpeers {
-		if !p.GetKnownBlocks().Has(hash) {
+		if !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1265,7 +1264,7 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.GetKnownTxs().Has(hash) {
+		if !p.KnowsTx(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1278,7 +1277,7 @@ func (ps *peerSet) TypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) [
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() == nodetype && !p.GetKnownTxs().Has(hash) {
+		if p.ConnType() == nodetype && !p.KnowsTx(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1291,7 +1290,7 @@ func (ps *peerSet) TypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []Pe
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() == nodetype && p.GetKnownTxs().Has(hash) {
+		if p.ConnType() == nodetype && p.KnowsTx(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1304,7 +1303,7 @@ func (ps *peerSet) AnotherTypePeersWithoutTx(hash common.Hash, nodetype p2p.Conn
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() != nodetype && !p.GetKnownTxs().Has(hash) {
+		if p.ConnType() != nodetype && !p.KnowsTx(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1318,7 +1317,7 @@ func (ps *peerSet) AnotherTypePeersWithTx(hash common.Hash, nodetype p2p.ConnTyp
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() != nodetype && p.GetKnownTxs().Has(hash) {
+		if p.ConnType() != nodetype && p.KnowsTx(hash) {
 			list = append(list, p)
 		}
 	}
@@ -1331,7 +1330,7 @@ func (ps *peerSet) CNWithoutTx(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.cnpeers))
 	for _, p := range ps.cnpeers {
-		if !p.GetKnownTxs().Has(hash) {
+		if !p.KnowsTx(hash) {
 			list = append(list, p)
 		}
 	}
