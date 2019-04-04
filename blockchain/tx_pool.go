@@ -84,6 +84,7 @@ type blockChain interface {
 	CurrentBlock() *types.Block
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
+	TryGetCachedStateDB(root common.Hash) (*state.StateDB, error)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
 
@@ -384,12 +385,12 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
 	}
-	statedb, err := pool.chain.StateAt(newHead.Root)
+	stateDB, err := pool.chain.TryGetCachedStateDB(newHead.Root)
 	if err != nil {
 		logger.Error("Failed to reset txpool state", "err", err)
 		return
 	}
-	pool.currentState = statedb
+	pool.currentState = stateDB
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
 	pool.currentMaxGas = newHead.GasLimit
