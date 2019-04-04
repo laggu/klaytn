@@ -7,11 +7,13 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strconv"
@@ -1609,6 +1611,225 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountCreationUpdateRoleBasedKey tests account creation and update with a roleBased key.
+// A roleBased key can contain three types of sub-keys, but two sub-keys are used in this test.
+// 0. create an account creator's account, "accountK".
+// 1. "accountK" creates a role-based account, "roleBasedAccount", with a human-readable address.
+// 2. "roleBasedAccount" updates its transaction key.
+func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// raw transaction to be printed in verbose mode
+	var txCreation *types.Transaction
+	var txUpdate *types.Transaction
+
+	// key, address setting
+	private_key := "4f047422233bca64fb5973489dc274a0ade80d270749fb7c4e6231a08cc6bd30"
+	user_key_1 := "e62544af405e9e6512ebbef81721ba7428a7914dadacb44bea2a86426d8a8b96"
+	user_key_2 := "227ffb0a420d70f344be9410a9918e411dd8bc1c46ee0e966751db4a6c086de3"
+	user_key_3 := "cc2e738550d8df28ad840d7aa8bfb87bf21798e3f3cbd953e0fdc1dea39bc14f"
+	humanReadableAddr, err := common.FromHumanReadableAddress("humanReadableAddr")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// "accountK" will create an role-based account, "roleBasedAccount"
+	accountK, err := createAnonymousAccount(private_key)
+	assert.Equal(t, nil, err)
+
+	// prepare private keys and account keys for a role-based account named "roleBasedAccount"
+	txKey, err := crypto.HexToECDSA(user_key_1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updateKey, err := crypto.HexToECDSA(user_key_2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newTxKey, err := crypto.HexToECDSA(user_key_3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// account key for "roleBasedAccount"
+	roleBasedAccKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyPublicWithValue(&txKey.PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&updateKey.PublicKey),
+	})
+
+	// new account key will replace the old account key
+	newRoleBasedAccKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyPublicWithValue(&newTxKey.PublicKey),
+		accountkey.NewAccountKeyNil(),
+		accountkey.NewAccountKeyNil(),
+	})
+
+	// "roleBasedAccount" initial setting
+	roleBasedAccount := &TestRoleBasedAccountType{
+		Addr:       humanReadableAddr,
+		TxKeys:     []*ecdsa.PrivateKey{txKey},
+		UpdateKeys: []*ecdsa.PrivateKey{updateKey},
+		Nonce:      uint64(0),
+		AccKey:     roleBasedAccKey,
+	}
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("accountK = ", accountK.Addr.String())
+		fmt.Println("roleBasedAccount = ", roleBasedAccount.Addr.String())
+	}
+
+	//signer := types.NewEIP155Signer(new(big.Int).SetUint64(1001))    // signer with Baobab chainID
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// 0. create an account creator's account, "accountK".
+	{
+		var txs types.Transactions
+		amount := new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.KLAY))
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            accountK.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    accountK.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		reservoir.Nonce += 1
+	}
+
+	// 1. "accountK" creates a role-based account, "roleBasedAccount", with a human-readable address.
+	{
+		var txs types.Transactions
+		amount := new(big.Int).SetUint64(params.KLAY) // 1 Klay to pay for accountUpdate tx
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         accountK.Nonce,
+			types.TxValueKeyFrom:          accountK.Addr,
+			types.TxValueKeyTo:            roleBasedAccount.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleBasedAccount.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		err = tx.SignWithKeys(signer, accountK.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		accountK.Nonce += 1
+
+		txCreation = tx
+	}
+
+	// 2. "roleBasedAccount" updates its transaction key.
+	{
+		var txs types.Transactions
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      roleBasedAccount.Nonce,
+			types.TxValueKeyFrom:       roleBasedAccount.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: newRoleBasedAccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		err = tx.SignWithKeys(signer, roleBasedAccount.UpdateKeys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		roleBasedAccount.TxKeys = []*ecdsa.PrivateKey{newTxKey}
+		roleBasedAccount.AccKey = newRoleBasedAccKey
+		roleBasedAccount.Nonce += 1
+
+		txUpdate = tx
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+
+		// print information of update tx ('HEX' field data is rawTransaction data)
+		fmt.Println("\n[Account creation tx]")
+		fmt.Println(txCreation)
+
+		// how to make raw transaction data from tx
+		rawTxCreation, err := rlp.EncodeToBytes(txCreation)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rawTxCreationString := hexutil.Encode(rawTxCreation)
+		fmt.Println("\tRAW TX: ", rawTxCreationString)
+
+		// print information of update tx
+		fmt.Println("\n[Account update raw tx]")
+		fmt.Println(txUpdate)
+
+		// how to make raw transaction data from tx
+		rawTxUpdate, err := rlp.EncodeToBytes(txUpdate)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rawTxUpdateString := hexutil.Encode(rawTxUpdate)
+		fmt.Println("\tRAW TX: ", rawTxUpdateString)
 	}
 }
 
