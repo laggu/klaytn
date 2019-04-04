@@ -87,44 +87,56 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 	}
 	switch tokenType {
 	case KLAY:
-		logger.Info("GateWay Got KLAY ReceivedEvent")
+		logger.Info("Got KLAY ReceivedEvent")
 		if local {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
 			tx, err := gateway.WithdrawKLAY(auth, token.Amount, to)
-			logger.Info("GateWay.WithdrawKLAY", "tx", tx.Hash().Hex())
-			return err
+			if err != nil {
+				logger.Error("Child GateWay failed to WithdrawKLAY", "err", err)
+				return err
+			}
+			logger.Info("Child GateWay succeeded to WithdrawKLAY", "tx", tx.Hash().Hex())
+			return nil
 		} else {
 			cce.handler.LockChainAccount()
 			defer cce.handler.UnLockChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
 			tx, err := gateway.WithdrawKLAY(auth, token.Amount, to)
-			if err == nil {
-				cce.handler.addChainAccountNonce(1)
+			if err != nil {
+				logger.Error("Parent GateWay failed to WithdrawKLAY", "err", err)
+				return err
 			}
-			logger.Info("GateWay.WithdrawKLAY", "tx", tx.Hash().Hex())
-			return err
+			cce.handler.addChainAccountNonce(1)
+			logger.Info("Parent GateWay succeeded to WithdrawKLAY", "tx", tx.Hash().Hex())
+			return nil
 		}
 	case TOKEN:
-		logger.Info("GateWay Got Token ReceivedEvent")
+		logger.Info("Got Token ReceivedEvent")
 		if local {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
 			tx, err := gateway.WithdrawToken(auth, token.Amount, to, tokenAddr)
-			logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
-			return err
+			if err != nil {
+				logger.Error("Child GateWay failed to WithdrawToken", "err", err)
+				return err
+			}
+			logger.Info("Child GateWay succeeded to WithdrawToken", "tx", tx.Hash().Hex())
+			return nil
 		} else {
 			cce.handler.LockChainAccount()
 			defer cce.handler.UnLockChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
 			tx, err := gateway.WithdrawToken(auth, token.Amount, to, tokenAddr)
-			if err == nil {
-				cce.handler.addChainAccountNonce(1)
+			if err != nil {
+				logger.Error("Parent GateWay failed to WithdrawToken", "err", err)
+				return err
 			}
-			logger.Info("GateWay.WithdrawERC20", "tx", tx.Hash().Hex())
-			return err
+			cce.handler.addChainAccountNonce(1)
+			logger.Info("Parent GateWay succeeded to WithdrawToken", "tx", tx.Hash().Hex())
+			return nil
 		}
 	case NFT:
 		// TODO-Klaytn It will be implemented.
