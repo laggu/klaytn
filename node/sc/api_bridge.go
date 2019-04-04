@@ -101,20 +101,22 @@ func (sbapi *SubBridgeAPI) DeployGatewayOnParentChain() (common.Address, error) 
 }
 
 // TODO-Klaytn needs to make unSubscribe() method and enable user can unSubscribeEvent.
-func (sbapi *SubBridgeAPI) SubscribeEventGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) error {
+func (sbapi *SubBridgeAPI) SubscribeEventGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) bool {
 	cErr := sbapi.sc.gatewayMgr.SubscribeEvent(cGatewayAddr)
 	if cErr != nil {
-		return cErr
+		logger.Error("Failed to SubscribeEventGateway Child Gateway", "addr", cGatewayAddr, "err", cErr)
+		return false
 	}
 
 	pErr := sbapi.sc.gatewayMgr.SubscribeEvent(pGatewayAddr)
 	if pErr != nil {
-		return pErr
+		logger.Error("Failed to SubscribeEventGateway Parent Gateway", "addr", pGatewayAddr, "err", cErr)
+		return false
 	}
 	// TODO-Klaytn needs to make unSubscribe() method and deal with the exception case.
 
 	sbapi.sc.AddressManager().AddGateway(cGatewayAddr, pGatewayAddr)
-	return nil
+	return true
 }
 
 func (sbapi *SubBridgeAPI) TxPendingCount() int {
@@ -225,22 +227,22 @@ func (sbapi *SubBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
 	return server.NodeInfo(), nil
 }
 
-func (mbapi *SubBridgeAPI) GetChainAccountAddr() string {
-	return mbapi.sc.config.ChainAccountAddr.Hex()
+func (sbapi *SubBridgeAPI) GetChainAccountAddr() string {
+	return sbapi.sc.config.ChainAccountAddr.Hex()
 }
 
-func (mbapi *SubBridgeAPI) GetChainAccountNonce() uint64 {
-	return mbapi.sc.handler.getChainAccountNonce()
+func (sbapi *SubBridgeAPI) GetChainAccountNonce() uint64 {
+	return sbapi.sc.handler.getChainAccountNonce()
 }
 
-func (mbapi *SubBridgeAPI) GetNodeAccountAddr() string {
-	return mbapi.sc.config.NodeAccountAddr.Hex()
+func (sbapi *SubBridgeAPI) GetNodeAccountAddr() string {
+	return sbapi.sc.config.NodeAccountAddr.Hex()
 }
 
-func (mbapi *SubBridgeAPI) GetAnchoringPeriod() uint64 {
-	return mbapi.sc.config.AnchoringPeriod
+func (sbapi *SubBridgeAPI) GetAnchoringPeriod() uint64 {
+	return sbapi.sc.config.AnchoringPeriod
 }
 
-func (mbapi *SubBridgeAPI) GetSentChainTxsLimit() uint64 {
-	return mbapi.sc.config.SentChainTxsLimit
+func (sbapi *SubBridgeAPI) GetSentChainTxsLimit() uint64 {
+	return sbapi.sc.config.SentChainTxsLimit
 }
