@@ -303,7 +303,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		governanceMode := governance.GovernanceModeMap[s.GovernanceConfig.GovernanceMode]
 		governingNode := s.GovernanceConfig.GoverningNode
 		if tally := snap.Tally[header.Coinbase]; governanceMode == params.GovernanceMode_None ||
-			(governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode) ||
+			(governanceMode == params.GovernanceMode_Single && validator == governingNode) ||
 			(governanceMode == params.GovernanceMode_Ballot && tally.Votes > snap.ValSet.TotalVotingPower()/2) {
 			if tally.Authorize {
 				snap.ValSet.AddValidator(header.Coinbase)
