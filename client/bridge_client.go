@@ -22,10 +22,10 @@ package client
 
 import (
 	"context"
+	"errors"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/networks/p2p"
-	"github.com/pkg/errors"
 )
 
 // BridgeAddPeerOnParentChain can add a static peer on bridge node for service chain.
