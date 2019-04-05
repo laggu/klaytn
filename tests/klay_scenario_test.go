@@ -548,6 +548,108 @@ func TestAccountCreationWithNilKey(t *testing.T) {
 	}
 }
 
+// TestFeeDelegatedWithSmallBalance tests the case that an account having a small amount of tokens transfers
+// all the tokens to another account with a fee payer.
+// This kinds of transactions were discarded in TxPool.promoteExecutable() because the total cost of
+// the transaction is larger than the amount of tokens the sender has.
+// Since we provide fee-delegated transactions, it is not true in the above case.
+// This test code should succeed.
+func TestFeeDelegatedWithSmallBalance(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// anonymous account
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := big.NewInt(25 * params.Ston)
+
+	// 1. Transfer (reservoir -> anon) using a legacy transaction.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(10000)
+		tx := types.NewTransaction(reservoir.Nonce,
+			anon.Addr, amount, gasLimit, gasPrice, []byte{})
+
+		err := tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 2. Transfer (anon -> reservoir) using a TxTypeFeeDelegatedValueTransfer
+	{
+		amount := new(big.Int).SetUint64(10000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
+			types.TxValueKeyFeePayer: reservoir.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		p := makeTxPool(bcdata, 10)
+
+		p.AddRemote(tx)
+
+		if err := bcdata.GenABlockWithTxpool(accountMap, p, prof); err != nil {
+			t.Fatal(err)
+		}
+		anon.Nonce += 1
+	}
+
+	state, err := bcdata.bc.State()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, uint64(0), state.GetBalance(anon.Addr).Uint64())
+}
+
 // TestTransactionScenario tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
 // 2. Create an account decoupled using TxTypeAccountCreation.

@@ -304,7 +304,18 @@ func (l *txList) Filter(costLimit *big.Int, gasLimit uint64) (types.Transactions
 	l.gascap = gasLimit
 
 	// Filter out all the transactions above the account's funds
-	removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Cost().Cmp(costLimit) > 0 || tx.Gas() > gasLimit })
+	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		// If gas for this tx is larger than the gas limit of the tx pool, drop it.
+		if tx.Gas() > gasLimit {
+			return true
+		}
+		// In case of fee-delegated transactions, the comparison value should not include tx fee.
+		if tx.IsFeeDelegatedTransaction() {
+			return tx.Value().Cmp(costLimit) > 0
+		}
+		// For other transactions, all tx cost should be payable by the sender.
+		return tx.Cost().Cmp(costLimit) > 0
+	})
 
 	// If the list was strict, filter anything above the lowest nonce
 	var invalids types.Transactions
