@@ -17,6 +17,7 @@
 package sc
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"io"
 	"math/big"
 	"path"
+	"time"
 )
 
 const (
@@ -213,9 +215,12 @@ func (gwm *GateWayManager) IsLocal(addr common.Address) (bool, bool) {
 
 // Deploy Gateway SmartContract on same node or remote node
 func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local bool) (common.Address, error) {
-
 	if local {
 		addr, gateway, err := gwm.deployGateway(gwm.subBridge.getChainID(), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend, gwm.subBridge.txPool.GasPrice())
+		if err != nil {
+			logger.Error("fail to deploy gateway", "err", err)
+			return common.Address{}, err
+		}
 		gwm.localGateWays[addr] = gateway
 		gwm.all[addr] = true
 		if err := gwm.journal.insert(addr, local); err != nil {
@@ -242,10 +247,9 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 }
 
 func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *gatewaycontract.Gateway, error) {
-
 	// TODO-Klaytn change config
-
 	if accountKey == nil {
+		// Only for unit test
 		return common.Address{}, nil, errors.New("nil accountKey")
 	}
 
@@ -253,10 +257,26 @@ func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accou
 
 	addr, tx, contract, err := gatewaycontract.DeployGateway(auth, backend, true)
 	if err != nil {
+		logger.Error("Failed to deploy contract.", "err", err)
 		return common.Address{}, nil, err
 	}
-	logger.Info("Gateway is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
+	logger.Info("Gateway is deploying...", "addr", addr, "txHash", tx.Hash().String())
 
+	back, ok := backend.(bind.DeployBackend)
+	if !ok {
+		logger.Warn("DeployBacked type assertion is failed. Skip WaitDeployed.")
+		return addr, contract, nil
+	}
+
+	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelTimeout()
+
+	addr, err = bind.WaitDeployed(timeoutContext, back, tx)
+	if err != nil {
+		logger.Error("Failed to WaitDeployed.", "err", err, "txHash", tx.Hash().String())
+		return common.Address{}, nil, err
+	}
+	logger.Info("Gateway is deployed.", "addr", addr, "txHash", tx.Hash().String())
 	return addr, contract, nil
 }
 
