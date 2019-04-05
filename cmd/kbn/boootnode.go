@@ -21,18 +21,15 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/cmd/utils"
-	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/metrics/prometheus"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/p2p/nat"
-	"github.com/ground-x/klaytn/networks/p2p/netutil"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/urfave/cli.v1"
@@ -41,23 +38,6 @@ import (
 	"os"
 	"time"
 )
-
-type bootnodeConfig struct {
-	// Parameter variables
-	addr         string
-	genKeyPath   string
-	nodeKeyFile  string
-	nodeKeyHex   string
-	natFlag      string
-	netrestrict  string
-	writeAddress bool
-
-	// Context
-	restrictList *netutil.Netlist
-	nodeKey      *ecdsa.PrivateKey
-	natm         nat.Interface
-	listenAddr   string
-}
 
 var (
 	logger = log.NewModuleLogger(log.CMDKBN)
@@ -70,80 +50,6 @@ const (
 	writeOutAddress
 	goodToGo
 )
-
-func checkCMDState(ctx bootnodeConfig) int {
-	if ctx.genKeyPath != "" {
-		return generateNodeKeySpecified
-	}
-	if ctx.nodeKeyFile == "" && ctx.nodeKeyHex == "" {
-		return noPrivateKeyPathSpecified
-	}
-	if ctx.nodeKeyFile != "" && ctx.nodeKeyHex != "" {
-		return nodeKeyDuplicated
-	}
-	if ctx.writeAddress {
-		return writeOutAddress
-	}
-	return goodToGo
-}
-
-func generateNodeKey(path string) {
-	nodeKey, err := crypto.GenerateKey()
-	if err != nil {
-		utils.Fatalf("could not generate key: %v", err)
-	}
-	if err = crypto.SaveECDSA(path, nodeKey); err != nil {
-		utils.Fatalf("%v", err)
-	}
-	os.Exit(0)
-}
-
-func doWriteOutAddress(ctx *bootnodeConfig) {
-	err := readNodeKey(ctx)
-	if err != nil {
-		utils.Fatalf("Failed to read node key: %v", err)
-	}
-	fmt.Printf("%v\n", discover.PubkeyID(&(ctx.nodeKey).PublicKey))
-	os.Exit(0)
-}
-
-func readNodeKey(ctx *bootnodeConfig) error {
-	var err error
-	if ctx.nodeKeyFile != "" {
-		ctx.nodeKey, err = crypto.LoadECDSA(ctx.nodeKeyFile)
-		return err
-	}
-	if ctx.nodeKeyHex != "" {
-		ctx.nodeKey, err = crypto.LoadECDSA(ctx.nodeKeyHex)
-		return err
-	}
-	return nil
-}
-
-func validateNetworkParameter(ctx *bootnodeConfig) error {
-	var err error
-	if ctx.natFlag != "" {
-		ctx.natm, err = nat.Parse(ctx.natFlag)
-		if err != nil {
-			return err
-		}
-	}
-
-	if ctx.netrestrict != "" {
-		ctx.restrictList, err = netutil.ParseNetlist(ctx.netrestrict)
-		if err != nil {
-			return err
-		}
-	}
-
-	if ctx.addr[0] != ':' {
-		ctx.listenAddr = ":" + ctx.addr
-	} else {
-		ctx.listenAddr = ctx.addr
-	}
-
-	return nil
-}
 
 func bootnode(c *cli.Context) error {
 	var (
@@ -162,23 +68,23 @@ func bootnode(c *cli.Context) error {
 	)
 
 	// Check exit condition
-	switch checkCMDState(ctx) {
+	switch ctx.checkCMDState() {
 	case generateNodeKeySpecified:
-		generateNodeKey(ctx.genKeyPath)
+		ctx.generateNodeKey()
 	case noPrivateKeyPathSpecified:
 		return errors.New("Use --nodekey or --nodekeyhex to specify a private key")
 	case nodeKeyDuplicated:
 		return errors.New("Options --nodekey and --nodekeyhex are mutually exclusive")
 	case writeOutAddress:
-		doWriteOutAddress(&ctx)
+		ctx.doWriteOutAddress()
 	default:
-		err = readNodeKey(&ctx)
+		err = ctx.readNodeKey()
 		if err != nil {
 			return err
 		}
 	}
 
-	err = validateNetworkParameter(&ctx)
+	err = ctx.validateNetworkParameter()
 	if err != nil {
 		return err
 	}

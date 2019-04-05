@@ -110,9 +110,9 @@ type bucket struct {
 	ips          netutil.DistinctNetSet
 }
 
-func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, nodeDBPath string, bootnodes []*Node) (*Table, error) {
+func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, cfg Config) (*Table, error) {
 	// If no node database was given, use an in-memory one
-	db, err := newNodeDB(nodeDBPath, Version, ourID)
+	db, err := newNodeDB(cfg.NodeDBPath, Version, ourID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,8 @@ func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, nodeDBPath string
 		rand:       mrand.New(mrand.NewSource(0)),
 		ips:        netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit},
 	}
-	if err := tab.setFallbackNodes(bootnodes); err != nil {
+
+	if err := tab.setFallbackNodes(cfg.Bootnodes); err != nil {
 		return nil, err
 	}
 	for i := 0; i < cap(tab.bondslots); i++ {
