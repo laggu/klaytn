@@ -30,15 +30,15 @@ import (
 	"time"
 )
 
-// TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer checks gas calculations
-// using LegacyAccount sender and LegacyAccount fee payer for fee delegated transaction types such as:
+// TestFeeDelegatedTransactionGasWithLegacyAndKlaytnLegacyPayer checks gas calculations
+// using LegacyAccount sender and KlaytnAccount with AccountKeyLegacy fee payer for fee delegated transaction types such as:
 // 1. TxTypeFeeDelegatedValueTransfer
 // 2. TxTypeFeeDelegatedValueTransferMemo with non-zero values.
 // 3. TxTypeFeeDelegatedValueTransferMemo with zero values.
 // 4. TxTypeFeeDelegatedSmartContractDeploy
 // 5. TxTypeFeeDelegatedSmartContractExecution
 // 6. TxTypeFeeDelegatedCancel
-func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *testing.T) {
+func TestFeeDelegatedTransactionGasWithLegacyAndKlaytnLegacyPayer(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -69,7 +69,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 	}
 
 	// anonymous account
-	legacyAccount, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	klaytnLegacy, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	assert.Equal(t, nil, err)
 
 	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
@@ -79,15 +79,25 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// Preparing step. Send Klay to LegacyAccount.
+	// Preparing step. Create a KlaytnAccount with AccountKeyLegacy.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(params.KLAY)
-		tx := types.NewTransaction(reservoir.Nonce,
-			legacyAccount.Addr, amount, gasLimit, gasPrice, []byte{})
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            klaytnLegacy.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    klaytnLegacy.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
 
-		err := tx.SignWithKeys(signer, reservoir.Keys)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -147,11 +157,11 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       legacyAccount.Addr,
+			types.TxValueKeyTo:       klaytnLegacy.Addr,
 			types.TxValueKeyAmount:   big.NewInt(100000),
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyFeePayer: legacyAccount.Addr,
+			types.TxValueKeyFeePayer: klaytnLegacy.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
 		assert.Equal(t, nil, err)
@@ -159,7 +169,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayerWithKeys(signer, legacyAccount.Keys)
+		err = tx.SignFeePayerWithKeys(signer, klaytnLegacy.Keys)
 		assert.Equal(t, nil, err)
 
 		receipt, gas, err := applyTransaction(t, bcdata, tx)
@@ -181,12 +191,12 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       legacyAccount.Addr,
+			types.TxValueKeyTo:       klaytnLegacy.Addr,
 			types.TxValueKeyAmount:   big.NewInt(100000),
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
 			types.TxValueKeyData:     data,
-			types.TxValueKeyFeePayer: legacyAccount.Addr,
+			types.TxValueKeyFeePayer: klaytnLegacy.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemo, values)
 		assert.Equal(t, nil, err)
@@ -194,7 +204,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayerWithKeys(signer, legacyAccount.Keys)
+		err = tx.SignFeePayerWithKeys(signer, klaytnLegacy.Keys)
 		assert.Equal(t, nil, err)
 
 		receipt, gas, err := applyTransaction(t, bcdata, tx)
@@ -217,12 +227,12 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       legacyAccount.Addr,
+			types.TxValueKeyTo:       klaytnLegacy.Addr,
 			types.TxValueKeyAmount:   big.NewInt(100000),
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
 			types.TxValueKeyData:     data,
-			types.TxValueKeyFeePayer: legacyAccount.Addr,
+			types.TxValueKeyFeePayer: klaytnLegacy.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemo, values)
 		assert.Equal(t, nil, err)
@@ -230,7 +240,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayerWithKeys(signer, legacyAccount.Keys)
+		err = tx.SignFeePayerWithKeys(signer, klaytnLegacy.Keys)
 		assert.Equal(t, nil, err)
 
 		receipt, gas, err := applyTransaction(t, bcdata, tx)
@@ -260,7 +270,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
-			types.TxValueKeyFeePayer:      legacyAccount.Addr,
+			types.TxValueKeyFeePayer:      klaytnLegacy.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -268,7 +278,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayerWithKeys(signer, legacyAccount.Keys)
+		err = tx.SignFeePayerWithKeys(signer, klaytnLegacy.Keys)
 		assert.Equal(t, nil, err)
 
 		receipt, gas, err := applyTransaction(t, bcdata, tx)
@@ -305,7 +315,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
 			types.TxValueKeyData:     data,
-			types.TxValueKeyFeePayer: legacyAccount.Addr,
+			types.TxValueKeyFeePayer: klaytnLegacy.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, values)
 		assert.Equal(t, nil, err)
@@ -313,7 +323,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayerWithKeys(signer, legacyAccount.Keys)
+		err = tx.SignFeePayerWithKeys(signer, klaytnLegacy.Keys)
 		assert.Equal(t, nil, err)
 
 		receipt, gas, err := applyTransaction(t, bcdata, tx)
@@ -340,7 +350,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 			types.TxValueKeyFrom:     reservoir.Addr,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyFeePayer: legacyAccount.Addr,
+			types.TxValueKeyFeePayer: klaytnLegacy.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancel, values)
 		assert.Equal(t, nil, err)
@@ -348,7 +358,7 @@ func TestFeeDelegatedTransactionGasWithLegacyAccountAndLegacyAccountPayer(t *tes
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignFeePayerWithKeys(signer, legacyAccount.Keys)
+		err = tx.SignFeePayerWithKeys(signer, klaytnLegacy.Keys)
 		assert.Equal(t, nil, err)
 
 		receipt, gas, err := applyTransaction(t, bcdata, tx)
