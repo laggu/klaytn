@@ -24,40 +24,47 @@
 #/build/logs/      @doctocat
 
 /.circleci/        @bitaholic
-/.github/          @bitaholic
+/.github/          @smseo
 /accounts/         @kjhman21
 /api/              @kjhman21
 /blockchain/       @kjhman21
-/build/*           @hqueue
-/build/rpm/        @bitaholic
+/build/            @bitaholic
 /client/           @KimKyungup
 /cmd/              @bitaholic
+/cmd/kscn/         @KimKyungup
 /common/           @andybclee
 /consensus/        @andybclee
 /console/          @andybclee
 /contracts/        @andybclee
-/crypto/           @andybclee
+/crypto/           @aidan-kwon
 /datasync/         @ehnuje
-/event/            @bitaholic
+/event/            @ehnuje
+/governance/       @andybclee
+/kerrors/          @kjhman21
 /log/              @ehnuje
 /metrics/          @bitaholic
-/networks/         @KimKyungup
-/node/             @KimKyungup
+/networks/         @bitaholic
+/node/             @bitaholic
+/node/sc/          @KimKyungup @jeonghonah
 /params/           @andybclee
 /params/version.go @bitaholic
-/ser/              @kjhman21
+/ser/              @ehnuje
 /storage/          @ehnuje
 /tests/            @kjhman21
 /utils/            @bitaholic
-/vendor/           @bitaholic
-/Gopkg.lock        @bitaholic
-/Gopkg.toml        @bitaholic
-/work/             @andybclee
+/vendor/           @ehnuje
+/work/             @kjhman21
 /.dockerignore     @bitaholic
 /.gitignore        @bitaholic
-/Dockerfile/       @bitaholic
-/interface.go/     @smseo
-/README.md/        @smseo
+/COPYING           @smseo
+/COPYING.LESSER    @smseo
+/Dockerfile        @bitaholic
+/Gopkg.lock        @ehnuje
+/Gopkg.toml        @ehnuje
+/Makefile          @bitaholic
+/README.md         @smseo
+/interface.go      @smseo
+/tags-for-todo-and-note.md   @ehnuje
 
 # The `docs/*` pattern will match files like
 # `docs/getting-started.md` but not further nested files like
