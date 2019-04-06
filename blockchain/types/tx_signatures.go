@@ -59,8 +59,11 @@ func NewTxSignaturesWithValues(signer Signer, txhash common.Hash, prv []*ecdsa.P
 	return txsigs, nil
 }
 
-func (t TxSignatures) getDefaultSig() *TxSignature {
-	return t[0]
+func (t TxSignatures) getDefaultSig() (*TxSignature, error) {
+	if t.empty() {
+		return nil, ErrInvalidSig
+	}
+	return t[0], nil
 }
 
 func (t TxSignatures) empty() bool {
@@ -68,23 +71,25 @@ func (t TxSignatures) empty() bool {
 }
 
 func (t TxSignatures) ChainId() *big.Int {
-	if t.empty() {
+	txSig, err := t.getDefaultSig()
+	if err != nil {
 		// This path should not be executed. This is written only for debugging.
-		logger.CritWithStack("should not be called if no entries exist")
+		logger.CritWithStack("should not be called if no entries exist", err)
 	}
 
 	// TODO-Klaytn-Multisig: Find a way to handle multiple V values here.
-	return t.getDefaultSig().ChainId()
+	return txSig.ChainId()
 }
 
 func (t TxSignatures) Protected() bool {
-	if t.empty() {
+	txSig, err := t.getDefaultSig()
+	if err != nil {
 		// This path should not be executed. This is written only for debugging.
-		logger.CritWithStack("should not be called if no entries exist")
+		logger.CritWithStack("should not be called if no entries exist", err)
 	}
 
 	// TODO-Klaytn-Multisig: Find a way to handle multiple V values here.
-	return t.getDefaultSig().Protected()
+	return txSig.Protected()
 }
 
 func (t TxSignatures) RawSignatureValues() []*big.Int {
@@ -97,11 +102,12 @@ func (t TxSignatures) RawSignatureValues() []*big.Int {
 }
 
 func (t TxSignatures) ValidateSignature() bool {
-	if t.empty() {
+	txSig, err := t.getDefaultSig()
+	if err != nil {
 		return false
 	}
 
-	cid := t.getDefaultSig().ChainId()
+	cid := txSig.ChainId()
 	for _, s := range t {
 		if s.ValidateSignature() == false {
 			return false
@@ -133,7 +139,9 @@ func (t TxSignatures) RecoverAddress(txhash common.Hash, homestead bool, vfunc f
 		return common.Address{}, ErrShouldBeSingleSignature
 	}
 
-	return t.getDefaultSig().RecoverAddress(txhash, homestead, vfunc)
+	txSig, _ := t.getDefaultSig()
+
+	return txSig.RecoverAddress(txhash, homestead, vfunc)
 }
 
 func (t TxSignatures) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
