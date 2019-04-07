@@ -536,6 +536,7 @@ func (tab *Table) closest(target common.Hash, nresults int) *nodesByDistance {
 	// This is a very wasteful way to find the closest nodes but
 	// obviously correct. I believe that tree-based buckets would make
 	// this easier to implement efficiently.
+	// TODO-Klaytn-Node more efficient ways to obtain the closest nodes could be considered.
 	close := &nodesByDistance{target: target}
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
