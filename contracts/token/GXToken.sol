@@ -35,6 +35,10 @@ contract GXToken {
      return true;
   }
 
+  function balanceOf(address owner) public view returns (uint256) {
+    return balances[owner];
+  }
+
   function balanceOfMine() public view returns (uint256) {
      return balances[msg.sender];
   }
