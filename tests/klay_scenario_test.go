@@ -25,7 +25,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
@@ -3500,21 +3499,13 @@ func TestValidateSender(t *testing.T) {
 	initialBalance := big.NewInt(1000000)
 
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
-	statedb.CreateAccountWithMap(anon.Addr, account.ExternallyOwnedAccountType,
-		map[account.AccountValueKeyType]interface{}{
-			account.AccountValueKeyNonce:         nonce,
-			account.AccountValueKeyBalance:       initialBalance,
-			account.AccountValueKeyHumanReadable: false,
-			account.AccountValueKeyAccountKey:    anon.AccKey,
-		})
+	statedb.CreateEOA(anon.Addr, false, anon.AccKey)
+	statedb.SetNonce(anon.Addr, nonce)
+	statedb.SetBalance(anon.Addr, initialBalance)
 
-	statedb.CreateAccountWithMap(decoupled.Addr, account.ExternallyOwnedAccountType,
-		map[account.AccountValueKeyType]interface{}{
-			account.AccountValueKeyNonce:         rand.Uint64(),
-			account.AccountValueKeyBalance:       initialBalance,
-			account.AccountValueKeyHumanReadable: false,
-			account.AccountValueKeyAccountKey:    decoupled.AccKey,
-		})
+	statedb.CreateEOA(decoupled.Addr, false, decoupled.AccKey)
+	statedb.SetNonce(decoupled.Addr, rand.Uint64())
+	statedb.SetBalance(decoupled.Addr, initialBalance)
 
 	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(32))
 	gasPrice := new(big.Int).SetUint64(0)

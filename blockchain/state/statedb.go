@@ -596,11 +596,24 @@ func (self *StateDB) CreateAccount(addr common.Address) {
 	}
 }
 
-// CreateAccountWithMap explicitly creates a state object with the given parameters (accountType and values).
-// If a state object with the address already exists the balance is carried over to the new account.
-func (self *StateDB) CreateAccountWithMap(addr common.Address, accountType account.AccountType,
-	values map[account.AccountValueKeyType]interface{}) {
-	new, prev := self.createObjectWithMap(addr, accountType, values)
+func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey) {
+	values := map[account.AccountValueKeyType]interface{}{
+		account.AccountValueKeyHumanReadable: humanReadable,
+		account.AccountValueKeyAccountKey:    key,
+	}
+	new, prev := self.createObjectWithMap(addr, account.ExternallyOwnedAccountType, values)
+	if prev != nil {
+		new.setBalance(prev.account.GetBalance())
+	}
+}
+
+func (self *StateDB) CreateSmartContractAccount(addr common.Address, humanReadable bool, key accountkey.AccountKey) {
+	values := map[account.AccountValueKeyType]interface{}{
+		account.AccountValueKeyNonce:         uint64(1),
+		account.AccountValueKeyHumanReadable: humanReadable,
+		account.AccountValueKeyAccountKey:    key,
+	}
+	new, prev := self.createObjectWithMap(addr, account.SmartContractAccountType, values)
 	if prev != nil {
 		new.setBalance(prev.account.GetBalance())
 	}

@@ -19,7 +19,6 @@ package types
 import (
 	"crypto/ecdsa"
 	"errors"
-	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/kerrors"
@@ -338,7 +337,8 @@ type StateDB interface {
 	IncNonce(common.Address)
 	Exist(common.Address) bool
 	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
-	CreateAccountWithMap(addr common.Address, accountType account.AccountType, values map[account.AccountValueKeyType]interface{})
+	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
+	CreateSmartContractAccount(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 	IsProgramAccount(addr common.Address) bool
 }
 

@@ -22,7 +22,6 @@ package vm
 
 import (
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
@@ -479,14 +478,10 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	}
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
-	evm.StateDB.CreateAccountWithMap(contractAddr, account.SmartContractAccountType, map[account.AccountValueKeyType]interface{}{
-		account.AccountValueKeyNonce:         1,
-		account.AccountValueKeyHumanReadable: humanReadable,
-		// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
-		//   because the account key is set to AccountKeyFail by default.
-		//   Need to make a decision of the key type.
-		account.AccountValueKeyAccountKey: accountkey.NewAccountKeyFail(),
-	})
+	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
+	//   because the account key is set to AccountKeyFail by default.
+	//   Need to make a decision of the key type.
+	evm.StateDB.CreateSmartContractAccount(contractAddr, humanReadable, accountkey.NewAccountKeyFail())
 	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 
 	// initialise a new contract and set the code that is to be used by the

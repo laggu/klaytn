@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
@@ -395,12 +394,7 @@ func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, state
 		return nil, 0, err
 	}
 	to := t.Recipient
-	stateDB.CreateAccountWithMap(to, account.ExternallyOwnedAccountType,
-		map[account.AccountValueKeyType]interface{}{
-			account.AccountValueKeyAccountKey:    t.Key,
-			account.AccountValueKeyHumanReadable: t.HumanReadable,
-		})
-
+	stateDB.CreateEOA(to, t.HumanReadable, t.Key)
 	stateDB.IncNonce(sender.Address())
 	ret, usedGas, err = vm.Call(sender, to, []byte{}, gas, value)
 
