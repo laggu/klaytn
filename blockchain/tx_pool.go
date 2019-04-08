@@ -174,7 +174,6 @@ type TxPool struct {
 
 	//TODO-Klaytn
 	txMu sync.RWMutex
-	pnMu sync.RWMutex // pnMu is mutex lock used by pendingNonce.
 
 	pending map[common.Address]*txList         // All currently processable transactions
 	queue   map[common.Address]*txList         // Queued but non-processable transactions
@@ -1043,7 +1042,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Gather all executable transactions and promote them
-		for _, tx := range list.Ready(pool.GetPendingNonce(addr)) {
+		for _, tx := range list.Ready(pool.getPendingNonce(addr)) {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
 				logger.Trace("Promoting queued transaction", "hash", hash)
@@ -1249,10 +1248,17 @@ func (pool *TxPool) getBalance(addr common.Address) *big.Int {
 	return pool.currentState.GetBalance(addr)
 }
 
-// GetPendingNonce returns the canonical nonce for the managed or unmanaged account.
+// GetPendingNonce is a method to check the last nonce value of pending in external API.
+// Use getPendingNonce to get the nonce value inside txpool because it catches the lock.
 func (pool *TxPool) GetPendingNonce(addr common.Address) uint64 {
-	pool.pnMu.Lock()
-	defer pool.pnMu.Unlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	return pool.getPendingNonce(addr)
+}
+
+// getPendingNonce returns the canonical nonce for the managed or unmanaged account.
+func (pool *TxPool) getPendingNonce(addr common.Address) uint64 {
 	cNonce := pool.getNonce(addr)
 	if pNonce, exist := pool.pendingNonce[addr]; !exist || pNonce < cNonce {
 		pool.pendingNonce[addr] = cNonce
@@ -1263,14 +1269,12 @@ func (pool *TxPool) GetPendingNonce(addr common.Address) uint64 {
 
 // setPendingNonce sets the new canonical nonce for the managed state.
 func (pool *TxPool) setPendingNonce(addr common.Address, nonce uint64) {
-	pool.pnMu.Lock()
-	defer pool.pnMu.Unlock()
 	pool.pendingNonce[addr] = nonce
 }
 
 // updatePendingNonce updates the account nonce to the dropped transaction.
 func (pool *TxPool) updatePendingNonce(addr common.Address, nonce uint64) {
-	if pool.GetPendingNonce(addr) > nonce {
+	if pool.getPendingNonce(addr) > nonce {
 		pool.setPendingNonce(addr, nonce)
 	}
 }
