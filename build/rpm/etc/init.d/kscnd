@@ -24,6 +24,7 @@ pidfile=${PIDFILE-/var/run/kscnd.pid}
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
+set -f
 OPTIONS="--nodiscover"
 
 if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
@@ -143,6 +144,7 @@ fi
 if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
     OPTIONS="$OPTIONS $ADDITIONAL"
 fi
+set +f
 
 start() {
         echo -n "Starting $prog: "

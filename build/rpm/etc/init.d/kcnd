@@ -24,6 +24,7 @@ pidfile=${PIDFILE-/var/run/kcnd.pid}
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
+set -f
 OPTIONS="--nodiscover"
 
 if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
@@ -132,6 +133,7 @@ fi
 if [[ ! -z $REWARDBASE ]] && [[ $REWARDBASE != "" ]]; then
     OPTIONS="$OPTIONS --rewardbase $REWARDBASE"
 fi
+set +f
 
 start() {
         echo -n "Starting $prog: "

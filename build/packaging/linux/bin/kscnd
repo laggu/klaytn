@@ -47,6 +47,7 @@ start() {
         exit 1
     fi
 
+    set -f
     OPTIONS="--nodiscover"
 
     if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
@@ -167,7 +168,6 @@ start() {
         OPTIONS="$OPTIONS $ADDITIONAL"
     fi
 
-    set -f
     $BIN/kscn $OPTIONS >> ${LOG_DIR}/kscnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
