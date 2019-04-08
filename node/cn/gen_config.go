@@ -28,7 +28,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		SkipBcVersionCheck      bool `toml:"-"`
-		DatabaseHandles         int  `toml:"-"`
 		PartitionedDB           bool
 		LevelDBCacheSize        int
 		TrieCacheSize           int
@@ -37,6 +36,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		ChildChainIndexing      bool
 		ParallelDBWrite         bool
 		StateDBCaching          bool
+		TxPoolStateCache        bool
 		Gxbase                  common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -58,7 +58,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.AnchoringPeriod = c.AnchoringPeriod
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
-	enc.DatabaseHandles = c.DatabaseHandles
 	enc.PartitionedDB = c.PartitionedDB
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
 	enc.TrieCacheSize = c.TrieCacheSize
@@ -67,6 +66,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.ChildChainIndexing = c.ChildChainIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
+	enc.TxPoolStateCache = c.TxPoolStateCache
 	enc.Gxbase = c.Gxbase
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -92,7 +92,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		SkipBcVersionCheck      *bool `toml:"-"`
-		DatabaseHandles         *int  `toml:"-"`
 		PartitionedDB           *bool
 		LevelDBCacheSize        *int
 		TrieCacheSize           *int
@@ -101,6 +100,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ChildChainIndexing      *bool
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
+		TxPoolStateCache        *bool
 		Gxbase                  *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -141,9 +141,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SkipBcVersionCheck != nil {
 		c.SkipBcVersionCheck = *dec.SkipBcVersionCheck
 	}
-	if dec.DatabaseHandles != nil {
-		c.DatabaseHandles = *dec.DatabaseHandles
-	}
 	if dec.PartitionedDB != nil {
 		c.PartitionedDB = *dec.PartitionedDB
 	}
@@ -167,6 +164,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.StateDBCaching != nil {
 		c.StateDBCaching = *dec.StateDBCaching
+	}
+	if dec.TxPoolStateCache != nil {
+		c.TxPoolStateCache = *dec.TxPoolStateCache
 	}
 	if dec.Gxbase != nil {
 		c.Gxbase = *dec.Gxbase

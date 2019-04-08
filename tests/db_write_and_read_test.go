@@ -40,8 +40,8 @@ var testEntries = []testEntry{
 	{"BadgerDB-Partitioned", &database.DBConfig{DBType: database.BadgerDB, Partitioned: true}},
 	{"MemoryDB-NonPartitioned", &database.DBConfig{DBType: database.MemoryDB, Partitioned: false}},
 	{"MemoryDB-Partitioned", &database.DBConfig{DBType: database.MemoryDB, Partitioned: true}},
-	{"LevelDB-NonPartitioned", &database.DBConfig{DBType: database.LevelDB, Partitioned: false, LevelDBCacheSize: 128, LevelDBHandles: 32}},
-	{"LevelDB-Partitioned", &database.DBConfig{DBType: database.LevelDB, Partitioned: true, LevelDBCacheSize: 128, LevelDBHandles: 32}},
+	{"LevelDB-NonPartitioned", &database.DBConfig{DBType: database.LevelDB, Partitioned: false, LevelDBCacheSize: 128, OpenFilesLimit: 32}},
+	{"LevelDB-Partitioned", &database.DBConfig{DBType: database.LevelDB, Partitioned: true, LevelDBCacheSize: 128, OpenFilesLimit: 32}},
 }
 
 // TestDBManager_WriteAndRead_Functional checks basic functionality of database.DBManager interface

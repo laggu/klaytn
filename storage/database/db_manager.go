@@ -232,7 +232,7 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType) *DBConfig {
 	ratio := dbConfigRatio[i]
 
 	newDBC.LevelDBCacheSize = originalDBC.LevelDBCacheSize * ratio / 100
-	newDBC.LevelDBHandles = originalDBC.LevelDBHandles * ratio / 100
+	newDBC.OpenFilesLimit = originalDBC.OpenFilesLimit * ratio / 100
 
 	// Update dir to each Database specific directory.
 	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDirs[i])
@@ -266,10 +266,10 @@ type DBConfig struct {
 	DBType          DBType
 	Partitioned     bool
 	ParallelDBWrite bool
+	OpenFilesLimit  int
 
 	// LevelDB related configurations.
-	LevelDBCacheSize int
-	LevelDBHandles   int
+	LevelDBCacheSize int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
 
 	// Service chain related configurations.
 	ChildChainIndexing bool
@@ -322,14 +322,14 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 func newDatabase(dbc *DBConfig) (Database, error) {
 	switch dbc.DBType {
 	case LevelDB:
-		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
+		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.OpenFilesLimit)
 	case BadgerDB:
 		return NewBGDatabase(dbc.Dir)
 	case MemoryDB:
 		return NewMemDatabase(), nil
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
-		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.LevelDBHandles)
+		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.OpenFilesLimit)
 	}
 }
 

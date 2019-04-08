@@ -377,7 +377,7 @@ func genDBManagerForTest(b *testing.B, dir string, dbType database.DBType) datab
 		db := database.NewMemoryDBManager()
 		return db
 	} else {
-		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 128, LevelDBHandles: 128, ChildChainIndexing: false}
+		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 128, OpenFilesLimit: 128, ChildChainIndexing: false}
 		return database.NewDBManager(dbc)
 	}
 }

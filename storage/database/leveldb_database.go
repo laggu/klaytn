@@ -21,6 +21,7 @@
 package database
 
 import (
+	"github.com/ground-x/klaytn/common/fdlimit"
 	"sync"
 	"time"
 
@@ -59,6 +60,24 @@ func GetDefaultLevelDBOption() *opt.Options {
 	return &copiedOption
 }
 
+// GetOpenFilesLimit raises out the number of allowed file handles per process
+// for klaytn and returns half of the allowance to assign to the database.
+func GetOpenFilesLimit() int {
+	limit, err := fdlimit.Current()
+	if err != nil {
+		logger.Crit("Failed to retrieve file descriptor allowance", "err", err)
+	}
+	if limit < 2048 {
+		if err := fdlimit.Raise(2048); err != nil {
+			logger.Crit("Failed to raise file descriptor allowance", "err", err)
+		}
+	}
+	if limit > 2048 { // cap database file descriptors even if more is available
+		limit = 2048
+	}
+	return limit / 2 // Leave half for networking and other stuff
+}
+
 type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
@@ -76,11 +95,11 @@ type levelDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 }
 
-func getLDBOptions(ldbCacheSize, numHandles int) *opt.Options {
+func getLDBOptions(levelDBCacheSize, openFilesCacheCapacity int) *opt.Options {
 	return &opt.Options{
-		OpenFilesCacheCapacity:        numHandles,
-		BlockCacheCapacity:            ldbCacheSize / 2 * opt.MiB,
-		WriteBuffer:                   ldbCacheSize / 4 * opt.MiB, // Two of these are used internally
+		OpenFilesCacheCapacity:        openFilesCacheCapacity,
+		BlockCacheCapacity:            levelDBCacheSize / 2 * opt.MiB,
+		WriteBuffer:                   levelDBCacheSize / 2 * opt.MiB,
 		Filter:                        filter.NewBloomFilter(10),
 		DisableBufferPool:             true,
 		CompactionTableSize:           4 * opt.MiB,
@@ -88,20 +107,20 @@ func getLDBOptions(ldbCacheSize, numHandles int) *opt.Options {
 	}
 }
 
-func NewLDBDatabase(file string, ldbCacheSize, numHandles int) (*levelDB, error) {
+func NewLDBDatabase(file string, levelDBCacheSize, openFilesCacheCapacity int) (*levelDB, error) {
 	localLogger := logger.NewWith("path", file)
 
 	// Ensure we have some minimal caching and file guarantees
-	if ldbCacheSize < 16 {
-		ldbCacheSize = 16
+	if levelDBCacheSize < 16 {
+		levelDBCacheSize = 16
 	}
-	if numHandles < 16 {
-		numHandles = 16
+	if openFilesCacheCapacity < 16 {
+		openFilesCacheCapacity = 16
 	}
-	localLogger.Info("Allocated LevelDB with write buffer and file LevelDBHandles", "writeBufferSize", ldbCacheSize, "numHandles", numHandles)
+	localLogger.Info("Allocated LevelDB with write buffer and file OpenFilesLimit", "levelDBCacheSize", levelDBCacheSize, "openFilesCacheCapacity", openFilesCacheCapacity)
 
 	// Open the db and recover any potential corruptions
-	db, err := leveldb.OpenFile(file, getLDBOptions(ldbCacheSize, numHandles))
+	db, err := leveldb.OpenFile(file, getLDBOptions(levelDBCacheSize, openFilesCacheCapacity))
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
 		db, err = leveldb.RecoverFile(file, nil)
 	}
