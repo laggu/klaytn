@@ -320,8 +320,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) RecoverFeePayerPubkey
 	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IntrinsicGas() (uint64, error) {
-	gasKey, err := t.Key.AccountCreationGas()
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+	gasKey, err := t.Key.AccountCreationGas(currentBlockNumber)
 	if err != nil {
 		return 0, err
 	}

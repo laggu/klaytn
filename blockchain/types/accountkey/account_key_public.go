@@ -75,11 +75,11 @@ func (a *AccountKeyPublic) String() string {
 	return fmt.Sprintf("AccountKeyPublic: %s", a.PublicKeySerializable.String())
 }
 
-func (a *AccountKeyPublic) AccountCreationGas() (uint64, error) {
+func (a *AccountKeyPublic) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey, nil
 }
 
-func (a *AccountKeyPublic) SigValidationGas() (uint64, error) {
+func (a *AccountKeyPublic) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
 	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
 }
 

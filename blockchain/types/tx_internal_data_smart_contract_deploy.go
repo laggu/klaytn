@@ -230,7 +230,7 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 
 }
 
-func (t *TxInternalDataSmartContractDeploy) IntrinsicGas() (uint64, error) {
+func (t *TxInternalDataSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxGasContractCreation
 
 	gasPayload, err := intrinsicGasPayload(t.Payload)

@@ -76,12 +76,12 @@ func (a *AccountKeyNil) DeepCopy() AccountKey {
 	return NewAccountKeyNil()
 }
 
-func (a *AccountKeyNil) AccountCreationGas() (uint64, error) {
+func (a *AccountKeyNil) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxAccountCreationGasDefault, nil
 }
 
-func (a *AccountKeyNil) SigValidationGas() (uint64, error) {
+func (a *AccountKeyNil) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxValidationGasDefault, nil
 }

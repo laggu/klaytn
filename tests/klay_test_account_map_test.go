@@ -105,17 +105,17 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker types.AccountKeyPicker) error {
+func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
 	for _, tx := range txs {
 		to := tx.To()
 		v := tx.Value()
 
-		from, gasFrom, err := types.ValidateSender(signer, tx, picker)
+		from, gasFrom, err := types.ValidateSender(signer, tx, picker, currentBlockNumber)
 		if err != nil {
 			return err
 		}
 
-		feePayer, gasFeePayer, err := types.ValidateFeePayer(signer, tx, picker)
+		feePayer, gasFeePayer, err := types.ValidateFeePayer(signer, tx, picker, currentBlockNumber)
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 
 		// TODO-Klaytn: This gas fee calculation is correct only if the transaction is a value transfer transaction.
 		// Calculate the correct transaction fee by checking the corresponding receipt.
-		intrinsicGas, err := tx.IntrinsicGas()
+		intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 		if err != nil {
 			return err
 		}

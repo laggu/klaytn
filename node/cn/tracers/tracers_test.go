@@ -171,7 +171,7 @@ func TestCallTracer(t *testing.T) {
 			}
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb)
+			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
 			}

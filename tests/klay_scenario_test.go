@@ -3521,7 +3521,7 @@ func TestValidateSender(t *testing.T) {
 		err := tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -3541,7 +3541,7 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -3561,7 +3561,7 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
 	}
@@ -3584,7 +3584,7 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
 	}
@@ -3606,7 +3606,7 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
 	}
@@ -3637,7 +3637,7 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFrom)
 	}
@@ -3661,11 +3661,11 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
 
-		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb)
+		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFeePayer)
 	}
@@ -3690,11 +3690,11 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb)
+		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, decoupled.Addr, actualFrom)
 
-		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb)
+		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb, 0)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, anon.Addr, actualFeePayer)
 	}

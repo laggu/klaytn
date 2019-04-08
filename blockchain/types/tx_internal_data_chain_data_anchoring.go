@@ -255,7 +255,7 @@ func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataChainDataAnchoring) IntrinsicGas() (uint64, error) {
+func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	nByte := (uint64)(len(t.AnchoredData))
 
 	// Make sure we don't exceed uint64 for all data combinations

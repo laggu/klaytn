@@ -68,10 +68,10 @@ type AccountKey interface {
 	DeepCopy() AccountKey
 
 	// AccountCreationGas returns gas required to create an account with the corresponding key.
-	AccountCreationGas() (uint64, error)
+	AccountCreationGas(currentBlockNumber uint64) (uint64, error)
 
 	// SigValidationGas returns gas required to validate a tx with the account.
-	SigValidationGas() (uint64, error)
+	SigValidationGas(currentBlockNumber uint64) (uint64, error)
 
 	// Init returns an error if all data in the key is invalid.
 	// This checks that the key is ready to be assigned to an account.

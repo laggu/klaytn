@@ -74,7 +74,7 @@ type AccountKeyPicker interface {
 
 // ValidateSender finds a sender from both legacy and new types of transactions.
 // It returns the senders address and gas used for the tx validation.
-func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.Address, uint64, error) {
+func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker, currentBlockNumber uint64) (common.Address, uint64, error) {
 	if tx.IsLegacyTransaction() {
 		addr, err := Sender(signer, tx)
 		return addr, 0, err
@@ -91,7 +91,7 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
 
-	gasKey, err := accKey.SigValidationGas()
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber)
 	if err != nil {
 		return common.Address{}, 0, err
 	}
@@ -105,10 +105,10 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker) (common.
 
 // ValidateFeePayer finds a fee payer from a transaction.
 // If the transaction is not a fee-delegated transaction, it returns `from`.
-func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (common.Address, uint64, error) {
+func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker, currentBlockNumber uint64) (common.Address, uint64, error) {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
-		addr, _, err := ValidateSender(signer, tx, p)
+		addr, _, err := ValidateSender(signer, tx, p, currentBlockNumber)
 		// Do not consume gas if the tx is not a fee delegated transaction.
 		return addr, 0, err
 	}
@@ -120,7 +120,7 @@ func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker) (commo
 	feePayer := tf.GetFeePayer()
 	accKey := p.GetKey(feePayer)
 
-	gasKey, err := accKey.SigValidationGas()
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber)
 	if err != nil {
 		return common.Address{}, 0, err
 	}

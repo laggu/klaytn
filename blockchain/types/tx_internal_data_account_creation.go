@@ -309,8 +309,8 @@ func (t *TxInternalDataAccountCreation) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataAccountCreation) IntrinsicGas() (uint64, error) {
-	gasKey, err := t.Key.AccountCreationGas()
+func (t *TxInternalDataAccountCreation) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+	gasKey, err := t.Key.AccountCreationGas(currentBlockNumber)
 	if err != nil {
 		return 0, err
 	}

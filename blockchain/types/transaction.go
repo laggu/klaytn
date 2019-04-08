@@ -205,12 +205,16 @@ func (tx *Transaction) Value() *big.Int                       { return new(big.I
 func (tx *Transaction) Nonce() uint64                         { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool                      { return tx.checkNonce }
 func (tx *Transaction) Type() TxType                          { return tx.data.Type() }
-func (tx *Transaction) IntrinsicGas() (uint64, error)         { return tx.data.IntrinsicGas() }
 func (tx *Transaction) IsLegacyTransaction() bool             { return tx.data.IsLegacyTransaction() }
 func (tx *Transaction) ValidatedSender() common.Address       { return tx.validatedSender }
 func (tx *Transaction) ValidatedFeePayer() common.Address     { return tx.validatedFeePayer }
 func (tx *Transaction) ValidatedIntrinsicGas() uint64         { return tx.validatedIntrinsicGas }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
+
+func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+	return tx.data.IntrinsicGas(currentBlockNumber)
+}
+
 func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 	return tx.data.Validate(db, blockNumber)
 }
@@ -341,18 +345,18 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64
 //
 // XXX Rename message to something less arbitrary?
 // TODO-Klaytn: Message is removed and this function will return *Transaction.
-func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker) (*Transaction, error) {
-	intrinsicGas, err := tx.IntrinsicGas()
+func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker, currentBlockNumber uint64) (*Transaction, error) {
+	intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	sender, gasFrom, err := ValidateSender(s, tx, picker)
+	sender, gasFrom, err := ValidateSender(s, tx, picker, currentBlockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	feePayer, gasFeePayer, err := ValidateFeePayer(s, tx, picker)
+	feePayer, gasFeePayer, err := ValidateFeePayer(s, tx, picker, currentBlockNumber)
 	if err != nil {
 		return nil, err
 	}

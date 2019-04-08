@@ -236,7 +236,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
 		enc)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas() (uint64, error) {
+func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return params.TxGas + params.TxGasFeeDelegated, nil
 }
 

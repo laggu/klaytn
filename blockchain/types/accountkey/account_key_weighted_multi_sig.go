@@ -116,7 +116,7 @@ func (a *AccountKeyWeightedMultiSig) String() string {
 	return string(b)
 }
 
-func (a *AccountKeyWeightedMultiSig) AccountCreationGas() (uint64, error) {
+func (a *AccountKeyWeightedMultiSig) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	numKeys := uint64(len(a.Keys))
 	if numKeys > MaxNumKeysForMultiSig {
 		return 0, kerrors.ErrMaxKeysExceed
@@ -124,7 +124,7 @@ func (a *AccountKeyWeightedMultiSig) AccountCreationGas() (uint64, error) {
 	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey, nil
 }
 
-func (a *AccountKeyWeightedMultiSig) SigValidationGas() (uint64, error) {
+func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
 	numKeys := uint64(len(a.Keys))
 	if numKeys > MaxNumKeysForMultiSig {
 		logger.Warn("validation failed due to the number of keys in the account is larger than the limit.",

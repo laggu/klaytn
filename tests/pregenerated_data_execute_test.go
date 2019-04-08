@@ -240,7 +240,7 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 		}
 
 		for _, tx := range txs {
-			tx.AsMessageWithAccountKeyPicker(signer, stateDB)
+			tx.AsMessageWithAccountKeyPicker(signer, stateDB, bcData.bc.CurrentBlock().NumberU64())
 		}
 
 		b.StartTimer()

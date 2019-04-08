@@ -269,7 +269,7 @@ func testValidateValueTransfer(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }
@@ -351,12 +351,12 @@ func testValidateFeeDelegatedValueTransfer(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -440,12 +440,12 @@ func testValidateFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -495,7 +495,7 @@ func testValidateValueTransferMemo(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }
@@ -579,12 +579,12 @@ func testValidateFeeDelegatedValueTransferMemo(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -670,12 +670,12 @@ func testValidateFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -728,7 +728,7 @@ func testValidateAccountCreation(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }
@@ -778,7 +778,7 @@ func testValidateAccountUpdate(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }
@@ -862,12 +862,12 @@ func testValidateFeeDelegatedAccountUpdate(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -953,12 +953,12 @@ func testValidateFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -1009,7 +1009,7 @@ func testValidateSmartContractDeploy(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }
@@ -1095,12 +1095,12 @@ func testValidateFeeDelegatedSmartContractDeploy(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -1188,12 +1188,12 @@ func testValidateFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -1243,7 +1243,7 @@ func testValidateSmartContractExecution(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }
@@ -1327,12 +1327,12 @@ func testValidateFeeDelegatedSmartContractExecution(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -1418,12 +1418,12 @@ func testValidateFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -1470,7 +1470,7 @@ func testValidateCancel(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }
@@ -1548,12 +1548,12 @@ func testValidateFeeDelegatedCancel(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -1633,12 +1633,12 @@ func testValidateFeeDelegatedCancelWithRatio(t *testing.T) {
 	p.SetKey(feePayer, feePayerKey)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 
 	// Validate fee payer
-	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p)
+	validatedFeePayer, _, err := ValidateFeePayer(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, feePayer, validatedFeePayer)
 }
@@ -1688,7 +1688,7 @@ func testValidateChainDataAnchoring(t *testing.T) {
 	p.SetKey(from, key)
 
 	// Validate
-	validatedFrom, _, err := ValidateSender(signer, tx, p)
+	validatedFrom, _, err := ValidateSender(signer, tx, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, validatedFrom)
 }

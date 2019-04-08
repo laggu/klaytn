@@ -563,12 +563,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
-	from, gasFrom, err := types.ValidateSender(pool.signer, tx, pool.currentState)
+	from, gasFrom, err := types.ValidateSender(pool.signer, tx, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
 		return ErrInvalidSender
 	}
 
-	feePayer, gasFeePayer, err := types.ValidateFeePayer(pool.signer, tx, pool.currentState)
+	feePayer, gasFeePayer, err := types.ValidateFeePayer(pool.signer, tx, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
 		return ErrInvalidFeePayer
 	}
@@ -632,7 +632,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	// TODO-Klaytn-Issue136
-	intrGas, err := tx.IntrinsicGas()
+	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
 	intrGas += gasFrom + gasFeePayer
 	if err != nil {
 		return err

@@ -70,12 +70,12 @@ func (a *AccountKeyLegacy) DeepCopy() AccountKey {
 	return NewAccountKeyLegacy()
 }
 
-func (a *AccountKeyLegacy) AccountCreationGas() (uint64, error) {
+func (a *AccountKeyLegacy) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxAccountCreationGasDefault, nil
 }
 
-func (a *AccountKeyLegacy) SigValidationGas() (uint64, error) {
+func (a *AccountKeyLegacy) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return params.TxValidationGasDefault, nil
 }

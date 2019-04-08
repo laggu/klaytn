@@ -102,7 +102,8 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 		}
 	*/
 
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(config, header.Number), statedb)
+	blockNumber := header.Number
+	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(config, blockNumber), statedb, blockNumber.Uint64())
 	if err != nil {
 		return nil, 0, err
 	}

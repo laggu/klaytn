@@ -178,10 +178,10 @@ func (a *AccountKeyRoleBased) String() string {
 	return string(b)
 }
 
-func (a *AccountKeyRoleBased) AccountCreationGas() (uint64, error) {
+func (a *AccountKeyRoleBased) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	gas := uint64(0)
 	for _, k := range *a {
-		gasK, err := k.AccountCreationGas()
+		gasK, err := k.AccountCreationGas(currentBlockNumber)
 		if err != nil {
 			return 0, err
 		}
@@ -191,10 +191,10 @@ func (a *AccountKeyRoleBased) AccountCreationGas() (uint64, error) {
 	return gas, nil
 }
 
-func (a *AccountKeyRoleBased) SigValidationGas() (uint64, error) {
+func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
 	gas := uint64(0)
 	for _, k := range *a {
-		gasK, err := k.SigValidationGas()
+		gasK, err := k.SigValidationGas(currentBlockNumber)
 		if err != nil {
 			return 0, err
 		}

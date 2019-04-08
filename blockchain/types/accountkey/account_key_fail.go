@@ -61,12 +61,12 @@ func (a *AccountKeyFail) DeepCopy() AccountKey {
 	return NewAccountKeyFail()
 }
 
-func (a *AccountKeyFail) AccountCreationGas() (uint64, error) {
+func (a *AccountKeyFail) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	// No gas required to make an account with a failed key.
 	return params.TxAccountCreationGasDefault, nil
 }
 
-func (a *AccountKeyFail) SigValidationGas() (uint64, error) {
+func (a *AccountKeyFail) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
 	// No gas required to make an account with a failed key.
 	return params.TxValidationGasDefault, nil
 }

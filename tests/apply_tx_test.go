@@ -331,7 +331,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 		reservoir.Nonce += 1
 
 		// execute this to cache ecrecover.
-		tx.AsMessageWithAccountKeyPicker(signer, state)
+		tx.AsMessageWithAccountKeyPicker(signer, state, header.Number.Uint64())
 	}
 
 	if isProfileEnabled() {
@@ -459,7 +459,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 
 		reservoir.Nonce += 1
 
-		tx.AsMessageWithAccountKeyPicker(signer, state)
+		tx.AsMessageWithAccountKeyPicker(signer, state, header.Number.Uint64())
 	}
 
 	if isProfileEnabled() {
@@ -585,7 +585,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 
 		sender.Nonce += 1
 
-		tx.AsMessageWithAccountKeyPicker(signer, state)
+		tx.AsMessageWithAccountKeyPicker(signer, state, header.Number.Uint64())
 	}
 
 	if isProfileEnabled() {

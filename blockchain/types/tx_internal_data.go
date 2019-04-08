@@ -251,7 +251,7 @@ type TxInternalData interface {
 	Equal(t TxInternalData) bool
 
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
-	IntrinsicGas() (uint64, error)
+	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
