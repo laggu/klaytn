@@ -419,6 +419,22 @@ loop:
 	close(tab.closed)
 }
 
+func (tab *Table) getBucketEntries() []*Node {
+	var nodes []*Node
+	for i := 0; i < nBuckets; i++ {
+		nodes = append(nodes, tab.buckets[i].entries...)
+	}
+	return nodes
+}
+
+func (tab *Table) getReplacements() []*Node {
+	var nodes []*Node
+	for i := 0; i < nBuckets; i++ {
+		nodes = append(nodes, tab.buckets[i].replacements...)
+	}
+	return nodes
+}
+
 // doRefresh performs a lookup for a random target to keep buckets
 // full. seed nodes are inserted if the table is empty (initial
 // bootstrap or discarded faulty peers).
@@ -631,6 +647,10 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	if node != nil {
 		tab.add(node)
 		tab.db.updateFindFails(id, 0)
+		lenEntries := len(tab.getBucketEntries())
+		lenReplacements := len(tab.getReplacements())
+		bucketEntriesGauge.Update(int64(lenEntries))
+		bucketReplacementsGauge.Update(int64(lenReplacements))
 	}
 	return node, result
 }

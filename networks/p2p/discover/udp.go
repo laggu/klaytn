@@ -287,8 +287,13 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	errc := t.pending(toid, pongPacket, func(p interface{}) bool {
 		return bytes.Equal(p.(*pong).ReplyTok, hash)
 	})
+	pingMeter.Mark(1)
 	t.write(toaddr, req.name(), packet)
-	return <-errc
+	err = <-errc
+	if err == nil {
+		pongMeter.Mark(1)
+	}
+	return err
 }
 
 func (t *udp) waitping(from NodeID) error {
@@ -317,7 +322,11 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node
 		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
+	findNodesMeter.Mark(1)
 	err := <-errc
+	if err != nil {
+		neighborsMeter.Mark(1)
+	}
 	return nodes, err
 }
 
@@ -394,6 +403,11 @@ func (t *udp) loop() {
 		case p := <-t.addpending:
 			p.deadline = time.Now().Add(respTimeout)
 			plist.PushBack(p)
+			if p.ptype == pongPacket {
+				pendingPongCounter.Inc(1)
+			} else if p.ptype == neighborsPacket {
+				pendingNeighborsCounter.Inc(1)
+			}
 
 		case r := <-t.gotreply:
 			var matched bool
@@ -401,6 +415,11 @@ func (t *udp) loop() {
 				p := el.Value.(*pending)
 				if p.from == r.from && p.ptype == r.ptype {
 					matched = true
+					if p.ptype == pongPacket {
+						pendingPongCounter.Dec(1)
+					} else if p.ptype == neighborsPacket {
+						pendingNeighborsCounter.Dec(1)
+					}
 					// Remove the matcher if its callback indicates
 					// that all replies have been received. This is
 					// required for packet types that expect multiple
@@ -546,6 +565,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	}
 	err = packet.handle(t, from, fromID, hash)
 	logger.Trace("<< "+packet.name(), "addr", from, "err", err)
+	udpPacketCounter.Inc(1)
 	return err
 }
 
