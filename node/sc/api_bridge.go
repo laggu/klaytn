@@ -101,22 +101,25 @@ func (sbapi *SubBridgeAPI) DeployGatewayOnParentChain() (common.Address, error) 
 }
 
 // TODO-Klaytn needs to make unSubscribe() method and enable user can unSubscribeEvent.
-func (sbapi *SubBridgeAPI) SubscribeEventGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) bool {
+func (sbapi *SubBridgeAPI) SubscribeEventGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) error {
+	err := sbapi.sc.AddressManager().AddGateway(cGatewayAddr, pGatewayAddr)
+	if err != nil {
+		return err
+	}
+
 	cErr := sbapi.sc.gatewayMgr.SubscribeEvent(cGatewayAddr)
 	if cErr != nil {
 		logger.Error("Failed to SubscribeEventGateway Child Gateway", "addr", cGatewayAddr, "err", cErr)
-		return false
+		return cErr
 	}
 
 	pErr := sbapi.sc.gatewayMgr.SubscribeEvent(pGatewayAddr)
 	if pErr != nil {
-		logger.Error("Failed to SubscribeEventGateway Parent Gateway", "addr", pGatewayAddr, "err", cErr)
-		return false
+		logger.Error("Failed to SubscribeEventGateway Parent Gateway", "addr", pGatewayAddr, "err", pErr)
+		// TODO-Klaytn needs to unsubscribe cGatewayAddr in this case.
+		return pErr
 	}
-	// TODO-Klaytn needs to make unSubscribe() method and deal with the exception case.
-
-	sbapi.sc.AddressManager().AddGateway(cGatewayAddr, pGatewayAddr)
-	return true
+	return nil
 }
 
 func (sbapi *SubBridgeAPI) TxPendingCount() int {
@@ -156,12 +159,17 @@ func (sbapi *SubBridgeAPI) UnRegisterGateway(gateway common.Address) {
 	sbapi.sc.AddressManager().DeleteGateway(gateway)
 }
 
-func (sbapi *SubBridgeAPI) RegisterToken(token1 common.Address, token2 common.Address) {
-	sbapi.sc.AddressManager().AddToken(token1, token2)
+func (sbapi *SubBridgeAPI) RegisterToken(token1 common.Address, token2 common.Address) error {
+	if err := sbapi.sc.AddressManager().AddToken(token1, token2); err != nil {
+		return err
+	}
+	logger.Info("Register token", "token1", token1.String(), "token2", token2.String())
+	return nil
 }
 
-func (sbapi *SubBridgeAPI) UnRegisterToken(token common.Address) {
-	sbapi.sc.AddressManager().DeleteToken(token)
+func (sbapi *SubBridgeAPI) UnRegisterToken(token common.Address) ([]common.Address, error) {
+	token1, token2, err := sbapi.sc.AddressManager().DeleteToken(token)
+	return []common.Address{token1, token2}, err
 }
 
 // AddPeer requests connecting to a remote node, and also maintaining the new
