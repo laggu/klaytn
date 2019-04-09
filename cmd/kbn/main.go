@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/cmd/utils/nodecmd"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/metrics/prometheus"
@@ -36,6 +37,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -64,6 +67,21 @@ func bootnode(c *cli.Context) error {
 			natFlag:      c.GlobalString(utils.NATFlag.Name),
 			netrestrict:  c.GlobalString(utils.NetrestrictFlag.Name),
 			writeAddress: c.GlobalBool(utils.WriteAddressFlag.Name),
+
+			IPCPath:          "klay.ipc",
+			DataDir:          c.GlobalString(utils.DataDirFlag.Name),
+			HTTPServerType:   "fasthttp",
+			HTTPHost:         DefaultHTTPHost,
+			HTTPPort:         DefaultHTTPPort,
+			HTTPModules:      []string{"net"},
+			HTTPVirtualHosts: []string{"localhost"},
+			WSHost:           DefaultWSHost,
+			WSPort:           DefaultWSPort,
+			WSModules:        []string{"net"},
+			GRPCHost:         DefaultGRPCHost,
+			GRPCPort:         DefaultGRPCPort,
+
+			Logger: log.NewModuleLogger(log.CMDKBN),
 		}
 	)
 
@@ -119,12 +137,42 @@ func bootnode(c *cli.Context) error {
 		utils.Fatalf("%v", err)
 	}
 
-	select {}
+	node, err := New(&ctx)
+	if err != nil {
+		return err
+	}
+	if err := startNode(node); err != nil {
+		return err
+	}
+	node.Wait()
+	return nil
+}
+
+func startNode(node *Node) error {
+	if err := node.Start(); err != nil {
+		return err
+	}
+	go func() {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigc)
+		<-sigc
+		logger.Info("Got interrupt, shutting down...")
+		go node.Stop()
+		for i := 10; i > 0; i-- {
+			<-sigc
+			if i > 1 {
+				logger.Info("Already shutting down, interrupt more to panic.", "times", i-1)
+			}
+		}
+	}()
+	return nil
 }
 
 func main() {
 	var (
 		cliFlags = []cli.Flag{
+			utils.DataDirFlag,
 			utils.GenKeyFlag,
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
@@ -144,6 +192,9 @@ func main() {
 	app.UsageText = app.Name + " [global options] [commands]"
 	app.Flags = append(app.Flags, cliFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Commands = []cli.Command{
+		nodecmd.AttachCommand,
+	}
 
 	app.Action = bootnode
 	app.Before = func(c *cli.Context) error {

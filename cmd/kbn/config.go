@@ -21,10 +21,23 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/p2p/nat"
 	"github.com/ground-x/klaytn/networks/p2p/netutil"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
+
+const (
+	DefaultHTTPHost = "localhost" // Default host interface for the HTTP RPC server
+	DefaultHTTPPort = 8551        // Default TCP port for the HTTP RPC server
+	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
+	DefaultWSPort   = 8552        // Default TCP port for the websocket RPC server
+	DefaultGRPCHost = "localhost" // Default host interface for the gRPC server
+	DefaultGRPCPort = 8553        // Default TCP port for the gRPC server
 )
 
 type bootnodeConfig struct {
@@ -42,6 +55,88 @@ type bootnodeConfig struct {
 	nodeKey      *ecdsa.PrivateKey
 	natm         nat.Interface
 	listenAddr   string
+
+	// DataDir is the file system folder the node should use for any data storage
+	// requirements. The configured data directory will not be directly shared with
+	// registered services, instead those can use utility methods to create/access
+	// databases or flat files. This enables ephemeral nodes which can fully reside
+	// in memory.
+	DataDir string
+
+	// IPCPath is the requested location to place the IPC endpoint. If the path is
+	// a simple file name, it is placed inside the data directory (or on the root
+	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
+	// relative), then that specific path is enforced. An empty path disables IPC.
+	IPCPath string `toml:",omitempty"`
+
+	// HTTP module type is http server module type (fasthttp and http)
+	HTTPServerType string `toml:",omitempty"`
+
+	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
+	// field is empty, no HTTP API endpoint will be started.
+	HTTPHost string `toml:",omitempty"`
+
+	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
+	// default zero value is/ valid and will pick a port number randomly (useful
+	// for ephemeral nodes).
+	HTTPPort int `toml:",omitempty"`
+
+	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
+	// clients. Please be aware that CORS is a browser enforced security, it's fully
+	// useless for custom HTTP clients.
+	HTTPCors []string `toml:",omitempty"`
+
+	// HTTPVirtualHosts is the list of virtual hostnames which are allowed on incoming requests.
+	// This is by default {'localhost'}. Using this prevents attacks like
+	// DNS rebinding, which bypasses SOP by simply masquerading as being within the same
+	// origin. These attacks do not utilize CORS, since they are not cross-domain.
+	// By explicitly checking the Host-header, the server will not allow requests
+	// made against the server with a malicious host domain.
+	// Requests using ip address directly are not affected
+	HTTPVirtualHosts []string `toml:",omitempty"`
+
+	// HTTPModules is a list of API modules to expose via the HTTP RPC interface.
+	// If the module list is empty, all RPC API endpoints designated public will be
+	// exposed.
+	HTTPModules []string `toml:",omitempty"`
+
+	// WSHost is the host interface on which to start the websocket RPC server. If
+	// this field is empty, no websocket API endpoint will be started.
+	WSHost string `toml:",omitempty"`
+
+	// WSPort is the TCP port number on which to start the websocket RPC server. The
+	// default zero value is/ valid and will pick a port number randomly (useful for
+	// ephemeral nodes).
+	WSPort int `toml:",omitempty"`
+
+	// WSOrigins is the list of domain to accept websocket requests from. Please be
+	// aware that the server can only act upon the HTTP request the client sends and
+	// cannot verify the validity of the request header.
+	WSOrigins []string `toml:",omitempty"`
+
+	// WSModules is a list of API modules to expose via the websocket RPC interface.
+	// If the module list is empty, all RPC API endpoints designated public will be
+	// exposed.
+	WSModules []string `toml:",omitempty"`
+
+	// WSExposeAll exposes all API modules via the WebSocket RPC interface rather
+	// than just the public ones.
+	//
+	// *WARNING* Only set this if the node is running in a trusted network, exposing
+	// private APIs to untrusted users is a major security risk.
+	WSExposeAll bool `toml:",omitempty"`
+
+	// GRPCHost is the host interface on which to start the gRPC server. If
+	// this field is empty, no gRPC API endpoint will be started.
+	GRPCHost string `toml:",omitempty"`
+
+	// GRPCPort is the TCP port number on which to start the gRPC server. The
+	// default zero value is valid and will pick a port number randomly (useful for
+	// ephemeral nodes).
+	GRPCPort int `toml:",omitempty"`
+
+	// Logger is a custom logger to use with the p2p.Server.
+	Logger log.Logger `toml:",omitempty"`
 }
 
 func (ctx *bootnodeConfig) checkCMDState() int {
@@ -116,4 +211,96 @@ func (ctx *bootnodeConfig) validateNetworkParameter() error {
 	}
 
 	return nil
+}
+
+func (c *bootnodeConfig) HttpServerType() string {
+	if c.HTTPServerType == "" {
+		return "http"
+	}
+	return c.HTTPServerType
+}
+
+func (c *bootnodeConfig) IsFastHTTP() bool {
+	return c.HttpServerType() == "fasthttp"
+}
+
+// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
+// account the set data folders as well as the designated platform we're currently
+// running on.
+func (c *bootnodeConfig) IPCEndpoint() string {
+	// Short circuit if IPC has not been enabled
+	if c.IPCPath == "" {
+		return ""
+	}
+	// On windows we can only use plain top-level pipes
+	if runtime.GOOS == "windows" {
+		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
+			return c.IPCPath
+		}
+		return `\\.\pipe\` + c.IPCPath
+	}
+	// Resolve names into the data directory full paths otherwise
+	if filepath.Base(c.IPCPath) == c.IPCPath {
+		if c.DataDir == "" {
+			return filepath.Join(os.TempDir(), c.IPCPath)
+		}
+		return filepath.Join(c.DataDir, c.IPCPath)
+	}
+	return c.IPCPath
+}
+
+func DefaultIPCEndpoint(clientIdentifier string) string {
+	if clientIdentifier == "" {
+		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+		if clientIdentifier == "" {
+			panic("empty executable name")
+		}
+	}
+	config := &bootnodeConfig{DataDir: os.TempDir(), IPCPath: clientIdentifier + ".ipc"}
+	return config.IPCEndpoint()
+}
+
+// HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
+// and port parameters.
+func (c *bootnodeConfig) HTTPEndpoint() string {
+	if c.HTTPHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort)
+}
+
+// DefaultHTTPEndpoint returns the HTTP endpoint used by default.
+func DefaultHTTPEndpoint() string {
+	config := &bootnodeConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
+	return config.HTTPEndpoint()
+}
+
+// WSEndpoint resolves a websocket endpoint based on the configured host interface
+// and port parameters.
+func (c *bootnodeConfig) WSEndpoint() string {
+	if c.WSHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.WSHost, c.WSPort)
+}
+
+// DefaultWSEndpoint returns the websocket endpoint used by default.
+func DefaultWSEndpoint() string {
+	config := &bootnodeConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
+	return config.WSEndpoint()
+}
+
+// GRPCEndpoint resolves a gRPC endpoint based on the configured host interface
+// and port parameters.
+func (c *bootnodeConfig) GRPCEndpoint() string {
+	if c.GRPCHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.GRPCHost, c.GRPCPort)
+}
+
+// DefaultGRPCEndpoint returns the gRPC endpoint used by default.
+func DefaultGRPCEndpoint() string {
+	config := &bootnodeConfig{GRPCHost: DefaultGRPCHost, GRPCPort: DefaultGRPCPort}
+	return config.GRPCEndpoint()
 }
