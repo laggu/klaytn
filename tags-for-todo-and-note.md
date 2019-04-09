@@ -53,3 +53,4 @@ Please note that the tag name always
 | Storage                                        | Related to storage.                                       |
 | Refactoring                                    | Related to refactoring.                                   |
 | gRPC                                           | Related to gRPC.                                          |
+| HF                                             | Related to HardFork.                                      |
