@@ -95,41 +95,47 @@ type levelDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 }
 
-func getLDBOptions(levelDBCacheSize, openFilesCacheCapacity int) *opt.Options {
-	return &opt.Options{
-		OpenFilesCacheCapacity:        openFilesCacheCapacity,
-		BlockCacheCapacity:            levelDBCacheSize / 2 * opt.MiB,
-		WriteBuffer:                   levelDBCacheSize / 2 * opt.MiB,
+func getLDBOptions(dbc *DBConfig) *opt.Options {
+	newOption := &opt.Options{
+		OpenFilesCacheCapacity:        dbc.OpenFilesLimit,
+		BlockCacheCapacity:            dbc.LevelDBCacheSize / 2 * opt.MiB,
+		WriteBuffer:                   dbc.LevelDBCacheSize / 2 * opt.MiB,
 		Filter:                        filter.NewBloomFilter(10),
 		DisableBufferPool:             true,
 		CompactionTableSize:           4 * opt.MiB,
 		CompactionTableSizeMultiplier: 2.0,
 	}
+
+	if dbc.LevelDBNoCompression {
+		newOption.Compression = opt.NoCompression
+	}
+
+	return newOption
 }
 
-func NewLDBDatabase(file string, levelDBCacheSize, openFilesCacheCapacity int) (*levelDB, error) {
-	localLogger := logger.NewWith("path", file)
+func NewLDBDatabase(dbc *DBConfig) (*levelDB, error) {
+	localLogger := logger.NewWith("path", dbc.Dir)
 
 	// Ensure we have some minimal caching and file guarantees
-	if levelDBCacheSize < 16 {
-		levelDBCacheSize = 16
+	if dbc.LevelDBCacheSize < 16 {
+		dbc.LevelDBCacheSize = 16
 	}
-	if openFilesCacheCapacity < 16 {
-		openFilesCacheCapacity = 16
+	if dbc.OpenFilesLimit < 16 {
+		dbc.OpenFilesLimit = 16
 	}
-	localLogger.Info("Allocated LevelDB with write buffer and file OpenFilesLimit", "levelDBCacheSize", levelDBCacheSize, "openFilesCacheCapacity", openFilesCacheCapacity)
+	localLogger.Info("Allocated LevelDB with write buffer and file OpenFilesLimit", "levelDBCacheSize", dbc.LevelDBCacheSize, "openFilesLimit", dbc.OpenFilesLimit)
 
 	// Open the db and recover any potential corruptions
-	db, err := leveldb.OpenFile(file, getLDBOptions(levelDBCacheSize, openFilesCacheCapacity))
+	db, err := leveldb.OpenFile(dbc.Dir, getLDBOptions(dbc))
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
-		db, err = leveldb.RecoverFile(file, nil)
+		db, err = leveldb.RecoverFile(dbc.Dir, nil)
 	}
 	// (Re)check for errors and abort if opening of the db failed
 	if err != nil {
 		return nil, err
 	}
 	return &levelDB{
-		fn:     file,
+		fn:     dbc.Dir,
 		db:     db,
 		logger: localLogger,
 	}, nil

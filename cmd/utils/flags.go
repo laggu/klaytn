@@ -189,6 +189,11 @@ var (
 		Usage: "Size of in-memory cache in LevelDB (MiB)",
 		Value: 768,
 	}
+	// TODO-Klaytn-Database LevelDBNoCompressionFlag should be removed before main-net release.
+	LevelDBNoCompressionFlag = cli.BoolFlag{
+		Name:  "db.leveldb.no-compression",
+		Usage: "Disables LevelDB data compression by Snappy algorithm",
+	}
 	NoParallelDBWriteFlag = cli.BoolFlag{
 		Name:  "db.no-parallel-write",
 		Usage: "Disables parallel writes of block data to persistent database",
@@ -994,6 +999,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
+	cfg.LevelDBNoCompression = ctx.GlobalIsSet(LevelDBNoCompressionFlag.Name)
 
 	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
 		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)

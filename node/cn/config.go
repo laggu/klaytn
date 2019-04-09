@@ -103,16 +103,17 @@ type Config struct {
 	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
 	// Database options
-	SkipBcVersionCheck bool `toml:"-"`
-	PartitionedDB      bool
-	LevelDBCacheSize   int
-	TrieCacheSize      int
-	TrieTimeout        time.Duration
-	TrieBlockInterval  uint
-	ChildChainIndexing bool
-	ParallelDBWrite    bool
-	StateDBCaching     bool
-	TxPoolStateCache   bool
+	SkipBcVersionCheck   bool `toml:"-"`
+	PartitionedDB        bool
+	LevelDBNoCompression bool
+	LevelDBCacheSize     int
+	TrieCacheSize        int
+	TrieTimeout          time.Duration
+	TrieBlockInterval    uint
+	ChildChainIndexing   bool
+	ParallelDBWrite      bool
+	StateDBCaching       bool
+	TxPoolStateCache     bool
 
 	// Mining-related options
 	Gxbase    common.Address `toml:",omitempty"`

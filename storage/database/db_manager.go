@@ -269,7 +269,8 @@ type DBConfig struct {
 	OpenFilesLimit  int
 
 	// LevelDB related configurations.
-	LevelDBCacheSize int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
+	LevelDBCacheSize     int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
+	LevelDBNoCompression bool
 
 	// Service chain related configurations.
 	ChildChainIndexing bool
@@ -322,14 +323,14 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 func newDatabase(dbc *DBConfig) (Database, error) {
 	switch dbc.DBType {
 	case LevelDB:
-		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.OpenFilesLimit)
+		return NewLDBDatabase(dbc)
 	case BadgerDB:
 		return NewBGDatabase(dbc.Dir)
 	case MemoryDB:
 		return NewMemDatabase(), nil
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
-		return NewLDBDatabase(dbc.Dir, dbc.LevelDBCacheSize, dbc.OpenFilesLimit)
+		return NewLDBDatabase(dbc)
 	}
 }
 

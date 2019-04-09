@@ -95,6 +95,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.LevelDBCacheSizeFlag,
 			utils.NoPartitionedDBFlag,
+			utils.LevelDBNoCompressionFlag,
 			utils.NoParallelDBWriteFlag,
 		},
 	},

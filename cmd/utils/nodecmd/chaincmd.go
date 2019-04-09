@@ -43,6 +43,7 @@ var (
 		Flags: []cli.Flag{
 			utils.DbTypeFlag,
 			utils.NoPartitionedDBFlag,
+			utils.LevelDBNoCompressionFlag,
 			utils.DataDirFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
