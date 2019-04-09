@@ -46,7 +46,8 @@ func init() {
 var errNoOriginalDataDir = errors.New("original data directory does not exist, aborting the test")
 
 const (
-	dirFor10MillionAccounts = "testdata1000_orig"
+	allSnappyDataDir         = "testdata1000_orig"
+	receiptOnlySnappyDataDir = "testdata1000_SnappyCompressionForOnlyReceipts_orig"
 )
 
 // randomIndex is used to access data with random index.
@@ -87,7 +88,7 @@ func makeTxsWithStateDB(stateDB *state.StateDB, fromAddrs []*common.Address, fro
 
 		toAddr := *toAddrs[toIdx]
 
-		tx := types.NewTransaction(fromNonce, toAddr, new(big.Int).Mul(big.NewInt(1e3), big.NewInt(params.KLAY)), 1000000, new(big.Int).SetInt64(25000000000), nil)
+		tx := types.NewTransaction(fromNonce, toAddr, new(big.Int).Mul(big.NewInt(1e3), big.NewInt(params.Peb)), 1000000, new(big.Int).SetInt64(25000000000), nil)
 		signedTx, err := types.SignTx(tx, signer, fromKey)
 		if err != nil {
 			return nil, err
@@ -152,21 +153,22 @@ type preGeneratedTC struct {
 	cacheConfig   *blockchain.CacheConfig
 }
 
-func BenchmarkPreGeneratedProfiling(b *testing.B) {
+func BenchmarkPreGeneratedProfiling_ReceiptOnlySnappy(b *testing.B) {
 	tc1 := &preGeneratedTC{
-		isGenerateTest: false, testName: "1000Accounts", originalDataDir: dirFor10MillionAccounts,
-		numTotalTxs: 10 * 10000, numTxsPerGen: 20000,
-		numTotalSenders: 20000, numTotalReceivers: 20000, indexPicker: randomIndex}
+		isGenerateTest: false, testName: "5000Txs_Random_ReceiptOnlySnappy_NoCache", originalDataDir: receiptOnlySnappyDataDir,
+		numTotalTxs: 5000, numTxsPerGen: 5000,
+		numTotalSenders: 5000, numTotalReceivers: 5000, indexPicker: randomIndex}
 
 	tc1.cacheConfig = &blockchain.CacheConfig{
-		StateDBCaching:   true,
-		TxPoolStateCache: true,
-		ArchiveMode:      true,
+		StateDBCaching:   false,
+		TxPoolStateCache: false,
+		ArchiveMode:      false,
 		CacheSize:        256 * 1024 * 1024,
 		BlockInterval:    blockchain.DefaultBlockInterval,
 	}
 
 	tc1.dbc = generateDefaultDBConfig()
+	tc1.dbc.LevelDBNoCompression = true
 
 	tc1.levelDBOption = generateDefaultLevelDBOption()
 

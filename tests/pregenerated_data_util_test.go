@@ -346,6 +346,8 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 
 // NewBCDataForPreGeneratedTest returns a new BCData pointer constructed either 1) from the scratch or 2) from the existing data.
 func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCData, error) {
+	totalTxs = 0
+
 	if numValidatorsForTest > tc.numTotalSenders {
 		return nil, errors.New("numTotalSenders should be bigger numValidatorsForTest")
 	}
@@ -363,6 +365,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
 	tc.dbc.Dir = path.Join(testDataDir, chainDataDir)
+	fmt.Println("DBDir", tc.dbc.Dir)
 	chainDB, err := database.NewLevelDBManagerForTest(tc.dbc, tc.levelDBOption)
 	if err != nil {
 		return nil, err
