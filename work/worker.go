@@ -409,11 +409,11 @@ func (self *worker) wait() {
 			}
 
 			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
+			work.stateMu.Unlock()
 			if err != nil {
 				logger.Error("Failed writing block to chain", "err", err)
 				continue
 			}
-			work.stateMu.Unlock()
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
