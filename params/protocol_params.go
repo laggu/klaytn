@@ -114,9 +114,6 @@ const (
 	// Network Id
 	AspenNetworkId  uint64 = 1000
 	BaobabNetworkId uint64 = 1001
-
-	// HardFork block numbers for Baobab
-	FirstBaobabHardFork uint64 = 86400 * 37
 )
 
 var (
