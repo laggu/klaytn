@@ -139,7 +139,7 @@ func (ec *Client) BridgeDeployGateway(ctx context.Context) (common.Address, comm
 	return result[0], result[1], nil
 }
 
-// BridgeRegisterGateway can register the pair of deployed gateways.
+// BridgeRegisterGateway can register the given pair of deployed child/parent gateways.
 func (ec *Client) BridgeRegisterGateway(ctx context.Context, cGateway common.Address, pGateway common.Address) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "bridge_registerGateway", cGateway, pGateway)
@@ -151,4 +151,11 @@ func (ec *Client) BridgeSubscribeGateway(ctx context.Context, cGateway common.Ad
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "bridge_subscribeEventGateway", cGateway, pGateway)
 	return result, err
+}
+
+// BridgeRegisterToken can register the given pair of deployed child/parent token contracts.
+// If the registering is failed, it returns an error.
+func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, cToken common.Address, pToken common.Address) error {
+	var result []common.Address
+	return ec.c.CallContext(ctx, &result, "bridge_registerToken", cToken, pToken)
 }
