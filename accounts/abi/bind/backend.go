@@ -85,6 +85,8 @@ type ContractTransactor interface {
 	EstimateGas(ctx context.Context, call klaytn.CallMsg) (gas uint64, err error)
 	// SendTransaction injects the transaction into the pending pool for execution.
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
+	// ChainID can return the chain ID of the chain.
+	ChainID(ctx context.Context) (*big.Int, error)
 }
 
 // ContractFilterer defines the methods needed to access log events using one-off

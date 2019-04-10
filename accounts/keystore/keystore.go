@@ -40,9 +40,10 @@ import (
 )
 
 var (
-	ErrLocked  = accounts.NewAuthNeededError("password or unlock")
-	ErrNoMatch = errors.New("no key for given address or file")
-	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+	ErrLocked     = accounts.NewAuthNeededError("password or unlock")
+	ErrNoMatch    = errors.New("no key for given address or file")
+	ErrDecrypt    = errors.New("could not decrypt key with given passphrase")
+	ErrChainIdNil = errors.New("Chain ID should not be nil")
 )
 
 // KeyStoreType is the reflect type of a keystore backend.
@@ -280,7 +281,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	if chainID != nil {
 		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
+	return nil, ErrChainIdNil
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
@@ -308,7 +309,7 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	if chainID != nil {
 		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey)
+	return nil, ErrChainIdNil
 }
 
 // Unlock unlocks the given account indefinitely.

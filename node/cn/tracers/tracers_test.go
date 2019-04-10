@@ -177,7 +177,7 @@ func TestCallTracer(t *testing.T) {
 			}
 			st := blockchain.NewStateTransition(evm, msg, new(blockchain.GasPool).AddGas(tx.Gas()))
 			if _, _, kerr := st.TransitionDb(); kerr.ErrTxInvalid != nil {
-				t.Fatalf("failed to execute transaction: %v", err)
+				t.Fatalf("failed to execute transaction: %v", kerr.ErrTxInvalid)
 			}
 			// Retrieve the trace result and compare against the etalon
 			res, err := tracer.GetResult()

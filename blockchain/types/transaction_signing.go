@@ -283,9 +283,6 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 		logger.Warn("No need to execute Sender!", "tx", string(b))
 	}
 
-	if !tx.Protected() {
-		return HomesteadSigner{}.Sender(tx)
-	}
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
@@ -301,9 +298,6 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
 	}
 
-	if !tx.Protected() {
-		return HomesteadSigner{}.SenderPubkey(tx)
-	}
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return nil, ErrInvalidChainId
 	}
@@ -317,10 +311,6 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
-	}
-
-	if !tx.Protected() {
-		return HomesteadSigner{}.SenderPubkey(tx)
 	}
 
 	if tx.ChainId().Cmp(s.chainId) != 0 {
@@ -346,14 +336,13 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 // WithSignature returns a new transaction with the given signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
-	R, S, V, err = HomesteadSigner{}.SignatureValues(sig)
-	if err != nil {
-		return nil, nil, nil, err
+	if len(sig) != 65 {
+		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
 	}
-	if s.chainId.Sign() != 0 {
-		V = big.NewInt(int64(sig[64] + 35))
-		V.Add(V, s.chainIdMul)
-	}
+	R = new(big.Int).SetBytes(sig[:32])
+	S = new(big.Int).SetBytes(sig[32:64])
+	V = big.NewInt(int64(sig[64] + 35))
+	V.Add(V, s.chainIdMul)
 	return R, S, V, nil
 }
 
@@ -409,152 +398,6 @@ func (s EIP155Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
 		tf.GetFeePayer(),
 		s.chainId, uint(0), uint(0))
 	return rlpHash(infs), nil
-}
-
-// TODO-Klaytn-RemoveLater Remove HomesteadSigner
-// HomesteadTransaction implements TransactionInterface using the
-// homestead rules.
-type HomesteadSigner struct{ FrontierSigner }
-
-func (s HomesteadSigner) Equal(s2 Signer) bool {
-	_, ok := s2.(HomesteadSigner)
-	return ok
-}
-
-// SignatureValues returns signature values. This signature
-// needs to be in the [R || S || V] format where V is 0 or 1.
-func (hs HomesteadSigner) SignatureValues(sig []byte) (r, s, v *big.Int, err error) {
-	return hs.FrontierSigner.SignatureValues(sig)
-}
-
-func identityV(v *big.Int) *big.Int {
-	return v
-}
-
-func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	if !tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute Sender!", "tx", string(b))
-	}
-
-	return tx.data.RecoverAddress(hs.Hash(tx), true, identityV)
-}
-
-func (hs HomesteadSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
-	}
-
-	return tx.data.RecoverPubkey(hs.Hash(tx), true, identityV)
-}
-
-func (hs HomesteadSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
-	}
-
-	tf, ok := tx.data.(TxInternalDataFeePayer)
-	if !ok {
-		return nil, errNotFeePayer
-	}
-
-	hash, err := hs.HashFeePayer(tx)
-	if err != nil {
-		return nil, err
-	}
-
-	return tf.RecoverFeePayerPubkey(hash, true, identityV)
-}
-
-type FrontierSigner struct{}
-
-func (s FrontierSigner) Equal(s2 Signer) bool {
-	_, ok := s2.(FrontierSigner)
-	return ok
-}
-
-// SignatureValues returns signature values. This signature
-// needs to be in the [R || S || V] format where V is 0 or 1.
-func (fs FrontierSigner) SignatureValues(sig []byte) (r, s, v *big.Int, err error) {
-	if len(sig) != 65 {
-		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
-	}
-	r = new(big.Int).SetBytes(sig[:32])
-	s = new(big.Int).SetBytes(sig[32:64])
-	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
-	return r, s, v, nil
-}
-
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
-	// If the data object implements SerializeForSignToByte(), use it.
-	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
-		return rlpHash(ser.SerializeForSignToBytes())
-	}
-	return rlpHash(tx.data.SerializeForSign())
-}
-
-// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
-// It does not uniquely identify the transaction.
-func (fs FrontierSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
-	tf, ok := tx.data.(TxInternalDataFeePayer)
-	if !ok {
-		return common.Hash{}, errNotFeePayer
-	}
-
-	// If the data object implements SerializeForSignToByte(), use it.
-	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
-		return rlpHash(struct {
-			Byte     []byte
-			FeePayer common.Address
-		}{
-			ser.SerializeForSignToBytes(),
-			tf.GetFeePayer(),
-		}), nil
-	}
-
-	infs := append(tx.data.SerializeForSign(), tf.GetFeePayer())
-	return rlpHash(infs), nil
-}
-
-func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
-	if !tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute Sender!", "tx", string(b))
-	}
-
-	return tx.data.RecoverAddress(fs.Hash(tx), false, identityV)
-}
-
-func (fs FrontierSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
-	}
-
-	return tx.data.RecoverPubkey(fs.Hash(tx), false, identityV)
-}
-
-func (fs FrontierSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
-	}
-
-	tf, ok := tx.data.(TxInternalDataFeePayer)
-	if !ok {
-		return nil, errNotFeePayer
-	}
-
-	hash, err := fs.HashFeePayer(tx)
-	if err != nil {
-		return nil, err
-	}
-
-	return tf.RecoverFeePayerPubkey(hash, false, identityV)
 }
 
 func recoverPlainCommon(sighash common.Hash, R, S, Vb *big.Int, homestead bool) ([]byte, error) {

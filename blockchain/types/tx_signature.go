@@ -59,10 +59,6 @@ func (t *TxSignature) ChainId() *big.Int {
 	return deriveChainId(t.V)
 }
 
-func (t *TxSignature) Protected() bool {
-	return isProtectedV(t.V)
-}
-
 func (t *TxSignature) RawSignatureValues() []*big.Int {
 	return []*big.Int{t.V, t.R, t.S}
 }

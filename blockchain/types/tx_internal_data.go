@@ -244,9 +244,6 @@ type TxInternalData interface {
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int
 
-	// Protected returns whether the transaction is protected from replay protection.
-	Protected() bool
-
 	// Equal returns true if all attributes are the same.
 	Equal(t TxInternalData) bool
 

@@ -47,11 +47,7 @@ var (
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
-	if V.Sign() != 0 && isProtectedV(V) {
-		return NewEIP155Signer(deriveChainId(V))
-	} else {
-		return HomesteadSigner{}
-	}
+	return NewEIP155Signer(deriveChainId(V))
 }
 
 type Transaction struct {
@@ -121,30 +117,11 @@ func (tx *Transaction) ChainId() *big.Int {
 	return tx.data.ChainId()
 }
 
-// Protected returns whether the transaction is protected from replay protection.
-func (tx *Transaction) Protected() bool {
-	return tx.data.Protected()
-}
-
-func isProtectedV(V *big.Int) bool {
-	if V.BitLen() <= 8 {
-		v := V.Uint64()
-		return v != 27 && v != 28
-	}
-	// anything not 27 or 28 are considered unprotected
-	return true
-}
-
 func validateSignature(v, r, s *big.Int) bool {
 	// TODO-Klaytn: Need to consider the case v.BitLen() > 64.
 	// Since ValidateSignatureValues receives v as type of byte, leave it as a future work.
-	var V byte
-	if isProtectedV(v) {
-		chainID := deriveChainId(v).Uint64()
-		V = byte(v.Uint64() - 35 - 2*chainID)
-	} else {
-		V = byte(v.Uint64() - 27)
-	}
+	chainID := deriveChainId(v).Uint64()
+	V := byte(v.Uint64() - 35 - 2*chainID)
 
 	return crypto.ValidateSignatureValues(V, r, s, false)
 }

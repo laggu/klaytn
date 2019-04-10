@@ -127,6 +127,11 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 	return rb.klayClient.TransactionReceipt(ctx, txHash)
 }
 
+// ChainID can return the chain ID of the chain.
+func (rb *RemoteBackend) ChainID(ctx context.Context) (*big.Int, error) {
+	return rb.klayClient.ChainID(ctx)
+}
+
 func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr

@@ -163,10 +163,6 @@ func (t *TxInternalDataLegacy) ChainId() *big.Int {
 	return deriveChainId(t.V)
 }
 
-func (t *TxInternalDataLegacy) Protected() bool {
-	return isProtectedV(t.V)
-}
-
 func (t *TxInternalDataLegacy) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }

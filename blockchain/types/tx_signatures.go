@@ -81,17 +81,6 @@ func (t TxSignatures) ChainId() *big.Int {
 	return txSig.ChainId()
 }
 
-func (t TxSignatures) Protected() bool {
-	txSig, err := t.getDefaultSig()
-	if err != nil {
-		// This path should not be executed. This is written only for debugging.
-		logger.CritWithStack("should not be called if no entries exist", err)
-	}
-
-	// TODO-Klaytn-Multisig: Find a way to handle multiple V values here.
-	return txSig.Protected()
-}
-
 func (t TxSignatures) RawSignatureValues() []*big.Int {
 	values := make([]*big.Int, 0, 3*len(t))
 	for _, s := range t {

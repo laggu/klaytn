@@ -208,6 +208,11 @@ func (lb *LocalBackend) SendTransaction(ctx context.Context, tx *types.Transacti
 	return lb.subbrige.txPool.AddLocal(tx)
 }
 
+// ChainID can return the chain ID of the chain.
+func (lb *LocalBackend) ChainID(ctx context.Context) (*big.Int, error) {
+	return lb.config.ChainID, nil
+}
+
 func (lb *LocalBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	receipt := lb.subbrige.blockchain.GetReceiptByTxHash(txHash)
 	if receipt != nil {

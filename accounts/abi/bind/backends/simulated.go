@@ -302,7 +302,8 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	sender, err := types.Sender(types.HomesteadSigner{}, tx)
+	signer := types.NewEIP155Signer(b.config.ChainID)
+	sender, err := types.Sender(signer, tx)
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -350,6 +351,11 @@ func (b *SimulatedBackend) FilterLogs(ctx context.Context, query klaytn.FilterQu
 		res[i] = *log
 	}
 	return res, nil
+}
+
+// ChainID can return the chain ID of the chain.
+func (b *SimulatedBackend) ChainID(ctx context.Context) (*big.Int, error) {
+	return b.blockchain.Config().ChainID, nil
 }
 
 // SubscribeFilterLogs creates a background log filtering operation, returning a
