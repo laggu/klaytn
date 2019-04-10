@@ -114,6 +114,25 @@ const (
 	// Network Id
 	AspenNetworkId  uint64 = 1000
 	BaobabNetworkId uint64 = 1001
+
+	TxGasValueTransfer     uint64 = 21000
+	TxGasContractExecution uint64 = 21000
+
+	// TODO-Klaytn-Gas: TxGasHumanReadable should be based on ENS.
+	TxGasHumanReadable uint64 = 500000
+)
+
+// TODO-Klaytn-HF: It should be cleaned up before the mainnet is released.
+const (
+	TxGasContractCreationHF1      uint64 = 21000
+	TxDataGasHF1                  uint64 = 100
+	TxChainDataAnchoringGasHF1    uint64 = 21000
+	TxValidationGasPerKeyHF1      uint64 = 15000
+	TxGasAccountCreationHF1       uint64 = 21000
+	TxGasAccountUpdateHF1         uint64 = 21000
+	TxGasFeeDelegatedHF1          uint64 = 10000
+	TxGasFeeDelegatedWithRatioHF1 uint64 = 15000
+	TxGasCancelHF1                uint64 = 21000
 )
 
 var (
