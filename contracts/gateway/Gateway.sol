@@ -1,13 +1,11 @@
 pragma solidity ^0.4.24;
 
-import "./ITokenReceiver.sol";
-import "./IToken.sol";
-import "./SafeMath.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-// TODO-Klaytn-Servicechain should know why if IERC721Recevier used, TOKEN token can't call receiver.
-contract Gateway is ITokenReceiver {
-    // TODO-Klaytn-Servicechain should add ownership for Gateway.
-
+contract Gateway is Ownable {
     bool public isChild;   // Child gateway can withdraw with no limit.
 
     using SafeMath for uint256;
@@ -15,7 +13,7 @@ contract Gateway is ITokenReceiver {
     struct Balance {
         uint256 klay;
         mapping(address => uint256) token;  // erc20 -> token
-        //mapping(address => mapping(uint256 => bool)) nft;    // erc721 -> nft
+        mapping(address => mapping(uint256 => bool)) nft;    // erc721 -> nft
     }
 
     Balance balances;
@@ -41,7 +39,7 @@ contract Gateway is ITokenReceiver {
         isChild = _isChild;
     }
 
-    // Deposit functions
+    // Internal Deposit functions
     function depositKLAY() private {
         balances.klay = balances.klay.add(msg.value);
     }
@@ -50,39 +48,56 @@ contract Gateway is ITokenReceiver {
         balances.token[msg.sender] = balances.token[msg.sender].add(amount);
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////
+    function depositNFT(uint256 uid) private {
+        balances.nft[msg.sender][uid] = true;
+    }
+
     // Withdrawal functions
     function withdrawToken(uint256 amount, address to, address contractAddress)
+    onlyOwner
     external
     {
-        // TODO-Klaytn-Servicechain should add require to check if msg.sender is same with the owner of Gateway.
         if (isChild == false){
             balances.token[contractAddress] = balances.token[contractAddress].sub(amount);
         }
-        IToken(contractAddress).transfer(to, amount);
+        IERC20(contractAddress).transfer(to, amount);
         emit TokenWithdrawn(to, TokenKind.TOKEN, contractAddress, amount);
     }
 
     function withdrawKLAY(uint256 amount, address to)
+    onlyOwner
     external
     {
-        // TODO-Klaytn-Servicechain should add require to check if msg.sender is same with the owner of Gateway.
         // TODO-Klaytn-Servicechain for KLAY, we can replace below variable with embedded variable.
         balances.klay = balances.klay.sub(amount);
         to.transfer(amount); // ensure it's not reentrant
         emit TokenWithdrawn(to, TokenKind.KLAY, address(0), amount);
     }
 
+    function withdrawERC721(uint256 uid, address contractAddress, address to)
+    onlyOwner
+    external
+    {
+        require(balances.nft[contractAddress][uid], "Does not own token");
+        IERC721(contractAddress).safeTransferFrom(address(this), to, uid);
+        delete balances.nft[contractAddress][uid];
+        emit TokenWithdrawn(to, TokenKind.NFT, contractAddress, uid);
+    }
+
     // Approve and Deposit function for 2-step deposits
     // Requires first to have called `approve` on the specified TOKEN contract
-    function depositToken(uint256 amount, address contractAddress, address to) external {
-        IToken(contractAddress).transferFrom(msg.sender, address(this), amount);
+    // TODO-Klaytn need to consider whether this method is necessary or not.
+    function depositToken(uint256 amount, address contractAddress, address to)
+    onlyOwner
+    external {
+        IERC20(contractAddress).transferFrom(msg.sender, address(this), amount);
         balances.token[contractAddress] = balances.token[contractAddress].add(amount);
         emit TokenReceived(TokenKind.TOKEN, msg.sender, amount, contractAddress, to);
     }
 
     //////////////////////////////////////////////////////////////////////////////
-    // Receiver functions for 1-step deposits to the gateway
+    // Receiver functions of Token for 1-step deposits to the gateway
+    bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
 
     function onTokenReceived(address _from, uint256 amount, address _to)
     public
@@ -93,6 +108,23 @@ contract Gateway is ITokenReceiver {
         depositToken(amount);
         emit TokenReceived(TokenKind.TOKEN, _from, amount, msg.sender, _to);
         return TOKEN_RECEIVED;
+    }
+
+    // Receiver function of NFT for 1-step deposits to the gateway
+    bytes4 private constant ERC721_RECEIVED = 0x150b7a02;
+
+    function onNFTReceived(
+        address from,
+        uint256 tokenId,
+        address to
+    )
+    public
+    returns(bytes4)
+    {
+        //require(allowedTokens[msg.sender], "Not a valid token");
+        depositNFT(tokenId);
+        emit TokenReceived(TokenKind.NFT, from, tokenId, msg.sender, to);
+        return ERC721_RECEIVED;
     }
 
     // () requests transfer KLAY to msg.sender address on relative chain.
@@ -121,5 +153,10 @@ contract Gateway is ITokenReceiver {
     // Returns given Token withdrawal limit
     function getToken(address contractAddress) external view returns (uint256) {
         return balances.token[contractAddress];
+    }
+
+    // Returns ERC721 token by uid
+    function getNFT(address owner, uint256 uid, address contractAddress) external view returns (bool) {
+        return balances.nft[contractAddress][uid];
     }
 }

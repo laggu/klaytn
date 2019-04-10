@@ -24,8 +24,9 @@ import (
 	"github.com/ground-x/klaytn/accounts/abi/bind/backends"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
-	gatewaycontract "github.com/ground-x/klaytn/contracts/gateway"
-	stoken "github.com/ground-x/klaytn/contracts/token"
+	"github.com/ground-x/klaytn/contracts/gateway"
+	"github.com/ground-x/klaytn/contracts/servicechain_nft"
+	"github.com/ground-x/klaytn/contracts/servicechain_token"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 	"github.com/pkg/errors"
@@ -35,20 +36,15 @@ import (
 	"path"
 	"sync"
 	"testing"
+	"time"
 )
 
-// TestGateWayManager tests the following event/method of smart contract.
-// Token Contract
-// - DepositToGateway method
-// Gateway Contract
-// - DepositKLAY method
-// - WithdrawKLAY method
-// - WithdrawToken method
-// - TokenWithdrawn event
-// - TokenReceived event
-// - [Error Case] check nonce on gateway deploy (#2284)
+// TestGateWayManager tests the event/method of Token/NFT/Gateway contracts.
+// And It tests the nonce error case of gateway deploy (#2284)
+// TODO-Klaytn-Servicechain needs to refine this test.
+// - consider main/service chain simulated backend.
+// - separate each test
 func TestGateWayManager(t *testing.T) {
-
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), GatewayAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -56,7 +52,7 @@ func TestGateWayManager(t *testing.T) {
 	}()
 
 	wg := sync.WaitGroup{}
-	wg.Add(5)
+	wg.Add(7)
 
 	// Generate a new random account and a funded simulator
 	key, _ := crypto.GenerateKey()
@@ -68,7 +64,10 @@ func TestGateWayManager(t *testing.T) {
 	key3, _ := crypto.GenerateKey()
 	auth3 := bind.NewKeyedTransactor(key3)
 
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}}
+	key4, _ := crypto.GenerateKey()
+	auth4 := bind.NewKeyedTransactor(key4)
+
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
 	sim := backends.NewSimulatedBackend(alloc)
 
 	balance2, _ := sim.BalanceAt(context.Background(), auth2.From, big.NewInt(0))
@@ -105,12 +104,33 @@ func TestGateWayManager(t *testing.T) {
 	}
 	gateway := gatewayManager.GetGateway(addr)
 	fmt.Println("===== GatewayContract Addr ", addr.Hex())
+	sim.Commit() // block
 
 	// 2. Deploy Token Contract
-	gxtokenaddr, _, gxtoken, err := stoken.DeployGXToken(auth, sim, addr)
+	tokenAddr, tx, token, err := sctoken.DeployServiceChainToken(auth, sim, addr)
 	if err != nil {
 		log.Fatalf("Failed to DeployGXToken: %v", err)
 	}
+	sim.Commit() // block
+
+	// 3. Deploy NFT Contract
+	nftTokenID := uint64(4438)
+	nftAddr, tx, nft, err := scnft.DeployServiceChainNFT(auth, sim, addr)
+	if err != nil {
+		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
+	}
+	sim.Commit() // block
+
+	// TODO-Klaytn-Servicechain needs to support WaitDeployed
+	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+	//defer cancelTimeout()
+	//
+	//addr, err = bind.WaitDeployed(timeoutContext, sim, tx)
+	//if err != nil {
+	//	log.Fatal("Failed to DeployGXToken.", "err", err, "txHash", tx.Hash().String())
+	//
+	//}
+	//fmt.Println("GXToken is deployed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
 	balance, _ := sim.BalanceAt(context.Background(), auth.From, nil)
 	fmt.Println("auth KLAY balance :", balance)
@@ -121,7 +141,10 @@ func TestGateWayManager(t *testing.T) {
 	balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
 	fmt.Println("auth3 KLAY balance :", balance)
 
-	// 3. Subscribe Gateway Contract
+	balance, _ = sim.BalanceAt(context.Background(), auth4.From, nil)
+	fmt.Println("auth4 KLAY balance :", balance)
+
+	// 4. Subscribe Gateway Contract
 	gatewayManager.SubscribeEvent(addr)
 	tokenCh := make(chan TokenReceivedEvent)
 	tokenSendCh := make(chan TokenTransferEvent)
@@ -152,11 +175,26 @@ func TestGateWayManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, ev.To, gxtokenaddr)
+					tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, ev.To, tokenAddr)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
 					fmt.Println("WithdrawToken Transaction by event ", tx.Hash().Hex())
+					sim.Commit() // block
+
+				case 2:
+					owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
+					if err != nil {
+						t.Fatal(err)
+					}
+					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
+
+					// WithdrawToken by Event
+					tx, err := gateway.WithdrawERC721(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, nftAddr, ev.To)
+					if err != nil {
+						log.Fatalf("Failed to WithdrawERC721: %v", err)
+					}
+					fmt.Println("WithdrawERC721 Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 				}
 
@@ -175,94 +213,192 @@ func TestGateWayManager(t *testing.T) {
 		}
 	}()
 
-	// 4. WithdrawToken to Auth2 for charging
-	tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, testToken, auth.From, gxtokenaddr)
-	if err != nil {
-		log.Fatalf("Failed to WithdrawToken: %v", err)
-	}
-	fmt.Println("WithdrawToken Transaction", tx.Hash().Hex())
-	sim.Commit() // block
+	// 5. WithdrawToken to Auth for chargin and Check balances
+	{
+		tx, err = gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, testToken, auth.From, tokenAddr)
+		if err != nil {
+			log.Fatalf("Failed to WithdrawToken: %v", err)
+		}
+		fmt.Println("WithdrawToken Transaction", tx.Hash().Hex())
+		sim.Commit() // block
 
-	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth.From})
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("auth token balance", balance.String())
-	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth2.From})
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("auth2 token balance", balance.String())
-	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth3.From})
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("auth3 token balance", balance.String())
+		// TODO-Klaytn-Servicechain needs to support WaitMined
+		//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+		//defer cancelTimeout()
+		//
+		//receipt, err := bind.WaitMined(timeoutContext, sim, tx)
+		//if err != nil {
+		//	log.Fatal("Failed to WithdrawToken.", "err", err, "txHash", tx.Hash().String(),"status",receipt.Status)
+		//}
+		//fmt.Println("WithdrawToken is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
-	// 5. DepositToGateway from auth to auth3
-	tx, err = gxtoken.DepositToGateway(&bind.TransactOpts{From: auth.From, Signer: auth.Signer}, testToken, auth3.From)
-	if err != nil {
-		log.Fatalf("Failed to SafeTransferAndCall: %v", err)
-	}
-	fmt.Println("DepositToGateway Transaction", tx.Hash().Hex())
-	sim.Commit() // block
+		balance, err = token.BalanceOf(&bind.CallOpts{From: auth.From}, auth.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth token balance", balance.String())
 
-	// 6. DepositKLAY from auth to auth3
-	tx, err = gateway.DepositKLAY(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY}, auth3.From)
-	if err != nil {
-		log.Fatalf("Failed to DepositKLAY: %v", err)
-	}
-	fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
+		balance, err = token.BalanceOf(&bind.CallOpts{From: auth2.From}, auth2.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth2 token balance", balance.String())
 
-	sim.Commit() // block
+		balance, err = token.BalanceOf(&bind.CallOpts{From: auth3.From}, auth3.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth3 token balance", balance.String())
+
+		balance, err = token.BalanceOf(&bind.CallOpts{From: auth4.From}, auth4.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth4 token balance", balance.String())
+	}
+
+	// 6. Register (Mint) an NFT to Auth4
+	{
+		tx, err = nft.Register(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 999999}, auth4.From, nftTokenID)
+		if err != nil {
+			log.Fatalf("Failed to Register NFT: %v", err)
+		}
+		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
+		sim.Commit() // block
+
+		balance, err = nft.BalanceOf(&bind.CallOpts{From: auth.From}, auth4.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth4 NFT balance", balance.String())
+		fmt.Println("auth4 address", auth4.From.String())
+		owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("NFT owner after registering", owner.String())
+	}
+
+	// 7. DepositToGateway from auth to auth3
+	{
+		tx, err = token.DepositToGateway(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 99999}, testToken, auth3.From)
+		if err != nil {
+			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
+		}
+		fmt.Println("DepositToGateway Transaction", tx.Hash().Hex())
+		sim.Commit() // block
+
+		// TODO-Klaytn-Servicechain needs to support WaitMined
+		//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+		//defer cancelTimeout()
+		//
+		//receipt, err := bind.WaitMined(timeoutContext, sim, tx)
+		//if err != nil {
+		//	log.Fatal("Failed to DepositToGateway.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
+		//
+		//}
+		//fmt.Println("DepositToGateway is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
+
+	}
+
+	// 8. DepositKLAY from auth to auth3
+	{
+		tx, err = gateway.DepositKLAY(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
+		if err != nil {
+			log.Fatalf("Failed to DepositKLAY: %v", err)
+		}
+		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
+
+		sim.Commit() // block
+	}
+
+	// 9. Request NFT value transfer from auth4 to auth3
+	{
+		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: auth4.From, Signer: auth4.Signer, GasLimit: 999999}, big.NewInt(int64(nftTokenID)), auth3.From)
+		if err != nil {
+			log.Fatalf("Failed to nft.DepositToGateway: %v", err)
+		}
+		fmt.Println("nft.DepositToGateway Transaction", tx.Hash().Hex())
+
+		sim.Commit() // block
+
+		timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelTimeout()
+
+		receipt, err := bind.WaitMined(timeoutContext, sim, tx)
+		if err != nil {
+			log.Fatal("Failed to nft.DepositToGateway.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
+
+		}
+		fmt.Println("nft.DepositToGateway is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
+	}
 
 	wg.Wait()
 
-	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth.From})
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("auth token balance", balance.String())
-	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth2.From})
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("auth2 token balance", balance.String())
-	balance, err = gxtoken.BalanceOfMine(&bind.CallOpts{From: auth3.From})
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("auth3 token balance", balance.String())
+	// 10. Check Token balance
+	{
+		balance, err = token.BalanceOf(&bind.CallOpts{From: auth.From}, auth.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth token balance", balance.String())
+		balance, err = token.BalanceOf(&bind.CallOpts{From: auth2.From}, auth2.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth2 token balance", balance.String())
+		balance, err = token.BalanceOf(&bind.CallOpts{From: auth3.From}, auth3.From)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("auth3 token balance", balance.String())
 
-	if balance.Cmp(testToken) != 0 {
-		t.Fatal("testToken is mismatched,", "expected", testToken.String(), "result", balance.String())
-	}
-
-	balance, _ = sim.BalanceAt(context.Background(), auth.From, nil)
-	fmt.Println("auth KLAY balance :", balance)
-
-	balance, _ = sim.BalanceAt(context.Background(), auth2.From, nil)
-	fmt.Println("auth2 KLAY balance :", balance)
-
-	balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
-	fmt.Println("auth3 KLAY balance :", balance)
-
-	if balance.Cmp(testKLAY) != 0 {
-		t.Fatal("testKLAY is mismatched,", "expected", testKLAY.String(), "result", balance.String())
+		if balance.Cmp(testToken) != 0 {
+			t.Fatal("testToken is mismatched,", "expected", testToken.String(), "result", balance.String())
+		}
 	}
 
-	// Nonce check on deploy error
-	addr2, err := gatewayManager.DeployGatewayNonceTest(sim)
-	if err != nil {
-		log.Fatalf("Failed to deploy new gateway contract: %v %v", err, addr2)
+	// 11. Check KLAY balance
+	{
+		balance, _ = sim.BalanceAt(context.Background(), auth.From, nil)
+		fmt.Println("auth KLAY balance :", balance)
+
+		balance, _ = sim.BalanceAt(context.Background(), auth2.From, nil)
+		fmt.Println("auth2 KLAY balance :", balance)
+
+		balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
+		fmt.Println("auth3 KLAY balance :", balance)
+
+		if balance.Cmp(testKLAY) != 0 {
+			t.Fatal("testKLAY is mismatched,", "expected", testKLAY.String(), "result", balance.String())
+		}
+	}
+
+	// 12. Check NFT owner
+	{
+		owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("NFT owner", owner.String())
+		if owner != auth3.From {
+			t.Fatal("NFT owner is mismatched", "expeted", auth3.From.String(), "result", owner.String())
+		}
+	}
+
+	// 13. Nonce check on deploy error
+	{
+		addr2, err := gatewayManager.DeployGatewayNonceTest(sim)
+		if err != nil {
+			log.Fatalf("Failed to deploy new gateway contract: %v %v", err, addr2)
+		}
 	}
 
 	gatewayManager.Stop()
 }
 
 // for TestMethod
-func (gwm *GateWayManager) DeployGatewayTest(backend bind.ContractBackend, local bool) (common.Address, error) {
-
+func (gwm *GateWayManager) DeployGatewayTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
 		addr, gateway, err := gwm.deployGatewayTest(big.NewInt(2019), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
 		gwm.localGateWays[addr] = gateway
@@ -276,16 +412,29 @@ func (gwm *GateWayManager) DeployGatewayTest(backend bind.ContractBackend, local
 	}
 }
 
-func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend) (common.Address, *gatewaycontract.Gateway, error) {
-
+func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *gateway.Gateway, error) {
 	auth := bind.NewKeyedTransactor(accountKey)
 	auth.Value = big.NewInt(10000)
-	addr, tx, contract, err := gatewaycontract.DeployGateway(auth, backend, true)
+	addr, tx, contract, err := gateway.DeployGateway(auth, backend, true)
 	if err != nil {
 		logger.Error("", "err", err)
 		return common.Address{}, nil, err
 	}
 	logger.Info("Gateway is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
+
+	// TODO-Klaytn-Servicechain needs to support WaitMined
+	//backend.Commit()
+	//
+	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+	//defer cancelTimeout()
+	//
+	//receipt, err := bind.WaitMined(timeoutContext, backend, tx)
+	//if err != nil {
+	//	log.Fatal("Failed to deploy.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
+	//	return common.Address{}, nil, err
+	//}
+	//fmt.Println("deployGateway is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
+
 	return addr, contract, nil
 }
 
