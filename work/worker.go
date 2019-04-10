@@ -576,7 +576,7 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
 		logger.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
@@ -612,7 +612,6 @@ func (self *worker) updateSnapshot() {
 	self.snapshotBlock = types.NewBlock(
 		self.current.header,
 		self.current.txs,
-		nil,
 		self.current.receipts,
 	)
 	self.snapshotState = self.current.state.Copy()

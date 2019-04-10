@@ -211,7 +211,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Finalize the block
 	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, []*types.Header{}, receipts)
+	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, receipts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -280,7 +280,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Finalize the block
 	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, []*types.Header{}, receipts)
+	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, receipts)
 	if err != nil {
 		return err
 	}

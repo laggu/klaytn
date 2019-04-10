@@ -263,7 +263,7 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
 
-	return types.NewBlock(head, nil, nil, nil)
+	return types.NewBlock(head, nil, nil)
 }
 
 // Commit writes the block and state of a genesis specification to the database.

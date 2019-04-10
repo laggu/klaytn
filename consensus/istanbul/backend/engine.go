@@ -239,15 +239,6 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	return abort, results
 }
 
-// VerifyUncles verifies that the given block's uncles conform to the consensus
-// rules of a given engine.
-func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
-	if len(block.Uncles()) > 0 {
-		return errInvalidUncleHash
-	}
-	return nil
-}
-
 // verifySigner checks whether the signer is in parent's validator set
 func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
@@ -427,7 +418,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	receipts []*types.Receipt) (*types.Block, error) {
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && sb.config.ProposerPolicy == istanbul.WeightedRandom {
@@ -468,7 +459,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	header.UncleHash = nilUncleHash
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts), nil
+	return types.NewBlock(header, txs, receipts), nil
 }
 
 // Seal generates a new block for the given input block with the local miner's

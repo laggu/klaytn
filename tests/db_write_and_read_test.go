@@ -272,7 +272,7 @@ func testWriteAndReadBlock(t *testing.T, dbManager database.DBManager) {
 	receipts := types.Receipts{generateReceipt(111)}
 
 	blockchain.InitDeriveSha(types.ImplDeriveShaOriginal)
-	block := types.NewBlock(header, body.Transactions, body.Uncles, receipts)
+	block := types.NewBlock(header, body.Transactions, receipts)
 
 	// 1. Before write, nil should be returned.
 	assert.Equal(t, (*types.Block)(nil), dbManager.ReadBlock(hash, blockNum))
@@ -282,7 +282,6 @@ func testWriteAndReadBlock(t *testing.T, dbManager database.DBManager) {
 	blockFromDB := dbManager.ReadBlock(block.Hash(), block.NumberU64())
 	assert.Equal(t, block.Header(), blockFromDB.Header())
 	assert.Equal(t, block.Transactions()[0].Hash(), blockFromDB.Transactions()[0].Hash())
-	assert.Equal(t, block.Uncles(), blockFromDB.Uncles())
 
 	// 3. Overwriting block with exact hash and blockNumber is not possible.
 

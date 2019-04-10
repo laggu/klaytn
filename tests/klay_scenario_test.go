@@ -3615,7 +3615,7 @@ func TestValidateSender(t *testing.T) {
 	{
 		dummyBlock := types.NewBlock(&types.Header{
 			GasLimit: gasLimit,
-		}, nil, nil, nil)
+		}, nil, nil)
 
 		scData := types.NewChainHashes(dummyBlock)
 		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
