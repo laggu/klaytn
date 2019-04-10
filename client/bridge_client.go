@@ -146,16 +146,14 @@ func (ec *Client) BridgeRegisterGateway(ctx context.Context, cGateway common.Add
 	return result, err
 }
 
-// BridgeSubscribeGateway can enable for sub-bridge to subscribe the event of given gateways.
-func (ec *Client) BridgeSubscribeGateway(ctx context.Context, cGateway common.Address, pGateway common.Address) (bool, error) {
-	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_subscribeEventGateway", cGateway, pGateway)
-	return result, err
+// BridgeSubscribeGateway can enable for service chain bridge to subscribe the event of given service/main chain gateways.
+// If the subscribing is failed, it returns an error.
+func (ec *Client) BridgeSubscribeGateway(ctx context.Context, sGateway common.Address, mGateway common.Address) error {
+	return ec.c.CallContext(ctx, nil, "bridge_subscribeEventGateway", sGateway, mGateway)
 }
 
-// BridgeRegisterToken can register the given pair of deployed child/parent token contracts.
+// BridgeRegisterTokenContract can register the given pair of deployed service/main chain token contracts.
 // If the registering is failed, it returns an error.
-func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, cToken common.Address, pToken common.Address) error {
-	var result []common.Address
-	return ec.c.CallContext(ctx, &result, "bridge_registerToken", cToken, pToken)
+func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, sToken common.Address, mToken common.Address) error {
+	return ec.c.CallContext(ctx, nil, "bridge_registerToken", sToken, mToken)
 }
