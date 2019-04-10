@@ -145,6 +145,8 @@ type BlockChain struct {
 
 	nonceCache   common.Cache
 	balanceCache common.Cache
+
+	lastMinedBlockHash common.Hash
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1346,6 +1348,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	if len(chain) == 0 {
 		return 0, nil, nil, nil
 	}
+
+	// To avoid self-mined block insertion.
+	if len(chain) == 1 && chain[0].Hash() == bc.lastMinedBlockHash {
+		return 0, nil, nil, nil
+	}
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
 		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 || chain[i].ParentHash() != chain[i-1].Hash() {
@@ -1948,6 +1955,11 @@ func (bc *BlockChain) GetNonceCache() common.Cache {
 // GetBalanceCache returns a balanceCache.
 func (bc *BlockChain) GetBalanceCache() common.Cache {
 	return bc.balanceCache
+}
+
+// SetLastMinedBlock sets lastly mined block.
+func (bc *BlockChain) SetLastMinedBlock(lastMinedBlock common.Hash) {
+	bc.lastMinedBlockHash = lastMinedBlock
 }
 
 // GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.

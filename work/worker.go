@@ -230,7 +230,7 @@ func (self *worker) start() {
 
 	// istanbul BFT
 	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
-		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock)
+		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock, self.chain.SetLastMinedBlock)
 	}
 
 	// spin up agents
