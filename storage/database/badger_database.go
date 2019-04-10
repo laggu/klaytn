@@ -21,11 +21,17 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/ground-x/klaytn/log"
 	"os"
+	"time"
 )
+
+const gcThreshold = int64(1 << 30) // GB
+const sizeGCTickerTime = 1 * time.Minute
 
 type badgerDB struct {
 	fn string // filename for reporting
 	db *badger.DB
+
+	gcTicker *time.Ticker // runs periodically and runs gc if db size exceeds the threshold.
 
 	logger log.Logger // Contextual logger tracking the database path
 }
@@ -59,25 +65,54 @@ func NewBadgerDB(dbDir string) (*badgerDB, error) {
 		return nil, fmt.Errorf("failed to make badgerDB while opening the DB. dbDir: %v, err: %v", dbDir, err)
 	}
 
-	return &badgerDB{
-		fn:     dbDir,
-		db:     db,
-		logger: localLogger,
-	}, nil
+	badger := &badgerDB{
+		fn:       dbDir,
+		db:       db,
+		logger:   localLogger,
+		gcTicker: time.NewTicker(sizeGCTickerTime),
+	}
+
+	go badger.runValueLogGC()
+
+	return badger, nil
 }
 
-func (db *badgerDB) Type() DBType {
+// runValueLogGC runs gc for two cases.
+// It periodically checks the size of value log and runs gc if it exceeds gcThreshold.
+func (bg *badgerDB) runValueLogGC() {
+	_, lastValueLogSize := bg.db.Size()
+
+	for {
+		select {
+		case <-bg.gcTicker.C:
+			_, currValueLogSize := bg.db.Size()
+			if currValueLogSize-lastValueLogSize < gcThreshold {
+				continue
+			}
+
+			err := bg.db.RunValueLogGC(0.5)
+			if err != nil {
+				bg.logger.Error("Error while runValueLogGC()", "err", err)
+				continue
+			}
+
+			_, lastValueLogSize = bg.db.Size()
+		}
+	}
+}
+
+func (bg *badgerDB) Type() DBType {
 	return BadgerDB
 }
 
 // Path returns the path to the database directory.
-func (db *badgerDB) Path() string {
-	return db.fn
+func (bg *badgerDB) Path() string {
+	return bg.fn
 }
 
 // Put inserts the given key and value pair to the database.
-func (db *badgerDB) Put(key []byte, value []byte) error {
-	txn := db.db.NewTransaction(true)
+func (bg *badgerDB) Put(key []byte, value []byte) error {
+	txn := bg.db.NewTransaction(true)
 	defer txn.Discard()
 	err := txn.Set(key, value)
 	if err != nil {
@@ -87,8 +122,8 @@ func (db *badgerDB) Put(key []byte, value []byte) error {
 }
 
 // Has returns true if the corresponding value to the given key exists.
-func (db *badgerDB) Has(key []byte) (bool, error) {
-	txn := db.db.NewTransaction(false)
+func (bg *badgerDB) Has(key []byte) (bool, error) {
+	txn := bg.db.NewTransaction(false)
 	defer txn.Discard()
 	item, err := txn.Get(key)
 	if err != nil {
@@ -99,8 +134,8 @@ func (db *badgerDB) Has(key []byte) (bool, error) {
 }
 
 // Get returns the corresponding value to the given key if exists.
-func (db *badgerDB) Get(key []byte) ([]byte, error) {
-	txn := db.db.NewTransaction(false)
+func (bg *badgerDB) Get(key []byte) ([]byte, error) {
+	txn := bg.db.NewTransaction(false)
 	defer txn.Discard()
 	item, err := txn.Get(key)
 	if err != nil {
@@ -110,8 +145,8 @@ func (db *badgerDB) Get(key []byte) ([]byte, error) {
 }
 
 // Delete deletes the key from the queue and database
-func (db *badgerDB) Delete(key []byte) error {
-	txn := db.db.NewTransaction(true)
+func (bg *badgerDB) Delete(key []byte) error {
+	txn := bg.db.NewTransaction(true)
 	defer txn.Discard()
 	err := txn.Delete(key)
 	if err != nil {
@@ -120,30 +155,30 @@ func (db *badgerDB) Delete(key []byte) error {
 	return txn.Commit(nil)
 }
 
-func (db *badgerDB) NewIterator() *badger.Iterator {
-	txn := db.db.NewTransaction(false)
+func (bg *badgerDB) NewIterator() *badger.Iterator {
+	txn := bg.db.NewTransaction(false)
 	return txn.NewIterator(badger.DefaultIteratorOptions)
 }
 
-func (db *badgerDB) Close() {
-	err := db.db.Close()
+func (bg *badgerDB) Close() {
+	err := bg.db.Close()
 	if err == nil {
-		db.logger.Info("Database closed")
+		bg.logger.Info("Database closed")
 	} else {
-		db.logger.Error("Failed to close database", "err", err)
+		bg.logger.Error("Failed to close database", "err", err)
 	}
 }
 
-func (db *badgerDB) LDB() *badger.DB {
-	return db.db
+func (bg *badgerDB) LDB() *badger.DB {
+	return bg.db
 }
 
-func (db *badgerDB) NewBatch() Batch {
-	txn := db.db.NewTransaction(true)
-	return &badgerBatch{db: db.db, txn: txn}
+func (bg *badgerDB) NewBatch() Batch {
+	txn := bg.db.NewTransaction(true)
+	return &badgerBatch{db: bg.db, txn: txn}
 }
 
-func (db *badgerDB) Meter(prefix string) {
+func (bg *badgerDB) Meter(prefix string) {
 	logger.Warn("badgerDB does not support metrics!")
 }
 
