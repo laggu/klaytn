@@ -145,7 +145,7 @@ func (a *AccountKeyRoleBased) UnmarshalJSON(b []byte) error {
 }
 
 func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
-	if len(*a) > int(RoleAccountUpdate) {
+	if len(*a) > int(r) {
 		return (*a)[r].Validate(r, pubkeys)
 	}
 	return a.getDefaultKey().Validate(r, pubkeys)
