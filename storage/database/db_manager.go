@@ -325,7 +325,7 @@ func newDatabase(dbc *DBConfig) (Database, error) {
 	case LevelDB:
 		return NewLDBDatabase(dbc)
 	case BadgerDB:
-		return NewBGDatabase(dbc.Dir)
+		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
 		return NewMemDatabase(), nil
 	default:

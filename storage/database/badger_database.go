@@ -30,42 +30,37 @@ type badgerDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 }
 
-func NewBGDatabase(path string) (*badgerDB, error) {
+func getBadgerDBDefaultOption(dbDir string) badger.Options {
+	opts := badger.DefaultOptions
+	opts.Dir = dbDir
+	opts.ValueDir = dbDir
 
-	localLogger := logger.NewWith("path", path)
+	return opts
+}
 
-	if fi, err := os.Stat(path); err == nil {
+func NewBadgerDB(dbDir string) (*badgerDB, error) {
+	localLogger := logger.NewWith("dbDir", dbDir)
+
+	if fi, err := os.Stat(dbDir); err == nil {
 		if !fi.IsDir() {
-			return nil, fmt.Errorf("badger/database: open %s: not a directory", path)
+			return nil, fmt.Errorf("failed to make badgerDB while checking dbDir. Given dbDir is not a directory. dbDir: %v", dbDir)
 		}
 	} else if os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return nil, err
+		if err := os.MkdirAll(dbDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to make badgerDB while making dbDir. dbDir: %v, err: %v", dbDir, err)
 		}
+	} else {
+		return nil, fmt.Errorf("failed to make badgerDB while checking dbDir. dbDir: %v, err: %v", dbDir, err)
 	}
 
-	opts := badger.DefaultOptions
-	opts.Dir = path
-	opts.ValueDir = path
-	// optional options
-	opts.NumMemtables = 5
-	opts.SyncWrites = false
-	opts.NumCompactors = 3
-	opts.DoNotCompact = true
-	opts.ReadOnly = false
-
+	opts := getBadgerDBDefaultOption(dbDir)
 	db, err := badger.Open(opts)
 	if err != nil {
-		logger.Error("fail to open badger", err)
-	}
-
-	// (Re)check for errors and abort if opening of the db failed
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to make badgerDB while opening the DB. dbDir: %v, err: %v", dbDir, err)
 	}
 
 	return &badgerDB{
-		fn:     path,
+		fn:     dbDir,
 		db:     db,
 		logger: localLogger,
 	}, nil
@@ -80,14 +75,10 @@ func (db *badgerDB) Path() string {
 	return db.fn
 }
 
-// Put puts the given key / value to the queue
+// Put inserts the given key and value pair to the database.
 func (db *badgerDB) Put(key []byte, value []byte) error {
-	// Generate the data to write to disk, update the meter and write
-	//value = rle.Compress(value)
-
 	txn := db.db.NewTransaction(true)
 	defer txn.Discard()
-
 	err := txn.Set(key, value)
 	if err != nil {
 		return err
@@ -95,13 +86,11 @@ func (db *badgerDB) Put(key []byte, value []byte) error {
 	return txn.Commit(nil)
 }
 
+// Has returns true if the corresponding value to the given key exists.
 func (db *badgerDB) Has(key []byte) (bool, error) {
-	// Retrieve the key and increment the miss counter if not found
 	txn := db.db.NewTransaction(false)
 	defer txn.Discard()
-
 	item, err := txn.Get(key)
-	// badger.ErrKeyNotFound
 	if err != nil {
 		return false, err
 	}
@@ -109,12 +98,10 @@ func (db *badgerDB) Has(key []byte) (bool, error) {
 	return value != nil, err
 }
 
-// Get returns the given key if it's present.
+// Get returns the corresponding value to the given key if exists.
 func (db *badgerDB) Get(key []byte) ([]byte, error) {
-	// Retrieve the key and increment the miss counter if not found
 	txn := db.db.NewTransaction(false)
 	defer txn.Discard()
-
 	item, err := txn.Get(key)
 	if err != nil {
 		return nil, err
@@ -124,10 +111,8 @@ func (db *badgerDB) Get(key []byte) ([]byte, error) {
 
 // Delete deletes the key from the queue and database
 func (db *badgerDB) Delete(key []byte) error {
-	// Execute the actual operation
 	txn := db.db.NewTransaction(true)
 	defer txn.Discard()
-
 	err := txn.Delete(key)
 	if err != nil {
 		return err
@@ -136,7 +121,6 @@ func (db *badgerDB) Delete(key []byte) error {
 }
 
 func (db *badgerDB) NewIterator() *badger.Iterator {
-	// Execute the actual operation
 	txn := db.db.NewTransaction(false)
 	return txn.NewIterator(badger.DefaultIteratorOptions)
 }
@@ -155,97 +139,93 @@ func (db *badgerDB) LDB() *badger.DB {
 }
 
 func (db *badgerDB) NewBatch() Batch {
-
 	txn := db.db.NewTransaction(true)
-
-	return &bdBatch{db: db.db, txn: txn}
+	return &badgerBatch{db: db.db, txn: txn}
 }
 
 func (db *badgerDB) Meter(prefix string) {
 	logger.Warn("badgerDB does not support metrics!")
 }
 
-type bdBatch struct {
+type badgerBatch struct {
 	db   *badger.DB
 	txn  *badger.Txn
 	size int
 }
 
-func (b *bdBatch) Put(key, value []byte) error {
-
+func (b *badgerBatch) Put(key, value []byte) error {
 	err := b.txn.Set(key, value)
 	b.size += len(value)
-
 	return err
 }
 
-func (b *bdBatch) Write() error {
+func (b *badgerBatch) Write() error {
 	return b.txn.Commit(nil)
 }
 
-func (b *bdBatch) ValueSize() int {
+func (b *badgerBatch) ValueSize() int {
 	return b.size
 }
 
-func (b *bdBatch) Reset() {
-	b.txn.Discard()
+func (b *badgerBatch) Reset() {
+	b.txn = b.db.NewTransaction(true)
 	b.size = 0
 }
 
-type bdtable struct {
+type badgerTable struct {
 	db     Database
 	prefix string
 }
 
-func (dt *bdtable) Type() DBType {
+func (dt *badgerTable) Type() DBType {
 	return dt.db.Type()
 }
 
-func (dt *bdtable) Put(key []byte, value []byte) error {
+func (dt *badgerTable) Put(key []byte, value []byte) error {
 	return dt.db.Put(append([]byte(dt.prefix), key...), value)
 }
 
-func (dt *bdtable) Has(key []byte) (bool, error) {
+func (dt *badgerTable) Has(key []byte) (bool, error) {
 	return dt.db.Has(append([]byte(dt.prefix), key...))
 }
 
-func (dt *bdtable) Get(key []byte) ([]byte, error) {
+func (dt *badgerTable) Get(key []byte) ([]byte, error) {
 	return dt.db.Get(append([]byte(dt.prefix), key...))
 }
 
-func (dt *bdtable) Delete(key []byte) error {
+func (dt *badgerTable) Delete(key []byte) error {
 	return dt.db.Delete(append([]byte(dt.prefix), key...))
 }
 
-func (dt *bdtable) Close() {
+func (dt *badgerTable) Close() {
 	// Do nothing; don't close the underlying DB.
 }
 
-func (dt *bdtable) Meter(prefix string) {
+func (dt *badgerTable) Meter(prefix string) {
 	dt.db.Meter(prefix)
 }
 
-type bdtableBatch struct {
+type badgerTableBatch struct {
 	batch  Batch
 	prefix string
 }
 
-func (dt *bdtable) NewBatch() Batch {
-	return &bdtableBatch{dt.db.NewBatch(), dt.prefix}
+func (dt *badgerTable) NewBatch() Batch {
+	return &badgerTableBatch{dt.db.NewBatch(), dt.prefix}
 }
 
-func (tb *bdtableBatch) Put(key, value []byte) error {
+func (tb *badgerTableBatch) Put(key, value []byte) error {
 	return tb.batch.Put(append([]byte(tb.prefix), key...), value)
 }
 
-func (tb *bdtableBatch) Write() error {
+func (tb *badgerTableBatch) Write() error {
 	return tb.batch.Write()
 }
 
-func (tb *bdtableBatch) ValueSize() int {
+func (tb *badgerTableBatch) ValueSize() int {
 	return tb.batch.ValueSize()
 }
 
-func (tb *bdtableBatch) Reset() {
+func (tb *badgerTableBatch) Reset() {
 	tb.batch.Reset()
 }

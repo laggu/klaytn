@@ -85,7 +85,7 @@ func NewTable(db Database, prefix string) Database {
 			prefix: prefix,
 		}
 	case BadgerDB:
-		return &bdtable{
+		return &badgerTable{
 			db:     db,
 			prefix: prefix,
 		}
@@ -102,7 +102,7 @@ func NewTableBatch(db Database, prefix string) Batch {
 	case LevelDB:
 		return &tableBatch{db.NewBatch(), prefix}
 	case BadgerDB:
-		return &bdtableBatch{db.NewBatch(), prefix}
+		return &badgerTableBatch{db.NewBatch(), prefix}
 	case MemoryDB:
 		return db.NewBatch()
 	default:
