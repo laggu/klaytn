@@ -62,6 +62,7 @@ type Backend interface {
 	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
 	SubscribeChainSideEvent(ch chan<- blockchain.ChainSideEvent) event.Subscription
 	IsParallelDBWrite() bool
+	GetNonceInCache(address common.Address) (uint64, bool)
 
 	// TxPool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error

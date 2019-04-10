@@ -46,6 +46,12 @@ type ServiceChainAPIBackend struct {
 	gpo *gasprice.Oracle
 }
 
+// GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.
+// If not, it returns (0, false).
+func (b *ServiceChainAPIBackend) GetNonceInCache(addr common.Address) (uint64, bool) {
+	return b.sc.blockchain.GetNonceInCache(addr)
+}
+
 // GetTxLookupInfoAndReceipt retrieves a tx and lookup info and receipt for a given transaction hash.
 func (b *ServiceChainAPIBackend) GetTxLookupInfoAndReceipt(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
 	return b.sc.blockchain.GetTxLookupInfoAndReceipt(txHash)

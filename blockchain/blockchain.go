@@ -1949,3 +1949,17 @@ func (bc *BlockChain) GetNonceCache() common.Cache {
 func (bc *BlockChain) GetBalanceCache() common.Cache {
 	return bc.balanceCache
 }
+
+// GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.
+// If not, it returns (0, false).
+func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
+	nonceCache := bc.GetNonceCache()
+
+	if nonceCache != nil {
+		if obj, exist := nonceCache.Get(addr); exist && obj != nil {
+			nonce, _ := obj.(uint64)
+			return nonce, true
+		}
+	}
+	return 0, false
+}

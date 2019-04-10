@@ -46,6 +46,12 @@ type CNAPIBackend struct {
 	gpo *gasprice.Oracle
 }
 
+// GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.
+// If not, it returns (0, false).
+func (b *CNAPIBackend) GetNonceInCache(addr common.Address) (uint64, bool) {
+	return b.cn.blockchain.GetNonceInCache(addr)
+}
+
 // GetTxLookupInfoAndReceipt retrieves a tx and lookup info and receipt for a given transaction hash.
 func (b *CNAPIBackend) GetTxLookupInfoAndReceipt(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
 	return b.cn.blockchain.GetTxLookupInfoAndReceipt(txHash)
