@@ -19,6 +19,7 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"github.com/ground-x/klaytn/fork"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -121,15 +122,27 @@ func (a *AccountKeyWeightedMultiSig) AccountCreationGas(currentBlockNumber uint6
 	if numKeys > MaxNumKeysForMultiSig {
 		return 0, kerrors.ErrMaxKeysExceed
 	}
+	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different accountCreationGas logic will be operated.
+	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
+		return numKeys * params.TxAccountCreationGasPerKey, nil
+	}
 	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey, nil
 }
 
-func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
+func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
 	numKeys := uint64(len(a.Keys))
 	if numKeys > MaxNumKeysForMultiSig {
 		logger.Warn("validation failed due to the number of keys in the account is larger than the limit.",
 			"account", a.String())
 		return 0, kerrors.ErrMaxKeysExceedInValidation
+	}
+	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different sigValidationGas logic will be operated.
+	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
+		if numKeys == 0 {
+			logger.Error("should not happen! numKeys is equal to zero!")
+			return 0, kerrors.ErrZeroLength
+		}
+		return (numKeys - 1) * params.TxValidationGasPerKey, nil
 	}
 	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
 }

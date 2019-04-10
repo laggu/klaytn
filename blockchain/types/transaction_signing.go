@@ -91,7 +91,7 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker, currentB
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
 
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber)
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation())
 	if err != nil {
 		return common.Address{}, 0, err
 	}
@@ -120,7 +120,7 @@ func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker, curren
 	feePayer := tf.GetFeePayer()
 	accKey := p.GetKey(feePayer)
 
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber)
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber, accountkey.RoleFeePayer)
 	if err != nil {
 		return common.Address{}, 0, err
 	}

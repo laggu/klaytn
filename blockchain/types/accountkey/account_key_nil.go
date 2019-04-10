@@ -18,6 +18,7 @@ package accountkey
 
 import (
 	"crypto/ecdsa"
+	"github.com/ground-x/klaytn/fork"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -78,11 +79,19 @@ func (a *AccountKeyNil) DeepCopy() AccountKey {
 
 func (a *AccountKeyNil) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	// No gas required to make an account with a nil key.
+	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different accountCreationGas logic will be operated.
+	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
+		return 0, nil
+	}
 	return params.TxAccountCreationGasDefault, nil
 }
 
-func (a *AccountKeyNil) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
+func (a *AccountKeyNil) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
 	// No gas required to make an account with a nil key.
+	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different sigValidationGas logic will be operated.
+	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
+		return 0, nil
+	}
 	return params.TxValidationGasDefault, nil
 }
 

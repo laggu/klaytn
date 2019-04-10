@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"github.com/ground-x/klaytn/fork"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -191,10 +192,28 @@ func (a *AccountKeyRoleBased) AccountCreationGas(currentBlockNumber uint64) (uin
 	return gas, nil
 }
 
-func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64) (uint64, error) {
+func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
+	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different sigValidationGas logic will be operated.
+	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
+		var key AccountKey
+		// Set the key used to sign for validation.
+		if len(*a) > int(r) {
+			key = (*a)[r]
+		} else {
+			key = a.getDefaultKey()
+		}
+
+		gas, err := key.SigValidationGas(currentBlockNumber, r)
+		if err != nil {
+			return 0, err
+		}
+
+		return gas, nil
+	}
+
 	gas := uint64(0)
 	for _, k := range *a {
-		gasK, err := k.SigValidationGas(currentBlockNumber)
+		gasK, err := k.SigValidationGas(currentBlockNumber, r)
 		if err != nil {
 			return 0, err
 		}
