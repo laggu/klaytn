@@ -1109,12 +1109,16 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 
 	// TODO-klaytn-Issue1911 After reviewing the behavior and performance, change the UpdateCacheStateObjects to update at the same time.
-	if err == nil && bc.cacheConfig.TxPoolStateCache {
+	if err != nil {
+		return status, err
+	}
+
+	if bc.cacheConfig.TxPoolStateCache {
 		stateDB.UpdateTxPoolStateCache(bc.nonceCache, bc.balanceCache)
 	}
 
 	// Update lastUpdatedRootHash and cachedStateDB after successful WriteBlockWithState.
-	if err == nil && bc.cacheConfig.StateDBCaching {
+	if stateDB.UseCachedStateObjects() {
 		bc.mu.Lock()
 		defer bc.mu.Unlock()
 
