@@ -555,10 +555,15 @@ const (
 	addressTypeKIRAddr
 )
 
+var (
+	errInitContractEmptyResult = errors.New("got empty result, nothing to parse")
+	errInitContractIncomplete  = errors.New("incomplete node information from InitContract")
+)
+
 func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 
 	if result == nil {
-		return nil, nil, nil, common.Address{}, common.Address{}, errors.New("got empty result, nothing to parse")
+		return nil, nil, nil, common.Address{}, common.Address{}, errInitContractIncomplete
 	}
 
 	abiStr := contract.InitContractABI
@@ -622,7 +627,7 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		//	"PoC address", pocAddr.String(),
 		//	"KIR address", kirAddr.String())
 
-		return nil, nil, nil, common.Address{}, common.Address{}, errors.New("incomplete node information from InitContract")
+		return nil, nil, nil, common.Address{}, common.Address{}, errInitContractIncomplete
 	}
 
 	return nodeIds, stakingAddrs, rewardAddrs, pocAddr, kirAddr, nil
@@ -677,8 +682,12 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 
 	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = ParseGetAllAddressFromInitContract(res)
 	if err != nil {
-		// This is expected behavior when smart contract is not setup yet.
-		logger.Info("Failed to parse result from InitContract contract. Use empty staking info", "err", err)
+		if err == errInitContractIncomplete {
+			// This is expected behavior when smart contract is not setup yet.
+			logger.Info("Use empty staking info instead of info from InitContract", "reason", err)
+		} else {
+			logger.Error("Failed to parse result from InitContract contract. Use empty staking info", "err", err)
+		}
 		return newEmptyStakingInfo(bc, blockNum)
 	}
 
