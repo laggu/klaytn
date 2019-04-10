@@ -172,4 +172,33 @@ cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf $RPM_BUILD_ROOT/e
 %attr(644, -, -) /etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
 %attr(754, -, -) /etc/init.d/{{ .DaemonName }}
 %config(noreplace) /etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+
+%pre
+if [ $1 -eq 2 ]; then
+	# Package upgrade
+	systemctl stop {{ .DaemonName }}.service > /dev/null 2>&1
+fi
+
+%post
+if [ $1 -eq 1 ]; then
+	# Package installation
+	systemctl daemon-reload >/dev/null 2>&1
+fi
+if [ $1 -eq 2 ]; then
+	# Package upgrade
+	systemctl daemon-reload >/dev/null 2>&1
+fi
+
+%preun
+if [ $1 -eq 0 ]; then
+	# Package removal, not upgrade
+	systemctl --no-reload disable {{ .DaemonName }}.service > /dev/null 2>&1
+	systemctl stop {{ .DaemonName }}.service > /dev/null 2>&1
+fi
+
+%postun
+if [ $1 -eq 0 ]; then
+	# Package uninstallation
+	systemctl daemon-reload >/dev/null 2>&1
+fi
 `
