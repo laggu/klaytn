@@ -70,20 +70,25 @@ func bootnode(c *cli.Context) error {
 
 			IPCPath:          "klay.ipc",
 			DataDir:          c.GlobalString(utils.DataDirFlag.Name),
-			HTTPServerType:   "fasthttp",
-			HTTPHost:         DefaultHTTPHost,
 			HTTPPort:         DefaultHTTPPort,
 			HTTPModules:      []string{"net"},
 			HTTPVirtualHosts: []string{"localhost"},
-			WSHost:           DefaultWSHost,
 			WSPort:           DefaultWSPort,
 			WSModules:        []string{"net"},
-			GRPCHost:         DefaultGRPCHost,
 			GRPCPort:         DefaultGRPCPort,
 
 			Logger: log.NewModuleLogger(log.CMDKBN),
 		}
 	)
+
+	setIPC(c, &ctx)
+	// httptype is http or fasthttp
+	if c.GlobalIsSet(utils.SrvTypeFlag.Name) {
+		ctx.HTTPServerType = c.GlobalString(utils.SrvTypeFlag.Name)
+	}
+	setHTTP(c, &ctx)
+	setWS(c, &ctx)
+	setgRPC(c, &ctx)
 
 	// Check exit condition
 	switch ctx.checkCMDState() {
@@ -172,6 +177,7 @@ func startNode(node *Node) error {
 func main() {
 	var (
 		cliFlags = []cli.Flag{
+			utils.SrvTypeFlag,
 			utils.DataDirFlag,
 			utils.GenKeyFlag,
 			utils.NodeKeyFileFlag,
@@ -192,6 +198,7 @@ func main() {
 	app.UsageText = app.Name + " [global options] [commands]"
 	app.Flags = append(app.Flags, cliFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = append(app.Flags, nodecmd.CommonRPCFlags...)
 	app.Commands = []cli.Command{
 		nodecmd.AttachCommand,
 	}
