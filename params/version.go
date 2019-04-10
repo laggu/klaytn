@@ -23,10 +23,10 @@ package params
 import "fmt"
 
 const (
-	ReleaseNum   = 17
+	ReleaseNum   = 18
 	VersionMajor = 0 // Major version component of the current release
 	VersionMinor = 5 // Minor version component of the current release
-	VersionPatch = 7 // Patch version component of the current release
+	VersionPatch = 8 // Patch version component of the current release
 )
 
 // Version holds the textual version string.
