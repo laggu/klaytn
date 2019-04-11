@@ -46,8 +46,14 @@ func init() {
 var errNoOriginalDataDir = errors.New("original data directory does not exist, aborting the test")
 
 const (
-	allSnappyDataDir         = "testdata1000_orig"
-	receiptOnlySnappyDataDir = "testdata1000_SnappyCompressionForOnlyReceipts_orig"
+	// All partitions are compressed by Snappy, CompactionTableSize = 4MiB, CompactionTableSizeMultiplier = 2.0
+	allSnappyDataDir = "testdata1000_orig"
+	// Only receipt partition is compressed by Snappy, CompactionTableSize = 4MiB, CompactionTableSizeMultiplier = 2.0
+	receiptOnlySnappy = "testdata1000_SnappyCompressionForOnlyReceipts_orig"
+	// Only receipt partition is compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
+	receiptOnlySnappyWithDefaultCompaction = "testdata1000_SnappyCompressionForOnlyReceiptsDefault"
+	// BadgerDB generated with default option.
+	badgerWithGC = "testdata1000BadgerWithGC_orig"
 )
 
 // randomIndex is used to access data with random index.
@@ -58,6 +64,13 @@ func randomIndex(index, lenAddrs int) int {
 // sequentialIndex is used to access data with sequential index.
 func sequentialIndex(index, lenAddrs int) int {
 	return index % lenAddrs
+}
+
+// fixedIndex is used to access data with same index.
+func fixedIndex(index int) func(int, int) int {
+	return func(int, int) int {
+		return index
+	}
 }
 
 // makeTxsWithStateDB generates transactions with the nonce retrieved from stateDB.
@@ -144,20 +157,25 @@ type preGeneratedTC struct {
 	numTotalTxs  int
 	numTxsPerGen int
 
-	numTotalSenders   int
-	numTotalReceivers int
-	indexPicker       func(int, int) int
+	numTotalSenders    int // senders are loaded once at the test initialization time.
+	numReceiversPerRun int // receivers are loaded repetitively for every tx generation run.
+
+	filePicker func(int, int) int // determines the index of address file to use.
+	addrPicker func(int, int) int // determines the index of address while making tx.
 
 	dbc           *database.DBConfig
 	levelDBOption *opt.Options
 	cacheConfig   *blockchain.CacheConfig
 }
 
-func BenchmarkPreGeneratedProfiling_ReceiptOnlySnappy(b *testing.B) {
+// Initial5000Txs test is to check the read performance of underlying database before cached.
+// To make test fair among runs, it always use same address file to build receiver address.
+func BenchmarkPreGeneratedProfiling_Initial5000Txs_ReceiptOnlySnappy(b *testing.B) {
 	tc1 := &preGeneratedTC{
-		isGenerateTest: false, testName: "5000Txs_Random_ReceiptOnlySnappy_NoCache", originalDataDir: receiptOnlySnappyDataDir,
+		isGenerateTest: false, testName: "Initial5000Txs_ReceiptOnlySnappy", originalDataDir: receiptOnlySnappy,
 		numTotalTxs: 5000, numTxsPerGen: 5000,
-		numTotalSenders: 5000, numTotalReceivers: 5000, indexPicker: randomIndex}
+		numTotalSenders: 20000, numReceiversPerRun: 20000,
+		filePicker: fixedIndex(1), addrPicker: randomIndex}
 
 	tc1.cacheConfig = &blockchain.CacheConfig{
 		StateDBCaching:   false,
@@ -169,8 +187,11 @@ func BenchmarkPreGeneratedProfiling_ReceiptOnlySnappy(b *testing.B) {
 
 	tc1.dbc = generateDefaultDBConfig()
 	tc1.dbc.LevelDBNoCompression = true
+	tc1.dbc.DBType = database.LevelDB
 
 	tc1.levelDBOption = generateDefaultLevelDBOption()
+	tc1.levelDBOption.CompactionTableSize = 4 * opt.MiB
+	tc1.levelDBOption.CompactionTableSizeMultiplier = 2.0
 
 	preGeneratedProfilingTest(b, tc1)
 }
@@ -203,7 +224,7 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 	defer bcData.db.Close()
 	defer bcData.bc.Stop()
 
-	txPool := makeTxPool(bcData, tc.numTotalTxs)
+	txPool := makeTxPool(bcData, tc.numTxsPerGen)
 	signer := types.MakeSigner(bcData.bc.Config(), bcData.bc.CurrentHeader().Number)
 
 	timeNow := time.Now()
@@ -212,20 +233,14 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 		b.Fatal(err)
 	}
 
+	// TODO-Klaytn-Tests Need to implement warm-up function here, to cache stateObjects or something else.
+
 	b.ResetTimer()
 	b.StopTimer()
 
 	numTxGenerationRuns := tc.numTotalTxs / tc.numTxsPerGen
 	for run := 1; run <= numTxGenerationRuns; run++ {
-		var toAddrs []*common.Address
-		if tc.isGenerateTest {
-			var newPrivateKeys []*ecdsa.PrivateKey
-			toAddrs, newPrivateKeys, err = createAccounts(tc.numTxsPerGen)
-			writeToFile(toAddrs, newPrivateKeys, run, testDataDir)
-		} else {
-			toAddrs, err = makeAddrsFromFile(tc.numTotalReceivers, testDataDir, tc.indexPicker)
-		}
-
+		toAddrs, err := makeOrGenerateAddrs(testDataDir, run, tc)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -236,7 +251,7 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 			b.Fatal(err)
 		}
 
-		txs, err := makeTxsWithStateDB(stateDB, bcData.addrs, bcData.privKeys, toAddrs, signer, tc.numTxsPerGen, tc.indexPicker)
+		txs, err := makeTxsWithStateDB(stateDB, bcData.addrs, bcData.privKeys, toAddrs, signer, tc.numTxsPerGen, tc.addrPicker)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -246,8 +261,9 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 		}
 
 		b.StartTimer()
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+		if run == numTxGenerationRuns {
+			pprof.StartCPUProfile(f)
+		}
 
 		txPool.AddRemotes(txs)
 
@@ -260,6 +276,37 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 			}
 		}
 
+		if run == numTxGenerationRuns {
+			pprof.StopCPUProfile()
+		}
 		b.StopTimer()
 	}
+}
+
+func makeOrGenerateAddrs(testDataDir string, run int, tc *preGeneratedTC) ([]*common.Address, error) {
+	if !tc.isGenerateTest {
+		return makeAddrsFromFile(tc.numReceiversPerRun, testDataDir, tc.addrPicker)
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	// If addrs directory exists in the current working directory for reuse,
+	// use it instead of generating addresses.
+	addrPathInWD := path.Join(wd, addressDirectory)
+	if _, err := os.Stat(addrPathInWD); err == nil {
+		return makeAddrsFromFile(tc.numReceiversPerRun, addrPathInWD, tc.addrPicker)
+	}
+
+	// No addrs directory exists. Generating and saving addresses and keys.
+	var newPrivateKeys []*ecdsa.PrivateKey
+	toAddrs, newPrivateKeys, err := createAccounts(tc.numTxsPerGen)
+	if err != nil {
+		return nil, err
+	}
+
+	writeToFile(toAddrs, newPrivateKeys, run, testDataDir)
+	return toAddrs, nil
 }
