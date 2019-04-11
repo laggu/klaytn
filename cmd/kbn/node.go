@@ -422,12 +422,10 @@ func (n *Node) WSEndpoint() string {
 	return n.wsEndpoint
 }
 
+func (n *Node) appendAPIs(apis []rpc.API) {
+	n.rpcAPIs = append(n.rpcAPIs, apis...)
+}
+
 func (n *Node) apis() []rpc.API {
-	return []rpc.API{
-		//{
-		//	Namespace: "bootnode",
-		//	Version:   "1.0",
-		//	Service:	nil,
-		//},
-	}
+	return n.rpcAPIs
 }

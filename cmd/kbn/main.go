@@ -138,7 +138,8 @@ func bootnode(ctx *cli.Context) error {
 		AnnounceAddr: realaddr,
 		NetRestrict:  bcfg.restrictList,
 	}
-	if _, err := discover.ListenUDP(conn, cfg); err != nil {
+	tab, err := discover.ListenUDP(conn, cfg)
+	if err != nil {
 		utils.Fatalf("%v", err)
 	}
 
@@ -146,6 +147,7 @@ func bootnode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	node.appendAPIs(NewBN(tab).APIs())
 	if err := startNode(node); err != nil {
 		return err
 	}

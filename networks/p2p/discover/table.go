@@ -166,6 +166,22 @@ func (tab *Table) Self() *Node {
 	return tab.self
 }
 
+func (tab *Table) CreateUpdateNode(n *Node) error {
+	return tab.db.updateNode(n)
+}
+
+func (tab *Table) GetNode(id NodeID) (*Node, error) {
+	node := tab.db.node(id)
+	if node == nil {
+		return nil, errors.New("failed to retrieve the node with the given id")
+	}
+	return node, nil
+}
+
+func (tab *Table) DeleteNode(id NodeID) error {
+	return tab.db.deleteNode(id)
+}
+
 // ReadRandomNodes fills the given slice with random nodes from the
 // table. It will not write the same node more than once. The nodes in
 // the slice are copies and can be modified by the caller.
@@ -419,7 +435,7 @@ loop:
 	close(tab.closed)
 }
 
-func (tab *Table) getBucketEntries() []*Node {
+func (tab *Table) GetBucketEntries() []*Node {
 	var nodes []*Node
 	for i := 0; i < nBuckets; i++ {
 		nodes = append(nodes, tab.buckets[i].entries...)
@@ -427,7 +443,7 @@ func (tab *Table) getBucketEntries() []*Node {
 	return nodes
 }
 
-func (tab *Table) getReplacements() []*Node {
+func (tab *Table) GetReplacements() []*Node {
 	var nodes []*Node
 	for i := 0; i < nBuckets; i++ {
 		nodes = append(nodes, tab.buckets[i].replacements...)
@@ -647,8 +663,8 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	if node != nil {
 		tab.add(node)
 		tab.db.updateFindFails(id, 0)
-		lenEntries := len(tab.getBucketEntries())
-		lenReplacements := len(tab.getReplacements())
+		lenEntries := len(tab.GetBucketEntries())
+		lenReplacements := len(tab.GetReplacements())
 		bucketEntriesGauge.Update(int64(lenEntries))
 		bucketReplacementsGauge.Update(int64(lenReplacements))
 	}

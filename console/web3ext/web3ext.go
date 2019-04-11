@@ -33,8 +33,40 @@ var Modules = map[string]string{
 	"bridge":     Bridge_JS,
 	"clique":     CliqueJs,
 	"governance": Governance_JS,
+	"bootnode":   Bootnode_JS,
 }
 
+const Bootnode_JS = `
+web3._extend({
+	property: 'bootnode',
+	methods: [
+		new web3._extend.Method({
+			name: 'createUpdateNode',
+			call: 'bootnode_createUpdateNode',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getNode',
+			call: 'bootnode_getNode',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getTableEntries',
+			call: 'bootnode_getTableEntries'
+		}),
+		new web3._extend.Method({
+			name: 'getTableReplacements',
+			call: 'bootnode_getTableReplacements'
+		}),
+		new web3._extend.Method({
+			name: 'deleteNode',
+			call: 'bootnode_deleteNode',
+			params: 1
+		})
+	],
+	properties: []
+});
+`
 const Governance_JS = `
 web3._extend({
 	property: 'governance',
