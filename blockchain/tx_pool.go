@@ -540,6 +540,8 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+	gasFeePayer := uint64(0)
+
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
 		logger.Info("fail to validate unitprice", "klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
@@ -550,27 +552,26 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
 	}
+
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
 	if tx.Value().Sign() < 0 {
 		return ErrNegativeValue
 	}
+
 	// TODO-Klaytn-Issue136
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	if pool.currentMaxGas < tx.Gas() {
 		logger.Error("tx_pool validateTx", "currentMaxGa", pool.currentMaxGas, "tx.Gas", tx.Gas())
 		return ErrGasLimit
 	}
+
 	// Make sure the transaction is signed properly
 	from, gasFrom, err := types.ValidateSender(pool.signer, tx, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
 		return ErrInvalidSender
 	}
 
-	feePayer, gasFeePayer, err := types.ValidateFeePayer(pool.signer, tx, pool.currentState, pool.currentBlockNumber)
-	if err != nil {
-		return ErrInvalidFeePayer
-	}
 	// TODO-Klaytn-Issue136
 	// 원격 트랜잭션이 drop 되어 버리는 문제를 해결하기 위해 주석 처리함. Andy
 	// Drop non-local transactions under our own minimal accepted gas price
@@ -582,52 +583,58 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if pool.getNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
 	}
+
 	// TODO-Klaytn-Issue136
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	senderBalance := pool.getBalance(from)
-	if from == feePayer {
-		if senderBalance.Cmp(tx.Cost()) < 0 {
-			logger.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
-			return ErrInsufficientFunds
-		}
-	} else {
-		if senderBalance.Cmp(tx.Value()) < 0 {
-			logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
-			return ErrInsufficientFundsFrom
+	if tx.IsFeeDelegatedTransaction() {
+		// balance check for fee-delegated tx
+		var feePayer common.Address
+
+		feePayer, gasFeePayer, err = types.ValidateFeePayer(pool.signer, tx, pool.currentState, pool.currentBlockNumber)
+		if err != nil {
+			return ErrInvalidFeePayer
 		}
 
 		feeRatio := tx.FeeRatio()
 		feePayerBalance := pool.getBalance(feePayer)
+
 		switch {
 		case feeRatio == types.MaxFeeRatio:
+			if senderBalance.Cmp(tx.Value()) < 0 {
+				logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
+				return ErrInsufficientFundsFrom
+			}
+
 			if feePayerBalance.Cmp(tx.Fee()) < 0 {
 				logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
 				return ErrInsufficientFundsFeePayer
 			}
+
 		case feeRatio < types.MaxFeeRatio:
 			feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
+
+			if senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 {
+				logger.Error("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", senderBalance, "feeBySender", feeBySender)
+				return ErrInsufficientFundsFeePayer
+			}
+
 			if feePayerBalance.Cmp(feeByFeePayer) < 0 {
 				logger.Error("[tx_pool] insufficient funds for feeByFeePayer", "feePayer", feePayer, "balance", feePayerBalance, "feeByFeePayer", feeByFeePayer)
 				return ErrInsufficientFundsFeePayer
 			}
-			if senderBalance.Cmp(feeBySender) < 0 {
-				logger.Error("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", senderBalance, "feeBySender", feeBySender)
-				return ErrInsufficientFundsFeePayer
-			}
+
 		default:
 			// feeRatio > types.MaxFeeRatio
 			return kerrors.ErrMaxFeeRatioExceeded
 		}
-	}
-
-	// TODO-Klaytn-Accounts: Need to add validation code for new tx types.
-	// The below can be implemented in a tx itself, or here.
-	// If the tx is account creation, need to check the below:
-	// 1. Is it valid for human-readable address?
-	// 2. Is the account already created?
-	if err := tx.Validate(pool.currentState, pool.currentBlockNumber); err != nil {
-		return err
+	} else {
+		// balance check for non-fee-delegated tx
+		if senderBalance.Cmp(tx.Cost()) < 0 {
+			logger.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
+			return ErrInsufficientFunds
+		}
 	}
 
 	// TODO-Klaytn-Issue136
@@ -639,6 +646,16 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
 	}
+
+	// TODO-Klaytn-Accounts: Need to add validation code for new tx types.
+	// The below can be implemented in a tx itself, or here.
+	// If the tx is account creation, need to check the below:
+	// 1. Is it valid for human-readable address?
+	// 2. Is the account already created?
+	if err := tx.Validate(pool.currentState, pool.currentBlockNumber); err != nil {
+		return err
+	}
+
 	return nil
 }
 

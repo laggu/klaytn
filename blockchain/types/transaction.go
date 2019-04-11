@@ -333,15 +333,20 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		return nil, err
 	}
 
-	feePayer, gasFeePayer, err := ValidateFeePayer(s, tx, picker, currentBlockNumber)
-	if err != nil {
-		return nil, err
-	}
-
 	tx.validatedSender = sender
-	tx.validatedFeePayer = feePayer
-	tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+	tx.validatedFeePayer = sender
+	tx.validatedIntrinsicGas = intrinsicGas + gasFrom
 	tx.checkNonce = true
+
+	if tx.IsFeeDelegatedTransaction() {
+		feePayer, gasFeePayer, err := ValidateFeePayer(s, tx, picker, currentBlockNumber)
+		if err != nil {
+			return nil, err
+		}
+
+		tx.validatedFeePayer = feePayer
+		tx.validatedIntrinsicGas += gasFeePayer
+	}
 
 	return tx, err
 }

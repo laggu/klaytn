@@ -115,11 +115,14 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 			return err
 		}
 
-		feePayer, gasFeePayer, err := types.ValidateFeePayer(signer, tx, picker, currentBlockNumber)
-		if err != nil {
-			return err
+		gasFeePayer := uint64(0)
+		feePayer := from
+		if tx.IsFeeDelegatedTransaction() {
+			feePayer, gasFeePayer, err = types.ValidateFeePayer(signer, tx, picker, currentBlockNumber)
+			if err != nil {
+				return err
+			}
 		}
-
 		if to == nil {
 			nonce, err := a.GetNonce(from)
 			if err != nil {

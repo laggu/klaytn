@@ -109,19 +109,18 @@ func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker, currentB
 }
 
 // ValidateFeePayer finds a fee payer from a transaction.
-// If the transaction is not a fee-delegated transaction, it returns `from`.
+// If the transaction is not a fee-delegated transaction, it returns an error.
 func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker, currentBlockNumber uint64) (common.Address, uint64, error) {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
-		addr, _, err := ValidateSender(signer, tx, p, currentBlockNumber)
-		// Do not consume gas if the tx is not a fee delegated transaction.
-		return addr, 0, err
+		return common.Address{}, 0, errUndefinedTxType
 	}
 
 	pubkey, err := SenderFeePayerPubkey(signer, tx)
 	if err != nil {
 		return common.Address{}, 0, err
 	}
+
 	feePayer := tf.GetFeePayer()
 	accKey := p.GetKey(feePayer)
 
