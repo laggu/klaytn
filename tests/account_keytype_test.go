@@ -521,6 +521,12 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 				tx, newKey, err = generateDefaultTx(sender, reservoir, txType)
 				assert.Equal(t, nil, err)
 
+				// skip if tx type is legacy transaction and sender is not legacy.
+				if txType == types.TxTypeLegacyTransaction &&
+					!sender.AccKey.Type().IsLegacyAccountKey() {
+					continue
+				}
+
 				// sign a tx
 				if accountKeyType == accountkey.AccountKeyTypeWeightedMultiSig {
 					if txType == types.TxTypeLegacyTransaction {

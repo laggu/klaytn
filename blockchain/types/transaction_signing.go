@@ -28,6 +28,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
@@ -77,6 +78,10 @@ type AccountKeyPicker interface {
 func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker, currentBlockNumber uint64) (common.Address, uint64, error) {
 	if tx.IsLegacyTransaction() {
 		addr, err := Sender(signer, tx)
+		// Legacy transaction cannot be executed unless the account has a legacy key.
+		if p.GetKey(addr).Type().IsLegacyAccountKey() == false {
+			return common.Address{}, 0, kerrors.ErrLegacyTransactionMustBeWithLegacyKey
+		}
 		return addr, 0, err
 	}
 
