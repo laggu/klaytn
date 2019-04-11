@@ -39,6 +39,22 @@ import (
 	"time"
 )
 
+// WaitGroupWithTimeOut waits the given wait group until the timout duration.
+func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing.T) {
+	c := make(chan struct{})
+	go func() {
+		wg.Wait()
+		c <- struct{}{}
+	}()
+	fmt.Println("start to wait group")
+	select {
+	case <-c:
+		fmt.Println("waiting group is done")
+	case <-time.After(duration):
+		t.Fatal("timed out waiting group")
+	}
+}
+
 // TestGateWayManager tests the event/method of Token/NFT/Gateway contracts.
 // And It tests the nonce error case of gateway deploy (#2284)
 // TODO-Klaytn-Servicechain needs to refine this test.
@@ -333,7 +349,8 @@ func TestGateWayManager(t *testing.T) {
 		fmt.Println("nft.DepositToGateway is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
 	}
 
-	wg.Wait()
+	// Wait a few second for wait group
+	WaitGroupWithTimeOut(&wg, 3*time.Second, t)
 
 	// 10. Check Token balance
 	{
