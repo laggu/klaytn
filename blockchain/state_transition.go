@@ -297,6 +297,8 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrLengthTooLong:                        types.ReceiptStatusErrLengthTooLong,
 	kerrors.ErrNestedCompositeType:                  types.ReceiptStatusErrNestedRoleBasedKey,
 	kerrors.ErrLegacyTransactionMustBeWithLegacyKey: types.ReceiptStatusErrLegacyTransactionMustBeWithLegacyKey,
+	kerrors.ErrDeprecated:                           types.ReceiptStatusErrDeprecated,
+	kerrors.ErrNotSupported:                         types.ReceiptStatusErrNotSupported,
 }
 
 var receiptstatus2errTxFailed = map[uint]error{
@@ -327,6 +329,8 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrLengthTooLong:                        kerrors.ErrLengthTooLong,
 	types.ReceiptStatusErrNestedRoleBasedKey:                   kerrors.ErrNestedCompositeType,
 	types.ReceiptStatusErrLegacyTransactionMustBeWithLegacyKey: kerrors.ErrLegacyTransactionMustBeWithLegacyKey,
+	types.ReceiptStatusErrDeprecated:                           kerrors.ErrDeprecated,
+	types.ReceiptStatusErrNotSupported:                         kerrors.ErrNotSupported,
 }
 
 // getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.

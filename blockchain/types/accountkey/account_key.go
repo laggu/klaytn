@@ -33,6 +33,8 @@ const (
 	AccountKeyTypeFail
 	AccountKeyTypeWeightedMultiSig
 	AccountKeyTypeRoleBased
+	AccountKeyTypeRoleBasedRlpFix
+	AccountKeyTypeLast
 )
 
 var (
@@ -99,6 +101,8 @@ func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 		return NewAccountKeyWeightedMultiSig(), nil
 	case AccountKeyTypeRoleBased:
 		return NewAccountKeyRoleBased(), nil
+	case AccountKeyTypeRoleBasedRlpFix:
+		return NewAccountKeyRoleBasedRlpFix(), nil
 	}
 
 	return nil, errUndefinedAccountKeyType

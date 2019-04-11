@@ -19,57 +19,35 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"encoding/json"
-	"errors"
 	"github.com/ground-x/klaytn/fork"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 )
 
-type RoleType int
+// AccountKeyRoleBasedRlpFix represents a role-based key.
+// The difference between AccountKeyRoleBased and AccountKeyRoleBasedRlpFix is RLP encoding.
+// Since AccountKeyRoleBased does not support caver-js, AccountKeyRoleBasedRlpFix is introduced.
+type AccountKeyRoleBasedRlpFix []AccountKey
 
-const (
-	RoleTransaction RoleType = iota
-	RoleAccountUpdate
-	RoleFeePayer
-	// TODO-Klaytn-Accounts: more roles can be listed here.
-	RoleLast
-)
-
-var (
-	errKeyLengthZero                    = errors.New("key length is zero")
-	errKeyShouldNotBeNilOrCompositeType = errors.New("key should not be nil or a composite type")
-)
-
-// AccountKeyRoleBased represents a role-based key.
-// The roles are defined like below:
-// RoleTransaction   - this key is used to verify transactions transferring values.
-// RoleAccountUpdate - this key is used to update keys in the account when using TxTypeAccountUpdate.
-// RoleFeePayer      - this key is used to pay tx fee when using fee-delegated transactions.
-//                     If an account has a key of this role and wants to pay tx fee,
-//                     fee-delegated transactions should be signed by this key.
-//
-// If RoleAccountUpdate or RoleFeePayer is not set, RoleTransaction will be used instead by default.
-type AccountKeyRoleBased []AccountKey
-
-func NewAccountKeyRoleBased() *AccountKeyRoleBased {
-	return &AccountKeyRoleBased{}
+func NewAccountKeyRoleBasedRlpFix() *AccountKeyRoleBasedRlpFix {
+	return &AccountKeyRoleBasedRlpFix{}
 }
 
-func NewAccountKeyRoleBasedWithValues(keys []AccountKey) *AccountKeyRoleBased {
-	return (*AccountKeyRoleBased)(&keys)
+func NewAccountKeyRoleBasedRlpFixWithValues(keys []AccountKey) *AccountKeyRoleBasedRlpFix {
+	return (*AccountKeyRoleBasedRlpFix)(&keys)
 }
 
-func (a *AccountKeyRoleBased) Type() AccountKeyType {
-	return AccountKeyTypeRoleBased
+func (a *AccountKeyRoleBasedRlpFix) Type() AccountKeyType {
+	return AccountKeyTypeRoleBasedRlpFix
 }
 
-func (a *AccountKeyRoleBased) IsCompositeType() bool {
+func (a *AccountKeyRoleBasedRlpFix) IsCompositeType() bool {
 	return true
 }
 
-func (a *AccountKeyRoleBased) DeepCopy() AccountKey {
-	n := make(AccountKeyRoleBased, len(*a))
+func (a *AccountKeyRoleBasedRlpFix) DeepCopy() AccountKey {
+	n := make(AccountKeyRoleBasedRlpFix, len(*a))
 
 	for i, k := range *a {
 		n[i] = k.DeepCopy()
@@ -78,8 +56,8 @@ func (a *AccountKeyRoleBased) DeepCopy() AccountKey {
 	return &n
 }
 
-func (a *AccountKeyRoleBased) Equal(b AccountKey) bool {
-	tb, ok := b.(*AccountKeyRoleBased)
+func (a *AccountKeyRoleBasedRlpFix) Equal(b AccountKey) bool {
+	tb, ok := b.(*AccountKeyRoleBasedRlpFix)
 	if !ok {
 		return false
 	}
@@ -97,30 +75,37 @@ func (a *AccountKeyRoleBased) Equal(b AccountKey) bool {
 	return true
 }
 
-func (a *AccountKeyRoleBased) EncodeRLP(w io.Writer) error {
-	serializers := make([]*AccountKeySerializer, len(*a))
+func (a *AccountKeyRoleBasedRlpFix) EncodeRLP(w io.Writer) error {
+	enc := make([][]byte, len(*a))
 
 	for i, k := range *a {
-		serializers[i] = NewAccountKeySerializerWithAccountKey(k)
+		enc[i], _ = rlp.EncodeToBytes(NewAccountKeySerializerWithAccountKey(k))
 	}
 
-	return rlp.Encode(w, serializers)
+	return rlp.Encode(w, enc)
 }
 
-func (a *AccountKeyRoleBased) DecodeRLP(s *rlp.Stream) error {
-	serializers := []*AccountKeySerializer{}
-	if err := s.Decode(&serializers); err != nil {
+func (a *AccountKeyRoleBasedRlpFix) DecodeRLP(s *rlp.Stream) error {
+	enc := [][]byte{}
+	if err := s.Decode(&enc); err != nil {
 		return err
 	}
-	*a = make(AccountKeyRoleBased, len(serializers))
-	for i, s := range serializers {
-		(*a)[i] = s.key
+
+	keys := make([]AccountKey, len(enc))
+	for i, b := range enc {
+		serializer := NewAccountKeySerializer()
+		if err := rlp.DecodeBytes(b, &serializer); err != nil {
+			return err
+		}
+		keys[i] = serializer.key
 	}
+
+	*a = (AccountKeyRoleBasedRlpFix)(keys)
 
 	return nil
 }
 
-func (a *AccountKeyRoleBased) MarshalJSON() ([]byte, error) {
+func (a *AccountKeyRoleBasedRlpFix) MarshalJSON() ([]byte, error) {
 	serializers := make([]*AccountKeySerializer, len(*a))
 
 	for i, k := range *a {
@@ -130,13 +115,13 @@ func (a *AccountKeyRoleBased) MarshalJSON() ([]byte, error) {
 	return json.Marshal(serializers)
 }
 
-func (a *AccountKeyRoleBased) UnmarshalJSON(b []byte) error {
+func (a *AccountKeyRoleBasedRlpFix) UnmarshalJSON(b []byte) error {
 	var serializers []*AccountKeySerializer
 	if err := json.Unmarshal(b, &serializers); err != nil {
 		return err
 	}
 
-	*a = make(AccountKeyRoleBased, len(serializers))
+	*a = make(AccountKeyRoleBasedRlpFix, len(serializers))
 	for i, s := range serializers {
 		(*a)[i] = s.key
 	}
@@ -144,7 +129,7 @@ func (a *AccountKeyRoleBased) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyRoleBasedRlpFix) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	if len(*a) > int(r) {
 		return (*a)[r].Validate(r, pubkeys)
 	}
@@ -152,7 +137,7 @@ func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) b
 }
 
 // ValidateAccountCreation validates keys when creating an account with this key.
-func (a *AccountKeyRoleBased) ValidateAccountCreation() error {
+func (a *AccountKeyRoleBasedRlpFix) ValidateAccountCreation() error {
 	// 1. RoleTransaction should exist at least.
 	if len(*a) < 1 {
 		return errKeyLengthZero
@@ -169,17 +154,17 @@ func (a *AccountKeyRoleBased) ValidateAccountCreation() error {
 	return nil
 }
 
-func (a *AccountKeyRoleBased) getDefaultKey() AccountKey {
+func (a *AccountKeyRoleBasedRlpFix) getDefaultKey() AccountKey {
 	return (*a)[RoleTransaction]
 }
 
-func (a *AccountKeyRoleBased) String() string {
+func (a *AccountKeyRoleBasedRlpFix) String() string {
 	serializer := NewAccountKeySerializerWithAccountKey(a)
 	b, _ := json.Marshal(serializer)
 	return string(b)
 }
 
-func (a *AccountKeyRoleBased) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
+func (a *AccountKeyRoleBasedRlpFix) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
 	gas := uint64(0)
 	for _, k := range *a {
 		gasK, err := k.AccountCreationGas(currentBlockNumber)
@@ -192,7 +177,7 @@ func (a *AccountKeyRoleBased) AccountCreationGas(currentBlockNumber uint64) (uin
 	return gas, nil
 }
 
-func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
+func (a *AccountKeyRoleBasedRlpFix) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
 	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different sigValidationGas logic will be operated.
 	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
 		var key AccountKey
@@ -223,9 +208,9 @@ func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r Role
 	return gas, nil
 }
 
-func (a *AccountKeyRoleBased) Init(currentBlockNumber uint64) error {
-	if fork.IsRoleBasedRLPFixEnabled(currentBlockNumber) {
-		return kerrors.ErrDeprecated
+func (a *AccountKeyRoleBasedRlpFix) Init(currentBlockNumber uint64) error {
+	if fork.IsRoleBasedRLPFixEnabled(currentBlockNumber) == false {
+		return kerrors.ErrNotSupported
 	}
 	// A zero-role key is not allowed.
 	if len(*a) == 0 {
@@ -250,11 +235,11 @@ func (a *AccountKeyRoleBased) Init(currentBlockNumber uint64) error {
 	return nil
 }
 
-func (a *AccountKeyRoleBased) Update(key AccountKey, currentBlockNumber uint64) error {
-	if fork.IsRoleBasedRLPFixEnabled(currentBlockNumber) {
-		return kerrors.ErrDeprecated
+func (a *AccountKeyRoleBasedRlpFix) Update(key AccountKey, currentBlockNumber uint64) error {
+	if fork.IsRoleBasedRLPFixEnabled(currentBlockNumber) == false {
+		return kerrors.ErrNotSupported
 	}
-	if ak, ok := key.(*AccountKeyRoleBased); ok {
+	if ak, ok := key.(*AccountKeyRoleBasedRlpFix); ok {
 		lenAk := len(*ak)
 		lenA := len(*a)
 		// If no key is to be replaced, it is regarded as a fail.

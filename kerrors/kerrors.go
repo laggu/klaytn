@@ -45,4 +45,7 @@ var (
 	ErrLengthTooLong                        = errors.New("length too long")
 	ErrNestedCompositeType                  = errors.New("nested composite type")
 	ErrLegacyTransactionMustBeWithLegacyKey = errors.New("a legacy transaction must be with a legacy account key")
+
+	ErrDeprecated   = errors.New("deprecated feature")
+	ErrNotSupported = errors.New("not supported")
 )

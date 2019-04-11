@@ -75,7 +75,9 @@ const (
 	ReceiptStatusErrLengthTooLong                        = uint(0x19)
 	ReceiptStatusErrNestedRoleBasedKey                   = uint(0x1a)
 	ReceiptStatusErrLegacyTransactionMustBeWithLegacyKey = uint(0x1b)
-	ReceiptStatusLast                                    = uint(0x1c) // Last value which is not an actual ReceiptStatus
+	ReceiptStatusErrDeprecated                           = uint(0x1c)
+	ReceiptStatusErrNotSupported                         = uint(0x1d)
+	ReceiptStatusLast                                    = uint(0x1e) // Last value which is not an actual ReceiptStatus
 //	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
 //	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
 //	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
