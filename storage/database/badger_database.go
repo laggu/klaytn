@@ -31,7 +31,8 @@ type badgerDB struct {
 	fn string // filename for reporting
 	db *badger.DB
 
-	gcTicker *time.Ticker // runs periodically and runs gc if db size exceeds the threshold.
+	gcTicker *time.Ticker  // runs periodically and runs gc if db size exceeds the threshold.
+	closeCh  chan struct{} // stops gc go routine when db closes.
 
 	logger log.Logger // Contextual logger tracking the database path
 }
@@ -70,6 +71,7 @@ func NewBadgerDB(dbDir string) (*badgerDB, error) {
 		db:       db,
 		logger:   localLogger,
 		gcTicker: time.NewTicker(sizeGCTickerTime),
+		closeCh:  make(chan struct{}),
 	}
 
 	go badger.runValueLogGC()
@@ -84,6 +86,9 @@ func (bg *badgerDB) runValueLogGC() {
 
 	for {
 		select {
+		case <-bg.closeCh:
+			bg.logger.Debug("Stopped value log GC", "dbDir", bg.fn)
+			return
 		case <-bg.gcTicker.C:
 			_, currValueLogSize := bg.db.Size()
 			if currValueLogSize-lastValueLogSize < gcThreshold {
@@ -161,6 +166,7 @@ func (bg *badgerDB) NewIterator() *badger.Iterator {
 }
 
 func (bg *badgerDB) Close() {
+	close(bg.closeCh)
 	err := bg.db.Close()
 	if err == nil {
 		bg.logger.Info("Database closed")
