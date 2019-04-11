@@ -74,8 +74,6 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 		return nil, errors.New("maxAccounts should be bigger numValidators!!")
 	}
 
-	conf := node.DefaultConfig
-
 	// Remove leveldb dir if exists
 	if _, err := os.Stat(dir); err == nil {
 		os.RemoveAll(dir)
@@ -115,7 +113,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, err := initBlockChain(&conf, chainDb, addrs, validatorAddresses, engine)
+	bc, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, engine)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +404,7 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 	return append(buf.Bytes(), payload...), nil
 }
 
-func initBlockChain(conf *node.Config, db database.DBManager, coinbaseAddrs []*common.Address, validators []common.Address,
+func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
 	engine consensus.Engine) (*blockchain.BlockChain, error) {
 
 	extraData, err := prepareIstanbulExtra(validators)
@@ -434,7 +432,7 @@ func initBlockChain(conf *node.Config, db database.DBManager, coinbaseAddrs []*c
 		return nil, err
 	}
 
-	chain, err := blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, cacheConfig, chainConfig, engine, vm.Config{})
 	if err != nil {
 		return nil, err
 	}

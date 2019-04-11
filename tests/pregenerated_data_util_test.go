@@ -410,7 +410,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	// 2) If executing test, call blockchain.NewBlockChain
 	var bc *blockchain.BlockChain
 	if tc.isGenerateTest {
-		bc, err = initBlockChain(nil, chainDB, addrs, validatorAddresses, engine)
+		bc, err = initBlockChain(chainDB, tc.cacheConfig, addrs, validatorAddresses, engine)
 	} else {
 		chainConfig, err := getChainConfig(chainDB)
 		if err != nil {
