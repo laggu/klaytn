@@ -54,22 +54,22 @@ const (
 	goodToGo
 )
 
-func bootnode(c *cli.Context) error {
+func bootnode(ctx *cli.Context) error {
 	var (
 		// Local variables
-		err error
-		ctx = bootnodeConfig{
+		err  error
+		bcfg = bootnodeConfig{
 			// Config variables
-			addr:         c.GlobalString(utils.BNAddrFlag.Name),
-			genKeyPath:   c.GlobalString(utils.GenKeyFlag.Name),
-			nodeKeyFile:  c.GlobalString(utils.NodeKeyFileFlag.Name),
-			nodeKeyHex:   c.GlobalString(utils.NodeKeyHexFlag.Name),
-			natFlag:      c.GlobalString(utils.NATFlag.Name),
-			netrestrict:  c.GlobalString(utils.NetrestrictFlag.Name),
-			writeAddress: c.GlobalBool(utils.WriteAddressFlag.Name),
+			addr:         ctx.GlobalString(utils.BNAddrFlag.Name),
+			genKeyPath:   ctx.GlobalString(utils.GenKeyFlag.Name),
+			nodeKeyFile:  ctx.GlobalString(utils.NodeKeyFileFlag.Name),
+			nodeKeyHex:   ctx.GlobalString(utils.NodeKeyHexFlag.Name),
+			natFlag:      ctx.GlobalString(utils.NATFlag.Name),
+			netrestrict:  ctx.GlobalString(utils.NetrestrictFlag.Name),
+			writeAddress: ctx.GlobalBool(utils.WriteAddressFlag.Name),
 
 			IPCPath:          "klay.ipc",
-			DataDir:          c.GlobalString(utils.DataDirFlag.Name),
+			DataDir:          ctx.GlobalString(utils.DataDirFlag.Name),
 			HTTPPort:         DefaultHTTPPort,
 			HTTPModules:      []string{"net"},
 			HTTPVirtualHosts: []string{"localhost"},
@@ -81,38 +81,38 @@ func bootnode(c *cli.Context) error {
 		}
 	)
 
-	setIPC(c, &ctx)
+	setIPC(ctx, &bcfg)
 	// httptype is http or fasthttp
-	if c.GlobalIsSet(utils.SrvTypeFlag.Name) {
-		ctx.HTTPServerType = c.GlobalString(utils.SrvTypeFlag.Name)
+	if ctx.GlobalIsSet(utils.SrvTypeFlag.Name) {
+		bcfg.HTTPServerType = ctx.GlobalString(utils.SrvTypeFlag.Name)
 	}
-	setHTTP(c, &ctx)
-	setWS(c, &ctx)
-	setgRPC(c, &ctx)
+	setHTTP(ctx, &bcfg)
+	setWS(ctx, &bcfg)
+	setgRPC(ctx, &bcfg)
 
 	// Check exit condition
-	switch ctx.checkCMDState() {
+	switch bcfg.checkCMDState() {
 	case generateNodeKeySpecified:
-		ctx.generateNodeKey()
+		bcfg.generateNodeKey()
 	case noPrivateKeyPathSpecified:
 		return errors.New("Use --nodekey or --nodekeyhex to specify a private key")
 	case nodeKeyDuplicated:
 		return errors.New("Options --nodekey and --nodekeyhex are mutually exclusive")
 	case writeOutAddress:
-		ctx.doWriteOutAddress()
+		bcfg.doWriteOutAddress()
 	default:
-		err = ctx.readNodeKey()
+		err = bcfg.readNodeKey()
 		if err != nil {
 			return err
 		}
 	}
 
-	err = ctx.validateNetworkParameter()
+	err = bcfg.validateNetworkParameter()
 	if err != nil {
 		return err
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", ctx.listenAddr)
+	addr, err := net.ResolveUDPAddr("udp", bcfg.listenAddr)
 	if err != nil {
 		utils.Fatalf("Failed to ResolveUDPAddr: %v", err)
 	}
@@ -123,26 +123,26 @@ func bootnode(c *cli.Context) error {
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	if ctx.natm != nil {
+	if bcfg.natm != nil {
 		if !realaddr.IP.IsLoopback() {
-			go nat.Map(ctx.natm, nil, "udp", realaddr.Port, realaddr.Port, "Klaytn node discovery")
+			go nat.Map(bcfg.natm, nil, "udp", realaddr.Port, realaddr.Port, "Klaytn node discovery")
 		}
 		// TODO: react to external IP changes over time.
-		if ext, err := ctx.natm.ExternalIP(); err == nil {
+		if ext, err := bcfg.natm.ExternalIP(); err == nil {
 			realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
 		}
 	}
 
 	cfg := discover.Config{
-		PrivateKey:   ctx.nodeKey,
+		PrivateKey:   bcfg.nodeKey,
 		AnnounceAddr: realaddr,
-		NetRestrict:  ctx.restrictList,
+		NetRestrict:  bcfg.restrictList,
 	}
 	if _, err := discover.ListenUDP(conn, cfg); err != nil {
 		utils.Fatalf("%v", err)
 	}
 
-	node, err := New(&ctx)
+	node, err := New(&bcfg)
 	if err != nil {
 		return err
 	}
