@@ -64,7 +64,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.ListenPortFlag,
 	utils.SubListenPortFlag,
 	utils.MultiChannelUseFlag,
-	utils.MaxPeersFlag,
+	utils.MaxConnectionsFlag,
 	utils.MaxPendingPeersFlag,
 	utils.TargetGasLimitFlag,
 	utils.NATFlag,

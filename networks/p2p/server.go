@@ -63,9 +63,10 @@ type Config struct {
 	// This field must be set to a valid secp256k1 private key.
 	PrivateKey *ecdsa.PrivateKey `toml:"-"`
 
-	// MaxPeers is the maximum number of peers that can be
-	// connected. It must be greater than zero.
-	MaxPeers int
+	// MaxPhysicalConnections is the maximum number of physical connections.
+	// A peer uses one connection if single channel peer and uses two connections if
+	// multi channel peer. It must be greater than zero.
+	MaxPhysicalConnections int
 
 	// ConnectionType is a type of connection like Consensus or Normal
 	// described at ConnType
@@ -257,7 +258,7 @@ type Server interface {
 	// PeerCount returns the number of connected peers.
 	PeerCount() int
 
-	// MaxPeers returns maximum count of peers.
+	// MaxPhysicalConnections returns maximum count of peers.
 	MaxPeers() int
 
 	// Disconnect tries to disconnect peer.
@@ -672,7 +673,7 @@ running:
 			// A connection has passed the encryption handshake so
 			// the remote identity is known (but hasn't been verified yet).
 			if trusted[c.id] {
-				// Ensure that the trusted flag is set before checking against MaxPeers.
+				// Ensure that the trusted flag is set before checking against MaxPhysicalConnections.
 				c.flags |= trustedConn
 			}
 			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
@@ -1418,7 +1419,7 @@ running:
 			// A connection has passed the encryption handshake so
 			// the remote identity is known (but hasn't been verified yet).
 			if trusted[c.id] {
-				// Ensure that the trusted flag is set before checking against MaxPeers.
+				// Ensure that the trusted flag is set before checking against MaxPhysicalConnections.
 				c.flags |= trustedConn
 			}
 			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
@@ -1520,7 +1521,7 @@ func (srv *BaseServer) protoHandshakeChecks(peers map[discover.NodeID]*Peer, inb
 
 func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inboundCount int, c *conn) error {
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.Config.MaxPeers:
+	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.Config.MaxPhysicalConnections:
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
@@ -1534,7 +1535,7 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 }
 
 func (srv *BaseServer) maxInboundConns() int {
-	return srv.Config.MaxPeers - srv.maxDialedConns()
+	return srv.Config.MaxPhysicalConnections - srv.maxDialedConns()
 }
 
 func (srv *BaseServer) maxDialedConns() int {
@@ -1545,7 +1546,7 @@ func (srv *BaseServer) maxDialedConns() int {
 	if r == 0 {
 		r = defaultDialRatio
 	}
-	return srv.Config.MaxPeers / r
+	return srv.Config.MaxPhysicalConnections / r
 }
 
 type tempError interface {
@@ -1832,7 +1833,7 @@ func (srv *BaseServer) Name() string {
 	return srv.Config.Name
 }
 
-// MaxPeers returns maximum count of peers.
+// MaxPhysicalConnections returns maximum count of peers.
 func (srv *BaseServer) MaxPeers() int {
-	return srv.Config.MaxPeers
+	return srv.Config.MaxPhysicalConnections
 }

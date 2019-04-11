@@ -80,10 +80,10 @@ func (s *CnAdapter) NewNode(config *NodeConfig) (Node, error) {
 
 	n, err := node.New(&node.Config{
 		P2P: p2p.Config{
-			PrivateKey:  config.PrivateKey, // from p2psim client
-			MaxPeers:    math.MaxInt32,
-			NoDiscovery: true,
-			ListenAddr:  fmt.Sprintf(":%d", config.Port),
+			PrivateKey:             config.PrivateKey, // from p2psim client
+			MaxPhysicalConnections: math.MaxInt32,
+			NoDiscovery:            true,
+			ListenAddr:             fmt.Sprintf(":%d", config.Port),
 			//Dialer:          s,
 			EnableMsgEvents: config.EnableMsgEvents,
 		},

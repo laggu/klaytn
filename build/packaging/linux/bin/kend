@@ -139,8 +139,8 @@ start() {
         OPTIONS="$OPTIONS --syncmode $SYNCMODE"
     fi
 
-    if [ ! -z $MAXPEERS ]; then
-        OPTIONS="$OPTIONS --maxpeers $MAXPEERS"
+    if [ ! -z $MAXCONNECTIONS ]; then
+        OPTIONS="$OPTIONS --maxconnections $MAXCONNECTIONS"
     fi
 
     if [ ! -z $LDBCACHESIZE ]; then

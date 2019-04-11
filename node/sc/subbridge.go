@@ -329,7 +329,7 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 	serverConfig.Name = s.ctx.NodeType().String()
 	serverConfig.Logger = logger
 	serverConfig.ListenAddr = s.config.BridgePort
-	serverConfig.MaxPeers = s.maxPeers
+	serverConfig.MaxPhysicalConnections = s.maxPeers
 	serverConfig.NoDiscovery = true
 	serverConfig.EnableMultiChannelServer = false
 
@@ -383,7 +383,7 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 	s.netRPCService = api.NewPublicNetAPI(s.bridgeServer, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
-	//s.maxPeers = s.bridgeServer.MaxPeers()
+	//s.maxPeers = s.bridgeServer.MaxPhysicalConnections()
 	//validator := func(header *types.Header) error {
 	//	return nil
 	//}

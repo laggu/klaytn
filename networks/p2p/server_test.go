@@ -74,10 +74,10 @@ func (c *testTransport) close(err error) {
 
 func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer)) Server {
 	config := Config{
-		Name:       "test",
-		MaxPeers:   10,
-		ListenAddr: "127.0.0.1:0",
-		PrivateKey: newkey(),
+		Name:                   "test",
+		MaxPhysicalConnections: 10,
+		ListenAddr:             "127.0.0.1:0",
+		PrivateKey:             newkey(),
 	}
 	server := &SingleChannelServer{
 		&BaseServer{
@@ -226,7 +226,7 @@ func TestServerTaskScheduling(t *testing.T) {
 	// because we're only interested in what run does.
 	srv := &SingleChannelServer{
 		&BaseServer{
-			Config:  Config{MaxPeers: 10},
+			Config:  Config{MaxPhysicalConnections: 10},
 			quit:    make(chan struct{}),
 			ntab:    fakeTable{},
 			running: true,
@@ -353,10 +353,10 @@ func TestServerAtCap(t *testing.T) {
 	srv := &SingleChannelServer{
 		BaseServer: &BaseServer{
 			Config: Config{
-				PrivateKey:   newkey(),
-				MaxPeers:     10,
-				NoDial:       true,
-				TrustedNodes: []*discover.Node{{ID: trustedID}},
+				PrivateKey:             newkey(),
+				MaxPhysicalConnections: 10,
+				NoDial:                 true,
+				TrustedNodes:           []*discover.Node{{ID: trustedID}},
 			},
 		},
 	}
@@ -458,11 +458,11 @@ func TestServerSetupConn(t *testing.T) {
 		srv := &SingleChannelServer{
 			&BaseServer{
 				Config: Config{
-					PrivateKey:     srvkey,
-					MaxPeers:       10,
-					NoDial:         true,
-					Protocols:      []Protocol{discard},
-					ConnectionType: 1,
+					PrivateKey:             srvkey,
+					MaxPhysicalConnections: 10,
+					NoDial:                 true,
+					Protocols:              []Protocol{discard},
+					ConnectionType:         1,
 				},
 				newTransport: func(fd net.Conn) transport { return test.tt },
 				logger:       logger.NewWith(),

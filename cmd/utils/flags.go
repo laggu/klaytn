@@ -389,9 +389,9 @@ var (
 		Usage: "klaytn node type (consensus node (cn), proxy node (pn), endpoint node (en))",
 		Value: "en",
 	}
-	MaxPeersFlag = cli.IntFlag{
-		Name:  "maxpeers",
-		Usage: "Maximum number of network peers (network disabled if set to 0)",
+	MaxConnectionsFlag = cli.IntFlag{
+		Name:  "maxconnections",
+		Usage: "Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0)",
 		Value: 25,
 	}
 	MaxPendingPeersFlag = cli.IntFlag{
@@ -813,10 +813,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	// set bootnodes via this function by check specified parameters
 	setBootstrapNodes(ctx, cfg)
 
-	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
-		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
+	if ctx.GlobalIsSet(MaxConnectionsFlag.Name) {
+		cfg.MaxPhysicalConnections = ctx.GlobalInt(MaxConnectionsFlag.Name)
 	}
-	logger.Info("Setting MaxPeers", "Maximum connections count", cfg.MaxPeers)
+	logger.Info("Setting MaxPhysicalConnections", "MaxPhysicalConnections", cfg.MaxPhysicalConnections)
 
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)

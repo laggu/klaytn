@@ -53,9 +53,9 @@ var DefaultConfig = Config{
 	WSModules:        []string{"net", "web3"},
 	GRPCPort:         DefaultGRPCPort,
 	P2P: p2p.Config{
-		ListenAddr: fmt.Sprintf(":%d", DefaultP2PPort),
-		MaxPeers:   25,
-		NAT:        nat.Any(),
+		ListenAddr:             fmt.Sprintf(":%d", DefaultP2PPort),
+		MaxPhysicalConnections: 25,
+		NAT:                    nat.Any(),
 	},
 }
 

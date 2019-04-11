@@ -105,7 +105,7 @@ func TestCustomGenesis(t *testing.T) {
 
 		// Query the custom genesis block
 		klay := runKlay(t,
-			"--datadir", datadir, "--maxpeers", "0", "--port", "0",
+			"--datadir", datadir, "--maxconnections", "0", "--port", "0",
 			"--nodiscover", "--nat", "none", "--ipcdisable",
 			"--exec", tt.query, "console")
 		klay.ExpectRegexp(tt.result)
