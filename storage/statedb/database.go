@@ -363,6 +363,11 @@ func (db *Database) node(hash common.Hash, cachegen uint16) node {
 // Node retrieves an encoded cached trie node from memory. If it cannot be found
 // cached, the method queries the persistent database for the content.
 func (db *Database) Node(hash common.Hash) ([]byte, error) {
+	// Return an error for zero hash which can occur panic
+	if (hash == common.Hash{}) {
+		return nil, ErrZeroHashNode
+	}
+
 	// Retrieve the node from cache if available
 	db.lock.RLock()
 	node := db.nodes[hash]

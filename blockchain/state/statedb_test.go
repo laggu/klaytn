@@ -24,7 +24,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/storage/database"
+	"github.com/ground-x/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/check.v1"
 	"math"
 	"math/big"
 	"math/rand"
@@ -32,12 +37,6 @@ import (
 	"strings"
 	"testing"
 	"testing/quick"
-
-	"gopkg.in/check.v1"
-
-	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/storage/database"
 )
 
 // Updating a state statedb without commit must not affect persistent DB.
@@ -652,5 +651,21 @@ func TestCopyOfCopy(t *testing.T) {
 	}
 	if got := sdb.Copy().Copy().GetBalance(addr).Uint64(); got != 42 {
 		t.Fatalf("2nd copy fail, expected 42, got %v", got)
+	}
+}
+
+// TestZeroHashNode checks returning values of `(db *Database) Node` function.
+// The function should return (nil, ErrZeroHashNode) for default common.Hash{} value.
+func TestZeroHashNode(t *testing.T) {
+	zeroHash := common.Hash{}
+
+	db := database.NewMemoryDBManager()
+	sdb := NewDatabase(db)
+	node, err := sdb.TrieDB().Node(zeroHash)
+	if err != nil {
+		assert.Equal(t, statedb.ErrZeroHashNode, err)
+	}
+	if node != nil {
+		t.Fatalf("node should return nil value for zero hash")
 	}
 }
