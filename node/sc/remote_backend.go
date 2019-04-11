@@ -124,11 +124,17 @@ func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transact
 }
 
 func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	if !rb.checkConnection() {
+		return nil, ConnectionFailErr
+	}
 	return rb.klayClient.TransactionReceipt(ctx, txHash)
 }
 
 // ChainID can return the chain ID of the chain.
 func (rb *RemoteBackend) ChainID(ctx context.Context) (*big.Int, error) {
+	if !rb.checkConnection() {
+		return nil, ConnectionFailErr
+	}
 	return rb.klayClient.ChainID(ctx)
 }
 
