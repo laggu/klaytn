@@ -37,7 +37,7 @@ func genTempDirForTestDB(b *testing.B) string {
 }
 
 func getKlayLDBOptions() *opt.Options {
-	return getLDBOptions(&DBConfig{LevelDBCacheSize: 128, OpenFilesLimit: 128})
+	return getLevelDBOptions(&DBConfig{LevelDBCacheSize: 128, OpenFilesLimit: 128})
 }
 
 func getKlayLDBOptionsForGetX(x int) *opt.Options {

@@ -36,7 +36,7 @@ type DBManager interface {
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
-	GetMemDB() *MemDatabase
+	GetMemDB() *MemDB
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -254,7 +254,7 @@ func NewMemoryDBManager() DBManager {
 		dbs:    make([]Database, 1, 1),
 		cm:     newCacheManager(),
 	}
-	dbm.dbs[0] = NewMemDatabase()
+	dbm.dbs[0] = NewMemDB()
 
 	return &dbm
 }
@@ -323,14 +323,14 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 func newDatabase(dbc *DBConfig) (Database, error) {
 	switch dbc.DBType {
 	case LevelDB:
-		return NewLDBDatabase(dbc)
+		return NewLevelDB(dbc)
 	case BadgerDB:
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
-		return NewMemDatabase(), nil
+		return NewMemDB(), nil
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
-		return NewLDBDatabase(dbc)
+		return NewLevelDB(dbc)
 	}
 }
 
@@ -375,9 +375,9 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 	return dbm.getDatabase(dbEntryType).NewBatch()
 }
 
-func (dbm *databaseManager) GetMemDB() *MemDatabase {
+func (dbm *databaseManager) GetMemDB() *MemDB {
 	if dbm.config.DBType == MemoryDB {
-		if memDB, ok := dbm.dbs[0].(*MemDatabase); ok {
+		if memDB, ok := dbm.dbs[0].(*MemDB); ok {
 			return memDB
 		} else {
 			logger.Error("DBManager is set as memory DBManager, but actual value is not set as memory DBManager.")

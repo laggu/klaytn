@@ -90,7 +90,7 @@ func NewTable(db Database, prefix string) Database {
 			prefix: prefix,
 		}
 	case MemoryDB:
-		return NewMemDatabase()
+		return NewMemDB()
 	default:
 		return nil
 	}

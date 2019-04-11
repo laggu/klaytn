@@ -95,7 +95,7 @@ type levelDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 }
 
-func getLDBOptions(dbc *DBConfig) *opt.Options {
+func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 	newOption := &opt.Options{
 		OpenFilesCacheCapacity:        dbc.OpenFilesLimit,
 		BlockCacheCapacity:            dbc.LevelDBCacheSize / 2 * opt.MiB,
@@ -113,7 +113,7 @@ func getLDBOptions(dbc *DBConfig) *opt.Options {
 	return newOption
 }
 
-func NewLDBDatabase(dbc *DBConfig) (*levelDB, error) {
+func NewLevelDB(dbc *DBConfig) (*levelDB, error) {
 	localLogger := logger.NewWith("path", dbc.Dir)
 
 	// Ensure we have some minimal caching and file guarantees
@@ -126,7 +126,7 @@ func NewLDBDatabase(dbc *DBConfig) (*levelDB, error) {
 	localLogger.Info("Allocated LevelDB with write buffer and file OpenFilesLimit", "levelDBCacheSize", dbc.LevelDBCacheSize, "openFilesLimit", dbc.OpenFilesLimit)
 
 	// Open the db and recover any potential corruptions
-	db, err := leveldb.OpenFile(dbc.Dir, getLDBOptions(dbc))
+	db, err := leveldb.OpenFile(dbc.Dir, getLevelDBOptions(dbc))
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
 		db, err = leveldb.RecoverFile(dbc.Dir, nil)
 	}
@@ -161,7 +161,7 @@ func setMinLevelDBOption(ldbOption *opt.Options) {
 
 // NewLevelDBWithOption explicitly receives LevelDB option to construct a LevelDB object.
 func NewLevelDBWithOption(dbPath string, ldbOption *opt.Options) (*levelDB, error) {
-	// TODO-Klaytn-Database Replace `NewLDBDatabase` with `NewLevelDBWithOption`
+	// TODO-Klaytn-Database Replace `NewLevelDB` with `NewLevelDBWithOption`
 
 	localLogger := logger.NewWith("path", dbPath)
 

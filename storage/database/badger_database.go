@@ -36,7 +36,7 @@ type badgerDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 }
 
-func getBadgerDBDefaultOption(dbDir string) badger.Options {
+func getBadgerDBOptions(dbDir string) badger.Options {
 	opts := badger.DefaultOptions
 	opts.Dir = dbDir
 	opts.ValueDir = dbDir
@@ -59,7 +59,7 @@ func NewBadgerDB(dbDir string) (*badgerDB, error) {
 		return nil, fmt.Errorf("failed to make badgerDB while checking dbDir. dbDir: %v, err: %v", dbDir, err)
 	}
 
-	opts := getBadgerDBDefaultOption(dbDir)
+	opts := getBadgerDBOptions(dbDir)
 	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make badgerDB while opening the DB. dbDir: %v, err: %v", dbDir, err)

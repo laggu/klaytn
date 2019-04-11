@@ -29,28 +29,28 @@ import (
 /*
  * This is a test memory database. Do not use for any production it does not get persisted
  */
-type MemDatabase struct {
+type MemDB struct {
 	db   map[string][]byte
 	lock sync.RWMutex
 }
 
-func NewMemDatabase() *MemDatabase {
-	return &MemDatabase{
+func NewMemDB() *MemDB {
+	return &MemDB{
 		db: make(map[string][]byte),
 	}
 }
 
-func NewMemDatabaseWithCap(size int) *MemDatabase {
-	return &MemDatabase{
+func NewMemDBWithCap(size int) *MemDB {
+	return &MemDB{
 		db: make(map[string][]byte, size),
 	}
 }
 
-func (db *MemDatabase) Type() DBType {
+func (db *MemDB) Type() DBType {
 	return MemoryDB
 }
 
-func (db *MemDatabase) Put(key []byte, value []byte) error {
+func (db *MemDB) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
@@ -58,7 +58,7 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	return nil
 }
 
-func (db *MemDatabase) Has(key []byte) (bool, error) {
+func (db *MemDB) Has(key []byte) (bool, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -66,7 +66,7 @@ func (db *MemDatabase) Has(key []byte) (bool, error) {
 	return ok, nil
 }
 
-func (db *MemDatabase) Get(key []byte) ([]byte, error) {
+func (db *MemDB) Get(key []byte) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -76,7 +76,7 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 	return nil, errors.New("not found")
 }
 
-func (db *MemDatabase) Keys() [][]byte {
+func (db *MemDB) Keys() [][]byte {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -87,7 +87,7 @@ func (db *MemDatabase) Keys() [][]byte {
 	return keys
 }
 
-func (db *MemDatabase) Delete(key []byte) error {
+func (db *MemDB) Delete(key []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
@@ -95,22 +95,22 @@ func (db *MemDatabase) Delete(key []byte) error {
 	return nil
 }
 
-func (db *MemDatabase) Close() {}
+func (db *MemDB) Close() {}
 
-func (db *MemDatabase) NewBatch() Batch {
+func (db *MemDB) NewBatch() Batch {
 	return &memBatch{db: db}
 }
 
-func (db *MemDatabase) Len() int { return len(db.db) }
+func (db *MemDB) Len() int { return len(db.db) }
 
-func (db *MemDatabase) Meter(prefix string) {
-	logger.Warn("MemDatabase does not support metrics!")
+func (db *MemDB) Meter(prefix string) {
+	logger.Warn("MemDB does not support metrics!")
 }
 
 type kv struct{ k, v []byte }
 
 type memBatch struct {
-	db     *MemDatabase
+	db     *MemDB
 	writes []kv
 	size   int
 }
