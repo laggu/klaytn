@@ -91,7 +91,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 		if local {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
-			tx, err := gateway.WithdrawKLAY(auth, token.Amount, to)
+			tx, err := gateway.WithdrawKLAY(auth, token.Amount, to, token.RequestNonce)
 			if err != nil {
 				logger.Error("Child GateWay failed to WithdrawKLAY", "err", err)
 				return err
@@ -103,7 +103,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 			defer cce.handler.UnLockChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
-			tx, err := gateway.WithdrawKLAY(auth, token.Amount, to)
+			tx, err := gateway.WithdrawKLAY(auth, token.Amount, to, token.RequestNonce)
 			if err != nil {
 				logger.Error("Parent GateWay failed to WithdrawKLAY", "err", err)
 				return err
@@ -117,7 +117,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 		if local {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
-			tx, err := gateway.WithdrawToken(auth, token.Amount, to, tokenAddr)
+			tx, err := gateway.WithdrawToken(auth, token.Amount, to, tokenAddr, token.RequestNonce)
 			if err != nil {
 				logger.Error("Child GateWay failed to WithdrawToken", "err", err)
 				return err
@@ -129,7 +129,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 			defer cce.handler.UnLockChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
 			gateway := cce.subbridge.gatewayMgr.GetGateway(gatewayAddr)
-			tx, err := gateway.WithdrawToken(auth, token.Amount, to, tokenAddr)
+			tx, err := gateway.WithdrawToken(auth, token.Amount, to, tokenAddr, token.RequestNonce)
 			if err != nil {
 				logger.Error("Parent GateWay failed to WithdrawToken", "err", err)
 				return err

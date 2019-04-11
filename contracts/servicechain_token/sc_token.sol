@@ -21,7 +21,7 @@ contract ServiceChainToken is ERC20 {
     uint256 public constant INITIAL_SUPPLY = 1000000000 * (10 ** uint256(decimals));
 
     constructor (address _gateway) public {
-        _mint(_gateway, INITIAL_SUPPLY);
+        _mint(msg.sender, INITIAL_SUPPLY);
         gateway = _gateway;
     }
 

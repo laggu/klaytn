@@ -18,7 +18,10 @@ contract Gateway is Ownable {
 
     Balance balances;
 
-    event TokenReceived(TokenKind kind, address from, uint256 amount, address contractAddress, address to);
+    uint64 public requestNonce;
+    uint64 public handleNonce;
+
+    event TokenReceived(TokenKind kind, address from, uint256 amount, address contractAddress, address to, uint64 reqeustNonce);
 
     enum TokenKind {
         KLAY,
@@ -33,7 +36,7 @@ contract Gateway is Ownable {
      * @param contractAddress Address of token contract the token belong to.
      * @param value For KLAY/TOKEN this is the amount.
      */
-    event TokenWithdrawn(address owner, TokenKind kind, address contractAddress, uint256 value);
+    event TokenWithdrawn(address owner, TokenKind kind, address contractAddress, uint256 value, uint64 handleNonce);
 
     constructor (bool _isChild) public payable {
         isChild = _isChild;
@@ -53,35 +56,44 @@ contract Gateway is Ownable {
     }
 
     // Withdrawal functions
-    function withdrawToken(uint256 amount, address to, address contractAddress)
+    function withdrawToken(uint256 amount, address to, address contractAddress, uint64 _handleNonce)
     onlyOwner
     external
     {
+        require(handleNonce == _handleNonce, "mismatched handle nonce");
+
         if (isChild == false){
             balances.token[contractAddress] = balances.token[contractAddress].sub(amount);
         }
         IERC20(contractAddress).transfer(to, amount);
-        emit TokenWithdrawn(to, TokenKind.TOKEN, contractAddress, amount);
+        emit TokenWithdrawn(to, TokenKind.TOKEN, contractAddress, amount, handleNonce);
+        handleNonce++;
     }
 
-    function withdrawKLAY(uint256 amount, address to)
+    function withdrawKLAY(uint256 amount, address to, uint64 _handleNonce)
     onlyOwner
     external
     {
+        require(handleNonce == _handleNonce, "mismatched handle nonce");
+
         // TODO-Klaytn-Servicechain for KLAY, we can replace below variable with embedded variable.
         balances.klay = balances.klay.sub(amount);
         to.transfer(amount); // ensure it's not reentrant
-        emit TokenWithdrawn(to, TokenKind.KLAY, address(0), amount);
+        emit TokenWithdrawn(to, TokenKind.KLAY, address(0), amount, handleNonce);
+        handleNonce++;
     }
 
-    function withdrawERC721(uint256 uid, address contractAddress, address to)
+    function withdrawERC721(uint256 uid, address contractAddress, address to, uint64 _handleNonce)
     onlyOwner
     external
     {
+        require(handleNonce == _handleNonce, "mismatched handle nonce");
         require(balances.nft[contractAddress][uid], "Does not own token");
+
         IERC721(contractAddress).safeTransferFrom(address(this), to, uid);
         delete balances.nft[contractAddress][uid];
-        emit TokenWithdrawn(to, TokenKind.NFT, contractAddress, uid);
+        emit TokenWithdrawn(to, TokenKind.NFT, contractAddress, uid, handleNonce);
+        handleNonce++;
     }
 
     // Approve and Deposit function for 2-step deposits
@@ -92,7 +104,8 @@ contract Gateway is Ownable {
     external {
         IERC20(contractAddress).transferFrom(msg.sender, address(this), amount);
         balances.token[contractAddress] = balances.token[contractAddress].add(amount);
-        emit TokenReceived(TokenKind.TOKEN, msg.sender, amount, contractAddress, to);
+        emit TokenReceived(TokenKind.TOKEN, msg.sender, amount, contractAddress, to, requestNonce);
+        requestNonce++;
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -106,7 +119,8 @@ contract Gateway is Ownable {
         // TODO-Klaytn-Servicechain should add allowedToken list in this Gateway.
         //require(allowedTokens[msg.sender], "Not a valid token");
         depositToken(amount);
-        emit TokenReceived(TokenKind.TOKEN, _from, amount, msg.sender, _to);
+        emit TokenReceived(TokenKind.TOKEN, _from, amount, msg.sender, _to, requestNonce);
+        requestNonce++;
         return TOKEN_RECEIVED;
     }
 
@@ -123,20 +137,23 @@ contract Gateway is Ownable {
     {
         //require(allowedTokens[msg.sender], "Not a valid token");
         depositNFT(tokenId);
-        emit TokenReceived(TokenKind.NFT, from, tokenId, msg.sender, to);
+        emit TokenReceived(TokenKind.NFT, from, tokenId, msg.sender, to, requestNonce);
+        requestNonce++;
         return ERC721_RECEIVED;
     }
 
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
         depositKLAY();
-        emit TokenReceived(TokenKind.KLAY, msg.sender, msg.value, address(0), msg.sender);
+        emit TokenReceived(TokenKind.KLAY, msg.sender, msg.value, address(0), msg.sender, requestNonce);
+        requestNonce++;
     }
 
     // DepositKLAY requests transfer KLAY to _to on relative chain.
     function DepositKLAY(address _to) external payable {
         depositKLAY();
-        emit TokenReceived(TokenKind.KLAY, msg.sender, msg.value, address(0), _to);
+        emit TokenReceived(TokenKind.KLAY, msg.sender, msg.value, address(0), _to, requestNonce);
+        requestNonce++;
     }
 
     // DepositWithoutEvent send KLAY to this contract without event for increasing the withdrawal limit.

@@ -68,7 +68,7 @@ func TestGateWayManager(t *testing.T) {
 	}()
 
 	wg := sync.WaitGroup{}
-	wg.Add(7)
+	wg.Add(6)
 
 	// Generate a new random account and a funded simulator
 	key, _ := crypto.GenerateKey()
@@ -149,16 +149,16 @@ func TestGateWayManager(t *testing.T) {
 	//fmt.Println("GXToken is deployed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
 	balance, _ := sim.BalanceAt(context.Background(), auth.From, nil)
-	fmt.Println("auth KLAY balance :", balance)
+	fmt.Printf("auth(%v) KLAY balance : %v\n", auth.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), auth2.From, nil)
-	fmt.Println("auth2 KLAY balance :", balance)
+	fmt.Printf("auth2(%v) KLAY balance : %v\n", auth2.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
-	fmt.Println("auth3 KLAY balance :", balance)
+	fmt.Printf("auth3(%v) KLAY balance : %v\n", auth3.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), auth4.From, nil)
-	fmt.Println("auth4 KLAY balance :", balance)
+	fmt.Printf("auth4(%v) KLAY balance : %v\n", auth4.From.String(), balance)
 
 	// 4. Subscribe Gateway Contract
 	gatewayManager.SubscribeEvent(addr)
@@ -177,12 +177,13 @@ func TestGateWayManager(t *testing.T) {
 					"from", ev.From.String(),
 					"to", ev.To.String(),
 					"contract", ev.ContractAddr.String(),
-					"token", ev.TokenAddr.String())
+					"token", ev.TokenAddr.String(),
+					"requestNonce", ev.RequestNonce)
 
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := gateway.WithdrawKLAY(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, ev.To)
+					tx, err := gateway.WithdrawKLAY(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
 					}
@@ -191,7 +192,7 @@ func TestGateWayManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, ev.To, tokenAddr)
+					tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
@@ -206,7 +207,7 @@ func TestGateWayManager(t *testing.T) {
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
-					tx, err := gateway.WithdrawERC721(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer}, ev.Amount, nftAddr, ev.To)
+					tx, err := gateway.WithdrawERC721(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, nftAddr, ev.To, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawERC721: %v", err)
 					}
@@ -223,19 +224,20 @@ func TestGateWayManager(t *testing.T) {
 					"amount", ev.Amount,
 					"owner", ev.Owner.String(),
 					"contract", ev.ContractAddr.String(),
-					"token", ev.TokenAddr.String())
+					"token", ev.TokenAddr.String(),
+					"handleNonce", ev.HandleNonce)
 				wg.Done()
 			}
 		}
 	}()
 
-	// 5. WithdrawToken to Auth for chargin and Check balances
+	// 5. transfer from auth to auth2 for charging and check balances
 	{
-		tx, err = gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, testToken, auth.From, tokenAddr)
+		tx, err = token.Transfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 999999}, auth2.From, testToken)
 		if err != nil {
-			log.Fatalf("Failed to WithdrawToken: %v", err)
+			log.Fatalf("Failed to Transfer for charging: %v", err)
 		}
-		fmt.Println("WithdrawToken Transaction", tx.Hash().Hex())
+		fmt.Println("Transfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		// TODO-Klaytn-Servicechain needs to support WaitMined
@@ -295,9 +297,9 @@ func TestGateWayManager(t *testing.T) {
 		fmt.Println("NFT owner after registering", owner.String())
 	}
 
-	// 7. DepositToGateway from auth to auth3
+	// 7. DepositToGateway from auth2 to auth3
 	{
-		tx, err = token.DepositToGateway(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 99999}, testToken, auth3.From)
+		tx, err = token.DepositToGateway(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 99999}, testToken, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
 		}

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	GasLimit = 1000000
+	GasLimit = 5000000
 )
 
 func MakeTransactOpts(accountKey *ecdsa.PrivateKey, nonce *big.Int, chainID *big.Int, gasPrice *big.Int) *bind.TransactOpts {

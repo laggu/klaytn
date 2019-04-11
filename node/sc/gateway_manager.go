@@ -51,6 +51,7 @@ type TokenReceivedEvent struct {
 	From         common.Address
 	To           common.Address
 	Amount       *big.Int // Amount is UID in NFT
+	RequestNonce uint64
 }
 
 // TokenWithdraw Event from SmartContract
@@ -60,6 +61,7 @@ type TokenTransferEvent struct {
 	TokenAddr    common.Address
 	Owner        common.Address
 	Amount       *big.Int // Amount is UID in NFT
+	HandleNonce  uint64
 }
 
 type GateWayJournal struct {
@@ -341,6 +343,7 @@ func (gwm *GateWayManager) loop(
 				From:         ev.From,
 				To:           ev.To,
 				Amount:       ev.Amount,
+				RequestNonce: ev.ReqeustNonce,
 			}
 			gwm.tokenReceived.Send(receiveEvent)
 		case ev := <-withdrawCh:
@@ -350,6 +353,7 @@ func (gwm *GateWayManager) loop(
 				TokenAddr:    ev.ContractAddress,
 				Owner:        ev.Owner,
 				Amount:       ev.Value,
+				HandleNonce:  ev.HandleNonce,
 			}
 			gwm.tokenWithdraw.Send(withdrawEvent)
 		case err := <-receivedSub.Err():
