@@ -285,7 +285,7 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 
 func makeOrGenerateAddrs(testDataDir string, run int, tc *preGeneratedTC) ([]*common.Address, error) {
 	if !tc.isGenerateTest {
-		return makeAddrsFromFile(tc.numReceiversPerRun, testDataDir, tc.addrPicker)
+		return makeAddrsFromFile(tc.numReceiversPerRun, testDataDir, tc.filePicker)
 	}
 
 	wd, err := os.Getwd()
@@ -297,7 +297,7 @@ func makeOrGenerateAddrs(testDataDir string, run int, tc *preGeneratedTC) ([]*co
 	// use it instead of generating addresses.
 	addrPathInWD := path.Join(wd, addressDirectory)
 	if _, err := os.Stat(addrPathInWD); err == nil {
-		return makeAddrsFromFile(tc.numReceiversPerRun, addrPathInWD, tc.addrPicker)
+		return makeAddrsFromFile(tc.numReceiversPerRun, addrPathInWD, tc.filePicker)
 	}
 
 	// No addrs directory exists. Generating and saving addresses and keys.

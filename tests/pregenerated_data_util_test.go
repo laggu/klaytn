@@ -189,7 +189,7 @@ func readAddrsAndPrivateKeysFromFile(dir string, num int) ([]*common.Address, []
 }
 
 // makeAddrsFromFile extracts the address stored in file by numAccounts.
-func makeAddrsFromFile(numAccounts int, testDataDir string, indexPicker func(int, int) int) ([]*common.Address, error) {
+func makeAddrsFromFile(numAccounts int, testDataDir string, filePicker func(int, int) int) ([]*common.Address, error) {
 	addrs := make([]*common.Address, 0, numAccounts)
 
 	files, err := ioutil.ReadDir(path.Join(testDataDir, addressDirectory))
@@ -200,7 +200,7 @@ func makeAddrsFromFile(numAccounts int, testDataDir string, indexPicker func(int
 	numFiles := len(files)
 	remain := numAccounts
 	for i := 1; remain > 0; i++ {
-		fileIndex := indexPicker(i, numFiles)
+		fileIndex := filePicker(i, numFiles)
 
 		fmt.Println("Read addresses", "fileIndex", fileIndex)
 		// Read recipient addresses from file.
