@@ -166,6 +166,8 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
+		// Initialize DeriveSha implementation
+		InitDeriveSha(genesis.Config.DeriveShaImpl)
 		block, err := genesis.Commit(db)
 		return genesis.Config, block.Hash(), err
 	}
