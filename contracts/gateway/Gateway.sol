@@ -1,9 +1,9 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "../openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
+import "../openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Gateway is Ownable {
     bool public isChild;   // Child gateway can withdraw with no limit.
