@@ -40,6 +40,7 @@ contract Gateway is Ownable {
 
     constructor (bool _isChild) public payable {
         isChild = _isChild;
+        depositKLAY();
     }
 
     // Internal Deposit functions
