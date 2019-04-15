@@ -389,6 +389,10 @@ func (self *stateObject) Balance() *big.Int {
 	return self.account.GetBalance()
 }
 
+func (self *stateObject) HumanReadable() bool {
+	return self.account.GetHumanReadable()
+}
+
 func (self *stateObject) Nonce() uint64 {
 	return self.account.GetNonce()
 }

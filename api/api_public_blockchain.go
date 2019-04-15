@@ -66,6 +66,16 @@ func (s *PublicBlockChainAPI) ChainID() *big.Int {
 	return nil
 }
 
+// IsHumanReadable returns true if the account associated with addr is a human-readable account.
+// It returns false otherwise.
+func (s *PublicBlockChainAPI) IsHumanReadable(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if err != nil {
+		return false, err
+	}
+	return state.IsHumanReadable(address), state.Error()
+}
+
 // GetBlockReceipts returns all the transaction receipts for the given block hash.
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
 	receipts := s.b.GetBlockReceipts(ctx, blockHash)
