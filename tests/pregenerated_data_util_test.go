@@ -409,13 +409,16 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	// 1) If generating test, call initBlockChain
 	// 2) If executing test, call blockchain.NewBlockChain
 	var bc *blockchain.BlockChain
+	var genesis *blockchain.Genesis
 	if tc.isGenerateTest {
-		bc, err = initBlockChain(chainDB, tc.cacheConfig, addrs, validatorAddresses, engine)
+		bc, genesis, err = initBlockChain(chainDB, tc.cacheConfig, addrs, validatorAddresses, nil, engine)
 	} else {
 		chainConfig, err := getChainConfig(chainDB)
 		if err != nil {
 			return nil, err
 		}
+		genesis = blockchain.DefaultGenesisBlock()
+		genesis.Config = chainConfig
 		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, engine, vm.Config{})
 	}
 
@@ -425,7 +428,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	return &BCData{bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine}, nil
+		validatorPrivKeys, engine, genesis}, nil
 }
 
 // getChainConfig returns chain config from chainDB.

@@ -59,10 +59,6 @@ func TestHardForkBlock(t *testing.T) {
 	//	GasFormulaFixBlockNumber:0,
 	//})
 
-	// If you get genesis.json print json.Marshal(genesis) in initBlockchain().
-	//b, err := json.Marshal(genesis)
-	//ioutil.WriteFile("genesis.json", b, 0755)
-
 	// If you print out b1.rlp and b2.rlp, uncomment below.
 	//genBlocks(t)
 	//return
@@ -168,6 +164,9 @@ func genBlocks(t *testing.T) {
 	bcdata, err := NewBCData(6, 4)
 	assert.Equal(t, nil, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+
+	b, err := json.Marshal(bcdata.genesis)
+	ioutil.WriteFile("genesis.json", b, 0755)
 
 	defer bcdata.Shutdown()
 

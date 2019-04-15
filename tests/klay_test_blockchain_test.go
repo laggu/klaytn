@@ -65,6 +65,7 @@ type BCData struct {
 	validatorAddresses []common.Address
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine             consensus.Istanbul
+	genesis            *blockchain.Genesis
 }
 
 var dir = "chaindata"
@@ -113,14 +114,14 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, engine)
+	bc, genesis, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, nil, engine)
 	if err != nil {
 		return nil, err
 	}
 
 	return &BCData{bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine}, nil
+		validatorPrivKeys, engine, genesis}, nil
 }
 
 func (bcdata *BCData) Shutdown() {
@@ -405,20 +406,22 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 }
 
 func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
-	engine consensus.Engine) (*blockchain.BlockChain, error) {
+	genesis *blockchain.Genesis, engine consensus.Engine) (*blockchain.BlockChain, *blockchain.Genesis, error) {
 
 	extraData, err := prepareIstanbulExtra(validators)
 
-	genesis := blockchain.DefaultGenesisBlock()
-	genesis.Coinbase = *coinbaseAddrs[0]
-	genesis.Config = Forks["Byzantium"]
-	genesis.GasLimit = GasLimit
-	genesis.ExtraData = extraData
-	genesis.Nonce = 0
-	genesis.Mixhash = types.IstanbulDigest
-	genesis.Difficulty = big.NewInt(1)
-	genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
-	genesis.Config.UnitPrice = 25 * params.Ston
+	if genesis == nil {
+		genesis = blockchain.DefaultGenesisBlock()
+		genesis.Coinbase = *coinbaseAddrs[0]
+		genesis.Config = Forks["Byzantium"]
+		genesis.GasLimit = GasLimit
+		genesis.ExtraData = extraData
+		genesis.Nonce = 0
+		genesis.Mixhash = types.IstanbulDigest
+		genesis.Difficulty = big.NewInt(1)
+		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
+		genesis.Config.UnitPrice = 25 * params.Ston
+	}
 
 	alloc := make(blockchain.GenesisAlloc)
 	for _, a := range coinbaseAddrs {
@@ -429,15 +432,17 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
-		return nil, err
+		return nil, nil, err
 	}
+
+	genesis.Config = chainConfig
 
 	chain, err := blockchain.NewBlockChain(db, cacheConfig, chainConfig, engine, vm.Config{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return chain, nil
+	return chain, genesis, nil
 }
 
 func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, error) {
