@@ -97,6 +97,16 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	return b, state.Error()
 }
 
+// AccountCreated returns true if the account associated with the address is created.
+// It returns false otherwise.
+func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if err != nil {
+		return false, err
+	}
+	return state.Exist(address), state.Error()
+}
+
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
