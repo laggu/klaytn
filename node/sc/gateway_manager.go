@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/common"
-	gatewaycontract "github.com/ground-x/klaytn/contracts/gateway"
+	gatewaycontract "github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -43,7 +43,7 @@ const (
 	NFT
 )
 
-// TokenReceived Event from SmartContract
+// RequestValueTransfer Event from SmartContract
 type TokenReceivedEvent struct {
 	TokenType    uint8
 	ContractAddr common.Address
@@ -74,7 +74,7 @@ type GateWayJournal struct {
 }
 
 type GateWayInfo struct {
-	gateway        *gatewaycontract.Gateway
+	gateway        *gatewaycontract.Bridge
 	onServiceChain bool
 	subscribed     bool
 }
@@ -190,7 +190,7 @@ func (gwm *GateWayManager) GetAllGateway() []*GateWayJournal {
 }
 
 // SetGateway stores the address and gateway pair with local/remote and subscription status.
-func (gwm *GateWayManager) SetGateway(addr common.Address, gateway *gatewaycontract.Gateway, local bool, subscribed bool) {
+func (gwm *GateWayManager) SetGateway(addr common.Address, gateway *gatewaycontract.Bridge, local bool, subscribed bool) {
 	gwm.gateways[addr] = &GateWayInfo{gateway, local, subscribed}
 }
 
@@ -203,11 +203,11 @@ func (gwm *GateWayManager) LoadAllGateway() error {
 			}
 			logger.Info("Add gateway pair in address manager")
 			// Step 1: register gateway
-			localGateway, err := gatewaycontract.NewGateway(journal.LocalAddress, gwm.subBridge.localBackend)
+			localGateway, err := gatewaycontract.NewBridge(journal.LocalAddress, gwm.subBridge.localBackend)
 			if err != nil {
 				return err
 			}
-			remoteGateway, err := gatewaycontract.NewGateway(journal.RemoteAddress, gwm.subBridge.remoteBackend)
+			remoteGateway, err := gatewaycontract.NewBridge(journal.RemoteAddress, gwm.subBridge.remoteBackend)
 			if err != nil {
 				return err
 			}
@@ -251,7 +251,7 @@ func (gwm *GateWayManager) loadGateway(addr common.Address, backend bind.Contrac
 		return nil
 	}
 
-	gateway, err := gatewaycontract.NewGateway(addr, backend)
+	gateway, err := gatewaycontract.NewBridge(addr, backend)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 // DeployGateway handles actual smart contract deployment.
 // To create contract, the chain ID, nonce, account key, private key, contract binding and gas price are used.
 // The deployed contract address, transaction are returned. An error is also returned if any.
-func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *gatewaycontract.Gateway, error) {
+func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *gatewaycontract.Bridge, error) {
 	// TODO-Klaytn change config
 	if accountKey == nil {
 		// Only for unit test
@@ -301,7 +301,7 @@ func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accou
 
 	auth := MakeTransactOpts(accountKey, nonce, chainID, gasPrice)
 
-	addr, tx, contract, err := gatewaycontract.DeployGateway(auth, backend, true)
+	addr, tx, contract, err := gatewaycontract.DeployBridge(auth, backend, true)
 	if err != nil {
 		logger.Error("Failed to deploy contract.", "err", err)
 		return common.Address{}, nil, err
@@ -338,16 +338,16 @@ func (gwm *GateWayManager) SubscribeEvent(addr common.Address) error {
 }
 
 // SubscribeEvent sets watch logs and creates a goroutine loop to handle event messages.
-func (gwm *GateWayManager) subscribeEvent(addr common.Address, gateway *gatewaycontract.Gateway) {
-	tokenReceivedCh := make(chan *gatewaycontract.GatewayTokenReceived, TokenEventChanSize)
-	tokenWithdrawCh := make(chan *gatewaycontract.GatewayTokenWithdrawn, TokenEventChanSize)
+func (gwm *GateWayManager) subscribeEvent(addr common.Address, gateway *gatewaycontract.Bridge) {
+	tokenReceivedCh := make(chan *gatewaycontract.BridgeRequestValueTransfer, TokenEventChanSize)
+	tokenWithdrawCh := make(chan *gatewaycontract.BridgeHandleValueTransfer, TokenEventChanSize)
 
-	receivedSub, err := gateway.WatchTokenReceived(nil, tokenReceivedCh)
+	receivedSub, err := gateway.WatchRequestValueTransfer(nil, tokenReceivedCh)
 	if err != nil {
 		logger.Error("Failed to pGateway.WatchERC20Received", "err", err)
 	}
 	gwm.receivedEvents[addr] = receivedSub
-	withdrawnSub, err := gateway.WatchTokenWithdrawn(nil, tokenWithdrawCh)
+	withdrawnSub, err := gateway.WatchHandleValueTransfer(nil, tokenWithdrawCh)
 	if err != nil {
 		logger.Error("Failed to pGateway.WatchTokenWithdrawn", "err", err)
 	}
@@ -371,8 +371,8 @@ func (gwm *GateWayManager) unsubscribeEvent(addr common.Address) {
 // Loop handles subscribed event messages.
 func (gwm *GateWayManager) loop(
 	addr common.Address,
-	receivedCh <-chan *gatewaycontract.GatewayTokenReceived,
-	withdrawCh <-chan *gatewaycontract.GatewayTokenWithdrawn,
+	receivedCh <-chan *gatewaycontract.BridgeRequestValueTransfer,
+	withdrawCh <-chan *gatewaycontract.BridgeHandleValueTransfer,
 	receivedSub event.Subscription,
 	withdrawSub event.Subscription) {
 
@@ -390,7 +390,7 @@ func (gwm *GateWayManager) loop(
 				From:         ev.From,
 				To:           ev.To,
 				Amount:       ev.Amount,
-				RequestNonce: ev.ReqeustNonce,
+				RequestNonce: ev.RequestNonce,
 			}
 			gwm.tokenReceived.Send(receiveEvent)
 		case ev := <-withdrawCh:

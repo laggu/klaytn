@@ -24,7 +24,7 @@ import (
 	"github.com/ground-x/klaytn/accounts/abi/bind/backends"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/contracts/gateway"
+	"github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/contracts/servicechain_nft"
 	"github.com/ground-x/klaytn/contracts/servicechain_token"
 	"github.com/ground-x/klaytn/crypto"
@@ -184,7 +184,7 @@ func TestGateWayManager(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := gateway.WithdrawKLAY(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
+					tx, err := gateway.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
 					}
@@ -193,7 +193,7 @@ func TestGateWayManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := gateway.WithdrawToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce)
+					tx, err := gateway.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
@@ -208,7 +208,7 @@ func TestGateWayManager(t *testing.T) {
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
-					tx, err := gateway.WithdrawERC721(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, nftAddr, ev.To, ev.RequestNonce)
+					tx, err := gateway.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, nftAddr, ev.To, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawERC721: %v", err)
 					}
@@ -298,13 +298,13 @@ func TestGateWayManager(t *testing.T) {
 		fmt.Println("NFT owner after registering", owner.String())
 	}
 
-	// 7. DepositToGateway from auth2 to auth3
+	// 7. RequestValueTransfer from auth2 to auth3
 	{
-		tx, err = token.DepositToGateway(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 99999}, testToken, auth3.From)
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 99999}, testToken, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
 		}
-		fmt.Println("DepositToGateway Transaction", tx.Hash().Hex())
+		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		// TODO-Klaytn-Servicechain needs to support WaitMined
@@ -313,16 +313,16 @@ func TestGateWayManager(t *testing.T) {
 		//
 		//receipt, err := bind.WaitMined(timeoutContext, sim, tx)
 		//if err != nil {
-		//	log.Fatal("Failed to DepositToGateway.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
+		//	log.Fatal("Failed to RequestValueTransfer.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
 		//
 		//}
-		//fmt.Println("DepositToGateway is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
+		//fmt.Println("RequestValueTransfer is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
 	}
 
 	// 8. DepositKLAY from auth to auth3
 	{
-		tx, err = gateway.DepositKLAY(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
+		tx, err = gateway.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}
@@ -335,9 +335,9 @@ func TestGateWayManager(t *testing.T) {
 	{
 		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: auth4.From, Signer: auth4.Signer, GasLimit: 999999}, big.NewInt(int64(nftTokenID)), auth3.From)
 		if err != nil {
-			log.Fatalf("Failed to nft.DepositToGateway: %v", err)
+			log.Fatalf("Failed to nft.RequestValueTransfer: %v", err)
 		}
-		fmt.Println("nft.DepositToGateway Transaction", tx.Hash().Hex())
+		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -346,10 +346,10 @@ func TestGateWayManager(t *testing.T) {
 
 		receipt, err := bind.WaitMined(timeoutContext, sim, tx)
 		if err != nil {
-			log.Fatal("Failed to nft.DepositToGateway.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
+			log.Fatal("Failed to nft.RequestValueTransfer.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
 
 		}
-		fmt.Println("nft.DepositToGateway is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
+		fmt.Println("nft.RequestValueTransfer is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
 	}
 
 	// Wait a few second for wait group
@@ -505,7 +505,7 @@ func TestGateWayManagerJournal(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := gateway.WithdrawKLAY(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
+					tx, err := gateway.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
 
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
@@ -524,7 +524,7 @@ func TestGateWayManagerJournal(t *testing.T) {
 
 	// 4. DepositKLAY from auth to auth3 to check subscription
 	{
-		tx, err := gateway.DepositKLAY(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
+		tx, err := gateway.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}
@@ -551,10 +551,10 @@ func (gwm *GateWayManager) DeployGatewayTest(backend *backends.SimulatedBackend,
 	}
 }
 
-func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *gateway.Gateway, error) {
+func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
 	auth := bind.NewKeyedTransactor(accountKey)
 	auth.Value = big.NewInt(10000)
-	addr, tx, contract, err := gateway.DeployGateway(auth, backend, true)
+	addr, tx, contract, err := bridge.DeployBridge(auth, backend, true)
 	if err != nil {
 		logger.Error("", "err", err)
 		return common.Address{}, nil, err

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/contracts/gateway"
+	"github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/node"
@@ -141,8 +141,8 @@ func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 }
 
 func (sbapi *SubBridgeAPI) RegisterGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) bool {
-	cGateway, cErr := gateway.NewGateway(cGatewayAddr, sbapi.sc.localBackend)
-	pGateway, pErr := gateway.NewGateway(pGatewayAddr, sbapi.sc.remoteBackend)
+	cGateway, cErr := bridge.NewBridge(cGatewayAddr, sbapi.sc.localBackend)
+	pGateway, pErr := bridge.NewBridge(pGatewayAddr, sbapi.sc.remoteBackend)
 
 	if cErr != nil || pErr != nil {
 		return false

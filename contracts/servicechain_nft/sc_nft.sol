@@ -12,8 +12,8 @@ contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), Ownable {
     constructor (address _bridge) public { bridge = _bridge; }
 
     // Owner mints the NFT to the user.
-    function register(address user, uint64 tokenId) onlyOwner external {
-        _mint(user, tokenId);
+    function register(address _user, uint64 _tokenId) onlyOwner external {
+        _mint(_user, _tokenId);
     }
 
     // TODO-Klaytn needs to consider how to prevent mint duplicated id in another NFT contract.
