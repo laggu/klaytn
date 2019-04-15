@@ -77,20 +77,20 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedEvent) error {
 	//TODO-Klaytn event handle
 	tokenType := token.TokenType
-	gatewayAddr := cce.subbridge.AddressManager().GetCounterPartGateway(token.ContractAddr)
+	bridgeAddr := cce.subbridge.AddressManager().GetCounterPartBridge(token.ContractAddr)
 	tokenAddr := cce.subbridge.AddressManager().GetCounterPartToken(token.TokenAddr)
 	to := token.To
 
-	gatewayInfo, ok := cce.subbridge.gatewayMgr.gateways[gatewayAddr]
+	bridgeInfo, ok := cce.subbridge.bridgeManager.bridges[bridgeAddr]
 	if !ok {
-		return errors.New("there is no gateway")
+		return errors.New("there is no bridge")
 	}
 	switch tokenType {
 	case KLAY:
 		logger.Info("Got request KLAY transfer event")
-		if gatewayInfo.onServiceChain {
+		if bridgeInfo.onServiceChain {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
-			tx, err := gatewayInfo.gateway.HandleKLAYTransfer(auth, token.Amount, to, token.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleKLAYTransfer(auth, token.Amount, to, token.RequestNonce)
 			if err != nil {
 				logger.Error("Child Bridge failed to HandleKLAYTransfer", "err", err)
 				return err
@@ -101,7 +101,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 			cce.handler.LockChainAccount()
 			defer cce.handler.UnLockChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
-			tx, err := gatewayInfo.gateway.HandleKLAYTransfer(auth, token.Amount, to, token.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleKLAYTransfer(auth, token.Amount, to, token.RequestNonce)
 			if err != nil {
 				logger.Error("Parent Bridge failed to HandleKLAYTransfer", "err", err)
 				return err
@@ -112,9 +112,9 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 		}
 	case TOKEN:
 		logger.Info("Got request token transfer event")
-		if gatewayInfo.onServiceChain {
+		if bridgeInfo.onServiceChain {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
-			tx, err := gatewayInfo.gateway.HandleTokenTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleTokenTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
 			if err != nil {
 				logger.Error("Child Bridge failed to HandleTokenTransfer", "err", err)
 				return err
@@ -125,7 +125,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 			cce.handler.LockChainAccount()
 			defer cce.handler.UnLockChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
-			tx, err := gatewayInfo.gateway.HandleTokenTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleTokenTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
 			if err != nil {
 				logger.Error("Parent Bridge failed to HandleTokenTransfer", "err", err)
 				return err
@@ -136,9 +136,9 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 		}
 	case NFT:
 		logger.Info("Got request NFT transfer event")
-		if gatewayInfo.onServiceChain {
+		if bridgeInfo.onServiceChain {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getNodeAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
-			tx, err := gatewayInfo.gateway.HandleNFTTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleNFTTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
 			if err != nil {
 				logger.Error("Child Bridge failed to HandleNFTTransfer", "err", err)
 				return err
@@ -149,7 +149,7 @@ func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedE
 			cce.handler.LockChainAccount()
 			defer cce.handler.UnLockChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
-			tx, err := gatewayInfo.gateway.HandleNFTTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleNFTTransfer(auth, token.Amount, to, tokenAddr, token.RequestNonce)
 			if err != nil {
 				logger.Error("Parent Bridge failed to HandleNFTTransfer", "err", err)
 				return err

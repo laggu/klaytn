@@ -55,14 +55,14 @@ func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing
 	}
 }
 
-// TestBridgeManager tests the event/method of Token/NFT/Gateway contracts.
-// And It tests the nonce error case of gateway deploy (#2284)
+// TestBridgeManager tests the event/method of Token/NFT/Bridge contracts.
+// And It tests the nonce error case of bridge deploy (#2284)
 // TODO-Klaytn-Servicechain needs to refine this test.
 // - consider main/service chain simulated backend.
 // - separate each test
 func TestBridgeManager(t *testing.T) {
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), GatewayAddrJournal)); err != nil {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -108,18 +108,18 @@ func TestBridgeManager(t *testing.T) {
 		return
 	}
 
-	gatewayManager, err := NewBridgeManager(sc)
+	bridgeManager, err := NewBridgeManager(sc)
 
 	testToken := big.NewInt(123)
 	testKLAY := big.NewInt(321)
 
-	// 1. Deploy Gateway Contract
-	addr, err := gatewayManager.DeployGatewayTest(sim, false)
+	// 1. Deploy Bridge Contract
+	addr, err := bridgeManager.DeployBridgeTest(sim, false)
 	if err != nil {
-		log.Fatalf("Failed to deploy new gateway contract: %v", err)
+		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
-	gateway := gatewayManager.gateways[addr].gateway
-	fmt.Println("===== GatewayContract Addr ", addr.Hex())
+	bridge := bridgeManager.bridges[addr].bridge
+	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
@@ -160,13 +160,13 @@ func TestBridgeManager(t *testing.T) {
 	balance, _ = sim.BalanceAt(context.Background(), auth4.From, nil)
 	fmt.Printf("auth4(%v) KLAY balance : %v\n", auth4.From.String(), balance)
 
-	// 4. Subscribe Gateway Contract
-	gatewayManager.SubscribeEvent(addr)
+	// 4. Subscribe Bridge Contract
+	bridgeManager.SubscribeEvent(addr)
 
 	tokenCh := make(chan TokenReceivedEvent)
 	tokenSendCh := make(chan TokenTransferEvent)
-	gatewayManager.SubscribeTokenReceived(tokenCh)
-	gatewayManager.SubscribeTokenWithDraw(tokenSendCh)
+	bridgeManager.SubscribeTokenReceived(tokenCh)
+	bridgeManager.SubscribeTokenWithDraw(tokenSendCh)
 
 	go func() {
 		for {
@@ -184,7 +184,7 @@ func TestBridgeManager(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := gateway.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
 					}
@@ -193,7 +193,7 @@ func TestBridgeManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := gateway.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce)
+					tx, err := bridge.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
@@ -208,7 +208,7 @@ func TestBridgeManager(t *testing.T) {
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
-					tx, err := gateway.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, nftAddr, ev.To, ev.RequestNonce)
+					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, nftAddr, ev.To, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawERC721: %v", err)
 					}
@@ -322,7 +322,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 8. DepositKLAY from auth to auth3
 	{
-		tx, err = gateway.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}
@@ -408,19 +408,19 @@ func TestBridgeManager(t *testing.T) {
 
 	// 13. Nonce check on deploy error
 	{
-		addr2, err := gatewayManager.DeployGatewayNonceTest(sim)
+		addr2, err := bridgeManager.DeployBridgeNonceTest(sim)
 		if err != nil {
-			log.Fatalf("Failed to deploy new gateway contract: %v %v", err, addr2)
+			log.Fatalf("Failed to deploy new bridge contract: %v %v", err, addr2)
 		}
 	}
 
-	gatewayManager.Stop()
+	bridgeManager.Stop()
 }
 
 // TestBridgeManagerJournal tests journal functionality.
 func TestBridgeManagerJournal(t *testing.T) {
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), GatewayAddrJournal)); err != nil {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -467,28 +467,28 @@ func TestBridgeManagerJournal(t *testing.T) {
 	testKLAY := big.NewInt(321)
 
 	// 1. Prepare manager and subscribe event
-	gwm, err := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
 
-	addr, err := gwm.DeployGatewayTest(sim, false)
-	gateway := gwm.gateways[addr].gateway
-	fmt.Println("===== GatewayContract Addr ", addr.Hex())
+	addr, err := bm.DeployBridgeTest(sim, false)
+	bridge := bm.bridges[addr].bridge
+	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	gwm.gateways[addr] = &BridgeInfo{gateway, true, true}
-	gwm.journal.cache = []*BridgeJournal{}
-	gwm.journal.cache = append(gwm.journal.cache, &BridgeJournal{addr, addr, true})
+	bm.bridges[addr] = &BridgeInfo{bridge, true, true}
+	bm.journal.cache = []*BridgeJournal{}
+	bm.journal.cache = append(bm.journal.cache, &BridgeJournal{addr, addr, true})
 
-	gwm.SubscribeEvent(addr)
-	gwm.unsubscribeEvent(addr)
+	bm.SubscribeEvent(addr)
+	bm.unsubscribeEvent(addr)
 
-	//// 2. Reload gateway as if journal is loaded (it handles subscription internally)
-	gwm.loadGateway(addr, sc.remoteBackend, false, true)
+	// 2. Reload bridge as if journal is loaded (it handles subscription internally)
+	bm.loadBridge(addr, sc.remoteBackend, false, true)
 
 	// 3. Run automatic subscription checker
 	tokenCh := make(chan TokenReceivedEvent)
 	tokenSendCh := make(chan TokenTransferEvent)
-	gwm.SubscribeTokenReceived(tokenCh)
-	gwm.SubscribeTokenWithDraw(tokenSendCh)
+	bm.SubscribeTokenReceived(tokenCh)
+	bm.SubscribeTokenWithDraw(tokenSendCh)
 
 	go func() {
 		for {
@@ -505,7 +505,7 @@ func TestBridgeManagerJournal(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := gateway.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
 
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
@@ -524,7 +524,7 @@ func TestBridgeManagerJournal(t *testing.T) {
 
 	// 4. DepositKLAY from auth to auth3 to check subscription
 	{
-		tx, err := gateway.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
+		tx, err := bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}
@@ -535,23 +535,23 @@ func TestBridgeManagerJournal(t *testing.T) {
 
 	wg.Wait()
 
-	gwm.Stop()
+	bm.Stop()
 }
 
 // for TestMethod
-func (gwm *BridgeManager) DeployGatewayTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
+func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
-		addr, gateway, err := gwm.deployGatewayTest(big.NewInt(2019), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
-		gwm.SetGateway(addr, gateway, local, false)
+		addr, bridge, err := bm.deployBridgeTest(big.NewInt(2019), big.NewInt((int64)(bm.subBridge.handler.getNodeAccountNonce())), bm.subBridge.handler.nodeKey, backend)
+		bm.SetBridge(addr, bridge, local, false)
 		return addr, err
 	} else {
-		addr, gateway, err := gwm.deployGatewayTest(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.chainAccountNonce)), gwm.subBridge.handler.chainKey, backend)
-		gwm.SetGateway(addr, gateway, local, false)
+		addr, bridge, err := bm.deployBridgeTest(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.chainAccountNonce)), bm.subBridge.handler.chainKey, backend)
+		bm.SetBridge(addr, bridge, local, false)
 		return addr, err
 	}
 }
 
-func (gwm *BridgeManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
+func (bm *BridgeManager) deployBridgeTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
 	auth := bind.NewKeyedTransactor(accountKey)
 	auth.Value = big.NewInt(10000)
 	addr, tx, contract, err := bridge.DeployBridge(auth, backend, true)
@@ -559,7 +559,7 @@ func (gwm *BridgeManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, ac
 		logger.Error("", "err", err)
 		return common.Address{}, nil, err
 	}
-	logger.Info("Gateway is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
+	logger.Info("Bridge is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
 
 	// TODO-Klaytn-Servicechain needs to support WaitMined
 	//backend.Commit()
@@ -572,20 +572,20 @@ func (gwm *BridgeManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, ac
 	//	log.Fatal("Failed to deploy.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
 	//	return common.Address{}, nil, err
 	//}
-	//fmt.Println("deployGateway is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
+	//fmt.Println("deployBridge is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
 	return addr, contract, nil
 }
 
 // Nonce should not be increased when error occurs
-func (gwm *BridgeManager) DeployGatewayNonceTest(backend bind.ContractBackend) (common.Address, error) {
-	key := gwm.subBridge.handler.chainKey
-	nonce := gwm.subBridge.handler.getChainAccountNonce()
-	gwm.subBridge.handler.chainKey = nil
-	addr, _ := gwm.DeployGateway(backend, false)
-	gwm.subBridge.handler.chainKey = key
+func (bm *BridgeManager) DeployBridgeNonceTest(backend bind.ContractBackend) (common.Address, error) {
+	key := bm.subBridge.handler.chainKey
+	nonce := bm.subBridge.handler.getChainAccountNonce()
+	bm.subBridge.handler.chainKey = nil
+	addr, _ := bm.DeployBridge(backend, false)
+	bm.subBridge.handler.chainKey = key
 
-	if nonce != gwm.subBridge.handler.getChainAccountNonce() {
+	if nonce != bm.subBridge.handler.getChainAccountNonce() {
 		return addr, errors.New("nonce is accidentally increased")
 	}
 

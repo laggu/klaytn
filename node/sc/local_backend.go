@@ -43,7 +43,7 @@ const defaultGasPrice = 50 * params.Ston
 var errBlockNumberUnsupported = errors.New("LocalBackend cannot access blocks other than the latest block")
 var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
 
-// TODO-Klaytn currently LocalBackend is only for ServiceChain, especially Gateway SmartContract
+// TODO-Klaytn currently LocalBackend is only for ServiceChain, especially Bridge SmartContract
 type LocalBackend struct {
 	subbrige *SubBridge
 

@@ -107,10 +107,10 @@ type SubBridge struct {
 	handler      *SubBridgeHandler
 	eventhandler *ChildChainEventHandler
 
-	// gatewaymanager for value exchange
+	// bridgemanager for value exchange
 	localBackend  *LocalBackend
 	remoteBackend *RemoteBackend
-	gatewayMgr    *BridgeManager
+	bridgeManager *BridgeManager
 
 	tokenReceivedCh  chan TokenReceivedEvent
 	tokenReceivedSub event.Subscription
@@ -273,18 +273,18 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 		return
 	}
 
-	sc.gatewayMgr, err = NewBridgeManager(sc)
+	sc.bridgeManager, err = NewBridgeManager(sc)
 	if err != nil {
 		logger.Error("fail to initialize BridgeManager", "err", err)
 		sc.bootFail = true
 		return
 	}
-	sc.tokenReceivedSub = sc.gatewayMgr.SubscribeTokenReceived(sc.tokenReceivedCh)
-	sc.tokenTransferSub = sc.gatewayMgr.SubscribeTokenWithDraw(sc.tokenTransferCh)
+	sc.tokenReceivedSub = sc.bridgeManager.SubscribeTokenReceived(sc.tokenReceivedCh)
+	sc.tokenTransferSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.tokenTransferCh)
 
 	if sc.config.VTRecovery {
 		logger.Info("value transfer recovery is enabled")
-		sc.gatewayMgr.LoadAllGateway()
+		sc.bridgeManager.LoadAllBridge()
 	}
 
 	sc.pmwg.Add(1)
@@ -612,7 +612,7 @@ func (s *SubBridge) Stop() error {
 	s.eventMux.Stop()
 	s.chainDB.Close()
 
-	s.gatewayMgr.Stop()
+	s.bridgeManager.Stop()
 	s.bridgeTxPool.Stop()
 	s.bridgeServer.Stop()
 

@@ -21,43 +21,43 @@ import (
 	"github.com/ground-x/klaytn/common"
 )
 
-// AddressManager manages mapping addresses for gateway,contract,user
+// AddressManager manages mapping addresses for bridge,contract,user
 // to exchange value between parent and child chain
 type AddressManager struct {
-	gatewayContracts map[common.Address]common.Address
-	tokenContracts   map[common.Address]common.Address
+	bridgeContracts map[common.Address]common.Address
+	tokenContracts  map[common.Address]common.Address
 }
 
 func NewAddressManager() (*AddressManager, error) {
 	return &AddressManager{
-		gatewayContracts: make(map[common.Address]common.Address),
-		tokenContracts:   make(map[common.Address]common.Address),
+		bridgeContracts: make(map[common.Address]common.Address),
+		tokenContracts:  make(map[common.Address]common.Address),
 	}, nil
 }
 
-func (am *AddressManager) AddGateway(gateway1 common.Address, gateway2 common.Address) error {
-	_, ok1 := am.gatewayContracts[gateway1]
-	_, ok2 := am.gatewayContracts[gateway2]
+func (am *AddressManager) AddBridge(bridge1 common.Address, bridge2 common.Address) error {
+	_, ok1 := am.bridgeContracts[bridge1]
+	_, ok2 := am.bridgeContracts[bridge2]
 
 	if ok1 || ok2 {
-		return errors.New("gateway already exists")
+		return errors.New("bridge already exists")
 	}
 
-	am.gatewayContracts[gateway1] = gateway2
-	am.gatewayContracts[gateway2] = gateway1
+	am.bridgeContracts[bridge1] = bridge2
+	am.bridgeContracts[bridge2] = bridge1
 	return nil
 }
 
-func (am *AddressManager) DeleteGateway(gateway1 common.Address) (common.Address, common.Address, error) {
-	gateway2, ok1 := am.gatewayContracts[gateway1]
+func (am *AddressManager) DeleteBridge(bridge1 common.Address) (common.Address, common.Address, error) {
+	bridge2, ok1 := am.bridgeContracts[bridge1]
 	if !ok1 {
-		return common.Address{}, common.Address{}, errors.New("gateway does not exist")
+		return common.Address{}, common.Address{}, errors.New("bridge does not exist")
 	}
 
-	delete(am.gatewayContracts, gateway1)
-	delete(am.gatewayContracts, gateway2)
+	delete(am.bridgeContracts, bridge1)
+	delete(am.bridgeContracts, bridge2)
 
-	return gateway1, gateway2, nil
+	return bridge1, bridge2, nil
 }
 
 func (am *AddressManager) AddToken(token1 common.Address, token2 common.Address) error {
@@ -85,12 +85,12 @@ func (am *AddressManager) DeleteToken(token1 common.Address) (common.Address, co
 	return token1, token2, nil
 }
 
-func (am *AddressManager) GetCounterPartGateway(addr common.Address) common.Address {
-	gateway, ok := am.gatewayContracts[addr]
+func (am *AddressManager) GetCounterPartBridge(addr common.Address) common.Address {
+	bridge, ok := am.bridgeContracts[addr]
 	if !ok {
 		return common.Address{}
 	}
-	return gateway
+	return bridge
 }
 
 func (am *AddressManager) GetCounterPartToken(addr common.Address) common.Address {

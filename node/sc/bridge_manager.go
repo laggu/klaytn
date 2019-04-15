@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/common"
-	gatewaycontract "github.com/ground-x/klaytn/contracts/bridge"
+	bridgecontract "github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -34,7 +34,7 @@ import (
 
 const (
 	TokenEventChanSize = 30
-	GatewayAddrJournal = "gateway_addrs.rlp"
+	BridgeAddrJournal  = "bridge_addrs.rlp"
 )
 
 const (
@@ -74,7 +74,7 @@ type BridgeJournal struct {
 }
 
 type BridgeInfo struct {
-	gateway        *gatewaycontract.Bridge
+	bridge         *bridgecontract.Bridge
 	onServiceChain bool
 	subscribed     bool
 }
@@ -109,124 +109,124 @@ type BridgeManager struct {
 
 	receivedEvents map[common.Address]event.Subscription
 	withdrawEvents map[common.Address]event.Subscription
-	gateways       map[common.Address]*BridgeInfo
+	bridges        map[common.Address]*BridgeInfo
 
 	tokenReceived event.Feed
 	tokenWithdraw event.Feed
 
 	scope event.SubscriptionScope
 
-	journal *gatewayAddrJournal
+	journal *bridgeAddrJournal
 }
 
 func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
-	gatewayAddrJournal := newBridgeAddrJournal(path.Join(main.config.DataDir, GatewayAddrJournal), main.config)
+	bridgeAddrJournal := newBridgeAddrJournal(path.Join(main.config.DataDir, BridgeAddrJournal), main.config)
 
-	gwm := &BridgeManager{
+	bridgeManager := &BridgeManager{
 		subBridge:      main,
 		receivedEvents: make(map[common.Address]event.Subscription),
 		withdrawEvents: make(map[common.Address]event.Subscription),
-		gateways:       make(map[common.Address]*BridgeInfo),
-		journal:        gatewayAddrJournal,
+		bridges:        make(map[common.Address]*BridgeInfo),
+		journal:        bridgeAddrJournal,
 	}
 
-	logger.Info("Load Gateway Address from JournalFiles ", "path", gwm.journal.path)
-	gwm.journal.cache = []*BridgeJournal{}
+	logger.Info("Load Bridge Address from JournalFiles ", "path", bridgeManager.journal.path)
+	bridgeManager.journal.cache = []*BridgeJournal{}
 
-	if err := gwm.journal.load(func(gwjournal BridgeJournal) error {
-		logger.Info("Load Gateway Address from JournalFiles ",
+	if err := bridgeManager.journal.load(func(gwjournal BridgeJournal) error {
+		logger.Info("Load Bridge Address from JournalFiles ",
 			"local address", gwjournal.LocalAddress.Hex(), "remote address", gwjournal.RemoteAddress.Hex())
-		gwm.journal.cache = append(gwm.journal.cache, &gwjournal)
+		bridgeManager.journal.cache = append(bridgeManager.journal.cache, &gwjournal)
 		return nil
 	}); err != nil {
-		logger.Error("fail to load gateway address", "err", err)
+		logger.Error("fail to load bridge address", "err", err)
 	}
 
-	if err := gwm.journal.rotate(gwm.GetAllGateway()); err != nil {
-		logger.Error("fail to rotate gateway journal", "err", err)
+	if err := bridgeManager.journal.rotate(bridgeManager.GetAllBridge()); err != nil {
+		logger.Error("fail to rotate bridge journal", "err", err)
 	}
 
-	return gwm, nil
+	return bridgeManager, nil
 }
 
 // SubscribeTokenReceived registers a subscription of TokenReceivedEvent.
-func (gwm *BridgeManager) SubscribeTokenReceived(ch chan<- TokenReceivedEvent) event.Subscription {
-	return gwm.scope.Track(gwm.tokenReceived.Subscribe(ch))
+func (bm *BridgeManager) SubscribeTokenReceived(ch chan<- TokenReceivedEvent) event.Subscription {
+	return bm.scope.Track(bm.tokenReceived.Subscribe(ch))
 }
 
 // SubscribeTokenWithDraw registers a subscription of TokenTransferEvent.
-func (gwm *BridgeManager) SubscribeTokenWithDraw(ch chan<- TokenTransferEvent) event.Subscription {
-	return gwm.scope.Track(gwm.tokenWithdraw.Subscribe(ch))
+func (bm *BridgeManager) SubscribeTokenWithDraw(ch chan<- TokenTransferEvent) event.Subscription {
+	return bm.scope.Track(bm.tokenWithdraw.Subscribe(ch))
 }
 
-// GetAllGateway returns a journal cache while removing unnecessary address pair.
-func (gwm *BridgeManager) GetAllGateway() []*BridgeJournal {
+// GetAllBridge returns a journal cache while removing unnecessary address pair.
+func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 	gwjs := []*BridgeJournal{}
 
-	for _, journal := range gwm.journal.cache {
+	for _, journal := range bm.journal.cache {
 		if journal.Paired {
-			gatewayInfo, ok := gwm.gateways[journal.LocalAddress]
-			if ok && !gatewayInfo.subscribed {
+			bridgeInfo, ok := bm.bridges[journal.LocalAddress]
+			if ok && !bridgeInfo.subscribed {
 				continue
 			}
-			if gwm.subBridge.AddressManager() != nil {
-				gwm.subBridge.addressManager.DeleteGateway(journal.LocalAddress)
+			if bm.subBridge.AddressManager() != nil {
+				bm.subBridge.addressManager.DeleteBridge(journal.LocalAddress)
 			}
 
-			gatewayInfo, ok = gwm.gateways[journal.RemoteAddress]
-			if ok && !gatewayInfo.subscribed {
+			bridgeInfo, ok = bm.bridges[journal.RemoteAddress]
+			if ok && !bridgeInfo.subscribed {
 				continue
 			}
-			if gwm.subBridge.AddressManager() != nil {
-				gwm.subBridge.addressManager.DeleteGateway(journal.RemoteAddress)
+			if bm.subBridge.AddressManager() != nil {
+				bm.subBridge.addressManager.DeleteBridge(journal.RemoteAddress)
 			}
 		}
 		gwjs = append(gwjs, journal)
 	}
 
-	gwm.journal.cache = gwjs
+	bm.journal.cache = gwjs
 
-	return gwm.journal.cache
+	return bm.journal.cache
 }
 
-// SetGateway stores the address and gateway pair with local/remote and subscription status.
-func (gwm *BridgeManager) SetGateway(addr common.Address, gateway *gatewaycontract.Bridge, local bool, subscribed bool) {
-	gwm.gateways[addr] = &BridgeInfo{gateway, local, subscribed}
+// SetBridge stores the address and bridge pair with local/remote and subscription status.
+func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.Bridge, local bool, subscribed bool) {
+	bm.bridges[addr] = &BridgeInfo{bridge, local, subscribed}
 }
 
-// LoadAllGateway reloads gateway and handles subscription by using the the journal cache.
-func (gwm *BridgeManager) LoadAllGateway() error {
-	for _, journal := range gwm.journal.cache {
+// LoadAllBridge reloads bridge and handles subscription by using the the journal cache.
+func (bm *BridgeManager) LoadAllBridge() error {
+	for _, journal := range bm.journal.cache {
 		if journal.Paired {
-			if gwm.subBridge.AddressManager() == nil {
+			if bm.subBridge.AddressManager() == nil {
 				return errors.New("address manager is not exist")
 			}
-			logger.Info("Add gateway pair in address manager")
-			// Step 1: register gateway
-			localGateway, err := gatewaycontract.NewBridge(journal.LocalAddress, gwm.subBridge.localBackend)
+			logger.Info("Add bridge pair in address manager")
+			// Step 1: register bridge
+			localBridge, err := bridgecontract.NewBridge(journal.LocalAddress, bm.subBridge.localBackend)
 			if err != nil {
 				return err
 			}
-			remoteGateway, err := gatewaycontract.NewBridge(journal.RemoteAddress, gwm.subBridge.remoteBackend)
+			remoteBridge, err := bridgecontract.NewBridge(journal.RemoteAddress, bm.subBridge.remoteBackend)
 			if err != nil {
 				return err
 			}
-			gwm.SetGateway(journal.LocalAddress, localGateway, true, false)
-			gwm.SetGateway(journal.RemoteAddress, remoteGateway, false, false)
+			bm.SetBridge(journal.LocalAddress, localBridge, true, false)
+			bm.SetBridge(journal.RemoteAddress, remoteBridge, false, false)
 
 			// Step 2: set address manager
-			gwm.subBridge.AddressManager().AddGateway(journal.LocalAddress, journal.RemoteAddress)
+			bm.subBridge.AddressManager().AddBridge(journal.LocalAddress, journal.RemoteAddress)
 
 			// Step 3: subscribe event
-			gwm.subscribeEvent(journal.LocalAddress, localGateway)
-			gwm.subscribeEvent(journal.RemoteAddress, remoteGateway)
+			bm.subscribeEvent(journal.LocalAddress, localBridge)
+			bm.subscribeEvent(journal.RemoteAddress, remoteBridge)
 
 		} else {
-			err := gwm.loadGateway(journal.LocalAddress, gwm.subBridge.localBackend, true, false)
+			err := bm.loadBridge(journal.LocalAddress, bm.subBridge.localBackend, true, false)
 			if err != nil {
 				return err
 			}
-			err = gwm.loadGateway(journal.RemoteAddress, gwm.subBridge.remoteBackend, false, false)
+			err = bm.loadBridge(journal.RemoteAddress, bm.subBridge.remoteBackend, false, false)
 			if err != nil {
 				return err
 			}
@@ -235,64 +235,64 @@ func (gwm *BridgeManager) LoadAllGateway() error {
 	return nil
 }
 
-// LoadGateway creates new gateway contract for a given address and subscribes an event if needed.
-func (gwm *BridgeManager) loadGateway(addr common.Address, backend bind.ContractBackend, local bool, subscribed bool) error {
-	var gatewayInfo *BridgeInfo
+// LoadBridge creates new bridge contract for a given address and subscribes an event if needed.
+func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBackend, local bool, subscribed bool) error {
+	var bridgeInfo *BridgeInfo
 
 	defer func() {
-		if gatewayInfo != nil && subscribed && !gwm.gateways[addr].subscribed {
-			logger.Info("gateway subscription is enabled by journal", "address", addr)
-			gwm.subscribeEvent(addr, gatewayInfo.gateway)
+		if bridgeInfo != nil && subscribed && !bm.bridges[addr].subscribed {
+			logger.Info("bridge subscription is enabled by journal", "address", addr)
+			bm.subscribeEvent(addr, bridgeInfo.bridge)
 		}
 	}()
 
-	gatewayInfo = gwm.gateways[addr]
-	if gatewayInfo != nil {
+	bridgeInfo = bm.bridges[addr]
+	if bridgeInfo != nil {
 		return nil
 	}
 
-	gateway, err := gatewaycontract.NewBridge(addr, backend)
+	bridge, err := bridgecontract.NewBridge(addr, backend)
 	if err != nil {
 		return err
 	}
-	logger.Info("gateway ", "address", addr)
-	gwm.SetGateway(addr, gateway, local, false)
-	gatewayInfo = gwm.gateways[addr]
+	logger.Info("bridge ", "address", addr)
+	bm.SetBridge(addr, bridge, local, false)
+	bridgeInfo = bm.bridges[addr]
 
 	return nil
 }
 
-// Deploy Gateway SmartContract on same node or remote node
-func (gwm *BridgeManager) DeployGateway(backend bind.ContractBackend, local bool) (common.Address, error) {
+// Deploy Bridge SmartContract on same node or remote node
+func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) (common.Address, error) {
 	if local {
-		addr, gateway, err := gwm.deployGateway(gwm.subBridge.getChainID(), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend, gwm.subBridge.txPool.GasPrice())
+		addr, bridge, err := bm.deployBridge(bm.subBridge.getChainID(), big.NewInt((int64)(bm.subBridge.handler.getNodeAccountNonce())), bm.subBridge.handler.nodeKey, backend, bm.subBridge.txPool.GasPrice())
 		if err != nil {
-			logger.Error("fail to deploy gateway", "err", err)
+			logger.Error("fail to deploy bridge", "err", err)
 			return common.Address{}, err
 		}
-		gwm.SetGateway(addr, gateway, local, false)
-		gwm.journal.insert(addr, common.Address{}, false)
+		bm.SetBridge(addr, bridge, local, false)
+		bm.journal.insert(addr, common.Address{}, false)
 
 		return addr, err
 	} else {
-		gwm.subBridge.handler.LockChainAccount()
-		defer gwm.subBridge.handler.UnLockChainAccount()
-		addr, gateway, err := gwm.deployGateway(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.getChainAccountNonce())), gwm.subBridge.handler.chainKey, backend, new(big.Int).SetUint64(gwm.subBridge.handler.remoteGasPrice))
+		bm.subBridge.handler.LockChainAccount()
+		defer bm.subBridge.handler.UnLockChainAccount()
+		addr, bridge, err := bm.deployBridge(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.getChainAccountNonce())), bm.subBridge.handler.chainKey, backend, new(big.Int).SetUint64(bm.subBridge.handler.remoteGasPrice))
 		if err != nil {
-			logger.Error("fail to deploy gateway", "err", err)
+			logger.Error("fail to deploy bridge", "err", err)
 			return common.Address{}, err
 		}
-		gwm.SetGateway(addr, gateway, local, false)
-		gwm.journal.insert(common.Address{}, addr, false)
-		gwm.subBridge.handler.addChainAccountNonce(1)
+		bm.SetBridge(addr, bridge, local, false)
+		bm.journal.insert(common.Address{}, addr, false)
+		bm.subBridge.handler.addChainAccountNonce(1)
 		return addr, err
 	}
 }
 
-// DeployGateway handles actual smart contract deployment.
+// DeployBridge handles actual smart contract deployment.
 // To create contract, the chain ID, nonce, account key, private key, contract binding and gas price are used.
 // The deployed contract address, transaction are returned. An error is also returned if any.
-func (gwm *BridgeManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *gatewaycontract.Bridge, error) {
+func (bm *BridgeManager) deployBridge(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *bridgecontract.Bridge, error) {
 	// TODO-Klaytn change config
 	if accountKey == nil {
 		// Only for unit test
@@ -301,12 +301,12 @@ func (gwm *BridgeManager) deployGateway(chainID *big.Int, nonce *big.Int, accoun
 
 	auth := MakeTransactOpts(accountKey, nonce, chainID, gasPrice)
 
-	addr, tx, contract, err := gatewaycontract.DeployBridge(auth, backend, true)
+	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend, true)
 	if err != nil {
 		logger.Error("Failed to deploy contract.", "err", err)
 		return common.Address{}, nil, err
 	}
-	logger.Info("Gateway is deploying...", "addr", addr, "txHash", tx.Hash().String())
+	logger.Info("Bridge is deploying...", "addr", addr, "txHash", tx.Hash().String())
 
 	back, ok := backend.(bind.DeployBackend)
 	if !ok {
@@ -322,57 +322,57 @@ func (gwm *BridgeManager) deployGateway(chainID *big.Int, nonce *big.Int, accoun
 		logger.Error("Failed to WaitDeployed.", "err", err, "txHash", tx.Hash().String())
 		return common.Address{}, nil, err
 	}
-	logger.Info("Gateway is deployed.", "addr", addr, "txHash", tx.Hash().String())
+	logger.Info("Bridge is deployed.", "addr", addr, "txHash", tx.Hash().String())
 	return addr, contract, nil
 }
 
-// SubscribeEvent registers a subscription of GatewayERC20Received and GatewayTokenWithdrawn
-func (gwm *BridgeManager) SubscribeEvent(addr common.Address) error {
-	gatewayInfo, ok := gwm.gateways[addr]
+// SubscribeEvent registers a subscription of BridgeERC20Received and BridgeTokenWithdrawn
+func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
+	bridgeInfo, ok := bm.bridges[addr]
 	if !ok {
-		return fmt.Errorf("there is no gateway contract which address %v", addr)
+		return fmt.Errorf("there is no bridge contract which address %v", addr)
 	}
-	gwm.subscribeEvent(addr, gatewayInfo.gateway)
+	bm.subscribeEvent(addr, bridgeInfo.bridge)
 
 	return nil
 }
 
 // SubscribeEvent sets watch logs and creates a goroutine loop to handle event messages.
-func (gwm *BridgeManager) subscribeEvent(addr common.Address, gateway *gatewaycontract.Bridge) {
-	tokenReceivedCh := make(chan *gatewaycontract.BridgeRequestValueTransfer, TokenEventChanSize)
-	tokenWithdrawCh := make(chan *gatewaycontract.BridgeHandleValueTransfer, TokenEventChanSize)
+func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontract.Bridge) {
+	tokenReceivedCh := make(chan *bridgecontract.BridgeRequestValueTransfer, TokenEventChanSize)
+	tokenWithdrawCh := make(chan *bridgecontract.BridgeHandleValueTransfer, TokenEventChanSize)
 
-	receivedSub, err := gateway.WatchRequestValueTransfer(nil, tokenReceivedCh)
+	receivedSub, err := bridge.WatchRequestValueTransfer(nil, tokenReceivedCh)
 	if err != nil {
-		logger.Error("Failed to pGateway.WatchERC20Received", "err", err)
+		logger.Error("Failed to pBridge.WatchERC20Received", "err", err)
 	}
-	gwm.receivedEvents[addr] = receivedSub
-	withdrawnSub, err := gateway.WatchHandleValueTransfer(nil, tokenWithdrawCh)
+	bm.receivedEvents[addr] = receivedSub
+	withdrawnSub, err := bridge.WatchHandleValueTransfer(nil, tokenWithdrawCh)
 	if err != nil {
-		logger.Error("Failed to pGateway.WatchTokenWithdrawn", "err", err)
+		logger.Error("Failed to pBridge.WatchTokenWithdrawn", "err", err)
 	}
-	gwm.withdrawEvents[addr] = withdrawnSub
-	gwm.gateways[addr].subscribed = true
+	bm.withdrawEvents[addr] = withdrawnSub
+	bm.bridges[addr].subscribed = true
 
-	go gwm.loop(addr, tokenReceivedCh, tokenWithdrawCh, gwm.scope.Track(receivedSub), gwm.scope.Track(withdrawnSub))
+	go bm.loop(addr, tokenReceivedCh, tokenWithdrawCh, bm.scope.Track(receivedSub), bm.scope.Track(withdrawnSub))
 }
 
 // UnsubscribeEvent cancels the contract's watch logs and initializes the status.
-func (gwm *BridgeManager) unsubscribeEvent(addr common.Address) {
-	receivedSub := gwm.receivedEvents[addr]
+func (bm *BridgeManager) unsubscribeEvent(addr common.Address) {
+	receivedSub := bm.receivedEvents[addr]
 	receivedSub.Unsubscribe()
 
-	withdrawSub := gwm.withdrawEvents[addr]
+	withdrawSub := bm.withdrawEvents[addr]
 	withdrawSub.Unsubscribe()
 
-	gwm.gateways[addr].subscribed = false
+	bm.bridges[addr].subscribed = false
 }
 
 // Loop handles subscribed event messages.
-func (gwm *BridgeManager) loop(
+func (bm *BridgeManager) loop(
 	addr common.Address,
-	receivedCh <-chan *gatewaycontract.BridgeRequestValueTransfer,
-	withdrawCh <-chan *gatewaycontract.BridgeHandleValueTransfer,
+	receivedCh <-chan *bridgecontract.BridgeRequestValueTransfer,
+	withdrawCh <-chan *bridgecontract.BridgeHandleValueTransfer,
 	receivedSub event.Subscription,
 	withdrawSub event.Subscription) {
 
@@ -392,7 +392,7 @@ func (gwm *BridgeManager) loop(
 				Amount:       ev.Amount,
 				RequestNonce: ev.RequestNonce,
 			}
-			gwm.tokenReceived.Send(receiveEvent)
+			bm.tokenReceived.Send(receiveEvent)
 		case ev := <-withdrawCh:
 			withdrawEvent := TokenTransferEvent{
 				TokenType:    ev.Kind,
@@ -402,7 +402,7 @@ func (gwm *BridgeManager) loop(
 				Amount:       ev.Value,
 				HandleNonce:  ev.HandleNonce,
 			}
-			gwm.tokenWithdraw.Send(withdrawEvent)
+			bm.tokenWithdraw.Send(withdrawEvent)
 		case err := <-receivedSub.Err():
 			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
 			return
@@ -413,7 +413,7 @@ func (gwm *BridgeManager) loop(
 	}
 }
 
-// Stop closes a subscribed event scope of the gateway manager.
-func (gwm *BridgeManager) Stop() {
-	gwm.scope.Close()
+// Stop closes a subscribed event scope of the bridge manager.
+func (bm *BridgeManager) Stop() {
+	bm.scope.Close()
 }

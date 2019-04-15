@@ -27,18 +27,18 @@ import (
 	"os"
 )
 
-// gatewayAddrJournal is a rotating log of addresses with the aim of storing locally
-// created addresses to allow deployed gateway contracts to survive node restarts.
-type gatewayAddrJournal struct {
+// bridgeAddrJournal is a rotating log of addresses with the aim of storing locally
+// created addresses to allow deployed bridge contracts to survive node restarts.
+type bridgeAddrJournal struct {
 	path   string // Filesystem path to store the addresses at
 	config *SCConfig
 	writer io.WriteCloser // Output stream to write new addresses into
 	cache  []*BridgeJournal
 }
 
-// newBridgeAddrJournal creates a new gateway addr journal to
-func newBridgeAddrJournal(path string, config *SCConfig) *gatewayAddrJournal {
-	return &gatewayAddrJournal{
+// newBridgeAddrJournal creates a new bridge addr journal to
+func newBridgeAddrJournal(path string, config *SCConfig) *bridgeAddrJournal {
+	return &bridgeAddrJournal{
 		path:   path,
 		config: config,
 		cache:  []*BridgeJournal{},
@@ -47,7 +47,7 @@ func newBridgeAddrJournal(path string, config *SCConfig) *gatewayAddrJournal {
 
 // load parses a address journal dump from disk, loading its contents into
 // the specified pool.
-func (journal *gatewayAddrJournal) load(add func(journal BridgeJournal) error) error {
+func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) error {
 	// Skip the parsing if the journal file doens't exist at all
 	if _, err := os.Stat(journal.path); os.IsNotExist(err) {
 		return nil
@@ -87,13 +87,13 @@ func (journal *gatewayAddrJournal) load(add func(journal BridgeJournal) error) e
 			dropped++
 		}
 	}
-	logger.Info("Loaded local gateway journal", "addrs", total, "dropped", dropped)
+	logger.Info("Loaded local bridge journal", "addrs", total, "dropped", dropped)
 
 	return failure
 }
 
 // insert adds the specified address to the local disk journal.
-func (journal *gatewayAddrJournal) insert(localAddress common.Address, remoteAddress common.Address, paired bool) error {
+func (journal *bridgeAddrJournal) insert(localAddress common.Address, remoteAddress common.Address, paired bool) error {
 	if !journal.config.VTRecovery {
 		logger.Debug("Value Transfer Recovery journal is disabled")
 		return nil
@@ -115,7 +115,7 @@ func (journal *gatewayAddrJournal) insert(localAddress common.Address, remoteAdd
 
 // rotate regenerates the addresses journal based on the current contents of
 // the address pool.
-func (journal *gatewayAddrJournal) rotate(all []*BridgeJournal) error {
+func (journal *bridgeAddrJournal) rotate(all []*BridgeJournal) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {
@@ -153,7 +153,7 @@ func (journal *gatewayAddrJournal) rotate(all []*BridgeJournal) error {
 }
 
 // close flushes the addresses journal contents to disk and closes the file.
-func (journal *gatewayAddrJournal) close() error {
+func (journal *bridgeAddrJournal) close() error {
 	var err error
 
 	if journal.writer != nil {

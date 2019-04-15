@@ -30,7 +30,7 @@ var (
 	ConnectionFailErr = errors.New("fail to connect remote chain")
 )
 
-// TODO-Klaytn currently RemoteBackend is only for ServiceChain, especially Gateway SmartContract
+// TODO-Klaytn currently RemoteBackend is only for ServiceChain, especially Bridge SmartContract
 type RemoteBackend struct {
 	subBrige  *SubBridge
 	targetUrl string

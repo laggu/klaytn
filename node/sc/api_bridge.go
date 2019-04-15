@@ -80,47 +80,47 @@ func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *typ
 	return sbapi.sc.handler.GetReceiptFromParentChain(blockHash)
 }
 
-func (sbapi *SubBridgeAPI) DeployGateway() ([]common.Address, error) {
-	localAddr, err := sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.localBackend, true)
+func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
+	localAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
 	if err != nil {
 		return nil, err
 	}
-	remoteAddr, err := sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.remoteBackend, false)
+	remoteAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
 	if err != nil {
 		return nil, err
 	}
 	return []common.Address{localAddr, remoteAddr}, nil
 }
 
-func (sbapi *SubBridgeAPI) DeployGatewayOnLocalChain() (common.Address, error) {
-	return sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.localBackend, true)
+func (sbapi *SubBridgeAPI) DeployBridgeOnLocalChain() (common.Address, error) {
+	return sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
 }
 
-func (sbapi *SubBridgeAPI) DeployGatewayOnParentChain() (common.Address, error) {
-	return sbapi.sc.gatewayMgr.DeployGateway(sbapi.sc.remoteBackend, false)
+func (sbapi *SubBridgeAPI) DeployBridgeOnParentChain() (common.Address, error) {
+	return sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
 }
 
 // TODO-Klaytn needs to make unSubscribe() method and enable user can unSubscribeEvent.
-func (sbapi *SubBridgeAPI) SubscribeEventGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) error {
-	err := sbapi.sc.AddressManager().AddGateway(cGatewayAddr, pGatewayAddr)
+func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+	err := sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
 	if err != nil {
 		return err
 	}
 
-	cErr := sbapi.sc.gatewayMgr.SubscribeEvent(cGatewayAddr)
+	cErr := sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
 	if cErr != nil {
-		logger.Error("Failed to SubscribeEventGateway Child Gateway", "addr", cGatewayAddr, "err", cErr)
+		logger.Error("Failed to SubscribeEventBridge Child Bridge", "addr", cBridgeAddr, "err", cErr)
 		return cErr
 	}
 
-	pErr := sbapi.sc.gatewayMgr.SubscribeEvent(pGatewayAddr)
+	pErr := sbapi.sc.bridgeManager.SubscribeEvent(pBridgeAddr)
 	if pErr != nil {
-		logger.Error("Failed to SubscribeEventGateway Parent Gateway", "addr", pGatewayAddr, "err", pErr)
-		// TODO-Klaytn needs to unsubscribe cGatewayAddr in this case.
+		logger.Error("Failed to SubscribeEventBridge Parent Bridge", "addr", pBridgeAddr, "err", pErr)
+		// TODO-Klaytn needs to unsubscribe cBridgeAddr in this case.
 		return pErr
 	}
 
-	sbapi.sc.gatewayMgr.journal.insert(cGatewayAddr, pGatewayAddr, true)
+	sbapi.sc.bridgeManager.journal.insert(cBridgeAddr, pBridgeAddr, true)
 	return nil
 }
 
@@ -128,8 +128,8 @@ func (sbapi *SubBridgeAPI) TxPendingCount() int {
 	return len(sbapi.sc.GetBridgeTxPool().Pending())
 }
 
-func (sbapi *SubBridgeAPI) ListDeployedGateway() []*BridgeJournal {
-	return sbapi.sc.gatewayMgr.GetAllGateway()
+func (sbapi *SubBridgeAPI) ListDeployedBridge() []*BridgeJournal {
+	return sbapi.sc.bridgeManager.GetAllBridge()
 }
 
 func (sbapi *SubBridgeAPI) Anchoring(flag bool) bool {
@@ -140,22 +140,22 @@ func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 	return sbapi.sc.GetAnchoringTx()
 }
 
-func (sbapi *SubBridgeAPI) RegisterGateway(cGatewayAddr common.Address, pGatewayAddr common.Address) bool {
-	cGateway, cErr := bridge.NewBridge(cGatewayAddr, sbapi.sc.localBackend)
-	pGateway, pErr := bridge.NewBridge(pGatewayAddr, sbapi.sc.remoteBackend)
+func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) bool {
+	cBridge, cErr := bridge.NewBridge(cBridgeAddr, sbapi.sc.localBackend)
+	pBridge, pErr := bridge.NewBridge(pBridgeAddr, sbapi.sc.remoteBackend)
 
 	if cErr != nil || pErr != nil {
 		return false
 	}
 
-	sbapi.sc.gatewayMgr.SetGateway(cGatewayAddr, cGateway, true, false)
-	sbapi.sc.gatewayMgr.SetGateway(pGatewayAddr, pGateway, false, false)
+	sbapi.sc.bridgeManager.SetBridge(cBridgeAddr, cBridge, true, false)
+	sbapi.sc.bridgeManager.SetBridge(pBridgeAddr, pBridge, false, false)
 
 	return true
 }
 
-func (sbapi *SubBridgeAPI) UnRegisterGateway(gateway common.Address) {
-	sbapi.sc.AddressManager().DeleteGateway(gateway)
+func (sbapi *SubBridgeAPI) UnRegisterBridge(bridge common.Address) {
+	sbapi.sc.AddressManager().DeleteBridge(bridge)
 }
 
 func (sbapi *SubBridgeAPI) RegisterToken(token1 common.Address, token2 common.Address) error {
