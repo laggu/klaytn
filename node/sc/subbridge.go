@@ -110,7 +110,7 @@ type SubBridge struct {
 	// gatewaymanager for value exchange
 	localBackend  *LocalBackend
 	remoteBackend *RemoteBackend
-	gatewayMgr    *GateWayManager
+	gatewayMgr    *BridgeManager
 
 	tokenReceivedCh  chan TokenReceivedEvent
 	tokenReceivedSub event.Subscription
@@ -273,9 +273,9 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 		return
 	}
 
-	sc.gatewayMgr, err = NewGateWayManager(sc)
+	sc.gatewayMgr, err = NewBridgeManager(sc)
 	if err != nil {
-		logger.Error("fail to initialize GateWayManager", "err", err)
+		logger.Error("fail to initialize BridgeManager", "err", err)
 		sc.bootFail = true
 		return
 	}

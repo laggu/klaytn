@@ -33,21 +33,21 @@ type gatewayAddrJournal struct {
 	path   string // Filesystem path to store the addresses at
 	config *SCConfig
 	writer io.WriteCloser // Output stream to write new addresses into
-	cache  []*GateWayJournal
+	cache  []*BridgeJournal
 }
 
-// newGateWayAddrJournal creates a new gateway addr journal to
-func newGateWayAddrJournal(path string, config *SCConfig) *gatewayAddrJournal {
+// newBridgeAddrJournal creates a new gateway addr journal to
+func newBridgeAddrJournal(path string, config *SCConfig) *gatewayAddrJournal {
 	return &gatewayAddrJournal{
 		path:   path,
 		config: config,
-		cache:  []*GateWayJournal{},
+		cache:  []*BridgeJournal{},
 	}
 }
 
 // load parses a address journal dump from disk, loading its contents into
 // the specified pool.
-func (journal *gatewayAddrJournal) load(add func(journal GateWayJournal) error) error {
+func (journal *gatewayAddrJournal) load(add func(journal BridgeJournal) error) error {
 	// Skip the parsing if the journal file doens't exist at all
 	if _, err := os.Stat(journal.path); os.IsNotExist(err) {
 		return nil
@@ -72,7 +72,7 @@ func (journal *gatewayAddrJournal) load(add func(journal GateWayJournal) error) 
 	)
 	for {
 		// Parse the next address and terminate on error
-		addr := new(GateWayJournal)
+		addr := new(BridgeJournal)
 		if err = stream.Decode(addr); err != nil {
 			if err != io.EOF {
 				failure = err
@@ -101,7 +101,7 @@ func (journal *gatewayAddrJournal) insert(localAddress common.Address, remoteAdd
 	if journal.writer == nil {
 		return errNoActiveJournal
 	}
-	item := GateWayJournal{
+	item := BridgeJournal{
 		localAddress,
 		remoteAddress,
 		paired,
@@ -115,7 +115,7 @@ func (journal *gatewayAddrJournal) insert(localAddress common.Address, remoteAdd
 
 // rotate regenerates the addresses journal based on the current contents of
 // the address pool.
-func (journal *gatewayAddrJournal) rotate(all []*GateWayJournal) error {
+func (journal *gatewayAddrJournal) rotate(all []*BridgeJournal) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {

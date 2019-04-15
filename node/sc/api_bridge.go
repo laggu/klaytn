@@ -128,7 +128,7 @@ func (sbapi *SubBridgeAPI) TxPendingCount() int {
 	return len(sbapi.sc.GetBridgeTxPool().Pending())
 }
 
-func (sbapi *SubBridgeAPI) ListDeployedGateway() []*GateWayJournal {
+func (sbapi *SubBridgeAPI) ListDeployedGateway() []*BridgeJournal {
 	return sbapi.sc.gatewayMgr.GetAllGateway()
 }
 

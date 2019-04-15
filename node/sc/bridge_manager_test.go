@@ -55,12 +55,12 @@ func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing
 	}
 }
 
-// TestGateWayManager tests the event/method of Token/NFT/Gateway contracts.
+// TestBridgeManager tests the event/method of Token/NFT/Gateway contracts.
 // And It tests the nonce error case of gateway deploy (#2284)
 // TODO-Klaytn-Servicechain needs to refine this test.
 // - consider main/service chain simulated backend.
 // - separate each test
-func TestGateWayManager(t *testing.T) {
+func TestBridgeManager(t *testing.T) {
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), GatewayAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -108,7 +108,7 @@ func TestGateWayManager(t *testing.T) {
 		return
 	}
 
-	gatewayManager, err := NewGateWayManager(sc)
+	gatewayManager, err := NewBridgeManager(sc)
 
 	testToken := big.NewInt(123)
 	testKLAY := big.NewInt(321)
@@ -417,8 +417,8 @@ func TestGateWayManager(t *testing.T) {
 	gatewayManager.Stop()
 }
 
-// TestGateWayManagerJournal tests journal functionality.
-func TestGateWayManagerJournal(t *testing.T) {
+// TestBridgeManagerJournal tests journal functionality.
+func TestBridgeManagerJournal(t *testing.T) {
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), GatewayAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -467,16 +467,16 @@ func TestGateWayManagerJournal(t *testing.T) {
 	testKLAY := big.NewInt(321)
 
 	// 1. Prepare manager and subscribe event
-	gwm, err := NewGateWayManager(sc)
+	gwm, err := NewBridgeManager(sc)
 
 	addr, err := gwm.DeployGatewayTest(sim, false)
 	gateway := gwm.gateways[addr].gateway
 	fmt.Println("===== GatewayContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	gwm.gateways[addr] = &GateWayInfo{gateway, true, true}
-	gwm.journal.cache = []*GateWayJournal{}
-	gwm.journal.cache = append(gwm.journal.cache, &GateWayJournal{addr, addr, true})
+	gwm.gateways[addr] = &BridgeInfo{gateway, true, true}
+	gwm.journal.cache = []*BridgeJournal{}
+	gwm.journal.cache = append(gwm.journal.cache, &BridgeJournal{addr, addr, true})
 
 	gwm.SubscribeEvent(addr)
 	gwm.unsubscribeEvent(addr)
@@ -539,7 +539,7 @@ func TestGateWayManagerJournal(t *testing.T) {
 }
 
 // for TestMethod
-func (gwm *GateWayManager) DeployGatewayTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
+func (gwm *BridgeManager) DeployGatewayTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
 		addr, gateway, err := gwm.deployGatewayTest(big.NewInt(2019), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
 		gwm.SetGateway(addr, gateway, local, false)
@@ -551,7 +551,7 @@ func (gwm *GateWayManager) DeployGatewayTest(backend *backends.SimulatedBackend,
 	}
 }
 
-func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
+func (gwm *BridgeManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
 	auth := bind.NewKeyedTransactor(accountKey)
 	auth.Value = big.NewInt(10000)
 	addr, tx, contract, err := bridge.DeployBridge(auth, backend, true)
@@ -578,7 +578,7 @@ func (gwm *GateWayManager) deployGatewayTest(chainID *big.Int, nonce *big.Int, a
 }
 
 // Nonce should not be increased when error occurs
-func (gwm *GateWayManager) DeployGatewayNonceTest(backend bind.ContractBackend) (common.Address, error) {
+func (gwm *BridgeManager) DeployGatewayNonceTest(backend bind.ContractBackend) (common.Address, error) {
 	key := gwm.subBridge.handler.chainKey
 	nonce := gwm.subBridge.handler.getChainAccountNonce()
 	gwm.subBridge.handler.chainKey = nil

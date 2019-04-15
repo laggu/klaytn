@@ -24,7 +24,7 @@ import (
 	"testing"
 )
 
-func TestGateWayJournal(t *testing.T) {
+func TestBridgeJournal(t *testing.T) {
 
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), "test.rlp")); err != nil {
@@ -32,8 +32,8 @@ func TestGateWayJournal(t *testing.T) {
 		}
 	}()
 
-	journal := newGateWayAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
-	if err := journal.load(func(journal GateWayJournal) error {
+	journal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
+	if err := journal.load(func(journal BridgeJournal) error {
 		fmt.Println("Local address ", journal.LocalAddress.Hex())
 		fmt.Println("Remote address ", journal.RemoteAddress.Hex())
 		fmt.Println("Paired", journal.Paired)
@@ -41,7 +41,7 @@ func TestGateWayJournal(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
 	}
-	if err := journal.rotate([]*GateWayJournal{}); err != nil {
+	if err := journal.rotate([]*BridgeJournal{}); err != nil {
 		t.Fatalf("fail to rotate journal %v", err)
 	}
 
@@ -62,9 +62,9 @@ func TestGateWayJournal(t *testing.T) {
 		t.Fatalf("fail to close file %v", err)
 	}
 
-	journal = newGateWayAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
+	journal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
 
-	if err := journal.load(func(journal GateWayJournal) error {
+	if err := journal.load(func(journal BridgeJournal) error {
 		if journal.LocalAddress.Hex() == "0x0000000000000000000000000000007465737431" {
 			if journal.Paired {
 				t.Fatalf("insert and load info mismatch: have %v, want %v", journal.Paired, false)
@@ -91,8 +91,8 @@ func TestGateWayJournal(t *testing.T) {
 	}
 }
 
-// TestGateWayJournalDisable tests insert method when VTRecovery is disabled.
-func TestGateWayJournalDisable(t *testing.T) {
+// TestBridgeJournalDisable tests insert method when VTRecovery is disabled.
+func TestBridgeJournalDisable(t *testing.T) {
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), "test.rlp")); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -100,9 +100,9 @@ func TestGateWayJournalDisable(t *testing.T) {
 	}()
 
 	// Step 1: Make new journal
-	addrJournal := newGateWayAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: false})
+	addrJournal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: false})
 
-	if err := addrJournal.load(func(journal GateWayJournal) error {
+	if err := addrJournal.load(func(journal BridgeJournal) error {
 		fmt.Println("Local address ", journal.LocalAddress.Hex())
 		fmt.Println("Remote address ", journal.RemoteAddress.Hex())
 		fmt.Println("Paired", journal.Paired)
@@ -110,7 +110,7 @@ func TestGateWayJournalDisable(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
 	}
-	if err := addrJournal.rotate([]*GateWayJournal{}); err != nil {
+	if err := addrJournal.rotate([]*BridgeJournal{}); err != nil {
 		t.Fatalf("fail to rotate journal %v", err)
 	}
 
@@ -124,9 +124,9 @@ func TestGateWayJournalDisable(t *testing.T) {
 	}
 
 	// Step 2: Check journal is empty.
-	addrJournal = newGateWayAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
+	addrJournal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
 
-	if err := addrJournal.load(func(journal GateWayJournal) error {
+	if err := addrJournal.load(func(journal BridgeJournal) error {
 		fmt.Println("Local address ", journal.LocalAddress.Hex())
 		fmt.Println("Remote address ", journal.RemoteAddress.Hex())
 		fmt.Println("Paired", journal.Paired)
