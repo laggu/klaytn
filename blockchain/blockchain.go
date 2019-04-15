@@ -502,7 +502,11 @@ func (bc *BlockChain) repair(head **types.Block) error {
 				return errors.New("rewound to block number 0, but repair failed")
 			} else {
 				// If headBlockNumber > 0, rewind one block and recheck state availability there
-				(*head) = bc.GetBlock((*head).ParentHash(), (*head).NumberU64()-1)
+				block := bc.GetBlock((*head).ParentHash(), (*head).NumberU64()-1)
+				if block == nil {
+					return fmt.Errorf("missing block %d [%x]", (*head).NumberU64()-1, (*head).ParentHash())
+				}
+				*head = block
 			}
 		}
 	}
