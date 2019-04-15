@@ -59,7 +59,7 @@ const (
 	// Fee for Service Chain
 	// TODO-Klaytn-ServiceChain The following parameters should be fixed.
 	// TODO-Klaytn-Governance The following parameters should be able to be modified by governance.
-	TxChainDataAnchoringGas uint64 = 50000 // Per transaction anchoring chain data. NOTE: Not payable on data of calls between transactions. // G_transactionchaindataanchoring
+	TxChainDataAnchoringGas uint64 = 21000 // Per transaction anchoring chain data. NOTE: Not payable on data of calls between transactions. // G_transactionchaindataanchoring
 	ChainDataAnchoringGas   uint64 = 100   // Per byte of anchoring chain data NOTE: Not payable on data of calls between transactions. // G_chaindataanchoring
 
 	// Precompiled contract gas prices
@@ -101,15 +101,15 @@ const (
 	TxAccountCreationGasDefault uint64 = 0
 	TxValidationGasDefault      uint64 = 0
 	TxAccountCreationGasPerKey  uint64 = 20000 // WARNING: With integer overflow in mind before changing this value.
-	TxValidationGasPerKey       uint64 = 5000  // WARNING: With integer overflow in mind before changing this value.
+	TxValidationGasPerKey       uint64 = 15000 // WARNING: With integer overflow in mind before changing this value.
 
 	// Fee for new tx types
 	// TODO-Klaytn: Need to fix values
-	TxGasAccountCreation       uint64 = 10000
-	TxGasAccountUpdate         uint64 = 15000
+	TxGasAccountCreation       uint64 = 21000
+	TxGasAccountUpdate         uint64 = 21000
 	TxGasFeeDelegated          uint64 = 1000
-	TxGasFeeDelegatedWithRatio uint64 = 3000
-	TxGasCancel                uint64 = 1000
+	TxGasFeeDelegatedWithRatio uint64 = 10000
+	TxGasCancel                uint64 = 21000
 
 	// Network Id
 	AspenNetworkId  uint64 = 1000
@@ -120,19 +120,7 @@ const (
 
 	// TODO-Klaytn-Gas: TxGasHumanReadable should be based on ENS.
 	TxGasHumanReadable uint64 = 500000
-)
-
-// TODO-Klaytn-HF: It should be cleaned up before the mainnet is released.
-const (
-	TxGasContractCreationHF1      uint64 = 21000
-	TxDataGasHF1                  uint64 = 100
-	TxChainDataAnchoringGasHF1    uint64 = 21000
-	TxValidationGasPerKeyHF1      uint64 = 15000
-	TxGasAccountCreationHF1       uint64 = 21000
-	TxGasAccountUpdateHF1         uint64 = 21000
-	TxGasFeeDelegatedHF1          uint64 = 10000
-	TxGasFeeDelegatedWithRatioHF1 uint64 = 15000
-	TxGasCancelHF1                uint64 = 21000
+	TxDataGas          uint64 = 100
 )
 
 var (
