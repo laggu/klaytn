@@ -718,11 +718,6 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'propose',
-			call: 'istanbul_propose',
-			params: 2
-		}),
-		new web3._extend.Method({
 			name: 'discard',
 			call: 'istanbul_discard',
 			params: 1

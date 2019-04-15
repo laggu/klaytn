@@ -79,6 +79,8 @@ const (
 	Ratio
 	UseGiniCoeff
 	DeferredTxFee
+	AddValidator
+	RemoveValidator
 )
 
 const (

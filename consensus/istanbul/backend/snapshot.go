@@ -83,33 +83,6 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet istanbul.
 	return snap
 }
 
-// newPendingGovernanceConfig creates a new GovernanceConfig which holds changes that haven't been applied
-func newPendingGovernanceConfig(src *params.GovernanceConfig) *params.GovernanceConfig {
-	newConfig := &params.GovernanceConfig{
-		Reward:   &params.RewardConfig{},
-		Istanbul: &params.IstanbulConfig{},
-	}
-	copyGovernanceConfig(src, newConfig)
-	return newConfig
-}
-
-// copyGovernanceConfig copies from source to destination governance config
-func copyGovernanceConfig(src *params.GovernanceConfig, dst *params.GovernanceConfig) {
-	if src == nil || dst == nil {
-		logger.Error("Both source and destination shouldn't be nil")
-		return
-	}
-	dst.GovernanceMode = src.GovernanceMode
-	dst.Reward.MintingAmount.Set(src.Reward.MintingAmount)
-	dst.Reward.Ratio = src.Reward.Ratio
-	dst.Reward.UseGiniCoeff = src.Reward.UseGiniCoeff
-	dst.UnitPrice = src.UnitPrice
-	dst.GoverningNode = src.GoverningNode
-	dst.Istanbul.SubGroupSize = src.Istanbul.SubGroupSize
-	dst.Istanbul.Epoch = src.Istanbul.Epoch
-	dst.Istanbul.ProposerPolicy = src.Istanbul.ProposerPolicy
-}
-
 // loadSnapshot loads an existing snapshot from the database.
 func loadSnapshot(epoch uint64, subSize uint64, db database.DBManager, hash common.Hash, gconfig *params.GovernanceConfig) (*Snapshot, error) {
 	blob, err := db.ReadIstanbulSnapshot(hash)
@@ -170,54 +143,6 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 	return (validator != nil && !authorize) || (validator == nil && authorize)
 }
 
-// cast adds a new vote into the tally
-// address : a node's address which is a target of this vote
-// voter : Have to be one of current validators. Actually a block proposer's address is delivered
-func (s *Snapshot) cast(address common.Address, authorize bool, voter common.Address) bool {
-	// Ensure the vote is meaningful
-	if !s.checkVote(address, authorize) {
-		return false
-	}
-
-	// Check the voter is one of current validator
-	_, validator := s.ValSet.GetByAddress(voter)
-
-	// Cast the vote into an existing or new tally
-	if old, ok := s.Tally[address]; ok {
-		old.Votes += validator.VotingPower()
-		s.Tally[address] = old
-	} else {
-		s.Tally[address] = Tally{Authorize: authorize, Votes: validator.VotingPower()}
-	}
-	return true
-}
-
-// uncast removes a previously cast vote from the tally.
-// address : a node's address which is a target of this vote
-// voter : Have to be one of current validators. Actually a block proposer's address is delivered
-func (s *Snapshot) uncast(address common.Address, authorize bool, voter common.Address) bool {
-	// Check the voter is one of current validator
-	_, validator := s.ValSet.GetByAddress(voter)
-
-	// If there's no tally, it's a dangling vote, just drop
-	tally, ok := s.Tally[address]
-	if !ok {
-		return false
-	}
-	// Ensure we only revert counted votes
-	if tally.Authorize != authorize {
-		return false
-	}
-	// Otherwise revert the vote
-	if tally.Votes > validator.VotingPower() {
-		tally.Votes -= validator.VotingPower()
-		s.Tally[address] = tally
-	} else {
-		delete(s.Tally, address)
-	}
-	return true
-}
-
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
 func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address, epoch uint64) (*Snapshot, error) {
@@ -262,76 +187,10 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			return nil, errUnauthorized
 		}
 
-		// Header authorized, discard any previous votes from the validator
-		for i, vote := range snap.Votes {
-			if vote.Validator == validator && vote.Address == header.Coinbase {
-				// Uncast the vote from the cached tally
-				snap.uncast(vote.Address, vote.Authorize, validator)
-
-				// Uncast the vote from the chronological list
-				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-				break // only one vote allowed
-			}
-		}
-
 		// Check if this governance vote duplicates
 		// Handle Governance related vote
 		gVote := new(governance.GovernanceVote)
 		snap.handleGovernanceVote(snap, header, validator, gVote, gov)
-
-		// TODO-Klaytn-Governance: The code below is preservered not to touch former working codes
-		//  But it would be much better to be integrated with governance vote
-		// Tally up the new vote from the validator
-		var authorize bool
-		switch {
-		case bytes.Compare(header.Nonce[:], nonceAuthVote) == 0:
-			authorize = true
-		case bytes.Compare(header.Nonce[:], nonceDropVote) == 0:
-			authorize = false
-		default:
-			return nil, errInvalidVote
-		}
-		if snap.cast(header.Coinbase, authorize, validator) {
-			snap.Votes = append(snap.Votes, &Vote{
-				Validator: validator,
-				Block:     number,
-				Address:   header.Coinbase,
-				Authorize: authorize,
-			})
-		}
-		// If the vote passed, update the list of validators
-		governanceMode := governance.GovernanceModeMap[s.GovernanceConfig.GovernanceMode]
-		governingNode := s.GovernanceConfig.GoverningNode
-		if tally := snap.Tally[header.Coinbase]; governanceMode == params.GovernanceMode_None ||
-			(governanceMode == params.GovernanceMode_Single && validator == governingNode) ||
-			(governanceMode == params.GovernanceMode_Ballot && tally.Votes > snap.ValSet.TotalVotingPower()/2) {
-			if tally.Authorize {
-				snap.ValSet.AddValidator(header.Coinbase)
-			} else {
-				snap.ValSet.RemoveValidator(header.Coinbase)
-
-				// Discard any previous votes the deauthorized validator cast
-				for i := 0; i < len(snap.Votes); i++ {
-					if snap.Votes[i].Validator == header.Coinbase {
-						// Uncast the vote from the cached tally
-						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize, validator)
-
-						// Uncast the vote from the chronological list
-						snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-
-						i--
-					}
-				}
-			}
-			// Discard any previous votes around the just changed account
-			for i := 0; i < len(snap.Votes); i++ {
-				if snap.Votes[i].Address == header.Coinbase {
-					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-					i--
-				}
-			}
-			delete(snap.Tally, header.Coinbase)
-		}
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
@@ -363,8 +222,8 @@ func (s *Snapshot) getMyVotingPower(addr common.Address) uint64 {
 
 func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, validator common.Address, gVote *governance.GovernanceVote, gov *governance.Governance) {
 
-	governanceMode := governance.GovernanceModeMap[s.GovernanceConfig.GovernanceMode]
-	governingNode := s.GovernanceConfig.GoverningNode
+	governanceMode := governance.GovernanceModeMap[gov.ChainConfig.Governance.GovernanceMode]
+	governingNode := gov.ChainConfig.Governance.GoverningNode
 
 	if len(header.Vote) > 0 {
 		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
@@ -373,17 +232,18 @@ func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, va
 			// Parse vote.Value and make it has appropriate type
 			gVote = gov.ParseVoteValue(gVote)
 
-			if gVote.Key == "governingnode" {
-				nodeCheckFlag := false
-				for _, addr := range snap.validators() {
-					if addr == gVote.Value {
-						nodeCheckFlag = true
-						break
-					}
-				}
-
-				if !nodeCheckFlag {
+			if governance.GovernanceKeyMap[gVote.Key] == params.GoverningNode {
+				_, addr := snap.ValSet.GetByAddress(gVote.Value.(common.Address))
+				if addr == nil {
 					logger.Warn("Invalid governing node address", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
+					return
+				}
+			} else if governance.GovernanceKeyMap[gVote.Key] == params.AddValidator {
+				if !s.checkVote(common.HexToAddress(gVote.Value.(string)), true) {
+					return
+				}
+			} else if governance.GovernanceKeyMap[gVote.Key] == params.RemoveValidator {
+				if !s.checkVote(common.HexToAddress(gVote.Value.(string)), false) {
 					return
 				}
 			}
@@ -396,8 +256,8 @@ func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, va
 				// Add new Vote to snapshot.GovernanceVotes
 				snap.GovernanceVotes = append(snap.GovernanceVotes, gVote)
 
-				// Tally up the new vote. This will be cleared when Epoch ended.
-				// Add to GovermanceTally if it doesn't exist
+				// Tally up the new vote. This will be cleared when Epoch ends.
+				// Add to GovernanceTally if it doesn't exist
 				s.addNewVote(snap, gVote, governanceMode, governingNode)
 			} else {
 				logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
@@ -411,10 +271,30 @@ func (s *Snapshot) addNewVote(snap *Snapshot, gVote *governance.GovernanceVote, 
 	if v != nil {
 		vp := v.VotingPower()
 		currentVotes := changeGovernanceTally(snap, gVote.Key, gVote.Value, vp, true)
-		if (governanceMode == params.GovernanceMode_None ||
-			(governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode)) ||
-			(governanceMode == params.GovernanceMode_Ballot && currentVotes > uint64(snap.ValSet.TotalVotingPower())/2) {
-			governance.ReflectVotes(*gVote, snap.PendingGovernanceConfig)
+		if governanceMode == params.GovernanceMode_None || (governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode) ||
+			(governanceMode == params.GovernanceMode_Ballot && currentVotes > snap.ValSet.TotalVotingPower()/2) {
+
+			switch governance.GovernanceKeyMap[gVote.Key] {
+			case params.AddValidator:
+				s.ValSet.AddValidator(common.HexToAddress(gVote.Value.(string)))
+			case params.RemoveValidator:
+				target := common.HexToAddress(gVote.Value.(string))
+				s.ValSet.RemoveValidator(target)
+				s.removeVotesFromRemovedNode(target)
+			default:
+				governance.ReflectVotes(*gVote, snap.PendingGovernanceConfig)
+			}
+		}
+	}
+}
+
+func (s *Snapshot) removeVotesFromRemovedNode(addr common.Address) {
+	for i := 0; i < len(s.GovernanceVotes); i++ {
+		if s.GovernanceVotes[i].Validator == addr {
+			// Uncast the vote from the chronological list
+			s.GovernanceVotes = append(s.GovernanceVotes[:i], s.GovernanceVotes[i+1:]...)
+
+			i--
 		}
 	}
 }

@@ -17,7 +17,10 @@
 package governance
 
 import (
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
+	"reflect"
+	"strings"
 	"sync/atomic"
 )
 
@@ -37,16 +40,36 @@ func NewGovernanceAPI(gov *Governance) *PublicGovernanceAPI {
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) interface{} {
-	gMode := api.governance.chainConfig.Governance.GovernanceMode
-	gNode := api.governance.chainConfig.Governance.GoverningNode
+	gMode := api.governance.ChainConfig.Governance.GovernanceMode
+	gNode := api.governance.ChainConfig.Governance.GoverningNode
 
 	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress {
 		return "You don't have the right to vote"
+	}
+	if strings.ToLower(key) == "removevalidator" {
+		if !api.isRemovingSelf(val) {
+			return "You can't vote on removing yourself"
+		}
 	}
 	if api.governance.AddVote(key, val) {
 		return "Your vote was successfully placed."
 	}
 	return "Your vote couldn't be placed. Please check your vote's key and value"
+}
+
+func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
+	if reflect.TypeOf(val).String() != "string" {
+		return false
+	}
+	target := val.(string)
+	if !common.IsHexAddress(target) {
+		return false
+	}
+	if common.HexToAddress(target) == api.governance.nodeAddress {
+		return false
+	} else {
+		return true
+	}
 }
 
 func (api *PublicGovernanceAPI) ShowTally() interface{} {
@@ -85,7 +108,7 @@ func (api *PublicGovernanceAPI) MyVotingPower() interface{} {
 }
 
 func (api *PublicGovernanceAPI) ChainConfig() interface{} {
-	return api.governance.chainConfig
+	return api.governance.ChainConfig
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() interface{} {
@@ -93,7 +116,7 @@ func (api *PublicGovernanceAPI) NodeAddress() interface{} {
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
-	if GovernanceModeMap[api.governance.chainConfig.Governance.GovernanceMode] == params.GovernanceMode_Ballot {
+	if GovernanceModeMap[api.governance.ChainConfig.Governance.GovernanceMode] == params.GovernanceMode_Ballot {
 		return true
 	}
 	return false

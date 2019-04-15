@@ -39,7 +39,6 @@ import (
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/hashicorp/golang-lru"
 	"math/big"
-	"math/rand"
 	"reflect"
 	"time"
 )
@@ -364,30 +363,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 			logger.Error("Failed to make governance data and header can't contain updated configuration", "Raw Governance Config", snap.PendingGovernanceConfig)
 		} else {
 			header.Governance = governanceConfig
-		}
-	}
-
-	// get valid candidate list
-	sb.candidatesLock.RLock()
-	var addresses []common.Address
-	var authorizes []bool
-	for address, authorize := range sb.candidates {
-		if snap.checkVote(address, authorize) {
-			addresses = append(addresses, address)
-			authorizes = append(authorizes, authorize)
-		}
-	}
-	sb.candidatesLock.RUnlock()
-
-	// pick one of the candidates randomly
-	if len(addresses) > 0 {
-		index := rand.Intn(len(addresses))
-		// add validator voting in coinbase
-		header.Coinbase = addresses[index]
-		if authorizes[index] {
-			copy(header.Nonce[:], nonceAuthVote)
-		} else {
-			copy(header.Nonce[:], nonceDropVote)
 		}
 	}
 

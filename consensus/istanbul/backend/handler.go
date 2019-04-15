@@ -229,6 +229,7 @@ func (sb *backend) replaceGovernanceConfig(g []byte) bool {
 	} else {
 		// deep copy new governance
 		sb.chain.Config().Governance = newGovernance.Copy()
+		sb.governance.ChainConfig.Governance = newGovernance.Copy()
 		// TODO-Klaytn-Governance Code for compatibility
 		// Need to be cleaned up when developers use same template for genesis.json
 		sb.config.Epoch = newGovernance.Istanbul.Epoch

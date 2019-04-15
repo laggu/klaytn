@@ -33,16 +33,18 @@ import (
 
 var (
 	GovernanceKeyMap = map[string]int{
-		"governancemode": params.GovernanceMode,
-		"governingnode":  params.GoverningNode,
-		"epoch":          params.Epoch,
-		"policy":         params.Policy,
-		"sub":            params.Sub,
-		"unitprice":      params.UnitPrice,
-		"mintingamount":  params.MintingAmount,
-		"ratio":          params.Ratio,
-		"useginicoeff":   params.UseGiniCoeff,
-		"deferredtxfee":  params.DeferredTxFee,
+		"governancemode":  params.GovernanceMode,
+		"governingnode":   params.GoverningNode,
+		"epoch":           params.Epoch,
+		"policy":          params.Policy,
+		"sub":             params.Sub,
+		"unitprice":       params.UnitPrice,
+		"mintingamount":   params.MintingAmount,
+		"ratio":           params.Ratio,
+		"useginicoeff":    params.UseGiniCoeff,
+		"deferredtxfee":   params.DeferredTxFee,
+		"addvalidator":    params.AddValidator,
+		"removevalidator": params.RemoveValidator,
 	}
 
 	ProposerPolicyMap = map[string]int{
@@ -81,7 +83,7 @@ type GovernanceTally struct {
 }
 
 type Governance struct {
-	chainConfig *params.ChainConfig
+	ChainConfig *params.ChainConfig
 
 	// Map used to keep multiple types of votes
 	voteMap     map[string]interface{}
@@ -97,7 +99,7 @@ type Governance struct {
 
 func NewGovernance(chainConfig *params.ChainConfig) *Governance {
 	ret := Governance{
-		chainConfig: chainConfig,
+		ChainConfig: chainConfig,
 		voteMap:     make(map[string]interface{}),
 	}
 	return &ret
@@ -166,7 +168,7 @@ func (g *Governance) checkValueType(key string, val interface{}) (interface{}, b
 	case string:
 		if keyIdx == params.GovernanceMode || keyIdx == params.MintingAmount || keyIdx == params.Ratio || keyIdx == params.Policy {
 			return strings.ToLower(val.(string)), true
-		} else if keyIdx == params.GoverningNode {
+		} else if keyIdx == params.GoverningNode || keyIdx == params.AddValidator || keyIdx == params.RemoveValidator {
 			if common.IsHexAddress(val.(string)) {
 				return val, true
 			}
@@ -176,7 +178,7 @@ func (g *Governance) checkValueType(key string, val interface{}) (interface{}, b
 			return val, true
 		}
 	case common.Address:
-		if keyIdx == params.GoverningNode {
+		if keyIdx == params.GoverningNode || keyIdx == params.AddValidator || keyIdx == params.RemoveValidator {
 			return val, true
 		}
 	case float64:
@@ -233,7 +235,7 @@ func (g *Governance) checkValue(key string, val interface{}) (interface{}, bool)
 
 	// Using type assertion is okay below, because type check was done before calling this method
 	switch k {
-	case params.GoverningNode:
+	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
 		if reflect.TypeOf(val).String() == "common.Address" {
 			return val, true
 		} else if common.IsHexAddress(val.(string)) {
@@ -288,7 +290,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
 	k := GovernanceKeyMap[gVote.Key]
 
 	switch k {
-	case params.GovernanceMode, params.GoverningNode, params.MintingAmount, params.Ratio, params.Policy:
+	case params.GovernanceMode, params.GoverningNode, params.MintingAmount, params.Ratio, params.Policy, params.AddValidator, params.RemoveValidator:
 		val = string(gVote.Value.([]uint8))
 	case params.Epoch, params.Sub, params.UnitPrice:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)

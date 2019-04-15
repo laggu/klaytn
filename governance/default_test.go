@@ -124,7 +124,7 @@ func TestNewGovernance(t *testing.T) {
 	config := getTestConfig()
 	tstGovernance := NewGovernance(config)
 
-	if !reflect.DeepEqual(tstGovernance.chainConfig, config) {
+	if !reflect.DeepEqual(tstGovernance.ChainConfig, config) {
 		t.Errorf("New governance's config is not same as the given one")
 	}
 }

@@ -449,7 +449,7 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 	}
 
 	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
-	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 0, 0))
+	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 1000, 0))
 
 	// sort validator
 	sort.Sort(valSet.validators)
