@@ -417,7 +417,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 
 		if proposer.Weight() != 0 {
-			stakingInfo := reward.GetStakingInfoFromStakingCache(params.CalcProposerBlockNumber(header.Number.Uint64()))
+			stakingInfo := reward.GetStakingInfoFromStakingCache(header.Number.Uint64())
 			if stakingInfo != nil {
 				kirAddr = stakingInfo.KIRAddr
 				pocAddr = stakingInfo.PoCAddr
