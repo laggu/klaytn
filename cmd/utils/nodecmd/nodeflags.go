@@ -129,4 +129,5 @@ var KSCNFlags = []cli.Flag{
 	utils.EnabledBridgeFlag,
 	utils.BridgeListenPortFlag,
 	utils.ParentChainURLFlag,
+	utils.VTRecoveryFlag,
 }

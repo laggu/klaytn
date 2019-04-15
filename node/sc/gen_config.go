@@ -30,6 +30,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		AnchoringPeriod    uint64
 		SentChainTxsLimit  uint64
 		ParentChainURL     string
+		VTRecovery         bool
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -51,6 +52,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
 	enc.ParentChainURL = s.ParentChainURL
+	enc.VTRecovery = s.VTRecovery
 	return &enc, nil
 }
 
@@ -76,6 +78,7 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		AnchoringPeriod    *uint64
 		SentChainTxsLimit  *uint64
 		ParentChainURL     *string
+		VTRecovery         *bool
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -137,6 +140,9 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.ParentChainURL != nil {
 		s.ParentChainURL = *dec.ParentChainURL
+	}
+	if dec.VTRecovery != nil {
+		s.VTRecovery = *dec.VTRecovery
 	}
 	return nil
 }

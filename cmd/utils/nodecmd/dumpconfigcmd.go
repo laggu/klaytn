@@ -165,6 +165,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 			cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
 			cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
 			cfg.ParentChainURL = ctx.GlobalString(utils.ParentChainURLFlag.Name)
+			cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
 		}
 
 	} else {

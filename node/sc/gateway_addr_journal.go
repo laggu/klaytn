@@ -30,14 +30,18 @@ import (
 // gatewayAddrJournal is a rotating log of addresses with the aim of storing locally
 // created addresses to allow deployed gateway contracts to survive node restarts.
 type gatewayAddrJournal struct {
-	path   string         // Filesystem path to store the addresses at
+	path   string // Filesystem path to store the addresses at
+	config *SCConfig
 	writer io.WriteCloser // Output stream to write new addresses into
+	cache  []*GateWayJournal
 }
 
 // newGateWayAddrJournal creates a new gateway addr journal to
-func newGateWayAddrJournal(path string) *gatewayAddrJournal {
+func newGateWayAddrJournal(path string, config *SCConfig) *gatewayAddrJournal {
 	return &gatewayAddrJournal{
-		path: path,
+		path:   path,
+		config: config,
+		cache:  []*GateWayJournal{},
 	}
 }
 
@@ -89,17 +93,23 @@ func (journal *gatewayAddrJournal) load(add func(journal GateWayJournal) error) 
 }
 
 // insert adds the specified address to the local disk journal.
-func (journal *gatewayAddrJournal) insert(addr common.Address, local bool) error {
+func (journal *gatewayAddrJournal) insert(localAddress common.Address, remoteAddress common.Address, paired bool) error {
+	if !journal.config.VTRecovery {
+		logger.Debug("Value Transfer Recovery journal is disabled")
+		return nil
+	}
 	if journal.writer == nil {
 		return errNoActiveJournal
 	}
 	item := GateWayJournal{
-		addr,
-		local,
+		localAddress,
+		remoteAddress,
+		paired,
 	}
 	if err := rlp.Encode(journal.writer, &item); err != nil {
 		return err
 	}
+	journal.cache = append(journal.cache, &item)
 	return nil
 }
 
@@ -119,8 +129,8 @@ func (journal *gatewayAddrJournal) rotate(all []*GateWayJournal) error {
 		return err
 	}
 	journaled := 0
-	for _, addr := range all {
-		if err = rlp.Encode(replacement, addr); err != nil {
+	for _, journal := range all {
+		if err = rlp.Encode(replacement, journal); err != nil {
 			replacement.Close()
 			return err
 		}

@@ -517,6 +517,10 @@ var (
 		Usage: "parentchain ws url",
 		Value: "ws://0.0.0.0:8546",
 	}
+	VTRecoveryFlag = cli.BoolFlag{
+		Name:  "vtrecovery",
+		Usage: "Enable value transfer recovery (default: false)",
+	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC

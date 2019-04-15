@@ -272,6 +272,7 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 		sc.bootFail = true
 		return
 	}
+
 	sc.gatewayMgr, err = NewGateWayManager(sc)
 	if err != nil {
 		logger.Error("fail to initialize GateWayManager", "err", err)
@@ -280,6 +281,11 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	}
 	sc.tokenReceivedSub = sc.gatewayMgr.SubscribeTokenReceived(sc.tokenReceivedCh)
 	sc.tokenTransferSub = sc.gatewayMgr.SubscribeTokenWithDraw(sc.tokenTransferCh)
+
+	if sc.config.VTRecovery {
+		logger.Info("value transfer recovery is enabled")
+		sc.gatewayMgr.LoadAllGateway()
+	}
 
 	sc.pmwg.Add(1)
 	go sc.loop()

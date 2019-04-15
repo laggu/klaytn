@@ -64,29 +64,41 @@ type TokenTransferEvent struct {
 	HandleNonce  uint64
 }
 
+// GateWayJournal has two types. When a single address is inserted, the Paired is disabled.
+// In this case, only one of the LocalAddress or RemoteAddress is filled with the address.
+// If two address in a pair is inserted, the Pared is enabled.
 type GateWayJournal struct {
-	Address common.Address `json:"address"`
-	IsLocal bool           `json:"local"`
+	LocalAddress  common.Address `json:"localAddress"`
+	RemoteAddress common.Address `json:"remoteAddress"`
+	Paired        bool           `json:"paired"`
+}
+
+type GateWayInfo struct {
+	gateway        *gatewaycontract.Gateway
+	onServiceChain bool
+	subscribed     bool
 }
 
 // DecodeRLP decodes the Klaytn
 func (b *GateWayJournal) DecodeRLP(s *rlp.Stream) error {
-	var gatewayjournal struct {
-		Address common.Address
-		IsLocal bool
+	var elem struct {
+		LocalAddress  common.Address
+		RemoteAddress common.Address
+		Paired        bool
 	}
-	if err := s.Decode(&gatewayjournal); err != nil {
+	if err := s.Decode(&elem); err != nil {
 		return err
 	}
-	b.Address, b.IsLocal = gatewayjournal.Address, gatewayjournal.IsLocal
+	b.LocalAddress, b.RemoteAddress, b.Paired = elem.LocalAddress, elem.RemoteAddress, elem.Paired
 	return nil
 }
 
 // EncodeRLP serializes b into the Klaytn RLP GateWayJournal format.
 func (b *GateWayJournal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
-		b.Address,
-		b.IsLocal,
+		b.LocalAddress,
+		b.RemoteAddress,
+		b.Paired,
 	})
 }
 
@@ -95,9 +107,9 @@ func (b *GateWayJournal) EncodeRLP(w io.Writer) error {
 type GateWayManager struct {
 	subBridge *SubBridge
 
-	all            map[common.Address]bool
-	localGateWays  map[common.Address]*gatewaycontract.Gateway
-	remoteGateWays map[common.Address]*gatewaycontract.Gateway
+	receivedEvents map[common.Address]event.Subscription
+	withdrawEvents map[common.Address]event.Subscription
+	gateways       map[common.Address]*GateWayInfo
 
 	tokenReceived event.Feed
 	tokenWithdraw event.Feed
@@ -108,30 +120,30 @@ type GateWayManager struct {
 }
 
 func NewGateWayManager(main *SubBridge) (*GateWayManager, error) {
-
-	gatewayAddrJournal := newGateWayAddrJournal(path.Join(main.config.DataDir, GatewayAddrJournal))
+	gatewayAddrJournal := newGateWayAddrJournal(path.Join(main.config.DataDir, GatewayAddrJournal), main.config)
 
 	gwm := &GateWayManager{
 		subBridge:      main,
-		all:            make(map[common.Address]bool),
-		localGateWays:  make(map[common.Address]*gatewaycontract.Gateway),
-		remoteGateWays: make(map[common.Address]*gatewaycontract.Gateway),
+		receivedEvents: make(map[common.Address]event.Subscription),
+		withdrawEvents: make(map[common.Address]event.Subscription),
+		gateways:       make(map[common.Address]*GateWayInfo),
 		journal:        gatewayAddrJournal,
 	}
 
 	logger.Info("Load Gateway Address from JournalFiles ", "path", gwm.journal.path)
+	gwm.journal.cache = []*GateWayJournal{}
+
 	if err := gwm.journal.load(func(gwjournal GateWayJournal) error {
-		logger.Info("Load Gateway Address from JournalFiles ", "Address", gwjournal.Address.Hex(), "Local", gwjournal.IsLocal)
-		if gwjournal.IsLocal {
-			return gwm.load(gwjournal.Address, main.localBackend, gwjournal.IsLocal)
-		} else {
-			return gwm.load(gwjournal.Address, main.remoteBackend, gwjournal.IsLocal)
-		}
+		logger.Info("Load Gateway Address from JournalFiles ",
+			"local address", gwjournal.LocalAddress.Hex(), "remote address", gwjournal.RemoteAddress.Hex())
+		gwm.journal.cache = append(gwm.journal.cache, &gwjournal)
+		return nil
 	}); err != nil {
 		logger.Error("fail to load gateway address", "err", err)
 	}
+
 	if err := gwm.journal.rotate(gwm.GetAllGateway()); err != nil {
-		logger.Error("fail to load gateway address", "err", err)
+		logger.Error("fail to rotate gateway journal", "err", err)
 	}
 
 	return gwm, nil
@@ -147,72 +159,107 @@ func (gwm *GateWayManager) SubscribeTokenWithDraw(ch chan<- TokenTransferEvent) 
 	return gwm.scope.Track(gwm.tokenWithdraw.Subscribe(ch))
 }
 
-// GetGateway get gateway smartcontract with address
-// addr is smartcontract address and local is same node or not
-func (gwm *GateWayManager) GetGateway(addr common.Address) *gatewaycontract.Gateway {
-	local, ok := gwm.all[addr]
-	if !ok {
-		return nil
-	}
-	if local {
-		gateway, ok := gwm.localGateWays[addr]
-		if !ok {
-			return nil
-		}
-		return gateway
-	} else {
-		gateway, ok := gwm.remoteGateWays[addr]
-		if !ok {
-			return nil
-		}
-		return gateway
-	}
-}
-
+// GetAllGateway returns a journal cache while removing unnecessary address pair.
 func (gwm *GateWayManager) GetAllGateway() []*GateWayJournal {
 	gwjs := []*GateWayJournal{}
-	for addr := range gwm.localGateWays {
-		gwjs = append(gwjs, &GateWayJournal{addr, true})
+
+	for _, journal := range gwm.journal.cache {
+		if journal.Paired {
+			gatewayInfo, ok := gwm.gateways[journal.LocalAddress]
+			if ok && !gatewayInfo.subscribed {
+				continue
+			}
+			if gwm.subBridge.AddressManager() != nil {
+				gwm.subBridge.addressManager.DeleteGateway(journal.LocalAddress)
+			}
+
+			gatewayInfo, ok = gwm.gateways[journal.RemoteAddress]
+			if ok && !gatewayInfo.subscribed {
+				continue
+			}
+			if gwm.subBridge.AddressManager() != nil {
+				gwm.subBridge.addressManager.DeleteGateway(journal.RemoteAddress)
+			}
+		}
+		gwjs = append(gwjs, journal)
 	}
-	for addr := range gwm.remoteGateWays {
-		gwjs = append(gwjs, &GateWayJournal{addr, false})
-	}
-	return gwjs
+
+	gwm.journal.cache = gwjs
+
+	return gwm.journal.cache
 }
 
-// Reorganize GateWayManager with smartcontract addresses
-func (gwm *GateWayManager) Load(addrs []common.Address, backend bind.ContractBackend, local bool) error {
-	for _, addr := range addrs {
-		err := gwm.load(addr, backend, local)
-		if err != nil {
-			logger.Error("fail to load gateway contract ", "err", err)
+// SetGateway stores the address and gateway pair with local/remote and subscription status.
+func (gwm *GateWayManager) SetGateway(addr common.Address, gateway *gatewaycontract.Gateway, local bool, subscribed bool) {
+	gwm.gateways[addr] = &GateWayInfo{gateway, local, subscribed}
+}
+
+// LoadAllGateway reloads gateway and handles subscription by using the the journal cache.
+func (gwm *GateWayManager) LoadAllGateway() error {
+	for _, journal := range gwm.journal.cache {
+		if journal.Paired {
+			if gwm.subBridge.AddressManager() == nil {
+				return errors.New("address manager is not exist")
+			}
+			logger.Info("Add gateway pair in address manager")
+			// Step 1: register gateway
+			localGateway, err := gatewaycontract.NewGateway(journal.LocalAddress, gwm.subBridge.localBackend)
+			if err != nil {
+				return err
+			}
+			remoteGateway, err := gatewaycontract.NewGateway(journal.RemoteAddress, gwm.subBridge.remoteBackend)
+			if err != nil {
+				return err
+			}
+			gwm.SetGateway(journal.LocalAddress, localGateway, true, false)
+			gwm.SetGateway(journal.RemoteAddress, remoteGateway, false, false)
+
+			// Step 2: set address manager
+			gwm.subBridge.AddressManager().AddGateway(journal.LocalAddress, journal.RemoteAddress)
+
+			// Step 3: subscribe event
+			gwm.subscribeEvent(journal.LocalAddress, localGateway)
+			gwm.subscribeEvent(journal.RemoteAddress, remoteGateway)
+
+		} else {
+			err := gwm.loadGateway(journal.LocalAddress, gwm.subBridge.localBackend, true, false)
+			if err != nil {
+				return err
+			}
+			err = gwm.loadGateway(journal.RemoteAddress, gwm.subBridge.remoteBackend, false, false)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (gwm *GateWayManager) load(addr common.Address, backend bind.ContractBackend, local bool) error {
+// LoadGateway creates new gateway contract for a given address and subscribes an event if needed.
+func (gwm *GateWayManager) loadGateway(addr common.Address, backend bind.ContractBackend, local bool, subscribed bool) error {
+	var gatewayInfo *GateWayInfo
+
+	defer func() {
+		if gatewayInfo != nil && subscribed && !gwm.gateways[addr].subscribed {
+			logger.Info("gateway subscription is enabled by journal", "address", addr)
+			gwm.subscribeEvent(addr, gatewayInfo.gateway)
+		}
+	}()
+
+	gatewayInfo = gwm.gateways[addr]
+	if gatewayInfo != nil {
+		return nil
+	}
 
 	gateway, err := gatewaycontract.NewGateway(addr, backend)
 	if err != nil {
 		return err
 	}
-	if local {
-		gwm.localGateWays[addr] = gateway
-		gwm.all[addr] = true
-	} else {
-		gwm.remoteGateWays[addr] = gateway
-		gwm.all[addr] = false
-	}
-	return nil
-}
+	logger.Info("gateway ", "address", addr)
+	gwm.SetGateway(addr, gateway, local, false)
+	gatewayInfo = gwm.gateways[addr]
 
-func (gwm *GateWayManager) IsLocal(addr common.Address) (bool, bool) {
-	local, ok := gwm.all[addr]
-	if !ok {
-		return false, false
-	}
-	return local, true
+	return nil
 }
 
 // Deploy Gateway SmartContract on same node or remote node
@@ -223,11 +270,9 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 			logger.Error("fail to deploy gateway", "err", err)
 			return common.Address{}, err
 		}
-		gwm.localGateWays[addr] = gateway
-		gwm.all[addr] = true
-		if err := gwm.journal.insert(addr, local); err != nil {
-			logger.Error("fail to journal address", "err", err)
-		}
+		gwm.SetGateway(addr, gateway, local, false)
+		gwm.journal.insert(addr, common.Address{}, false)
+
 		return addr, err
 	} else {
 		gwm.subBridge.handler.LockChainAccount()
@@ -237,17 +282,16 @@ func (gwm *GateWayManager) DeployGateway(backend bind.ContractBackend, local boo
 			logger.Error("fail to deploy gateway", "err", err)
 			return common.Address{}, err
 		}
-		gwm.remoteGateWays[addr] = gateway
-		gwm.all[addr] = false
-		if err := gwm.journal.insert(addr, local); err != nil {
-			logger.Error("fail to journal address", "err", err)
-			return common.Address{}, err
-		}
+		gwm.SetGateway(addr, gateway, local, false)
+		gwm.journal.insert(common.Address{}, addr, false)
 		gwm.subBridge.handler.addChainAccountNonce(1)
 		return addr, err
 	}
 }
 
+// DeployGateway handles actual smart contract deployment.
+// To create contract, the chain ID, nonce, account key, private key, contract binding and gas price are used.
+// The deployed contract address, transaction are returned. An error is also returned if any.
 func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *gatewaycontract.Gateway, error) {
 	// TODO-Klaytn change config
 	if accountKey == nil {
@@ -284,29 +328,17 @@ func (gwm *GateWayManager) deployGateway(chainID *big.Int, nonce *big.Int, accou
 
 // SubscribeEvent registers a subscription of GatewayERC20Received and GatewayTokenWithdrawn
 func (gwm *GateWayManager) SubscribeEvent(addr common.Address) error {
-
-	local, ok := gwm.all[addr]
+	gatewayInfo, ok := gwm.gateways[addr]
 	if !ok {
 		return fmt.Errorf("there is no gateway contract which address %v", addr)
 	}
-	if local {
-		gateway, ok := gwm.localGateWays[addr]
-		if !ok {
-			return fmt.Errorf("there is no gateway contract which address %v", addr)
-		}
-		gwm.subscribeEvent(addr, gateway)
-	} else {
-		gateway, ok := gwm.remoteGateWays[addr]
-		if !ok {
-			return fmt.Errorf("there is no gateway contract which address %v", addr)
-		}
-		gwm.subscribeEvent(addr, gateway)
-	}
+	gwm.subscribeEvent(addr, gatewayInfo.gateway)
+
 	return nil
 }
 
+// SubscribeEvent sets watch logs and creates a goroutine loop to handle event messages.
 func (gwm *GateWayManager) subscribeEvent(addr common.Address, gateway *gatewaycontract.Gateway) {
-
 	tokenReceivedCh := make(chan *gatewaycontract.GatewayTokenReceived, TokenEventChanSize)
 	tokenWithdrawCh := make(chan *gatewaycontract.GatewayTokenWithdrawn, TokenEventChanSize)
 
@@ -314,14 +346,29 @@ func (gwm *GateWayManager) subscribeEvent(addr common.Address, gateway *gatewayc
 	if err != nil {
 		logger.Error("Failed to pGateway.WatchERC20Received", "err", err)
 	}
+	gwm.receivedEvents[addr] = receivedSub
 	withdrawnSub, err := gateway.WatchTokenWithdrawn(nil, tokenWithdrawCh)
 	if err != nil {
 		logger.Error("Failed to pGateway.WatchTokenWithdrawn", "err", err)
 	}
+	gwm.withdrawEvents[addr] = withdrawnSub
+	gwm.gateways[addr].subscribed = true
 
 	go gwm.loop(addr, tokenReceivedCh, tokenWithdrawCh, gwm.scope.Track(receivedSub), gwm.scope.Track(withdrawnSub))
 }
 
+// UnsubscribeEvent cancels the contract's watch logs and initializes the status.
+func (gwm *GateWayManager) unsubscribeEvent(addr common.Address) {
+	receivedSub := gwm.receivedEvents[addr]
+	receivedSub.Unsubscribe()
+
+	withdrawSub := gwm.withdrawEvents[addr]
+	withdrawSub.Unsubscribe()
+
+	gwm.gateways[addr].subscribed = false
+}
+
+// Loop handles subscribed event messages.
 func (gwm *GateWayManager) loop(
 	addr common.Address,
 	receivedCh <-chan *gatewaycontract.GatewayTokenReceived,
@@ -366,6 +413,7 @@ func (gwm *GateWayManager) loop(
 	}
 }
 
+// Stop closes a subscribed event scope of the gateway manager.
 func (gwm *GateWayManager) Stop() {
 	gwm.scope.Close()
 }

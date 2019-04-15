@@ -119,6 +119,8 @@ func (sbapi *SubBridgeAPI) SubscribeEventGateway(cGatewayAddr common.Address, pG
 		// TODO-Klaytn needs to unsubscribe cGatewayAddr in this case.
 		return pErr
 	}
+
+	sbapi.sc.gatewayMgr.journal.insert(cGatewayAddr, pGatewayAddr, true)
 	return nil
 }
 
@@ -146,11 +148,8 @@ func (sbapi *SubBridgeAPI) RegisterGateway(cGatewayAddr common.Address, pGateway
 		return false
 	}
 
-	sbapi.sc.gatewayMgr.localGateWays[cGatewayAddr] = cGateway
-	sbapi.sc.gatewayMgr.all[cGatewayAddr] = true
-
-	sbapi.sc.gatewayMgr.remoteGateWays[pGatewayAddr] = pGateway
-	sbapi.sc.gatewayMgr.all[pGatewayAddr] = false
+	sbapi.sc.gatewayMgr.SetGateway(cGatewayAddr, cGateway, true, false)
+	sbapi.sc.gatewayMgr.SetGateway(pGatewayAddr, pGateway, false, false)
 
 	return true
 }

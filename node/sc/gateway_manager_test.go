@@ -118,7 +118,7 @@ func TestGateWayManager(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Failed to deploy new gateway contract: %v", err)
 	}
-	gateway := gatewayManager.GetGateway(addr)
+	gateway := gatewayManager.gateways[addr].gateway
 	fmt.Println("===== GatewayContract Addr ", addr.Hex())
 	sim.Commit() // block
 
@@ -162,6 +162,7 @@ func TestGateWayManager(t *testing.T) {
 
 	// 4. Subscribe Gateway Contract
 	gatewayManager.SubscribeEvent(addr)
+
 	tokenCh := make(chan TokenReceivedEvent)
 	tokenSendCh := make(chan TokenTransferEvent)
 	gatewayManager.SubscribeTokenReceived(tokenCh)
@@ -416,17 +417,136 @@ func TestGateWayManager(t *testing.T) {
 	gatewayManager.Stop()
 }
 
+// TestGateWayManagerJournal tests journal functionality.
+func TestGateWayManagerJournal(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), GatewayAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// Generate a new random account and a funded simulator
+	key, _ := crypto.GenerateKey()
+	auth := bind.NewKeyedTransactor(key)
+
+	key2, _ := crypto.GenerateKey()
+	auth2 := bind.NewKeyedTransactor(key2)
+
+	key3, _ := crypto.GenerateKey()
+	auth3 := bind.NewKeyedTransactor(key3)
+
+	key4, _ := crypto.GenerateKey()
+	auth4 := bind.NewKeyedTransactor(key4)
+
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	config := &SCConfig{}
+	config.nodekey = key
+	config.chainkey = key2
+	config.DataDir = os.TempDir()
+	config.VTRecovery = true
+
+	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
+	config.ChainAccountAddr = &chainKeyAddr
+
+	sc := &SubBridge{
+		config: config,
+		peers:  newBridgePeerSet(),
+	}
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	testKLAY := big.NewInt(321)
+
+	// 1. Prepare manager and subscribe event
+	gwm, err := NewGateWayManager(sc)
+
+	addr, err := gwm.DeployGatewayTest(sim, false)
+	gateway := gwm.gateways[addr].gateway
+	fmt.Println("===== GatewayContract Addr ", addr.Hex())
+	sim.Commit() // block
+
+	gwm.gateways[addr] = &GateWayInfo{gateway, true, true}
+	gwm.journal.cache = []*GateWayJournal{}
+	gwm.journal.cache = append(gwm.journal.cache, &GateWayJournal{addr, addr, true})
+
+	gwm.SubscribeEvent(addr)
+	gwm.unsubscribeEvent(addr)
+
+	//// 2. Reload gateway as if journal is loaded (it handles subscription internally)
+	gwm.loadGateway(addr, sc.remoteBackend, false, true)
+
+	// 3. Run automatic subscription checker
+	tokenCh := make(chan TokenReceivedEvent)
+	tokenSendCh := make(chan TokenTransferEvent)
+	gwm.SubscribeTokenReceived(tokenCh)
+	gwm.SubscribeTokenWithDraw(tokenSendCh)
+
+	go func() {
+		for {
+			select {
+			case ev := <-tokenCh:
+				fmt.Println("Deposit Event",
+					"type", ev.TokenType,
+					"amount", ev.Amount,
+					"from", ev.From.String(),
+					"to", ev.To.String(),
+					"contract", ev.ContractAddr.String(),
+					"token", ev.TokenAddr.String())
+
+				switch ev.TokenType {
+				case 0:
+					// WithdrawKLAY by Event
+					tx, err := gateway.WithdrawKLAY(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
+
+					if err != nil {
+						log.Fatalf("Failed to WithdrawKLAY: %v", err)
+					}
+					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
+					sim.Commit() // block
+				}
+				wg.Done()
+
+			case ev := <-tokenSendCh:
+				fmt.Println("receive token withdraw event ", ev.ContractAddr.Hex())
+				wg.Done()
+			}
+		}
+	}()
+
+	// 4. DepositKLAY from auth to auth3 to check subscription
+	{
+		tx, err := gateway.DepositKLAY(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
+		if err != nil {
+			log.Fatalf("Failed to DepositKLAY: %v", err)
+		}
+		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
+
+		sim.Commit() // block
+	}
+
+	wg.Wait()
+
+	gwm.Stop()
+}
+
 // for TestMethod
 func (gwm *GateWayManager) DeployGatewayTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
 		addr, gateway, err := gwm.deployGatewayTest(big.NewInt(2019), big.NewInt((int64)(gwm.subBridge.handler.getNodeAccountNonce())), gwm.subBridge.handler.nodeKey, backend)
-		gwm.localGateWays[addr] = gateway
-		gwm.all[addr] = true
+		gwm.SetGateway(addr, gateway, local, false)
 		return addr, err
 	} else {
 		addr, gateway, err := gwm.deployGatewayTest(gwm.subBridge.handler.parentChainID, big.NewInt((int64)(gwm.subBridge.handler.chainAccountNonce)), gwm.subBridge.handler.chainKey, backend)
-		gwm.remoteGateWays[addr] = gateway
-		gwm.all[addr] = false
+		gwm.SetGateway(addr, gateway, local, false)
 		return addr, err
 	}
 }
