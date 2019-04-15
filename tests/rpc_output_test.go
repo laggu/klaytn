@@ -32,6 +32,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul/backend"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/networks/rpc"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -145,6 +146,7 @@ func TestRPCOutput(t *testing.T) {
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	var txs types.Transactions
 
@@ -164,7 +166,7 @@ func TestRPCOutput(t *testing.T) {
 
 	// TxTypeValueTransfer
 	{
-		amount := new(big.Int).SetUint64(10000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -317,7 +319,7 @@ func TestRPCOutput(t *testing.T) {
 
 	// TxTypeAccountCreation
 	{
-		amount := new(big.Int).SetUint64(100000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -340,7 +342,7 @@ func TestRPCOutput(t *testing.T) {
 	}
 
 	{
-		amount := new(big.Int).SetUint64(100000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -363,7 +365,7 @@ func TestRPCOutput(t *testing.T) {
 	}
 
 	{
-		amount := new(big.Int).SetUint64(1000000000000)
+		amount := new(big.Int).SetUint64(params.KLAY)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -578,14 +580,13 @@ func TestRPCOutput(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
-			types.TxValueKeyAmount:        amountToSend,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          data,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyAmount:   amountToSend,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     data,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)
@@ -609,15 +610,14 @@ func TestRPCOutput(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
-			types.TxValueKeyAmount:        amountToSend,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      common.Big0,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyData:          data,
-			types.TxValueKeyFeePayer:      reservoir2.Addr,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyAmount:   amountToSend,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: common.Big0,
+			types.TxValueKeyData:     data,
+			types.TxValueKeyFeePayer: reservoir2.Addr,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, values)
 		assert.Equal(t, nil, err)
@@ -650,7 +650,6 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyAmount:             amountToSend,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           common.Big0,
-			types.TxValueKeyHumanReadable:      true,
 			types.TxValueKeyData:               data,
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(66),
