@@ -208,7 +208,7 @@ func TestBridgeManager(t *testing.T) {
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
-					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, nftAddr, ev.To, ev.RequestNonce)
+					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, nftAddr, ev.RequestNonce)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawERC721: %v", err)
 					}
@@ -278,7 +278,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 6. Register (Mint) an NFT to Auth4
 	{
-		tx, err = nft.Register(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 999999}, auth4.From, nftTokenID)
+		tx, err = nft.Register(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 999999}, auth4.From, big.NewInt(int64(nftTokenID)))
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}

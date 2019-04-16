@@ -106,15 +106,18 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     }
 
     // handleNFTTransfer sends the NFT by the request.
-    function handleNFTTransfer(uint256 _uid, address _contractAddress, address _to, uint64 _handleNonce)
+    function handleNFTTransfer(uint256 _uid, address _to, address _contractAddress, uint64 _handleNonce)
     onlyOwner
     external
     {
         require(handleNonce == _handleNonce, "mismatched handle nonce");
-        require(balances.nft[_contractAddress][_uid], "Does not own token");
+
+        if (onServiceChain == false){
+            require(balances.nft[_contractAddress][_uid], "Does not own token");
+            delete balances.nft[_contractAddress][_uid];
+        }
 
         IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
-        delete balances.nft[_contractAddress][_uid];
         emit HandleValueTransfer(_to, TokenKind.NFT, _contractAddress, _uid, handleNonce);
         handleNonce++;
     }
