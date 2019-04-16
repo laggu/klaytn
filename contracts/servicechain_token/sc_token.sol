@@ -26,8 +26,7 @@ contract ServiceChainToken is ERC20 {
     }
 
     // Additional functions for gateway interaction, influenced from Zeppelin ERC721 Impl.
-
-    function RequestValueTransfer(uint256 _amount, address _to) external {
+    function requestValueTransfer(uint256 _amount, address _to) external {
         safeTransferAndCall(bridge, _amount, _to);
     }
 

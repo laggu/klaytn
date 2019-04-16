@@ -29,7 +29,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         NFT
     }
 
-
     constructor (bool _onServiceChain) public payable {
         onServiceChain = _onServiceChain;
         updateKLAY();
@@ -77,8 +76,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         balances.nft[msg.sender][_uid] = true;
     }
 
-    // HandleValue(Token/KLAY/NFT)Transfer sends the value by the request.
-    function HandleTokenTransfer(uint256 _amount, address _to, address _contractAddress, uint64 _handleNonce)
+    // handleTokenTransfer sends the token by the request.
+    function handleTokenTransfer(uint256 _amount, address _to, address _contractAddress, uint64 _handleNonce)
     onlyOwner
     external
     {
@@ -92,7 +91,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         handleNonce++;
     }
 
-    function HandleKLAYTransfer(uint256 _amount, address _to, uint64 _handleNonce)
+    // handleKLAYTransfer sends the KLAY by the request.
+    function handleKLAYTransfer(uint256 _amount, address _to, uint64 _handleNonce)
     onlyOwner
     external
     {
@@ -105,7 +105,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         handleNonce++;
     }
 
-    function HandleNFTTransfer(uint256 _uid, address _contractAddress, address _to, uint64 _handleNonce)
+    // handleNFTTransfer sends the NFT by the request.
+    function handleNFTTransfer(uint256 _uid, address _contractAddress, address _to, uint64 _handleNonce)
     onlyOwner
     external
     {
@@ -171,30 +172,30 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         requestNonce++;
     }
 
-    // DepositKLAY requests transfer KLAY to _to on relative chain.
-    function RequestKLAYTransfer(address _to) external payable {
+    // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
+    function requestKLAYTransfer(address _to) external payable {
         updateKLAY();
         emit RequestValueTransfer(TokenKind.KLAY, msg.sender, msg.value, address(0), _to, requestNonce);
         requestNonce++;
     }
 
-    // DepositWithoutEvent send KLAY to this contract without event for increasing the withdrawal limit.
-    function ChargeWithoutEvent() external payable {
+    // chargeWithoutEvent sends KLAY to this contract without event for increasing the withdrawal limit.
+    function chargeWithoutEvent() external payable {
         updateKLAY();
     }
     //////////////////////////////////////////////////////////////////////////////
 
-    // Returns KLAY withdrawal limit
+    // getKLAY returns KLAY withdrawal limit
     function getKLAY() external view returns (uint256) {
         return balances.klay;
     }
 
-    // Returns given Token withdrawal limit
+    // getToken returns given Token withdrawal limit
     function getToken(address contractAddress) external view returns (uint256) {
         return balances.token[contractAddress];
     }
 
-    // Returns ERC721 token by uid
+    // getNFT returns whether the given NFT is owned or not.
     function getNFT(address owner, uint256 uid, address contractAddress) external view returns (bool) {
         return balances.nft[contractAddress][uid];
     }
