@@ -256,7 +256,7 @@ func (a *AccountKeyRoleBased) Update(key AccountKey, currentBlockNumber uint64) 
 		}
 		for i := 0; i < lenAk; i++ {
 			// A composite key is not allowed.
-			if (*a)[i].IsCompositeType() {
+			if (*ak)[i].IsCompositeType() {
 				return kerrors.ErrNestedCompositeType
 			}
 			// Skip if AccountKeyNil.

@@ -241,7 +241,7 @@ func (a *AccountKeyRoleBasedRlpFix) Update(key AccountKey, currentBlockNumber ui
 		}
 		for i := 0; i < lenAk; i++ {
 			// A composite key is not allowed.
-			if (*a)[i].IsCompositeType() {
+			if (*ak)[i].IsCompositeType() {
 				return kerrors.ErrNestedCompositeType
 			}
 			// Skip if AccountKeyNil.

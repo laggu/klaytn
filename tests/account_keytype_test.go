@@ -27,22 +27,12 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 	var err error
 
 	// prepare  keys
-	prvKeysHex := []string{
-		"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
-		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
-		"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
-	}
-
-	keys := make([]*ecdsa.PrivateKey, len(prvKeysHex))
+	keys := genTestKeys(3)
 	weights := []uint{1, 1, 1}
-	weightedKeys := make(accountkey.WeightedPublicKeys, len(prvKeysHex))
+	weightedKeys := make(accountkey.WeightedPublicKeys, 3)
 	threshold := uint(2)
 
-	for i, p := range prvKeysHex {
-		keys[i], err = crypto.HexToECDSA(p)
-		if err != nil {
-			return nil, err
-		}
+	for i := range keys {
 		weightedKeys[i] = accountkey.NewWeightedPublicKey(weights[i], (*accountkey.PublicKeySerializable)(&keys[i].PublicKey))
 	}
 
@@ -53,6 +43,12 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleFeePayer].PublicKey),
 	}
 
+	// a role-based rlp fix key
+	roleRLPAccKey := accountkey.AccountKeyRoleBasedRlpFix{
+		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleTransaction].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleAccountUpdate].PublicKey),
+		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleFeePayer].PublicKey),
+	}
 	// default account setting
 	account := &TestAccountType{
 		Addr:   crypto.PubkeyToAddress(keys[0].PublicKey), // default
@@ -77,6 +73,9 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 	case accountkey.AccountKeyTypeRoleBased:
 		account.Keys = keys
 		account.AccKey = accountkey.NewAccountKeyRoleBasedWithValues(roleAccKey)
+	case accountkey.AccountKeyTypeRoleBasedRlpFix:
+		account.Keys = keys
+		account.AccKey = accountkey.NewAccountKeyRoleBasedRlpFixWithValues(roleRLPAccKey)
 	default:
 		return nil, kerrors.ErrDifferentAccountKeyType
 	}
@@ -924,6 +923,116 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountUpdateRoleBasedKeyNested tests account update with a nested RoleBasedKey.
+// Nested RoleBasedKey is not allowed in Klaytn.
+// 1. Create an account with a RoleBasedKey.
+// 2. Update an accountKey with a nested RoleBasedKey
+func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// roleBasedKeys and a nested roleBasedKey
+	roleKey, err := createDefaultAccount(accountkey.AccountKeyTypeRoleBased)
+	assert.Equal(t, nil, err)
+
+	roleKey2, err := createDefaultAccount(accountkey.AccountKeyTypeRoleBased)
+	assert.Equal(t, nil, err)
+
+	nestedAccKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		roleKey2.AccKey,
+	})
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("roleAddr = ", roleKey.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// 1. Create an account with a RoleBasedKey.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(params.KLAY)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            roleKey.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		reservoir.Nonce += 1
+	}
+
+	// 2. Update an accountKey with a nested RoleBasedKey.
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      roleKey.Nonce,
+			types.TxValueKeyFrom:       roleKey.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: nestedAccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{roleKey.Keys[accountkey.RoleAccountUpdate]})
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
