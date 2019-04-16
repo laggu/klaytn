@@ -118,7 +118,7 @@ func newTxInternalDataFeeDelegatedValueTransferMemoWithMap(values map[TxValueKey
 
 	if len(values) != 0 {
 		for k := range values {
-			fmt.Println("unnecessary key", k.String())
+			logger.Warn("unnecessary key", k.String())
 		}
 		return nil, errUndefinedKeyRemains
 	}
