@@ -762,23 +762,23 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'deployGateway',
-			call: 'bridge_deployGateway',
+			name: 'deployBridge',
+			call: 'bridge_deployBridge',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'deployGatewayOnLocal',
-			call: 'bridge_deployGatewayOnLocalChain',
+			name: 'deployBridgeOnLocal',
+			call: 'bridge_deployBridgeOnLocalChain',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'deployGatewayOnRemote',
-			call: 'bridge_deployGatewayOnParentChain',
+			name: 'deployBridgeOnRemote',
+			call: 'bridge_deployBridgeOnParentChain',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'subscribeGateway',
-			call: 'bridge_subscribeEventGateway',
+			name: 'subscribeBridge',
+			call: 'bridge_subscribeEventBridge',
 			params: 2
 		}),
 		new web3._extend.Method({
@@ -787,13 +787,13 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'registerGateway',
-			call: 'bridge_registerGateway',
+			name: 'registerBridge',
+			call: 'bridge_registerBridge',
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'unRegisterGateway',
-			call: 'bridge_unRegisterGateway',
+			name: 'unRegisterBridge',
+			call: 'bridge_unRegisterBridge',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -833,8 +833,8 @@ web3._extend({
 			getter: 'bridge_getChainAccountNonce'
 		}),
 		new web3._extend.Property({
-			name: 'listGateway',
-			getter: 'bridge_listDeployedGateway'
+			name: 'listBridge',
+			getter: 'bridge_listDeployedBridge'
 		}),
 		new web3._extend.Property({
 			name: 'txPendingCount',

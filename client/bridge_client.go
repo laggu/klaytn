@@ -123,11 +123,11 @@ func (ec *Client) BridgeGetSentChainTxsLimit(ctx context.Context) (uint64, error
 	return result, err
 }
 
-// BridgeDeployGateway can deploy the pair of gateway for parent/child chain.
-func (ec *Client) BridgeDeployGateway(ctx context.Context) (common.Address, common.Address, error) {
+// BridgeDeployBridge can deploy the pair of bridge for parent/child chain.
+func (ec *Client) BridgeDeployBridge(ctx context.Context) (common.Address, common.Address, error) {
 	var result []common.Address
 
-	err := ec.c.CallContext(ctx, &result, "bridge_deployGateway")
+	err := ec.c.CallContext(ctx, &result, "bridge_deployBridge")
 	if err != nil {
 		return common.Address{}, common.Address{}, err
 	}
@@ -139,21 +139,21 @@ func (ec *Client) BridgeDeployGateway(ctx context.Context) (common.Address, comm
 	return result[0], result[1], nil
 }
 
-// BridgeRegisterGateway can register the given pair of deployed child/parent gateways.
-func (ec *Client) BridgeRegisterGateway(ctx context.Context, cGateway common.Address, pGateway common.Address) (bool, error) {
+// BridgeRegisterBridge can register the given pair of deployed child/parent bridges.
+func (ec *Client) BridgeRegisterBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_registerGateway", cGateway, pGateway)
+	err := ec.c.CallContext(ctx, &result, "bridge_registerBridge", scBridge, mcBridge)
 	return result, err
 }
 
-// BridgeSubscribeGateway can enable for service chain bridge to subscribe the event of given service/main chain gateways.
+// BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given service/main chain bridges.
 // If the subscribing is failed, it returns an error.
-func (ec *Client) BridgeSubscribeGateway(ctx context.Context, sGateway common.Address, mGateway common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_subscribeEventGateway", sGateway, mGateway)
+func (ec *Client) BridgeSubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
+	return ec.c.CallContext(ctx, nil, "bridge_subscribeEventBridge", scBridge, mcBridge)
 }
 
 // BridgeRegisterTokenContract can register the given pair of deployed service/main chain token contracts.
 // If the registering is failed, it returns an error.
-func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, sToken common.Address, mToken common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_registerToken", sToken, mToken)
+func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, scToken common.Address, mcToken common.Address) error {
+	return ec.c.CallContext(ctx, nil, "bridge_registerToken", scToken, mcToken)
 }
