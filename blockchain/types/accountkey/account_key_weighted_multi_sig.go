@@ -136,15 +136,11 @@ func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64,
 			"account", a.String())
 		return 0, kerrors.ErrMaxKeysExceedInValidation
 	}
-	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different sigValidationGas logic will be operated.
-	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
-		if numKeys == 0 {
-			logger.Error("should not happen! numKeys is equal to zero!")
-			return 0, kerrors.ErrZeroLength
-		}
-		return (numKeys - 1) * params.TxValidationGasPerKey, nil
+	if numKeys == 0 {
+		logger.Error("should not happen! numKeys is equal to zero!")
+		return 0, kerrors.ErrZeroLength
 	}
-	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
+	return (numKeys - 1) * params.TxValidationGasPerKey, nil
 }
 
 func (a *AccountKeyWeightedMultiSig) Init(currentBlockNumber uint64) error {

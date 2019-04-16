@@ -178,31 +178,17 @@ func (a *AccountKeyRoleBasedRlpFix) AccountCreationGas(currentBlockNumber uint64
 }
 
 func (a *AccountKeyRoleBasedRlpFix) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
-	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different sigValidationGas logic will be operated.
-	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
-		var key AccountKey
-		// Set the key used to sign for validation.
-		if len(*a) > int(r) {
-			key = (*a)[r]
-		} else {
-			key = a.getDefaultKey()
-		}
-
-		gas, err := key.SigValidationGas(currentBlockNumber, r)
-		if err != nil {
-			return 0, err
-		}
-
-		return gas, nil
+	var key AccountKey
+	// Set the key used to sign for validation.
+	if len(*a) > int(r) {
+		key = (*a)[r]
+	} else {
+		key = a.getDefaultKey()
 	}
 
-	gas := uint64(0)
-	for _, k := range *a {
-		gasK, err := k.SigValidationGas(currentBlockNumber, r)
-		if err != nil {
-			return 0, err
-		}
-		gas += gasK
+	gas, err := key.SigValidationGas(currentBlockNumber, r)
+	if err != nil {
+		return 0, err
 	}
 
 	return gas, nil

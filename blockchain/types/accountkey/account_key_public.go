@@ -19,7 +19,6 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ground-x/klaytn/fork"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 )
@@ -77,19 +76,11 @@ func (a *AccountKeyPublic) String() string {
 }
 
 func (a *AccountKeyPublic) AccountCreationGas(currentBlockNumber uint64) (uint64, error) {
-	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different accountCreationGas logic will be operated.
-	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
-		return numKeys * params.TxAccountCreationGasPerKey, nil
-	}
-	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey, nil
+	return numKeys * params.TxAccountCreationGasPerKey, nil
 }
 
 func (a *AccountKeyPublic) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
-	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different sigValidationGas logic will be operated.
-	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
-		return (numKeys - 1) * params.TxValidationGasPerKey, nil
-	}
-	return params.TxValidationGasDefault + numKeys*params.TxValidationGasPerKey, nil
+	return (numKeys - 1) * params.TxValidationGasPerKey, nil
 }
 
 func (a *AccountKeyPublic) Init(currentBlockNumber uint64) error {

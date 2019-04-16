@@ -40,7 +40,7 @@ type TestAccount interface {
 	GetFeeKeys() []*ecdsa.PrivateKey
 	GetNonce() uint64
 	GetAccKey() accountkey.AccountKey
-	GetValidationGas() uint64
+	GetValidationGas(r accountkey.RoleType) uint64
 	AddNonce()
 }
 
@@ -203,15 +203,19 @@ func TestGasCalculation(t *testing.T) {
 	for _, f := range testFunctions {
 		for _, sender := range accountTypes {
 			toAccount := reservoir
+			senderRole := accountkey.RoleTransaction
 
 			// LegacyTransaction can be used only with LegacyAccount and KlaytnAccount with AccountKeyLegacy.
 			if !strings.Contains(sender.Type, "Legacy") && strings.Contains(f.Name, "Legacy") {
 				continue
 			}
 
-			// Sender can't be a LegacyAccount with AccountUpdate
-			if sender.Type == "Legacy" && strings.Contains(f.Name, "AccountUpdate") {
-				continue
+			if strings.Contains(f.Name, "AccountUpdate") {
+				// Sender can't be a LegacyAccount with AccountUpdate
+				if sender.Type == "Legacy" {
+					continue
+				}
+				senderRole = accountkey.RoleAccountUpdate
 			}
 
 			// Set contract's address with SmartContractExecution
@@ -224,7 +228,7 @@ func TestGasCalculation(t *testing.T) {
 				Name := f.Name + "/" + sender.Type + "Sender"
 				t.Run(Name, func(t *testing.T) {
 					tx, intrinsic := f.genTx(t, signer, sender.account, toAccount, nil, gasPrice)
-					acocuntValidationGas := sender.account.GetValidationGas()
+					acocuntValidationGas := sender.account.GetValidationGas(senderRole)
 					testGasValidation(t, bcdata, tx, intrinsic+acocuntValidationGas)
 				})
 			} else {
@@ -233,7 +237,7 @@ func TestGasCalculation(t *testing.T) {
 					Name := f.Name + "/" + sender.Type + "Sender/" + payer.Type + "Payer"
 					t.Run(Name, func(t *testing.T) {
 						tx, intrinsic := f.genTx(t, signer, sender.account, toAccount, payer.account, gasPrice)
-						acocuntsValidationGas := sender.account.GetValidationGas() + payer.account.GetValidationGas()
+						acocuntsValidationGas := sender.account.GetValidationGas(senderRole) + payer.account.GetValidationGas(accountkey.RoleFeePayer)
 						testGasValidation(t, bcdata, tx, intrinsic+acocuntsValidationGas)
 					})
 				}
@@ -794,7 +798,7 @@ func genRoleBasedWithMultiSigAccount(t *testing.T) TestAccount {
 // Generate new Account functions for testing AccountCreation and AccountUpdate
 func genNewAccountWithGas(t *testing.T, testAccount TestAccount) (TestAccount, uint64, bool) {
 	var newAccount TestAccount
-	gas := params.TxAccountCreationGasDefault
+	gas := uint64(0)
 	readable := false
 
 	// AccountKeyLegacy
@@ -834,9 +838,9 @@ func genNewAccountWithGas(t *testing.T, testAccount TestAccount) (TestAccount, u
 		assert.Equal(t, nil, err)
 
 		newAccount = newRoleBasedWithMultiSig
-		gas = params.TxAccountCreationGasDefault + uint64(len(newAccount.GetTxKeys()))*params.TxAccountCreationGasPerKey
-		gas += params.TxAccountCreationGasDefault + uint64(len(newAccount.GetUpdateKeys()))*params.TxAccountCreationGasPerKey
-		gas += params.TxAccountCreationGasDefault + uint64(len(newAccount.GetFeeKeys()))*params.TxAccountCreationGasPerKey
+		gas = uint64(len(newAccount.GetTxKeys())) * params.TxAccountCreationGasPerKey
+		gas += uint64(len(newAccount.GetUpdateKeys())) * params.TxAccountCreationGasPerKey
+		gas += uint64(len(newAccount.GetFeeKeys())) * params.TxAccountCreationGasPerKey
 	}
 
 	return newAccount, gas, readable
@@ -952,20 +956,20 @@ func (t *TestAccountType) GetAccKey() accountkey.AccountKey {
 }
 
 // Return SigValidationGas depends on AccountType
-func (t *TestAccountType) GetValidationGas() uint64 {
+func (t *TestAccountType) GetValidationGas(r accountkey.RoleType) uint64 {
 	if t.GetAccKey() == nil {
-		return params.TxValidationGasDefault
+		return 0
 	}
 
 	var gas uint64
 
 	switch t.GetAccKey().Type() {
 	case accountkey.AccountKeyTypeLegacy:
-		gas = params.TxValidationGasDefault
+		gas = 0
 	case accountkey.AccountKeyTypePublic:
-		gas = params.TxValidationGasDefault + 1*params.TxValidationGasPerKey
+		gas = (1 - 1) * params.TxValidationGasPerKey
 	case accountkey.AccountKeyTypeWeightedMultiSig:
-		gas = params.TxValidationGasDefault + uint64(len(t.GetTxKeys()))*params.TxValidationGasPerKey
+		gas = uint64(len(t.GetTxKeys())-1) * params.TxValidationGasPerKey
 	}
 
 	return gas
@@ -1001,14 +1005,21 @@ func (t *TestRoleBasedAccountType) GetAccKey() accountkey.AccountKey {
 }
 
 // Return SigValidationGas depends on AccountType
-func (t *TestRoleBasedAccountType) GetValidationGas() uint64 {
+func (t *TestRoleBasedAccountType) GetValidationGas(r accountkey.RoleType) uint64 {
 	if t.GetAccKey() == nil {
-		return params.TxValidationGasDefault
+		return 0
 	}
 
-	gas := params.TxValidationGasDefault + uint64(len(t.GetTxKeys()))*params.TxValidationGasPerKey
-	gas += params.TxValidationGasDefault + uint64(len(t.GetUpdateKeys()))*params.TxValidationGasPerKey
-	gas += params.TxValidationGasDefault + uint64(len(t.GetFeeKeys()))*params.TxValidationGasPerKey
+	var gas uint64
+
+	switch r {
+	case accountkey.RoleTransaction:
+		gas = uint64(len(t.GetTxKeys())-1) * params.TxValidationGasPerKey
+	case accountkey.RoleAccountUpdate:
+		gas = uint64(len(t.GetUpdateKeys())-1) * params.TxValidationGasPerKey
+	case accountkey.RoleFeePayer:
+		gas = uint64(len(t.GetFeeKeys())-1) * params.TxValidationGasPerKey
+	}
 
 	return gas
 }
