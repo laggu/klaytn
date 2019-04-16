@@ -142,7 +142,7 @@ func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuer
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.FilterLogs(ctx, query)
+	return rb.klayClient.FilterLogs(ctx, query)
 }
 
 func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
