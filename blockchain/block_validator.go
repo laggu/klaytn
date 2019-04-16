@@ -28,7 +28,7 @@ import (
 	"github.com/ground-x/klaytn/params"
 )
 
-// BlockValidator is responsible for validating block headers, uncles and
+// BlockValidator is responsible for validating block headers and
 // processed state.
 //
 // BlockValidator implements Validator.
@@ -48,8 +48,8 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 	return validator
 }
 
-// ValidateBody validates the given block's uncles and verifies the the block
-// header's transaction and uncle roots. The headers are assumed to be already
+// ValidateBody verifies the the block
+// header's transaction. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	// Check whether the block's known, and if not, that it's linkable
@@ -62,7 +62,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		}
 		return consensus.ErrPrunedAncestor
 	}
-	// Header validity is known at this point, check the uncles and transactions
+	// Header validity is known at this point, check the transactions
 	header := block.Header()
 	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)

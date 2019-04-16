@@ -695,14 +695,12 @@ func handleBlockBodiesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 	// Deliver them all to the downloader for queuing
 	transactions := make([][]*types.Transaction, len(request))
-	uncles := make([][]*types.Header, len(request))
 
 	for i, body := range request {
 		transactions[i] = body.Transactions
-		uncles[i] = body.Uncles
 	}
 
-	err := pm.downloader.DeliverBodies(p.GetID(), transactions, uncles)
+	err := pm.downloader.DeliverBodies(p.GetID(), transactions)
 	if err != nil {
 		logger.Debug("Failed to deliver bodies", "err", err)
 	}
@@ -876,17 +874,15 @@ func handleBlockBodiesFetchResponseMsg(pm *ProtocolManager, p Peer, msg p2p.Msg)
 	}
 	// Deliver them all to the downloader for queuing
 	transactions := make([][]*types.Transaction, len(request))
-	uncles := make([][]*types.Header, len(request))
 
 	for i, body := range request {
 		transactions[i] = body.Transactions
-		uncles[i] = body.Uncles
 	}
 
-	transactions, uncles = pm.fetcher.FilterBodies(p.GetID(), transactions, uncles, time.Now())
+	transactions = pm.fetcher.FilterBodies(p.GetID(), transactions, time.Now())
 
-	if len(transactions) > 0 || len(uncles) > 0 {
-		logger.Warn("Failed to filter bodies", "peer", p.GetID(), "lenTxs", len(transactions), "lenUncles", len(uncles))
+	if len(transactions) > 0 {
+		logger.Warn("Failed to filter bodies", "peer", p.GetID(), "lenTxs", len(transactions))
 	}
 	return nil
 }

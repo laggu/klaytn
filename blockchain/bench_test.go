@@ -68,16 +68,6 @@ func BenchmarkInsertChain_valueTx_10kB_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BadgerDB, genValueTx(100*1024))
 }
 
-func BenchmarkInsertChain_uncles_memDB(b *testing.B) {
-	benchInsertChain(b, database.MemoryDB, genUncles)
-}
-func BenchmarkInsertChain_uncles_levelDB(b *testing.B) {
-	benchInsertChain(b, database.LevelDB, genUncles)
-}
-func BenchmarkInsertChain_uncles_badgerDB(b *testing.B) {
-	benchInsertChain(b, database.BadgerDB, genUncles)
-}
-
 func BenchmarkInsertChain_ring200_memDB(b *testing.B) {
 	benchInsertChain(b, database.MemoryDB, genTxRing(200))
 }
@@ -158,18 +148,6 @@ func genTxRing(naccounts int) func(int, *BlockGen) {
 			gen.AddTx(tx)
 			from = to
 		}
-	}
-}
-
-// genUncles generates blocks with two uncle headers.
-func genUncles(i int, gen *BlockGen) {
-	if i >= 6 {
-		b2 := gen.PrevBlock(i - 6).Header()
-		b2.Extra = []byte("foo")
-		gen.AddUncle(b2)
-		b3 := gen.PrevBlock(i - 6).Header()
-		b3.Extra = []byte("bar")
-		gen.AddUncle(b3)
 	}
 }
 
@@ -298,7 +276,6 @@ func makeChainForBench(db database.DBManager, full bool, count uint64) {
 			Number:      big.NewInt(int64(n)),
 			ParentHash:  hash,
 			Difficulty:  big.NewInt(1),
-			UncleHash:   types.EmptyUncleHash,
 			TxHash:      types.EmptyRootHash,
 			ReceiptHash: types.EmptyRootHash,
 		}

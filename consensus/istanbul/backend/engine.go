@@ -74,10 +74,6 @@ var (
 	errInvalidMixDigest = errors.New("invalid Istanbul mix digest")
 	// errInvalidNonce is returned if a block's nonce is invalid
 	errInvalidNonce = errors.New("invalid nonce")
-	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
-	errInvalidUncleHash = errors.New("non empty uncle hash")
-	// errInconsistentValidatorSet is returned if the validator set is inconsistent
-	errInconsistentValidatorSet = errors.New("non empty uncle hash")
 	// errInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
 	errInvalidTimestamp = errors.New("invalid timestamp")
 	// errInvalidVotingChain is returned if an authorization list is attempted to
@@ -95,7 +91,6 @@ var (
 )
 var (
 	defaultDifficulty = big.NewInt(1)
-	nilUncleHash      = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 	emptyNonce        = types.BlockNonce{}
 	now               = time.Now
 
@@ -146,10 +141,6 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != types.IstanbulDigest {
 		return errInvalidMixDigest
-	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
-	if header.UncleHash != nilUncleHash {
-		return errInvalidUncleHash
 	}
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
 	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
@@ -430,8 +421,6 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	}
 
 	header.Root = state.IntermediateRoot(true)
-	// Uncles are dropped in Istanbul
-	header.UncleHash = nilUncleHash
 
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, receipts), nil

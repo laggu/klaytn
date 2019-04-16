@@ -664,7 +664,7 @@ func (dbm *databaseManager) ReadBodyInCache(hash common.Hash) *types.Body {
 	return dbm.cm.readBodyCache(hash)
 }
 
-// ReadBodyRLP retrieves the block body (transactions and uncles) in RLP encoding.
+// ReadBodyRLP retrieves the block body (transactions) in RLP encoding.
 func (dbm *databaseManager) ReadBodyRLP(hash common.Hash, number uint64) rlp.RawValue {
 	// Short circuit if the rlp encoded body's already in the cache, retrieve otherwise
 	if cachedBodyRLP := dbm.readBodyRLPInCache(hash); cachedBodyRLP != nil {
@@ -688,7 +688,7 @@ func (dbm *databaseManager) ReadBodyRLP(hash common.Hash, number uint64) rlp.Raw
 	return data
 }
 
-// ReadBodyRLPByHash retrieves the block body (transactions and uncles) in RLP encoding.
+// ReadBodyRLPByHash retrieves the block body (transactions) in RLP encoding.
 func (dbm *databaseManager) ReadBodyRLPByHash(hash common.Hash) rlp.RawValue {
 	// Short circuit if the rlp encoded body's already in the cache, retrieve otherwise
 	if cachedBodyRLP := dbm.readBodyRLPInCache(hash); cachedBodyRLP != nil {
@@ -717,7 +717,7 @@ func (dbm *databaseManager) ReadBodyRLPByHash(hash common.Hash) rlp.RawValue {
 	return data
 }
 
-// readBodyRLPInCache retrieves the block body (transactions and uncles) in RLP encoding
+// readBodyRLPInCache retrieves the block body (transactions) in RLP encoding
 // in bodyRLPCache. It only searches cache.
 func (dbm *databaseManager) readBodyRLPInCache(hash common.Hash) rlp.RawValue {
 	return dbm.cm.readBodyRLPCache(hash)
@@ -921,7 +921,7 @@ func (dbm *databaseManager) ReadBlock(hash common.Hash, number uint64) *types.Bl
 		return nil
 	}
 
-	block := types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
+	block := types.NewBlockWithHeader(header).WithBody(body.Transactions)
 
 	// Write to cache at the end of successful write.
 	dbm.cm.writeBlockCache(hash, block)
@@ -948,7 +948,7 @@ func (dbm *databaseManager) ReadBlockByHash(hash common.Hash) *types.Block {
 		return nil
 	}
 
-	block := types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
+	block := types.NewBlockWithHeader(header).WithBody(body.Transactions)
 
 	// Write to cache at the end of successful write.
 	dbm.cm.writeBlockCache(hash, block)

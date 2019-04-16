@@ -36,8 +36,7 @@ import (
 )
 
 var (
-	EmptyRootHash  = common.Hash{}
-	EmptyUncleHash = CalcUncleHash(nil)
+	EmptyRootHash = common.Hash{}
 )
 
 // A BlockNonce is a 64-bit hash which proves (combined with the
@@ -70,32 +69,7 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
 // Header represents a block header in the Klaytn blockchain.
-// TODO-Klaytn Header will be replaced by HeaderWithoutUncle.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles,omitempty"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Rewardbase  common.Address `json:"reward"           gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
-	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	// TimeFoS represents a fraction of a second since `Time`.
-	TimeFoS    uint8       `json:"timestampFoS"     gencodec:"required"`
-	Extra      []byte      `json:"extraData"        gencodec:"required"`
-	MixDigest  common.Hash `json:"mixHash"          gencodec:"required"`
-	Nonce      BlockNonce  `json:"nonce"            gencodec:"required"`
-	Governance []byte      `json:"governanceData"        gencodec:"required"`
-	Vote       []byte      `json:"voteData,omitempty"`
-}
-
-// HeaderWithoutUncle represents a block header without UncleHash.
-type HeaderWithoutUncle struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Rewardbase  common.Address `json:"reward"           gencodec:"required"`
@@ -139,12 +113,10 @@ func (h *Header) Hash() common.Hash {
 	if h.MixDigest == IstanbulDigest {
 		// Seal is reserved in extra-data. To prove block is signed by the proposer.
 		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
-			// TODO-Klaytn Revert below code after replacement of Header by HeaderWithoutUncle.
-			return rlpHash(istanbulHeader.ToHeaderWithoutUncle()) //rlpHash(istanbulHeader)
+			return rlpHash(istanbulHeader)
 		}
 	}
-	// TODO-Klaytn Revert below code after replacement of Header by HeaderWithoutUncle.
-	return rlpHash(h.ToHeaderWithoutUncle()) //rlpHash(h)
+	return rlpHash(h)
 }
 
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.
@@ -167,32 +139,6 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
-// ToHeaderWithoutUncle returns copied HeaderWithoutUncle from the Header.
-// TODO-Klaytn Remove below code after replacement of Header by HeaderWithoutUncle.
-func (h *Header) ToHeaderWithoutUncle() *HeaderWithoutUncle {
-	header := HeaderWithoutUncle{
-		h.ParentHash,
-		h.Coinbase,
-		h.Rewardbase,
-		h.Root,
-		h.TxHash,
-		h.ReceiptHash,
-		h.Bloom,
-		h.Difficulty,
-		h.Number,
-		h.GasLimit,
-		h.GasUsed,
-		h.Time,
-		h.TimeFoS,
-		h.Extra,
-		h.MixDigest,
-		h.Nonce,
-		h.Governance,
-		h.Vote,
-	}
-	return &header
-}
-
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
@@ -207,16 +153,14 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
-// a block's data contents (transactions and uncles) together.
+// a block's data contents (transactions) together.
 type Body struct {
 	Transactions []*Transaction
-	Uncles       []*Header
 }
 
 // Block represents an entire block in the Klaytn blockchain.
 type Block struct {
 	header       *Header
-	uncles       []*Header
 	transactions Transactions
 
 	// caches
@@ -250,7 +194,6 @@ type StorageBlock Block
 type extblock struct {
 	Header *Header
 	Txs    []*Transaction
-	Uncles []*Header
 }
 
 // [deprecated by klay/63]
@@ -258,7 +201,6 @@ type extblock struct {
 type storageblock struct {
 	Header *Header
 	Txs    []*Transaction
-	Uncles []*Header
 	TD     *big.Int
 }
 
@@ -266,9 +208,8 @@ type storageblock struct {
 // changes to header and to the field values will not affect the
 // block.
 //
-// The values of TxHash, UncleHash, ReceiptHash and Bloom in header
-// are ignored and set to values derived from the given txs, uncles
-// and receipts.
+// The values of TxHash, ReceiptHash and Bloom in header
+// are ignored and set to values derived from the given txs and receipts.
 func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
 
@@ -287,8 +228,6 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
 		b.header.Bloom = CreateBloom(receipts)
 	}
-
-	b.header.UncleHash = EmptyUncleHash
 
 	return b
 }
@@ -335,7 +274,7 @@ func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&eb); err != nil {
 		return err
 	}
-	b.header, b.uncles, b.transactions = eb.Header, eb.Uncles, eb.Txs
+	b.header, b.transactions = eb.Header, eb.Txs
 	b.size.Store(common.StorageSize(rlp.ListSize(size)))
 	return nil
 }
@@ -345,7 +284,6 @@ func (b *Block) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, extblock{
 		Header: b.header,
 		Txs:    b.transactions,
-		Uncles: b.uncles,
 	})
 }
 
@@ -355,13 +293,12 @@ func (b *StorageBlock) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&sb); err != nil {
 		return err
 	}
-	b.header, b.uncles, b.transactions, b.td = sb.Header, sb.Uncles, sb.Txs, sb.TD
+	b.header, b.transactions, b.td = sb.Header, sb.Txs, sb.TD
 	return nil
 }
 
 // TODO: copies
 
-func (b *Block) Uncles() []*Header          { return b.uncles }
 func (b *Block) Transactions() Transactions { return b.transactions }
 
 func (b *Block) Transaction(hash common.Hash) *Transaction {
@@ -390,13 +327,12 @@ func (b *Block) Root() common.Hash          { return b.header.Root }
 func (b *Block) ParentHash() common.Hash    { return b.header.ParentHash }
 func (b *Block) TxHash() common.Hash        { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash   { return b.header.ReceiptHash }
-func (b *Block) UncleHash() common.Hash     { return b.header.UncleHash }
 func (b *Block) Extra() []byte              { return common.CopyBytes(b.header.Extra) }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
+func (b *Block) Body() *Body { return &Body{b.transactions} }
 
 func (b *Block) HashNoNonce() common.Hash {
 	return b.header.HashNoNonce()
@@ -421,10 +357,6 @@ func (c *writeCounter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-func CalcUncleHash(uncles []*Header) common.Hash {
-	return rlpHash(uncles)
-}
-
 // WithSeal returns a new block with the data from b but the header replaced with
 // the sealed one.
 func (b *Block) WithSeal(header *Header) *Block {
@@ -433,21 +365,16 @@ func (b *Block) WithSeal(header *Header) *Block {
 	return &Block{
 		header:       &cpy,
 		transactions: b.transactions,
-		uncles:       b.uncles,
 	}
 }
 
-// WithBody returns a new block with the given transaction and uncle contents.
-func (b *Block) WithBody(transactions []*Transaction, uncles []*Header) *Block {
+// WithBody returns a new block with the given transactions.
+func (b *Block) WithBody(transactions []*Transaction) *Block {
 	block := &Block{
 		header:       CopyHeader(b.header),
 		transactions: make([]*Transaction, len(transactions)),
-		uncles:       make([]*Header, len(uncles)),
 	}
 	copy(block.transactions, transactions)
-	for i := range uncles {
-		block.uncles[i] = CopyHeader(uncles[i])
-	}
 	return block
 }
 
@@ -468,10 +395,8 @@ MinerHash: %x
 %v
 Transactions:
 %v
-Uncles:
-%v
 }
-`, b.Number(), b.Size(), b.header.HashNoNonce(), b.header, b.transactions, b.uncles)
+`, b.Number(), b.Size(), b.header.HashNoNonce(), b.header, b.transactions)
 	return str
 }
 
@@ -479,7 +404,6 @@ func (h *Header) String() string {
 	return fmt.Sprintf(`Header(%x):
 [
 	ParentHash:       %x
-	UncleHash:        %x
 	Coinbase:         %x
 	Rewardbase:       %x
 	Root:             %x
@@ -497,7 +421,7 @@ func (h *Header) String() string {
 	Nonce:            %x
 	Governance:       %x
 	Vote:             %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.Governance, h.Vote)
+]`, h.Hash(), h.ParentHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.Governance, h.Vote)
 }
 
 type Blocks []*Block

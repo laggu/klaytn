@@ -190,9 +190,7 @@ func testWriteAndReadBody(t *testing.T, dbManager database.DBManager) {
 	txs := types.Transactions{tx}
 	body.Transactions = txs
 
-	hash, blockNum, header := generateHeaderWithBlockNum(111)
-	uncles := []*types.Header{header}
-	body.Uncles = uncles
+	hash, blockNum, _ := generateHeaderWithBlockNum(111)
 
 	// 1. Before write, nil should be returned.
 	assert.Equal(t, (*types.Body)(nil), dbManager.ReadBody(hash, blockNum))
@@ -316,10 +314,6 @@ func generateBody(t *testing.T) *types.Body {
 	tx := generateTx(t)
 	txs := types.Transactions{tx}
 	body.Transactions = txs
-
-	_, _, header := generateHeaderWithBlockNum(111)
-	uncles := []*types.Header{header}
-	body.Uncles = uncles
 
 	return body
 }

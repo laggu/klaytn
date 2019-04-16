@@ -244,7 +244,7 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 	// https://github.com/ethereum/EIPs/issues/100.
 	// algorithm:
 	// diff = (parent_diff +
-	//         (parent_diff / 2048 * max((2 if len(parent.uncles) else 1) - ((timestamp - parent.timestamp) // 9), -99))
+	//         (parent_diff / 2048 * max((1) - ((timestamp - parent.timestamp) // 9), -99))
 	//        ) + 2^(periodCount - 2)
 
 	bigTime := new(big.Int).SetUint64(time)
@@ -254,19 +254,16 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 	x := new(big.Int)
 	y := new(big.Int)
 
-	// (2 if len(parent_uncles) else 1) - (block_timestamp - parent_timestamp) // 9
+	// (1) - (block_timestamp - parent_timestamp) // 9
 	x.Sub(bigTime, bigParentTime)
 	x.Div(x, big9)
-	if parent.UncleHash == types.EmptyUncleHash {
-		x.Sub(big1, x)
-	} else {
-		x.Sub(big2, x)
-	}
-	// max((2 if len(parent_uncles) else 1) - (block_timestamp - parent_timestamp) // 9, -99)
+	x.Sub(big1, x)
+
+	// max((1) - (block_timestamp - parent_timestamp) // 9, -99)
 	if x.Cmp(bigMinus99) < 0 {
 		x.Set(bigMinus99)
 	}
-	// parent_diff + (parent_diff / 2048 * max((2 if len(parent.uncles) else 1) - ((timestamp - parent.timestamp) // 9), -99))
+	// parent_diff + (parent_diff / 2048 * max((1) - ((timestamp - parent.timestamp) // 9), -99))
 	y.Div(parent.Difficulty, params.DifficultyBoundDivisor)
 	x.Mul(y, x)
 	x.Add(parent.Difficulty, x)
@@ -398,10 +395,10 @@ func (ethash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header)
 	return nil
 }
 
-// Finalize implements consensus.Engine, accumulating the block and uncle rewards,
+// Finalize implements consensus.Engine, accumulating the block rewards,
 // setting the final state and assembling the block.
 func (ethash *Gxhash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
-	// Accumulate any block and uncle rewards and commit the final state root
+	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
 	header.Root = state.IntermediateRoot(true)
 
@@ -416,13 +413,12 @@ var (
 )
 
 // AccumulateRewards credits the coinbase of the given block with the mining
-// reward. The total reward consists of the static block reward and rewards for
-// included uncles. The coinbase of each uncle block is also rewarded.
+// reward. The total reward consists of the static block reward.
 func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
 	// Select the correct block reward based on chain progression
 	blockReward := ByzantiumBlockReward
 
-	// Accumulate the rewards for the miner and any included uncles
+	// Accumulate the rewards for the miner
 	reward := new(big.Int).Set(blockReward)
 
 	state.AddBalance(header.Coinbase, reward)

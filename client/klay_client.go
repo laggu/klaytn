@@ -69,7 +69,7 @@ func (ec *Client) Close() {
 // BlockByHash returns the given full block.
 //
 // Note that loading full blocks requires two requests. Use HeaderByHash
-// if you don't need all transactions or uncle headers.
+// if you don't need all transactions.
 func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
 	return ec.getBlock(ctx, "klay_getBlockByHash", hash, true)
 }
@@ -78,7 +78,7 @@ func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Blo
 // latest known block is returned.
 //
 // Note that loading full blocks requires two requests. Use HeaderByNumber
-// if you don't need all transactions or uncle headers.
+// if you don't need all transactions.
 func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	return ec.getBlock(ctx, "klay_getBlockByNumber", toBlockNumArg(number), true)
 }
@@ -86,7 +86,6 @@ func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Bl
 type rpcBlock struct {
 	Hash         common.Hash      `json:"hash"`
 	Transactions []rpcTransaction `json:"transactions"`
-	UncleHashes  []common.Hash    `json:"uncles"`
 }
 
 func (ec *Client) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
@@ -120,7 +119,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 		setSenderFromServer(tx.tx, tx.From, body.Hash)
 		txs[i] = tx.tx
 	}
-	return types.NewBlockWithHeader(head).WithBody(txs, nil), nil
+	return types.NewBlockWithHeader(head).WithBody(txs), nil
 }
 
 // HeaderByHash returns the block header with the given hash.

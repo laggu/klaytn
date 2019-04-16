@@ -21,7 +21,6 @@
 package work
 
 import (
-	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
@@ -34,7 +33,6 @@ import (
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
-	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -77,13 +75,10 @@ type Task struct {
 	config *params.ChainConfig
 	signer types.Signer
 
-	stateMu   sync.RWMutex        // protects state
-	state     *state.StateDB      // apply state changes here
-	ancestors *set.Set            // ancestor set (used for checking uncle parent validity)
-	family    *set.Set            // family set (used for checking uncle invalidity)
-	uncles    *set.Set            // uncle set
-	tcount    int                 // tx count in cycle
-	gasPool   *blockchain.GasPool // available gas used to pack transactions // TODO-Klaytn-Issue136
+	stateMu sync.RWMutex        // protects state
+	state   *state.StateDB      // apply state changes here
+	tcount  int                 // tx count in cycle
+	gasPool *blockchain.GasPool // available gas used to pack transactions // TODO-Klaytn-Issue136
 
 	Block *types.Block // the new block
 
@@ -134,9 +129,6 @@ type worker struct {
 	snapshotBlock *types.Block
 	snapshotState *state.StateDB
 
-	uncleMu        sync.Mutex
-	possibleUncles map[common.Hash]*types.Block
-
 	unconfirmed *unconfirmedBlocks // set of locally mined blocks pending canonicalness confirmations
 
 	// atomic status counters
@@ -148,22 +140,21 @@ type worker struct {
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, backend Backend, mux *event.TypeMux, nodetype p2p.ConnType) *worker {
 	worker := &worker{
-		config:         config,
-		engine:         engine,
-		backend:        backend,
-		mux:            mux,
-		txsCh:          make(chan blockchain.NewTxsEvent, txChanSize),
-		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:    make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDB:        backend.ChainDB(),
-		recv:           make(chan *Result, resultQueueSize),
-		chain:          backend.BlockChain(),
-		proc:           backend.BlockChain().Validator(),
-		possibleUncles: make(map[common.Hash]*types.Block),
-		coinbase:       coinbase,
-		agents:         make(map[Agent]struct{}),
-		unconfirmed:    newUnconfirmedBlocks(backend.BlockChain(), miningLogAtDepth),
-		nodetype:       nodetype,
+		config:      config,
+		engine:      engine,
+		backend:     backend,
+		mux:         mux,
+		txsCh:       make(chan blockchain.NewTxsEvent, txChanSize),
+		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		chainDB:     backend.ChainDB(),
+		recv:        make(chan *Result, resultQueueSize),
+		chain:       backend.BlockChain(),
+		proc:        backend.BlockChain().Validator(),
+		coinbase:    coinbase,
+		agents:      make(map[Agent]struct{}),
+		unconfirmed: newUnconfirmedBlocks(backend.BlockChain(), miningLogAtDepth),
+		nodetype:    nodetype,
 	}
 
 	// istanbul BFT
@@ -335,10 +326,7 @@ func (self *worker) update() {
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			// Handle ChainSideEvent
-		case ev := <-self.chainSideCh:
-			self.uncleMu.Lock()
-			self.possibleUncles[ev.Block.Hash()] = ev.Block
-			self.uncleMu.Unlock()
+		case <-self.chainSideCh:
 
 			// System stopped
 		case <-self.txsSub.Err():
@@ -472,15 +460,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, nil, header)
 
-	// when 08 is processed ancestors contain 07 (quick block)
-	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
-		for _, uncle := range ancestor.Uncles() {
-			work.family.Add(uncle.Hash())
-		}
-		work.family.Add(ancestor.Hash())
-		work.ancestors.Add(ancestor.Hash())
-	}
-
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	self.current = work
@@ -497,8 +476,6 @@ func (self *worker) commitNewWork() {
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	self.uncleMu.Lock()
-	defer self.uncleMu.Unlock()
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
@@ -553,28 +530,6 @@ func (self *worker) commitNewWork() {
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending) // TODO-Klaytn-Issue136 gasPrice
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
-	// compute uncles for the new block.
-	var (
-		uncles    []*types.Header
-		badUncles []common.Hash
-	)
-	for hash, uncle := range self.possibleUncles {
-		if len(uncles) == 2 {
-			break
-		}
-		if err := self.commitUncle(work, uncle.Header()); err != nil {
-			logger.Trace("Bad uncle found and will be removed", "hash", hash)
-			logger.Trace(fmt.Sprint(uncle))
-
-			badUncles = append(badUncles, hash)
-		} else {
-			logger.Debug("Committing new uncle to block", "hash", hash)
-			uncles = append(uncles, uncle.Header())
-		}
-	}
-	for _, hash := range badUncles {
-		delete(self.possibleUncles, hash)
-	}
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
 		logger.Error("Failed to finalize block for sealing", "err", err)
@@ -582,27 +537,12 @@ func (self *worker) commitNewWork() {
 	}
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
-		logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
+		logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 
 	self.push(work)
 	self.updateSnapshot()
-}
-
-func (self *worker) commitUncle(work *Task, uncle *types.Header) error {
-	hash := uncle.Hash()
-	if work.uncles.Has(hash) {
-		return fmt.Errorf("uncle not unique")
-	}
-	if !work.ancestors.Has(uncle.ParentHash) {
-		return fmt.Errorf("uncle's parent unknown (%x)", uncle.ParentHash[0:4])
-	}
-	if work.family.Has(hash) {
-		return fmt.Errorf("uncle already in family (%x)", hash)
-	}
-	work.uncles.Add(uncle.Hash())
-	return nil
 }
 
 func (self *worker) updateSnapshot() {
@@ -787,9 +727,6 @@ func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.Sta
 		config:    config,
 		signer:    signer,
 		state:     statedb,
-		ancestors: set.New(),
-		family:    set.New(),
-		uncles:    set.New(),
 		gasPool:   gasPool,
 		header:    header,
 		createdAt: time.Now(),
