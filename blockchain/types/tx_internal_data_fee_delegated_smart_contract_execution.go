@@ -252,14 +252,14 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) String() string {
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGas
+	gas := params.TxGas + params.TxGasFeeDelegated
 
-	gasPayload, err := intrinsicGasPayload(t.Payload)
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
 	if err != nil {
 		return 0, err
 	}
 
-	return gas + gasPayload + params.TxGasFeeDelegated, nil
+	return gasPayloadWithGas, nil
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSignToBytes() []byte {

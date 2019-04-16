@@ -233,12 +233,12 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 func (t *TxInternalDataSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxGasContractCreation
 
-	gasPayload, err := intrinsicGasPayload(t.Payload)
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
 	if err != nil {
 		return 0, err
 	}
 
-	return gas + gasPayload, nil
+	return gasPayloadWithGas, nil
 }
 
 func (t *TxInternalDataSmartContractDeploy) SerializeForSignToBytes() []byte {

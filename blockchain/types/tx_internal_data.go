@@ -437,8 +437,7 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	return nil, errUndefinedTxType
 }
 
-func intrinsicGasPayload(data []byte) (uint64, error) {
-	gas := uint64(0)
+func IntrinsicGasPayload(gas uint64, data []byte) (uint64, error) {
 	// Bump the required gas by the amount of transactional data
 	if len(data) > 0 {
 		// Zero and non-zero bytes are priced differently
@@ -473,12 +472,12 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 	} else {
 		gas = params.TxGas
 	}
-	gasPayload, err := intrinsicGasPayload(data)
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, data)
 	if err != nil {
 		return 0, err
 	}
 
-	return gas + gasPayload, nil
+	return gasPayloadWithGas, nil
 }
 
 // CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.

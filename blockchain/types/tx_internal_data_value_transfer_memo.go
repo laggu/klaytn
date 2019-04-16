@@ -219,12 +219,13 @@ func (t *TxInternalDataValueTransferMemo) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gasPayload, err := intrinsicGasPayload(t.Payload)
+	gas := params.TxGas
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
 	if err != nil {
 		return 0, err
 	}
 
-	return params.TxGas + gasPayload, nil
+	return gasPayloadWithGas, nil
 }
 
 func (t *TxInternalDataValueTransferMemo) SerializeForSignToBytes() []byte {

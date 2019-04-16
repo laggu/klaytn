@@ -447,7 +447,7 @@ func genFeeDelegatedWithRatioAccountUpdate(t *testing.T, signer types.Signer, fr
 }
 
 func genSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, gasPrice)
+	values, intrinsicGas := genMapForDeploy(t, from, gasPrice, types.TxTypeSmartContractDeploy)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 	assert.Equal(t, nil, err)
@@ -459,7 +459,7 @@ func genSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount,
 }
 
 func genFeeDelegatedSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, gasPrice)
+	values, intrinsicGas := genMapForDeploy(t, from, gasPrice, types.TxTypeFeeDelegatedSmartContractDeploy)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
@@ -471,13 +471,11 @@ func genFeeDelegatedSmartContractDeploy(t *testing.T, signer types.Signer, from 
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsicGas += params.TxGasFeeDelegated
-
 	return tx, intrinsicGas
 }
 
 func genFeeDelegatedWithRatioSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, gasPrice)
+	values, intrinsicGas := genMapForDeploy(t, from, gasPrice, types.TxTypeFeeDelegatedSmartContractDeployWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -490,13 +488,11 @@ func genFeeDelegatedWithRatioSmartContractDeploy(t *testing.T, signer types.Sign
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsicGas += params.TxGasFeeDelegatedWithRatio
-
 	return tx, intrinsicGas
 }
 
 func genSmartContractExecution(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice)
+	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice, types.TxTypeSmartContractExecution)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 
@@ -509,7 +505,7 @@ func genSmartContractExecution(t *testing.T, signer types.Signer, from TestAccou
 }
 
 func genFeeDelegatedSmartContractExecution(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice)
+	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractExecution)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, values)
@@ -522,13 +518,11 @@ func genFeeDelegatedSmartContractExecution(t *testing.T, signer types.Signer, fr
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsicGas += params.TxGasFeeDelegated
-
 	return tx, intrinsicGas
 }
 
 func genFeeDelegatedWithRatioSmartContractExecution(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice)
+	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractExecutionWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -541,8 +535,6 @@ func genFeeDelegatedWithRatioSmartContractExecution(t *testing.T, signer types.S
 
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
-
-	intrinsicGas += params.TxGasFeeDelegatedWithRatio
 
 	return tx, intrinsicGas
 }
@@ -670,7 +662,7 @@ func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKey
 	return values
 }
 
-func genMapForDeploy(t *testing.T, from TestAccount, gasPrice *big.Int) (map[types.TxValueKeyType]interface{}, uint64) {
+func genMapForDeploy(t *testing.T, from TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	amount := new(big.Int).SetUint64(0)
 
 	values := map[types.TxValueKeyType]interface{}{
@@ -684,15 +676,16 @@ func genMapForDeploy(t *testing.T, from TestAccount, gasPrice *big.Int) (map[typ
 		types.TxValueKeyData:          common.FromHex(code),
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(common.FromHex(code), true, true)
-	assert.Equal(t, nil, err)
-
+	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x175fd)
 
-	return values, intrinsicGas
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code))
+	assert.Equal(t, nil, err)
+
+	return values, gasPayloadWithGas
 }
 
-func genMapForExecution(t *testing.T, from TestAccount, to TestAccount, gasPrice *big.Int) (map[types.TxValueKeyType]interface{}, uint64) {
+func genMapForExecution(t *testing.T, from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	abiStr := `[{"constant":true,"inputs":[],"name":"totalAmount","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"receiver","type":"address"}],"name":"reward","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"safeWithdrawal","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"}]`
 	abii, err := abi.JSON(strings.NewReader(string(abiStr)))
 	assert.Equal(t, nil, err)
@@ -712,12 +705,13 @@ func genMapForExecution(t *testing.T, from TestAccount, to TestAccount, gasPrice
 		types.TxValueKeyData:     data,
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(data, false, true)
-	assert.Equal(t, nil, err)
-
+	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x9ec4)
 
-	return values, intrinsicGas
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, data)
+	assert.Equal(t, nil, err)
+
+	return values, gasPayloadWithGas
 }
 
 func genMapForCancel(from TestAccount, gasPrice *big.Int) map[types.TxValueKeyType]interface{} {
@@ -879,6 +873,57 @@ func genMultiSigParamForRoleBased() []TestCreateMultisigAccountParam {
 	params = append(params, param3)
 
 	return params
+}
+
+func getIntrinsicGas(txType types.TxType) uint64 {
+	var intrinsic uint64
+
+	switch txType {
+	case types.TxTypeLegacyTransaction:
+		intrinsic = params.TxGas
+	case types.TxTypeValueTransfer:
+		intrinsic = params.TxGas
+	case types.TxTypeFeeDelegatedValueTransfer:
+		intrinsic = params.TxGas + params.TxGasFeeDelegated
+	case types.TxTypeFeeDelegatedValueTransferWithRatio:
+		intrinsic = params.TxGas + params.TxGasFeeDelegatedWithRatio
+	case types.TxTypeValueTransferMemo:
+		intrinsic = params.TxGas
+	case types.TxTypeFeeDelegatedValueTransferMemo:
+		intrinsic = params.TxGas + params.TxGasFeeDelegated
+	case types.TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		intrinsic = params.TxGas + params.TxGasFeeDelegatedWithRatio
+	case types.TxTypeAccountCreation:
+		intrinsic = params.TxGasAccountCreation
+	case types.TxTypeAccountUpdate:
+		intrinsic = params.TxGasAccountUpdate
+	case types.TxTypeFeeDelegatedAccountUpdate:
+		intrinsic = params.TxGasAccountUpdate + params.TxGasFeeDelegated
+	case types.TxTypeFeeDelegatedAccountUpdateWithRatio:
+		intrinsic = params.TxGasAccountUpdate + params.TxGasFeeDelegatedWithRatio
+	case types.TxTypeSmartContractDeploy:
+		intrinsic = params.TxGasContractCreation
+	case types.TxTypeFeeDelegatedSmartContractDeploy:
+		intrinsic = params.TxGasContractCreation + params.TxGasFeeDelegated
+	case types.TxTypeFeeDelegatedSmartContractDeployWithRatio:
+		intrinsic = params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio
+	case types.TxTypeSmartContractExecution:
+		intrinsic = params.TxGas
+	case types.TxTypeFeeDelegatedSmartContractExecution:
+		intrinsic = params.TxGas + params.TxGasFeeDelegated
+	case types.TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		intrinsic = params.TxGas + params.TxGasFeeDelegatedWithRatio
+	case types.TxTypeChainDataAnchoring:
+		intrinsic = params.TxChainDataAnchoringGas
+	case types.TxTypeCancel:
+		intrinsic = params.TxGasCancel
+	case types.TxTypeFeeDelegatedCancel:
+		intrinsic = params.TxGasCancel + params.TxGasFeeDelegated
+	case types.TxTypeFeeDelegatedCancelWithRatio:
+		intrinsic = params.TxGasCancel + params.TxGasFeeDelegatedWithRatio
+	}
+
+	return intrinsic
 }
 
 // Implement TestAccount interface for TestAccountType
