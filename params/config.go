@@ -101,6 +101,8 @@ const (
 	VMLogToFile   = 0x1
 	VMLogToStdout = 0x2
 	VMLogToAll    = VMLogToFile | VMLogToStdout
+
+	UpperGasLimit = uint64(999999999999)
 )
 
 // ChainConfig is the blockchain config which determines the blockchain settings.

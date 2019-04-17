@@ -3796,9 +3796,7 @@ func TestValidateSender(t *testing.T) {
 
 	// TxTypeChainDataAnchoring
 	{
-		dummyBlock := types.NewBlock(&types.Header{
-			GasLimit: gasLimit,
-		}, nil, nil)
+		dummyBlock := types.NewBlock(&types.Header{}, nil, nil)
 
 		scData := types.NewChainHashes(dummyBlock)
 		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
@@ -3933,17 +3931,15 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 	parent := bcdata.bc.CurrentBlock()
 	num := parent.Number()
 	author := bcdata.addrs[0]
-	gp := new(blockchain.GasPool).AddGas(parent.GasLimit())
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   blockchain.CalcGasLimit(parent),
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 		Difficulty: big.NewInt(0),
 	}
 	usedGas := uint64(0)
-	return blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, gp, state, header, tx, &usedGas, vmConfig)
+	return blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, tx, &usedGas, vmConfig)
 }
 
 func genAccountKeyRoleBased() accountkey.AccountKey {

@@ -26,7 +26,6 @@ import (
 	"github.com/ground-x/klaytn/common/compiler"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
-	"math"
 	"math/big"
 	"strings"
 	"testing"
@@ -104,9 +103,8 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 
 	evmContext := blockchain.NewEVMContext(msg, header, bcdata.bc, nil)
 	vmenv := vm.NewEVM(evmContext, statedb, bcdata.bc.Config(), &vm.Config{})
-	gaspool := new(blockchain.GasPool).AddGas(math.MaxUint64)
 
-	ret, _, kerr := blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	ret, _, kerr := blockchain.NewStateTransition(vmenv, msg).TransitionDb()
 	err = kerr.ErrTxInvalid
 	if err != nil {
 		return nil, err

@@ -54,9 +54,7 @@ type testBlockChain struct {
 }
 
 func (bc *testBlockChain) CurrentBlock() *types.Block {
-	return types.NewBlock(&types.Header{
-		GasLimit: bc.gasLimit,
-	}, nil, nil)
+	return types.NewBlock(&types.Header{}, nil, nil)
 }
 
 func (bc *testBlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
@@ -546,25 +544,6 @@ func TestTransactionDropping(t *testing.T) {
 	}
 	if len(pool.all) != 4 {
 		t.Errorf("total transaction mismatch: have %d, want %d", len(pool.all), 4)
-	}
-	// Reduce the block gas limit, check that invalidated transactions are dropped
-	pool.chain.(*testBlockChain).gasLimit = 100
-	pool.lockedReset(nil, nil)
-
-	if _, ok := pool.pending[account].txs.items[tx0.Nonce()]; !ok {
-		t.Errorf("funded pending transaction missing: %v", tx0)
-	}
-	if _, ok := pool.pending[account].txs.items[tx1.Nonce()]; ok {
-		t.Errorf("over-gased pending transaction present: %v", tx1)
-	}
-	if _, ok := pool.queue[account].txs.items[tx10.Nonce()]; !ok {
-		t.Errorf("funded queued transaction missing: %v", tx10)
-	}
-	if _, ok := pool.queue[account].txs.items[tx11.Nonce()]; ok {
-		t.Errorf("over-gased queued transaction present: %v", tx11)
-	}
-	if len(pool.all) != 2 {
-		t.Errorf("total transaction mismatch: have %d, want %d", len(pool.all), 2)
 	}
 }
 

@@ -271,7 +271,6 @@ func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
-		GasLimit:   genesis.InitGasLimit,
 		Difficulty: big.NewInt(genesis.InitDifficulty),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{

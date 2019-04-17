@@ -79,7 +79,6 @@ type Header struct {
 	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
 	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
 	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	// TimeFoS represents a fraction of a second since `Time`.
@@ -95,7 +94,6 @@ type Header struct {
 type headerMarshaling struct {
 	Difficulty *hexutil.Big
 	Number     *hexutil.Big
-	GasLimit   hexutil.Uint64
 	GasUsed    hexutil.Uint64
 	Time       *hexutil.Big
 	TimeFoS    hexutil.Uint
@@ -131,7 +129,6 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Bloom,
 		h.Difficulty,
 		h.Number,
-		h.GasLimit,
 		h.GasUsed,
 		h.Time,
 		h.TimeFoS,
@@ -311,7 +308,6 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 }
 
 func (b *Block) Number() *big.Int     { return new(big.Int).Set(b.header.Number) }
-func (b *Block) GasLimit() uint64     { return b.header.GasLimit }
 func (b *Block) GasUsed() uint64      { return b.header.GasUsed }
 func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
 func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
@@ -412,7 +408,6 @@ func (h *Header) String() string {
 	Bloom:            %x
 	Difficulty:       %v
 	Number:           %v
-	GasLimit:         %v
 	GasUsed:          %v
 	Time:             %v
 	TimeFoS:          %v
@@ -421,7 +416,7 @@ func (h *Header) String() string {
 	Nonce:            %x
 	Governance:       %x
 	Vote:             %x
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.Governance, h.Vote)
+]`, h.Hash(), h.ParentHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.Governance, h.Vote)
 }
 
 type Blocks []*Block

@@ -245,10 +245,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		evm.Cancel(vm.CancelByCtxDone)
 	}()
 
-	// Setup the gas pool (also for unmetered requests)
-	// and apply the message.
-	gp := new(blockchain.GasPool).AddGas(math.MaxUint64) // TODO-Klaytn-Issue136
-	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gp)
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
@@ -282,11 +279,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 		hi = uint64(args.Gas)
 	} else {
 		// Retrieve the current pending block to act as the gas ceiling
-		block, err := s.b.BlockByNumber(ctx, rpc.PendingBlockNumber)
-		if err != nil {
-			return 0, err
-		}
-		hi = block.GasLimit()
+		hi = params.UpperGasLimit
 	}
 	cap = hi
 
@@ -400,7 +393,6 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"governanceData":   hexutil.Bytes(head.Governance),
 		"voteData":         hexutil.Bytes(head.Vote),
 		"size":             hexutil.Uint64(b.Size()),
-		"gasLimit":         hexutil.Uint64(head.GasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        (*hexutil.Big)(head.Time),
 		"timestampFoS":     (hexutil.Uint)(head.TimeFoS),

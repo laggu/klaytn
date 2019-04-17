@@ -167,7 +167,6 @@ type TxPool struct {
 	currentBlockNumber uint64                    // Current block number
 	currentState       *state.StateDB            // Current state in the blockchain head
 	pendingNonce       map[common.Address]uint64 // Pending nonce tracking virtual nonces
-	currentMaxGas      uint64                    // Current gas limit for transaction caps
 
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
@@ -392,7 +391,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = stateDB
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
-	pool.currentMaxGas = newHead.GasLimit
 
 	// Inject any transactions discarded due to reorgs
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
@@ -557,13 +555,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// transactions but may occur if you create a transaction using the RPC.
 	if tx.Value().Sign() < 0 {
 		return ErrNegativeValue
-	}
-
-	// TODO-Klaytn-Issue136
-	// Ensure the transaction doesn't exceed the current block limit gas.
-	if pool.currentMaxGas < tx.Gas() {
-		logger.Error("tx_pool validateTx", "currentMaxGa", pool.currentMaxGas, "tx.Gas", tx.Gas())
-		return ErrGasLimit
 	}
 
 	// Make sure the transaction is signed properly
@@ -1048,8 +1039,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			delete(pool.all, hash)
 			pool.priced.Removed()
 		}
-		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.getBalance(addr), pool.currentMaxGas)
+		// Drop all transactions that are too costly (low balance)
+		drops, _ := list.Filter(pool.getBalance(addr))
 		for _, tx := range drops {
 			hash := tx.Hash()
 			logger.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -1214,7 +1205,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.getBalance(addr), pool.currentMaxGas)
+		drops, invalids := list.Filter(pool.getBalance(addr))
 		for _, tx := range drops {
 			hash := tx.Hash()
 			logger.Trace("Removed unpayable pending transaction", "hash", hash)

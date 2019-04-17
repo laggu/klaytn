@@ -173,7 +173,7 @@ func TestCallTracer(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
 			}
-			st := blockchain.NewStateTransition(evm, msg, new(blockchain.GasPool).AddGas(tx.Gas()))
+			st := blockchain.NewStateTransition(evm, msg)
 			if _, _, kerr := st.TransitionDb(); kerr.ErrTxInvalid != nil {
 				t.Fatalf("failed to execute transaction: %v", kerr.ErrTxInvalid)
 			}

@@ -663,7 +663,6 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	if intervalBlock == nil {
 		return nil, errors.New("stateDB is not ready for staking info")
 	}
-	gaspool := new(blockchain.GasPool).AddGas(intervalBlock.GasLimit())
 	statedb, err := bc.StateAt(intervalBlock.Root())
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("failed to make a state for interval block. blockNum: %d, root err: %s", blockNum, err))
@@ -673,7 +672,7 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	context := blockchain.NewEVMContext(msg, intervalBlock.Header(), bc, nil)
 	evm := vm.NewEVM(context, statedb, chainConfig, &vm.Config{})
 
-	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gaspool)
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	logger.Trace("Call InitContract contract", "used gas", gas, "kerr", kerr)
 	err = kerr.ErrTxInvalid
 	if err != nil {

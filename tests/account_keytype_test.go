@@ -93,7 +93,7 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 // The address "contact" should exist before calling this function.
 func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType) (*types.Transaction, *ecdsa.PrivateKey, error) {
 	gasPrice := new(big.Int).SetUint64(25)
-	gasLimit := uint64(1000000000)
+	gasLimit := uint64(1000000)
 	amount := new(big.Int).SetUint64(1000000000)
 
 	// generate a random private key for account creation/update Txs or contract deploy Txs
@@ -351,7 +351,7 @@ func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, tx
 // TxTypeChainDataAnchoring is excluded because it is not fully developed.
 func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(25)
-	gasLimit := uint64(1000000000)
+	gasLimit := uint64(1000000)
 
 	if testing.Verbose() {
 		enableLog()
@@ -2134,7 +2134,6 @@ func TestAccountTransferWithRoleBasedTxKey(t *testing.T) {
 	defer bcdata.Shutdown()
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(2500000000)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -2391,7 +2390,6 @@ func TestAccountTransferWithRoleBasedUpdateKey(t *testing.T) {
 	defer bcdata.Shutdown()
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(2500000000)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -2628,7 +2626,6 @@ func TestAccountTransferWithRoleBasedFeePayerKey(t *testing.T) {
 	defer bcdata.Shutdown()
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(2500000000)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -2914,7 +2911,6 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 	defer bcdata.Shutdown()
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(2500000000)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -3457,7 +3453,6 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 	defer bcdata.Shutdown()
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(2500000000)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -3996,7 +3991,6 @@ func TestAccountFeeDelegationWithRoleBasedFeePayerKey(t *testing.T) {
 	defer bcdata.Shutdown()
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(2500000000)
 
 	// Initialize address-balance map for verification
 	start = time.Now()

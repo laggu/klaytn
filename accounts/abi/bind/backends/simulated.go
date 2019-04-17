@@ -230,7 +230,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 	if call.Gas >= params.TxGas {
 		hi = call.Gas
 	} else {
-		hi = b.pendingBlock.GasLimit()
+		hi = params.UpperGasLimit
 	}
 	cap = hi
 
@@ -290,9 +290,8 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call klaytn.CallMsg
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, &vm.Config{})
-	gaspool := new(blockchain.GasPool).AddGas(math.MaxUint64)
 
-	ret, usedGas, kerr := blockchain.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	ret, usedGas, kerr := blockchain.NewStateTransition(vmenv, msg).TransitionDb()
 	return ret, usedGas, kerr.Status != types.ReceiptStatusSuccessful, kerr.ErrTxInvalid
 }
 

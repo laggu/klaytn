@@ -450,7 +450,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		vmctx := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
 		vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{})
-		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg, new(blockchain.GasPool).AddGas(msg.Gas())); kerr.ErrTxInvalid != nil {
+		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
 			failed = kerr.ErrTxInvalid
 			break
 		}
@@ -595,7 +595,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 	// Run the transaction with tracing enabled.
 	vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{Debug: true, Tracer: tracer})
 
-	ret, gas, kerr := blockchain.ApplyMessage(vmenv, message, new(blockchain.GasPool).AddGas(message.Gas()))
+	ret, gas, kerr := blockchain.ApplyMessage(vmenv, message)
 	if kerr.ErrTxInvalid != nil {
 		return nil, fmt.Errorf("tracing failed: %v", kerr.ErrTxInvalid)
 	}
@@ -644,7 +644,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 		}
 		// Not yet the searched for transaction, execute on top of the current state
 		vmenv := vm.NewEVM(context, statedb, api.config, &vm.Config{})
-		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg, new(blockchain.GasPool).AddGas(tx.Gas())); kerr.ErrTxInvalid != nil {
+		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state

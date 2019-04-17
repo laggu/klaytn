@@ -97,12 +97,3 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	}
 	return nil
 }
-
-// TODO-Klaytn-Issue136 block gasLimit
-// CalcGasLimit computes the gas limit of the next block after parent.
-// This is miner strategy, not consensus protocol.
-func CalcGasLimit(parent *types.Block) uint64 {
-	// NOTE-Klaytn We use a constant block gas limit.
-	// TODO-Klaytn-RemoveLater Later we may can totally remove this code
-	return parent.GasLimit()
-}

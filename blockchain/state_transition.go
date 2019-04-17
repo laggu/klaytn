@@ -55,7 +55,6 @@ The state transitioning model does all the necessary work to work out a valid ne
 6) Derive new state root
 */
 type StateTransition struct {
-	gp         *GasPool
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int
@@ -119,9 +118,8 @@ type kerror struct {
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
+func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 	return &StateTransition{
-		gp:       gp,
 		evm:      evm,
 		msg:      msg,
 		gasPrice: msg.GasPrice(),
@@ -138,8 +136,8 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, kerror) {
-	return NewStateTransition(evm, msg, gp).TransitionDb()
+func ApplyMessage(evm *vm.EVM, msg Message) ([]byte, uint64, kerror) {
+	return NewStateTransition(evm, msg).TransitionDb()
 }
 
 // to returns the recipient of the message.
@@ -161,9 +159,6 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice gasLimit
-	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
-		return err
-	}
 
 	feeRatio := st.msg.FeeRatio()
 	validatedFeePayer := st.msg.ValidatedFeePayer()
@@ -385,10 +380,6 @@ func (st *StateTransition) refundGas() {
 		// This will not happen because it is already checked in buyGas(), but to make sure, we add a log here.
 		logger.Error("FeeRatio exceeds the maximum", "feeRatio", feeRatio, "msg", st.msg)
 	}
-
-	// Also return remaining gas to the block gas counter so it is
-	// available for the next transaction.
-	st.gp.AddGas(st.gas)
 }
 
 // gasUsed returns the amount of gas used up by the state transition.

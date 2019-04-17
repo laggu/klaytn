@@ -308,7 +308,6 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   blockchain.CalcGasLimit(parent),
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 	}
@@ -316,7 +315,6 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 		b.Fatal(err)
 	}
 
-	gp := new(blockchain.GasPool).AddGas(parent.GasLimit())
 	state, err := bcdata.bc.State()
 	assert.Equal(b, nil, err)
 
@@ -347,7 +345,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, gp, state, header, txs[i], &usedGas, vmConfig)
+		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()
@@ -437,7 +435,6 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   blockchain.CalcGasLimit(parent),
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 	}
@@ -445,7 +442,6 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 		b.Fatal(err)
 	}
 
-	gp := new(blockchain.GasPool).AddGas(parent.GasLimit())
 	state, err := bcdata.bc.State()
 	assert.Equal(b, nil, err)
 
@@ -475,7 +471,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, gp, state, header, txs[i], &usedGas, vmConfig)
+		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()
@@ -562,15 +558,12 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   blockchain.CalcGasLimit(parent),
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 	}
 	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
 		b.Fatal(err)
 	}
-
-	gp := new(blockchain.GasPool).AddGas(parent.GasLimit())
 
 	state, err := bcdata.bc.State()
 	assert.Equal(b, nil, err)
@@ -601,7 +594,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, gp, state, header, txs[i], &usedGas, vmConfig)
+		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()

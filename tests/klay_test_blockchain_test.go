@@ -154,7 +154,6 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		ParentHash: parent.Hash(),
 		Coinbase:   common.Address{},
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   blockchain.CalcGasLimit(parent),
 		Time:       big.NewInt(tstamp),
 		Governance: common.Hex2Bytes("b8dc7b22676f7665726e696e676e6f6465223a22307865373333636234643237396461363936663330643437306638633034646563623534666362306432222c22676f7665726e616e63656d6f6465223a2273696e676c65222c22726577617264223a7b226d696e74696e67616d6f756e74223a393630303030303030303030303030303030302c22726174696f223a2233342f33332f3333227d2c22626674223a7b2265706f6368223a33303030302c22706f6c696379223a302c22737562223a32317d2c22756e69745072696365223a32353030303030303030307d"),
 		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
@@ -200,9 +199,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Apply the set of transactions
 	start = time.Now()
-	gp := new(blockchain.GasPool)
-	gp = gp.AddGas(GasLimit)
-	task := work.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
+	task := work.NewTask(bcdata.bc.Config(), signer, statedb, header)
 	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
@@ -269,9 +266,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	}
 
 	start = time.Now()
-	gp := new(blockchain.GasPool)
-	gp = gp.AddGas(GasLimit)
-	task := work.NewTask(bcdata.bc.Config(), signer, statedb, gp, header)
+	task := work.NewTask(bcdata.bc.Config(), signer, statedb, header)
 	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()

@@ -127,10 +127,7 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 		evm.Cancel(vm.CancelByCtxDone)
 	}()
 
-	// Setup the gas pool (also for unmetered requests)
-	// and apply the message.
-	gp := new(blockchain.GasPool).AddGas(math.MaxUint64) // TODO-Klaytn-Issue136
-	res, gas, kerr := blockchain.ApplyMessage(evm, msg, gp)
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
@@ -168,10 +165,7 @@ func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (g
 	if uint64(call.Gas) >= params.TxGas {
 		hi = uint64(call.Gas)
 	} else {
-		// Retrieve the current pending block to act as the gas ceiling
-		// TODO-Klaytn consider whether using pendingBlock or not
-		block := lb.subbrige.blockchain.CurrentBlock()
-		hi = block.GasLimit()
+		hi = params.UpperGasLimit
 	}
 	cap = hi
 

@@ -75,10 +75,9 @@ type Task struct {
 	config *params.ChainConfig
 	signer types.Signer
 
-	stateMu sync.RWMutex        // protects state
-	state   *state.StateDB      // apply state changes here
-	tcount  int                 // tx count in cycle
-	gasPool *blockchain.GasPool // available gas used to pack transactions // TODO-Klaytn-Issue136
+	stateMu sync.RWMutex   // protects state
+	state   *state.StateDB // apply state changes here
+	tcount  int            // tx count in cycle
 
 	Block *types.Block // the new block
 
@@ -458,7 +457,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, nil, header)
+	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, header)
 
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
@@ -502,7 +501,6 @@ func (self *worker) commitNewWork() {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   blockchain.CalcGasLimit(parent),
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
 	}
@@ -558,10 +556,6 @@ func (self *worker) updateSnapshot() {
 }
 
 func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *blockchain.BlockChain, coinbase common.Address) {
-	if env.gasPool == nil {
-		env.gasPool = new(blockchain.GasPool).AddGas(env.header.GasLimit)
-	}
-
 	coalescedLogs := env.ApplyTransactions(txs, bc, coinbase)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
@@ -630,12 +624,6 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
-		// TODO-Klaytn-Issue136
-		// If we don't have enough gas for any further transactions then we're done
-		if env.gasPool.Gas() < params.TxGas {
-			logger.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
-			break
-		}
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
 		if tx == nil {
@@ -660,7 +648,7 @@ CommitTransactionLoop:
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
-		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool, vmConfig)
+		err, logs := env.commitTransaction(tx, bc, coinbase, vmConfig)
 		switch err {
 		// TODO-Klaytn-Issue136
 		case blockchain.ErrGasLimitReached:
@@ -708,10 +696,10 @@ CommitTransactionLoop:
 	return coalescedLogs
 }
 
-func (env *Task) commitTransaction(tx *types.Transaction, bc *blockchain.BlockChain, coinbase common.Address, gp *blockchain.GasPool, vmConfig *vm.Config) (error, []*types.Log) {
+func (env *Task) commitTransaction(tx *types.Transaction, bc *blockchain.BlockChain, coinbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := blockchain.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	receipt, _, err := blockchain.ApplyTransaction(env.config, bc, &coinbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return err, nil
@@ -722,12 +710,11 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc *blockchain.BlockCh
 	return nil, receipt.Logs
 }
 
-func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, gasPool *blockchain.GasPool, header *types.Header) *Task {
+func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
 	return &Task{
 		config:    config,
 		signer:    signer,
 		state:     statedb,
-		gasPool:   gasPool,
 		header:    header,
 		createdAt: time.Now(),
 	}

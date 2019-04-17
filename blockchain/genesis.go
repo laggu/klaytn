@@ -249,15 +249,11 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
 		Governance: g.Governance,
-		GasLimit:   g.GasLimit,
 		GasUsed:    g.GasUsed,
 		Difficulty: g.Difficulty,
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		Root:       root,
-	}
-	if g.GasLimit == 0 {
-		head.GasLimit = params.GenesisGasLimit
 	}
 	if g.Difficulty == nil {
 		head.Difficulty = params.GenesisDifficulty

@@ -163,7 +163,6 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.Bloom,
 		header.Difficulty,
 		header.Number,
-		header.GasLimit,
 		header.GasUsed,
 		header.Time,
 		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short

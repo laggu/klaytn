@@ -32,14 +32,12 @@ import (
 
 const (
 	FileName       = "genesis.json"
-	InitGasLimit   = 999999999999 // 4700000
 	InitDifficulty = 1
 )
 
 func New(options ...Option) *blockchain.Genesis {
 	genesis := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
-		GasLimit:   InitGasLimit,
 		Difficulty: big.NewInt(InitDifficulty),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{
@@ -60,7 +58,6 @@ func New(options ...Option) *blockchain.Genesis {
 func NewClique(options ...Option) *blockchain.Genesis {
 	genesis := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
-		GasLimit:   InitGasLimit,
 		Difficulty: big.NewInt(InitDifficulty),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{

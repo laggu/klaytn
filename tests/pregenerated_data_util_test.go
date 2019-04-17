@@ -271,9 +271,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return err
 	}
 
-	gp := new(blockchain.GasPool)
-	gp = gp.AddGas(GasLimit)
-	task := work.NewTask(bcdata.bc.Config(), signer, stateDB, gp, header)
+	task := work.NewTask(bcdata.bc.Config(), signer, stateDB, header)
 	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()

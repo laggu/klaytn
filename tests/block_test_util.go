@@ -234,9 +234,6 @@ func validateHeader(h *btHeader, h2 *types.Header) error {
 	if h.Difficulty.Cmp(h2.Difficulty) != 0 {
 		return fmt.Errorf("Difficulty: want: %v have: %v", h.Difficulty, h2.Difficulty)
 	}
-	if h.GasLimit != h2.GasLimit {
-		return fmt.Errorf("GasLimit: want: %d have: %d", h.GasLimit, h2.GasLimit)
-	}
 	if h.GasUsed != h2.GasUsed {
 		return fmt.Errorf("GasUsed: want: %d have: %d", h.GasUsed, h2.GasUsed)
 	}

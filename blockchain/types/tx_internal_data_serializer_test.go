@@ -32,7 +32,7 @@ var (
 	feePayer  = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
 	nonce     = uint64(1234)
 	amount    = big.NewInt(10)
-	gasLimit  = uint64(999999999)
+	gasLimit  = uint64(1000000)
 	gasPrice  = big.NewInt(25)
 )
 
