@@ -66,6 +66,16 @@ func (s *PublicBlockChainAPI) ChainID() *big.Int {
 	return nil
 }
 
+// IsContractAccount returns true if the account associated with addr has a non-empty codeHash.
+// It returns false otherwise.
+func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if err != nil {
+		return false, err
+	}
+	return state.IsContractAccount(address), state.Error()
+}
+
 // IsHumanReadable returns true if the account associated with addr is a human-readable account.
 // It returns false otherwise.
 func (s *PublicBlockChainAPI) IsHumanReadable(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {

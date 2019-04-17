@@ -192,6 +192,15 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 	self.setState(key, value)
 }
 
+// IsContractAccount returns true is the account has a non-empty codeHash.
+func (self *stateObject) IsContractAccount() bool {
+	acc := account.GetProgramAccount(self.account)
+	if acc != nil && !bytes.Equal(acc.GetCodeHash(), emptyCodeHash) {
+		return true
+	}
+	return false
+}
+
 // IsProgramAccount returns true if the account implements ProgramAccount.
 func (self *stateObject) IsProgramAccount() bool {
 	return account.GetProgramAccount(self.account) != nil

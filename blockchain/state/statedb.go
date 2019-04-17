@@ -301,6 +301,14 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	return nil
 }
 
+func (self *StateDB) IsContractAccount(addr common.Address) bool {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.IsContractAccount()
+	}
+	return false
+}
+
 func (self *StateDB) IsHumanReadable(addr common.Address) bool {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
