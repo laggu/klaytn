@@ -25,7 +25,9 @@ import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/hashicorp/golang-lru"
 )
@@ -212,6 +214,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 		// Resolve the authorization key and check against signers
 		signer, err := ecrecover(header, s.sigcache)
+
 		if err != nil {
 			return nil, err
 		}
@@ -225,67 +228,93 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 		snap.Recents[number] = signer
 
-		// Header authorized, discard any previous votes from the signer
-		for i, vote := range snap.Votes {
-			if vote.Signer == signer && vote.Address == header.Coinbase {
-				// Uncast the vote from the cached tally
-				snap.uncast(vote.Address, vote.Authorize)
+		var cb common.Address
+		var nonce []byte
 
-				// Uncast the vote from the chronological list
-				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-				break // only one vote allowed
+		if len(header.Vote) > 0 {
+			gVote := new(governance.GovernanceVote)
+			if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
+				logger.Error("Failed to decode a vote", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+				return nil, errInvalidVote
 			}
-		}
-		// Tally up the new vote from the signer
-		var authorize bool
-		switch {
-		case bytes.Equal(header.Nonce[:], nonceAuthVote):
-			authorize = true
-		case bytes.Equal(header.Nonce[:], nonceDropVote):
-			authorize = false
-		default:
-			return nil, errInvalidVote
-		}
-		if snap.cast(header.Coinbase, authorize) {
-			snap.Votes = append(snap.Votes, &Vote{
-				Signer:    signer,
-				Block:     number,
-				Address:   header.Coinbase,
-				Authorize: authorize,
-			})
-		}
-		// If the vote passed, update the list of signers
-		if tally := snap.Tally[header.Coinbase]; tally.Votes > len(snap.Signers)/2 {
-			if tally.Authorize {
-				snap.Signers[header.Coinbase] = struct{}{}
+
+			if temp, ok := gVote.Value.([]uint8); !ok {
+				return nil, errInvalidVote
 			} else {
-				delete(snap.Signers, header.Coinbase)
+				cb = common.BytesToAddress(temp)
+			}
 
-				// Signer list shrunk, delete any leftover recent caches
-				if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
-					delete(snap.Recents, number-limit)
+			switch gVote.Key {
+			case "addvalidator":
+				nonce = nonceAuthVote
+			case "removevalidator":
+				nonce = nonceDropVote
+			default:
+				return nil, errInvalidVote
+			}
+
+			// Header authorized, discard any previous votes from the signer
+			for i, vote := range snap.Votes {
+				if vote.Signer == signer && vote.Address == cb {
+					// Uncast the vote from the cached tally
+					snap.uncast(vote.Address, vote.Authorize)
+
+					// Uncast the vote from the chronological list
+					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
+					break // only one vote allowed
 				}
-				// Discard any previous votes the deauthorized signer cast
+			}
+			// Tally up the new vote from the signer
+			var authorize bool
+			switch {
+			case bytes.Equal(nonce, nonceAuthVote):
+				authorize = true
+			case bytes.Equal(nonce, nonceDropVote):
+				authorize = false
+			default:
+				return nil, errInvalidVote
+			}
+			if snap.cast(cb, authorize) {
+				snap.Votes = append(snap.Votes, &Vote{
+					Signer:    signer,
+					Block:     number,
+					Address:   cb,
+					Authorize: authorize,
+				})
+			}
+			// If the vote passed, update the list of signers
+			if tally := snap.Tally[cb]; tally.Votes > len(snap.Signers)/2 {
+				if tally.Authorize {
+					snap.Signers[cb] = struct{}{}
+				} else {
+					delete(snap.Signers, cb)
+
+					// Signer list shrunk, delete any leftover recent caches
+					if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
+						delete(snap.Recents, number-limit)
+					}
+					// Discard any previous votes the deauthorized signer cast
+					for i := 0; i < len(snap.Votes); i++ {
+						if snap.Votes[i].Signer == cb {
+							// Uncast the vote from the cached tally
+							snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
+
+							// Uncast the vote from the chronological list
+							snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
+
+							i--
+						}
+					}
+				}
+				// Discard any previous votes around the just changed account
 				for i := 0; i < len(snap.Votes); i++ {
-					if snap.Votes[i].Signer == header.Coinbase {
-						// Uncast the vote from the cached tally
-						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
-
-						// Uncast the vote from the chronological list
+					if snap.Votes[i].Address == cb {
 						snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-
 						i--
 					}
 				}
+				delete(snap.Tally, cb)
 			}
-			// Discard any previous votes around the just changed account
-			for i := 0; i < len(snap.Votes); i++ {
-				if snap.Votes[i].Address == header.Coinbase {
-					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-					i--
-				}
-			}
-			delete(snap.Tally, header.Coinbase)
 		}
 	}
 	snap.Number += uint64(len(headers))

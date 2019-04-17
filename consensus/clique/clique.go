@@ -31,6 +31,7 @@ import (
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/params"
@@ -289,13 +290,6 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if checkpoint && header.Coinbase != (common.Address{}) {
 		return errInvalidCheckpointBeneficiary
 	}
-	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
-	if !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidVote
-	}
-	if checkpoint && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidCheckpointVote
-	}
 	// Check that the extra-data contains both the vanity and signature
 	if len(header.Extra) < ExtraVanity {
 		return errMissingVanity
@@ -501,9 +495,6 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 // header for running the transactions on top.
 func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
-	header.Coinbase = common.Address{}
-	header.Nonce = types.BlockNonce{}
-
 	number := header.Number.Uint64()
 	// Assemble the voting snapshot to check which votes make sense
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
@@ -522,12 +513,19 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 		}
 		// If there's pending proposals, cast a vote on them
 		if len(addresses) > 0 {
-			header.Coinbase = addresses[rand.Intn(len(addresses))]
-			if c.proposals[header.Coinbase] {
-				copy(header.Nonce[:], nonceAuthVote)
+			vote := new(governance.GovernanceVote)
+			addr := addresses[rand.Intn(len(addresses))]
+			if c.proposals[addr] == true {
+				vote.Key = "addvalidator"
 			} else {
-				copy(header.Nonce[:], nonceDropVote)
+				vote.Key = "removevalidator"
 			}
+			vote.Value = addr
+			encoded, err := rlp.EncodeToBytes(vote)
+			if err != nil {
+				logger.Error("Failed to RLP Encode a vote", "vote", vote)
+			}
+			header.Vote = encoded
 		}
 		c.lock.RUnlock()
 	}

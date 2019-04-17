@@ -8,7 +8,9 @@ import (
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
 	"sort"
 	"testing"
@@ -375,6 +377,7 @@ func TestClique(t *testing.T) {
 				}
 			}
 		}
+
 		// Create the genesis block with the initial set of signers
 		genesis := &blockchain.Genesis{
 			ExtraData: make([]byte, ExtraVanity+common.AddressLength*len(signers)+ExtraSeal),
@@ -396,12 +399,17 @@ func TestClique(t *testing.T) {
 		engine.fakeDiff = true
 
 		blocks, _ := blockchain.GenerateChain(&config, genesis.ToBlock(db), engine, db, len(tt.votes), func(j int, gen *blockchain.BlockGen) {
-			// Cast the vote contained in this block
-			gen.SetCoinbase(accounts.address(tt.votes[j].voted))
+			vote := new(governance.GovernanceVote)
 			if tt.votes[j].auth {
-				var nonce types.BlockNonce
-				copy(nonce[:], nonceAuthVote)
-				gen.SetNonce(nonce)
+				vote.Key = "addvalidator"
+			} else {
+				vote.Key = "removevalidator"
+			}
+
+			if len(tt.votes[j].voted) > 0 {
+				vote.Value = accounts.address(tt.votes[j].voted)
+				encoded, _ := rlp.EncodeToBytes(vote)
+				gen.SetVoteData(encoded)
 			}
 		})
 		// Iterate through the blocks and seal them individually
