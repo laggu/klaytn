@@ -46,14 +46,18 @@ func init() {
 var errNoOriginalDataDir = errors.New("original data directory does not exist, aborting the test")
 
 const (
+	// All partitions are compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
+	aspen500_orig = "aspen500_orig"
 	// All partitions are compressed by Snappy, CompactionTableSize = 4MiB, CompactionTableSizeMultiplier = 2.0
-	allSnappyDataDir = "testdata1000_orig"
-	// Only receipt partition is compressed by Snappy, CompactionTableSize = 4MiB, CompactionTableSizeMultiplier = 2.0
-	receiptOnlySnappy = "testdata1000_SnappyCompressionForOnlyReceipts_orig"
+	baobab500_orig = "baobab500_orig"
+
 	// Only receipt partition is compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
-	receiptOnlySnappyWithDefaultCompaction = "testdata1000_SnappyCompressionForOnlyReceiptsDefault"
-	// BadgerDB generated with default option.
-	badgerWithGC = "testdata1000BadgerWithGC_orig"
+	candidate500LevelDB_orig = "candidate500LevelDB_orig"
+	// Using BadgerDB with its default options.
+	candidate500BadgerDB_orig = "candidate500BadgerDB_orig"
+
+	// Same configuration as Baobab network, however only 10,000 accounts exist.
+	baobab1_orig = "baobab1_orig"
 )
 
 // randomIndex is used to access data with random index.
@@ -117,7 +121,7 @@ func makeTxsWithStateDB(stateDB *state.StateDB, fromAddrs []*common.Address, fro
 // setupTestDir does two things. If it is a data-generating test, it will just
 // return the target path. If it is not a data-generating test, it will remove
 // previously existing path and then copy the original data to the target path.
-func setupTestDir(originalDataDir string, isGenerateTest bool) (string, error) {
+func setupTestDir(originalDataDirName string, isGenerateTest bool) (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -126,20 +130,20 @@ func setupTestDir(originalDataDir string, isGenerateTest bool) (string, error) {
 	// Original data directory should be located at github.com/ground-x
 	// Therefore, it should be something like github.com/ground-x/testdata150_orig
 	grandParentPath := filepath.Dir(filepath.Dir(wd))
+	originalDataDirPath := path.Join(grandParentPath, originalDataDirName)
 
 	// If it is generating test case, just returns the path.
 	if isGenerateTest {
-		return path.Join(grandParentPath, originalDataDir), nil
+		return originalDataDirPath, nil
 	}
 
-	dataDirPath := path.Join(grandParentPath, originalDataDir)
-	if _, err := os.Stat(dataDirPath); err != nil {
+	if _, err = os.Stat(originalDataDirPath); err != nil {
 		return "", errNoOriginalDataDir
 	}
 
-	testDir := strings.Split(originalDataDir, "_orig")[0]
+	testDir := strings.Split(originalDataDirName, "_orig")[0]
 
-	originalDataPath := path.Join(grandParentPath, originalDataDir)
+	originalDataPath := path.Join(grandParentPath, originalDataDirName)
 	testDataPath := path.Join(grandParentPath, testDir)
 
 	os.RemoveAll(testDataPath)
@@ -168,37 +172,78 @@ type preGeneratedTC struct {
 	cacheConfig   *blockchain.CacheConfig
 }
 
-// Initial5000Txs test is to check the read performance of underlying database before cached.
-// To make test fair among runs, it always use same address file to build receiver address.
-func BenchmarkPreGeneratedProfiling_Initial5000Txs_ReceiptOnlySnappy(b *testing.B) {
-	tc1 := &preGeneratedTC{
-		isGenerateTest: false, testName: "Initial5000Txs_ReceiptOnlySnappy", originalDataDir: receiptOnlySnappy,
-		numTotalTxs: 5000, numTxsPerGen: 5000,
-		numTotalSenders: 20000, numReceiversPerRun: 20000,
-		filePicker: fixedIndex(1), addrPicker: randomIndex}
+// BenchmarkDataGeneration_Aspen generates the data with Aspen network's database configurations.
+func BenchmarkDataGeneration_Aspen(b *testing.B) {
+	tc := getGenerateTestDefaultTC()
+	tc.testName = "BenchmarkDataGeneration_Aspen"
+	tc.originalDataDir = aspen500_orig
 
-	tc1.cacheConfig = &blockchain.CacheConfig{
-		StateDBCaching:   false,
-		TxPoolStateCache: false,
-		ArchiveMode:      false,
-		CacheSize:        256 * 1024 * 1024,
-		BlockInterval:    blockchain.DefaultBlockInterval,
-	}
+	tc.cacheConfig = getCacheConfigForDataGeneration()
 
-	tc1.dbc = generateDefaultDBConfig()
-	tc1.dbc.LevelDBNoCompression = true
-	tc1.dbc.DBType = database.LevelDB
+	tc.dbc, tc.levelDBOption = genAspenOptions()
 
-	tc1.levelDBOption = generateDefaultLevelDBOption()
-	tc1.levelDBOption.CompactionTableSize = 4 * opt.MiB
-	tc1.levelDBOption.CompactionTableSizeMultiplier = 2.0
-
-	preGeneratedProfilingTest(b, tc1)
+	dataGenerationTest(b, tc)
 }
 
-// preGeneratedProfilingTest is to check the performance of Klaytn with pre-generated data.
-// To run the test, original data directory should be located at "$GOPATH/src/github.com/ground-x/"
-func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
+// BenchmarkDataGeneration_Baobab generates the data with Baobab network's database configurations.
+func BenchmarkDataGeneration_Baobab(b *testing.B) {
+	tc := getGenerateTestDefaultTC()
+	tc.testName = "BenchmarkDataGeneration_Baobab"
+	tc.originalDataDir = baobab500_orig
+
+	tc.cacheConfig = getCacheConfigForDataGeneration()
+
+	tc.dbc, tc.levelDBOption = genBaobabOptions()
+
+	dataGenerationTest(b, tc)
+}
+
+// BenchmarkDataGeneration_CandidateLevelDB generates the data for main-net's
+// with candidate configurations, using LevelDB.
+func BenchmarkDataGeneration_CandidateLevelDB(b *testing.B) {
+	tc := getGenerateTestDefaultTC()
+	tc.testName = "BenchmarkDataGeneration_CandidateLevelDB"
+	tc.originalDataDir = candidate500LevelDB_orig
+
+	tc.cacheConfig = getCacheConfigForDataGeneration()
+
+	tc.dbc, tc.levelDBOption = genCandidateLevelDBOptions()
+
+	dataGenerationTest(b, tc)
+}
+
+// BenchmarkDataGeneration_CandidateBadgerDB generates the data for main-net's
+// with candidate configurations, using BadgerDB.
+func BenchmarkDataGeneration_CandidateBadgerDB(b *testing.B) {
+	tc := getGenerateTestDefaultTC()
+	tc.testName = "BenchmarkDataGeneration_CandidateBadgerDB"
+	tc.originalDataDir = candidate500BadgerDB_orig
+
+	tc.cacheConfig = getCacheConfigForDataGeneration()
+
+	tc.dbc, tc.levelDBOption = genCandidateBadgerDBOptions()
+
+	dataGenerationTest(b, tc)
+}
+
+// BenchmarkDataGeneration_Baobab_ControlGroup generates the data with Baobab network's database configurations.
+// To work as a control group, it only generates 10,000 accounts.
+func BenchmarkDataGeneration_Baobab_ControlGroup(b *testing.B) {
+	tc := getGenerateTestDefaultTC()
+	tc.testName = "BenchmarkDataGeneration_Baobab_ControlGroup"
+	tc.originalDataDir = baobab1_orig
+	tc.numTotalTxs = 10000
+
+	tc.cacheConfig = getCacheConfigForDataGeneration()
+
+	tc.dbc, tc.levelDBOption = genBaobabOptions()
+
+	dataGenerationTest(b, tc)
+}
+
+// dataGenerationTest generates given number of accounts for pre-generated tests.
+// Newly generated data directory will be located at "$GOPATH/src/github.com/ground-x/"
+func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
 	if tc.numTotalTxs%tc.numTxsPerGen != 0 {
 		b.Fatalf("tc.numTotalTxs %% tc.numTxsPerGen != 0, tc.numTotalTxs: %v, tc.numTxsPerGen: %v",
 			tc.numTotalTxs, tc.numTxsPerGen)
@@ -206,10 +251,7 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 
 	testDataDir, err := setupTestDir(tc.originalDataDir, tc.isGenerateTest)
 	if err != nil {
-		// If original data directory does not exist for generating test, it is okay.
-		if !(tc.isGenerateTest && err == errNoOriginalDataDir) {
-			b.Fatal(err)
-		}
+		b.Fatalf("err: %v, dir: %v", err, testDataDir)
 	}
 
 	if testing.Verbose() {
@@ -239,8 +281,8 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 	b.StopTimer()
 
 	numTxGenerationRuns := tc.numTotalTxs / tc.numTxsPerGen
-	for run := 1; run <= numTxGenerationRuns; run++ {
-		toAddrs, err := makeOrGenerateAddrs(testDataDir, run, tc)
+	for run := 1; run < numTxGenerationRuns; run++ {
+		toAddrs, _, err := makeOrGenerateAddrsAndKey(testDataDir, run, tc)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -281,32 +323,4 @@ func preGeneratedProfilingTest(b *testing.B, tc *preGeneratedTC) {
 		}
 		b.StopTimer()
 	}
-}
-
-func makeOrGenerateAddrs(testDataDir string, run int, tc *preGeneratedTC) ([]*common.Address, error) {
-	if !tc.isGenerateTest {
-		return makeAddrsFromFile(tc.numReceiversPerRun, testDataDir, tc.filePicker)
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	// If addrs directory exists in the current working directory for reuse,
-	// use it instead of generating addresses.
-	addrPathInWD := path.Join(wd, addressDirectory)
-	if _, err := os.Stat(addrPathInWD); err == nil {
-		return makeAddrsFromFile(tc.numReceiversPerRun, addrPathInWD, tc.filePicker)
-	}
-
-	// No addrs directory exists. Generating and saving addresses and keys.
-	var newPrivateKeys []*ecdsa.PrivateKey
-	toAddrs, newPrivateKeys, err := createAccounts(tc.numTxsPerGen)
-	if err != nil {
-		return nil, err
-	}
-
-	writeToFile(toAddrs, newPrivateKeys, run, testDataDir)
-	return toAddrs, nil
 }

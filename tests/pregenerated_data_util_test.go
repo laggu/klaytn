@@ -59,24 +59,6 @@ const (
 
 var totalTxs = 0
 
-// getDataDirName returns a name of directory from the given parameters.
-func getDataDirName(numFilesToGenerate int, ldbOption *opt.Options) string {
-	dataDirectory := fmt.Sprintf("testdata%v", numFilesToGenerate)
-
-	if ldbOption == nil {
-		return dataDirectory
-	}
-
-	dataDirectory += fmt.Sprintf("NoSyncIs%s", strconv.FormatBool(ldbOption.NoSync))
-
-	// Below codes can be used if necessary.
-	//dataDirectory += fmt.Sprintf("_BlockCacheCapacity%vMB", ldbOption.BlockCacheCapacity / opt.MiB)
-	//dataDirectory += fmt.Sprintf("_CompactionTableSize%vMB", ldbOption.CompactionTableSize / opt.MiB)
-	//dataDirectory += fmt.Sprintf("_CompactionTableSizeMultiplier%v", int(ldbOption.CompactionTableSizeMultiplier))
-
-	return dataDirectory
-}
-
 // writeToFile writes addresses and private keys to designated directories with given fileNum.
 // Addresses are stored in a file like `addrs_0` and private keys are stored in a file like `privateKeys_0`.
 func writeToFile(addrs []*common.Address, privKeys []*ecdsa.PrivateKey, fileNum int, dir string) {
@@ -188,47 +170,24 @@ func readAddrsAndPrivateKeysFromFile(dir string, num int) ([]*common.Address, []
 	return addrs, privateKeys, nil
 }
 
-// makeAddrsFromFile extracts the address stored in file by numAccounts.
-func makeAddrsFromFile(numAccounts int, testDataDir string, filePicker func(int, int) int) ([]*common.Address, error) {
+// getAddrsAndKeysFromFile extracts the address stored in file by numAccounts.
+func getAddrsAndKeysFromFile(numAccounts int, testDataDir string, run int, filePicker func(int, int) int) ([]*common.Address, []*ecdsa.PrivateKey, error) {
 	addrs := make([]*common.Address, 0, numAccounts)
+	privKeys := make([]*ecdsa.PrivateKey, 0, numAccounts)
 
 	files, err := ioutil.ReadDir(path.Join(testDataDir, addressDirectory))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	numFiles := len(files)
 	remain := numAccounts
-	for i := 1; remain > 0; i++ {
+	for i := run; remain > 0; i++ {
 		fileIndex := filePicker(i, numFiles)
 
 		fmt.Println("Read addresses", "fileIndex", fileIndex)
 		// Read recipient addresses from file.
-		addrsPerFile, err := readAddrsFromFile(testDataDir, fileIndex)
-
-		if err != nil {
-			return nil, err
-		}
-
-		partSize := int(math.Min(float64(len(addrsPerFile)), float64(remain)))
-		addrs = append(addrs, addrsPerFile[:partSize]...)
-		remain -= partSize
-	}
-
-	return addrs, nil
-}
-
-// makeAddrsAndPrivKeysFromFile extracts the address and private key stored in file by numAccounts.
-func makeAddrsAndPrivKeysFromFile(numAccounts int, fileDir string) ([]*common.Address, []*ecdsa.PrivateKey, error) {
-	addrs := make([]*common.Address, 0, numAccounts)
-	privKeys := make([]*ecdsa.PrivateKey, 0, numAccounts)
-
-	remain := numAccounts
-	fileIndex := 0
-	for remain > 0 {
-		// Read addresses and private keys from file.
-		addrsPerFile, privKeysPerFile, err := readAddrsAndPrivateKeysFromFile(fileDir, fileIndex)
-
+		addrsPerFile, privKeysPerFile, err := readAddrsAndPrivateKeysFromFile(testDataDir, fileIndex)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -237,35 +196,37 @@ func makeAddrsAndPrivKeysFromFile(numAccounts int, fileDir string) ([]*common.Ad
 		addrs = append(addrs, addrsPerFile[:partSize]...)
 		privKeys = append(privKeys, privKeysPerFile[:partSize]...)
 		remain -= partSize
-		fileIndex++
 	}
 
 	return addrs, privKeys, nil
 }
 
-// generateGovernaceDataForTest returns *governance.Governance for test.
-func generateGovernaceDataForTest() *governance.Governance {
-	return governance.NewGovernance(&params.ChainConfig{
-		ChainID:       big.NewInt(2018),
-		UnitPrice:     25000000000,
-		DeriveShaImpl: 0,
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          istanbul.DefaultConfig.Epoch,
-			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
-			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
-		},
-		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
-	})
-}
+func makeOrGenerateAddrsAndKey(testDataDir string, run int, tc *preGeneratedTC) ([]*common.Address, []*ecdsa.PrivateKey, error) {
+	if !tc.isGenerateTest {
+		return getAddrsAndKeysFromFile(tc.numReceiversPerRun, testDataDir, run, tc.filePicker)
+	}
 
-// generateDefaultLevelDBOption returns default LevelDB option for pre-generated tests.
-func generateDefaultLevelDBOption() *opt.Options {
-	return &opt.Options{WriteBuffer: 256 * opt.MiB, CompactionTableSize: 4 * opt.MiB, CompactionTableSizeMultiplier: 2}
-}
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, nil, err
+	}
 
-// generateDefaultDBConfig returns default database.DBConfig for pre-generated tests.
-func generateDefaultDBConfig() *database.DBConfig {
-	return &database.DBConfig{Partitioned: true, ParallelDBWrite: true}
+	// If addrs directory exists in the current working directory for reuse,
+	// use it instead of generating addresses.
+	addrPathInWD := path.Join(wd, addressDirectory)
+	if _, err := os.Stat(addrPathInWD); err == nil {
+		return getAddrsAndKeysFromFile(tc.numReceiversPerRun, wd, run, tc.filePicker)
+	}
+
+	// No addrs directory exists. Generating and saving addresses and keys.
+	var newPrivateKeys []*ecdsa.PrivateKey
+	toAddrs, newPrivateKeys, err := createAccounts(tc.numTxsPerGen)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	writeToFile(toAddrs, newPrivateKeys, run, testDataDir)
+	return toAddrs, newPrivateKeys, nil
 }
 
 // getValidatorAddrsAndKeys returns the first `numValidators` addresses and private keys
@@ -366,7 +327,15 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	// Create a database
 	tc.dbc.Dir = path.Join(testDataDir, chainDataDir)
 	fmt.Println("DBDir", tc.dbc.Dir)
-	chainDB, err := database.NewLevelDBManagerForTest(tc.dbc, tc.levelDBOption)
+
+	var chainDB database.DBManager
+	var err error
+	if tc.dbc.DBType == database.LevelDB {
+		chainDB, err = database.NewLevelDBManagerForTest(tc.dbc, tc.levelDBOption)
+	} else if tc.dbc.DBType == database.BadgerDB {
+		chainDB = database.NewDBManager(tc.dbc)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -379,15 +348,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	// Prepare sender addresses and private keys
 	// 1) If generating test, create accounts and private keys as many as numTotalSenders
 	// 2) If executing test, load accounts and private keys from file as many as numTotalSenders
-	var addrs []*common.Address
-	var privKeys []*ecdsa.PrivateKey
-	if tc.isGenerateTest {
-		addrs, privKeys, err = createAccounts(tc.numTotalSenders)
-		writeToFile(addrs, privKeys, 0, testDataDir)
-	} else {
-		addrs, privKeys, err = makeAddrsAndPrivKeysFromFile(tc.numTotalSenders, testDataDir)
-	}
-
+	addrs, privKeys, err := makeOrGenerateAddrsAndKey(testDataDir, 0, tc)
 	if err != nil {
 		return nil, err
 	}
@@ -431,6 +392,49 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		validatorPrivKeys, engine, genesis}, nil
 }
 
+// genAspenOptions returns database configurations of Aspen network.
+func genAspenOptions() (*database.DBConfig, *opt.Options) {
+	aspenDBConfig := generateDefaultDBConfig()
+	aspenDBConfig.DBType = database.LevelDB
+	aspenDBConfig.LevelDBNoCompression = false
+
+	aspenLevelDBOptions := &opt.Options{WriteBuffer: 256 * opt.MiB}
+
+	return aspenDBConfig, aspenLevelDBOptions
+}
+
+// genBaobabOptions returns database configurations of Baobab network.
+func genBaobabOptions() (*database.DBConfig, *opt.Options) {
+	dbc, opts := genAspenOptions()
+
+	opts.CompactionTableSize = 4 * opt.MiB
+	opts.CompactionTableSizeMultiplier = 2
+
+	return dbc, opts
+}
+
+// genCandidateLevelDBOptions returns candidate database configurations of main-net, using LevelDB.
+func genCandidateLevelDBOptions() (*database.DBConfig, *opt.Options) {
+	dbc, opts := genAspenOptions()
+
+	dbc.LevelDBNoCompression = true
+
+	return dbc, opts
+}
+
+// genCandidateLevelDBOptions returns candidate database configurations of main-net, using BadgerDB.
+func genCandidateBadgerDBOptions() (*database.DBConfig, *opt.Options) {
+	dbc := generateDefaultDBConfig()
+	dbc.DBType = database.BadgerDB
+
+	return dbc, &opt.Options{}
+}
+
+// generateDefaultDBConfig returns default database.DBConfig for pre-generated tests.
+func generateDefaultDBConfig() *database.DBConfig {
+	return &database.DBConfig{Partitioned: true, ParallelDBWrite: true}
+}
+
 // getChainConfig returns chain config from chainDB.
 func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 	stored := chainDB.ReadBlockByNumber(0)
@@ -444,4 +448,39 @@ func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 	}
 
 	return chainConfig, nil
+}
+
+// getCacheConfigForDataGeneration returns cache config for data generation tests.
+func getCacheConfigForDataGeneration() *blockchain.CacheConfig {
+	return &blockchain.CacheConfig{
+		StateDBCaching:   true,
+		TxPoolStateCache: true,
+		ArchiveMode:      false,
+		CacheSize:        256 * 1024 * 1024,
+		BlockInterval:    blockchain.DefaultBlockInterval,
+	}
+}
+
+// generateGovernaceDataForTest returns *governance.Governance for test.
+func generateGovernaceDataForTest() *governance.Governance {
+	return governance.NewGovernance(&params.ChainConfig{
+		ChainID:       big.NewInt(2018),
+		UnitPrice:     25000000000,
+		DeriveShaImpl: 0,
+		Istanbul: &params.IstanbulConfig{
+			Epoch:          istanbul.DefaultConfig.Epoch,
+			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
+			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
+		},
+		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+	})
+}
+
+// getGenerateTestDefaultTC returns default TC of data generation tests.
+func getGenerateTestDefaultTC() *preGeneratedTC {
+	return &preGeneratedTC{
+		isGenerateTest: true,
+		numTotalTxs:    5 * 10000, numTxsPerGen: 10000,
+		numTotalSenders: 10000, numReceiversPerRun: 10000,
+		filePicker: sequentialIndex, addrPicker: sequentialIndex}
 }
