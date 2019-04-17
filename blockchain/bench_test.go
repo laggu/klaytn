@@ -129,7 +129,7 @@ func genTxRing(naccounts int) func(int, *BlockGen) {
 	from := 0
 	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
 	return func(i int, gen *BlockGen) {
-		gas := uint64(math.MaxUint64)
+		gas := uint64(1000000)
 		for {
 			gas -= params.TxGas
 			if gas < params.TxGas {
