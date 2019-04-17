@@ -109,7 +109,7 @@ func prepare(t *testing.T) testInfo {
 	aliceKey, _ := crypto.GenerateKey()
 	aliceAuth := bind.NewKeyedTransactor(aliceKey)
 	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.ChainAccountAddr = &chainKeyAddr
+	config.ServiceChainAccountAddr = &chainKeyAddr
 
 	// Alloc genesis and create a simulator
 	alloc := blockchain.GenesisAlloc{
