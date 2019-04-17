@@ -234,16 +234,16 @@ func (sbapi *SubBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
 	return server.NodeInfo(), nil
 }
 
-func (sbapi *SubBridgeAPI) GetChainAccountAddr() string {
-	return sbapi.sc.config.ChainAccountAddr.Hex()
+func (sbapi *SubBridgeAPI) GetMainChainAccountAddr() string {
+	return sbapi.sc.config.MainChainAccountAddr.Hex()
 }
 
-func (sbapi *SubBridgeAPI) GetChainAccountNonce() uint64 {
-	return sbapi.sc.handler.getChainAccountNonce()
+func (sbapi *SubBridgeAPI) GetMainChainAccountNonce() uint64 {
+	return sbapi.sc.handler.getMainChainAccountNonce()
 }
 
-func (sbapi *SubBridgeAPI) GetNodeAccountAddr() string {
-	return sbapi.sc.config.NodeAccountAddr.Hex()
+func (sbapi *SubBridgeAPI) GetServiceChainAccountAddr() string {
+	return sbapi.sc.config.ServiceChainAccountAddr.Hex()
 }
 
 func (sbapi *SubBridgeAPI) GetAnchoringPeriod() uint64 {

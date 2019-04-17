@@ -91,13 +91,13 @@ func TestAnchoringServiceChainDataWithAPIs(t *testing.T) {
 		t.Fatalf("parent GetChildChainIndexingEnabled Result %v", result)
 	}
 
-	//Check if chainAccountAddr is ok.
-	chainAccountAddr, err := cClient.GetChainAccountAddr(ctx)
+	//Check if mainChainAccountAddr is ok.
+	mainChainAccountAddr, err := cClient.GetMainChainAccountAddr(ctx)
 	if err != nil {
-		t.Fatalf("parent GetChainAccountAddr Err %v", err)
+		t.Fatalf("parent GetMainChainAccountAddr Err %v", err)
 	}
-	if chainAccountAddr != expectedChainAddr {
-		t.Fatalf("parent GetChainAccountAddr chainAccountAddr %v", chainAccountAddr.String())
+	if mainChainAccountAddr != expectedChainAddr {
+		t.Fatalf("parent GetMainChainAccountAddr mainChainAccountAddr %v", mainChainAccountAddr.String())
 	}
 
 	//Check if GetAnchoringPeriod is ok.

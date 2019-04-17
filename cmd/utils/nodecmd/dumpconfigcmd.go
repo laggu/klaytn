@@ -153,14 +153,14 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		} else {
 			cfg.IsMainBridge = false
 
-			if ctx.GlobalIsSet(utils.ChainAccountAddrFlag.Name) {
-				tempStr := ctx.GlobalString(utils.ChainAccountAddrFlag.Name)
+			if ctx.GlobalIsSet(utils.MainChainAccountAddrFlag.Name) {
+				tempStr := ctx.GlobalString(utils.MainChainAccountAddrFlag.Name)
 				if !common.IsHexAddress(tempStr) {
 					logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
 				}
 				tempAddr := common.StringToAddress(tempStr)
-				cfg.ChainAccountAddr = &tempAddr
-				logger.Info("A chain address is registered.", "chainAccountAddr", *cfg.ChainAccountAddr)
+				cfg.MainChainAccountAddr = &tempAddr
+				logger.Info("A chain address is registered.", "mainChainAccountAddr", *cfg.MainChainAccountAddr)
 			}
 			cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
 			cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)

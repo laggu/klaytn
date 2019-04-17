@@ -95,7 +95,7 @@ func TestBridgeManager(t *testing.T) {
 	config.DataDir = os.TempDir()
 
 	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.ChainAccountAddr = &chainKeyAddr
+	config.MainChainAccountAddr = &chainKeyAddr
 
 	sc := &SubBridge{
 		config: config,
@@ -451,7 +451,7 @@ func TestBridgeManagerJournal(t *testing.T) {
 	config.VTRecovery = true
 
 	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.ChainAccountAddr = &chainKeyAddr
+	config.MainChainAccountAddr = &chainKeyAddr
 
 	sc := &SubBridge{
 		config: config,
@@ -541,11 +541,11 @@ func TestBridgeManagerJournal(t *testing.T) {
 // for TestMethod
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
-		addr, bridge, err := bm.deployBridgeTest(big.NewInt(2019), big.NewInt((int64)(bm.subBridge.handler.getNodeAccountNonce())), bm.subBridge.handler.nodeKey, backend)
+		addr, bridge, err := bm.deployBridgeTest(big.NewInt(2019), big.NewInt((int64)(bm.subBridge.handler.getServiceChainAccountNonce())), bm.subBridge.handler.nodeKey, backend)
 		bm.SetBridge(addr, bridge, local, false)
 		return addr, err
 	} else {
-		addr, bridge, err := bm.deployBridgeTest(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.chainAccountNonce)), bm.subBridge.handler.chainKey, backend)
+		addr, bridge, err := bm.deployBridgeTest(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.mainChainAccountNonce)), bm.subBridge.handler.chainKey, backend)
 		bm.SetBridge(addr, bridge, local, false)
 		return addr, err
 	}
@@ -580,12 +580,12 @@ func (bm *BridgeManager) deployBridgeTest(chainID *big.Int, nonce *big.Int, acco
 // Nonce should not be increased when error occurs
 func (bm *BridgeManager) DeployBridgeNonceTest(backend bind.ContractBackend) (common.Address, error) {
 	key := bm.subBridge.handler.chainKey
-	nonce := bm.subBridge.handler.getChainAccountNonce()
+	nonce := bm.subBridge.handler.getMainChainAccountNonce()
 	bm.subBridge.handler.chainKey = nil
 	addr, _ := bm.DeployBridge(backend, false)
 	bm.subBridge.handler.chainKey = key
 
-	if nonce != bm.subBridge.handler.getChainAccountNonce() {
+	if nonce != bm.subBridge.handler.getMainChainAccountNonce() {
 		return addr, errors.New("nonce is accidentally increased")
 	}
 

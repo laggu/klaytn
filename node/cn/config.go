@@ -94,9 +94,9 @@ type Config struct {
 	NoPruning bool
 
 	// Service chain options
-	ChainAccountAddr  *common.Address // A hex account address in parent chain used to sign service chain transaction.
-	AnchoringPeriod   uint64          // Period when child chain sends an anchoring transaction to parent chain. Default value is 1.
-	SentChainTxsLimit uint64          // Number of chain transactions stored for resending. Default value is 1000.
+	MainChainAccountAddr *common.Address // A hex account address in the main chain used to sign a service chain transaction.
+	AnchoringPeriod      uint64          // Period when child chain sends an anchoring transaction to the main chain. Default value is 1.
+	SentChainTxsLimit    uint64          // Number of chain transactions stored for resending. Default value is 1000.
 
 	// Light client options
 	//LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests

@@ -87,12 +87,12 @@ type SCConfig struct {
 	MaxPeer    int
 
 	// ServiceChain
-	ChainAccountAddr  *common.Address
-	NodeAccountAddr   *common.Address
-	chainkey          *ecdsa.PrivateKey
-	nodekey           *ecdsa.PrivateKey
-	AnchoringPeriod   uint64
-	SentChainTxsLimit uint64
+	MainChainAccountAddr    *common.Address
+	ServiceChainAccountAddr *common.Address
+	chainkey                *ecdsa.PrivateKey
+	nodekey                 *ecdsa.PrivateKey
+	AnchoringPeriod         uint64
+	SentChainTxsLimit       uint64
 
 	ParentChainURL string
 	VTRecovery     bool

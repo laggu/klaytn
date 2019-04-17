@@ -823,8 +823,8 @@ web3._extend({
 			getter: 'bridge_peers'
 		}),
 		new web3._extend.Property({
-			name: 'chainAccount',
-			getter: 'bridge_getChainAccountAddr'
+			name: 'mainChainAccount',
+			getter: 'bridge_getMainChainAccountAddr'
 		}),
 		new web3._extend.Property({
 			name: 'anchoringPeriod',
@@ -835,8 +835,8 @@ web3._extend({
 			getter: 'bridge_getSentChainTxsLimit'
 		}),
 		new web3._extend.Property({
-			name: 'chainAccountNonce',
-			getter: 'bridge_getChainAccountNonce'
+			name: 'mainChainAccountNonce',
+			getter: 'bridge_getMainChainAccountNonce'
 		}),
 		new web3._extend.Property({
 			name: 'listBridge',

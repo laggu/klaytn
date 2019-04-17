@@ -24,7 +24,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
-		ChainAccountAddr        *common.Address
+		MainChainAccountAddr    *common.Address
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		SkipBcVersionCheck      bool `toml:"-"`
@@ -55,7 +55,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
-	enc.ChainAccountAddr = c.ChainAccountAddr
+	enc.MainChainAccountAddr = c.MainChainAccountAddr
 	enc.AnchoringPeriod = c.AnchoringPeriod
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
@@ -90,7 +90,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
-		ChainAccountAddr        *common.Address
+		MainChainAccountAddr    *common.Address
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		SkipBcVersionCheck      *bool `toml:"-"`
@@ -132,8 +132,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.NoPruning != nil {
 		c.NoPruning = *dec.NoPruning
 	}
-	if dec.ChainAccountAddr != nil {
-		c.ChainAccountAddr = dec.ChainAccountAddr
+	if dec.MainChainAccountAddr != nil {
+		c.MainChainAccountAddr = dec.MainChainAccountAddr
 	}
 	if dec.AnchoringPeriod != nil {
 		c.AnchoringPeriod = *dec.AnchoringPeriod

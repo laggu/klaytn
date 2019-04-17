@@ -11,26 +11,26 @@ import (
 // MarshalTOML marshals as TOML.
 func (s SCConfig) MarshalTOML() (interface{}, error) {
 	type SCConfig struct {
-		Name               string `toml:"-"`
-		EnabledBridge      bool
-		IsMainBridge       bool
-		DataDir            string
-		NetworkId          uint64
-		SkipBcVersionCheck bool `toml:"-"`
-		DatabaseHandles    int  `toml:"-"`
-		LevelDBCacheSize   int
-		TrieCacheSize      int
-		TrieTimeout        time.Duration
-		TrieBlockInterval  uint
-		ChildChainIndexing bool
-		BridgePort         string
-		MaxPeer            int
-		ChainAccountAddr   *common.Address
-		NodeAccountAddr    *common.Address
-		AnchoringPeriod    uint64
-		SentChainTxsLimit  uint64
-		ParentChainURL     string
-		VTRecovery         bool
+		Name                    string `toml:"-"`
+		EnabledBridge           bool
+		IsMainBridge            bool
+		DataDir                 string
+		NetworkId               uint64
+		SkipBcVersionCheck      bool `toml:"-"`
+		DatabaseHandles         int  `toml:"-"`
+		LevelDBCacheSize        int
+		TrieCacheSize           int
+		TrieTimeout             time.Duration
+		TrieBlockInterval       uint
+		ChildChainIndexing      bool
+		BridgePort              string
+		MaxPeer                 int
+		MainChainAccountAddr    *common.Address
+		ServiceChainAccountAddr *common.Address
+		AnchoringPeriod         uint64
+		SentChainTxsLimit       uint64
+		ParentChainURL          string
+		VTRecovery              bool
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -47,8 +47,8 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.ChildChainIndexing = s.ChildChainIndexing
 	enc.BridgePort = s.BridgePort
 	enc.MaxPeer = s.MaxPeer
-	enc.ChainAccountAddr = s.ChainAccountAddr
-	enc.NodeAccountAddr = s.NodeAccountAddr
+	enc.MainChainAccountAddr = s.MainChainAccountAddr
+	enc.ServiceChainAccountAddr = s.ServiceChainAccountAddr
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
 	enc.ParentChainURL = s.ParentChainURL
@@ -59,26 +59,26 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 // UnmarshalTOML unmarshals from TOML.
 func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type SCConfig struct {
-		Name               *string `toml:"-"`
-		EnabledBridge      *bool
-		IsMainBridge       *bool
-		DataDir            *string
-		NetworkId          *uint64
-		SkipBcVersionCheck *bool `toml:"-"`
-		DatabaseHandles    *int  `toml:"-"`
-		LevelDBCacheSize   *int
-		TrieCacheSize      *int
-		TrieTimeout        *time.Duration
-		TrieBlockInterval  *uint
-		ChildChainIndexing *bool
-		BridgePort         *string
-		MaxPeer            *int
-		ChainAccountAddr   *common.Address
-		NodeAccountAddr    *common.Address
-		AnchoringPeriod    *uint64
-		SentChainTxsLimit  *uint64
-		ParentChainURL     *string
-		VTRecovery         *bool
+		Name                    *string `toml:"-"`
+		EnabledBridge           *bool
+		IsMainBridge            *bool
+		DataDir                 *string
+		NetworkId               *uint64
+		SkipBcVersionCheck      *bool `toml:"-"`
+		DatabaseHandles         *int  `toml:"-"`
+		LevelDBCacheSize        *int
+		TrieCacheSize           *int
+		TrieTimeout             *time.Duration
+		TrieBlockInterval       *uint
+		ChildChainIndexing      *bool
+		BridgePort              *string
+		MaxPeer                 *int
+		MainChainAccountAddr    *common.Address
+		ServiceChainAccountAddr *common.Address
+		AnchoringPeriod         *uint64
+		SentChainTxsLimit       *uint64
+		ParentChainURL          *string
+		VTRecovery              *bool
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -126,11 +126,11 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.MaxPeer != nil {
 		s.MaxPeer = *dec.MaxPeer
 	}
-	if dec.ChainAccountAddr != nil {
-		s.ChainAccountAddr = dec.ChainAccountAddr
+	if dec.MainChainAccountAddr != nil {
+		s.MainChainAccountAddr = dec.MainChainAccountAddr
 	}
-	if dec.NodeAccountAddr != nil {
-		s.NodeAccountAddr = dec.NodeAccountAddr
+	if dec.ServiceChainAccountAddr != nil {
+		s.ServiceChainAccountAddr = dec.ServiceChainAccountAddr
 	}
 	if dec.AnchoringPeriod != nil {
 		s.AnchoringPeriod = *dec.AnchoringPeriod

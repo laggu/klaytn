@@ -123,7 +123,7 @@ var KENFlags = []cli.Flag{
 
 var KSCNFlags = []cli.Flag{
 	utils.CoinbaseFlag,
-	utils.ChainAccountAddrFlag,
+	utils.MainChainAccountAddrFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,
 	utils.EnabledBridgeFlag,

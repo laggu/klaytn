@@ -112,8 +112,8 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	config.ChildChainIndexing = true
 	chainDB := CreateDB(ctx, config, "scchaindata")
 
-	if config.chainkey != nil || config.ChainAccountAddr != nil {
-		logger.Warn("MainBridge doesn't need a chain account. Chain account is only for SubBridge.")
+	if config.chainkey != nil || config.MainChainAccountAddr != nil {
+		logger.Warn("MainBridge doesn't need a main chain account. The main chain account is only for SubBridge.")
 	}
 
 	sc := &MainBridge{

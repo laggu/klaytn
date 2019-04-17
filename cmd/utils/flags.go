@@ -439,13 +439,13 @@ var (
 		Name:  "netrestrict",
 		Usage: "Restricts network communication to the given IP network (CIDR masks)",
 	}
-	ChainAccountAddrFlag = cli.StringFlag{
+	MainChainAccountAddrFlag = cli.StringFlag{
 		Name:  "chainaddr",
-		Usage: "A hex account address in parent chain used to sign service chain transaction",
+		Usage: "A hex account address in the main chain used to sign a service chain transaction",
 	}
 	AnchoringPeriodFlag = cli.Uint64Flag{
 		Name:  "chaintxperiod",
-		Usage: "The period to make and send a chain transaction to parent chain",
+		Usage: "The period to make and send a chain transaction to the main chain",
 		Value: 1,
 	}
 	SentChainTxsLimit = cli.Uint64Flag{
@@ -1016,14 +1016,14 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	logger.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
 
 	// TODO-Klaytn-ServiceChain Add human-readable address once its implementation is introduced.
-	if ctx.GlobalIsSet(ChainAccountAddrFlag.Name) {
-		tempStr := ctx.GlobalString(ChainAccountAddrFlag.Name)
+	if ctx.GlobalIsSet(MainChainAccountAddrFlag.Name) {
+		tempStr := ctx.GlobalString(MainChainAccountAddrFlag.Name)
 		if !common.IsHexAddress(tempStr) {
 			logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
 		}
 		tempAddr := common.StringToAddress(tempStr)
-		cfg.ChainAccountAddr = &tempAddr
-		logger.Info("A chain address is registered.", "chainAccountAddr", *cfg.ChainAccountAddr)
+		cfg.MainChainAccountAddr = &tempAddr
+		logger.Info("A chain address is registered.", "mainChainAccountAddr", *cfg.MainChainAccountAddr)
 	}
 	cfg.AnchoringPeriod = ctx.GlobalUint64(AnchoringPeriodFlag.Name)
 	cfg.SentChainTxsLimit = ctx.GlobalUint64(SentChainTxsLimit.Name)

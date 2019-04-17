@@ -78,10 +78,10 @@ func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash comm
 	return &result, err
 }
 
-// BridgeGetChainAccountAddr can get the chain address to sign chain transaction in service chain.
-func (ec *Client) GetChainAccountAddr(ctx context.Context) (common.Address, error) {
+// BridgeGetMainChainAccountAddr can get a main chain account address to sign the chain transaction in a service chain.
+func (ec *Client) GetMainChainAccountAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "bridge_getChainAccountAddr")
+	err := ec.c.CallContext(ctx, &result, "bridge_getMainChainAccountAddr")
 	return result, err
 }
 

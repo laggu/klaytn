@@ -350,7 +350,7 @@ func (pool *BridgeTxPool) add(tx *types.Transaction) error {
 }
 
 // journalTx adds the specified transaction to the local disk journal if it is
-// deemed to have been sent from a bridgenode account.
+// deemed to have been sent from a service chain account.
 func (pool *BridgeTxPool) journalTx(from common.Address, tx *types.Transaction) {
 	// Only journal if it's enabled
 	if pool.journal == nil {

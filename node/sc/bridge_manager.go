@@ -265,7 +265,7 @@ func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBa
 // Deploy Bridge SmartContract on same node or remote node
 func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) (common.Address, error) {
 	if local {
-		addr, bridge, err := bm.deployBridge(bm.subBridge.getChainID(), big.NewInt((int64)(bm.subBridge.handler.getNodeAccountNonce())), bm.subBridge.handler.nodeKey, backend, bm.subBridge.txPool.GasPrice())
+		addr, bridge, err := bm.deployBridge(bm.subBridge.getChainID(), big.NewInt((int64)(bm.subBridge.handler.getServiceChainAccountNonce())), bm.subBridge.handler.nodeKey, backend, bm.subBridge.txPool.GasPrice())
 		if err != nil {
 			logger.Error("fail to deploy bridge", "err", err)
 			return common.Address{}, err
@@ -275,16 +275,16 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 
 		return addr, err
 	} else {
-		bm.subBridge.handler.LockChainAccount()
-		defer bm.subBridge.handler.UnLockChainAccount()
-		addr, bridge, err := bm.deployBridge(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.getChainAccountNonce())), bm.subBridge.handler.chainKey, backend, new(big.Int).SetUint64(bm.subBridge.handler.remoteGasPrice))
+		bm.subBridge.handler.LockMainChainAccount()
+		defer bm.subBridge.handler.UnLockMainChainAccount()
+		addr, bridge, err := bm.deployBridge(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.getMainChainAccountNonce())), bm.subBridge.handler.chainKey, backend, new(big.Int).SetUint64(bm.subBridge.handler.remoteGasPrice))
 		if err != nil {
 			logger.Error("fail to deploy bridge", "err", err)
 			return common.Address{}, err
 		}
 		bm.SetBridge(addr, bridge, local, false)
 		bm.journal.insert(common.Address{}, addr, false)
-		bm.subBridge.handler.addChainAccountNonce(1)
+		bm.subBridge.handler.addMainChainAccountNonce(1)
 		return addr, err
 	}
 }
