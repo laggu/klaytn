@@ -291,21 +291,29 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // a point in calculating all the costs or if the balance covers all. If the threshold
 // is lower than the costcap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
-func (l *txList) Filter(costLimit *big.Int) (types.Transactions, types.Transactions) {
+func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transactions, types.Transactions) {
 	// If all transactions are below the threshold, short circuit
-	if l.costcap.Cmp(costLimit) <= 0 {
+	if l.costcap.Cmp(senderBalance) <= 0 {
 		return nil, nil
 	}
-	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
+	l.costcap = new(big.Int).Set(senderBalance) // Lower the caps to the thresholds
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		// In case of fee-delegated transactions, the comparison value should not include tx fee.
+		// In case of fee-delegated transactions, the comparison value should consider tx fee and fee ratio.
 		if tx.IsFeeDelegatedTransaction() {
-			return tx.Value().Cmp(costLimit) > 0
+			feePayer, _ := tx.FeePayer()
+			feePayerBalance := pool.getBalance(feePayer)
+			feeRatio, isRatioTx := tx.FeeRatio()
+			if isRatioTx {
+				feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
+				return senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 || feePayerBalance.Cmp(feeByFeePayer) < 0
+			} else {
+				return senderBalance.Cmp(tx.Value()) < 0 || feePayerBalance.Cmp(tx.Fee()) < 0
+			}
 		}
 		// For other transactions, all tx cost should be payable by the sender.
-		return tx.Cost().Cmp(costLimit) > 0
+		return senderBalance.Cmp(tx.Cost()) < 0
 	})
 
 	// If the list was strict, filter anything above the lowest nonce
