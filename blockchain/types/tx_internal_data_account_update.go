@@ -313,7 +313,9 @@ func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
 }
 
 func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// TODO-Klaytn-Accounts: need validation of t.key?
+	if err := t.Key.ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
+		return err
+	}
 	return nil
 }
 

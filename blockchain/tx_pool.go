@@ -537,7 +537,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
-func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
@@ -588,22 +588,14 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			return ErrInvalidFeePayer
 		}
 
-		feeRatio := tx.FeeRatio()
 		feePayerBalance := pool.getBalance(feePayer)
-
-		switch {
-		case feeRatio == types.MaxFeeRatio:
-			if senderBalance.Cmp(tx.Value()) < 0 {
-				logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
-				return ErrInsufficientFundsFrom
+		feeRatio, isRatioTx := tx.FeeRatio()
+		if isRatioTx {
+			// Check fee ratio range
+			if !feeRatio.IsValid() {
+				return kerrors.ErrFeeRatioOutOfRange
 			}
 
-			if feePayerBalance.Cmp(tx.Fee()) < 0 {
-				logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
-				return ErrInsufficientFundsFeePayer
-			}
-
-		case feeRatio < types.MaxFeeRatio:
 			feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
 
 			if senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 {
@@ -615,10 +607,16 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 				logger.Error("[tx_pool] insufficient funds for feeByFeePayer", "feePayer", feePayer, "balance", feePayerBalance, "feeByFeePayer", feeByFeePayer)
 				return ErrInsufficientFundsFeePayer
 			}
+		} else {
+			if senderBalance.Cmp(tx.Value()) < 0 {
+				logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
+				return ErrInsufficientFundsFrom
+			}
 
-		default:
-			// feeRatio > types.MaxFeeRatio
-			return kerrors.ErrMaxFeeRatioExceeded
+			if feePayerBalance.Cmp(tx.Fee()) < 0 {
+				logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
+				return ErrInsufficientFundsFeePayer
+			}
 		}
 	} else {
 		// balance check for non-fee-delegated tx
@@ -638,11 +636,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrIntrinsicGas
 	}
 
-	// TODO-Klaytn-Accounts: Need to add validation code for new tx types.
-	// The below can be implemented in a tx itself, or here.
-	// If the tx is account creation, need to check the below:
-	// 1. Is it valid for human-readable address?
-	// 2. Is the account already created?
+	// "tx.Validate()" conducts additional validation for each new txType.
+	// Validate humanReadable address when this tx has "true" in the humanReadable field.
+	// Validate accountKey when the this create or update an account
+	// Validate the existence of the address which will be created though this Tx
+	// Validate a contract account whether it is executable
 	if err := tx.Validate(pool.currentState, pool.currentBlockNumber); err != nil {
 		return err
 	}
@@ -685,7 +683,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	}
 	// TODO-Klaytn-Issue136
 	// If the transaction fails basic validation, discard it
-	if err := pool.validateTx(tx, local); err != nil {
+	if err := pool.validateTx(tx); err != nil {
 		logger.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxCounter.Inc(1)
 		return false, err

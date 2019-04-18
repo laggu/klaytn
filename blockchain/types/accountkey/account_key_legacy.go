@@ -61,6 +61,10 @@ func (a *AccountKeyLegacy) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool
 	return false
 }
 
+func (a *AccountKeyLegacy) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
+	return nil
+}
+
 func (a *AccountKeyLegacy) String() string {
 	return "AccountKeyLegacy"
 }

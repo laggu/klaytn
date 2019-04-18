@@ -22,7 +22,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -296,10 +295,6 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SerializeForSign() []
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.FeeRatio.IsValid() == false {
-		return kerrors.ErrFeeRatioOutOfRange
-	}
-
 	return nil
 }
 

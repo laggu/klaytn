@@ -23,7 +23,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -370,12 +369,9 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSign() []
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// TODO-Klaytn-Accounts: need validation of t.key?
-
-	if t.FeeRatio.IsValid() == false {
-		return kerrors.ErrFeeRatioOutOfRange
+	if err := t.Key.ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
+		return err
 	}
-
 	return nil
 }
 

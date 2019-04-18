@@ -354,10 +354,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateD
 		return kerrors.ErrAccountAlreadyExists
 	}
 
-	if t.FeeRatio.IsValid() == false {
-		return kerrors.ErrFeeRatioOutOfRange
-	}
-
 	return nil
 }
 

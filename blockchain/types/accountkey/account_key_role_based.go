@@ -151,6 +151,31 @@ func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) b
 	return a.getDefaultKey().Validate(r, pubkeys)
 }
 
+func (a *AccountKeyRoleBased) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
+	lenAk := len(*a)
+	// If no key is to be replaced, it is regarded as a fail.
+	if lenAk == 0 {
+		return kerrors.ErrZeroLength
+	}
+
+	// Do not allow undefined roles.
+	if lenAk > (int)(RoleLast) {
+		return kerrors.ErrLengthTooLong
+	}
+
+	for i := 0; i < lenAk; i++ {
+		// A composite key is not allowed.
+		if (*a)[i].IsCompositeType() {
+			return kerrors.ErrNestedCompositeType
+		}
+
+		if err := (*a)[i].ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ValidateAccountCreation validates keys when creating an account with this key.
 func (a *AccountKeyRoleBased) ValidateAccountCreation() error {
 	// 1. RoleTransaction should exist at least.
@@ -255,18 +280,21 @@ func (a *AccountKeyRoleBased) Update(key AccountKey, currentBlockNumber uint64) 
 			*a = append(*a, (*ak)[lenA:]...)
 		}
 		for i := 0; i < lenAk; i++ {
+			switch {
 			// A composite key is not allowed.
-			if (*ak)[i].IsCompositeType() {
+			case (*ak)[i].IsCompositeType():
 				return kerrors.ErrNestedCompositeType
+			// Do nothing for AccountKeyTypeNil
+			case (*ak)[i].Type() == AccountKeyTypeNil:
+			// Update AccountKeyTypeFail
+			case (*ak)[i].Type() == AccountKeyTypeFail:
+				(*a)[i] = (*ak)[i]
+			default:
+				if err := (*ak)[i].Init(currentBlockNumber); err != nil {
+					return err
+				}
+				(*a)[i] = (*ak)[i]
 			}
-			// Skip if AccountKeyNil.
-			if (*ak)[i].Type() == AccountKeyTypeNil {
-				continue
-			}
-			if err := (*ak)[i].Init(currentBlockNumber); err != nil {
-				return err
-			}
-			(*a)[i] = (*ak)[i]
 		}
 
 		return nil

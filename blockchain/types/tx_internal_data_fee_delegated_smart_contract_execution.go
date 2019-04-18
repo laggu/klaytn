@@ -301,7 +301,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSign() []
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// Fail if the target address is not a program account.
-	if stateDB.IsProgramAccount(t.Recipient) == false {
+	if stateDB.IsContractAvailable(t.Recipient) == false {
 		return kerrors.ErrNotProgramAccount
 	}
 

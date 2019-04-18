@@ -348,6 +348,15 @@ func (self *StateDB) GetState(addr common.Address, bhash common.Hash) common.Has
 	return common.Hash{}
 }
 
+// IsContractAvailable returns true if the account corresponding to the given address implements ProgramAccount.
+func (self *StateDB) IsContractAvailable(addr common.Address) bool {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.IsContractAvailable()
+	}
+	return false
+}
+
 // IsProgramAccount returns true if the account corresponding to the given address implements ProgramAccount.
 func (self *StateDB) IsProgramAccount(addr common.Address) bool {
 	stateObject := self.getStateObject(addr)

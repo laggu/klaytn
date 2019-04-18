@@ -344,7 +344,9 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SerializeForSign() []interface
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// TODO-Klaytn-Accounts: need validation of t.key?
+	if err := t.Key.ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
+		return err
+	}
 	return nil
 }
 

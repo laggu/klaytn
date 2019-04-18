@@ -71,6 +71,10 @@ func (a *AccountKeyPublic) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool
 	return a.PublicKeySerializable.Equal((*PublicKeySerializable)(pubkeys[0]))
 }
 
+func (a *AccountKeyPublic) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
+	return a.Init(currentBlockNumber)
+}
+
 func (a *AccountKeyPublic) String() string {
 	return fmt.Sprintf("AccountKeyPublic: %s", a.PublicKeySerializable.String())
 }

@@ -73,6 +73,7 @@ type StateDB interface {
 
 	// IsProgramAccount returns true if the account implements ProgramAccount.
 	IsProgramAccount(address common.Address) bool
+	IsContractAvailable(address common.Address) bool
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
 

@@ -66,6 +66,9 @@ type AccountKey interface {
 	// Validate returns true if the given public keys are verifiable with the AccountKey.
 	Validate(RoleType, []*ecdsa.PublicKey) bool
 
+	// ValidateBeforeKeyUpdate returns nil if the given account key can be used as a new key.
+	ValidateBeforeKeyUpdate(currentBlockNumber uint64) error
+
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey
 

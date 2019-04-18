@@ -52,6 +52,10 @@ func (a *AccountKeyFail) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	return false
 }
 
+func (a *AccountKeyFail) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
+	return nil
+}
+
 func (a *AccountKeyFail) String() string {
 	return "AccountKeyFail"
 }

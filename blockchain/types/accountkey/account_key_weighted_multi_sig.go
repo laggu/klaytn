@@ -111,6 +111,10 @@ func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, pubkeys []*ecdsa.Publi
 	return false
 }
 
+func (a *AccountKeyWeightedMultiSig) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
+	return a.Init(currentBlockNumber)
+}
+
 func (a *AccountKeyWeightedMultiSig) String() string {
 	serializer := NewAccountKeySerializerWithAccountKey(a)
 	b, _ := json.Marshal(serializer)

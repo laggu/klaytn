@@ -201,6 +201,15 @@ func (self *stateObject) IsContractAccount() bool {
 	return false
 }
 
+// IsContractAvailable returns true if the account has a smart contract code hash and didn't self-destruct
+func (self *stateObject) IsContractAvailable() bool {
+	acc := account.GetProgramAccount(self.account)
+	if acc != nil && !bytes.Equal(acc.GetCodeHash(), emptyCodeHash) && self.suicided == false {
+		return true
+	}
+	return false
+}
+
 // IsProgramAccount returns true if the account implements ProgramAccount.
 func (self *stateObject) IsProgramAccount() bool {
 	return account.GetProgramAccount(self.account) != nil

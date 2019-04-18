@@ -82,7 +82,7 @@ type Message interface {
 	// FeeRatio returns a ratio of tx fee paid by the fee payer in percentage.
 	// For example, if it is 30, 30% of tx fee will be paid by the fee payer.
 	// 70% will be paid by the sender.
-	FeeRatio() types.FeeRatio
+	FeeRatio() (types.FeeRatio, bool)
 
 	//FromFrontier() (common.Address, error)
 	To() *common.Address
@@ -160,19 +160,10 @@ func (st *StateTransition) useGas(amount uint64) error {
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice gasLimit
 
-	feeRatio := st.msg.FeeRatio()
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
-	switch {
-	case feeRatio == types.MaxFeeRatio:
-		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
-		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
-			return errInsufficientBalanceForGas
-		}
-
-		st.state.SubBalance(validatedFeePayer, mgval)
-
-	case feeRatio < types.MaxFeeRatio:
+	feeRatio, isRatioTx := st.msg.FeeRatio()
+	if isRatioTx {
 		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, mgval)
 
 		if st.state.GetBalance(validatedFeePayer).Cmp(feePayer) < 0 {
@@ -185,11 +176,15 @@ func (st *StateTransition) buyGas() error {
 
 		st.state.SubBalance(validatedFeePayer, feePayer)
 		st.state.SubBalance(validatedSender, feeSender)
+	} else {
+		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
+		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
+			return errInsufficientBalanceForGas
+		}
 
-	default:
-		// feeRatio > types.MaxFeeRatio
-		return kerrors.ErrMaxFeeRatioExceeded
+		st.state.SubBalance(validatedFeePayer, mgval)
 	}
+
 	st.gas += st.msg.Gas()
 
 	st.initialGas = st.msg.Gas()
@@ -361,24 +356,17 @@ func (st *StateTransition) refundGas() {
 	// Return KLAY for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice) // TODO-Klaytn-Issue136 gasPrice
 
-	feeRatio := st.msg.FeeRatio()
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
-	switch {
-	case feeRatio == types.MaxFeeRatio:
-		// To make a short circuit, the below routine processes when feeRatio == 100.
-		st.state.AddBalance(validatedFeePayer, remaining)
-
-	case feeRatio < types.MaxFeeRatio:
+	feeRatio, isRatioTx := st.msg.FeeRatio()
+	if isRatioTx {
 		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, remaining)
 
 		st.state.AddBalance(validatedFeePayer, feePayer)
 		st.state.AddBalance(validatedSender, feeSender)
-
-	default:
-		// feeRatio > types.MaxFeeRatio
-		// This will not happen because it is already checked in buyGas(), but to make sure, we add a log here.
-		logger.Error("FeeRatio exceeds the maximum", "feeRatio", feeRatio, "msg", st.msg)
+	} else {
+		// To make a short circuit, the below routine processes when feeRatio == 100.
+		st.state.AddBalance(validatedFeePayer, remaining)
 	}
 }
 
