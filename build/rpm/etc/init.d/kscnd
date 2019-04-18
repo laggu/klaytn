@@ -126,12 +126,12 @@ if [ ! -z $LDBCACHESIZE ]; then
     OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
 fi
 
-if [[ ! -z $COINBASE ]] && [[ $COINBASE != "" ]]; then
-    OPTIONS="$OPTIONS --coinbase $COINBASE --unlock $COINBASE"
+if [[ ! -z $SCSIGNER ]] && [[ $SCSIGNER != "" ]]; then
+    OPTIONS="$OPTIONS --scsigner $SCSIGNER --unlock $SCSIGNER"
 fi
 
-if [[ ! -z $COINBASE_PASSWD_FILE ]] && [[ $COINBASE_PASSWD_FILE != "" ]]; then
-    OPTIONS="$OPTIONS --password $COINBASE_PASSWD_FILE"
+if [[ ! -z $SCSIGNER_PASSWD_FILE ]] && [[ $SCSIGNER_PASSWD_FILE != "" ]]; then
+    OPTIONS="$OPTIONS --password $SCSIGNER_PASSWD_FILE"
 fi
 
 if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then

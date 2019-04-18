@@ -38,7 +38,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		ParallelDBWrite         bool
 		StateDBCaching          bool
 		TxPoolStateCache        bool
-		Gxbase                  common.Address `toml:",omitempty"`
+		ServiceChainSigner      common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
 		Rewardbase              common.Address `toml:",omitempty"`
@@ -69,7 +69,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
 	enc.TxPoolStateCache = c.TxPoolStateCache
-	enc.Gxbase = c.Gxbase
+	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
 	enc.Rewardbase = c.Rewardbase
@@ -104,7 +104,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
 		TxPoolStateCache        *bool
-		Gxbase                  *common.Address `toml:",omitempty"`
+		ServiceChainSigner      *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
 		Rewardbase              *common.Address `toml:",omitempty"`
@@ -174,8 +174,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.TxPoolStateCache != nil {
 		c.TxPoolStateCache = *dec.TxPoolStateCache
 	}
-	if dec.Gxbase != nil {
-		c.Gxbase = *dec.Gxbase
+	if dec.ServiceChainSigner != nil {
+		c.ServiceChainSigner = *dec.ServiceChainSigner
 	}
 	if dec.ExtraData != nil {
 		c.ExtraData = *dec.ExtraData

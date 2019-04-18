@@ -131,7 +131,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "CONSENSUS",
 		Flags: []cli.Flag{
-			utils.CoinbaseFlag,
+			utils.ServiceChainSignerFlag,
 		},
 	},
 	{

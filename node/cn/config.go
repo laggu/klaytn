@@ -116,9 +116,9 @@ type Config struct {
 	TxPoolStateCache     bool
 
 	// Mining-related options
-	Gxbase    common.Address `toml:",omitempty"`
-	ExtraData []byte         `toml:",omitempty"`
-	GasPrice  *big.Int
+	ServiceChainSigner common.Address `toml:",omitempty"`
+	ExtraData          []byte         `toml:",omitempty"`
+	GasPrice           *big.Int
 
 	// Reward
 	Rewardbase common.Address `toml:",omitempty"`

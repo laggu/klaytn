@@ -141,7 +141,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		coinbase:       config.Gxbase,
+		coinbase:       config.ServiceChainSigner,
 		rewardbase:     config.Rewardbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDB, params.BloomBitsBlocks),

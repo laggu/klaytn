@@ -110,7 +110,7 @@ var KCNFlags = []cli.Flag{
 var KPNFlags = []cli.Flag{}
 
 var KENFlags = []cli.Flag{
-	utils.CoinbaseFlag,
+	utils.ServiceChainSignerFlag,
 	utils.BaobabFlag,
 	utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
 	utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
@@ -122,7 +122,7 @@ var KENFlags = []cli.Flag{
 }
 
 var KSCNFlags = []cli.Flag{
-	utils.CoinbaseFlag,
+	utils.ServiceChainSignerFlag,
 	utils.MainChainAccountAddrFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,

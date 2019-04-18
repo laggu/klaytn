@@ -52,9 +52,9 @@ func NewPublicKlayServiceChainAPI(sc *ServiceChain) *PublicKlayServiceChainAPI {
 	return &PublicKlayServiceChainAPI{sc}
 }
 
-// Coinbase is the address that mining rewards will be send to
-func (api *PublicKlayServiceChainAPI) Coinbase() (common.Address, error) {
-	return api.sc.Coinbase()
+// Signer is the address that signing the block.
+func (api *PublicKlayServiceChainAPI) Signer() (common.Address, error) {
+	return api.sc.Signer()
 }
 
 // Hashrate returns the POW hashrate

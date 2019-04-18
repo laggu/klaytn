@@ -74,7 +74,7 @@ type ServiceChain struct {
 
 	miner    *work.Miner
 	gasPrice *big.Int
-	coinbase common.Address
+	signer   common.Address
 
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
@@ -113,7 +113,7 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		coinbase:       config.Gxbase,
+		signer:         config.ServiceChainSigner,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 	}
@@ -260,27 +260,27 @@ func (s *ServiceChain) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *ServiceChain) Coinbase() (eb common.Address, err error) {
+func (s *ServiceChain) Signer() (eb common.Address, err error) {
 	s.lock.RLock()
-	coinbase := s.coinbase
+	signer := s.signer
 	s.lock.RUnlock()
 
-	if coinbase != (common.Address{}) {
-		return coinbase, nil
+	if signer != (common.Address{}) {
+		return signer, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
 			coinbase := accounts[0].Address
 
 			s.lock.Lock()
-			s.coinbase = coinbase
+			s.signer = coinbase
 			s.lock.Unlock()
 
-			logger.Info("Coinbase automatically configured", "address", coinbase)
+			logger.Info("Signer automatically configured", "address", coinbase)
 			return coinbase, nil
 		}
 	}
-	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
+	return common.Address{}, fmt.Errorf("Signer must be explicitly specified")
 }
 
 // SetRewardbase sets the mining reward address.
@@ -291,22 +291,22 @@ func (s *ServiceChain) SetCoinbase(coinbase common.Address) {
 		logger.Error("Cannot set coinbase in Istanbul consensus")
 		return
 	}
-	s.coinbase = coinbase
+	s.signer = coinbase
 	s.lock.Unlock()
 
 	s.miner.SetCoinbase(coinbase)
 }
 
 func (s *ServiceChain) StartMining(local bool) error {
-	eb, err := s.Coinbase()
+	eb, err := s.Signer()
 	if err != nil {
-		logger.Error("Cannot start mining without coinbase", "err", err)
-		return fmt.Errorf("coinbase missing: %v", err)
+		logger.Error("Cannot start mining without a signer", "err", err)
+		return fmt.Errorf("signer missing: %v", err)
 	}
 	if clique, ok := s.engine.(*clique.Clique); ok {
 		rewardwallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 		if rewardwallet == nil || err != nil {
-			logger.Error("Coinbase account unavailable locally", "err", err)
+			logger.Error("Signer account unavailable locally", "err", err)
 			return fmt.Errorf("signer missing: %v", err)
 		}
 		clique.Authorize(eb, rewardwallet.SignHash)

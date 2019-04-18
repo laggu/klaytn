@@ -41,9 +41,9 @@ start() {
         mkdir -p $LOG_DIR
     fi
 
-    if [ -z $COINBASE_PASSWD_FILE ] || [ ! -f $COINBASE_PASSWD_FILE ]; then
+    if [ -z $SCSIGNER_PASSWD_FILE ] || [ ! -f $SCSIGNER_PASSWD_FILE ]; then
         echo
-        echo "  [ERROR] : Coinbase's wallet password file is not exist. [conf/kscnd.conf - COINBASE_PASSWD_FILE=$COINBASE_PASSWD_FILE ]"
+        echo "  [ERROR] : The service chain signer wallet password file is not exist. [conf/kscnd.conf - SCSIGNER_PASSWD_FILE=$SCSIGNER_PASSWD_FILE ]"
         exit 1
     fi
 
@@ -149,12 +149,12 @@ start() {
         OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
     fi
 
-    if [[ ! -z $COINBASE ]] && [[ $COINBASE != "" ]]; then
-        OPTIONS="$OPTIONS --coinbase $COINBASE --unlock $COINBASE"
+    if [[ ! -z $SCSIGNER ]] && [[ $SCSIGNER != "" ]]; then
+        OPTIONS="$OPTIONS --scsigner $SCSIGNER --unlock $SCSIGNER"
     fi
 
-    if [[ ! -z $COINBASE_PASSWD_FILE ]] && [[ $COINBASE_PASSWD_FILE != "" ]]; then
-        OPTIONS="$OPTIONS --password $COINBASE_PASSWD_FILE"
+    if [[ ! -z $SCSIGNER_PASSWD_FILE ]] && [[ $SCSIGNER_PASSWD_FILE != "" ]]; then
+        OPTIONS="$OPTIONS --password $SCSIGNER_PASSWD_FILE"
     fi
 
     if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then

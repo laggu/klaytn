@@ -248,9 +248,9 @@ var (
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
 		Value: params.GenesisGasLimit,
 	}
-	CoinbaseFlag = cli.StringFlag{
-		Name:  "coinbase",
-		Usage: "Public address for block mining rewards (default = first account created)",
+	ServiceChainSignerFlag = cli.StringFlag{
+		Name:  "scsigner",
+		Usage: "Public address for signing blocks in the service chain (default = first account created)",
 		Value: "0",
 	}
 	RewardbaseFlag = cli.StringFlag{
@@ -726,15 +726,15 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	return accs[index], nil
 }
 
-// setCoinbase retrieves the coinbase either from the directly specified
+// setServiceChainSigner retrieves the service chain signer either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setGxbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
-	if ctx.GlobalIsSet(CoinbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(CoinbaseFlag.Name))
+func setServiceChainSigner(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
+	if ctx.GlobalIsSet(ServiceChainSignerFlag.Name) {
+		account, err := MakeAddress(ks, ctx.GlobalString(ServiceChainSignerFlag.Name))
 		if err != nil {
-			Fatalf("Option %q: %v", CoinbaseFlag.Name, err)
+			Fatalf("Option %q: %v", ServiceChainSignerFlag.Name, err)
 		}
-		cfg.Gxbase = account.Address
+		cfg.ServiceChainSigner = account.Address
 	}
 }
 
@@ -986,7 +986,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setGxbase(ctx, ks, cfg)
+	setServiceChainSigner(ctx, ks, cfg)
 	setRewardbase(ctx, ks, cfg)
 	setTxPool(ctx, &cfg.TxPool)
 
