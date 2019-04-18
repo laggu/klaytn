@@ -106,6 +106,7 @@ type Config struct {
 	SkipBcVersionCheck   bool `toml:"-"`
 	PartitionedDB        bool
 	LevelDBNoCompression bool
+	LevelDBBufferPool    bool
 	LevelDBCacheSize     int
 	TrieCacheSize        int
 	TrieTimeout          time.Duration

@@ -96,6 +96,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 			utils.LevelDBCacheSizeFlag,
 			utils.NoPartitionedDBFlag,
 			utils.LevelDBNoCompressionFlag,
+			utils.LevelDBNoBufferPoolFlag,
 			utils.NoParallelDBWriteFlag,
 		},
 	},

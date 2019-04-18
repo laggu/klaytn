@@ -194,6 +194,10 @@ var (
 		Name:  "db.leveldb.no-compression",
 		Usage: "Disables LevelDB data compression by Snappy algorithm",
 	}
+	LevelDBNoBufferPoolFlag = cli.BoolFlag{
+		Name:  "db.leveldb.no-buffer-pool",
+		Usage: "Disables using buffer pool for LevelDB's block allocation",
+	}
 	NoParallelDBWriteFlag = cli.BoolFlag{
 		Name:  "db.no-parallel-write",
 		Usage: "Disables parallel writes of block data to persistent database",
@@ -1004,6 +1008,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
 	cfg.LevelDBNoCompression = ctx.GlobalIsSet(LevelDBNoCompressionFlag.Name)
+	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
 
 	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
 		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)

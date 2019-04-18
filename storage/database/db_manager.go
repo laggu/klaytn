@@ -271,6 +271,7 @@ type DBConfig struct {
 	// LevelDB related configurations.
 	LevelDBCacheSize     int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
 	LevelDBNoCompression bool
+	LevelDBBufferPool    bool
 
 	// Service chain related configurations.
 	ChildChainIndexing bool

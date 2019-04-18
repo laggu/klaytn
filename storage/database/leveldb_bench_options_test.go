@@ -61,7 +61,6 @@ func getKlayLDBOptionsForPutX(x int) *opt.Options {
 	opts.CompactionTableSize *= x
 
 	opts.CompactionSourceLimitFactor *= x
-	opts.DisableBufferPool = true
 	opts.Compression = opt.DefaultCompression
 
 	return opts
@@ -78,7 +77,6 @@ func getKlayLDBOptionsForBatchX(x int) *opt.Options {
 	opts.CompactionTableSize *= x
 
 	opts.CompactionSourceLimitFactor *= x
-	opts.DisableBufferPool = true
 	opts.Compression = opt.DefaultCompression
 
 	return opts

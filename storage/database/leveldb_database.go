@@ -50,7 +50,7 @@ var defaultLevelDBOption = &opt.Options{
 	BlockCacheCapacity:     minBlockCacheCapacity,
 	OpenFilesCacheCapacity: MinOpenFilesCacheCapacity,
 	Filter:                 filter.NewBloomFilter(minBitsPerKeyForFilter),
-	DisableBufferPool:      true,
+	DisableBufferPool:      false,
 }
 
 // GetDefaultLevelDBOption returns default LevelDB option copied from defaultLevelDBOption.
@@ -101,7 +101,7 @@ func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 		BlockCacheCapacity:            dbc.LevelDBCacheSize / 2 * opt.MiB,
 		WriteBuffer:                   dbc.LevelDBCacheSize / 2 * opt.MiB,
 		Filter:                        filter.NewBloomFilter(10),
-		DisableBufferPool:             true,
+		DisableBufferPool:             !dbc.LevelDBBufferPool,
 		CompactionTableSize:           4 * opt.MiB,
 		CompactionTableSizeMultiplier: 2.0,
 	}
@@ -123,7 +123,8 @@ func NewLevelDB(dbc *DBConfig) (*levelDB, error) {
 	if dbc.OpenFilesLimit < 16 {
 		dbc.OpenFilesLimit = 16
 	}
-	localLogger.Info("Allocated LevelDB with write buffer and file OpenFilesLimit", "levelDBCacheSize", dbc.LevelDBCacheSize, "openFilesLimit", dbc.OpenFilesLimit)
+	localLogger.Info("Allocated LevelDB with write buffer and file OpenFilesLimit",
+		"levelDBCacheSize", dbc.LevelDBCacheSize, "openFilesLimit", dbc.OpenFilesLimit, "useBufferPool", dbc.LevelDBBufferPool)
 
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(dbc.Dir, getLevelDBOptions(dbc))
@@ -143,7 +144,6 @@ func NewLevelDB(dbc *DBConfig) (*levelDB, error) {
 
 // setMinLevelDBOption sets some value of options if they are smaller than minimum value.
 func setMinLevelDBOption(ldbOption *opt.Options) {
-
 	if ldbOption.WriteBuffer < minWriteBufferSize {
 		ldbOption.WriteBuffer = minWriteBufferSize
 	}
@@ -155,8 +155,6 @@ func setMinLevelDBOption(ldbOption *opt.Options) {
 	if ldbOption.OpenFilesCacheCapacity < MinOpenFilesCacheCapacity {
 		ldbOption.OpenFilesCacheCapacity = MinOpenFilesCacheCapacity
 	}
-
-	ldbOption.DisableBufferPool = true
 }
 
 // NewLevelDBWithOption explicitly receives LevelDB option to construct a LevelDB object.

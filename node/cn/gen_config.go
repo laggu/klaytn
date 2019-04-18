@@ -30,6 +30,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		SkipBcVersionCheck      bool `toml:"-"`
 		PartitionedDB           bool
 		LevelDBNoCompression    bool
+		LevelDBBufferPool       bool
 		LevelDBCacheSize        int
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
@@ -61,6 +62,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.PartitionedDB = c.PartitionedDB
 	enc.LevelDBNoCompression = c.LevelDBNoCompression
+	enc.LevelDBBufferPool = c.LevelDBBufferPool
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
@@ -96,6 +98,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		SkipBcVersionCheck      *bool `toml:"-"`
 		PartitionedDB           *bool
 		LevelDBNoCompression    *bool
+		LevelDBBufferPool       *bool
 		LevelDBCacheSize        *int
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
@@ -149,6 +152,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.LevelDBNoCompression != nil {
 		c.LevelDBNoCompression = *dec.LevelDBNoCompression
+	}
+	if dec.LevelDBBufferPool != nil {
+		c.LevelDBBufferPool = *dec.LevelDBBufferPool
 	}
 	if dec.LevelDBCacheSize != nil {
 		c.LevelDBCacheSize = *dec.LevelDBCacheSize
