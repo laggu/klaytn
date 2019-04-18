@@ -241,7 +241,10 @@ func (t *TxInternalDataFeeDelegatedCancel) SerializeForSign() []interface{} {
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No more validation required for TxTypeCancel for now.
+	// Fail if the sender does not exist.
+	if !stateDB.Exist(t.From) {
+		return errValueKeySenderUnknown
+	}
 	return nil
 }
 

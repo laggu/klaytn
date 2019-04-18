@@ -331,6 +331,10 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	if stateDB.Exist(to) {
 		return kerrors.ErrAccountAlreadyExists
 	}
+	// Fail if the sender does not exist.
+	if !stateDB.Exist(t.From) {
+		return errValueKeySenderUnknown
+	}
 	return nil
 }
 

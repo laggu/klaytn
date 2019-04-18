@@ -299,7 +299,10 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) SerializeForSign() []inter
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No more validation required for TxInternalDataFeeDelegatedValueTransferMemo.
+	// Fail if the sender does not exist.
+	if !stateDB.Exist(t.From) {
+		return errValueKeySenderUnknown
+	}
 	return nil
 }
 
