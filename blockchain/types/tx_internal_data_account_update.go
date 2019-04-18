@@ -316,6 +316,10 @@ func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumb
 	if err := t.Key.ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
 		return err
 	}
+	// Fail if the sender does not exist.
+	if !stateDB.Exist(t.From) {
+		return errValueKeySenderUnknown
+	}
 	return nil
 }
 
