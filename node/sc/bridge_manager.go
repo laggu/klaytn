@@ -74,9 +74,11 @@ type BridgeJournal struct {
 }
 
 type BridgeInfo struct {
-	bridge         *bridgecontract.Bridge
-	onServiceChain bool
-	subscribed     bool
+	bridge              *bridgecontract.Bridge
+	onServiceChain      bool
+	subscribed          bool
+	pendingRequestEvent *eventSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
+	nextRequestNonce    uint64          // TODO-Klaytn Need to set initial value for recovery.
 }
 
 // DecodeRLP decodes the Klaytn
@@ -191,7 +193,7 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 
 // SetBridge stores the address and bridge pair with local/remote and subscription status.
 func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.Bridge, local bool, subscribed bool) {
-	bm.bridges[addr] = &BridgeInfo{bridge, local, subscribed}
+	bm.bridges[addr] = &BridgeInfo{bridge, local, subscribed, newEventSortedMap(), 0}
 }
 
 // LoadAllBridge reloads bridge and handles subscription by using the the journal cache.

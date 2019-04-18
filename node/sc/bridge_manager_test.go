@@ -474,7 +474,7 @@ func TestBridgeManagerJournal(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr] = &BridgeInfo{bridge, true, true}
+	bm.bridges[addr] = &BridgeInfo{bridge, true, true, newEventSortedMap(), 0}
 	bm.journal.cache = []*BridgeJournal{}
 	bm.journal.cache = append(bm.journal.cache, &BridgeJournal{addr, addr, true})
 
