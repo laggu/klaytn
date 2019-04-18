@@ -53,7 +53,15 @@ func TestTable_pingReplace(t *testing.T) {
 
 func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding bool) {
 	transport := newPingRecorder()
-	tab, _ := newTable(transport, NodeID{}, &net.UDPAddr{}, Config{Bootnodes: nil, NodeDBPath: ""})
+	conf := Config{
+		udp:        transport,
+		Id:         NodeID{},
+		Addr:       &net.UDPAddr{},
+		Bootnodes:  nil,
+		NodeDBPath: "",
+	}
+	discv, _ := newTable(&conf)
+	tab := discv.(*Table)
 	defer tab.Close()
 
 	// Wait for init so bond is accepted.
@@ -143,7 +151,15 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 // This checks that the table-wide IP limit is applied correctly.
 func TestTable_IPLimit(t *testing.T) {
 	transport := newPingRecorder()
-	tab, _ := newTable(transport, NodeID{}, &net.UDPAddr{}, Config{Bootnodes: nil, NodeDBPath: ""})
+	conf := Config{
+		udp:        transport,
+		Id:         NodeID{},
+		Addr:       &net.UDPAddr{},
+		Bootnodes:  nil,
+		NodeDBPath: "",
+	}
+	discv, _ := newTable(&conf)
+	tab := discv.(*Table)
 	defer tab.Close()
 
 	for i := 0; i < tableIPLimit+1; i++ {
@@ -159,7 +175,15 @@ func TestTable_IPLimit(t *testing.T) {
 // This checks that the table-wide IP limit is applied correctly.
 func TestTable_BucketIPLimit(t *testing.T) {
 	transport := newPingRecorder()
-	tab, _ := newTable(transport, NodeID{}, &net.UDPAddr{}, Config{Bootnodes: nil, NodeDBPath: ""})
+	conf := Config{
+		udp:        transport,
+		Id:         NodeID{},
+		Addr:       &net.UDPAddr{},
+		Bootnodes:  nil,
+		NodeDBPath: "",
+	}
+	discv, _ := newTable(&conf)
+	tab := discv.(*Table)
 	defer tab.Close()
 
 	d := 3
@@ -232,7 +256,15 @@ func TestTable_closest(t *testing.T) {
 	test := func(test *closeTest) bool {
 		// for any node table, Target and N
 		transport := newPingRecorder()
-		tab, _ := newTable(transport, test.Self, &net.UDPAddr{}, Config{Bootnodes: nil, NodeDBPath: ""})
+		conf := Config{
+			udp:        transport,
+			Id:         test.Self,
+			Addr:       &net.UDPAddr{},
+			Bootnodes:  nil,
+			NodeDBPath: "",
+		}
+		discv, _ := newTable(&conf)
+		tab := discv.(*Table)
 		defer tab.Close()
 		tab.stuff(test.All)
 
@@ -292,7 +324,15 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 	}
 	test := func(buf []*Node) bool {
 		transport := newPingRecorder()
-		tab, _ := newTable(transport, NodeID{}, &net.UDPAddr{}, Config{Bootnodes: nil, NodeDBPath: ""})
+		conf := Config{
+			udp:        transport,
+			Id:         NodeID{},
+			Addr:       &net.UDPAddr{},
+			Bootnodes:  nil,
+			NodeDBPath: "",
+		}
+		discv, _ := newTable(&conf)
+		tab := discv.(*Table)
 		defer tab.Close()
 		<-tab.initDone
 
@@ -337,7 +377,15 @@ func (*closeTest) Generate(rand *rand.Rand, size int) reflect.Value {
 
 func TestTable_Lookup(t *testing.T) {
 	self := nodeAtDistance(common.Hash{}, 0)
-	tab, _ := newTable(lookupTestnet, self.ID, &net.UDPAddr{}, Config{Bootnodes: nil, NodeDBPath: ""})
+	conf := Config{
+		udp:        lookupTestnet,
+		Id:         self.ID,
+		Addr:       &net.UDPAddr{},
+		Bootnodes:  nil,
+		NodeDBPath: "",
+	}
+	discv, _ := newTable(&conf)
+	tab := discv.(*Table)
 	defer tab.Close()
 
 	// lookup on empty table returns no nodes

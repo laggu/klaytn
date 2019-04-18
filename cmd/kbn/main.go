@@ -134,11 +134,15 @@ func bootnode(ctx *cli.Context) error {
 	}
 
 	cfg := discover.Config{
-		PrivateKey:   bcfg.nodeKey,
-		AnnounceAddr: realaddr,
-		NetRestrict:  bcfg.restrictList,
+		PrivateKey:      bcfg.nodeKey,
+		AnnounceAddr:    realaddr,
+		NetRestrict:     bcfg.restrictList,
+		Conn:            conn,
+		Addr:            realaddr,
+		Id:              discover.PubkeyID(&bcfg.nodeKey.PublicKey),
+		DiscoveryPolicy: discover.DiscoveryPolicyActive,
 	}
-	tab, err := discover.ListenUDP(conn, cfg)
+	tab, err := discover.ListenUDP(&cfg)
 	if err != nil {
 		utils.Fatalf("%v", err)
 	}

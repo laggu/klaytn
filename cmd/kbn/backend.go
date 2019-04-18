@@ -22,10 +22,10 @@ import (
 )
 
 type BN struct {
-	ntab *discover.Table
+	ntab discover.Discovery
 }
 
-func NewBN(t *discover.Table) *BN {
+func NewBN(t discover.Discovery) *BN {
 	return &BN{ntab: t}
 }
 

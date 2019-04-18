@@ -171,7 +171,7 @@ type udp struct {
 	closing chan struct{}
 	nat     nat.Interface
 
-	*Table
+	Discovery
 }
 
 // pending represents a pending reply.
@@ -228,42 +228,51 @@ type Config struct {
 	NetRestrict  *netutil.Netlist  // network whitelist
 	Bootnodes    []*Node           // list of bootstrap nodes
 	Unhandled    chan<- ReadPacket // unhandled packets are sent on this channel
+
+	// These setting are required for create Table and UDP
+	DiscoveryPolicy int
+	Id              NodeID
+	Addr            *net.UDPAddr
+	udp             transport
+	Conn            conn
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(c conn, cfg Config) (*Table, error) {
-	tab, _, err := newUDP(c, cfg)
+func ListenUDP(cfg *Config) (Discovery, error) {
+	discv, _, err := newUDP(cfg)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("UDP listener up", "self", tab.self)
-	return tab, nil
+	logger.Info("UDP listener up", "self", discv.Self())
+	return discv, nil
+
 }
 
-func newUDP(c conn, cfg Config) (*Table, *udp, error) {
+func newUDP(cfg *Config) (Discovery, *udp, error) {
 	udp := &udp{
-		conn:        c,
+		conn:        cfg.Conn,
 		priv:        cfg.PrivateKey,
 		netrestrict: cfg.NetRestrict,
 		closing:     make(chan struct{}),
 		gotreply:    make(chan reply),
 		addpending:  make(chan *pending),
 	}
-	realaddr := c.LocalAddr().(*net.UDPAddr)
+	realaddr := cfg.Addr
 	if cfg.AnnounceAddr != nil {
 		realaddr = cfg.AnnounceAddr
 	}
 	// TODO: separate TCP port
 	udp.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port))
-	tab, err := newTable(udp, PubkeyID(&cfg.PrivateKey.PublicKey), realaddr, cfg)
+	cfg.udp = udp
+
+	var err error
+	udp.Discovery, err = NewDiscovery(cfg)
 	if err != nil {
 		return nil, nil, err
 	}
-	udp.Table = tab
-
 	go udp.loop()
 	go udp.readLoop(cfg.Unhandled)
-	return udp.Table, udp, nil
+	return udp.Discovery, udp, nil
 }
 
 func (t *udp) close() {
@@ -563,8 +572,8 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 		logger.Debug("Bad discv4 packet", "addr", from, "err", err)
 		return err
 	}
-	err = packet.handle(t, from, fromID, hash)
 	logger.Trace("<< "+packet.name(), "addr", from, "err", err)
+	err = packet.handle(t, from, fromID, hash)
 	udpPacketCounter.Inc(1)
 	return err
 }
@@ -634,7 +643,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.db.hasBond(fromID) {
+	if !t.hasBond(fromID) {
 		// No bond exists, we don't process the packet. This prevents
 		// an attack vector where the discovery protocol could be used
 		// to amplify traffic in a DDOS attack. A malicious actor
@@ -645,9 +654,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 		return errUnknownNode
 	}
 	target := crypto.Keccak256Hash(req.Target[:])
-	t.mutex.Lock()
-	closest := t.closest(target, bucketSize).entries
-	t.mutex.Unlock()
+	closest := t.RetrieveNodes(target, bucketSize)
 
 	p := neighbors{Expiration: uint64(time.Now().Add(expiration).Unix())}
 	var sent bool

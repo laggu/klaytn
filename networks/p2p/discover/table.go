@@ -63,6 +63,31 @@ const (
 	seedMaxAge         = 5 * 24 * time.Hour
 )
 
+const (
+	DiscoveryPolicyActive = iota
+	DiscoveryPolicyPassive
+	DiscoveryPolicyComposite
+)
+
+type Discovery interface {
+	Self() *Node
+	Close()
+	Resolve(target NodeID) *Node
+	Lookup(target NodeID) []*Node
+	ReadRandomNodes([]*Node) int
+	RetrieveNodes(target common.Hash, nresults int) []*Node // replace of closest():Table
+
+	hasBond(id NodeID) bool
+	bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16) (*Node, error)
+
+	// interfaces for API
+	CreateUpdateNode(n *Node) error
+	GetNode(id NodeID) (*Node, error)
+	DeleteNode(id NodeID) error
+	GetBucketEntries() []*Node
+	GetReplacements() []*Node
+}
+
 type Table struct {
 	mutex   sync.Mutex        // protects buckets, bucket content, nursery, rand
 	buckets [nBuckets]*bucket // index of known nodes by distance
@@ -110,16 +135,24 @@ type bucket struct {
 	ips          netutil.DistinctNetSet
 }
 
-func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, cfg Config) (*Table, error) {
+func NewDiscovery(cfg *Config) (Discovery, error) {
+	switch cfg.DiscoveryPolicy {
+	case DiscoveryPolicyActive:
+		return newTable(cfg)
+	}
+	return nil, fmt.Errorf("Not supported yet")
+}
+
+func newTable(cfg *Config) (Discovery, error) {
 	// If no node database was given, use an in-memory one
-	db, err := newNodeDB(cfg.NodeDBPath, Version, ourID)
+	db, err := newNodeDB(cfg.NodeDBPath, Version, cfg.Id)
 	if err != nil {
 		return nil, err
 	}
 	tab := &Table{
-		net:        t,
+		net:        cfg.udp,
 		db:         db,
-		self:       NewNode(ourID, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
+		self:       NewNode(cfg.Id, cfg.Addr.IP, uint16(cfg.Addr.Port), uint16(cfg.Addr.Port)),
 		bonding:    make(map[NodeID]*bondproc),
 		bondslots:  make(chan struct{}, maxBondingPingPongs),
 		refreshReq: make(chan chan struct{}),
@@ -148,6 +181,7 @@ func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, cfg Config) (*Tab
 	// expiration.
 	tab.db.ensureExpirer()
 	go tab.loop()
+	logger.Debug("new Table created", "err", nil)
 	return tab, nil
 }
 
@@ -578,6 +612,12 @@ func (tab *Table) closest(target common.Hash, nresults int) *nodesByDistance {
 	return close
 }
 
+func (tab *Table) RetrieveNodes(target common.Hash, nresults int) []*Node {
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	return tab.closest(target, nresults).entries
+}
+
 func (tab *Table) len() (n int) {
 	for _, b := range &tab.buckets {
 		n += len(b.entries)
@@ -850,6 +890,10 @@ func (tab *Table) bumpOrAdd(b *bucket, n *Node) bool {
 func (tab *Table) deleteInBucket(b *bucket, n *Node) {
 	b.entries = deleteNode(b.entries, n)
 	tab.removeIP(b, n.IP)
+}
+
+func (tab *Table) hasBond(id NodeID) bool {
+	return tab.db.hasBond(id)
 }
 
 // pushNode adds n to the front of list, keeping at most max items.
