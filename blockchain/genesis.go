@@ -289,6 +289,12 @@ func (g *Genesis) Commit(db database.DBManager) (*types.Block, error) {
 // MustCommit writes the genesis block and state to db, panicking on error.
 // The block is committed as the canonical head block.
 func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
+	config := g.Config
+	if config == nil {
+		config = params.AllGxhashProtocolChanges
+	}
+	InitDeriveSha(config.DeriveShaImpl)
+
 	block, err := g.Commit(db)
 	if err != nil {
 		panic(err)
