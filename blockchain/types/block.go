@@ -71,7 +71,6 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 // Header represents a block header in the Klaytn blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Rewardbase  common.Address `json:"reward"           gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
@@ -121,7 +120,6 @@ func (h *Header) Hash() common.Hash {
 func (h *Header) HashNoNonce() common.Hash {
 	return rlpHash([]interface{}{
 		h.ParentHash,
-		h.Coinbase,
 		h.Rewardbase,
 		h.Root,
 		h.TxHash,
@@ -317,7 +315,6 @@ func (b *Block) NumberU64() uint64          { return b.header.Number.Uint64() }
 func (b *Block) MixDigest() common.Hash     { return b.header.MixDigest }
 func (b *Block) Nonce() uint64              { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
 func (b *Block) Bloom() Bloom               { return b.header.Bloom }
-func (b *Block) Coinbase() common.Address   { return b.header.Coinbase }
 func (b *Block) Rewardbase() common.Address { return b.header.Rewardbase }
 func (b *Block) Root() common.Hash          { return b.header.Root }
 func (b *Block) ParentHash() common.Hash    { return b.header.ParentHash }
@@ -400,7 +397,6 @@ func (h *Header) String() string {
 	return fmt.Sprintf(`Header(%x):
 [
 	ParentHash:       %x
-	Coinbase:         %x
 	Rewardbase:       %x
 	Root:             %x
 	TxSha:            %x
@@ -416,7 +412,7 @@ func (h *Header) String() string {
 	Nonce:            %x
 	Governance:       %x
 	Vote:             %x
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.Governance, h.Vote)
+]`, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.Governance, h.Vote)
 }
 
 type Blocks []*Block

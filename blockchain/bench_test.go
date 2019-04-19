@@ -272,7 +272,6 @@ func makeChainForBench(db database.DBManager, full bool, count uint64) {
 	var hash common.Hash
 	for n := uint64(0); n < count; n++ {
 		header := &types.Header{
-			Coinbase:    common.Address{},
 			Number:      big.NewInt(int64(n)),
 			ParentHash:  hash,
 			Difficulty:  big.NewInt(1),

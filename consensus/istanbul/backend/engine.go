@@ -101,9 +101,7 @@ var (
 	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
 )
 
-// Author retrieves the Klaytn address of the account that minted the given
-// block, which may be different from the header's coinbase if a consensus
-// engine is based on signatures.
+// Author retrieves the Klaytn address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
 }
@@ -134,7 +132,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidExtraDataFormat
 	}
 
-	// Ensure that the coinbase is valid
+	// Ensure that the nonce is valid
 	if header.Nonce != (emptyNonce) && !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
 		return errInvalidNonce
 	}
@@ -328,7 +326,6 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 // rules of a particular engine. The changes are executed inline.
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// unused fields, force to set to empty
-	header.Coinbase = common.Address{}
 	header.Rewardbase = sb.rewardbase
 	header.Nonce = emptyNonce
 	header.MixDigest = types.IstanbulDigest

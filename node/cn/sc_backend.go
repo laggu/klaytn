@@ -156,7 +156,7 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 	cn.protocolManager.wsendpoint = config.WsEndpoint
 
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
-	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
+	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), config.ServiceChainSigner)
 
 	cn.APIBackend = &ServiceChainAPIBackend{cn, nil}
 
@@ -283,20 +283,6 @@ func (s *ServiceChain) Signer() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("Signer must be explicitly specified")
 }
 
-// SetRewardbase sets the mining reward address.
-func (s *ServiceChain) SetCoinbase(coinbase common.Address) {
-	s.lock.Lock()
-	// istanbul BFT
-	if _, ok := s.engine.(consensus.Istanbul); ok {
-		logger.Error("Cannot set coinbase in Istanbul consensus")
-		return
-	}
-	s.signer = coinbase
-	s.lock.Unlock()
-
-	s.miner.SetCoinbase(coinbase)
-}
-
 func (s *ServiceChain) StartMining(local bool) error {
 	eb, err := s.Signer()
 	if err != nil {
@@ -318,7 +304,7 @@ func (s *ServiceChain) StartMining(local bool) error {
 		// will ensure that private networks work in single miner mode too.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 	}
-	go s.miner.Start(eb)
+	go s.miner.Start()
 	return nil
 }
 

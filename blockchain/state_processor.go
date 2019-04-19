@@ -49,7 +49,7 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 }
 
 // Process processes the state changes according to the Ethereum rules by running
-// the transaction messages using the statedb and applying any rewards to the processor. (coinbase)
+// the transaction messages using the statedb and applying any rewards to the processor.
 //
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the

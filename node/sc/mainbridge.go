@@ -73,7 +73,7 @@ type MainBridge struct {
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 
 	bridgeServer p2p.Server
 	ctx          *node.ServiceContext

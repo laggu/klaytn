@@ -54,7 +54,8 @@ var (
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Gxhash) Author(header *types.Header) (common.Address, error) {
-	return header.Coinbase, nil
+	// Returns arbitrary address because gxhash is used just for testing
+	return params.AuthorAddressForTesting, nil
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
@@ -401,5 +402,5 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	// Accumulate the rewards for the miner
 	reward := new(big.Int).Set(blockReward)
 
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(params.AuthorAddressForTesting, reward)
 }

@@ -57,9 +57,8 @@ type ChainReader interface {
 
 // Engine is an algorithm agnostic consensus engine.
 type Engine interface {
-	// Author retrieves the Ethereum address of the account that minted the given
-	// block, which may be different from the header's coinbase if a consensus
-	// engine is based on signatures.
+	// Author retrieves the Klaytn address of the account that minted the given
+	// block.
 	Author(header *types.Header) (common.Address, error)
 
 	// VerifyHeader checks whether a header conforms to the consensus rules of a

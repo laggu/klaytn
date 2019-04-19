@@ -160,7 +160,7 @@ func (env *tester) Close(t *testing.T) {
 }
 
 // Tests that the node lists the correct welcome message, notably that it contains
-// the instance name, coinbase account, block number, data directory and supported
+// the instance name, block number, data directory and supported
 // console modules.
 func TestWelcome(t *testing.T) {
 	tester := newTester(t, nil)

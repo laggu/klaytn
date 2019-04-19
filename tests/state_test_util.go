@@ -180,7 +180,6 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *stat
 func (t *StateTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	return &blockchain.Genesis{
 		Config:     config,
-		Coinbase:   t.json.Env.Coinbase,
 		Difficulty: t.json.Env.Difficulty,
 		GasLimit:   t.json.Env.GasLimit,
 		Number:     t.json.Env.Number,

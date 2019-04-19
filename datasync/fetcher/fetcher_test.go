@@ -51,8 +51,7 @@ var (
 // reassembly.
 func makeChain(n int, seed byte, parent *types.Block) ([]common.Hash, map[common.Hash]*types.Block) {
 	blocks, _ := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), testdb, n, func(i int, block *blockchain.BlockGen) {
-		block.SetCoinbase(common.Address{seed})
-
+		block.SetRewardbase(common.Address{seed})
 		// If the block number is multiple of 3, send a bonus transaction to the miner
 		if parent == genesis && i%3 == 0 {
 			signer := types.MakeSigner(params.TestChainConfig, block.Number())

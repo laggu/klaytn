@@ -54,21 +54,21 @@ type Miner struct {
 
 	worker *worker
 
-	coinbase common.Address
-	mining   int32
-	backend  Backend
-	engine   consensus.Engine
+	rewardbase common.Address
+	mining     int32
+	backend    Backend
+	engine     consensus.Engine
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype p2p.ConnType) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype p2p.ConnType, rewardbase common.Address) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, backend, mux, nodetype),
+		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype),
 		canStart: 1,
 	}
 	// TODO-KLAYTN drop or missing tx
@@ -100,7 +100,7 @@ out:
 			atomic.StoreInt32(&self.canStart, 1)
 			atomic.StoreInt32(&self.shouldStart, 0)
 			if shouldStart {
-				self.Start(self.coinbase)
+				self.Start()
 			}
 			// unsubscribe. we're only interested in this event once
 			events.Unsubscribe()
@@ -110,9 +110,8 @@ out:
 	}
 }
 
-func (self *Miner) Start(coinbase common.Address) {
+func (self *Miner) Start() {
 	atomic.StoreInt32(&self.shouldStart, 1)
-	self.SetCoinbase(coinbase)
 
 	if atomic.LoadInt32(&self.canStart) == 0 {
 		logger.Info("Network syncing, will start work afterwards")
@@ -183,9 +182,4 @@ func (self *Miner) Pending() (*types.Block, *state.StateDB) {
 // change between multiple method calls
 func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
-}
-
-func (self *Miner) SetCoinbase(addr common.Address) {
-	self.coinbase = addr
-	self.worker.setCoinbase(addr)
 }

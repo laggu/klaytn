@@ -54,7 +54,6 @@ type Genesis struct {
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
-	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
@@ -252,7 +251,6 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 		GasUsed:    g.GasUsed,
 		Difficulty: g.Difficulty,
 		MixDigest:  g.Mixhash,
-		Coinbase:   g.Coinbase,
 		Root:       root,
 	}
 	if g.Difficulty == nil {

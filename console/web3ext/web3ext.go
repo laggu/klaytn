@@ -556,12 +556,6 @@ web3._extend({
 			call: 'miner_stop'
 		}),
 		new web3._extend.Method({
-			name: 'setCoinbase',
-			call: 'miner_setCoinbase',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'setRewardbase',
 			call: 'miner_setRewardbase',
 			params: 1,

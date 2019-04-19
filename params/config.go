@@ -28,8 +28,9 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("// todo generate new hash for mainnet") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash = common.HexToHash("// todo generate new hash for testnet") // Testnet genesis hash to enforce below configs on
+	MainnetGenesisHash      = common.HexToHash("// todo generate new hash for mainnet") // Mainnet genesis hash to enforce below configs on
+	TestnetGenesisHash      = common.HexToHash("// todo generate new hash for testnet") // Testnet genesis hash to enforce below configs on
+	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
 )
 
 var (

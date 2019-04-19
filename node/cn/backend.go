@@ -89,14 +89,13 @@ type CN struct {
 
 	miner    *work.Miner
 	gasPrice *big.Int
-	coinbase common.Address
 
 	rewardbase common.Address
 
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 
 	components []interface{}
 
@@ -141,17 +140,15 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		coinbase:       config.ServiceChainSigner,
 		rewardbase:     config.Rewardbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		governance:     governance,
 	}
 
-	// istanbul BFT. force to set the istanbul coinbase to node key address
+	// istanbul BFT. Derive and set node's address using nodekey
 	if chainConfig.Istanbul != nil {
-		cn.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
-		governance.SetNodeAddress(cn.coinbase)
+		governance.SetNodeAddress(crypto.PubkeyToAddress(ctx.NodeKey().PublicKey))
 	}
 
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
@@ -216,7 +213,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
-	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType())
+	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey))
 	// istanbul BFT
 	cn.miner.SetExtra(makeExtraData(config.ExtraData))
 
@@ -358,29 +355,6 @@ func (s *CN) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *CN) Coinbase() (eb common.Address, err error) {
-	s.lock.RLock()
-	coinbase := s.coinbase
-	s.lock.RUnlock()
-
-	if coinbase != (common.Address{}) {
-		return coinbase, nil
-	}
-	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
-		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			coinbase := accounts[0].Address
-
-			s.lock.Lock()
-			s.coinbase = coinbase
-			s.lock.Unlock()
-
-			logger.Info("Coinbase automatically configured", "address", coinbase)
-			return coinbase, nil
-		}
-	}
-	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
-}
-
 func (s *CN) Rewardbase() (eb common.Address, err error) {
 	s.lock.RLock()
 	rewardbase := s.rewardbase
@@ -406,32 +380,18 @@ func (s *CN) Rewardbase() (eb common.Address, err error) {
 }
 
 func (s *CN) RewardbaseWallet() (accounts.Wallet, error) {
-	coinbase, err := s.Rewardbase()
+	rewardBase, err := s.Rewardbase()
 	if err != nil {
 		return nil, err
 	}
 
-	account := accounts.Account{Address: coinbase}
+	account := accounts.Account{Address: rewardBase}
 	wallet, err := s.AccountManager().Find(account)
 	if err != nil {
 		logger.Error("find err", "err", err)
 		return nil, err
 	}
 	return wallet, nil
-}
-
-// SetRewardbase sets the mining reward address.
-func (s *CN) SetCoinbase(coinbase common.Address) {
-	s.lock.Lock()
-	// istanbul BFT
-	if _, ok := s.engine.(consensus.Istanbul); ok {
-		logger.Error("Cannot set coinbase in Istanbul consensus")
-		return
-	}
-	s.coinbase = coinbase
-	s.lock.Unlock()
-
-	s.miner.SetCoinbase(coinbase)
 }
 
 func (s *CN) SetRewardbase(rewardbase common.Address) {
@@ -447,14 +407,6 @@ func (s *CN) SetRewardbase(rewardbase common.Address) {
 }
 
 func (s *CN) StartMining(local bool) error {
-	eb, err := s.Coinbase()
-	if eb == (common.Address{}) {
-		// TODO-Klaytn This zero address is only for the test code that uses gxhash.
-		//             Remove this when cleaning up the gxhash code and its test code.
-		eb = common.HexToAddress("0x0000000000000000000000000000000000000000")
-	} else if err != nil {
-		return fmt.Errorf("error on getting coinbase: %v", err)
-	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
@@ -462,7 +414,7 @@ func (s *CN) StartMining(local bool) error {
 		// will ensure that private networks work in single miner mode too.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 	}
-	go s.miner.Start(eb)
+	go s.miner.Start()
 	return nil
 }
 

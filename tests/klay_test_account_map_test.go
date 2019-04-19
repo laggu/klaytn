@@ -35,8 +35,8 @@ type AccountInfo struct {
 }
 
 type AccountMap struct {
-	m        map[common.Address]*AccountInfo
-	coinbase common.Address
+	m          map[common.Address]*AccountInfo
+	rewardbase common.Address
 }
 
 func NewAccountMap() *AccountMap {
@@ -99,7 +99,7 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 		a.Set(*addr, statedb.GetBalance(*addr), statedb.GetNonce(*addr))
 	}
 
-	a.coinbase = *bcdata.addrs[0]
+	a.rewardbase = *bcdata.addrs[0]
 
 	return nil
 }
@@ -155,7 +155,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 			a.SubBalance(feePayer, fee)
 		}
 
-		a.AddBalance(a.coinbase, fee)
+		a.AddBalance(a.rewardbase, fee)
 
 		a.IncNonce(from)
 	}

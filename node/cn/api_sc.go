@@ -186,12 +186,6 @@ func (api *PrivateServiceChainMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	return true
 }
 
-// SetCoinbase sets the coinbase of the miner.
-func (api *PrivateServiceChainMinerAPI) SetCoinbase(coinbase common.Address) bool {
-	api.e.SetCoinbase(coinbase)
-	return true
-}
-
 // GetHashrate returns the current hashrate of the miner.
 func (api *PrivateServiceChainMinerAPI) GetHashrate() uint64 {
 	return uint64(api.e.miner.HashRate())

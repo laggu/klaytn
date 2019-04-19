@@ -152,7 +152,6 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 	num := parent.Number()
 	header := &types.Header{
 		ParentHash: parent.Hash(),
-		Coinbase:   common.Address{},
 		Number:     num.Add(num, common.Big1),
 		Time:       big.NewInt(tstamp),
 		Governance: common.Hex2Bytes("b8dc7b22676f7665726e696e676e6f6465223a22307865373333636234643237396461363936663330643437306638633034646563623534666362306432222c22676f7665726e616e63656d6f6465223a2273696e676c65222c22726577617264223a7b226d696e74696e67616d6f756e74223a393630303030303030303030303030303030302c22726174696f223a2233342f33332f3333227d2c22626674223a7b2265706f6368223a33303030302c22706f6c696379223a302c22737562223a32317d2c22756e69745072696365223a32353030303030303030307d"),
@@ -407,7 +406,6 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	if genesis == nil {
 		genesis = blockchain.DefaultGenesisBlock()
-		genesis.Coinbase = *coinbaseAddrs[0]
 		genesis.Config = Forks["Byzantium"]
 		genesis.GasLimit = GasLimit
 		genesis.ExtraData = extraData

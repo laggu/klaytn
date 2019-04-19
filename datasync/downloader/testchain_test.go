@@ -123,7 +123,7 @@ func (tc *testChain) generate(n int, seed byte, parent *types.Block, heavy bool)
 	// defer func() { fmt.Printf("test chain generated in %v\n", time.Since(start)) }()
 
 	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), testDB, n, func(i int, block *blockchain.BlockGen) {
-		block.SetCoinbase(common.Address{seed})
+		block.SetRewardbase(common.Address{seed})
 		// If a heavy chain is requested, delay blocks to raise difficulty
 		if heavy {
 			block.OffsetTime(-1)

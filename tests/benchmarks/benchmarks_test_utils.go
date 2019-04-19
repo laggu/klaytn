@@ -34,7 +34,6 @@ type BenchConfig struct {
 	ChainConfig *params.ChainConfig
 	Difficulty  *big.Int
 	Origin      common.Address
-	Coinbase    common.Address
 	BlockNumber *big.Int
 	Time        *big.Int
 	GasLimit    uint64
@@ -53,7 +52,6 @@ func makeBenchConfig() *BenchConfig {
 	cfg.ChainConfig = &params.ChainConfig{ChainID: big.NewInt(1)}
 	cfg.Difficulty = new(big.Int)
 	// Origin      common.Address
-	// Coinbase    common.Address
 	cfg.BlockNumber = new(big.Int)
 	cfg.Time = big.NewInt(time.Now().Unix())
 	cfg.GasLimit = math.MaxUint64
@@ -80,7 +78,6 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 		GetHash:     func(uint64) common.Hash { return common.Hash{} },
 
 		Origin:      cfg.Origin,
-		Coinbase:    cfg.Coinbase,
 		BlockNumber: cfg.BlockNumber,
 		Time:        cfg.Time,
 		Difficulty:  cfg.Difficulty,

@@ -49,10 +49,9 @@ type BlockGen struct {
 	engine consensus.Engine
 }
 
-// SetRewardbase sets the coinbase of the generated block.
-// It can be called at most once.
-func (b *BlockGen) SetCoinbase(addr common.Address) {
-	b.header.Coinbase = addr
+// SetRewardbase sets the rewardbase field of the generated block.
+func (b *BlockGen) SetRewardbase(addr common.Address) {
+	b.header.Rewardbase = addr
 }
 
 // SetExtra sets the extra data field of the generated block.
@@ -69,8 +68,8 @@ func (b *BlockGen) SetVoteData(data []byte) {
 	b.header.Vote = data
 }
 
-// AddTx adds a transaction to the generated block. If no coinbase has
-// been set, the block's coinbase is set to the zero address.
+// AddTx adds a transaction to the generated block.
+// In gxhash, arbitary address is used as a block author's address.
 //
 // AddTx panics if the transaction cannot be executed. In addition to
 // the protocol-imposed limitations (gas limit, etc.), there are some
@@ -81,8 +80,8 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 	b.AddTxWithChain(nil, tx)
 }
 
-// AddTxWithChain adds a transaction to the generated block. If no coinbase has
-// been set, the block's coinbase is set to the zero address.
+// AddTxWithChain adds a transaction to the generated block.
+// In gxhash, arbitary address is used as a block author's address.
 //
 // AddTxWithChain panics if the transaction cannot be executed. In addition to
 // the protocol-imposed limitations (gas limit, etc.), there are some
@@ -91,7 +90,7 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 // the block in chain will be returned.
 func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := ApplyTransaction(b.config, bc, &b.header.Coinbase, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
+	receipt, _, err := ApplyTransaction(b.config, bc, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -152,8 +151,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 //
 // The generator function is called with a new block generator for
 // every block. Any transactions added to the generator
-// become part of the block. If gen is nil, the blocks will be empty
-// and their coinbase will be the zero address.
+// become part of the block. If gen is nil, the blocks will be empty.
 //
 // Blocks created by GenerateChain do not contain valid proof of work
 // values. Inserting them into BlockChain requires use of FakePow or
@@ -215,7 +213,6 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 	return &types.Header{
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
-		Coinbase:   parent.Coinbase(),
 		Difficulty: engine.CalcDifficulty(chain, time.Uint64(), &types.Header{
 			Number:     parent.Number(),
 			Time:       new(big.Int).Sub(time, big.NewInt(10)),
@@ -239,7 +236,7 @@ func makeHeaderChain(parent *types.Header, n int, engine consensus.Engine, db da
 // makeBlockChain creates a deterministic chain of blocks rooted at parent.
 func makeBlockChain(parent *types.Block, n int, engine consensus.Engine, db database.DBManager, seed int) []*types.Block {
 	blocks, _ := GenerateChain(params.TestChainConfig, parent, engine, db, n, func(i int, b *BlockGen) {
-		b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
+		b.SetRewardbase(common.Address{0: byte(seed), 19: byte(i)})
 	})
 	return blocks
 }

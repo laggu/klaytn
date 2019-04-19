@@ -118,11 +118,11 @@ type worker struct {
 	proc    blockchain.Validator
 	chainDB database.DBManager
 
-	coinbase common.Address
-	extra    []byte
+	extra []byte
 
-	currentMu sync.Mutex
-	current   *Task
+	currentMu  sync.Mutex
+	current    *Task
+	rewardbase common.Address
 
 	snapshotMu    sync.RWMutex
 	snapshotBlock *types.Block
@@ -137,7 +137,7 @@ type worker struct {
 	nodetype p2p.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, backend Backend, mux *event.TypeMux, nodetype p2p.ConnType) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype p2p.ConnType) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -150,10 +150,10 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		recv:        make(chan *Result, resultQueueSize),
 		chain:       backend.BlockChain(),
 		proc:        backend.BlockChain().Validator(),
-		coinbase:    coinbase,
 		agents:      make(map[Agent]struct{}),
 		unconfirmed: newUnconfirmedBlocks(backend.BlockChain(), miningLogAtDepth),
 		nodetype:    nodetype,
+		rewardbase:  rewardbase,
 	}
 
 	// istanbul BFT
@@ -170,12 +170,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	//	}
 
 	return worker
-}
-
-func (self *worker) setCoinbase(addr common.Address) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	self.coinbase = addr
 }
 
 func (self *worker) setExtra(extra []byte) {
@@ -287,7 +281,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 					txs[acc] = append(txs[acc], tx)
 				}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs) // TODO-Klaytn-Issue136 gasPrice
-				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
+				self.current.commitTransactions(self.mux, txset, self.chain, self.rewardbase)
 				self.updateSnapshot()
 				self.current.stateMu.Unlock()
 				self.currentMu.Unlock()
@@ -504,10 +498,6 @@ func (self *worker) commitNewWork() {
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
 	}
-	// Only set the coinbase if we are mining (avoid spurious block rewards)
-	if atomic.LoadInt32(&self.mining) == 1 {
-		header.Coinbase = self.coinbase
-	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return
@@ -526,7 +516,7 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending) // TODO-Klaytn-Issue136 gasPrice
-	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
+	work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
@@ -555,8 +545,8 @@ func (self *worker) updateSnapshot() {
 	self.snapshotState = self.current.state.Copy()
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *blockchain.BlockChain, coinbase common.Address) {
-	coalescedLogs := env.ApplyTransactions(txs, bc, coinbase)
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *blockchain.BlockChain, rewardbase common.Address) {
+	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
@@ -578,7 +568,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *blockchain.BlockChain, coinbase common.Address) []*types.Log {
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *blockchain.BlockChain, rewardbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
@@ -648,7 +638,7 @@ CommitTransactionLoop:
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
-		err, logs := env.commitTransaction(tx, bc, coinbase, vmConfig)
+		err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		switch err {
 		// TODO-Klaytn-Issue136
 		case blockchain.ErrGasLimitReached:
@@ -696,10 +686,10 @@ CommitTransactionLoop:
 	return coalescedLogs
 }
 
-func (env *Task) commitTransaction(tx *types.Transaction, bc *blockchain.BlockChain, coinbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
+func (env *Task) commitTransaction(tx *types.Transaction, bc *blockchain.BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := blockchain.ApplyTransaction(env.config, bc, &coinbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	receipt, _, err := blockchain.ApplyTransaction(env.config, bc, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return err, nil

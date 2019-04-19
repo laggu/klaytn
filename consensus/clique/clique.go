@@ -157,7 +157,6 @@ func sigHash(header *types.Header) (hash common.Hash) {
 
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
-		header.Coinbase,
 		header.Root,
 		header.TxHash,
 		header.ReceiptHash,
@@ -285,11 +284,6 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
-	// Checkpoint blocks need to enforce zero beneficiary
-	checkpoint := (number % c.config.Epoch) == 0
-	if checkpoint && header.Coinbase != (common.Address{}) {
-		return errInvalidCheckpointBeneficiary
-	}
 	// Check that the extra-data contains both the vanity and signature
 	if len(header.Extra) < ExtraVanity {
 		return errMissingVanity
@@ -299,6 +293,7 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	}
 	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
 	signersBytes := len(header.Extra) - ExtraVanity - ExtraSeal
+	checkpoint := (number % c.config.Epoch) == 0
 	if !checkpoint && signersBytes != 0 {
 		return errExtraSigners
 	}
