@@ -24,7 +24,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
-		MainChainAccountAddr    *common.Address
+		MainChainAccountAddr    *common.Address `toml:",omitempty"`
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		SkipBcVersionCheck      bool `toml:"-"`
@@ -92,7 +92,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
-		MainChainAccountAddr    *common.Address
+		MainChainAccountAddr    *common.Address `toml:",omitempty"`
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		SkipBcVersionCheck      *bool `toml:"-"`

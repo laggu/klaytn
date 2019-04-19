@@ -87,8 +87,8 @@ type SCConfig struct {
 	MaxPeer    int
 
 	// ServiceChain
-	MainChainAccountAddr    *common.Address
-	ServiceChainAccountAddr *common.Address
+	MainChainAccountAddr    *common.Address `toml:",omitempty"`
+	ServiceChainAccountAddr *common.Address `toml:",omitempty"`
 	chainkey                *ecdsa.PrivateKey
 	nodekey                 *ecdsa.PrivateKey
 	AnchoringPeriod         uint64

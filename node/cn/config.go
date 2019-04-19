@@ -94,7 +94,7 @@ type Config struct {
 	NoPruning bool
 
 	// Service chain options
-	MainChainAccountAddr *common.Address // A hex account address in the main chain used to sign a service chain transaction.
+	MainChainAccountAddr *common.Address `toml:",omitempty"` // A hex account address in the main chain used to sign a service chain transaction.
 	AnchoringPeriod      uint64          // Period when child chain sends an anchoring transaction to the main chain. Default value is 1.
 	SentChainTxsLimit    uint64          // Number of chain transactions stored for resending. Default value is 1000.
 

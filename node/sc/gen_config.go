@@ -25,8 +25,8 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		ChildChainIndexing      bool
 		BridgePort              string
 		MaxPeer                 int
-		MainChainAccountAddr    *common.Address
-		ServiceChainAccountAddr *common.Address
+		MainChainAccountAddr    *common.Address `toml:",omitempty"`
+		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		ParentChainURL          string
@@ -73,8 +73,8 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ChildChainIndexing      *bool
 		BridgePort              *string
 		MaxPeer                 *int
-		MainChainAccountAddr    *common.Address
-		ServiceChainAccountAddr *common.Address
+		MainChainAccountAddr    *common.Address `toml:",omitempty"`
+		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		ParentChainURL          *string
