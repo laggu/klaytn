@@ -184,7 +184,7 @@ func TestBridgeManager(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
 					}
@@ -193,7 +193,7 @@ func TestBridgeManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := bridge.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce)
+					tx, err := bridge.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
@@ -208,7 +208,7 @@ func TestBridgeManager(t *testing.T) {
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
-					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, nftAddr, ev.RequestNonce)
+					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawERC721: %v", err)
 					}
@@ -505,7 +505,7 @@ func TestBridgeManagerJournal(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)

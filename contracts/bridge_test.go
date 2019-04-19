@@ -103,8 +103,8 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 }
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
-func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, big.NewInt(int64(value)), to, nonce)
+func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, big.NewInt(int64(value)), to, nonce, blockNum)
 	if err != nil {
 		t.Fatalf("fail to WithdrawKLAY %v", err)
 		return nil
@@ -205,8 +205,10 @@ loop:
 	t.Fatal("fail to check monotone increasing nonce", "lastNonce", expectedNonce)
 }
 
-// TestBridgeHandleValueTransferNonce checks the bridge allow the handle value transfer tx with only serialized nonce.
-func TestBridgeHandleValueTransferNonce(t *testing.T) {
+// TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
+// - the bridge allows the handle value transfer with only serialized nonce.
+// - the bridge correctly stores and returns the block number.
+func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
@@ -240,7 +242,8 @@ func TestBridgeHandleValueTransferNonce(t *testing.T) {
 	sentNonce := uint64(0)
 	testCount := uint64(1000)
 	transferAmount := uint64(100)
-	tx = SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, t)
+	sentBlockNumber := uint64(100000)
+	tx = SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, sentBlockNumber, t)
 	backend.Commit()
 
 	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), timeOut)
@@ -266,16 +269,29 @@ loop:
 				return
 			}
 			sentNonce++
-
+			sentBlockNumber++
 			// fail case : smaller nonce
-			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce+1, t)
+			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce+1, sentBlockNumber+1, t)
 
 			// fail case : bigger nonce
-			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce-1, t)
+			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce-1, sentBlockNumber-1, t)
 
 			// success case : right nonce
-			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, t)
+			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, sentBlockNumber, t)
 			backend.Commit()
+
+			resultBlockNumber, err := b.LastHandledRequestBlockNumber(nil)
+			if err != nil {
+				t.Fatal("failed to get LastHandledRequestBlockNumber.", "err", err)
+			}
+
+			resultHandleNonce, err := b.HandleNonce(nil)
+			if err != nil {
+				t.Fatal("failed to get HandleNonce.", "err", err)
+			}
+
+			assert.Equal(t, sentNonce, resultHandleNonce-1)
+			assert.Equal(t, sentBlockNumber, resultBlockNumber)
 
 		case err := <-handleSub.Err():
 			t.Log("Contract Event Loop Running Stop by handleSub.Err()", "err", err)

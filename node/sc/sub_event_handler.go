@@ -84,7 +84,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *B
 		logger.Debug("Got request KLAY transfer event")
 		if bridgeInfo.onServiceChain {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getServiceChainAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
-			tx, err := bridgeInfo.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber)
 			if err != nil {
 				logger.Error("Child Bridge failed to HandleKLAYTransfer", "err", err)
 				return err
@@ -94,7 +94,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *B
 			cce.handler.LockMainChainAccount()
 			defer cce.handler.UnLockMainChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getMainChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
-			tx, err := bridgeInfo.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber)
 			if err != nil {
 				logger.Error("Parent Bridge failed to HandleKLAYTransfer", "err", err)
 				return err
@@ -106,7 +106,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *B
 		logger.Debug("Got request ev transfer event")
 		if bridgeInfo.onServiceChain {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getServiceChainAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
-			tx, err := bridgeInfo.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 			if err != nil {
 				logger.Error("Child Bridge failed to HandleTokenTransfer", "err", err)
 				return err
@@ -116,7 +116,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *B
 			cce.handler.LockMainChainAccount()
 			defer cce.handler.UnLockMainChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getMainChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
-			tx, err := bridgeInfo.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 			if err != nil {
 				logger.Error("Parent Bridge failed to HandleTokenTransfer", "err", err)
 				return err
@@ -128,7 +128,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *B
 		logger.Debug("Got request NFT transfer event")
 		if bridgeInfo.onServiceChain {
 			auth := MakeTransactOpts(cce.handler.nodeKey, big.NewInt((int64)(cce.handler.getServiceChainAccountNonce())), cce.subbridge.getChainID(), cce.subbridge.txPool.GasPrice())
-			tx, err := bridgeInfo.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 			if err != nil {
 				logger.Error("Child Bridge failed to HandleNFTTransfer", "err", err)
 				return err
@@ -138,7 +138,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *B
 			cce.handler.LockMainChainAccount()
 			defer cce.handler.UnLockMainChainAccount()
 			auth := MakeTransactOpts(cce.handler.chainKey, big.NewInt((int64)(cce.handler.getMainChainAccountNonce())), cce.handler.parentChainID, new(big.Int).SetUint64(cce.subbridge.handler.remoteGasPrice))
-			tx, err := bridgeInfo.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce)
+			tx, err := bridgeInfo.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 			if err != nil {
 				logger.Error("Parent Bridge failed to HandleNFTTransfer", "err", err)
 				return err

@@ -159,7 +159,7 @@ func prepare(t *testing.T) testInfo {
 				case 0:
 					assert.Equal(t, addr, ev.ContractAddr)
 					opts := &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-					tx, err := br.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce)
+					tx, err := br.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 					}

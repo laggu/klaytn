@@ -23,6 +23,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     uint64 public requestNonce;
     uint64 public handleNonce;
 
+    uint64 public lastHandledRequestBlockNumber;
+
     enum TokenKind {
         KLAY,
         TOKEN,
@@ -77,40 +79,46 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     }
 
     // handleTokenTransfer sends the token by the request.
-    function handleTokenTransfer(uint256 _amount, address _to, address _contractAddress, uint64 _handleNonce)
+    function handleTokenTransfer(uint256 _amount, address _to, address _contractAddress, uint64 _requestNonce, uint64 _requestBlockNumber)
     onlyOwner
     external
     {
-        require(handleNonce == _handleNonce, "mismatched handle nonce");
+        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
         if (onServiceChain == false){
             balances.token[_contractAddress] = balances.token[_contractAddress].sub(_amount);
         }
         IERC20(_contractAddress).transfer(_to, _amount);
         emit HandleValueTransfer(_to, TokenKind.TOKEN, _contractAddress, _amount, handleNonce);
+
+        lastHandledRequestBlockNumber = _requestBlockNumber;
+
         handleNonce++;
     }
 
     // handleKLAYTransfer sends the KLAY by the request.
-    function handleKLAYTransfer(uint256 _amount, address _to, uint64 _handleNonce)
+    function handleKLAYTransfer(uint256 _amount, address _to, uint64 _requestNonce, uint64 _requestBlockNumber)
     onlyOwner
     external
     {
-        require(handleNonce == _handleNonce, "mismatched handle nonce");
+        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
         // TODO-Klaytn-Servicechain for KLAY, we can replace below variable with embedded variable.
         balances.klay = balances.klay.sub(_amount);
         _to.transfer(_amount); // ensure it's not reentrant
         emit HandleValueTransfer(_to, TokenKind.KLAY, address(0), _amount, handleNonce);
+
+        lastHandledRequestBlockNumber = _requestBlockNumber;
+
         handleNonce++;
     }
 
     // handleNFTTransfer sends the NFT by the request.
-    function handleNFTTransfer(uint256 _uid, address _to, address _contractAddress, uint64 _handleNonce)
+    function handleNFTTransfer(uint256 _uid, address _to, address _contractAddress, uint64 _requestNonce, uint64 _requestBlockNumber)
     onlyOwner
     external
     {
-        require(handleNonce == _handleNonce, "mismatched handle nonce");
+        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
         if (onServiceChain == false){
             require(balances.nft[_contractAddress][_uid], "Does not own token");
@@ -119,6 +127,9 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
 
         IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
         emit HandleValueTransfer(_to, TokenKind.NFT, _contractAddress, _uid, handleNonce);
+
+        lastHandledRequestBlockNumber = _requestBlockNumber;
+
         handleNonce++;
     }
 

@@ -52,6 +52,7 @@ type TokenReceivedEvent struct {
 	To           common.Address
 	Amount       *big.Int // Amount is UID in NFT
 	RequestNonce uint64
+	BlockNumber  uint64
 }
 
 // TokenWithdraw Event from SmartContract
@@ -393,6 +394,7 @@ func (bm *BridgeManager) loop(
 				To:           ev.To,
 				Amount:       ev.Amount,
 				RequestNonce: ev.RequestNonce,
+				BlockNumber:  ev.Raw.BlockNumber,
 			}
 			bm.tokenReceived.Send(receiveEvent)
 		case ev := <-withdrawCh:
