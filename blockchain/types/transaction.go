@@ -196,6 +196,10 @@ func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 	return tx.data.Validate(db, blockNumber)
 }
 
+func (tx *Transaction) ValidateMutableValue(db StateDB) bool {
+	return tx.data.ValidateMutableValue(db)
+}
+
 func (tx *Transaction) GetRoleTypeForValidation() accountkey.RoleType {
 	return tx.data.GetRoleTypeForValidation()
 }

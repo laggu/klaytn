@@ -259,6 +259,11 @@ type TxInternalData interface {
 	// This function is called in TxPool.validateTx() and TxInternalData.Execute().
 	Validate(stateDB StateDB, currentBlockNumber uint64) error
 
+	// ValidateMutableValue returns true if tx is validated. Otherwise, it returns false.
+	// The function validates tx values associated with mutable values in the state.
+	// MutableValues: accountKey, the existence of creating address, feePayer's balance, etc.
+	ValidateMutableValue(stateDB StateDB) bool
+
 	// IsLegacyTransaction returns true if the tx type is a legacy transaction (TxInternalDataLegacy) object.
 	IsLegacyTransaction() bool
 

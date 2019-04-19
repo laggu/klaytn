@@ -338,6 +338,13 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	return nil
 }
 
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) ValidateMutableValue(stateDB StateDB) bool {
+	if stateDB.Exist(t.Recipient) {
+		return false
+	}
+	return true
+}
+
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) FillContractAddress(from common.Address, r *Receipt) {
 	r.ContractAddress = t.Recipient
 }

@@ -212,6 +212,10 @@ func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint
 	return nil
 }
 
+func (t *TxInternalDataCancel) ValidateMutableValue(stateDB StateDB) bool {
+	return true
+}
+
 func (t *TxInternalDataCancel) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return nil, gas, nil

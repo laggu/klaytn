@@ -349,6 +349,10 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint
 	return nil
 }
 
+func (t *TxInternalDataLegacy) ValidateMutableValue(stateDB StateDB) bool {
+	return true
+}
+
 func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {
 	if t.Recipient == nil {
 		codeHash := crypto.Keccak256Hash(t.Payload)

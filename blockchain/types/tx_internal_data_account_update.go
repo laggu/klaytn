@@ -323,6 +323,10 @@ func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumb
 	return nil
 }
 
+func (t *TxInternalDataAccountUpdate) ValidateMutableValue(stateDB StateDB) bool {
+	return true
+}
+
 func (t *TxInternalDataAccountUpdate) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	err = stateDB.UpdateKey(sender.Address(), t.Key, currentBlockNumber)

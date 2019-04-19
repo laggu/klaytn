@@ -275,6 +275,10 @@ func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, current
 	return nil
 }
 
+func (t *TxInternalDataSmartContractExecution) ValidateMutableValue(stateDB StateDB) bool {
+	return true
+}
+
 func (t *TxInternalDataSmartContractExecution) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if err := t.Validate(stateDB, currentBlockNumber); err != nil {
 		stateDB.IncNonce(sender.Address())

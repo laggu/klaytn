@@ -248,6 +248,10 @@ func (t *TxInternalDataFeeDelegatedCancel) Validate(stateDB StateDB, currentBloc
 	return nil
 }
 
+func (t *TxInternalDataFeeDelegatedCancel) ValidateMutableValue(stateDB StateDB) bool {
+	return true
+}
+
 func (t *TxInternalDataFeeDelegatedCancel) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return nil, gas, nil

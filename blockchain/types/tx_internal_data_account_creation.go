@@ -388,6 +388,13 @@ func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNu
 	return nil
 }
 
+func (t *TxInternalDataAccountCreation) ValidateMutableValue(stateDB StateDB) bool {
+	if stateDB.Exist(t.Recipient) {
+		return false
+	}
+	return true
+}
+
 func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	if err := t.Validate(stateDB, currentBlockNumber); err != nil {
 		stateDB.IncNonce(sender.Address())

@@ -302,6 +302,10 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB Stat
 	return nil
 }
 
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) ValidateMutableValue(stateDB StateDB) bool {
+	return true
+}
+
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return vm.Call(sender, t.Recipient, nil, gas, value)

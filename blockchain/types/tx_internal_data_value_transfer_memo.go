@@ -270,6 +270,10 @@ func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlock
 	return nil
 }
 
+func (t *TxInternalDataValueTransferMemo) ValidateMutableValue(stateDB StateDB) bool {
+	return true
+}
+
 func (t *TxInternalDataValueTransferMemo) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
 	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
