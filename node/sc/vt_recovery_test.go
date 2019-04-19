@@ -21,7 +21,6 @@ import (
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/accounts/abi/bind/backends"
 	"github.com/ground-x/klaytn/blockchain"
-	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
@@ -36,21 +35,22 @@ import (
 )
 
 type testInfo struct {
-	sim       *backends.SimulatedBackend
-	sc        *SubBridge
-	bm        *BridgeManager
-	bridge    *bridge.Bridge
-	nodeAuth  *bind.TransactOpts
-	aliceAuth *bind.TransactOpts
-	contract  common.Address
+	sim          *backends.SimulatedBackend
+	sc           *SubBridge
+	bm           *BridgeManager
+	localBridge  *bridge.Bridge
+	remoteBridge *bridge.Bridge
+	nodeAuth     *bind.TransactOpts
+	aliceAuth    *bind.TransactOpts
 }
 
 const testGasLimit = 100000
-const testTimeout = 5 * time.Second
 const testAmount = 321
+const testTimeout = 5 * time.Second
 const testTxCount = 7
-const testBlockOffset = 3 // +2 for genesis and deploy, +1 by hardcoded hint
-const testNonceOffset = 1 // +1 by hardcoded hint
+const testBlockOffset = 3 // +2 for genesis and bridge contract, +1 by a hardcoded hint
+const testNonceOffset = 1 // +1 by a hardcoded hint
+const testPendingCount = 2
 
 // TestValueTransferRecovery tests value transfer recovery.
 func TestValueTransferRecovery(t *testing.T) {
@@ -65,15 +65,25 @@ func TestValueTransferRecovery(t *testing.T) {
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true})
 
 	// 2. Get recovery hint (currently hardcoded to block number 3)
-	hint := vtr.getRecoveryHint(info.contract)
+	requestHint, err := vtr.getRequestValueTransferHint(info.localBridge)
+	if err != nil {
+		t.Fatal("fail to get request value transfer hint")
+	}
+	handleHint, err := vtr.getHandleValueTransferHint(info.remoteBridge)
+	if err != nil {
+		t.Fatal("fail to get handle value transfer hint")
+	}
+	fmt.Println("request hint", requestHint, "handle hint", handleHint)
+	assert.Equal(t, uint64(testTxCount), requestHint.nonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), handleHint.nonce)
 
 	// 3. Request logs from the hint
-	events, err := vtr.getPendingEvents(info.bridge, hint)
+	events, err := vtr.getPendingEvents(info.localBridge, requestHint, handleHint)
 	if err != nil {
 		t.Fatal("fail to get logs from bridge contract")
 	}
 
-	// 4. Confirm pending transactions
+	// 4. Check pending transactions
 	fmt.Println("start to check pending tx")
 	var count = 0
 	for index, evt := range events {
@@ -129,15 +139,30 @@ func prepare(t *testing.T) testInfo {
 
 	// Prepare manager and deploy bridge contract
 	bm, err := NewBridgeManager(sc)
-	addr, err := bm.DeployBridgeTest(sim, false)
-	br := bm.bridges[addr].bridge
-	fmt.Println("BridgeContract", addr.Hex())
-	sim.Commit() // block
-	err = bm.SubscribeEvent(addr)
+	localAddr, err := bm.DeployBridgeTest(sim, false)
 	if err != nil {
-		t.Fatalf("bridge manager event subscription failed")
+		t.Fatal("deploy bridge test failed", localAddr)
 	}
-	info := testInfo{sim, sc, bm, br, nodeAuth, aliceAuth, addr}
+	remoteAddr, err := bm.DeployBridgeTest(sim, false) // mimic remote by local
+	if err != nil {
+		t.Fatal("deploy bridge test failed", remoteAddr)
+	}
+	localBridge := bm.bridges[localAddr].bridge
+	remoteBridge := bm.bridges[remoteAddr].bridge
+	fmt.Println("BridgeContract", localAddr.Hex())
+	fmt.Println("BridgeContract", remoteAddr.Hex())
+	sim.Commit() // block
+
+	// Subscribe events
+	err = bm.SubscribeEvent(localAddr)
+	if err != nil {
+		t.Fatalf("local bridge manager event subscription failed")
+	}
+	err = bm.SubscribeEvent(remoteAddr)
+	if err != nil {
+		t.Fatalf("remote bridge manager event subscription failed")
+	}
+	info := testInfo{sim, sc, bm, localBridge, remoteBridge, nodeAuth, aliceAuth}
 
 	// Prepare channel for event handling
 	tokenCh := make(chan TokenReceivedEvent)
@@ -146,31 +171,37 @@ func prepare(t *testing.T) testInfo {
 	bm.SubscribeTokenWithDraw(tokenSendCh)
 
 	wg := sync.WaitGroup{}
-	wg.Add(2 * testTxCount)
+	wg.Add((2 * testTxCount) - testPendingCount)
 
 	// Start a event handling loop
 	go func() {
 		for {
 			select {
 			case ev := <-tokenCh:
-				fmt.Println("\treceive TokenReceivedEvent", ev.ContractAddr.String())
+				fmt.Println("\tTokenReceivedEvent", ev.ContractAddr.String())
 
 				switch ev.TokenType {
 				case 0:
-					assert.Equal(t, addr, ev.ContractAddr)
+					// Intentionally lost a single handle value transfer.
+					// Since the increase of monotony in nonce is checked in the contract,
+					// all subsequent handle transfer will be failed.
+					if ev.RequestNonce == (testTxCount - testPendingCount) {
+						fmt.Println("missing handle value transfer", "nonce", ev.RequestNonce)
+						break
+					}
+					assert.Equal(t, localAddr, ev.ContractAddr)
 					opts := &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-					tx, err := br.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+					_, err := remoteBridge.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 					}
-					fmt.Println("\tHandleKLAYTransfer Tx", tx.Hash().Hex())
 					sim.Commit() // block
 				}
 				wg.Done()
 
 			case ev := <-tokenSendCh:
-				assert.Equal(t, addr, ev.ContractAddr)
-				fmt.Println("\treceive TokenTransferEvent", ev.ContractAddr.Hex())
+				assert.Equal(t, remoteAddr, ev.ContractAddr)
+				fmt.Println("\tTokenTransferEvent", ev.ContractAddr.Hex())
 				wg.Done()
 			}
 		}
@@ -194,10 +225,9 @@ func valueTransfer(info testInfo) {
 		Value:    big.NewInt(testAmount),
 		GasLimit: testGasLimit,
 	}
-	tx, err := info.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From)
+	_, err := info.localBridge.RequestKLAYTransfer(opts, info.aliceAuth.From)
 	if err != nil {
 		log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 	}
-	fmt.Println("\tRequestKLAYTransfer Tx", tx.Hash().Hex())
 	info.sim.Commit() // block
 }

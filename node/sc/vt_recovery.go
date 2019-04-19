@@ -18,15 +18,13 @@ package sc
 
 import (
 	"github.com/ground-x/klaytn/accounts/abi/bind"
-	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/bridge"
 )
 
-// valueTransferHint stores the last handled block number, tx index and bridge address.
+// valueTransferHint stores the last handled block number and nonce (Request or Handle).
 type valueTransferHint struct {
-	blockNumber   uint64
-	txIndex       uint64
-	bridgeAddress common.Address
+	blockNumber uint64
+	nonce       uint64
 }
 
 // valueTransferRecovery stores status information for the value transfer recovery process.
@@ -44,18 +42,32 @@ func NewValueTransferRecovery(config *SCConfig) *valueTransferRecovery {
 	}
 }
 
-// getRecoveryHint loads hint information for value transfer recovery.
-// TODO-Klaytn-Servicechain: load block number, tx index, bridge addresses from a journal
-func (vtr *valueTransferRecovery) getRecoveryHint(contract common.Address) *valueTransferHint {
-	return &valueTransferHint{3, 1, contract}
+// getRequestValueTransferHint gets a hint for request value transfer transactions.
+func (vtr *valueTransferRecovery) getRequestValueTransferHint(br *bridge.Bridge) (*valueTransferHint, error) {
+	blockNumber := uint64(3) // Fixme: get a blockNumber by calling br.BlockNumber(nil)
+	nonce, err := br.RequestNonce(nil)
+	if err != nil {
+		return nil, err
+	}
+	return &valueTransferHint{blockNumber, nonce}, nil
+}
+
+// getHandleValueTransferHint gets a hint for request value transfer transactions.
+func (vtr *valueTransferRecovery) getHandleValueTransferHint(br *bridge.Bridge) (*valueTransferHint, error) {
+	blockNumber := uint64(3) // Fixme: get a blockNumber by calling br.BlockNumber(nil)
+	nonce, err := br.HandleNonce(nil)
+	if err != nil {
+		return nil, err
+	}
+	return &valueTransferHint{blockNumber, nonce}, nil
 }
 
 // getPendingEvents gets pending events by using a bridge's log filter.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
 // TODO-Klaytn-Servicechain: check if pending or not
-func (vtr *valueTransferRecovery) getPendingEvents(br *bridge.Bridge, hint *valueTransferHint) ([]*bridge.BridgeRequestValueTransfer, error) {
+func (vtr *valueTransferRecovery) getPendingEvents(br *bridge.Bridge, requestHint, handleHint *valueTransferHint) ([]*bridge.BridgeRequestValueTransfer, error) {
 	vtr.pendingEvents = []*bridge.BridgeRequestValueTransfer{}
-	it, err := br.FilterRequestValueTransfer(&bind.FilterOpts{Start: hint.blockNumber})
+	it, err := br.FilterRequestValueTransfer(&bind.FilterOpts{Start: handleHint.blockNumber})
 	if err != nil {
 		return []*bridge.BridgeRequestValueTransfer{}, err
 	}
