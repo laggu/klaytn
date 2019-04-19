@@ -49,8 +49,8 @@ const testAmount = 321
 const testTimeout = 5 * time.Second
 const testTxCount = 7
 const testBlockOffset = 3 // +2 for genesis and bridge contract, +1 by a hardcoded hint
-const testNonceOffset = 1 // +1 by a hardcoded hint
 const testPendingCount = 2
+const testNonceOffset = testTxCount - testPendingCount
 
 // TestValueTransferRecovery tests value transfer recovery.
 func TestValueTransferRecovery(t *testing.T) {
@@ -65,26 +65,22 @@ func TestValueTransferRecovery(t *testing.T) {
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true})
 
 	// 2. Get recovery hint (currently hardcoded to block number 3)
-	requestHint, err := vtr.getRequestValueTransferHint(info.localBridge)
+	hint, err := vtr.getValueTransferHint(info.localBridge, info.remoteBridge)
 	if err != nil {
 		t.Fatal("fail to get request value transfer hint")
 	}
-	handleHint, err := vtr.getHandleValueTransferHint(info.remoteBridge)
-	if err != nil {
-		t.Fatal("fail to get handle value transfer hint")
-	}
-	fmt.Println("request hint", requestHint, "handle hint", handleHint)
-	assert.Equal(t, uint64(testTxCount), requestHint.nonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount), handleHint.nonce)
+	fmt.Println("value transfer hint", hint)
+	assert.Equal(t, uint64(testTxCount-1), hint.requestNonce) // nonce begins at zero.
+	assert.Equal(t, uint64(testTxCount-1-testPendingCount), hint.handleNonce)
 
 	// 3. Request logs from the hint
-	events, err := vtr.getPendingEvents(info.localBridge, requestHint, handleHint)
+	events, err := vtr.getPendingEvents(info.localBridge, hint)
 	if err != nil {
 		t.Fatal("fail to get logs from bridge contract")
 	}
 
 	// 4. Check pending transactions
-	fmt.Println("start to check pending tx")
+	fmt.Println("start to check pending tx", "len", len(events))
 	var count = 0
 	for index, evt := range events {
 		fmt.Println("\tPending Tx:", evt.Raw.TxHash.String())
@@ -97,7 +93,7 @@ func TestValueTransferRecovery(t *testing.T) {
 		})
 		count++
 	}
-	assert.Equal(t, testTxCount-1, count)
+	assert.Equal(t, testPendingCount, count)
 
 	// 5. Recover pending transactions
 	vtr.recoverTransactions()

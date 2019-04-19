@@ -19,12 +19,14 @@ package sc
 import (
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/contracts/bridge"
+	"github.com/pkg/errors"
 )
 
 // valueTransferHint stores the last handled block number and nonce (Request or Handle).
 type valueTransferHint struct {
-	blockNumber uint64
-	nonce       uint64
+	blockNumber  uint64
+	requestNonce uint64
+	handleNonce  uint64
 }
 
 // valueTransferRecovery stores status information for the value transfer recovery process.
@@ -42,38 +44,56 @@ func NewValueTransferRecovery(config *SCConfig) *valueTransferRecovery {
 	}
 }
 
-// getRequestValueTransferHint gets a hint for request value transfer transactions.
-func (vtr *valueTransferRecovery) getRequestValueTransferHint(br *bridge.Bridge) (*valueTransferHint, error) {
-	blockNumber := uint64(3) // Fixme: get a blockNumber by calling br.BlockNumber(nil)
-	nonce, err := br.RequestNonce(nil)
+// getValueTransferHint gets a hint for value transfer transactions.
+// The hint includes block number of the request value transfer, request nonce and handle nonce.
+func (vtr *valueTransferRecovery) getValueTransferHint(requestBridge, handleBridge *bridge.Bridge) (*valueTransferHint, error) {
+	if requestBridge == nil {
+		return nil, errors.New("request bridge is nil")
+	}
+	if handleBridge == nil {
+		return nil, errors.New("handle bridge is nil")
+	}
+	blockNumber, err := handleBridge.LastHandledRequestBlockNumber(nil)
 	if err != nil {
 		return nil, err
 	}
-	return &valueTransferHint{blockNumber, nonce}, nil
-}
-
-// getHandleValueTransferHint gets a hint for request value transfer transactions.
-func (vtr *valueTransferRecovery) getHandleValueTransferHint(br *bridge.Bridge) (*valueTransferHint, error) {
-	blockNumber := uint64(3) // Fixme: get a blockNumber by calling br.BlockNumber(nil)
-	nonce, err := br.HandleNonce(nil)
+	requestNonce, err := requestBridge.RequestNonce(nil)
 	if err != nil {
 		return nil, err
 	}
-	return &valueTransferHint{blockNumber, nonce}, nil
+	handleNonce, err := handleBridge.HandleNonce(nil)
+	if err != nil {
+		return nil, err
+	}
+	// -1 to get a nonce in the logs.
+	return &valueTransferHint{blockNumber, requestNonce - 1, handleNonce - 1}, nil
 }
 
 // getPendingEvents gets pending events by using a bridge's log filter.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
-// TODO-Klaytn-Servicechain: check if pending or not
-func (vtr *valueTransferRecovery) getPendingEvents(br *bridge.Bridge, requestHint, handleHint *valueTransferHint) ([]*bridge.BridgeRequestValueTransfer, error) {
+func (vtr *valueTransferRecovery) getPendingEvents(br *bridge.Bridge, hint *valueTransferHint) ([]*bridge.BridgeRequestValueTransfer, error) {
+	if br == nil {
+		return []*bridge.BridgeRequestValueTransfer{}, errors.New("bridge is nil")
+	}
+	if hint.requestNonce == hint.handleNonce {
+		return []*bridge.BridgeRequestValueTransfer{}, nil
+	}
+
 	vtr.pendingEvents = []*bridge.BridgeRequestValueTransfer{}
-	it, err := br.FilterRequestValueTransfer(&bind.FilterOpts{Start: handleHint.blockNumber})
+	it, err := br.FilterRequestValueTransfer(&bind.FilterOpts{Start: hint.blockNumber}) // to the current
 	if err != nil {
 		return []*bridge.BridgeRequestValueTransfer{}, err
 	}
+
 	for it.Next() {
-		vtr.pendingEvents = append(vtr.pendingEvents, it.Event)
+		logger.Debug("pending nonce in the events", it.Event.RequestNonce)
+		if it.Event.RequestNonce > hint.handleNonce {
+			logger.Debug("filtered pending nonce", it.Event.RequestNonce)
+			vtr.pendingEvents = append(vtr.pendingEvents, it.Event)
+		}
 	}
+	logger.Debug("pending events", len(vtr.pendingEvents))
+
 	return vtr.pendingEvents, nil
 }
 
