@@ -79,9 +79,9 @@ func fixedIndex(index int) func(int, int) int {
 
 // makeTxsWithStateDB generates transactions with the nonce retrieved from stateDB.
 // stateDB is used only once to initialize nonceMap, and then nonceMap is used instead of stateDB.
-func makeTxsWithStateDB(stateDB *state.StateDB, fromAddrs []*common.Address, fromKeys []*ecdsa.PrivateKey, toAddrs []*common.Address, signer types.Signer, numTransactions int, indexPicker func(int, int) int) (types.Transactions, error) {
+func makeTxsWithStateDB(isGenerate bool, stateDB *state.StateDB, fromAddrs []*common.Address, fromKeys []*ecdsa.PrivateKey, toAddrs []*common.Address, signer types.Signer, numTransactions int, indexPicker func(int, int) int) (types.Transactions, map[common.Address]uint64, error) {
 	if len(fromAddrs) != len(fromKeys) {
-		return nil, fmt.Errorf("len(fromAddrs) %v != len(fromKeys) %v", len(fromAddrs), len(fromKeys))
+		return nil, nil, fmt.Errorf("len(fromAddrs) %v != len(fromKeys) %v", len(fromAddrs), len(fromKeys))
 	}
 
 	// Use nonceMap, not to change the nonce of stateDB.
@@ -92,9 +92,22 @@ func makeTxsWithStateDB(stateDB *state.StateDB, fromAddrs []*common.Address, fro
 	}
 
 	// Generate value transfer transactions from initial account to the given "toAddrs".
+	return makeTxsWithNonceMap(isGenerate, nonceMap, fromAddrs, fromKeys, toAddrs, signer, numTransactions, indexPicker)
+}
+
+// makeTxsWithStateDB generates transactions with the nonce retrieved from nonceMap.
+func makeTxsWithNonceMap(isGenerate bool, nonceMap map[common.Address]uint64, fromAddrs []*common.Address, fromKeys []*ecdsa.PrivateKey, toAddrs []*common.Address, signer types.Signer, numTransactions int, indexPicker func(int, int) int) (types.Transactions, map[common.Address]uint64, error) {
 	txs := make(types.Transactions, 0, numTransactions)
 	lenFromAddrs := len(fromAddrs)
 	lenToAddrs := len(toAddrs)
+
+	var transferValue *big.Int
+	if isGenerate {
+		transferValue = new(big.Int).Mul(big.NewInt(1e4), big.NewInt(params.KLAY))
+	} else {
+		transferValue = new(big.Int).Mul(big.NewInt(1e3), big.NewInt(params.Peb))
+	}
+
 	for i := 0; i < numTransactions; i++ {
 		fromIdx := indexPicker(i, lenFromAddrs)
 		toIdx := indexPicker(i, lenToAddrs)
@@ -105,17 +118,17 @@ func makeTxsWithStateDB(stateDB *state.StateDB, fromAddrs []*common.Address, fro
 
 		toAddr := *toAddrs[toIdx]
 
-		tx := types.NewTransaction(fromNonce, toAddr, new(big.Int).Mul(big.NewInt(1e3), big.NewInt(params.Peb)), 1000000, new(big.Int).SetInt64(25000000000), nil)
+		tx := types.NewTransaction(fromNonce, toAddr, transferValue, 1000000, new(big.Int).SetInt64(25000000000), nil)
 		signedTx, err := types.SignTx(tx, signer, fromKey)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		txs = append(txs, signedTx)
 		nonceMap[fromAddr]++
 	}
 
-	return txs, nil
+	return txs, nonceMap, nil
 }
 
 // setupTestDir does two things. If it is a data-generating test, it will just
@@ -158,8 +171,8 @@ type preGeneratedTC struct {
 	testName        string
 	originalDataDir string
 
-	numTotalTxs  int
-	numTxsPerGen int
+	numTotalAccountsToGenerate int
+	numTxsPerGen               int
 
 	numTotalSenders    int // senders are loaded once at the test initialization time.
 	numReceiversPerRun int // receivers are loaded repetitively for every tx generation run.
@@ -174,11 +187,11 @@ type preGeneratedTC struct {
 
 // BenchmarkDataGeneration_Aspen generates the data with Aspen network's database configurations.
 func BenchmarkDataGeneration_Aspen(b *testing.B) {
-	tc := getGenerateTestDefaultTC()
+	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_Aspen"
 	tc.originalDataDir = aspen500_orig
 
-	tc.cacheConfig = getCacheConfigForDataGeneration()
+	tc.cacheConfig = defaultCacheConfig()
 
 	tc.dbc, tc.levelDBOption = genAspenOptions()
 
@@ -187,11 +200,11 @@ func BenchmarkDataGeneration_Aspen(b *testing.B) {
 
 // BenchmarkDataGeneration_Baobab generates the data with Baobab network's database configurations.
 func BenchmarkDataGeneration_Baobab(b *testing.B) {
-	tc := getGenerateTestDefaultTC()
+	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_Baobab"
 	tc.originalDataDir = baobab500_orig
 
-	tc.cacheConfig = getCacheConfigForDataGeneration()
+	tc.cacheConfig = defaultCacheConfig()
 
 	tc.dbc, tc.levelDBOption = genBaobabOptions()
 
@@ -201,11 +214,11 @@ func BenchmarkDataGeneration_Baobab(b *testing.B) {
 // BenchmarkDataGeneration_CandidateLevelDB generates the data for main-net's
 // with candidate configurations, using LevelDB.
 func BenchmarkDataGeneration_CandidateLevelDB(b *testing.B) {
-	tc := getGenerateTestDefaultTC()
+	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_CandidateLevelDB"
 	tc.originalDataDir = candidate500LevelDB_orig
 
-	tc.cacheConfig = getCacheConfigForDataGeneration()
+	tc.cacheConfig = defaultCacheConfig()
 
 	tc.dbc, tc.levelDBOption = genCandidateLevelDBOptions()
 
@@ -215,11 +228,11 @@ func BenchmarkDataGeneration_CandidateLevelDB(b *testing.B) {
 // BenchmarkDataGeneration_CandidateBadgerDB generates the data for main-net's
 // with candidate configurations, using BadgerDB.
 func BenchmarkDataGeneration_CandidateBadgerDB(b *testing.B) {
-	tc := getGenerateTestDefaultTC()
+	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_CandidateBadgerDB"
 	tc.originalDataDir = candidate500BadgerDB_orig
 
-	tc.cacheConfig = getCacheConfigForDataGeneration()
+	tc.cacheConfig = defaultCacheConfig()
 
 	tc.dbc, tc.levelDBOption = genCandidateBadgerDBOptions()
 
@@ -229,12 +242,12 @@ func BenchmarkDataGeneration_CandidateBadgerDB(b *testing.B) {
 // BenchmarkDataGeneration_Baobab_ControlGroup generates the data with Baobab network's database configurations.
 // To work as a control group, it only generates 10,000 accounts.
 func BenchmarkDataGeneration_Baobab_ControlGroup(b *testing.B) {
-	tc := getGenerateTestDefaultTC()
+	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_Baobab_ControlGroup"
 	tc.originalDataDir = baobab1_orig
-	tc.numTotalTxs = 10000
+	tc.numTotalAccountsToGenerate = 10000
 
-	tc.cacheConfig = getCacheConfigForDataGeneration()
+	tc.cacheConfig = defaultCacheConfig()
 
 	tc.dbc, tc.levelDBOption = genBaobabOptions()
 
@@ -244,18 +257,9 @@ func BenchmarkDataGeneration_Baobab_ControlGroup(b *testing.B) {
 // dataGenerationTest generates given number of accounts for pre-generated tests.
 // Newly generated data directory will be located at "$GOPATH/src/github.com/ground-x/"
 func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
-	if tc.numTotalTxs%tc.numTxsPerGen != 0 {
-		b.Fatalf("tc.numTotalTxs %% tc.numTxsPerGen != 0, tc.numTotalTxs: %v, tc.numTxsPerGen: %v",
-			tc.numTotalTxs, tc.numTxsPerGen)
-	}
-
-	testDataDir, err := setupTestDir(tc.originalDataDir, tc.isGenerateTest)
+	testDataDir, profileFile, err := setUpTest(tc)
 	if err != nil {
-		b.Fatalf("err: %v, dir: %v", err, testDataDir)
-	}
-
-	if testing.Verbose() {
-		enableLog()
+		b.Fatal(err)
 	}
 
 	bcData, err := NewBCDataForPreGeneratedTest(testDataDir, tc)
@@ -269,20 +273,12 @@ func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
 	txPool := makeTxPool(bcData, tc.numTxsPerGen)
 	signer := types.MakeSigner(bcData.bc.Config(), bcData.bc.CurrentHeader().Number)
 
-	timeNow := time.Now()
-	f, err := os.Create(tc.testName + "_" + timeNow.Format("2006-01-02-1504") + ".cpu.out")
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	// TODO-Klaytn-Tests Need to implement warm-up function here, to cache stateObjects or something else.
-
 	b.ResetTimer()
 	b.StopTimer()
 
-	numTxGenerationRuns := tc.numTotalTxs / tc.numTxsPerGen
+	numTxGenerationRuns := tc.numTotalAccountsToGenerate / tc.numTxsPerGen
 	for run := 1; run < numTxGenerationRuns; run++ {
-		toAddrs, _, err := makeOrGenerateAddrsAndKey(testDataDir, run, tc)
+		toAddrs, _, err := makeOrGenerateAddrsAndKeys(testDataDir, run, tc)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -293,7 +289,7 @@ func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
 			b.Fatal(err)
 		}
 
-		txs, err := makeTxsWithStateDB(stateDB, bcData.addrs, bcData.privKeys, toAddrs, signer, tc.numTxsPerGen, tc.addrPicker)
+		txs, _, err := makeTxsWithStateDB(true, stateDB, bcData.addrs, bcData.privKeys, toAddrs, signer, tc.numTxsPerGen, tc.addrPicker)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -304,7 +300,7 @@ func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
 
 		b.StartTimer()
 		if run == numTxGenerationRuns {
-			pprof.StartCPUProfile(f)
+			pprof.StartCPUProfile(profileFile)
 		}
 
 		txPool.AddRemotes(txs)
@@ -323,4 +319,13 @@ func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
 		}
 		b.StopTimer()
 	}
+}
+
+// getGenerationTestDefaultTC returns default TC of data generation tests.
+func getGenerationTestDefaultTC() *preGeneratedTC {
+	return &preGeneratedTC{
+		isGenerateTest:             true,
+		numTotalAccountsToGenerate: 500 * 10000, numTxsPerGen: 10000,
+		numTotalSenders: 10000, numReceiversPerRun: 10000,
+		filePicker: sequentialIndex, addrPicker: sequentialIndex}
 }

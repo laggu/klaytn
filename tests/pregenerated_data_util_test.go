@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	istanbulBackend "github.com/ground-x/klaytn/consensus/istanbul/backend"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/node"
@@ -41,8 +42,8 @@ import (
 	"path"
 	"strconv"
 	"sync"
-
-	istanbulBackend "github.com/ground-x/klaytn/consensus/istanbul/backend"
+	"testing"
+	"time"
 )
 
 const (
@@ -185,12 +186,13 @@ func getAddrsAndKeysFromFile(numAccounts int, testDataDir string, run int, fileP
 	for i := run; remain > 0; i++ {
 		fileIndex := filePicker(i, numFiles)
 
-		fmt.Println("Read addresses", "fileIndex", fileIndex)
 		// Read recipient addresses from file.
 		addrsPerFile, privKeysPerFile, err := readAddrsAndPrivateKeysFromFile(testDataDir, fileIndex)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		fmt.Println("Read addresses from " + addressFilePrefix + strconv.Itoa(fileIndex) + ", len(addrs)=" + strconv.Itoa(len(addrsPerFile)))
 
 		partSize := int(math.Min(float64(len(addrsPerFile)), float64(remain)))
 		addrs = append(addrs, addrsPerFile[:partSize]...)
@@ -201,9 +203,10 @@ func getAddrsAndKeysFromFile(numAccounts int, testDataDir string, run int, fileP
 	return addrs, privKeys, nil
 }
 
-func makeOrGenerateAddrsAndKey(testDataDir string, run int, tc *preGeneratedTC) ([]*common.Address, []*ecdsa.PrivateKey, error) {
+func makeOrGenerateAddrsAndKeys(testDataDir string, run int, tc *preGeneratedTC) ([]*common.Address, []*ecdsa.PrivateKey, error) {
+	// If it is execution test, makeOrGenerateAddrsAndKeys is called to build validator list.
 	if !tc.isGenerateTest {
-		return getAddrsAndKeysFromFile(tc.numReceiversPerRun, testDataDir, run, tc.filePicker)
+		return getAddrsAndKeysFromFile(numValidatorsForTest, testDataDir, run, tc.filePicker)
 	}
 
 	wd, err := os.Getwd()
@@ -292,10 +295,21 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return err
 	}
 
-	// Insert the block into the blockchain.
-	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
-		return fmt.Errorf("err = %s, n = %d\n", err, n)
+	// Write the block with state.
+	status, err := bcdata.bc.WriteBlockWithState(b, receipts, stateDB)
+	if err != nil {
+		return fmt.Errorf("err = %s", err)
 	}
+
+	if status == blockchain.SideStatTy {
+		return fmt.Errorf("forked block is generated! number: %v, hash: %v, txs: %v", b.Number(), b.Hash(), len(b.Transactions()))
+	}
+
+	// Trigger post chain events after successful writing.
+	logs := stateDB.Logs()
+	events := []interface{}{blockchain.ChainEvent{Block: b, Hash: b.Hash(), Logs: logs}}
+	events = append(events, blockchain.ChainHeadEvent{Block: b})
+	bcdata.bc.PostChainEvents(events, logs)
 
 	totalTxs += len(newtxs)
 	fmt.Println("blockNum", b.NumberU64(), "numTxs", len(newtxs), "totalTxs", totalTxs)
@@ -346,7 +360,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	// Prepare sender addresses and private keys
 	// 1) If generating test, create accounts and private keys as many as numTotalSenders
 	// 2) If executing test, load accounts and private keys from file as many as numTotalSenders
-	addrs, privKeys, err := makeOrGenerateAddrsAndKey(testDataDir, 0, tc)
+	addrs, privKeys, err := makeOrGenerateAddrsAndKeys(testDataDir, 0, tc)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +406,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 // genAspenOptions returns database configurations of Aspen network.
 func genAspenOptions() (*database.DBConfig, *opt.Options) {
-	aspenDBConfig := generateDefaultDBConfig()
+	aspenDBConfig := defaultDBConfig()
 	aspenDBConfig.DBType = database.LevelDB
 	aspenDBConfig.LevelDBNoCompression = false
 
@@ -416,20 +430,21 @@ func genCandidateLevelDBOptions() (*database.DBConfig, *opt.Options) {
 	dbc, opts := genAspenOptions()
 
 	dbc.LevelDBNoCompression = true
+	dbc.LevelDBBufferPool = true
 
 	return dbc, opts
 }
 
 // genCandidateLevelDBOptions returns candidate database configurations of main-net, using BadgerDB.
 func genCandidateBadgerDBOptions() (*database.DBConfig, *opt.Options) {
-	dbc := generateDefaultDBConfig()
+	dbc := defaultDBConfig()
 	dbc.DBType = database.BadgerDB
 
 	return dbc, &opt.Options{}
 }
 
-// generateDefaultDBConfig returns default database.DBConfig for pre-generated tests.
-func generateDefaultDBConfig() *database.DBConfig {
+// defaultDBConfig returns default database.DBConfig for pre-generated tests.
+func defaultDBConfig() *database.DBConfig {
 	return &database.DBConfig{Partitioned: true, ParallelDBWrite: true}
 }
 
@@ -448,8 +463,8 @@ func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 	return chainConfig, nil
 }
 
-// getCacheConfigForDataGeneration returns cache config for data generation tests.
-func getCacheConfigForDataGeneration() *blockchain.CacheConfig {
+// defaultCacheConfig returns cache config for data generation tests.
+func defaultCacheConfig() *blockchain.CacheConfig {
 	return &blockchain.CacheConfig{
 		StateDBCaching:   true,
 		TxPoolStateCache: true,
@@ -474,11 +489,22 @@ func generateGovernaceDataForTest() *governance.Governance {
 	})
 }
 
-// getGenerateTestDefaultTC returns default TC of data generation tests.
-func getGenerateTestDefaultTC() *preGeneratedTC {
-	return &preGeneratedTC{
-		isGenerateTest: true,
-		numTotalTxs:    5 * 10000, numTxsPerGen: 10000,
-		numTotalSenders: 10000, numReceiversPerRun: 10000,
-		filePicker: sequentialIndex, addrPicker: sequentialIndex}
+// setUpTest sets up test data directory, verbosity and profile file.
+func setUpTest(tc *preGeneratedTC) (string, *os.File, error) {
+	testDataDir, err := setupTestDir(tc.originalDataDir, tc.isGenerateTest)
+	if err != nil {
+		return "", nil, fmt.Errorf("err: %v, dir: %v", err, testDataDir)
+	}
+
+	if testing.Verbose() {
+		enableLog()
+	}
+
+	timeNow := time.Now()
+	f, err := os.Create(tc.testName + "_" + timeNow.Format("2006-01-02-1504") + ".cpu.out")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create file for cpu profiling, err: %v", err)
+	}
+
+	return testDataDir, f, nil
 }
