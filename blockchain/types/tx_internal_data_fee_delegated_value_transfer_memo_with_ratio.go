@@ -45,8 +45,8 @@ type TxInternalDataFeeDelegatedValueTransferMemoWithRatio struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -162,7 +162,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Equal(b TxInterna
 		bytes.Equal(t.Payload, tb.Payload) &&
 		t.TxSignatures.equal(tb.TxSignatures) &&
 		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignature.equal(tb.FeePayerSignature)
+		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) String() string {
@@ -196,7 +196,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) String() string {
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
 		t.FeeRatio,
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		common.Bytes2Hex(t.Payload),
 		enc)
 }
@@ -247,7 +247,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeePayer() com
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeeRatio() FeeRatio {
@@ -262,12 +262,12 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetSignature(s Tx
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

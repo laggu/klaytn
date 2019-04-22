@@ -41,8 +41,8 @@ type TxInternalDataFeeDelegatedSmartContractExecution struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -149,7 +149,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) Equal(a TxInternalDat
 		bytes.Equal(t.Payload, ta.Payload) &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) IsLegacyTransaction() bool {
@@ -198,7 +198,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetFeePayer() common.
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetHash(h *common.Hash) {
@@ -209,12 +209,12 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetSignature(s TxSign
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) String() string {
@@ -247,7 +247,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) String() string {
 		common.Bytes2Hex(t.Payload),
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 }
 

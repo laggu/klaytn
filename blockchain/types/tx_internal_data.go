@@ -300,7 +300,7 @@ type TxInternalDataFeePayer interface {
 	// RecoverFeePayerPubkey returns the fee payer's public key derived from txhash and signatures(r, s, v).
 	RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)
 
-	SetFeePayerSignature(s TxSignatures)
+	SetFeePayerSignatures(s TxSignatures)
 }
 
 // TxInternalDataFeeRatio has a function `GetFeeRatio`.

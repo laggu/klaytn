@@ -39,8 +39,8 @@ type TxInternalDataFeeDelegatedAccountUpdate struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -55,8 +55,8 @@ type txInternalDataFeeDelegatedAccountUpdateSerializable struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 }
 
 func newTxInternalDataFeeDelegatedAccountUpdate() *TxInternalDataFeeDelegatedAccountUpdate {
@@ -138,7 +138,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) toSerializable() *txInternalDa
 		keyEnc,
 		t.TxSignatures,
 		t.FeePayer,
-		t.FeePayerSignature,
+		t.FeePayerSignatures,
 	}
 }
 
@@ -149,7 +149,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) fromSerializable(serialized *t
 	t.From = serialized.From
 	t.TxSignatures = serialized.TxSignatures
 	t.FeePayer = serialized.FeePayer
-	t.FeePayerSignature = serialized.FeePayerSignature
+	t.FeePayerSignatures = serialized.FeePayerSignatures
 
 	serializer := accountkey.NewAccountKeySerializer()
 	rlp.DecodeBytes(serialized.Key, serializer)
@@ -228,7 +228,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFeePayer() common.Address {
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SetHash(h *common.Hash) {
@@ -252,7 +252,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) Equal(a TxInternalData) bool {
 		t.Key.Equal(ta.Key) &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) String() string {
@@ -281,7 +281,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) String() string {
 		t.Key.String(),
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 }
 
@@ -289,12 +289,12 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedAccountUpdate) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

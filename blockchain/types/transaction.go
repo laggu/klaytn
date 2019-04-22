@@ -413,7 +413,7 @@ func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
 		return err
 	}
 
-	if err := tx.SetFeePayerSignature(TxSignatures{sig}); err != nil {
+	if err := tx.SetFeePayerSignatures(TxSignatures{sig}); err != nil {
 		return err
 	}
 
@@ -431,20 +431,20 @@ func (tx *Transaction) SignFeePayerWithKeys(s Signer, prv []*ecdsa.PrivateKey) e
 		return err
 	}
 
-	if err := tx.SetFeePayerSignature(sig); err != nil {
+	if err := tx.SetFeePayerSignatures(sig); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (tx *Transaction) SetFeePayerSignature(s TxSignatures) error {
+func (tx *Transaction) SetFeePayerSignatures(s TxSignatures) error {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
 		return errNotFeePayer
 	}
 
-	tf.SetFeePayerSignature(s)
+	tf.SetFeePayerSignatures(s)
 
 	return nil
 }

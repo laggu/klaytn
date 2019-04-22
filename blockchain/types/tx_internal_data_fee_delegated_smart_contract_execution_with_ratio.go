@@ -46,8 +46,8 @@ type TxInternalDataFeeDelegatedSmartContractExecutionWithRatio struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -162,7 +162,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) Equal(a TxIn
 		bytes.Equal(t.Payload, ta.Payload) &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) IsLegacyTransaction() bool {
@@ -211,7 +211,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeePayer(
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeeRatio() FeeRatio {
@@ -226,12 +226,12 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) SetSignature
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) String() string {
@@ -266,7 +266,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) String() str
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
 		t.FeeRatio,
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 }
 

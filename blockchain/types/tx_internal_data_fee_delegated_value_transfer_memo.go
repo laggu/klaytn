@@ -40,8 +40,8 @@ type TxInternalDataFeeDelegatedValueTransferMemo struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -149,7 +149,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) Equal(b TxInternalData) bo
 		bytes.Equal(t.Payload, tb.Payload) &&
 		t.TxSignatures.equal(tb.TxSignatures) &&
 		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignature.equal(tb.FeePayerSignature)
+		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) String() string {
@@ -181,7 +181,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) String() string {
 		t.Amount,
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		common.Bytes2Hex(t.Payload),
 		enc)
 }
@@ -232,7 +232,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetFeePayer() common.Addre
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetHash(h *common.Hash) {
@@ -243,12 +243,12 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetSignature(s TxSignature
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

@@ -39,8 +39,8 @@ type TxInternalDataFeeDelegatedCancel struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -142,19 +142,19 @@ func (t *TxInternalDataFeeDelegatedCancel) GetFeePayer() common.Address {
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) SetHash(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedCancel) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) IsLegacyTransaction() bool {
@@ -173,7 +173,7 @@ func (t *TxInternalDataFeeDelegatedCancel) Equal(b TxInternalData) bool {
 		t.From == ta.From &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) String() string {
@@ -200,7 +200,7 @@ func (t *TxInternalDataFeeDelegatedCancel) String() string {
 		t.GasLimit,
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 }
 

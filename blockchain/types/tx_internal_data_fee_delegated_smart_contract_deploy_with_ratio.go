@@ -47,8 +47,8 @@ type TxInternalDataFeeDelegatedSmartContractDeployWithRatio struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -175,7 +175,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Equal(a TxInter
 		t.HumanReadable == ta.HumanReadable &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IsLegacyTransaction() bool {
@@ -220,7 +220,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeePayer() c
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeeRatio() FeeRatio {
@@ -235,12 +235,12 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetSignature(s 
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) String() string {
@@ -277,7 +277,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) String() string
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
 		t.FeeRatio,
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 
 }

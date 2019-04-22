@@ -40,8 +40,8 @@ type TxInternalDataFeeDelegatedValueTransfer struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -140,7 +140,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) Equal(b TxInternalData) bool {
 		t.From == tb.From &&
 		t.TxSignatures.equal(tb.TxSignatures) &&
 		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignature.equal(tb.FeePayerSignature)
+		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) IsLegacyTransaction() bool {
@@ -185,7 +185,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayer() common.Address {
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SetHash(h *common.Hash) {
@@ -196,12 +196,12 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedValueTransfer) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
@@ -232,7 +232,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
 		t.Amount,
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 }
 

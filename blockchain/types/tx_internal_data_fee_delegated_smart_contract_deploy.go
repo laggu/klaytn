@@ -42,8 +42,8 @@ type TxInternalDataFeeDelegatedSmartContractDeploy struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -162,7 +162,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Equal(a TxInternalData) 
 		t.HumanReadable == ta.HumanReadable &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) IsLegacyTransaction() bool {
@@ -207,7 +207,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayer() common.Add
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetHash(h *common.Hash) {
@@ -218,12 +218,12 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetSignature(s TxSignatu
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
@@ -258,7 +258,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
 		t.HumanReadable,
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 
 }

@@ -44,8 +44,8 @@ type TxInternalDataFeeDelegatedAccountUpdateWithRatio struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -61,8 +61,8 @@ type txInternalDataFeeDelegatedAccountUpdateWithRatioSerializable struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 }
 
 func newTxInternalDataFeeDelegatedAccountUpdateWithRatio() *TxInternalDataFeeDelegatedAccountUpdateWithRatio {
@@ -152,7 +152,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) toSerializable() *txI
 		t.FeeRatio,
 		t.TxSignatures,
 		t.FeePayer,
-		t.FeePayerSignature,
+		t.FeePayerSignatures,
 	}
 }
 
@@ -163,7 +163,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) fromSerializable(seri
 	t.From = serialized.From
 	t.TxSignatures = serialized.TxSignatures
 	t.FeePayer = serialized.FeePayer
-	t.FeePayerSignature = serialized.FeePayerSignature
+	t.FeePayerSignatures = serialized.FeePayerSignatures
 	t.FeeRatio = serialized.FeeRatio
 
 	serializer := accountkey.NewAccountKeySerializer()
@@ -243,7 +243,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeePayer() common.
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeeRatio() FeeRatio {
@@ -272,7 +272,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Equal(a TxInternalDat
 		t.Key.Equal(ta.Key) &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) String() string {
@@ -303,7 +303,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) String() string {
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
 		t.FeeRatio,
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 }
 
@@ -311,12 +311,12 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SetSignature(s TxSign
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

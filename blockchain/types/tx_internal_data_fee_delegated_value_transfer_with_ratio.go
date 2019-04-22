@@ -43,8 +43,8 @@ type TxInternalDataFeeDelegatedValueTransferWithRatio struct {
 
 	TxSignatures
 
-	FeePayer          common.Address
-	FeePayerSignature TxSignatures
+	FeePayer           common.Address
+	FeePayerSignatures TxSignatures
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -151,7 +151,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Equal(a TxInternalDat
 		t.FeeRatio == ta.FeeRatio &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignature.equal(ta.FeePayerSignature)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) IsLegacyTransaction() bool {
@@ -200,7 +200,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) GetFeePayer() common.
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) GetFeePayerRawSignatureValues() []*big.Int {
-	return t.FeePayerSignature.RawSignatureValues()
+	return t.FeePayerSignatures.RawSignatureValues()
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SetHash(h *common.Hash) {
@@ -211,12 +211,12 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SetSignature(s TxSign
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SetFeePayerSignature(s TxSignatures) {
-	t.FeePayerSignature = s
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SetFeePayerSignatures(s TxSignatures) {
+	t.FeePayerSignatures = s
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignature.RecoverPubkey(txhash, homestead, vfunc)
+	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) String() string {
@@ -249,7 +249,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) String() string {
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
 		t.FeeRatio,
-		t.FeePayerSignature.string(),
+		t.FeePayerSignatures.string(),
 		enc)
 }
 

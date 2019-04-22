@@ -159,7 +159,7 @@ func (v *TxInternalDataFeeDelegatedValueTransfer) MakeInterfaceSlice() []interfa
 		v.From,
 		v.TxSignatures,
 		v.FeePayer,
-		v.FeePayerSignature,
+		v.FeePayerSignatures,
 	}
 }
 
@@ -175,7 +175,7 @@ func (v *TxInternalDataFeeDelegatedValueTransferWithRatio) MakeInterfaceSlice() 
 		v.FeeRatio,
 		v.TxSignatures,
 		v.FeePayer,
-		v.FeePayerSignature,
+		v.FeePayerSignatures,
 	}
 }
 

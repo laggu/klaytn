@@ -322,7 +322,7 @@ func testValidateFeeDelegatedValueTransfer(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -411,7 +411,7 @@ func testValidateFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -550,7 +550,7 @@ func testValidateFeeDelegatedValueTransferMemo(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -641,7 +641,7 @@ func testValidateFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -833,7 +833,7 @@ func testValidateFeeDelegatedAccountUpdate(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -924,7 +924,7 @@ func testValidateFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -1066,7 +1066,7 @@ func testValidateFeeDelegatedSmartContractDeploy(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -1159,7 +1159,7 @@ func testValidateFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -1298,7 +1298,7 @@ func testValidateFeeDelegatedSmartContractExecution(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -1389,7 +1389,7 @@ func testValidateFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -1519,7 +1519,7 @@ func testValidateFeeDelegatedCancel(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{
@@ -1604,7 +1604,7 @@ func testValidateFeeDelegatedCancelWithRatio(t *testing.T) {
 	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
-	tx.SetFeePayerSignature(feePayerSig)
+	tx.SetFeePayerSignatures(feePayerSig)
 
 	// AccountKeyPicker initialization
 	p := &AccountKeyPickerForTest{

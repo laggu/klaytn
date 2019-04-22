@@ -352,7 +352,7 @@ func testTxRLPDecodeFeeDelegatedValueTransfer(t *testing.T) {
 		tx.From,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -384,7 +384,7 @@ func testTxRLPDecodeFeeDelegatedValueTransferMemo(t *testing.T) {
 		tx.Payload,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -417,7 +417,7 @@ func testTxRLPDecodeFeeDelegatedAccountUpdate(t *testing.T) {
 		encodedKey,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -448,7 +448,7 @@ func testTxRLPDecodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 		tx.From,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -480,7 +480,7 @@ func testTxRLPDecodeFeeDelegatedSmartContractExecution(t *testing.T) {
 		tx.Payload,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -509,7 +509,7 @@ func testTxRLPDecodeFeeDelegatedCancel(t *testing.T) {
 		tx.From,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -541,7 +541,7 @@ func testTxRLPDecodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 		tx.FeeRatio,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -574,7 +574,7 @@ func testTxRLPDecodeFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 		tx.FeeRatio,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -608,7 +608,7 @@ func testTxRLPDecodeFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		tx.FeeRatio,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -642,7 +642,7 @@ func testTxRLPDecodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		tx.FeeRatio,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -675,7 +675,7 @@ func testTxRLPDecodeFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 		tx.FeeRatio,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
@@ -705,7 +705,7 @@ func testTxRLPDecodeFeeDelegatedCancelWithRatio(t *testing.T) {
 		tx.FeeRatio,
 		tx.TxSignatures,
 		tx.FeePayer,
-		tx.FeePayerSignature,
+		tx.FeePayerSignatures,
 	})
 	assert.Equal(t, nil, err)
 
