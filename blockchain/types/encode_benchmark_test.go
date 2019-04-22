@@ -245,10 +245,8 @@ func (v *TxInternalDataChainDataAnchoring) MakeInterfaceSlice() []interface{} {
 		v.AccountNonce,
 		v.Price,
 		v.GasLimit,
-		v.Recipient,
-		v.Amount,
 		v.From,
-		v.AnchoredData,
+		v.Payload,
 		v.TxSignatures,
 	}
 }

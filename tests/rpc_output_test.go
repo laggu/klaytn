@@ -753,8 +753,6 @@ func TestRPCOutput(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:        reservoir.Nonce,
 			types.TxValueKeyFrom:         reservoir.Addr,
-			types.TxValueKeyTo:           decoupled.Addr,
-			types.TxValueKeyAmount:       amount,
 			types.TxValueKeyGasLimit:     gasLimit,
 			types.TxValueKeyGasPrice:     gasPrice,
 			types.TxValueKeyAnchoredData: anchoredData,

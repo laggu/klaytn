@@ -18,6 +18,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -34,10 +35,8 @@ type TxInternalDataChainDataAnchoring struct {
 	AccountNonce uint64
 	Price        *big.Int
 	GasLimit     uint64
-	Recipient    common.Address
-	Amount       *big.Int
 	From         common.Address
-	AnchoredData []byte
+	Payload      []byte
 
 	TxSignatures
 
@@ -45,13 +44,24 @@ type TxInternalDataChainDataAnchoring struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
+type TxInternalDataChainDataAnchoringJSON struct {
+	Type         TxType           `json:"typeInt"`
+	TypeStr      string           `json:"type"`
+	AccountNonce hexutil.Uint64   `json:"nonce"`
+	Price        *hexutil.Big     `json:"gasPrice"`
+	GasLimit     hexutil.Uint64   `json:"gas"`
+	From         common.Address   `json:"from"`
+	Payload      hexutil.Bytes    `json:"input"`
+	TxSignatures TxSignaturesJSON `json:"signatures"`
+	Hash         *common.Hash     `json:"hash"`
+}
+
 func newTxInternalDataChainDataAnchoring() *TxInternalDataChainDataAnchoring {
 	h := common.Hash{}
 
 	return &TxInternalDataChainDataAnchoring{
-		Price:  new(big.Int),
-		Amount: new(big.Int),
-		Hash:   &h,
+		Price: new(big.Int),
+		Hash:  &h,
 	}
 }
 
@@ -79,20 +89,6 @@ func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interf
 		return nil, errValueKeyGasLimitMustUint64
 	}
 
-	if v, ok := values[TxValueKeyTo].(common.Address); ok {
-		d.Recipient = v
-		delete(values, TxValueKeyTo)
-	} else {
-		return nil, errValueKeyToMustAddress
-	}
-
-	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
-		d.Amount.Set(v)
-		delete(values, TxValueKeyAmount)
-	} else {
-		return nil, errValueKeyAmountMustBigInt
-	}
-
 	if v, ok := values[TxValueKeyFrom].(common.Address); ok {
 		d.From = v
 		delete(values, TxValueKeyFrom)
@@ -101,7 +97,7 @@ func newTxInternalDataChainDataAnchoringWithMap(values map[TxValueKeyType]interf
 	}
 
 	if v, ok := values[TxValueKeyAnchoredData].([]byte); ok {
-		d.AnchoredData = v
+		d.Payload = v
 		delete(values, TxValueKeyAnchoredData)
 	} else {
 		return nil, errValueKeyAnchoredDataMustByteSlice
@@ -134,28 +130,24 @@ func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
 	return t.AccountNonce == tb.AccountNonce &&
 		t.Price.Cmp(tb.Price) == 0 &&
 		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
 		t.From == tb.From &&
 		t.TxSignatures.equal(tb.TxSignatures) &&
-		bytes.Equal(t.AnchoredData, tb.AnchoredData)
+		bytes.Equal(t.Payload, tb.Payload)
 }
 
 func (t *TxInternalDataChainDataAnchoring) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
-	dataAnchoredRLP, _ := rlp.EncodeToBytes(t.AnchoredData)
+	dataAnchoredRLP, _ := rlp.EncodeToBytes(t.Payload)
 	tx := Transaction{data: t}
 
 	return fmt.Sprintf(`
 	TX(%x)
 	Type:          %s
 	From:          %s
-	To:            %s
 	Nonce:         %v
 	GasPrice:      %#x
 	GasLimit:      %#x
-	Value:         %#x
 	Signature:     %s
 	Hex:           %x
 	AnchoredData:  %s
@@ -163,11 +155,9 @@ func (t *TxInternalDataChainDataAnchoring) String() string {
 		tx.Hash(),
 		t.Type().String(),
 		t.From.String(),
-		t.Recipient.String(),
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
-		t.Amount,
 		t.TxSignatures.string(),
 		enc,
 		common.Bytes2Hex(dataAnchoredRLP))
@@ -179,8 +169,6 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
 		AccountNonce uint64
 		Price        *big.Int
 		GasLimit     uint64
-		Recipient    common.Address
-		Amount       *big.Int
 		From         common.Address
 		AnchoredData []byte
 	}{
@@ -188,10 +176,8 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
-		t.Recipient,
-		t.Amount,
 		t.From,
-		t.AnchoredData,
+		t.Payload,
 	})
 
 	return b
@@ -203,10 +189,8 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
-		t.Recipient,
-		t.Amount,
 		t.From,
-		t.AnchoredData,
+		t.Payload,
 	}
 }
 
@@ -227,16 +211,11 @@ func (t *TxInternalDataChainDataAnchoring) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataChainDataAnchoring) GetRecipient() *common.Address {
-	if t.Recipient == (common.Address{}) {
-		return nil
-	}
-
-	to := common.Address(t.Recipient)
-	return &to
+	return &common.Address{}
 }
 
 func (t *TxInternalDataChainDataAnchoring) GetAmount() *big.Int {
-	return new(big.Int).Set(t.Amount)
+	return common.Big0
 }
 
 func (t *TxInternalDataChainDataAnchoring) GetFrom() common.Address {
@@ -256,7 +235,7 @@ func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	nByte := (uint64)(len(t.AnchoredData))
+	nByte := (uint64)(len(t.Payload))
 
 	// Make sure we don't exceed uint64 for all data combinations
 	if (math.MaxUint64-params.TxChainDataAnchoringGas)/params.ChainDataAnchoringGas < nByte {
@@ -277,17 +256,48 @@ func (t *TxInternalDataChainDataAnchoring) ValidateMutableValue(stateDB StateDB)
 
 func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	stateDB.IncNonce(sender.Address())
-	return vm.Call(sender, t.Recipient, nil, gas, value)
+	return nil, gas, nil
 }
 
 func (t *TxInternalDataChainDataAnchoring) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
-		"type":         t.Type().String(),
-		"gas":          hexutil.Uint64(t.GasLimit),
-		"gasPrice":     (*hexutil.Big)(t.Price),
-		"nonce":        hexutil.Uint64(t.AccountNonce),
-		"to":           t.Recipient,
-		"value":        (*hexutil.Big)(t.Amount),
-		"anchoredData": hexutil.Bytes(t.AnchoredData),
+		"typeInt":    t.Type(),
+		"type":       t.Type().String(),
+		"gas":        hexutil.Uint64(t.GasLimit),
+		"gasPrice":   (*hexutil.Big)(t.Price),
+		"nonce":      hexutil.Uint64(t.AccountNonce),
+		"input":      hexutil.Bytes(t.Payload),
+		"signatures": t.TxSignatures.ToJSON(),
 	}
+}
+
+func (t *TxInternalDataChainDataAnchoring) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TxInternalDataChainDataAnchoringJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.From,
+		t.Payload,
+		t.TxSignatures.ToJSON(),
+		t.Hash,
+	})
+}
+
+func (t *TxInternalDataChainDataAnchoring) UnmarshalJSON(b []byte) error {
+	js := &TxInternalDataChainDataAnchoringJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
+		return err
+	}
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = uint64(js.GasLimit)
+	t.From = js.From
+	t.Payload = js.Payload
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.Hash = js.Hash
+
+	return nil
 }

@@ -227,7 +227,7 @@ func (tx *Transaction) IsFeeDelegatedTransaction() bool {
 func (tx *Transaction) AnchoredData() ([]byte, error) {
 	txData, ok := tx.data.(*TxInternalDataChainDataAnchoring)
 	if ok {
-		return txData.AnchoredData, nil
+		return txData.Payload, nil
 	}
 	return []byte{}, ErrInvalidTxTypeForAnchoredData
 }

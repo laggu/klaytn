@@ -328,9 +328,7 @@ func genChainDataTransaction() TxInternalData {
 
 	txdata, err := NewTxInternalDataWithMap(TxTypeChainDataAnchoring, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:        nonce,
-		TxValueKeyTo:           to,
 		TxValueKeyFrom:         from,
-		TxValueKeyAmount:       amount,
 		TxValueKeyGasLimit:     gasLimit,
 		TxValueKeyGasPrice:     gasPrice,
 		TxValueKeyAnchoredData: anchoredData,

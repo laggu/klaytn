@@ -273,8 +273,6 @@ func (sbh *SubBridgeHandler) genUnsignedServiceChainTx(block *types.Block) (*typ
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:        sbh.getMainChainAccountNonce(), // main chain account nonce will be increased after signing a transaction.
 		types.TxValueKeyFrom:         *sbh.GetMainChainAccountAddr(),
-		types.TxValueKeyTo:           *sbh.GetMainChainAccountAddr(),
-		types.TxValueKeyAmount:       new(big.Int).SetUint64(0),
 		types.TxValueKeyGasLimit:     uint64(100000), // TODO-Klaytn-ServiceChain should define proper gas limit
 		types.TxValueKeyGasPrice:     new(big.Int).SetUint64(sbh.remoteGasPrice),
 		types.TxValueKeyAnchoredData: encodedCCTxData,

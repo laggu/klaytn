@@ -1644,10 +1644,8 @@ func testValidateChainDataAnchoring(t *testing.T) {
 		internalTx.AccountNonce,
 		internalTx.Price,
 		internalTx.GasLimit,
-		internalTx.Recipient,
-		internalTx.Amount,
 		internalTx.From,
-		internalTx.AnchoredData,
+		internalTx.Payload,
 	})
 	assert.Equal(t, nil, err)
 

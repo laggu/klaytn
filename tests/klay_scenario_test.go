@@ -903,12 +903,9 @@ func TestTransactionScenario(t *testing.T) {
 
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(10000000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:        reservoir.Nonce,
 			types.TxValueKeyFrom:         reservoir.Addr,
-			types.TxValueKeyTo:           reservoir.Addr,
-			types.TxValueKeyAmount:       amount,
 			types.TxValueKeyGasLimit:     gasLimit,
 			types.TxValueKeyGasPrice:     gasPrice,
 			types.TxValueKeyAnchoredData: dataAnchoredRLP,
@@ -3801,12 +3798,9 @@ func TestValidateSender(t *testing.T) {
 		scData := types.NewChainHashes(dummyBlock)
 		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
 
-		amount := new(big.Int).SetUint64(0)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:        anon.Nonce,
 			types.TxValueKeyFrom:         anon.Addr,
-			types.TxValueKeyTo:           anon.Addr,
-			types.TxValueKeyAmount:       amount,
 			types.TxValueKeyGasLimit:     gasLimit,
 			types.TxValueKeyGasPrice:     gasPrice,
 			types.TxValueKeyAnchoredData: dataAnchoredRLP,

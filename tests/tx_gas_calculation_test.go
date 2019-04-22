@@ -605,8 +605,6 @@ func genChainDataAnchoring(t *testing.T, signer types.Signer, from TestAccount, 
 	tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:        from.GetNonce(),
 		types.TxValueKeyFrom:         from.GetAddr(),
-		types.TxValueKeyTo:           to.GetAddr(),
-		types.TxValueKeyAmount:       big.NewInt(100000),
 		types.TxValueKeyGasLimit:     gasLimit,
 		types.TxValueKeyGasPrice:     gasPrice,
 		types.TxValueKeyAnchoredData: anchoredData,

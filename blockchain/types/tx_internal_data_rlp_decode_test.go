@@ -317,10 +317,8 @@ func testTxRLPDecodeChainDataAnchoring(t *testing.T) {
 		tx.AccountNonce,
 		tx.Price,
 		tx.GasLimit,
-		tx.Recipient,
-		tx.Amount,
 		tx.From,
-		tx.AnchoredData,
+		tx.Payload,
 		tx.TxSignatures,
 	})
 	assert.Equal(t, nil, err)
