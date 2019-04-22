@@ -17,6 +17,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -40,6 +41,17 @@ type TxInternalDataCancel struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 
 	TxSignatures
+}
+
+type TxInternalDataCancelJSON struct {
+	Type         TxType           `json:"typeInt"`
+	TypeStr      string           `json:"type"`
+	AccountNonce hexutil.Uint64   `json:"nonce"`
+	Price        *hexutil.Big     `json:"gasPrice"`
+	GasLimit     hexutil.Uint64   `json:"gas"`
+	From         common.Address   `json:"from"`
+	TxSignatures TxSignaturesJSON `json:"signatures"`
+	Hash         *common.Hash     `json:"hash"`
 }
 
 func newTxInternalDataCancel() *TxInternalDataCancel {
@@ -223,9 +235,40 @@ func (t *TxInternalDataCancel) Execute(sender ContractRef, vm VM, stateDB StateD
 
 func (t *TxInternalDataCancel) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
-		"type":     t.Type().String(),
-		"gas":      hexutil.Uint64(t.GasLimit),
-		"gasPrice": (*hexutil.Big)(t.Price),
-		"nonce":    hexutil.Uint64(t.AccountNonce),
+		"type":       t.Type().String(),
+		"typeInt":    t.Type(),
+		"gas":        hexutil.Uint64(t.GasLimit),
+		"gasPrice":   (*hexutil.Big)(t.Price),
+		"nonce":      hexutil.Uint64(t.AccountNonce),
+		"signatures": t.TxSignatures.ToJSON(),
 	}
+}
+
+func (t *TxInternalDataCancel) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TxInternalDataCancelJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.From,
+		t.TxSignatures.ToJSON(),
+		t.Hash,
+	})
+}
+
+func (t *TxInternalDataCancel) UnmarshalJSON(b []byte) error {
+	js := &TxInternalDataCancelJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
+		return err
+	}
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = (uint64)(js.GasLimit)
+	t.From = js.From
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.Hash = js.Hash
+
+	return nil
 }
