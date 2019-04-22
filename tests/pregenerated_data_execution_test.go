@@ -219,7 +219,7 @@ func executeTxs(bcData *BCData, txPool *blockchain.TxPool, txs types.Transaction
 // getExecutionTestDefaultTC returns default TC of data execution tests.
 func getExecutionTestDefaultTC() *preGeneratedTC {
 	numActiveAccounts := 100 * 10000
-	numExecPhaseTxs := txPoolSize
+	numExecPhaseTxs := txPoolSize * 10
 
 	return &preGeneratedTC{
 		isGenerateTest:     false,
