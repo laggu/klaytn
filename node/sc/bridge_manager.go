@@ -256,7 +256,7 @@ func (bm *BridgeManager) LoadAllBridge() error {
 				return errors.New("address manager is not exist")
 			}
 			logger.Info("Add bridge pair in address manager")
-			// Step 1: register bridge
+			// 1. register bridge
 			localBridge, err := bridgecontract.NewBridge(journal.LocalAddress, bm.subBridge.localBackend)
 			if err != nil {
 				return err
@@ -268,13 +268,20 @@ func (bm *BridgeManager) LoadAllBridge() error {
 			bm.SetBridge(journal.LocalAddress, localBridge, true, false)
 			bm.SetBridge(journal.RemoteAddress, remoteBridge, false, false)
 
-			// Step 2: set address manager
+			// 2. set address manager
 			bm.subBridge.AddressManager().AddBridge(journal.LocalAddress, journal.RemoteAddress)
 
-			// Step 3: subscribe event
-			bm.subscribeEvent(journal.LocalAddress, localBridge)
-			bm.subscribeEvent(journal.RemoteAddress, remoteBridge)
-
+			// 3. subscribe event
+			err = bm.subscribeEvent(journal.LocalAddress, localBridge)
+			if err != nil {
+				return err
+			}
+			err = bm.subscribeEvent(journal.RemoteAddress, remoteBridge)
+			if err != nil {
+				bm.subBridge.AddressManager().DeleteBridge(journal.LocalAddress)
+				bm.unsubscribeEvent(journal.LocalAddress)
+				return err
+			}
 		} else {
 			err := bm.loadBridge(journal.LocalAddress, bm.subBridge.localBackend, true, false)
 			if err != nil {
@@ -325,7 +332,6 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 			return common.Address{}, err
 		}
 		bm.SetBridge(addr, bridge, local, false)
-		bm.journal.insert(addr, common.Address{}, false)
 
 		return addr, err
 	} else {
@@ -337,7 +343,6 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 			return common.Address{}, err
 		}
 		bm.SetBridge(addr, bridge, local, false)
-		bm.journal.insert(common.Address{}, addr, false)
 		bm.subBridge.handler.addMainChainAccountNonce(1)
 		return addr, err
 	}
@@ -386,29 +391,38 @@ func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
 	if !ok {
 		return fmt.Errorf("there is no bridge contract which address %v", addr)
 	}
-	bm.subscribeEvent(addr, bridgeInfo.bridge)
+	err := bm.subscribeEvent(addr, bridgeInfo.bridge)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // SubscribeEvent sets watch logs and creates a goroutine loop to handle event messages.
-func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontract.Bridge) {
+func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontract.Bridge) error {
 	tokenReceivedCh := make(chan *bridgecontract.BridgeRequestValueTransfer, TokenEventChanSize)
 	tokenWithdrawCh := make(chan *bridgecontract.BridgeHandleValueTransfer, TokenEventChanSize)
 
 	receivedSub, err := bridge.WatchRequestValueTransfer(nil, tokenReceivedCh)
 	if err != nil {
 		logger.Error("Failed to pBridge.WatchERC20Received", "err", err)
+		return err
 	}
 	bm.receivedEvents[addr] = receivedSub
 	withdrawnSub, err := bridge.WatchHandleValueTransfer(nil, tokenWithdrawCh)
 	if err != nil {
 		logger.Error("Failed to pBridge.WatchTokenWithdrawn", "err", err)
+		receivedSub.Unsubscribe()
+		delete(bm.receivedEvents, addr)
+		return err
 	}
 	bm.withdrawEvents[addr] = withdrawnSub
 	bm.bridges[addr].subscribed = true
 
 	go bm.loop(addr, tokenReceivedCh, tokenWithdrawCh, bm.scope.Track(receivedSub), bm.scope.Track(withdrawnSub))
+
+	return nil
 }
 
 // UnsubscribeEvent cancels the contract's watch logs and initializes the status.
