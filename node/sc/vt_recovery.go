@@ -29,65 +29,107 @@ type valueTransferHint struct {
 	handleNonce  uint64
 }
 
-// valueTransferRecovery stores status information for the value transfer recovery process.
+// valueTransferRecovery stores status information for the value transfer recovery.
 type valueTransferRecovery struct {
 	config        *SCConfig
-	done          bool
+	requestBridge *bridge.Bridge
+	handleBridge  *bridge.Bridge
+	hint          *valueTransferHint
 	pendingEvents []*bridge.BridgeRequestValueTransfer
+	auth          *bind.TransactOpts
+	gasLimit      uint64
 }
 
 // NewValueTransferRecovery creates a new value transfer recovery structure.
-func NewValueTransferRecovery(config *SCConfig) *valueTransferRecovery {
+func NewValueTransferRecovery(config *SCConfig, requestBridge, handleBridge *bridge.Bridge, auth *bind.TransactOpts) *valueTransferRecovery {
 	return &valueTransferRecovery{
 		config:        config,
+		requestBridge: requestBridge,
+		handleBridge:  handleBridge,
+		hint:          nil,
 		pendingEvents: []*bridge.BridgeRequestValueTransfer{},
+		auth:          auth,
+		gasLimit:      100000,
 	}
 }
 
+// Recover handles the whole recovery process of the value transfer recovery.
+func (vtr *valueTransferRecovery) Recover() error {
+	if !vtr.config.VTRecovery {
+		logger.Debug("value transfer recovery is disabled")
+		return nil
+	}
+
+	logger.Debug("start to get value transfer hint")
+	_, err := vtr.getRecoveryHint()
+	if err != nil {
+		return err
+	}
+
+	logger.Debug("start to get pending events")
+	events, err := vtr.getPendingEvents()
+	if err != nil {
+		return err
+	}
+	if len(events) == 0 {
+		logger.Debug("nothing to recover value transfer")
+		return nil
+	}
+
+	logger.Debug("start to recover pending transactions")
+	err = vtr.recoverTransactions()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // getValueTransferHint gets a hint for value transfer transactions.
-// The hint includes block number of the request value transfer, request nonce and handle nonce.
-func (vtr *valueTransferRecovery) getValueTransferHint(requestBridge, handleBridge *bridge.Bridge) (*valueTransferHint, error) {
-	if requestBridge == nil {
+// The hint includes a block number to begin search, request nonce and handle nonce.
+func (vtr *valueTransferRecovery) getRecoveryHint() (*valueTransferHint, error) {
+	if vtr.requestBridge == nil {
 		return nil, errors.New("request bridge is nil")
 	}
-	if handleBridge == nil {
+	if vtr.handleBridge == nil {
 		return nil, errors.New("handle bridge is nil")
 	}
-	blockNumber, err := handleBridge.LastHandledRequestBlockNumber(nil)
+	blockNumber, err := vtr.handleBridge.LastHandledRequestBlockNumber(nil)
 	if err != nil {
 		return nil, err
 	}
-	requestNonce, err := requestBridge.RequestNonce(nil)
+	requestNonce, err := vtr.requestBridge.RequestNonce(nil)
 	if err != nil {
 		return nil, err
 	}
-	handleNonce, err := handleBridge.HandleNonce(nil)
+	handleNonce, err := vtr.handleBridge.HandleNonce(nil)
 	if err != nil {
 		return nil, err
 	}
 	// -1 to get a nonce in the logs.
-	return &valueTransferHint{blockNumber, requestNonce - 1, handleNonce - 1}, nil
+	vtr.hint = &valueTransferHint{blockNumber, requestNonce - 1, handleNonce - 1}
+	return vtr.hint, nil
 }
 
 // getPendingEvents gets pending events by using a bridge's log filter.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
-func (vtr *valueTransferRecovery) getPendingEvents(br *bridge.Bridge, hint *valueTransferHint) ([]*bridge.BridgeRequestValueTransfer, error) {
-	if br == nil {
+func (vtr *valueTransferRecovery) getPendingEvents() ([]*bridge.BridgeRequestValueTransfer, error) {
+	if vtr.requestBridge == nil {
 		return []*bridge.BridgeRequestValueTransfer{}, errors.New("bridge is nil")
 	}
-	if hint.requestNonce == hint.handleNonce {
+	if vtr.hint.requestNonce == vtr.hint.handleNonce {
 		return []*bridge.BridgeRequestValueTransfer{}, nil
 	}
 
 	vtr.pendingEvents = []*bridge.BridgeRequestValueTransfer{}
-	it, err := br.FilterRequestValueTransfer(&bind.FilterOpts{Start: hint.blockNumber}) // to the current
+	it, err := vtr.requestBridge.FilterRequestValueTransfer(&bind.FilterOpts{Start: vtr.hint.blockNumber}) // to the current
 	if err != nil {
 		return []*bridge.BridgeRequestValueTransfer{}, err
 	}
 
 	for it.Next() {
 		logger.Debug("pending nonce in the events", it.Event.RequestNonce)
-		if it.Event.RequestNonce > hint.handleNonce {
+		if it.Event.RequestNonce > vtr.hint.handleNonce {
 			logger.Debug("filtered pending nonce", it.Event.RequestNonce)
 			vtr.pendingEvents = append(vtr.pendingEvents, it.Event)
 		}
@@ -98,7 +140,25 @@ func (vtr *valueTransferRecovery) getPendingEvents(br *bridge.Bridge, hint *valu
 }
 
 // recoverTransactions recovers all pending transactions by resending them.
-// TODO-Klaytn-Servicechain: implement resending transaction
-func (vtr *valueTransferRecovery) recoverTransactions() {
-	vtr.done = true
+func (vtr *valueTransferRecovery) recoverTransactions() error {
+	if !vtr.config.VTRecovery {
+		logger.Debug("value transfer recovery is disabled")
+		return nil
+	}
+
+	defer func() {
+		vtr.pendingEvents = []*bridge.BridgeRequestValueTransfer{}
+	}()
+
+	for _, ev := range vtr.pendingEvents {
+		logger.Warn("try to recover value transfer transaction", ev.Raw.TxHash, "nonce", ev.RequestNonce)
+		opts := &bind.TransactOpts{From: vtr.auth.From, Signer: vtr.auth.Signer, GasLimit: vtr.gasLimit}
+		_, err := vtr.handleBridge.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.Raw.BlockNumber)
+		if err != nil {
+			logger.Error("fail to recover handle value transfer transaction.", "nonce", ev.RequestNonce)
+			return err
+		}
+	}
+
+	return nil
 }
