@@ -65,6 +65,21 @@ type txInternalDataFeeDelegatedAccountUpdateWithRatioSerializable struct {
 	FeePayerSignatures TxSignatures
 }
 
+type TxInternalDataFeeDelegatedAccountUpdateWithRatioJSON struct {
+	Type               TxType           `json:"typeInt"`
+	TypeStr            string           `json:"type"`
+	AccountNonce       hexutil.Uint64   `json:"nonce"`
+	Price              *hexutil.Big     `json:"gasPrice"`
+	GasLimit           hexutil.Uint64   `json:"gas"`
+	From               common.Address   `json:"from"`
+	Key                hexutil.Bytes    `json:"key"`
+	FeeRatio           hexutil.Uint     `json:"feeRatio"`
+	TxSignatures       TxSignaturesJSON `json:"signatures"`
+	FeePayer           common.Address   `json:"feePayer"`
+	FeePayerSignatures TxSignaturesJSON `json:"feePayerSignatures"`
+	Hash               *common.Hash     `json:"hash"`
+}
+
 func newTxInternalDataFeeDelegatedAccountUpdateWithRatio() *TxInternalDataFeeDelegatedAccountUpdateWithRatio {
 	return &TxInternalDataFeeDelegatedAccountUpdateWithRatio{
 		Price:        new(big.Int),
@@ -187,17 +202,44 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) DecodeRLP(s *rlp.Stre
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.toSerializable())
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	return json.Marshal(TxInternalDataFeeDelegatedAccountUpdateWithRatioJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.From,
+		(hexutil.Bytes)(keyEnc),
+		(hexutil.Uint)(t.FeeRatio),
+		t.TxSignatures.ToJSON(),
+		t.FeePayer,
+		t.FeePayerSignatures.ToJSON(),
+		t.Hash,
+	})
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) UnmarshalJSON(b []byte) error {
-	dec := newTxInternalDataFeeDelegatedAccountUpdateWithRatioSerializable()
-
-	if err := json.Unmarshal(b, dec); err != nil {
+	js := &TxInternalDataFeeDelegatedAccountUpdateWithRatioJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
 		return err
 	}
 
-	t.fromSerializable(dec)
+	ser := accountkey.NewAccountKeySerializer()
+	rlp.DecodeBytes(js.Key, ser)
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = (uint64)(js.GasLimit)
+	t.From = js.From
+	t.Key = ser.GetKey()
+	t.FeeRatio = FeeRatio(js.FeeRatio)
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.FeePayer = js.FeePayer
+	t.FeePayerSignatures = js.FeePayerSignatures.ToTxSignatures()
+	t.Hash = js.Hash
 
 	return nil
 }
@@ -395,12 +437,15 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) MakeRPCOutput() map[s
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
 	return map[string]interface{}{
-		"type":     t.Type().String(),
-		"gas":      hexutil.Uint64(t.GasLimit),
-		"gasPrice": (*hexutil.Big)(t.Price),
-		"nonce":    hexutil.Uint64(t.AccountNonce),
-		"key":      hexutil.Bytes(keyEnc),
-		"feePayer": t.FeePayer,
-		"feeRatio": hexutil.Uint(t.FeeRatio),
+		"typeInt":            t.Type(),
+		"type":               t.Type().String(),
+		"gas":                hexutil.Uint64(t.GasLimit),
+		"gasPrice":           (*hexutil.Big)(t.Price),
+		"nonce":              hexutil.Uint64(t.AccountNonce),
+		"key":                hexutil.Bytes(keyEnc),
+		"feeRatio":           hexutil.Uint(t.FeeRatio),
+		"signatures":         t.TxSignatures.ToJSON(),
+		"feePayer":           t.FeePayer,
+		"feePayerSignatures": t.FeePayerSignatures.ToJSON(),
 	}
 }
