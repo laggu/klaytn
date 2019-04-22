@@ -59,7 +59,7 @@ type testklay struct {
 
 var (
 	// The app that holds all commands and flags.
-	app = utils.NewApp(GetGitCommit(), "the klaytn command line interface")
+	app = utils.NewApp(GetGitCommit(), "the Klaytn command line interface")
 
 	// flags that configure the node
 	nodeFlags = CommonNodeFlags

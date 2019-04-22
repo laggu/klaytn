@@ -198,7 +198,7 @@ func main() {
 		}
 	)
 	// TODO-Klaytn: remove `help` command
-	app := utils.NewApp("", "the klaytn's bootnode command line interface")
+	app := utils.NewApp("", "the Klaytn's bootnode command line interface")
 	app.Name = "kbn"
 	app.Copyright = "Copyright 2018 The klaytn Authors"
 	app.UsageText = app.Name + " [global options] [commands]"

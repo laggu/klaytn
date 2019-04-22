@@ -112,8 +112,8 @@ type ProtocolManager struct {
 	nodetype p2p.ConnType
 }
 
-// NewProtocolManager returns a new klaytn sub protocol manager. The klaytn sub protocol manages peers capable
-// with the klaytn network.
+// NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
+// with the Klaytn network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
@@ -265,7 +265,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	logger.Debug("Removing klaytn peer", "peer", id)
+	logger.Debug("Removing Klaytn peer", "peer", id)
 
 	// Unregister the peer from the downloader and peer set
 	pm.downloader.UnregisterPeer(id)
@@ -301,7 +301,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 }
 
 func (pm *ProtocolManager) Stop() {
-	logger.Info("Stopping klaytn protocol")
+	logger.Info("Stopping Klaytn protocol")
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
@@ -322,7 +322,7 @@ func (pm *ProtocolManager) Stop() {
 	// Wait for all peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
 
-	logger.Info("klaytn protocol stopped")
+	logger.Info("Klaytn protocol stopped")
 }
 
 func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
@@ -345,7 +345,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("klaytn peer connected", "name", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
 
 	// Execute the handshake
 	var (
@@ -358,7 +358,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 
 	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash())
 	if err != nil {
-		p.GetP2PPeer().Log().Debug("klaytn peer handshake failed", "err", err)
+		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
 		return err
 	}
 	if rw, ok := p.GetRW().(*meteredMsgReadWriter); ok {
@@ -368,7 +368,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	// Register the peer locally
 	if err := pm.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
+		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
 		return err
 	}
 	defer pm.removePeer(p.GetID())
@@ -418,7 +418,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		//go pm.handleMsg(p, addr, msg)
 
 		//if err := pm.handleMsg(p); err != nil {
-		//	p.Log().Debug("klaytn message handling failed", "err", err)
+		//	p.Log().Debug("Klaytn message handling failed", "err", err)
 		//	return err
 		//}
 	}

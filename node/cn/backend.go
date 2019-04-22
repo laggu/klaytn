@@ -272,7 +272,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 	return ctx.OpenDatabase(dbc)
 }
 
-// CreateConsensusEngine creates the required type of consensus engine instance for a klaytn service
+// CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype p2p.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {

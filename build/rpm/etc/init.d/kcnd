@@ -3,7 +3,7 @@
 # kcnd         Startup script for the kcn
 #
 # chkconifg: - 85 15
-# description : kcnd is klaytn consensus node daemon
+# description : kcnd is Klaytn consensus node daemon
 #
 # processname: kcnd
 # config:  /etc/kcnd/conf/kcnd.conf

@@ -3,7 +3,7 @@
 # kbnd         Startup script for the kbn
 #
 # chkconifg: - 85 15
-# description : kbnd is klaytn boot node daemon
+# description : kbnd is Klaytn boot node daemon
 #
 # processname: kbnd
 # config:  /etc/kbnd/conf/kbnd.conf

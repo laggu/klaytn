@@ -146,31 +146,31 @@ var (
 
 	rpcPortFlag = cli.IntFlag{
 		Name:  "rpc-port",
-		Usage: "klay.conf - klaytn node's rpc port [default: 8551] ",
+		Usage: "klay.conf - Klaytn node's rpc port [default: 8551] ",
 		Value: 8551,
 	}
 
 	wsPortFlag = cli.IntFlag{
 		Name:  "ws-port",
-		Usage: "klay.conf - klaytn node's ws port [default: 8552]",
+		Usage: "klay.conf - Klaytn node's ws port [default: 8552]",
 		Value: 8552,
 	}
 
 	p2pPortFlag = cli.IntFlag{
 		Name:  "p2p-port",
-		Usage: "klay.conf - klaytn node's p2p port [default: 32323]",
+		Usage: "klay.conf - Klaytn node's p2p port [default: 32323]",
 		Value: 32323,
 	}
 
 	dataDirFlag = cli.StringFlag{
 		Name:  "data-dir",
-		Usage: "klay.conf - klaytn node's data directory path [default : /var/klay/data]",
+		Usage: "klay.conf - Klaytn node's data directory path [default : /var/klay/data]",
 		Value: "/var/klay/data",
 	}
 
 	logDirFlag = cli.StringFlag{
 		Name:  "log-dir",
-		Usage: "klay.conf - klaytn node's log directory path [default : /var/klay/log]",
+		Usage: "klay.conf - Klaytn node's log directory path [default : /var/klay/log]",
 		Value: "/var/klay/log",
 	}
 

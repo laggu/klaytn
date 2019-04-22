@@ -40,7 +40,7 @@ import (
 
 var logger = log.NewModuleLogger(log.NodeCN)
 
-// DefaultConfig contains default settings for use on the klaytn main net.
+// DefaultConfig contains default settings for use on the Klaytn main net.
 var DefaultConfig = Config{
 	SyncMode: downloader.FullSync,
 	Gxhash: gxhash.Config{
@@ -85,7 +85,7 @@ func init() {
 
 type Config struct {
 	// The genesis block, which is inserted if the database is empty.
-	// If nil, the klaytn main net block is used.
+	// If nil, the Klaytn main net block is used.
 	Genesis *blockchain.Genesis `toml:",omitempty"`
 
 	// Protocol options

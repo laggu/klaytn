@@ -13,7 +13,7 @@ IF NOT EXIST %DATA_DIR% (
     mkdir %DATA_DIR%
 )
 
-echo "Init genesis for klaytn aspen network"
+echo "Init genesis for Klaytn aspen network"
 
 copy %CONF%\aspen\static-nodes.json %DATA_DIR%\
 

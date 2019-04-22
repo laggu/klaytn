@@ -188,7 +188,7 @@ func (s *ServiceChain) SetComponents(component []interface{}) {
 	// do nothing
 }
 
-// CreateConsensusEngine creates the required type of consensus engine instance for a klaytn service
+// CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
 func CreateCliqueEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {

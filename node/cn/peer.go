@@ -168,7 +168,7 @@ type Peer interface {
 	// It is used solely by the fetcher.
 	FetchBlockBodies(hashes []common.Hash) error
 
-	// Handshake executes the klaytn protocol handshake, negotiating version number,
+	// Handshake executes the Klaytn protocol handshake, negotiating version number,
 	// network IDs, difficulties, head, and genesis blocks and returning error.
 	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error
 
@@ -568,7 +568,7 @@ func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 	return p2p.Send(p.rw, ReceiptsRequestMsg, hashes)
 }
 
-// Handshake executes the klaytn protocol handshake, negotiating version number,
+// Handshake executes the Klaytn protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error {
 	// Send out own handshake in a new thread
@@ -935,7 +935,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("klaytn peer connected", "name", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
 
 	// Execute the handshake
 	var (
@@ -948,7 +948,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 
 	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash())
 	if err != nil {
-		p.GetP2PPeer().Log().Debug("klaytn peer handshake failed", "err", err)
+		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
 		return err
 	}
 
@@ -957,7 +957,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	// Register the peer locally
 	if err := pm.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("klaytn peer registration failed", "err", err)
+		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
 		return err
 	}
 	defer pm.removePeer(p.GetID())
@@ -1312,7 +1312,7 @@ func (ps *peerSet) AnotherTypePeersWithoutTx(hash common.Hash, nodetype p2p.Conn
 	return list
 }
 
-// TODO-KLAYTN drop or missing tx
+// TODO-Klaytn drop or missing tx
 func (ps *peerSet) AnotherTypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()

@@ -48,7 +48,7 @@ var (
 	logger   = log.NewModuleLogger(log.CMDKGEN)
 	fileFlag = cli.BoolFlag{
 		Name:  "file",
-		Usage: `Generate a nodekey and a klaytn node information as files`,
+		Usage: `Generate a nodekey and a Klaytn node information as files`,
 	}
 	portFlag = cli.IntFlag{
 		Name:  "port",

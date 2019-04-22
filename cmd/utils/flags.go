@@ -73,7 +73,7 @@ var (
 	// General settings
 	NetworkTypeFlag = cli.StringFlag{
 		Name:  "networktype",
-		Usage: "klaytn network type (main-net (mn), service chain-net (scn))",
+		Usage: "Klaytn network type (main-net (mn), service chain-net (scn))",
 		Value: "mn",
 	}
 	DbTypeFlag = cli.StringFlag{
@@ -390,7 +390,7 @@ var (
 	// Network Settings
 	NodeTypeFlag = cli.StringFlag{
 		Name:  "nodetype",
-		Usage: "klaytn node type (consensus node (cn), proxy node (pn), endpoint node (en))",
+		Usage: "Klaytn node type (consensus node (cn), proxy node (pn), endpoint node (en))",
 		Value: "en",
 	}
 	MaxConnectionsFlag = cli.IntFlag{

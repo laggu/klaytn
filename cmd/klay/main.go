@@ -45,7 +45,7 @@ var (
 	logger = log.NewModuleLogger(log.CMDKlay)
 
 	// The app that holds all commands and flags.
-	app = utils.NewApp(nodecmd.GetGitCommit(), "the klaytn command line interface")
+	app = utils.NewApp(nodecmd.GetGitCommit(), "the Klaytn command line interface")
 
 	// flags that configure the node
 	nodeFlags = append(nodecmd.CommonNodeFlags, utils.NodeTypeFlag)

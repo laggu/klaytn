@@ -24,11 +24,11 @@ type NodeInfo struct {
 }
 
 var NODE_TYPE = map[string]NodeInfo{
-	CN:  {"kcnd", "kcnd is klaytn consensus node daemon"},
-	PN:  {"kpnd", "kpnd is klaytn proxy node daemon"},
-	EN:  {"kend", "kend is klaytn endpoint node daemon"},
-	SCN: {"kscnd", "kscnd is klaytn servicechain node daemon"},
-	BN:  {"kbnd", "kbnd is klaytn boot node daemon"},
+	CN:  {"kcnd", "kcnd is Klaytn consensus node daemon"},
+	PN:  {"kpnd", "kpnd is Klaytn proxy node daemon"},
+	EN:  {"kend", "kend is Klaytn endpoint node daemon"},
+	SCN: {"kscnd", "kscnd is Klaytn servicechain node daemon"},
+	BN:  {"kbnd", "kbnd is Klaytn boot node daemon"},
 }
 
 type RpmSpec struct {
