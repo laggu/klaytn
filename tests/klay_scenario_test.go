@@ -3704,9 +3704,9 @@ func TestValidateSender(t *testing.T) {
 		err := tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, anon.Addr, actualFrom)
+		assert.Equal(t, anon.Addr, tx.ValidatedSender())
 	}
 
 	// TxTypeValueTransfer
@@ -3724,9 +3724,9 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, anon.Addr, actualFrom)
+		assert.Equal(t, anon.Addr, tx.ValidatedSender())
 	}
 
 	// TxTypeValueTransfer
@@ -3744,9 +3744,9 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, decoupled.Addr, actualFrom)
+		assert.Equal(t, decoupled.Addr, tx.ValidatedSender())
 	}
 
 	// TxTypeSmartContractDeploy
@@ -3767,9 +3767,9 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, decoupled.Addr, actualFrom)
+		assert.Equal(t, decoupled.Addr, tx.ValidatedSender())
 	}
 
 	// TxTypeSmartContractExecution
@@ -3789,9 +3789,9 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, decoupled.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, decoupled.Addr, actualFrom)
+		assert.Equal(t, decoupled.Addr, tx.ValidatedSender())
 	}
 
 	// TxTypeChainDataAnchoring
@@ -3818,9 +3818,9 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, anon.Addr, actualFrom)
+		assert.Equal(t, anon.Addr, tx.ValidatedSender())
 	}
 
 	// TxTypeFeeDelegatedValueTransfer
@@ -3842,13 +3842,13 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, decoupled.Addr, actualFrom)
+		assert.Equal(t, decoupled.Addr, tx.ValidatedSender())
 
-		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb, 0)
+		_, err = tx.ValidateFeePayer(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, anon.Addr, actualFeePayer)
+		assert.Equal(t, anon.Addr, tx.ValidatedFeePayer())
 	}
 
 	// TxTypeFeeDelegatedValueTransferWithRatio
@@ -3871,13 +3871,13 @@ func TestValidateSender(t *testing.T) {
 		err = tx.SignFeePayerWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
-		actualFrom, _, err := types.ValidateSender(signer, tx, statedb, 0)
+		_, err = tx.ValidateSender(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, decoupled.Addr, actualFrom)
+		assert.Equal(t, decoupled.Addr, tx.ValidatedSender())
 
-		actualFeePayer, _, err := types.ValidateFeePayer(signer, tx, statedb, 0)
+		_, err = tx.ValidateFeePayer(signer, statedb, 0)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, anon.Addr, actualFeePayer)
+		assert.Equal(t, anon.Addr, tx.ValidatedFeePayer())
 	}
 }
 

@@ -28,6 +28,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"math/big"
@@ -332,23 +333,20 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		return nil, err
 	}
 
-	sender, gasFrom, err := ValidateSender(s, tx, picker, currentBlockNumber)
+	gasFrom, err := tx.ValidateSender(s, picker, currentBlockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	tx.validatedSender = sender
-	tx.validatedFeePayer = sender
 	tx.validatedIntrinsicGas = intrinsicGas + gasFrom
 	tx.checkNonce = true
 
 	if tx.IsFeeDelegatedTransaction() {
-		feePayer, gasFeePayer, err := ValidateFeePayer(s, tx, picker, currentBlockNumber)
+		gasFeePayer, err := tx.ValidateFeePayer(s, picker, currentBlockNumber)
 		if err != nil {
 			return nil, err
 		}
 
-		tx.validatedFeePayer = feePayer
 		tx.validatedIntrinsicGas += gasFeePayer
 	}
 
@@ -459,6 +457,82 @@ func (tx *Transaction) RawSignatureValues() TxSignatures {
 
 func (tx *Transaction) String() string {
 	return tx.data.String()
+}
+
+// ValidateSender finds a sender from both legacy and new types of transactions.
+// It returns the senders address and gas used for the tx validation.
+func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, currentBlockNumber uint64) (uint64, error) {
+	if tx.IsLegacyTransaction() {
+		addr, err := Sender(signer, tx)
+		// Legacy transaction cannot be executed unless the account has a legacy key.
+		if p.GetKey(addr).Type().IsLegacyAccountKey() == false {
+			return 0, kerrors.ErrLegacyTransactionMustBeWithLegacyKey
+		}
+		if tx.validatedSender == (common.Address{}) {
+			tx.validatedSender = addr
+			tx.validatedFeePayer = addr
+		}
+		return 0, err
+	}
+
+	pubkey, err := SenderPubkey(signer, tx)
+	if err != nil {
+		return 0, err
+	}
+	txfrom, ok := tx.data.(TxInternalDataFrom)
+	if !ok {
+		return 0, errNotTxInternalDataFrom
+	}
+	from := txfrom.GetFrom()
+	accKey := p.GetKey(from)
+
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation())
+	if err != nil {
+		return 0, err
+	}
+
+	if err := accountkey.ValidateAccountKey(from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
+		return 0, ErrInvalidSigSender
+	}
+
+	if tx.validatedSender == (common.Address{}) {
+		tx.validatedSender = from
+		tx.validatedFeePayer = from
+	}
+
+	return gasKey, nil
+}
+
+// ValidateFeePayer finds a fee payer from a transaction.
+// If the transaction is not a fee-delegated transaction, it returns an error.
+func (tx *Transaction) ValidateFeePayer(signer Signer, p AccountKeyPicker, currentBlockNumber uint64) (uint64, error) {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return 0, errUndefinedTxType
+	}
+
+	pubkey, err := SenderFeePayerPubkey(signer, tx)
+	if err != nil {
+		return 0, err
+	}
+
+	feePayer := tf.GetFeePayer()
+	accKey := p.GetKey(feePayer)
+
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber, accountkey.RoleFeePayer)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := accountkey.ValidateAccountKey(feePayer, accKey, pubkey, accountkey.RoleFeePayer); err != nil {
+		return 0, ErrInvalidSigFeePayer
+	}
+
+	if tx.validatedFeePayer == tx.validatedSender {
+		tx.validatedFeePayer = feePayer
+	}
+
+	return gasKey, nil
 }
 
 // Transactions is a Transaction slice type for basic sorting.

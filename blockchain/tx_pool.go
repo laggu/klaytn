@@ -558,10 +558,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// Make sure the transaction is signed properly
-	from, gasFrom, err := types.ValidateSender(pool.signer, tx, pool.currentState, pool.currentBlockNumber)
+	gasFrom, err := tx.ValidateSender(pool.signer, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
 		return ErrInvalidSender
 	}
+	from := tx.ValidatedSender()
 
 	// TODO-Klaytn-Issue136
 	// 원격 트랜잭션이 drop 되어 버리는 문제를 해결하기 위해 주석 처리함. Andy
@@ -581,13 +582,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	senderBalance := pool.getBalance(from)
 	if tx.IsFeeDelegatedTransaction() {
 		// balance check for fee-delegated tx
-		var feePayer common.Address
-
-		feePayer, gasFeePayer, err = types.ValidateFeePayer(pool.signer, tx, pool.currentState, pool.currentBlockNumber)
+		gasFeePayer, err = tx.ValidateFeePayer(pool.signer, pool.currentState, pool.currentBlockNumber)
 		if err != nil {
 			return ErrInvalidFeePayer
 		}
-
+		feePayer := tx.ValidatedFeePayer()
 		feePayerBalance := pool.getBalance(feePayer)
 		feeRatio, isRatioTx := tx.FeeRatio()
 		if isRatioTx {

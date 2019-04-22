@@ -109,18 +109,20 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		to := tx.To()
 		v := tx.Value()
 
-		from, gasFrom, err := types.ValidateSender(signer, tx, picker, currentBlockNumber)
+		gasFrom, err := tx.ValidateSender(signer, picker, currentBlockNumber)
 		if err != nil {
 			return err
 		}
+		from := tx.ValidatedSender()
 
 		gasFeePayer := uint64(0)
 		feePayer := from
 		if tx.IsFeeDelegatedTransaction() {
-			feePayer, gasFeePayer, err = types.ValidateFeePayer(signer, tx, picker, currentBlockNumber)
+			gasFeePayer, err = tx.ValidateFeePayer(signer, picker, currentBlockNumber)
 			if err != nil {
 				return err
 			}
+			feePayer = tx.ValidatedFeePayer()
 		}
 		if to == nil {
 			nonce, err := a.GetNonce(from)

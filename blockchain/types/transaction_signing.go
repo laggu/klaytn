@@ -28,7 +28,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
-	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
@@ -71,69 +70,6 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // AccountKeyPicker has a function GetKey() to retrieve an account key from statedb.
 type AccountKeyPicker interface {
 	GetKey(address common.Address) accountkey.AccountKey
-}
-
-// ValidateSender finds a sender from both legacy and new types of transactions.
-// It returns the senders address and gas used for the tx validation.
-func ValidateSender(signer Signer, tx *Transaction, p AccountKeyPicker, currentBlockNumber uint64) (common.Address, uint64, error) {
-	if tx.IsLegacyTransaction() {
-		addr, err := Sender(signer, tx)
-		// Legacy transaction cannot be executed unless the account has a legacy key.
-		if p.GetKey(addr).Type().IsLegacyAccountKey() == false {
-			return common.Address{}, 0, kerrors.ErrLegacyTransactionMustBeWithLegacyKey
-		}
-		return addr, 0, err
-	}
-
-	pubkey, err := SenderPubkey(signer, tx)
-	if err != nil {
-		return common.Address{}, 0, err
-	}
-	txfrom, ok := tx.data.(TxInternalDataFrom)
-	if !ok {
-		return common.Address{}, 0, errNotTxInternalDataFrom
-	}
-	from := txfrom.GetFrom()
-	accKey := p.GetKey(from)
-
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation())
-	if err != nil {
-		return common.Address{}, 0, err
-	}
-
-	if err := accountkey.ValidateAccountKey(from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
-		return common.Address{}, 0, ErrInvalidSigSender
-	}
-
-	return from, gasKey, nil
-}
-
-// ValidateFeePayer finds a fee payer from a transaction.
-// If the transaction is not a fee-delegated transaction, it returns an error.
-func ValidateFeePayer(signer Signer, tx *Transaction, p AccountKeyPicker, currentBlockNumber uint64) (common.Address, uint64, error) {
-	tf, ok := tx.data.(TxInternalDataFeePayer)
-	if !ok {
-		return common.Address{}, 0, errUndefinedTxType
-	}
-
-	pubkey, err := SenderFeePayerPubkey(signer, tx)
-	if err != nil {
-		return common.Address{}, 0, err
-	}
-
-	feePayer := tf.GetFeePayer()
-	accKey := p.GetKey(feePayer)
-
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber, accountkey.RoleFeePayer)
-	if err != nil {
-		return common.Address{}, 0, err
-	}
-
-	if err := accountkey.ValidateAccountKey(feePayer, accKey, pubkey, accountkey.RoleFeePayer); err != nil {
-		return common.Address{}, 0, ErrInvalidSigFeePayer
-	}
-
-	return feePayer, gasKey, nil
 }
 
 // Sender returns the address of the transaction.
