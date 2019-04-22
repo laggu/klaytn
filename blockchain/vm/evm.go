@@ -482,6 +482,7 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
 	evm.StateDB.CreateSmartContractAccount(contractAddr, humanReadable, accountkey.NewAccountKeyFail())
+	evm.StateDB.SetNonce(contractAddr, 1)
 	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 
 	// initialise a new contract and set the code that is to be used by the

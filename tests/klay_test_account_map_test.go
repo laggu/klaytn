@@ -160,6 +160,14 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		a.AddBalance(a.rewardbase, fee)
 
 		a.IncNonce(from)
+
+		if tx.IsLegacyTransaction() && tx.To() == nil {
+			a.IncNonce(*to)
+		}
+
+		if tx.Type() == types.TxTypeSmartContractDeploy || tx.Type() == types.TxTypeFeeDelegatedSmartContractDeploy || tx.Type() == types.TxTypeFeeDelegatedSmartContractDeployWithRatio {
+			a.IncNonce(*to)
+		}
 	}
 
 	return nil
