@@ -18,6 +18,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -42,6 +43,20 @@ type TxInternalDataSmartContractExecution struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+type TxInternalDataSmartContractExecutionJSON struct {
+	Type         TxType           `json:"typeInt"`
+	TypeStr      string           `json:"type"`
+	AccountNonce hexutil.Uint64   `json:"nonce"`
+	Price        *hexutil.Big     `json:"gasPrice"`
+	GasLimit     hexutil.Uint64   `json:"gas"`
+	Recipient    common.Address   `json:"to"`
+	Amount       *hexutil.Big     `json:"value"`
+	From         common.Address   `json:"from"`
+	Payload      hexutil.Bytes    `json:"input"`
+	TxSignatures TxSignaturesJSON `json:"signatures"`
+	Hash         *common.Hash     `json:"hash"`
 }
 
 func newTxInternalDataSmartContractExecution() *TxInternalDataSmartContractExecution {
@@ -290,12 +305,49 @@ func (t *TxInternalDataSmartContractExecution) Execute(sender ContractRef, vm VM
 
 func (t *TxInternalDataSmartContractExecution) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
-		"type":     t.Type().String(),
-		"gas":      hexutil.Uint64(t.GasLimit),
-		"gasPrice": (*hexutil.Big)(t.Price),
-		"input":    hexutil.Bytes(t.Payload),
-		"nonce":    hexutil.Uint64(t.AccountNonce),
-		"to":       t.Recipient,
-		"value":    (*hexutil.Big)(t.Amount),
+		"typeInt":    t.Type(),
+		"type":       t.Type().String(),
+		"gas":        hexutil.Uint64(t.GasLimit),
+		"gasPrice":   (*hexutil.Big)(t.Price),
+		"input":      hexutil.Bytes(t.Payload),
+		"nonce":      hexutil.Uint64(t.AccountNonce),
+		"to":         t.Recipient,
+		"value":      (*hexutil.Big)(t.Amount),
+		"signatures": t.TxSignatures.ToJSON(),
 	}
+}
+
+func (t *TxInternalDataSmartContractExecution) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TxInternalDataSmartContractExecutionJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.Recipient,
+		(*hexutil.Big)(t.Amount),
+		t.From,
+		t.Payload,
+		t.TxSignatures.ToJSON(),
+		t.Hash,
+	})
+}
+
+func (t *TxInternalDataSmartContractExecution) UnmarshalJSON(b []byte) error {
+	js := &TxInternalDataSmartContractExecutionJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
+		return err
+	}
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = uint64(js.GasLimit)
+	t.Recipient = js.Recipient
+	t.Amount = (*big.Int)(js.Amount)
+	t.From = js.From
+	t.Payload = js.Payload
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.Hash = js.Hash
+
+	return nil
 }
