@@ -19,6 +19,7 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -27,8 +28,6 @@ import (
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 )
-
-//go:generate gencodec -type TxInternalDataLegacy -field-override txdataMarshaling -out gen_tx_json.go
 
 type TxInternalDataLegacy struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
@@ -47,15 +46,15 @@ type TxInternalDataLegacy struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-type txdataMarshaling struct {
-	AccountNonce hexutil.Uint64
-	Price        *hexutil.Big
-	GasLimit     hexutil.Uint64
-	Amount       *hexutil.Big
-	Payload      hexutil.Bytes
-	V            *hexutil.Big
-	R            *hexutil.Big
-	S            *hexutil.Big
+type TxInternalDataLegacyJSON struct {
+	AccountNonce hexutil.Uint64   `json:"nonce"`
+	Price        *hexutil.Big     `json:"gasPrice"`
+	GasLimit     hexutil.Uint64   `json:"gas"`
+	Recipient    *common.Address  `json:"to"`
+	Amount       *hexutil.Big     `json:"value"`
+	Payload      hexutil.Bytes    `json:"input"`
+	TxSignatures TxSignaturesJSON `json:"signatures"`
+	Hash         *common.Hash     `json:"hash"`
 }
 
 func newEmptyTxInternalDataLegacy() *TxInternalDataLegacy {
@@ -373,12 +372,47 @@ func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateD
 
 func (t *TxInternalDataLegacy) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
-		"type":     t.Type().String(),
-		"gas":      hexutil.Uint64(t.GasLimit),
-		"gasPrice": (*hexutil.Big)(t.Price),
-		"input":    hexutil.Bytes(t.Payload),
-		"nonce":    hexutil.Uint64(t.AccountNonce),
-		"to":       t.Recipient,
-		"value":    (*hexutil.Big)(t.Amount),
+		"typeInt":    t.Type(),
+		"type":       t.Type().String(),
+		"gas":        hexutil.Uint64(t.GasLimit),
+		"gasPrice":   (*hexutil.Big)(t.Price),
+		"input":      hexutil.Bytes(t.Payload),
+		"nonce":      hexutil.Uint64(t.AccountNonce),
+		"to":         t.Recipient,
+		"value":      (*hexutil.Big)(t.Amount),
+		"signatures": TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 	}
+}
+
+func (t *TxInternalDataLegacy) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TxInternalDataLegacyJSON{
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.Recipient,
+		(*hexutil.Big)(t.Amount),
+		t.Payload,
+		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
+		t.Hash,
+	})
+}
+
+func (t *TxInternalDataLegacy) UnmarshalJSON(b []byte) error {
+	js := &TxInternalDataLegacyJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
+		return err
+	}
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = uint64(js.GasLimit)
+	t.Recipient = js.Recipient
+	t.Amount = (*big.Int)(js.Amount)
+	t.Payload = js.Payload
+	t.V = (*big.Int)(js.TxSignatures[0].V)
+	t.R = (*big.Int)(js.TxSignatures[0].R)
+	t.S = (*big.Int)(js.TxSignatures[0].S)
+	t.Hash = js.Hash
+
+	return nil
 }
