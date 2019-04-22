@@ -57,6 +57,9 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 	logger.Debug("bridgeNode block number", "number", block.Number())
 	cce.handler.LocalChainHeadEvent(block)
 
+	// Handling all bridge's pending request events even if there is no new follow-up event.
+	cce.handlingAllBridgePendingRequestEvents()
+
 	// Logging information of value transfer
 	cce.subbridge.bridgeManager.LogBridgeStatus()
 
@@ -86,6 +89,17 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 func (cce *ChildChainEventHandler) handleRequestValueTransferEvent(bridgeInfo *BridgeInfo, ev *TokenReceivedEvent) error {
 	tokenType := ev.TokenType
 	tokenAddr := cce.subbridge.AddressManager().GetCounterPartToken(ev.TokenAddr)
+	if tokenType != KLAY && tokenAddr == (common.Address{}) {
+		logger.Error("Unregisterd counter part token address.", "addr", tokenAddr.Hex())
+		// TODO-Klaytn consider the invalid token address
+		// - prevent the invalid token address in the bridge contract.
+		// - ignore and keep the request with the invalid token address during handling transaction.
+
+		// Increase only handle nonce of bridge contract.
+		ev.TokenType = KLAY
+		ev.Amount = big.NewInt(0)
+	}
+
 	to := ev.To
 
 	switch tokenType {
@@ -165,18 +179,26 @@ func (cce *ChildChainEventHandler) handleRequestValueTransferEvent(bridgeInfo *B
 func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(ev TokenReceivedEvent) error {
 	handleBridgeAddr := cce.subbridge.AddressManager().GetCounterPartBridge(ev.ContractAddr)
 	handleBridgeInfo, ok := cce.subbridge.bridgeManager.bridges[handleBridgeAddr]
-	handleBridgeInfo.UpdateRequestedNonce(ev.RequestNonce)
-
 	if !ok {
 		return errors.New("there is no bridge")
 	}
 
 	// TODO-Klaytn need to manage the size limitation of pending event list.
-	handleBridgeInfo.pendingRequestEvent.Put(&ev)
+	handleBridgeInfo.AddRequestValueTransferEvents([]*TokenReceivedEvent{&ev})
 
-	pendingEvent := handleBridgeInfo.pendingRequestEvent.Ready(handleBridgeInfo.nextRequestNonce)
+	return cce.processingPendingRequestEvents(handleBridgeInfo)
+}
+
+func (cce *ChildChainEventHandler) handlingAllBridgePendingRequestEvents() error {
+	for _, bi := range cce.subbridge.bridgeManager.bridges {
+		cce.processingPendingRequestEvents(bi)
+	}
+	return nil
+}
+
+func (cce *ChildChainEventHandler) processingPendingRequestEvents(handleBridgeInfo *BridgeInfo) error {
+	pendingEvent := handleBridgeInfo.GetReadyRequestValueTransferEvents()
 	if pendingEvent == nil {
-		logger.Debug("Pended bigger nonce request value transfer event", "nonce", ev.RequestNonce, "nextRequestNonce", handleBridgeInfo.nextRequestNonce, "len(pendingEvent)", len(handleBridgeInfo.pendingRequestEvent.items))
 		return nil
 	}
 
@@ -191,9 +213,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(ev TokenRecei
 	for idx, ev := range pendingEvent {
 		err := cce.handleRequestValueTransferEvent(handleBridgeInfo, ev)
 		if err != nil {
-			for _, remainEv := range pendingEvent[idx:] {
-				handleBridgeInfo.pendingRequestEvent.Put(remainEv)
-			}
+			handleBridgeInfo.AddRequestValueTransferEvents(pendingEvent[idx:])
 			logger.Error("Failed handle request value transfer event", "len(RePutEvent)", len(pendingEvent[idx:]))
 			return err
 		}
