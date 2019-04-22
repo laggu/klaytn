@@ -19,6 +19,7 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -47,6 +48,23 @@ type TxInternalDataFeeDelegatedSmartContractDeploy struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+type TxInternalDataFeeDelegatedSmartContractDeployJSON struct {
+	Type               TxType           `json:"typeInt"`
+	TypeStr            string           `json:"type"`
+	AccountNonce       hexutil.Uint64   `json:"nonce"`
+	Price              *hexutil.Big     `json:"gasPrice"`
+	GasLimit           hexutil.Uint64   `json:"gas"`
+	Recipient          common.Address   `json:"to"`
+	Amount             *hexutil.Big     `json:"value"`
+	From               common.Address   `json:"from"`
+	Payload            hexutil.Bytes    `json:"input"`
+	HumanReadable      bool             `json:"humanReadable"`
+	TxSignatures       TxSignaturesJSON `json:"signatures"`
+	FeePayer           common.Address   `json:"feePayer"`
+	FeePayerSignatures TxSignaturesJSON `json:"feePayerSignatures"`
+	Hash               *common.Hash     `json:"hash"`
 }
 
 func newTxInternalDataFeeDelegatedSmartContractDeploy() *TxInternalDataFeeDelegatedSmartContractDeploy {
@@ -361,14 +379,58 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Execute(sender ContractR
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
-		"type":          t.Type().String(),
-		"gas":           hexutil.Uint64(t.GasLimit),
-		"gasPrice":      (*hexutil.Big)(t.Price),
-		"input":         hexutil.Bytes(t.Payload),
-		"nonce":         hexutil.Uint64(t.AccountNonce),
-		"to":            t.Recipient,
-		"value":         (*hexutil.Big)(t.Amount),
-		"humanReadable": t.HumanReadable,
-		"feePayer":      t.FeePayer,
+		"typeInt":            t.Type(),
+		"type":               t.Type().String(),
+		"gas":                hexutil.Uint64(t.GasLimit),
+		"gasPrice":           (*hexutil.Big)(t.Price),
+		"input":              hexutil.Bytes(t.Payload),
+		"nonce":              hexutil.Uint64(t.AccountNonce),
+		"to":                 t.Recipient,
+		"value":              (*hexutil.Big)(t.Amount),
+		"humanReadable":      t.HumanReadable,
+		"signatures":         t.TxSignatures.ToJSON(),
+		"feePayer":           t.FeePayer,
+		"feePayerSignatures": t.FeePayerSignatures.ToJSON(),
 	}
+}
+
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TxInternalDataFeeDelegatedSmartContractDeployJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.Recipient,
+		(*hexutil.Big)(t.Amount),
+		t.From,
+		t.Payload,
+		t.HumanReadable,
+		t.TxSignatures.ToJSON(),
+		t.FeePayer,
+		t.FeePayerSignatures.ToJSON(),
+		t.Hash,
+	})
+}
+
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) UnmarshalJSON(b []byte) error {
+	js := &TxInternalDataFeeDelegatedSmartContractDeployJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
+		return err
+	}
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = (uint64)(js.GasLimit)
+	t.Recipient = js.Recipient
+	t.Amount = (*big.Int)(js.Amount)
+	t.From = js.From
+	t.Payload = js.Payload
+	t.HumanReadable = js.HumanReadable
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.FeePayer = js.FeePayer
+	t.FeePayerSignatures = js.FeePayerSignatures.ToTxSignatures()
+	t.Hash = js.Hash
+
+	return nil
 }
