@@ -47,6 +47,21 @@ type TxInternalDataAccountCreation struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
+type TxInternalDataAccountCreationJSON struct {
+	Type          TxType           `json:"typeInt"`
+	TypeStr       string           `json:"type"`
+	AccountNonce  hexutil.Uint64   `json:"nonce"`
+	Price         *hexutil.Big     `json:"gasPrice"`
+	GasLimit      hexutil.Uint64   `json:"gas"`
+	Recipient     common.Address   `json:"to"`
+	Amount        *hexutil.Big     `json:"value"`
+	From          common.Address   `json:"from"`
+	HumanReadable bool             `json:"humanReadable"`
+	Key           hexutil.Bytes    `json:"key"`
+	TxSignatures  TxSignaturesJSON `json:"signatures"`
+	Hash          *common.Hash     `json:"hash"`
+}
+
 // txInternalDataAccountCreationSerializable for RLP serialization.
 type txInternalDataAccountCreationSerializable struct {
 	AccountNonce  uint64
@@ -192,17 +207,44 @@ func (t *TxInternalDataAccountCreation) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (t *TxInternalDataAccountCreation) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.toSerializable())
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	return json.Marshal(TxInternalDataAccountCreationJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.Recipient,
+		(*hexutil.Big)(t.Amount),
+		t.From,
+		t.HumanReadable,
+		(hexutil.Bytes)(keyEnc),
+		t.TxSignatures.ToJSON(),
+		t.Hash,
+	})
 }
 
 func (t *TxInternalDataAccountCreation) UnmarshalJSON(b []byte) error {
-	dec := newTxInternalDataAccountCreationSerializable()
-
-	if err := json.Unmarshal(b, dec); err != nil {
+	js := &TxInternalDataAccountCreationJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
 		return err
 	}
 
-	t.fromSerializable(dec)
+	ser := accountkey.NewAccountKeySerializer()
+	rlp.DecodeBytes(js.Key, ser)
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = (uint64)(js.GasLimit)
+	t.Recipient = js.Recipient
+	t.Amount = (*big.Int)(js.Amount)
+	t.From = js.From
+	t.HumanReadable = js.HumanReadable
+	t.Key = ser.GetKey()
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.Hash = js.Hash
 
 	return nil
 }
@@ -413,6 +455,7 @@ func (t *TxInternalDataAccountCreation) MakeRPCOutput() map[string]interface{} {
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
 	return map[string]interface{}{
+		"typeInt":       t.Type(),
 		"type":          t.Type().String(),
 		"gas":           hexutil.Uint64(t.GasLimit),
 		"gasPrice":      (*hexutil.Big)(t.Price),
@@ -421,5 +464,6 @@ func (t *TxInternalDataAccountCreation) MakeRPCOutput() map[string]interface{} {
 		"value":         (*hexutil.Big)(t.Amount),
 		"humanReadable": t.HumanReadable,
 		"key":           hexutil.Bytes(keyEnc),
+		"signatures":    t.TxSignatures.ToJSON(),
 	}
 }
