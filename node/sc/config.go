@@ -94,8 +94,9 @@ type SCConfig struct {
 	AnchoringPeriod         uint64
 	SentChainTxsLimit       uint64
 
-	ParentChainURL string
-	VTRecovery     bool
+	ParentChainURL     string
+	VTRecovery         bool
+	VTRecoveryInterval uint64
 }
 
 // NodeName returns the devp2p node identifier.
