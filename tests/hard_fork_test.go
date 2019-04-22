@@ -238,11 +238,94 @@ func genBlocks(t *testing.T) {
 
 		{
 			amount := new(big.Int).SetUint64(0)
+			contractAddr := contract.GetAddr()
 
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:         reservoir.GetNonce(),
 				types.TxValueKeyFrom:          reservoir.GetAddr(),
-				types.TxValueKeyTo:            contract.GetAddr(),
+				types.TxValueKeyTo:            &contractAddr,
+				types.TxValueKeyAmount:        amount,
+				types.TxValueKeyGasLimit:      gasLimit,
+				types.TxValueKeyGasPrice:      gasPrice,
+				types.TxValueKeyHumanReadable: false,
+				types.TxValueKeyData:          common.FromHex(code),
+			}
+			tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+			assert.Equal(t, nil, err)
+
+			txs = append(txs, tx)
+
+			reservoir.AddNonce()
+		}
+		{
+			amount := new(big.Int).SetUint64(0)
+			contractAddr := common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd4809ff")
+
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:         reservoir.GetNonce(),
+				types.TxValueKeyFrom:          reservoir.GetAddr(),
+				types.TxValueKeyTo:            &contractAddr,
+				types.TxValueKeyAmount:        amount,
+				types.TxValueKeyGasLimit:      gasLimit,
+				types.TxValueKeyGasPrice:      gasPrice,
+				types.TxValueKeyHumanReadable: false,
+				types.TxValueKeyData:          common.FromHex(code),
+				types.TxValueKeyFeePayer:      reservoir.GetAddr(),
+			}
+			tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+			assert.Equal(t, nil, err)
+
+			err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
+			assert.Equal(t, nil, err)
+
+			txs = append(txs, tx)
+
+			reservoir.AddNonce()
+		}
+		{
+			amount := new(big.Int).SetUint64(0)
+			contractAddr := common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd480900")
+
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:              reservoir.GetNonce(),
+				types.TxValueKeyFrom:               reservoir.GetAddr(),
+				types.TxValueKeyTo:                 &contractAddr,
+				types.TxValueKeyAmount:             amount,
+				types.TxValueKeyGasLimit:           gasLimit,
+				types.TxValueKeyGasPrice:           gasPrice,
+				types.TxValueKeyHumanReadable:      false,
+				types.TxValueKeyData:               common.FromHex(code),
+				types.TxValueKeyFeePayer:           reservoir.GetAddr(),
+				types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(20),
+			}
+			tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+			assert.Equal(t, nil, err)
+
+			err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
+			assert.Equal(t, nil, err)
+
+			txs = append(txs, tx)
+
+			reservoir.AddNonce()
+		}
+
+		// SmartContractDeploy with Nil Recipient.
+		{
+			amount := new(big.Int).SetUint64(0)
+
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:         reservoir.GetNonce(),
+				types.TxValueKeyFrom:          reservoir.GetAddr(),
+				types.TxValueKeyTo:            (*common.Address)(nil),
 				types.TxValueKeyAmount:        amount,
 				types.TxValueKeyGasLimit:      gasLimit,
 				types.TxValueKeyGasPrice:      gasPrice,
@@ -265,7 +348,7 @@ func genBlocks(t *testing.T) {
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:         reservoir.GetNonce(),
 				types.TxValueKeyFrom:          reservoir.GetAddr(),
-				types.TxValueKeyTo:            common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd4809ff"),
+				types.TxValueKeyTo:            (*common.Address)(nil),
 				types.TxValueKeyAmount:        amount,
 				types.TxValueKeyGasLimit:      gasLimit,
 				types.TxValueKeyGasPrice:      gasPrice,
@@ -292,7 +375,7 @@ func genBlocks(t *testing.T) {
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:              reservoir.GetNonce(),
 				types.TxValueKeyFrom:               reservoir.GetAddr(),
-				types.TxValueKeyTo:                 common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd480900"),
+				types.TxValueKeyTo:                 (*common.Address)(nil),
 				types.TxValueKeyAmount:             amount,
 				types.TxValueKeyGasLimit:           gasLimit,
 				types.TxValueKeyGasPrice:           gasPrice,

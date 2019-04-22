@@ -84,6 +84,7 @@ var (
 	errValueKeyAnchoredDataMustByteSlice = errors.New("AnchoredData must be a slice of bytes")
 	errValueKeyNonceMustUint64           = errors.New("Nonce must be a type of uint64")
 	errValueKeyToMustAddress             = errors.New("To must be a type of common.Address")
+	errValueKeyToMustAddressPointer      = errors.New("To must be a type of *common.Address")
 	errValueKeyAmountMustBigInt          = errors.New("Amount must be a type of *big.Int")
 	errValueKeyGasLimitMustUint64        = errors.New("GasLimit must be a type of uint64")
 	errValueKeyGasPriceMustBigInt        = errors.New("GasPrice must be a type of *big.Int")

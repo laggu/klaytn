@@ -57,6 +57,7 @@ func TestGasCalculation(t *testing.T) {
 		{"AccountCreation", genAccountCreation},
 		{"AccountUpdate", genAccountUpdate},
 		{"SmartContractDeploy", genSmartContractDeploy},
+		{"SmartContractDeployWithNil", genSmartContractDeploy},
 		{"SmartContractExecution", genSmartContractExecution},
 		{"Cancel", genCancel},
 		{"ChainDataAnchoring", genChainDataAnchoring},
@@ -64,12 +65,14 @@ func TestGasCalculation(t *testing.T) {
 		{"FeeDelegatedValueTransferWithMemo", genFeeDelegatedValueTransferWithMemo},
 		{"FeeDelegatedAccountUpdate", genFeeDelegatedAccountUpdate},
 		{"FeeDelegatedSmartContractDeploy", genFeeDelegatedSmartContractDeploy},
+		{"FeeDelegatedSmartContractDeployWithNil", genFeeDelegatedSmartContractDeploy},
 		{"FeeDelegatedSmartContractExecution", genFeeDelegatedSmartContractExecution},
 		{"FeeDelegatedCancel", genFeeDelegatedCancel},
 		{"FeeDelegatedWithRatioValueTransfer", genFeeDelegatedWithRatioValueTransfer},
 		{"FeeDelegatedWithRatioValueTransferWithMemo", genFeeDelegatedWithRatioValueTransferWithMemo},
 		{"FeeDelegatedWithRatioAccountUpdate", genFeeDelegatedWithRatioAccountUpdate},
 		{"FeeDelegatedWithRatioSmartContractDeploy", genFeeDelegatedWithRatioSmartContractDeploy},
+		{"FeeDelegatedWithRatioSmartContractDeployWithNil", genFeeDelegatedWithRatioSmartContractDeploy},
 		{"FeeDelegatedWithRatioSmartContractExecution", genFeeDelegatedWithRatioSmartContractExecution},
 		{"FeeDelegatedWithRatioCancel", genFeeDelegatedWithRatioCancel},
 	}
@@ -175,11 +178,12 @@ func TestGasCalculation(t *testing.T) {
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(0)
+		to := contract.GetAddr()
 
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            contract.GetAddr(),
+			types.TxValueKeyTo:            &to,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -221,6 +225,8 @@ func TestGasCalculation(t *testing.T) {
 			// Set contract's address with SmartContractExecution
 			if strings.Contains(f.Name, "SmartContractExecution") {
 				toAccount = contract
+			} else if strings.Contains(f.Name, "WithNil") {
+				toAccount = nil
 			}
 
 			if !strings.Contains(f.Name, "FeeDelegated") {
@@ -451,7 +457,7 @@ func genFeeDelegatedWithRatioAccountUpdate(t *testing.T, signer types.Signer, fr
 }
 
 func genSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, gasPrice, types.TxTypeSmartContractDeploy)
+	values, intrinsicGas := genMapForDeploy(t, from, to, gasPrice, types.TxTypeSmartContractDeploy)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 	assert.Equal(t, nil, err)
@@ -463,7 +469,7 @@ func genSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount,
 }
 
 func genFeeDelegatedSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, gasPrice, types.TxTypeFeeDelegatedSmartContractDeploy)
+	values, intrinsicGas := genMapForDeploy(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractDeploy)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
@@ -479,7 +485,7 @@ func genFeeDelegatedSmartContractDeploy(t *testing.T, signer types.Signer, from 
 }
 
 func genFeeDelegatedWithRatioSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, gasPrice, types.TxTypeFeeDelegatedSmartContractDeployWithRatio)
+	values, intrinsicGas := genMapForDeploy(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractDeployWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -666,18 +672,23 @@ func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKey
 	return values
 }
 
-func genMapForDeploy(t *testing.T, from TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	amount := new(big.Int).SetUint64(0)
-
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.GetNonce(),
 		types.TxValueKeyAmount:        amount,
 		types.TxValueKeyGasLimit:      gasLimit,
 		types.TxValueKeyGasPrice:      gasPrice,
 		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyTo:            common.HexToAddress("12345678"),
 		types.TxValueKeyFrom:          from.GetAddr(),
 		types.TxValueKeyData:          common.FromHex(code),
+	}
+
+	if to == nil {
+		values[types.TxValueKeyTo] = (*common.Address)(nil)
+	} else {
+		addr := common.HexToAddress("12345678")
+		values[types.TxValueKeyTo] = &addr
 	}
 
 	intrinsicGas := getIntrinsicGas(txType)

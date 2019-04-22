@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -34,7 +35,7 @@ type TxInternalDataSmartContractDeploy struct {
 	AccountNonce  uint64
 	Price         *big.Int
 	GasLimit      uint64
-	Recipient     common.Address
+	Recipient     *common.Address `rlp:"nil"`
 	Amount        *big.Int
 	From          common.Address
 	Payload       []byte
@@ -52,7 +53,7 @@ type TxInternalDataSmartContractDeployJSON struct {
 	AccountNonce  hexutil.Uint64   `json:"nonce"`
 	Price         *hexutil.Big     `json:"gasPrice"`
 	GasLimit      hexutil.Uint64   `json:"gas"`
-	Recipient     common.Address   `json:"to"`
+	Recipient     *common.Address  `json:"to"`
 	Amount        *hexutil.Big     `json:"value"`
 	From          common.Address   `json:"from"`
 	Payload       hexutil.Bytes    `json:"input"`
@@ -80,11 +81,11 @@ func newTxInternalDataSmartContractDeployWithMap(values map[TxValueKeyType]inter
 		return nil, errValueKeyNonceMustUint64
 	}
 
-	if v, ok := values[TxValueKeyTo].(common.Address); ok {
+	if v, ok := values[TxValueKeyTo].(*common.Address); ok {
 		t.Recipient = v
 		delete(values, TxValueKeyTo)
 	} else {
-		return nil, errValueKeyToMustAddress
+		return nil, errValueKeyToMustAddressPointer
 	}
 
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
@@ -151,6 +152,18 @@ func (t *TxInternalDataSmartContractDeploy) GetPayload() []byte {
 	return t.Payload
 }
 
+func (t *TxInternalDataSmartContractDeploy) equalRecipient(a *TxInternalDataSmartContractDeploy) bool {
+	if t.Recipient == nil && a.Recipient == nil {
+		return true
+	}
+
+	if t.Recipient != nil && a.Recipient != nil && bytes.Equal(t.Recipient.Bytes(), a.Recipient.Bytes()) {
+		return true
+	}
+
+	return false
+}
+
 func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
 	ta, ok := a.(*TxInternalDataSmartContractDeploy)
 	if !ok {
@@ -160,7 +173,7 @@ func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
 	return t.AccountNonce == ta.AccountNonce &&
 		t.Price.Cmp(ta.Price) == 0 &&
 		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
+		t.equalRecipient(ta) &&
 		t.Amount.Cmp(ta.Amount) == 0 &&
 		t.From == ta.From &&
 		bytes.Equal(t.Payload, ta.Payload) &&
@@ -185,12 +198,7 @@ func (t *TxInternalDataSmartContractDeploy) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataSmartContractDeploy) GetRecipient() *common.Address {
-	if t.Recipient == (common.Address{}) {
-		return nil
-	}
-
-	to := common.Address(t.Recipient)
-	return &to
+	return t.Recipient
 }
 
 func (t *TxInternalDataSmartContractDeploy) GetAmount() *big.Int {
@@ -263,7 +271,7 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSignToBytes() []byte {
 		AccountNonce  uint64
 		Price         *big.Int
 		GasLimit      uint64
-		Recipient     common.Address
+		Recipient     *common.Address
 		Amount        *big.Int
 		From          common.Address
 		Payload       []byte
@@ -298,34 +306,45 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 }
 
 func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	to := t.Recipient
-	if t.HumanReadable {
-		addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
-			if r == rune(0x0) {
-				return true
+	if t.Recipient != nil {
+		to := t.Recipient
+		if t.HumanReadable {
+			addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
+				if r == rune(0x0) {
+					return true
+				}
+				return false
+			}))
+			if err := common.IsHumanReadableAddress(addrString); err != nil {
+				return kerrors.ErrNotHumanReadableAddress
 			}
-			return false
-		}))
-		if err := common.IsHumanReadableAddress(addrString); err != nil {
-			return kerrors.ErrNotHumanReadableAddress
+		}
+		// Fail if the address is already created.
+		if stateDB.Exist(*to) {
+			return kerrors.ErrAccountAlreadyExists
 		}
 	}
-	// Fail if the address is already created.
-	if stateDB.Exist(to) {
-		return kerrors.ErrAccountAlreadyExists
+	// Fail if the sender does not exist.
+	if !stateDB.Exist(t.From) {
+		return errValueKeySenderUnknown
 	}
 	return nil
 }
 
 func (t *TxInternalDataSmartContractDeploy) ValidateMutableValue(stateDB StateDB) bool {
-	if stateDB.Exist(t.Recipient) {
+	if t.Recipient != nil && stateDB.Exist(*t.Recipient) {
 		return false
 	}
 	return true
 }
 
 func (t *TxInternalDataSmartContractDeploy) FillContractAddress(from common.Address, r *Receipt) {
-	r.ContractAddress = t.Recipient
+	if t.Recipient == nil {
+		codeHash := crypto.Keccak256Hash(t.Payload)
+		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce, codeHash)
+	} else {
+		r.ContractAddress = *t.Recipient
+	}
 }
 
 func (t *TxInternalDataSmartContractDeploy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
@@ -333,7 +352,12 @@ func (t *TxInternalDataSmartContractDeploy) Execute(sender ContractRef, vm VM, s
 		stateDB.IncNonce(sender.Address())
 		return nil, 0, err
 	}
-	ret, _, usedGas, err = vm.CreateWithAddress(sender, t.Payload, gas, value, t.Recipient, t.HumanReadable)
+
+	if t.Recipient == nil {
+		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value)
+	} else {
+		ret, _, usedGas, err = vm.CreateWithAddress(sender, t.Payload, gas, value, *t.Recipient, t.HumanReadable)
+	}
 
 	return ret, usedGas, err
 }

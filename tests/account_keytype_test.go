@@ -235,7 +235,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeSmartContractDeploy:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyTo] = &newAddr
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -244,7 +244,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeFeeDelegatedSmartContractDeploy:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyTo] = &newAddr
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -254,7 +254,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeFeeDelegatedSmartContractDeployWithRatio:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyTo] = &newAddr
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -488,7 +488,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:         reservoir.Nonce,
 				types.TxValueKeyFrom:          reservoir.Addr,
-				types.TxValueKeyTo:            contract.Addr,
+				types.TxValueKeyTo:            &contract.Addr,
 				types.TxValueKeyAmount:        amount,
 				types.TxValueKeyGasLimit:      gasLimit,
 				types.TxValueKeyGasPrice:      gasPrice,
@@ -2290,7 +2290,7 @@ func TestAccountTransferWithRoleBasedTxKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         roleBased.Nonce,
 			types.TxValueKeyFrom:          roleBased.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -2529,7 +2529,7 @@ func TestAccountTransferWithRoleBasedUpdateKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         roleBased.Nonce,
 			types.TxValueKeyFrom:          roleBased.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -2775,7 +2775,7 @@ func TestAccountTransferWithRoleBasedFeePayerKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         roleBased.Nonce,
 			types.TxValueKeyFrom:          roleBased.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -2802,7 +2802,7 @@ func TestAccountTransferWithRoleBasedFeePayerKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         roleBased.Nonce,
 			types.TxValueKeyFrom:          roleBased.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -3218,7 +3218,7 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -3247,7 +3247,7 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.Nonce,
 			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 contract.Addr,
+			types.TxValueKeyTo:                 &contract.Addr,
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
@@ -3279,7 +3279,7 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -3757,7 +3757,7 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -3786,7 +3786,7 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.Nonce,
 			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 contract.Addr,
+			types.TxValueKeyTo:                 &contract.Addr,
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
@@ -3818,7 +3818,7 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -4337,7 +4337,7 @@ func TestAccountFeeDelegationWithRoleBasedFeePayerKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -4371,7 +4371,7 @@ func TestAccountFeeDelegationWithRoleBasedFeePayerKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.Nonce,
 			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 contract2.Addr,
+			types.TxValueKeyTo:                 &contract2.Addr,
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,

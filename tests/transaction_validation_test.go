@@ -92,7 +92,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
 			types.TxValueKeyData:          common.FromHex(code),
 		}
@@ -112,7 +112,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyTo:            contractInvalid.Addr,
+			types.TxValueKeyTo:            &contractInvalid.Addr,
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
 			types.TxValueKeyData:          []byte{}, // the invalid contract doesn't have contract code
 		}
