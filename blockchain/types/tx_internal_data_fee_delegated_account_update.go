@@ -59,6 +59,20 @@ type txInternalDataFeeDelegatedAccountUpdateSerializable struct {
 	FeePayerSignatures TxSignatures
 }
 
+type TxInternalDataFeeDelegatedAccountUpdateJSON struct {
+	Type               TxType           `json:"typeInt"`
+	TypeStr            string           `json:"type"`
+	AccountNonce       hexutil.Uint64   `json:"nonce"`
+	Price              *hexutil.Big     `json:"gasPrice"`
+	GasLimit           hexutil.Uint64   `json:"gas"`
+	From               common.Address   `json:"from"`
+	Key                hexutil.Bytes    `json:"key"`
+	TxSignatures       TxSignaturesJSON `json:"signatures"`
+	FeePayer           common.Address   `json:"feePayer"`
+	FeePayerSignatures TxSignaturesJSON `json:"feePayerSignatures"`
+	Hash               *common.Hash     `json:"hash"`
+}
+
 func newTxInternalDataFeeDelegatedAccountUpdate() *TxInternalDataFeeDelegatedAccountUpdate {
 	return &TxInternalDataFeeDelegatedAccountUpdate{
 		Price:        new(big.Int),
@@ -172,17 +186,42 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) DecodeRLP(s *rlp.Stream) error
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.toSerializable())
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	return json.Marshal(TxInternalDataFeeDelegatedAccountUpdateJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.From,
+		(hexutil.Bytes)(keyEnc),
+		t.TxSignatures.ToJSON(),
+		t.FeePayer,
+		t.FeePayerSignatures.ToJSON(),
+		t.Hash,
+	})
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) UnmarshalJSON(b []byte) error {
-	dec := newTxInternalDataFeeDelegatedAccountUpdateSerializable()
-
-	if err := json.Unmarshal(b, dec); err != nil {
+	js := &TxInternalDataFeeDelegatedAccountUpdateJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
 		return err
 	}
 
-	t.fromSerializable(dec)
+	ser := accountkey.NewAccountKeySerializer()
+	rlp.DecodeBytes(js.Key, ser)
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = (uint64)(js.GasLimit)
+	t.From = js.From
+	t.Key = ser.GetKey()
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.FeePayer = js.FeePayer
+	t.FeePayerSignatures = js.FeePayerSignatures.ToTxSignatures()
+	t.Hash = js.Hash
 
 	return nil
 }
@@ -370,11 +409,14 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) MakeRPCOutput() map[string]int
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
 	return map[string]interface{}{
-		"type":     t.Type().String(),
-		"gas":      hexutil.Uint64(t.GasLimit),
-		"gasPrice": (*hexutil.Big)(t.Price),
-		"nonce":    hexutil.Uint64(t.AccountNonce),
-		"key":      hexutil.Bytes(keyEnc),
-		"feePayer": t.FeePayer,
+		"type":               t.Type().String(),
+		"typeInt":            t.Type(),
+		"gas":                hexutil.Uint64(t.GasLimit),
+		"gasPrice":           (*hexutil.Big)(t.Price),
+		"nonce":              hexutil.Uint64(t.AccountNonce),
+		"key":                hexutil.Bytes(keyEnc),
+		"signatures":         t.TxSignatures.ToJSON(),
+		"feePayer":           t.FeePayer,
+		"feePayerSignatures": t.FeePayerSignatures.ToJSON(),
 	}
 }
