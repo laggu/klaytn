@@ -18,6 +18,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -49,6 +50,20 @@ type TxInternalDataFeeDelegatedCancelWithRatio struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+type TxInternalDataFeeDelegatedCancelWithRatioJSON struct {
+	Type               TxType           `json:"typeInt"`
+	TypeStr            string           `json:"type"`
+	AccountNonce       hexutil.Uint64   `json:"nonce"`
+	Price              *hexutil.Big     `json:"gasPrice"`
+	GasLimit           hexutil.Uint64   `json:"gas"`
+	From               common.Address   `json:"from"`
+	FeeRatio           hexutil.Uint     `json:"feeRatio"`
+	TxSignatures       TxSignaturesJSON `json:"signatures"`
+	FeePayer           common.Address   `json:"feePayer"`
+	FeePayerSignatures TxSignaturesJSON `json:"feePayerSignatures"`
+	Hash               *common.Hash     `json:"hash"`
 }
 
 func newTxInternalDataFeeDelegatedCancelWithRatio() *TxInternalDataFeeDelegatedCancelWithRatio {
@@ -281,11 +296,49 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, 
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
-		"type":     t.Type().String(),
-		"gas":      hexutil.Uint64(t.GasLimit),
-		"gasPrice": (*hexutil.Big)(t.Price),
-		"nonce":    hexutil.Uint64(t.AccountNonce),
-		"feePayer": t.FeePayer,
-		"feeRatio": hexutil.Uint(t.FeeRatio),
+		"typeInt":            t.Type(),
+		"type":               t.Type().String(),
+		"gas":                hexutil.Uint64(t.GasLimit),
+		"gasPrice":           (*hexutil.Big)(t.Price),
+		"nonce":              hexutil.Uint64(t.AccountNonce),
+		"feeRatio":           hexutil.Uint(t.FeeRatio),
+		"signatures":         t.TxSignatures.ToJSON(),
+		"feePayer":           t.FeePayer,
+		"feePayerSignatures": t.FeePayerSignatures.ToJSON(),
 	}
+}
+
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TxInternalDataFeeDelegatedCancelWithRatioJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.From,
+		(hexutil.Uint)(t.FeeRatio),
+		t.TxSignatures.ToJSON(),
+		t.FeePayer,
+		t.FeePayerSignatures.ToJSON(),
+		t.Hash,
+	})
+}
+
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) UnmarshalJSON(b []byte) error {
+	js := &TxInternalDataFeeDelegatedCancelWithRatioJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
+		return err
+	}
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = uint64(js.GasLimit)
+	t.From = js.From
+	t.FeeRatio = FeeRatio(js.FeeRatio)
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.FeePayer = js.FeePayer
+	t.FeePayerSignatures = js.FeePayerSignatures.ToTxSignatures()
+	t.Hash = js.Hash
+
+	return nil
 }
