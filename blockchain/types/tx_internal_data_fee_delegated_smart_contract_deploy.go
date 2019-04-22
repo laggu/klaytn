@@ -206,7 +206,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayer() common.Add
 	return t.FeePayer
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayerRawSignatureValues() []*big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayerRawSignatureValues() TxSignatures {
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 

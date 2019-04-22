@@ -242,7 +242,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeePayer() common.
 	return t.FeePayer
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeePayerRawSignatureValues() []*big.Int {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeePayerRawSignatureValues() TxSignatures {
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 

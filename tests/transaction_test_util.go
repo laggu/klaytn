@@ -113,7 +113,7 @@ func (tt *ttTransaction) verify(signer types.Signer, tx *types.Transaction) erro
 		return fmt.Errorf("Nonce mismatch: got %v, want %v", tx.Nonce(), tt.Nonce)
 	}
 	sigs := tx.RawSignatureValues()
-	v, r, s := sigs[0], sigs[1], sigs[2]
+	v, r, s := sigs[0].V, sigs[1].R, sigs[2].S
 	if r.Cmp(tt.R) != 0 {
 		return fmt.Errorf("R mismatch: got %v, want %v", r, tt.R)
 	}

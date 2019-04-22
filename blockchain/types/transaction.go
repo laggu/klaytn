@@ -453,7 +453,7 @@ func (tx *Transaction) SetSignature(signature TxSignatures) {
 	tx.data.SetSignature(signature)
 }
 
-func (tx *Transaction) RawSignatureValues() []*big.Int {
+func (tx *Transaction) RawSignatureValues() TxSignatures {
 	return tx.data.RawSignatureValues()
 }
 

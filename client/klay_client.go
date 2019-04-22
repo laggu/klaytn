@@ -169,7 +169,7 @@ func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *
 		return nil, false, err
 	} else if json == nil {
 		return nil, false, klaytn.NotFound
-	} else if sigs := json.tx.RawSignatureValues(); sigs[1] == nil {
+	} else if sigs := json.tx.RawSignatureValues(); sigs[0].V == nil {
 		return nil, false, fmt.Errorf("server returned transaction without signature")
 	}
 	setSenderFromServer(json.tx, json.From, json.BlockHash)
@@ -215,7 +215,7 @@ func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash,
 	if err == nil {
 		if json == nil {
 			return nil, klaytn.NotFound
-		} else if sigs := json.tx.RawSignatureValues(); sigs[1] == nil {
+		} else if sigs := json.tx.RawSignatureValues(); sigs[0].V == nil {
 			return nil, fmt.Errorf("server returned transaction without signature")
 		}
 	}

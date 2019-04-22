@@ -205,8 +205,8 @@ func (t *TxInternalDataLegacy) SetSignature(s TxSignatures) {
 	t.S = s[0].S
 }
 
-func (t *TxInternalDataLegacy) RawSignatureValues() []*big.Int {
-	return []*big.Int{t.V, t.R, t.S}
+func (t *TxInternalDataLegacy) RawSignatureValues() TxSignatures {
+	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
 func (t *TxInternalDataLegacy) ValidateSignature() bool {

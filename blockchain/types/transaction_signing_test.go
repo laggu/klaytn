@@ -72,7 +72,7 @@ func TestEIP155RawSignatureValues(t *testing.T) {
 	r, s, v, err := signer.SignatureValues(sig)
 
 	sigs := tx.RawSignatureValues()
-	txV, txR, txS := sigs[0], sigs[1], sigs[2]
+	txV, txR, txS := sigs[0].V, sigs[0].R, sigs[0].S
 
 	assert.Equal(t, r, txR)
 	assert.Equal(t, s, txS)

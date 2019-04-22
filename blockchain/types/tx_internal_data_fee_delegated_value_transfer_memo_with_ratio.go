@@ -246,7 +246,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeePayer() com
 	return t.FeePayer
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeePayerRawSignatureValues() []*big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeePayerRawSignatureValues() TxSignatures {
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 

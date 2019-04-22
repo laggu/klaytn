@@ -82,13 +82,8 @@ func (t TxSignatures) ChainId() *big.Int {
 	return txSig.ChainId()
 }
 
-func (t TxSignatures) RawSignatureValues() []*big.Int {
-	values := make([]*big.Int, 0, 3*len(t))
-	for _, s := range t {
-		values = append(values, s.RawSignatureValues()...)
-	}
-
-	return values
+func (t TxSignatures) RawSignatureValues() TxSignatures {
+	return t
 }
 
 func (t TxSignatures) ValidateSignature() bool {

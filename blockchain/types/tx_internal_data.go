@@ -228,8 +228,8 @@ type TxInternalData interface {
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.
 	// Due to multi signatures, it is not good to return three values of `*big.Int`.
-	// The format would be something like [v, r, s, v, r, s].
-	RawSignatureValues() []*big.Int
+	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
+	RawSignatureValues() TxSignatures
 
 	// ValidateSignature returns true if the signature is valid.
 	ValidateSignature() bool
@@ -294,8 +294,8 @@ type TxInternalDataFeePayer interface {
 
 	// GetFeePayerRawSignatureValues returns fee payer's signatures as a slice of `*big.Int`.
 	// Due to multi signatures, it is not good to return three values of `*big.Int`.
-	// The format would be something like [v, r, s, v, r, s].
-	GetFeePayerRawSignatureValues() []*big.Int
+	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
+	GetFeePayerRawSignatureValues() TxSignatures
 
 	// RecoverFeePayerPubkey returns the fee payer's public key derived from txhash and signatures(r, s, v).
 	RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)

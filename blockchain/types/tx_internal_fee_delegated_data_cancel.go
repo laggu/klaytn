@@ -141,7 +141,7 @@ func (t *TxInternalDataFeeDelegatedCancel) GetFeePayer() common.Address {
 	return t.FeePayer
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) GetFeePayerRawSignatureValues() []*big.Int {
+func (t *TxInternalDataFeeDelegatedCancel) GetFeePayerRawSignatureValues() TxSignatures {
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 

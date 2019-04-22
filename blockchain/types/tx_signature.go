@@ -67,8 +67,8 @@ func (t *TxSignature) ChainId() *big.Int {
 	return deriveChainId(t.V)
 }
 
-func (t *TxSignature) RawSignatureValues() []*big.Int {
-	return []*big.Int{t.V, t.R, t.S}
+func (t *TxSignature) RawSignatureValues() *TxSignature {
+	return t
 }
 
 func (t *TxSignature) ValidateSignature() bool {
