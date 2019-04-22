@@ -43,7 +43,7 @@ const (
 
 var logger = log.NewModuleLogger(log.ServiceChain)
 
-// DefaultConfig contains default settings for use on the klaytn main net.
+// DefaultConfig contains default settings for use on the Klaytn main net.
 var DefaultConfig = SCConfig{
 	NetworkId: 1,
 	MaxPeer:   50,

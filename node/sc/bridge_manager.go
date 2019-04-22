@@ -411,7 +411,7 @@ func (bm *BridgeManager) loop(
 	defer receivedSub.Unsubscribe()
 	defer withdrawSub.Unsubscribe()
 
-	// TODO-klaytn change goroutine logic for performance
+	// TODO-Klaytn change goroutine logic for performance
 	for {
 		select {
 		case ev := <-receivedCh:

@@ -22,7 +22,7 @@ package client
 
 import "github.com/ground-x/klaytn"
 
-// Verify that Client implements the klaytn interfaces.
+// Verify that Client implements the Klaytn interfaces.
 var (
 	// _ = klaytn.Subscription(&Client{})
 	_ = klaytn.ChainReader(&Client{})
