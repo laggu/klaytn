@@ -52,6 +52,18 @@ type txInternalDataAccountUpdateSerializable struct {
 	TxSignatures
 }
 
+type TxInternalDataAccountUpdateJSON struct {
+	Type         TxType           `json:"typeInt"`
+	TypeStr      string           `json:"type"`
+	AccountNonce hexutil.Uint64   `json:"nonce"`
+	Price        *hexutil.Big     `json:"gasPrice"`
+	GasLimit     hexutil.Uint64   `json:"gas"`
+	From         common.Address   `json:"from"`
+	Key          hexutil.Bytes    `json:"key"`
+	TxSignatures TxSignaturesJSON `json:"signatures"`
+	Hash         *common.Hash     `json:"hash"`
+}
+
 func newTxInternalDataAccountUpdate() *TxInternalDataAccountUpdate {
 	return &TxInternalDataAccountUpdate{
 		Price:        new(big.Int),
@@ -154,17 +166,38 @@ func (t *TxInternalDataAccountUpdate) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (t *TxInternalDataAccountUpdate) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.toSerializable())
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	return json.Marshal(TxInternalDataAccountUpdateJSON{
+		t.Type(),
+		t.Type().String(),
+		(hexutil.Uint64)(t.AccountNonce),
+		(*hexutil.Big)(t.Price),
+		(hexutil.Uint64)(t.GasLimit),
+		t.From,
+		(hexutil.Bytes)(keyEnc),
+		t.TxSignatures.ToJSON(),
+		t.Hash,
+	})
 }
 
 func (t *TxInternalDataAccountUpdate) UnmarshalJSON(b []byte) error {
-	dec := newTxInternalDataAccountUpdateSerializable()
-
-	if err := json.Unmarshal(b, dec); err != nil {
+	js := &TxInternalDataAccountUpdateJSON{}
+	if err := json.Unmarshal(b, js); err != nil {
 		return err
 	}
 
-	t.fromSerializable(dec)
+	ser := accountkey.NewAccountKeySerializer()
+	rlp.DecodeBytes(js.Key, ser)
+
+	t.AccountNonce = uint64(js.AccountNonce)
+	t.Price = (*big.Int)(js.Price)
+	t.GasLimit = (uint64)(js.GasLimit)
+	t.From = js.From
+	t.Key = ser.GetKey()
+	t.TxSignatures = js.TxSignatures.ToTxSignatures()
+	t.Hash = js.Hash
 
 	return nil
 }
@@ -338,10 +371,12 @@ func (t *TxInternalDataAccountUpdate) MakeRPCOutput() map[string]interface{} {
 	keyEnc, _ := rlp.EncodeToBytes(serializer)
 
 	return map[string]interface{}{
-		"type":     t.Type().String(),
-		"gas":      hexutil.Uint64(t.GasLimit),
-		"gasPrice": (*hexutil.Big)(t.Price),
-		"nonce":    hexutil.Uint64(t.AccountNonce),
-		"key":      hexutil.Bytes(keyEnc),
+		"type":       t.Type().String(),
+		"typeInt":    t.Type(),
+		"gas":        hexutil.Uint64(t.GasLimit),
+		"gasPrice":   (*hexutil.Big)(t.Price),
+		"nonce":      hexutil.Uint64(t.AccountNonce),
+		"key":        hexutil.Bytes(keyEnc),
+		"signatures": t.TxSignatures.ToJSON(),
 	}
 }
