@@ -492,14 +492,14 @@ func (sc *SubBridge) loop() {
 			if err := sc.eventhandler.HandleLogsEvent(logs); err != nil {
 				logger.Error("subbridge log event", "err", err)
 			}
-		// Handle TokenEvent
+		// Handle Bridge Event
 		case ev := <-sc.tokenReceivedCh:
-			if err := sc.eventhandler.HandleTokenReceivedEvent(ev); err != nil {
-				logger.Error("fail to handle for tokenReceivedEvent ", err)
+			if err := sc.eventhandler.HandleRequestValueTransferEvent(ev); err != nil {
+				logger.Error("fail to handle for request value transfer event ", err)
 			}
 		case ev := <-sc.tokenTransferCh:
-			if err := sc.eventhandler.HandleTokenTransferEvent(ev); err != nil {
-				logger.Error("fail to handle for tokenTransferEvent ", err)
+			if err := sc.eventhandler.HandleHandleValueTransferEvent(ev); err != nil {
+				logger.Error("fail to handle for handle value transfer event ", err)
 			}
 		case <-report.C:
 			// report status

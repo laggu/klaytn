@@ -39,6 +39,11 @@ type ChildChainEventHandler struct {
 	listeners []LogEventListener
 }
 
+const (
+	// TODO-Klaytn need to define proper value.
+	errorDiffRequestHandleNonce = 10000
+)
+
 func NewChildChainEventHandler(bridge *SubBridge, handler *SubBridgeHandler) (*ChildChainEventHandler, error) {
 	return &ChildChainEventHandler{subbridge: bridge, handler: handler}, nil
 }
@@ -51,6 +56,10 @@ func (cce *ChildChainEventHandler) AddListener(listener LogEventListener) {
 func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
 	logger.Debug("bridgeNode block number", "number", block.Number())
 	cce.handler.LocalChainHeadEvent(block)
+
+	// Logging information of value transfer
+	cce.subbridge.bridgeManager.LogBridgeStatus()
+
 	return nil
 }
 
@@ -74,7 +83,7 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
-func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *BridgeInfo, ev *TokenReceivedEvent) error {
+func (cce *ChildChainEventHandler) handleRequestValueTransferEvent(bridgeInfo *BridgeInfo, ev *TokenReceivedEvent) error {
 	tokenType := ev.TokenType
 	tokenAddr := cce.subbridge.AddressManager().GetCounterPartToken(ev.TokenAddr)
 	to := ev.To
@@ -153,41 +162,59 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(bridgeInfo *B
 	return nil
 }
 
-func (cce *ChildChainEventHandler) HandleTokenReceivedEvent(token TokenReceivedEvent) error {
-	bridgeAddr := cce.subbridge.AddressManager().GetCounterPartBridge(token.ContractAddr)
-	bridgeInfo, ok := cce.subbridge.bridgeManager.bridges[bridgeAddr]
+func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(ev TokenReceivedEvent) error {
+	handleBridgeAddr := cce.subbridge.AddressManager().GetCounterPartBridge(ev.ContractAddr)
+	handleBridgeInfo, ok := cce.subbridge.bridgeManager.bridges[handleBridgeAddr]
+	handleBridgeInfo.UpdateRequestedNonce(ev.RequestNonce)
+
 	if !ok {
 		return errors.New("there is no bridge")
 	}
 
 	// TODO-Klaytn need to manage the size limitation of pending event list.
-	bridgeInfo.pendingRequestEvent.Put(&token)
+	handleBridgeInfo.pendingRequestEvent.Put(&ev)
 
-	pendingEvent := bridgeInfo.pendingRequestEvent.Ready(bridgeInfo.nextRequestNonce)
+	pendingEvent := handleBridgeInfo.pendingRequestEvent.Ready(handleBridgeInfo.nextRequestNonce)
 	if pendingEvent == nil {
-		logger.Debug("Pended bigger nonce request value transfer event", "nonce", token.RequestNonce, "nextRequestNonce", bridgeInfo.nextRequestNonce, "len(pendingEvent)", len(bridgeInfo.pendingRequestEvent.items))
+		logger.Debug("Pended bigger nonce request value transfer event", "nonce", ev.RequestNonce, "nextRequestNonce", handleBridgeInfo.nextRequestNonce, "len(pendingEvent)", len(handleBridgeInfo.pendingRequestEvent.items))
 		return nil
 	}
-	logger.Info("Get Pending request value transfer event", "len(pendingEvent)", len(pendingEvent))
+
+	logger.Debug("Get Pending request value transfer event", "len(pendingEvent)", len(pendingEvent))
+
+	diff := handleBridgeInfo.requestedNonce - handleBridgeInfo.handledNonce
+	if diff > errorDiffRequestHandleNonce {
+		logger.Error("Value transfer requested/handled nonce gap is too much.", "toSC", handleBridgeInfo.onServiceChain, "diff", diff, "requestedNonce", handleBridgeInfo.requestedNonce, "handledNonce", handleBridgeInfo.handledNonce)
+		// TODO-Klaytn need to consider starting value transfer recovery.
+	}
 
 	for idx, ev := range pendingEvent {
-		err := cce.HandleRequestValueTransferEvent(bridgeInfo, ev)
+		err := cce.handleRequestValueTransferEvent(handleBridgeInfo, ev)
 		if err != nil {
 			for _, remainEv := range pendingEvent[idx:] {
-				bridgeInfo.pendingRequestEvent.Put(remainEv)
+				handleBridgeInfo.pendingRequestEvent.Put(remainEv)
 			}
 			logger.Error("Failed handle request value transfer event", "len(RePutEvent)", len(pendingEvent[idx:]))
 			return err
 		}
-		bridgeInfo.nextRequestNonce++
-		logger.Debug("Increased nextRequestNonce", "nonce", bridgeInfo.nextRequestNonce)
+		handleBridgeInfo.nextRequestNonce++
 	}
 
 	return nil
 }
 
-func (cce *ChildChainEventHandler) HandleTokenTransferEvent(token TokenTransferEvent) error {
-	//TODO-Klaytn event handle
+func (cce *ChildChainEventHandler) HandleHandleValueTransferEvent(ev TokenTransferEvent) error {
+	handleBridgeInfo, ok := cce.subbridge.bridgeManager.bridges[ev.ContractAddr]
+	if !ok {
+		return errors.New("there is no bridge")
+	}
+
+	handleBridgeInfo.UpdateHandledNonce(ev.HandleNonce)
+
+	tokenType := ev.TokenType
+	tokenAddr := cce.subbridge.AddressManager().GetCounterPartToken(ev.TokenAddr)
+
+	logger.Trace("RequestValueTransfer Event", "bridgeAddr", ev.ContractAddr.String(), "handleNonce", ev.HandleNonce, "to", ev.Owner.String(), "valueType", tokenType, "token/NFT contract", tokenAddr, "value", ev.Amount.String())
 	return nil
 }
 

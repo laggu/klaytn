@@ -80,6 +80,23 @@ type BridgeInfo struct {
 	subscribed          bool
 	pendingRequestEvent *eventSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
 	nextRequestNonce    uint64          // TODO-Klaytn Need to set initial value for recovery.
+
+	handledNonce   uint64 // the nonce from the request value transfer event
+	requestedNonce uint64 // the nonce from the handle value transfer event
+}
+
+// UpdateRequestedNonce updates the requested nonce with new nonce.
+func (bi *BridgeInfo) UpdateRequestedNonce(nonce uint64) {
+	if bi.requestedNonce < nonce {
+		bi.requestedNonce = nonce
+	}
+}
+
+// UpdateHandledNonce updates the handled nonce with new nonce.
+func (bi *BridgeInfo) UpdateHandledNonce(nonce uint64) {
+	if bi.handledNonce < nonce {
+		bi.handledNonce = nonce
+	}
 }
 
 // DecodeRLP decodes the Klaytn
@@ -152,6 +169,18 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 	return bridgeManager, nil
 }
 
+// LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
+func (bm *BridgeManager) LogBridgeStatus() {
+	for _, b := range bm.bridges {
+		diffNonce := b.requestedNonce - b.handledNonce
+		if b.onServiceChain {
+			logger.Info("Bridge(Main -> Service Chain)", "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
+		} else {
+			logger.Info("Bridge(Service -> Main Chain)", "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
+		}
+	}
+}
+
 // SubscribeTokenReceived registers a subscription of TokenReceivedEvent.
 func (bm *BridgeManager) SubscribeTokenReceived(ch chan<- TokenReceivedEvent) event.Subscription {
 	return bm.scope.Track(bm.tokenReceived.Subscribe(ch))
@@ -194,7 +223,7 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 
 // SetBridge stores the address and bridge pair with local/remote and subscription status.
 func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.Bridge, local bool, subscribed bool) {
-	bm.bridges[addr] = &BridgeInfo{bridge, local, subscribed, newEventSortedMap(), 0}
+	bm.bridges[addr] = &BridgeInfo{bridge, local, subscribed, newEventSortedMap(), 0, 0, 0}
 }
 
 // LoadAllBridge reloads bridge and handles subscription by using the the journal cache.
