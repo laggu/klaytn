@@ -49,7 +49,7 @@ node (retaining all historical state) or a light node (retrieving data live).
 Core Cell (CC) is a set of consensus node (CN) and one or more proxy nodes
 (PNs) and plays a role of generating blocks in the Klaytn network.  Since
 setting up and operating a CC is a bit complicated work, we recommend to visit
-the [CC Operation Guide](http://docs.klaytn.net/cn_bootstrapping/en_cc_overview.html)
+the [CC Operation Guide](https://docs.klaytn.com/node/cc)
 for the detail of CC bootstrapping process.
 
 ## Running an Endpoint Node

@@ -18,7 +18,7 @@
 // This file is derived from interfaces.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package klaytn defines interfaces for interacting with KLAYTN.
+// Package klaytn defines interfaces for interacting with Klaytn.
 package klaytn
 
 import (
