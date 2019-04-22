@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/kerrors"
 	"math/big"
 )
@@ -151,4 +152,27 @@ func (t TxSignatures) string() string {
 	b, _ := json.Marshal(t)
 
 	return string(b)
+}
+
+func (t TxSignatures) ToJSON() TxSignaturesJSON {
+	js := make(TxSignaturesJSON, len(t))
+
+	for i, s := range t {
+		js[i] = &TxSignatureJSON{(*hexutil.Big)(s.V), (*hexutil.Big)(s.R), (*hexutil.Big)(s.S)}
+	}
+
+	return js
+}
+
+// TxSignaturesJSON is an array of *TxSignatureJSON. This structure is for JSON marshalling.
+type TxSignaturesJSON []*TxSignatureJSON
+
+func (t TxSignaturesJSON) ToTxSignatures() TxSignatures {
+	sigs := make(TxSignatures, len(t))
+
+	for i, s := range t {
+		sigs[i] = &TxSignature{(*big.Int)(s.V), (*big.Int)(s.R), (*big.Int)(s.S)}
+	}
+
+	return sigs
 }

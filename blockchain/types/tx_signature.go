@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/crypto"
 	"math/big"
 )
@@ -29,6 +30,13 @@ type TxSignature struct {
 	V *big.Int
 	R *big.Int
 	S *big.Int
+}
+
+// TxSignature contains a signature of tx (V, R, S) as types of hexutil.Big.
+type TxSignatureJSON struct {
+	V *hexutil.Big
+	R *hexutil.Big
+	S *hexutil.Big
 }
 
 func NewTxSignature() *TxSignature {
