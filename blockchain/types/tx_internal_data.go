@@ -17,6 +17,7 @@
 package types
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
@@ -497,4 +498,16 @@ func CalcFeeWithRatio(feeRatio FeeRatio, fee *big.Int) (*big.Int, *big.Int) {
 	feeSender := new(big.Int).Sub(fee, feePayer)
 
 	return feePayer, feeSender
+}
+
+func equalRecipient(a, b *common.Address) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a != nil && b != nil && bytes.Equal(a.Bytes(), b.Bytes()) {
+		return true
+	}
+
+	return false
 }

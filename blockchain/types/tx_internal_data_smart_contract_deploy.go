@@ -152,18 +152,6 @@ func (t *TxInternalDataSmartContractDeploy) GetPayload() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataSmartContractDeploy) equalRecipient(a *TxInternalDataSmartContractDeploy) bool {
-	if t.Recipient == nil && a.Recipient == nil {
-		return true
-	}
-
-	if t.Recipient != nil && a.Recipient != nil && bytes.Equal(t.Recipient.Bytes(), a.Recipient.Bytes()) {
-		return true
-	}
-
-	return false
-}
-
 func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
 	ta, ok := a.(*TxInternalDataSmartContractDeploy)
 	if !ok {
@@ -173,7 +161,7 @@ func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
 	return t.AccountNonce == ta.AccountNonce &&
 		t.Price.Cmp(ta.Price) == 0 &&
 		t.GasLimit == ta.GasLimit &&
-		t.equalRecipient(ta) &&
+		equalRecipient(t.Recipient, ta.Recipient) &&
 		t.Amount.Cmp(ta.Amount) == 0 &&
 		t.From == ta.From &&
 		bytes.Equal(t.Payload, ta.Payload) &&
