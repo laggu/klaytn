@@ -30,8 +30,7 @@ type TxInternalDataSerializer struct {
 
 // txInternalDataJSON is an internal object for JSON serialization.
 type txInternalDataJSON struct {
-	TxType TxType
-	Tx     json.RawMessage
+	TxType TxType `json:"typeInt"`
 }
 
 // newTxInternalDataSerializerWithValues creates a new TxInternalDataSerializer object with the given TxInternalData object.
@@ -82,12 +81,8 @@ func (serializer *TxInternalDataSerializer) MarshalJSON() ([]byte, error) {
 	if serializer.txType == TxTypeLegacyTransaction {
 		return json.Marshal(serializer.tx)
 	}
-	b, err := json.Marshal(serializer.tx)
-	if err != nil {
-		return nil, err
-	}
 
-	return json.Marshal(&txInternalDataJSON{serializer.txType, json.RawMessage(b)})
+	return json.Marshal(serializer.tx)
 }
 
 func (serializer *TxInternalDataSerializer) UnmarshalJSON(b []byte) error {
@@ -97,9 +92,9 @@ func (serializer *TxInternalDataSerializer) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if len(dec.Tx) == 0 {
+	if dec.TxType == TxTypeLegacyTransaction {
 		// fallback to unmarshal the legacy transaction.
-		txd := newEmptyTxInternalDataLegacy()
+		txd := newTxInternalDataLegacy()
 		if err := json.Unmarshal(b, txd); err != nil {
 			return err
 		}
@@ -117,5 +112,5 @@ func (serializer *TxInternalDataSerializer) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	return json.Unmarshal([]byte(dec.Tx), serializer.tx)
+	return json.Unmarshal(b, serializer.tx)
 }

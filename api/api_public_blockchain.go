@@ -452,7 +452,6 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	output["from"] = from
 	output["hash"] = tx.Hash()
 	output["transactionIndex"] = hexutil.Uint(index)
-	output["signatures"] = tx.RawSignatureValues().ToJSON()
 
 	return output
 }

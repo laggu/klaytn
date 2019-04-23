@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -71,6 +72,7 @@ func TestTransactionSerialization(t *testing.T) {
 	}{
 		{"RLP", testTransactionRLP},
 		{"JSON", testTransactionJSON},
+		{"RPC", testTransactionRPC},
 	}
 
 	txMap := make(map[TxType]TxInternalData)
@@ -147,6 +149,58 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 
 	if !tx.Equal(dec.tx) {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
+	}
+}
+
+// Copied from api/api_public_blockchain.go
+func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+	var from common.Address
+	if tx.IsLegacyTransaction() {
+		signer := NewEIP155Signer(tx.ChainId())
+		from, _ = Sender(signer, tx)
+	} else {
+		from, _ = tx.From()
+	}
+
+	output := tx.MakeRPCOutput()
+
+	output["blockHash"] = blockHash
+	output["blockNumber"] = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+	output["from"] = from
+	output["hash"] = tx.Hash()
+	output["transactionIndex"] = hexutil.Uint(index)
+
+	return output
+}
+
+func testTransactionRPC(t *testing.T, tx TxInternalData) {
+	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
+
+	if _, ok := tx.(TxInternalDataFeePayer); ok {
+		rawTx.SignFeePayer(signer, key)
+	}
+
+	h := rawTx.Hash()
+	tx.SetHash(&h)
+
+	// Copied from newRPCTransaction
+	rpcout := newRPCTransaction(rawTx, common.Hash{}, 0, 0)
+
+	b, err := json.Marshal(rpcout)
+	if err != nil {
+		panic(err)
+	}
+
+	decTx := &Transaction{}
+
+	if err := json.Unmarshal(b, decTx); err != nil {
+		panic(err)
+	}
+
+	if !rawTx.Equal(decTx) {
+		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, decTx)
 	}
 }
 
