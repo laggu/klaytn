@@ -73,7 +73,7 @@ func newTestChain(length int, genesis *types.Block) *testChain {
 	tc.genesis = genesis
 	tc.chain = append(tc.chain, genesis.Hash())
 	tc.headerm[tc.genesis.Hash()] = tc.genesis.Header()
-	tc.tdm[tc.genesis.Hash()] = tc.genesis.Difficulty()
+	tc.tdm[tc.genesis.Hash()] = tc.genesis.BlockScore()
 	tc.blockm[tc.genesis.Hash()] = tc.genesis
 	tc.generate(length-1, 0, genesis, false)
 	return tc
@@ -124,7 +124,7 @@ func (tc *testChain) generate(n int, seed byte, parent *types.Block, heavy bool)
 
 	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), testDB, n, func(i int, block *blockchain.BlockGen) {
 		block.SetRewardbase(common.Address{seed})
-		// If a heavy chain is requested, delay blocks to raise difficulty
+		// If a heavy chain is requested, delay blocks to raise blockscore
 		if heavy {
 			block.OffsetTime(-1)
 		}
@@ -142,7 +142,7 @@ func (tc *testChain) generate(n int, seed byte, parent *types.Block, heavy bool)
 	// Convert the block-chain into a hash-chain and header/block maps
 	td := new(big.Int).Set(tc.td(parent.Hash()))
 	for i, b := range blocks {
-		td := td.Add(td, b.Difficulty())
+		td := td.Add(td, b.BlockScore())
 		hash := b.Hash()
 		tc.chain = append(tc.chain, hash)
 		tc.blockm[hash] = b
@@ -162,7 +162,7 @@ func (tc *testChain) headBlock() *types.Block {
 	return tc.blockm[tc.chain[len(tc.chain)-1]]
 }
 
-// td returns the total difficulty of the given block.
+// td returns the total blockscore of the given block.
 func (tc *testChain) td(hash common.Hash) *big.Int {
 	return tc.tdm[hash]
 }

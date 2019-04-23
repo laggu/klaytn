@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/keystore"
 	"github.com/ground-x/klaytn/blockchain"
-	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/cmd/homi/docker/compose"
 	"github.com/ground-x/klaytn/cmd/homi/docker/service"
 	"github.com/ground-x/klaytn/cmd/homi/genesis"
@@ -271,7 +270,7 @@ func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
-		Difficulty: big.NewInt(genesis.InitDifficulty),
+		BlockScore: big.NewInt(genesis.InitBlockScore),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{
 			ChainID:       big.NewInt(2019),
@@ -292,7 +291,6 @@ func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 				UnitPrice: 25000000000,
 			},
 		},
-		Mixhash: types.IstanbulDigest,
 	}
 	assignExtraData := genesis.Validators(nodeAddrs...)
 	assignExtraData(genesisJson)

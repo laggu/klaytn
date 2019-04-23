@@ -21,7 +21,6 @@
 package gxhash
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/state"
@@ -46,8 +45,7 @@ var (
 var (
 	errLargeBlockTime    = errors.New("timestamp too big")
 	errZeroBlockTime     = errors.New("timestamp equals parent's")
-	errInvalidDifficulty = errors.New("non-positive difficulty")
-	errInvalidMixDigest  = errors.New("invalid mix digest")
+	errInvalidBlockScore = errors.New("non-positive blockScore")
 	errInvalidPoW        = errors.New("invalid proof-of-work")
 )
 
@@ -174,11 +172,11 @@ func (ethash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if header.Time.Cmp(parent.Time) <= 0 {
 		return errZeroBlockTime
 	}
-	// Verify the block's difficulty based in it's timestamp and parent's difficulty
-	expected := ethash.CalcDifficulty(chain, header.Time.Uint64(), parent)
+	// Verify the block's blockscore based in it's timestamp and parent's blockscore
+	expected := ethash.CalcBlockScore(chain, header.Time.Uint64(), parent)
 
-	if expected.Cmp(header.Difficulty) != 0 {
-		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
+	if expected.Cmp(header.BlockScore) != 0 {
+		return fmt.Errorf("invalid blockscore: have %v, want %v", header.BlockScore, expected)
 	}
 	// Verify that the block number is parent's +1
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(common.Big1) != 0 {
@@ -193,18 +191,18 @@ func (ethash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 	return nil
 }
 
-// CalcDifficulty is the difficulty adjustment algorithm. It returns
-// the difficulty that a new block should have when created at time
-// given the parent block's time and difficulty.
-func (ethash *Gxhash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	return CalcDifficulty(chain.Config(), time, parent)
+// CalcBlockScore is the blockscore adjustment algorithm. It returns
+// the blockscore that a new block should have when created at time
+// given the parent block's time and blockscore.
+func (ethash *Gxhash) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+	return CalcBlockScore(chain.Config(), time, parent)
 }
 
-// CalcDifficulty is the difficulty adjustment algorithm. It returns
-// the difficulty that a new block should have when created at time
-// given the parent block's time and difficulty.
-func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
-	return calcDifficultyByzantium(time, parent)
+// CalcBlockScore is the blockscore adjustment algorithm. It returns
+// the blockscore that a new block should have when created at time
+// given the parent block's time and blockscore.
+func CalcBlockScore(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
+	return calcBlockScoreByzantium(time, parent)
 }
 
 // Some weird constants to avoid constant memory allocs for them.
@@ -218,10 +216,10 @@ var (
 	big2999999    = big.NewInt(2999999)
 )
 
-// calcDifficultyByzantium is the difficulty adjustment algorithm. It returns
-// the difficulty that a new block should have when created at time given the
-// parent block's time and difficulty. The calculation uses the Byzantium rules.
-func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
+// calcBlockScoreByzantium is the blockscore adjustment algorithm. It returns
+// the blockscore that a new block should have when created at time given the
+// parent block's time and blockscore. The calculation uses the Byzantium rules.
+func calcBlockScoreByzantium(time uint64, parent *types.Header) *big.Int {
 	// https://github.com/ethereum/EIPs/issues/100.
 	// algorithm:
 	// diff = (parent_diff +
@@ -245,13 +243,13 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 		x.Set(bigMinus99)
 	}
 	// parent_diff + (parent_diff / 2048 * max((1) - ((timestamp - parent.timestamp) // 9), -99))
-	y.Div(parent.Difficulty, params.DifficultyBoundDivisor)
+	y.Div(parent.BlockScore, params.BlockScoreBoundDivisor)
 	x.Mul(y, x)
-	x.Add(parent.Difficulty, x)
+	x.Add(parent.BlockScore, x)
 
-	// minimum difficulty can ever be (before exponential factor)
-	if x.Cmp(params.MinimumDifficulty) < 0 {
-		x.Set(params.MinimumDifficulty)
+	// minimum blockscore can ever be (before exponential factor)
+	if x.Cmp(params.MinimumBlockScore) < 0 {
+		x.Set(params.MinimumBlockScore)
 	}
 	// calculate a fake block number for the ice-age delay:
 	//   https://github.com/ethereum/EIPs/pull/669
@@ -274,10 +272,10 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 	return x
 }
 
-// calcDifficultyHomestead is the difficulty adjustment algorithm. It returns
-// the difficulty that a new block should have when created at time given the
-// parent block's time and difficulty. The calculation uses the Homestead rules.
-func calcDifficultyHomestead(time uint64, parent *types.Header) *big.Int {
+// calcBlockScoreHomestead is the blockscore adjustment algorithm. It returns
+// the blockscore that a new block should have when created at time given the
+// parent block's time and blockscore. The calculation uses the Homestead rules.
+func calcBlockScoreHomestead(time uint64, parent *types.Header) *big.Int {
 	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.md
 	// algorithm:
 	// diff = (parent_diff +
@@ -301,13 +299,13 @@ func calcDifficultyHomestead(time uint64, parent *types.Header) *big.Int {
 		x.Set(bigMinus99)
 	}
 	// (parent_diff + parent_diff // 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))
-	y.Div(parent.Difficulty, params.DifficultyBoundDivisor)
+	y.Div(parent.BlockScore, params.BlockScoreBoundDivisor)
 	x.Mul(y, x)
-	x.Add(parent.Difficulty, x)
+	x.Add(parent.BlockScore, x)
 
-	// minimum difficulty can ever be (before exponential factor)
-	if x.Cmp(params.MinimumDifficulty) < 0 {
-		x.Set(params.MinimumDifficulty)
+	// minimum blockscore can ever be (before exponential factor)
+	if x.Cmp(params.MinimumBlockScore) < 0 {
+		x.Set(params.MinimumBlockScore)
 	}
 	// for the exponential factor
 	periodCount := new(big.Int).Add(parent.Number, big1)
@@ -324,7 +322,7 @@ func calcDifficultyHomestead(time uint64, parent *types.Header) *big.Int {
 }
 
 // VerifySeal implements consensus.Engine, checking whether the given block satisfies
-// the PoW difficulty requirements.
+// the PoW blockscore requirements.
 func (ethash *Gxhash) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
 	// If we're running a fake PoW, accept any seal as valid
 	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
@@ -338,41 +336,38 @@ func (ethash *Gxhash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	if ethash.shared != nil {
 		return ethash.shared.VerifySeal(chain, header)
 	}
-	// Ensure that we have a valid difficulty for the block
-	if header.Difficulty.Sign() <= 0 {
-		return errInvalidDifficulty
+	// Ensure that we have a valid blockscore for the block
+	if header.BlockScore.Sign() <= 0 {
+		return errInvalidBlockScore
 	}
 	// Recompute the digest and PoW value and verify against the header
 	number := header.Number.Uint64()
 
 	cache := ethash.cache(number)
-	size := datasetSize(number)
-	if ethash.config.PowMode == ModeTest {
-		size = 32 * 1024
-	}
-	digest, result := hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64())
+	//size := datasetSize(number)
+	//if ethash.config.PowMode == ModeTest {
+	//	size = 32 * 1024
+	//}
+	//digest, result := hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), 0)
 	// Caches are unmapped in a finalizer. Ensure that the cache stays live
 	// until after the call to hashimotoLight so it's not unmapped while being used.
 	runtime.KeepAlive(cache)
 
-	if !bytes.Equal(header.MixDigest[:], digest) {
-		return errInvalidMixDigest
-	}
-	target := new(big.Int).Div(maxUint256, header.Difficulty)
-	if new(big.Int).SetBytes(result).Cmp(target) > 0 {
-		return errInvalidPoW
-	}
+	//target := new(big.Int).Div(maxUint256, header.blockscore)
+	//if new(big.Int).SetBytes(result).Cmp(target) > 0 {
+	//	return errInvalidPoW
+	//}
 	return nil
 }
 
-// Prepare implements consensus.Engine, initializing the difficulty field of a
+// Prepare implements consensus.Engine, initializing the blockscore field of a
 // header to conform to the ethash protocol. The changes are done inline.
 func (ethash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.Difficulty = ethash.CalcDifficulty(chain, header.Time.Uint64(), parent)
+	header.BlockScore = ethash.CalcBlockScore(chain, header.Time.Uint64(), parent)
 	return nil
 }
 

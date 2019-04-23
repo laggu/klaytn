@@ -25,27 +25,25 @@ import (
 	"time"
 
 	"github.com/ground-x/klaytn/blockchain"
-	"github.com/ground-x/klaytn/blockchain/types"
 	istcommon "github.com/ground-x/klaytn/cmd/homi/common"
 	"github.com/ground-x/klaytn/params"
 )
 
 const (
 	FileName       = "genesis.json"
-	InitDifficulty = 1
+	InitBlockScore = 1
 )
 
 func New(options ...Option) *blockchain.Genesis {
 	genesis := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
-		Difficulty: big.NewInt(InitDifficulty),
+		BlockScore: big.NewInt(InitBlockScore),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{
 			ChainID:       big.NewInt(2018),
 			UnitPrice:     0,
 			DeriveShaImpl: 0,
 		},
-		Mixhash: types.IstanbulDigest,
 	}
 
 	for _, opt := range options {
@@ -58,7 +56,7 @@ func New(options ...Option) *blockchain.Genesis {
 func NewClique(options ...Option) *blockchain.Genesis {
 	genesis := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
-		Difficulty: big.NewInt(InitDifficulty),
+		BlockScore: big.NewInt(InitBlockScore),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{
 			ChainID: big.NewInt(3000), // TODO-Klaytn Needs Optional chainID

@@ -765,7 +765,7 @@ func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 }
 
 // TotalDifficulty operations.
-// ReadTd retrieves a block's total difficulty corresponding to the hash.
+// ReadTd retrieves a block's total blockscore corresponding to the hash.
 func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
 	if cachedTd := dbm.cm.readTdCache(hash); cachedTd != nil {
 		return cachedTd
@@ -778,7 +778,7 @@ func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
 	}
 	td := new(big.Int)
 	if err := rlp.Decode(bytes.NewReader(data), td); err != nil {
-		logger.Error("Invalid block total difficulty RLP", "hash", hash, "err", err)
+		logger.Error("Invalid block total blockscore RLP", "hash", hash, "err", err)
 		return nil
 	}
 
@@ -787,26 +787,26 @@ func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
 	return td
 }
 
-// WriteTd stores the total difficulty of a block into the database.
+// WriteTd stores the total blockscore of a block into the database.
 func (dbm *databaseManager) WriteTd(hash common.Hash, number uint64, td *big.Int) {
 	db := dbm.getDatabase(tdDB)
 	data, err := rlp.EncodeToBytes(td)
 	if err != nil {
-		logger.Crit("Failed to RLP encode block total difficulty", "err", err)
+		logger.Crit("Failed to RLP encode block total blockscore", "err", err)
 	}
 	if err := db.Put(headerTDKey(number, hash), data); err != nil {
-		logger.Crit("Failed to store block total difficulty", "err", err)
+		logger.Crit("Failed to store block total blockscore", "err", err)
 	}
 
 	// Write to cache at the end of successful write.
 	dbm.cm.writeTdCache(hash, td)
 }
 
-// DeleteTd removes all block total difficulty data associated with a hash.
+// DeleteTd removes all block total blockscore data associated with a hash.
 func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(tdDB)
 	if err := db.Delete(headerTDKey(number, hash)); err != nil {
-		logger.Crit("Failed to delete block total difficulty", "err", err)
+		logger.Crit("Failed to delete block total blockscore", "err", err)
 	}
 	// Delete cache at the end of successful delete.
 	dbm.cm.deleteTdCache(hash)

@@ -905,9 +905,9 @@ func handleNewBlockMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// calculate the head hash and TD that the peer truly must have.
 	var (
 		trueHead = request.Block.ParentHash()
-		trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
+		trueTD   = new(big.Int).Sub(request.TD, request.Block.BlockScore())
 	)
-	// Update the peers total difficulty if better than the previous
+	// Update the peers total blockscore if better than the previous
 	if _, td := p.Head(); trueTD.Cmp(td) > 0 {
 		p.SetHead(trueHead, trueTD)
 
@@ -1060,7 +1060,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
-	td := new(big.Int).Add(block.Difficulty(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
+	td := new(big.Int).Add(block.BlockScore(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
 	peersToSendBlock := pm.samplePeersToSendBlock(block)
 	for _, peer := range peersToSendBlock {
 		peer.AsyncSendNewBlock(block, td)
@@ -1240,7 +1240,7 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 // known about the host peer.
 type NodeInfo struct {
 	Network    uint64              `json:"network"`    // Ethereum network ID (1=Frontier, 2=Morden, Ropsten=3, Rinkeby=4)
-	Difficulty *big.Int            `json:"difficulty"` // Total difficulty of the host's blockchain
+	BlockScore *big.Int            `json:"blockscore"` // Total blockscore of the host's blockchain
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
@@ -1251,7 +1251,7 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 	currentBlock := pm.blockchain.CurrentBlock()
 	return &NodeInfo{
 		Network:    pm.networkId,
-		Difficulty: pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
+		BlockScore: pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
 		Genesis:    pm.blockchain.Genesis().Hash(),
 		Config:     pm.blockchain.Config(),
 		Head:       currentBlock.Hash(),

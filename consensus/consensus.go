@@ -91,9 +91,9 @@ type Engine interface {
 	// seal place on top.
 	Seal(chain ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error)
 
-	// CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
+	// CalcBlockScore is the blockscore adjustment algorithm. It returns the blockscore
 	// that a new block should have.
-	CalcDifficulty(chain ChainReader, time uint64, parent *types.Header) *big.Int
+	CalcBlockScore(chain ChainReader, time uint64, parent *types.Header) *big.Int
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API

@@ -66,14 +66,10 @@ var (
 	errUnknownBlock = errors.New("unknown block")
 	// errUnauthorized is returned if a header is signed by a non authorized entity.
 	errUnauthorized = errors.New("unauthorized")
-	// errInvalidDifficulty is returned if the difficulty of a block is not 1
-	errInvalidDifficulty = errors.New("invalid difficulty")
+	// errInvalidBlockScore is returned if the BlockScore of a block is not 1
+	errInvalidBlockScore = errors.New("invalid blockscore")
 	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
 	errInvalidExtraDataFormat = errors.New("invalid extra data format")
-	// errInvalidMixDigest is returned if a block's mix digest is not Istanbul digest.
-	errInvalidMixDigest = errors.New("invalid Istanbul mix digest")
-	// errInvalidNonce is returned if a block's nonce is invalid
-	errInvalidNonce = errors.New("invalid nonce")
 	// errInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
 	errInvalidTimestamp = errors.New("invalid timestamp")
 	// errInvalidVotingChain is returned if an authorization list is attempted to
@@ -90,8 +86,7 @@ var (
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
 )
 var (
-	defaultDifficulty = big.NewInt(1)
-	emptyNonce        = types.BlockNonce{}
+	defaultBlockScore = big.NewInt(1)
 	now               = time.Now
 
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new validator
@@ -131,18 +126,9 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	if _, err := types.ExtractIstanbulExtra(header); err != nil {
 		return errInvalidExtraDataFormat
 	}
-
-	// Ensure that the nonce is valid
-	if header.Nonce != (emptyNonce) && !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidNonce
-	}
-	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != types.IstanbulDigest {
-		return errInvalidMixDigest
-	}
-	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
-	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
+	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
+	if header.BlockScore == nil || header.BlockScore.Cmp(defaultBlockScore) != 0 {
+		return errInvalidBlockScore
 	}
 
 	return sb.verifyCascadingFields(chain, header, parents)
@@ -315,9 +301,9 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 		return errUnknownBlock
 	}
 
-	// ensure that the difficulty equals to defaultDifficulty
-	if header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
+	// ensure that the blockscore equals to defaultBlockScore
+	if header.BlockScore.Cmp(defaultBlockScore) != 0 {
+		return errInvalidBlockScore
 	}
 	return sb.verifySigner(chain, header, nil)
 }
@@ -327,8 +313,6 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// unused fields, force to set to empty
 	header.Rewardbase = sb.rewardbase
-	header.Nonce = emptyNonce
-	header.MixDigest = types.IstanbulDigest
 
 	// copy the parent extra data as the header extra data
 	number := header.Number.Uint64()
@@ -336,8 +320,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	// use the same difficulty for all blocks
-	header.Difficulty = defaultDifficulty
+	// use the same blockscore for all blocks
+	header.BlockScore = defaultBlockScore
 
 	// Assemble the voting snapshot
 	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil)
@@ -502,7 +486,7 @@ func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types
 	return block.WithSeal(header), nil
 }
 
-func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+func (sb *backend) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	return big.NewInt(0)
 }
 

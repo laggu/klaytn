@@ -132,7 +132,7 @@ func testFork(t *testing.T, blockchain *BlockChain, i, n int, full bool, compara
 func printChain(bc *BlockChain) {
 	for i := bc.CurrentBlock().Number().Uint64(); i > 0; i-- {
 		b := bc.GetBlockByNumber(uint64(i))
-		fmt.Printf("\t%x %v\n", b.Hash(), b.Difficulty())
+		fmt.Printf("\t%x %v\n", b.Hash(), b.BlockScore())
 	}
 }
 
@@ -166,7 +166,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 			return err
 		}
 		blockchain.mu.Lock()
-		blockchain.db.WriteTd(block.Hash(), block.NumberU64(), new(big.Int).Add(block.Difficulty(), blockchain.GetTdByHash(block.ParentHash())))
+		blockchain.db.WriteTd(block.Hash(), block.NumberU64(), new(big.Int).Add(block.BlockScore(), blockchain.GetTdByHash(block.ParentHash())))
 		blockchain.db.WriteBlock(block)
 		statedb.Commit(false)
 		blockchain.mu.Unlock()
@@ -184,7 +184,7 @@ func testHeaderChainImport(chain []*types.Header, blockchain *BlockChain) error 
 		}
 		// Manually insert the header into the database, but don't reorganise (allows subsequent testing)
 		blockchain.mu.Lock()
-		blockchain.db.WriteTd(header.Hash(), header.Number.Uint64(), new(big.Int).Add(header.Difficulty, blockchain.GetTdByHash(header.ParentHash)))
+		blockchain.db.WriteTd(header.Hash(), header.Number.Uint64(), new(big.Int).Add(header.BlockScore, blockchain.GetTdByHash(header.ParentHash)))
 		blockchain.db.WriteHeader(header)
 		blockchain.mu.Unlock()
 	}
@@ -231,10 +231,10 @@ func testExtendCanonical(t *testing.T, full bool) {
 	}
 	defer processor.Stop()
 
-	// Define the difficulty comparator
+	// Define the blockscore comparator
 	better := func(td1, td2 *big.Int) {
 		if td2.Cmp(td1) <= 0 {
-			t.Errorf("total difficulty mismatch: have %v, expected more than %v", td2, td1)
+			t.Errorf("total blockscore mismatch: have %v, expected more than %v", td2, td1)
 		}
 	}
 	// Start fork from current height
@@ -259,10 +259,10 @@ func testShorterFork(t *testing.T, full bool) {
 	}
 	defer processor.Stop()
 
-	// Define the difficulty comparator
+	// Define the blockscore comparator
 	worse := func(td1, td2 *big.Int) {
 		if td2.Cmp(td1) >= 0 {
-			t.Errorf("total difficulty mismatch: have %v, expected less than %v", td2, td1)
+			t.Errorf("total blockscore mismatch: have %v, expected less than %v", td2, td1)
 		}
 	}
 	// Sum of numbers must be less than `length` for this to be a shorter fork
@@ -289,10 +289,10 @@ func testLongerFork(t *testing.T, full bool) {
 	}
 	defer processor.Stop()
 
-	// Define the difficulty comparator
+	// Define the blockscore comparator
 	better := func(td1, td2 *big.Int) {
 		if td2.Cmp(td1) <= 0 {
-			t.Errorf("total difficulty mismatch: have %v, expected more than %v", td2, td1)
+			t.Errorf("total blockscore mismatch: have %v, expected more than %v", td2, td1)
 		}
 	}
 	// Sum of numbers must be greater than `length` for this to be a longer fork
@@ -319,10 +319,10 @@ func testEqualFork(t *testing.T, full bool) {
 	}
 	defer processor.Stop()
 
-	// Define the difficulty comparator
+	// Define the blockscore comparator
 	equal := func(td1, td2 *big.Int) {
 		if td2.Cmp(td1) != 0 {
-			t.Errorf("total difficulty mismatch: have %v, want %v", td2, td1)
+			t.Errorf("total blockscore mismatch: have %v, want %v", td2, td1)
 		}
 	}
 	// Sum of numbers must be equal to `length` for this to be an equal fork
@@ -375,7 +375,7 @@ func TestReorgShortHeaders(t *testing.T) { testReorgShort(t, false) }
 func TestReorgShortBlocks(t *testing.T)  { testReorgShort(t, true) }
 
 func testReorgShort(t *testing.T, full bool) {
-	// Create a long easy chain vs. a short heavy one. Due to difficulty adjustment
+	// Create a long easy chain vs. a short heavy one. Due to blockscore adjustment
 	// we need a fairly long chain of blocks with different difficulties for a short
 	// one to become heavyer than a long one. The 96 is an empirical value.
 	easy := make([]int64, 96)
@@ -443,15 +443,15 @@ func testReorg(t *testing.T, first, second []int64, td int64, full bool) {
 			}
 		}
 	}
-	// Make sure the chain total difficulty is the correct one
-	want := new(big.Int).Add(blockchain.genesisBlock.Difficulty(), big.NewInt(td))
+	// Make sure the chain total blockscore is the correct one
+	want := new(big.Int).Add(blockchain.genesisBlock.BlockScore(), big.NewInt(td))
 	if full {
 		if have := blockchain.GetTdByHash(blockchain.CurrentBlock().Hash()); have.Cmp(want) != 0 {
-			t.Errorf("total difficulty mismatch: have %v, want %v", have, want)
+			t.Errorf("total blockscore mismatch: have %v, want %v", have, want)
 		}
 	} else {
 		if have := blockchain.GetTdByHash(blockchain.CurrentHeader().Hash()); have.Cmp(want) != 0 {
-			t.Errorf("total difficulty mismatch: have %v, want %v", have, want)
+			t.Errorf("total blockscore mismatch: have %v, want %v", have, want)
 		}
 	}
 }
@@ -813,7 +813,7 @@ func TestChainTxReorgs(t *testing.T) {
 			gen.AddTx(freshDrop) // This transaction will be dropped in the fork from exactly at the split point
 			gen.AddTx(swapped)   // This transaction will be swapped out at the exact height
 
-			gen.OffsetTime(9) // Lower the block difficulty to simulate a weaker chain
+			gen.OffsetTime(9) // Lower the block blockscore to simulate a weaker chain
 		}
 	})
 	// Import the chain. This runs all block validation rules.

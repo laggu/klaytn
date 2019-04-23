@@ -127,6 +127,9 @@ func initGenesis(ctx *cli.Context) error {
 func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain.Genesis {
 	engine := params.UseIstanbul
 	valueChanged := false
+	if genesis.Config == nil {
+		genesis.Config = new(params.ChainConfig)
+	}
 
 	// using Clique as a consensus engine
 	if genesis.Config.Istanbul == nil && genesis.Config.Clique != nil {

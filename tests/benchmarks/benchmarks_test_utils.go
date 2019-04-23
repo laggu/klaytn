@@ -32,7 +32,7 @@ import (
 
 type BenchConfig struct {
 	ChainConfig *params.ChainConfig
-	Difficulty  *big.Int
+	BlockScore  *big.Int
 	Origin      common.Address
 	BlockNumber *big.Int
 	Time        *big.Int
@@ -50,7 +50,7 @@ func makeBenchConfig() *BenchConfig {
 	cfg := &BenchConfig{}
 
 	cfg.ChainConfig = &params.ChainConfig{ChainID: big.NewInt(1)}
-	cfg.Difficulty = new(big.Int)
+	cfg.BlockScore = new(big.Int)
 	// Origin      common.Address
 	cfg.BlockNumber = new(big.Int)
 	cfg.Time = big.NewInt(time.Now().Unix())
@@ -80,7 +80,7 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 		Origin:      cfg.Origin,
 		BlockNumber: cfg.BlockNumber,
 		Time:        cfg.Time,
-		Difficulty:  cfg.Difficulty,
+		BlockScore:  cfg.BlockScore,
 		GasLimit:    cfg.GasLimit,
 		GasPrice:    cfg.GasPrice,
 	}

@@ -123,6 +123,13 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, genesisErr
 	}
 
+	if chainConfig.Clique != nil {
+		types.EngineType = types.Engine_Clique
+	}
+	if chainConfig.Istanbul != nil {
+		types.EngineType = types.Engine_IBFT
+	}
+
 	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json.
 	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)

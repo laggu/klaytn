@@ -68,8 +68,6 @@ type btBlock struct {
 
 type btHeader struct {
 	Bloom            types.Bloom
-	MixHash          common.Hash
-	Nonce            types.BlockNonce
 	Number           *big.Int
 	Hash             common.Hash
 	ParentHash       common.Hash
@@ -77,7 +75,7 @@ type btHeader struct {
 	StateRoot        common.Hash
 	TransactionsTrie common.Hash
 	ExtraData        []byte
-	Difficulty       *big.Int
+	BlockScore       *big.Int
 	GasLimit         uint64
 	GasUsed          uint64
 	Timestamp        *big.Int
@@ -86,7 +84,7 @@ type btHeader struct {
 type btHeaderMarshaling struct {
 	ExtraData  hexutil.Bytes
 	Number     *math.HexOrDecimal256
-	Difficulty *math.HexOrDecimal256
+	BlockScore *math.HexOrDecimal256
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
 	Timestamp  *math.HexOrDecimal256
@@ -139,14 +137,12 @@ func (t *BlockTest) Run() error {
 func (t *BlockTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	return &blockchain.Genesis{
 		Config:     config,
-		Nonce:      t.json.Genesis.Nonce.Uint64(),
 		Timestamp:  t.json.Genesis.Timestamp.Uint64(),
 		ParentHash: t.json.Genesis.ParentHash,
 		ExtraData:  t.json.Genesis.ExtraData,
 		GasLimit:   t.json.Genesis.GasLimit,
 		GasUsed:    t.json.Genesis.GasUsed,
-		Difficulty: t.json.Genesis.Difficulty,
-		Mixhash:    t.json.Genesis.MixHash,
+		BlockScore: t.json.Genesis.BlockScore,
 		Alloc:      t.json.Pre,
 	}
 }
@@ -202,12 +198,6 @@ func validateHeader(h *btHeader, h2 *types.Header) error {
 	if h.Bloom != h2.Bloom {
 		return fmt.Errorf("Bloom: want: %x have: %x", h.Bloom, h2.Bloom)
 	}
-	if h.MixHash != h2.MixDigest {
-		return fmt.Errorf("MixHash: want: %x have: %x", h.MixHash, h2.MixDigest)
-	}
-	if h.Nonce != h2.Nonce {
-		return fmt.Errorf("Nonce: want: %x have: %x", h.Nonce, h2.Nonce)
-	}
 	if h.Number.Cmp(h2.Number) != 0 {
 		return fmt.Errorf("Number: want: %v have: %v", h.Number, h2.Number)
 	}
@@ -226,8 +216,8 @@ func validateHeader(h *btHeader, h2 *types.Header) error {
 	if !bytes.Equal(h.ExtraData, h2.Extra) {
 		return fmt.Errorf("Extra data: want: %x have: %x", h.ExtraData, h2.Extra)
 	}
-	if h.Difficulty.Cmp(h2.Difficulty) != 0 {
-		return fmt.Errorf("Difficulty: want: %v have: %v", h.Difficulty, h2.Difficulty)
+	if h.BlockScore.Cmp(h2.BlockScore) != 0 {
+		return fmt.Errorf("BlockScore: want: %v have: %v", h.BlockScore, h2.BlockScore)
 	}
 	if h.GasUsed != h2.GasUsed {
 		return fmt.Errorf("GasUsed: want: %d have: %d", h.GasUsed, h2.GasUsed)

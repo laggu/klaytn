@@ -396,7 +396,7 @@ func TestClique(t *testing.T) {
 			Epoch:  tt.epoch,
 		}
 		engine := New(config.Clique, db)
-		engine.fakeDiff = true
+		engine.fakeBlockScore = true
 
 		blocks, _ := blockchain.GenerateChain(&config, genesis.ToBlock(db), engine, db, len(tt.votes), func(j int, gen *blockchain.BlockGen) {
 			vote := new(governance.GovernanceVote)
@@ -424,7 +424,7 @@ func TestClique(t *testing.T) {
 				header.Extra = make([]byte, ExtraVanity+len(auths)*common.AddressLength+ExtraSeal)
 				accounts.checkpoint(header, auths)
 			}
-			header.Difficulty = diffInTurn // Ignored, we just need a valid number
+			header.BlockScore = scoreInTurn // Ignored, we just need a valid number
 
 			// Generate the signature, embed it into the header and the block
 			accounts.sign(header, tt.votes[j].signer)

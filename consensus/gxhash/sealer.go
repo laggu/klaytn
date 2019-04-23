@@ -23,7 +23,6 @@ package gxhash
 import (
 	crand "crypto/rand"
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus"
 	"math"
 	"math/big"
@@ -33,12 +32,11 @@ import (
 )
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies
-// the block's difficulty requirements.
+// the block's blockscore requirements.
 func (ethash *Gxhash) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	// If we're running a fake PoW, simply return a 0 nonce immediately
 	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
 		header := block.Header()
-		header.Nonce, header.MixDigest = types.BlockNonce{}, common.Hash{}
 		return block.WithSeal(header), nil
 	}
 	// If we're running a shared PoW, delegate sealing to it
@@ -95,13 +93,13 @@ func (ethash *Gxhash) Seal(chain consensus.ChainReader, block *types.Block, stop
 }
 
 // mine is the actual proof-of-work miner that searches for a nonce starting from
-// seed that results in correct final block difficulty.
+// seed that results in correct final block blockscore.
 func (ethash *Gxhash) mine(block *types.Block, id int, seed uint64, abort chan struct{}, found chan *types.Block) {
 	// Extract some data from the header
 	var (
 		header  = block.Header()
 		hash    = header.HashNoNonce().Bytes()
-		target  = new(big.Int).Div(maxUint256, header.Difficulty)
+		target  = new(big.Int).Div(maxUint256, header.BlockScore)
 		number  = header.Number.Uint64()
 		dataset = ethash.dataset(number)
 	)
@@ -129,12 +127,10 @@ search:
 				attempts = 0
 			}
 			// Compute the PoW value of this nonce
-			digest, result := hashimotoFull(dataset.dataset, hash, nonce)
+			_, result := hashimotoFull(dataset.dataset, hash, nonce)
 			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 				// Correct nonce found, create a new header with it
 				header = types.CopyHeader(header)
-				header.Nonce = types.EncodeNonce(nonce)
-				header.MixDigest = common.BytesToHash(digest)
 
 				// Seal and return a block (if still needed)
 				select {

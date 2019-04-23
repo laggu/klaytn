@@ -185,7 +185,7 @@ func (p *baseBridgePeer) Info() *BridgePeerInfo {
 	}
 }
 
-// Head retrieves a copy of the current head hash and total difficulty of the
+// Head retrieves a copy of the current head hash and total blockscore of the
 // peer.
 func (p *baseBridgePeer) Head() (hash common.Hash, td *big.Int) {
 	p.lock.RLock()
@@ -195,7 +195,7 @@ func (p *baseBridgePeer) Head() (hash common.Hash, td *big.Int) {
 	return hash, new(big.Int).Set(p.td)
 }
 
-// SetHead updates the head hash and total difficulty of the peer.
+// SetHead updates the head hash and total blockscore of the peer.
 func (p *baseBridgePeer) SetHead(hash common.Hash, td *big.Int) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -462,7 +462,7 @@ func (ps *bridgePeerSet) PeersWithoutTx(hash common.Hash) []BridgePeer {
 	return list
 }
 
-// BestPeer retrieves the known peer with the currently highest total difficulty.
+// BestPeer retrieves the known peer with the currently highest total blockscore.
 func (ps *bridgePeerSet) BestPeer() BridgePeer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()

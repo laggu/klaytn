@@ -71,7 +71,7 @@ const (
 // about a connected peer.
 type PeerInfo struct {
 	Version    int      `json:"version"`    // Ethereum protocol version negotiated
-	Difficulty *big.Int `json:"difficulty"` // Total difficulty of the peer's blockchain
+	BlockScore *big.Int `json:"blockscore"` // Total blockscore of the peer's blockchain
 	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
 }
 
@@ -93,7 +93,7 @@ type Peer interface {
 	// Info gathers and returns a collection of metadata known about a peer.
 	Info() *PeerInfo
 
-	// SetHead updates the head hash and total difficulty of the peer.
+	// SetHead updates the head hash and total blockscore of the peer.
 	SetHead(hash common.Hash, td *big.Int)
 
 	// AddToKnownBlocks adds a block hash to knownBlocksCache for the peer, ensuring that the block will
@@ -371,12 +371,12 @@ func (p *basePeer) Info() *PeerInfo {
 
 	return &PeerInfo{
 		Version:    p.version,
-		Difficulty: td,
+		BlockScore: td,
 		Head:       hash.Hex(),
 	}
 }
 
-// Head retrieves a copy of the current head hash and total difficulty of the
+// Head retrieves a copy of the current head hash and total blockscore of the
 // peer.
 func (p *basePeer) Head() (hash common.Hash, td *big.Int) {
 	p.lock.RLock()
@@ -386,7 +386,7 @@ func (p *basePeer) Head() (hash common.Hash, td *big.Int) {
 	return hash, new(big.Int).Set(p.td)
 }
 
-// SetHead updates the head hash and total difficulty of the peer.
+// SetHead updates the head hash and total blockscore of the peer.
 func (p *basePeer) SetHead(hash common.Hash, td *big.Int) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -1339,7 +1339,7 @@ func (ps *peerSet) CNWithoutTx(hash common.Hash) []Peer {
 	return list
 }
 
-// BestPeer retrieves the known peer with the currently highest total difficulty.
+// BestPeer retrieves the known peer with the currently highest total blockscore.
 func (ps *peerSet) BestPeer() Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()

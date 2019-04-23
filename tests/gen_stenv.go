@@ -17,14 +17,14 @@ var _ = (*stEnvMarshaling)(nil)
 func (s stEnv) MarshalJSON() ([]byte, error) {
 	type stEnv struct {
 		Coinbase   common.UnprefixedAddress `json:"currentCoinbase"   gencodec:"required"`
-		Difficulty *math.HexOrDecimal256    `json:"currentDifficulty" gencodec:"required"`
+		BlockScore *math.HexOrDecimal256    `json:"currentDifficulty" gencodec:"required"`
 		GasLimit   math.HexOrDecimal64      `json:"currentGasLimit"   gencodec:"required"`
 		Number     math.HexOrDecimal64      `json:"currentNumber"     gencodec:"required"`
 		Timestamp  math.HexOrDecimal64      `json:"currentTimestamp"  gencodec:"required"`
 	}
 	var enc stEnv
 	enc.Coinbase = common.UnprefixedAddress(s.Coinbase)
-	enc.Difficulty = (*math.HexOrDecimal256)(s.Difficulty)
+	enc.BlockScore = (*math.HexOrDecimal256)(s.BlockScore)
 	enc.GasLimit = math.HexOrDecimal64(s.GasLimit)
 	enc.Number = math.HexOrDecimal64(s.Number)
 	enc.Timestamp = math.HexOrDecimal64(s.Timestamp)
@@ -35,7 +35,7 @@ func (s stEnv) MarshalJSON() ([]byte, error) {
 func (s *stEnv) UnmarshalJSON(input []byte) error {
 	type stEnv struct {
 		Coinbase   *common.UnprefixedAddress `json:"currentCoinbase"   gencodec:"required"`
-		Difficulty *math.HexOrDecimal256     `json:"currentDifficulty" gencodec:"required"`
+		BlockScore *math.HexOrDecimal256     `json:"currentDifficulty" gencodec:"required"`
 		GasLimit   *math.HexOrDecimal64      `json:"currentGasLimit"   gencodec:"required"`
 		Number     *math.HexOrDecimal64      `json:"currentNumber"     gencodec:"required"`
 		Timestamp  *math.HexOrDecimal64      `json:"currentTimestamp"  gencodec:"required"`
@@ -48,10 +48,10 @@ func (s *stEnv) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'currentCoinbase' for stEnv")
 	}
 	s.Coinbase = common.Address(*dec.Coinbase)
-	if dec.Difficulty == nil {
+	if dec.BlockScore == nil {
 		return errors.New("missing required field 'currentDifficulty' for stEnv")
 	}
-	s.Difficulty = (*big.Int)(dec.Difficulty)
+	s.BlockScore = (*big.Int)(dec.BlockScore)
 	if dec.GasLimit == nil {
 		return errors.New("missing required field 'currentGasLimit' for stEnv")
 	}

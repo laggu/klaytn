@@ -21,7 +21,6 @@
 package types
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
@@ -35,36 +34,16 @@ import (
 	"unsafe"
 )
 
-var (
-	EmptyRootHash = common.Hash{}
+const (
+	Engine_IBFT int = iota
+	Engine_Clique
+	Engine_Gxhash
 )
 
-// A BlockNonce is a 64-bit hash which proves (combined with the
-// mix-hash) that a sufficient amount of computation has been carried
-// out on a block.
-type BlockNonce [8]byte
-
-// EncodeNonce converts the given integer to a block nonce.
-func EncodeNonce(i uint64) BlockNonce {
-	var n BlockNonce
-	binary.BigEndian.PutUint64(n[:], i)
-	return n
-}
-
-// Uint64 returns the integer value of a block nonce.
-func (n BlockNonce) Uint64() uint64 {
-	return binary.BigEndian.Uint64(n[:])
-}
-
-// MarshalText encodes n as a hex string with 0x prefix.
-func (n BlockNonce) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(n[:]).MarshalText()
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (n *BlockNonce) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedText("BlockNonce", input, n[:])
-}
+var (
+	EmptyRootHash = common.Hash{}
+	EngineType    = Engine_IBFT
+)
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
@@ -76,22 +55,20 @@ type Header struct {
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
 	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
+	BlockScore  *big.Int       `json:"blockScore"       gencodec:"required"`
 	Number      *big.Int       `json:"number"           gencodec:"required"`
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	// TimeFoS represents a fraction of a second since `Time`.
-	TimeFoS    uint8       `json:"timestampFoS"     gencodec:"required"`
-	Extra      []byte      `json:"extraData"        gencodec:"required"`
-	MixDigest  common.Hash `json:"mixHash"          gencodec:"required"`
-	Nonce      BlockNonce  `json:"nonce"            gencodec:"required"`
-	Governance []byte      `json:"governanceData"        gencodec:"required"`
-	Vote       []byte      `json:"voteData,omitempty"`
+	TimeFoS    uint8  `json:"timestampFoS"     gencodec:"required"`
+	Extra      []byte `json:"extraData"        gencodec:"required"`
+	Governance []byte `json:"governanceData"        gencodec:"required"`
+	Vote       []byte `json:"voteData,omitempty"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Difficulty *hexutil.Big
+	BlockScore *hexutil.Big
 	Number     *hexutil.Big
 	GasUsed    hexutil.Uint64
 	Time       *hexutil.Big
@@ -107,7 +84,7 @@ type headerMarshaling struct {
 func (h *Header) Hash() common.Hash {
 	// If the mix digest is equivalent to the predefined Istanbul digest, use Istanbul
 	// specific hash calculation.
-	if h.MixDigest == IstanbulDigest {
+	if EngineType == Engine_IBFT {
 		// Seal is reserved in extra-data. To prove block is signed by the proposer.
 		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
 			return rlpHash(istanbulHeader)
@@ -125,7 +102,7 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.TxHash,
 		h.ReceiptHash,
 		h.Bloom,
-		h.Difficulty,
+		h.BlockScore,
 		h.Number,
 		h.GasUsed,
 		h.Time,
@@ -137,7 +114,7 @@ func (h *Header) HashNoNonce() common.Hash {
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
+	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.BlockScore.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -162,7 +139,7 @@ type Block struct {
 	hash atomic.Value
 	size atomic.Value
 
-	// Td is used by package blockchain to store the total difficulty
+	// Td is used by package blockchain to store the total blockscore
 	// of the chain up to and including the block.
 	td *big.Int
 
@@ -241,8 +218,8 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Time = new(big.Int); h.Time != nil {
 		cpy.Time.Set(h.Time)
 	}
-	if cpy.Difficulty = new(big.Int); h.Difficulty != nil {
-		cpy.Difficulty.Set(h.Difficulty)
+	if cpy.BlockScore = new(big.Int); h.BlockScore != nil {
+		cpy.BlockScore.Set(h.BlockScore)
 	}
 	if cpy.Number = new(big.Int); h.Number != nil {
 		cpy.Number.Set(h.Number)
@@ -307,13 +284,11 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 
 func (b *Block) Number() *big.Int     { return new(big.Int).Set(b.header.Number) }
 func (b *Block) GasUsed() uint64      { return b.header.GasUsed }
-func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
+func (b *Block) BlockScore() *big.Int { return new(big.Int).Set(b.header.BlockScore) }
 func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
 func (b *Block) TimeFoS() uint8       { return b.header.TimeFoS }
 
 func (b *Block) NumberU64() uint64          { return b.header.Number.Uint64() }
-func (b *Block) MixDigest() common.Hash     { return b.header.MixDigest }
-func (b *Block) Nonce() uint64              { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
 func (b *Block) Bloom() Bloom               { return b.header.Bloom }
 func (b *Block) Rewardbase() common.Address { return b.header.Rewardbase }
 func (b *Block) Root() common.Hash          { return b.header.Root }
@@ -402,17 +377,15 @@ func (h *Header) String() string {
 	TxSha:            %x
 	ReceiptSha:       %x
 	Bloom:            %x
-	Difficulty:       %v
+	BlockScore:       %v
 	Number:           %v
 	GasUsed:          %v
 	Time:             %v
 	TimeFoS:          %v
 	Extra:            %s
-	MixDigest:        %x
-	Nonce:            %x
 	Governance:       %x
 	Vote:             %x
-]`, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.MixDigest, h.Nonce, h.Governance, h.Vote)
+]`, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
 }
 
 type Blocks []*Block

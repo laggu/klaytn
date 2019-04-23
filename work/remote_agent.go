@@ -22,7 +22,6 @@ package work
 
 import (
 	"errors"
-	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/gxhash"
@@ -123,7 +122,7 @@ func (a *RemoteAgent) GetWork() ([3]string, error) {
 		// Calculate the "target" to be returned to the external miner
 		n := big.NewInt(1)
 		n.Lsh(n, 255)
-		n.Div(n, block.Difficulty())
+		n.Div(n, block.BlockScore())
 		n.Lsh(n, 1)
 		res[2] = common.BytesToHash(n.Bytes()).Hex()
 
@@ -136,7 +135,7 @@ func (a *RemoteAgent) GetWork() ([3]string, error) {
 // SubmitWork tries to inject a pow solution into the remote agent, returning
 // whether the solution was accepted or not (not can be both a bad pow as well as
 // any other error, like no work pending).
-func (a *RemoteAgent) SubmitWork(nonce types.BlockNonce, mixDigest, hash common.Hash) bool {
+func (a *RemoteAgent) SubmitWork(hash common.Hash) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -148,8 +147,6 @@ func (a *RemoteAgent) SubmitWork(nonce types.BlockNonce, mixDigest, hash common.
 	}
 	// Make sure the Engine solutions is indeed valid
 	result := work.Block.Header()
-	result.Nonce = nonce
-	result.MixDigest = mixDigest
 
 	if err := a.engine.VerifySeal(a.chain, result); err != nil {
 		logger.Error("Invalid proof-of-work submitted", "hash", hash, "err", err)

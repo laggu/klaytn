@@ -79,7 +79,7 @@ type stPostState struct {
 
 type stEnv struct {
 	Coinbase   common.Address `json:"currentCoinbase"   gencodec:"required"`
-	Difficulty *big.Int       `json:"currentDifficulty" gencodec:"required"`
+	BlockScore *big.Int       `json:"currentDifficulty" gencodec:"required"`
 	GasLimit   uint64         `json:"currentGasLimit"   gencodec:"required"`
 	Number     uint64         `json:"currentNumber"     gencodec:"required"`
 	Timestamp  uint64         `json:"currentTimestamp"  gencodec:"required"`
@@ -87,7 +87,7 @@ type stEnv struct {
 
 type stEnvMarshaling struct {
 	Coinbase   common.UnprefixedAddress
-	Difficulty *math.HexOrDecimal256
+	BlockScore *math.HexOrDecimal256
 	GasLimit   math.HexOrDecimal64
 	Number     math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
@@ -180,7 +180,7 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *stat
 func (t *StateTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	return &blockchain.Genesis{
 		Config:     config,
-		Difficulty: t.json.Env.Difficulty,
+		BlockScore: t.json.Env.BlockScore,
 		GasLimit:   t.json.Env.GasLimit,
 		Number:     t.json.Env.Number,
 		Timestamp:  t.json.Env.Timestamp,

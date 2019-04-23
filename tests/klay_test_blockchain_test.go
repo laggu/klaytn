@@ -409,9 +409,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 		genesis.Config = Forks["Byzantium"]
 		genesis.GasLimit = GasLimit
 		genesis.ExtraData = extraData
-		genesis.Nonce = 0
-		genesis.Mixhash = types.IstanbulDigest
-		genesis.Difficulty = big.NewInt(1)
+		genesis.BlockScore = big.NewInt(1)
 		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
 		genesis.Config.UnitPrice = 25 * params.Ston
 	}

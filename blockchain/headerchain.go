@@ -100,7 +100,7 @@ func (hc *HeaderChain) GetBlockNumber(hash common.Hash) *uint64 {
 }
 
 // WriteHeader writes a header into the local chain, given that its parent is
-// already known. If the total difficulty of the newly inserted header becomes
+// already known. If the total blockscore of the newly inserted header becomes
 // greater than the current known TD, the canonical chain is re-routed.
 //
 // Note: This method is not concurrent-safe with inserting blocks simultaneously
@@ -114,13 +114,13 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 		hash   = header.Hash()
 		number = header.Number.Uint64()
 	)
-	// Calculate the total difficulty of the header
+	// Calculate the total blockscore of the header
 	ptd := hc.GetTd(header.ParentHash, number-1)
 	if ptd == nil {
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
 	localTd := hc.GetTd(hc.currentHeaderHash, hc.CurrentHeader().Number.Uint64())
-	externTd := new(big.Int).Add(header.Difficulty, ptd)
+	externTd := new(big.Int).Add(header.BlockScore, ptd)
 
 	// Irrelevant of the canonical status, write the td and header to the database
 	hc.WriteTd(hash, number, externTd)
@@ -129,7 +129,7 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
-	// If the total difficulty is higher than our known, add it to the canonical chain
+	// If the total blockscore is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
@@ -281,13 +281,13 @@ func (hc *HeaderChain) GetBlockHashesFromHash(hash common.Hash, max uint64) []co
 	return chain
 }
 
-// GetTd retrieves a block's total difficulty in the canonical chain from the
+// GetTd retrieves a block's total blockscore in the canonical chain from the
 // database by hash and number, caching it if found.
 func (hc *HeaderChain) GetTd(hash common.Hash, number uint64) *big.Int {
 	return hc.chainDB.ReadTd(hash, number)
 }
 
-// GetTdByHash retrieves a block's total difficulty in the canonical chain from the
+// GetTdByHash retrieves a block's total blockscore in the canonical chain from the
 // database by hash, caching it if found.
 func (hc *HeaderChain) GetTdByHash(hash common.Hash) *big.Int {
 	number := hc.GetBlockNumber(hash)
@@ -297,7 +297,7 @@ func (hc *HeaderChain) GetTdByHash(hash common.Hash) *big.Int {
 	return hc.GetTd(hash, *number)
 }
 
-// WriteTd stores a block's total difficulty into the database, also caching it
+// WriteTd stores a block's total blockscore into the database, also caching it
 // along the way.
 func (hc *HeaderChain) WriteTd(hash common.Hash, number uint64, td *big.Int) {
 	hc.chainDB.WriteTd(hash, number, td)

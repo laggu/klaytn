@@ -528,7 +528,7 @@ func opNumber(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 }
 
 func opDifficulty(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Difficulty)))
+	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.BlockScore)))
 	return nil, nil
 }
 

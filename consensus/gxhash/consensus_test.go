@@ -35,36 +35,36 @@ import (
 
 type diffTest struct {
 	ParentTimestamp    uint64
-	ParentDifficulty   *big.Int
+	ParentBlockScore   *big.Int
 	CurrentTimestamp   uint64
 	CurrentBlocknumber *big.Int
-	CurrentDifficulty  *big.Int
+	CurrentBlockScore  *big.Int
 }
 
 func (d *diffTest) UnmarshalJSON(b []byte) (err error) {
 	var ext struct {
 		ParentTimestamp    string
-		ParentDifficulty   string
+		ParentBlockScore   string
 		CurrentTimestamp   string
 		CurrentBlocknumber string
-		CurrentDifficulty  string
+		CurrentBlockScore  string
 	}
 	if err := json.Unmarshal(b, &ext); err != nil {
 		return err
 	}
 
 	d.ParentTimestamp = math.MustParseUint64(ext.ParentTimestamp)
-	d.ParentDifficulty = math.MustParseBig256(ext.ParentDifficulty)
+	d.ParentBlockScore = math.MustParseBig256(ext.ParentBlockScore)
 	d.CurrentTimestamp = math.MustParseUint64(ext.CurrentTimestamp)
 	d.CurrentBlocknumber = math.MustParseBig256(ext.CurrentBlocknumber)
-	d.CurrentDifficulty = math.MustParseBig256(ext.CurrentDifficulty)
+	d.CurrentBlockScore = math.MustParseBig256(ext.CurrentBlockScore)
 
 	return nil
 }
 
 // TODO-Klaytn-FailedTest Enable this test later
 /*
-func TestCalcDifficulty(t *testing.T) {
+func TestCalcBlockScore(t *testing.T) {
 	file, err := os.Open(filepath.Join("..", "..", "tests", "testdata", "BasicTests", "difficulty.json"))
 	if err != nil {
 		t.Skip(err)
@@ -81,13 +81,13 @@ func TestCalcDifficulty(t *testing.T) {
 
 	for name, test := range tests {
 		number := new(big.Int).Sub(test.CurrentBlocknumber, big.NewInt(1))
-		diff := CalcDifficulty(config, test.CurrentTimestamp, &types.Header{
+		diff := CalcBlockScore(config, test.CurrentTimestamp, &types.Header{
 			Number:     number,
 			Time:       new(big.Int).SetUint64(test.ParentTimestamp),
-			Difficulty: test.ParentDifficulty,
+			BlockScore: test.ParentBlockScore,
 		})
-		if diff.Cmp(test.CurrentDifficulty) != 0 {
-			t.Error(name, "failed. Expected", test.CurrentDifficulty, "and calculated", diff)
+		if diff.Cmp(test.CurrentBlockScore) != 0 {
+			t.Error(name, "failed. Expected", test.CurrentBlockScore, "and calculated", diff)
 		}
 	}
 }

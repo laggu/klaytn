@@ -224,7 +224,7 @@ func (cm *cacheManager) hasHeaderInCache(hash common.Hash) bool {
 	return false
 }
 
-// readTdCache looks for cached total difficulty in tdCache.
+// readTdCache looks for cached total blockScore in tdCache.
 // It returns nil if not found.
 func (cm *cacheManager) readTdCache(hash common.Hash) *big.Int {
 	if cached, ok := cm.tdCache.Get(hash); ok && cached != nil {
@@ -235,7 +235,7 @@ func (cm *cacheManager) readTdCache(hash common.Hash) *big.Int {
 	return nil
 }
 
-// writeHeaderCache writes total difficulty as a value, headerHash as a key.
+// writeHeaderCache writes total blockScore as a value, headerHash as a key.
 func (cm *cacheManager) writeTdCache(hash common.Hash, td *big.Int) {
 	if td == nil {
 		return

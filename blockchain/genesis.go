@@ -47,13 +47,11 @@ var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 // fork switch-over blocks through the chain configuration.
 type Genesis struct {
 	Config     *params.ChainConfig `json:"config"`
-	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
 	Governance []byte              `json:"governanceData"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
-	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
-	Mixhash    common.Hash         `json:"mixHash"`
+	BlockScore *big.Int            `json:"blockScore"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
@@ -89,13 +87,12 @@ type GenesisAccount struct {
 
 // field type overrides for gencodec
 type genesisSpecMarshaling struct {
-	Nonce      math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
 	Number     math.HexOrDecimal64
-	Difficulty *math.HexOrDecimal256
+	BlockScore *math.HexOrDecimal256
 	Alloc      map[common.UnprefixedAddress]GenesisAccount
 }
 
@@ -242,19 +239,17 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
-		Nonce:      types.EncodeNonce(g.Nonce),
 		Time:       new(big.Int).SetUint64(g.Timestamp),
 		TimeFoS:    0,
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
 		Governance: g.Governance,
 		GasUsed:    g.GasUsed,
-		Difficulty: g.Difficulty,
-		MixDigest:  g.Mixhash,
+		BlockScore: g.BlockScore,
 		Root:       root,
 	}
-	if g.Difficulty == nil {
-		head.Difficulty = params.GenesisDifficulty
+	if g.BlockScore == nil {
+		head.BlockScore = params.GenesisBlockScore
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
@@ -269,7 +264,7 @@ func (g *Genesis) Commit(db database.DBManager) (*types.Block, error) {
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
-	db.WriteTd(block.Hash(), block.NumberU64(), g.Difficulty)
+	db.WriteTd(block.Hash(), block.NumberU64(), g.BlockScore)
 	db.WriteBlock(block)
 	db.WriteReceipts(block.Hash(), block.NumberU64(), nil)
 	db.WriteCanonicalHash(block.Hash(), block.NumberU64())
@@ -310,10 +305,9 @@ func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance 
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
-		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
+		BlockScore: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
 	}
 }
@@ -322,10 +316,9 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
-		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
-		Difficulty: big.NewInt(1048576),
+		BlockScore: big.NewInt(1048576),
 		Alloc:      decodePrealloc(testnetAllocData),
 	}
 }
@@ -344,7 +337,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 		Config:     &config,
 		ExtraData:  append(append(make([]byte, 32), faucet[:]...), make([]byte, 65)...),
 		GasLimit:   6283185,
-		Difficulty: big.NewInt(1),
+		BlockScore: big.NewInt(1),
 		Alloc: map[common.Address]GenesisAccount{
 			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
 			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256

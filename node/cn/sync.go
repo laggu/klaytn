@@ -196,7 +196,7 @@ func (pm *ProtocolManager) synchronise(peer Peer) {
 	// Otherwise try to sync with the downloader
 	mode := pm.getSyncMode(currentBlock)
 	if mode == downloader.FastSync {
-		// Make sure the peer's total difficulty we are synchronizing is higher.
+		// Make sure the peer's total blockscore we are synchronizing is higher.
 		if pm.blockchain.GetTdByHash(pm.blockchain.CurrentFastBlock().Hash()).Cmp(pTd) >= 0 {
 			return
 		}

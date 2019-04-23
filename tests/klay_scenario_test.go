@@ -3930,7 +3930,7 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 		Number:     num.Add(num, common.Big1),
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
-		Difficulty: big.NewInt(0),
+		BlockScore: big.NewInt(0),
 	}
 	usedGas := uint64(0)
 	return blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, tx, &usedGas, vmConfig)

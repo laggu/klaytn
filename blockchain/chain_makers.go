@@ -59,11 +59,6 @@ func (b *BlockGen) SetExtra(data []byte) {
 	b.header.Extra = data
 }
 
-// SetNonce sets the nonce field of the generated block.
-func (b *BlockGen) SetNonce(nonce types.BlockNonce) {
-	b.header.Nonce = nonce
-}
-
 func (b *BlockGen) SetVoteData(data []byte) {
 	b.header.Vote = data
 }
@@ -135,14 +130,14 @@ func (b *BlockGen) PrevBlock(index int) *types.Block {
 }
 
 // OffsetTime modifies the time instance of a block, implicitly changing its
-// associated difficulty. It's useful to test scenarios where forking is not
+// associated blockscore. It's useful to test scenarios where forking is not
 // tied to chain length directly.
 func (b *BlockGen) OffsetTime(seconds int64) {
 	b.header.Time.Add(b.header.Time, new(big.Int).SetInt64(seconds))
 	if b.header.Time.Cmp(b.parent.Header().Time) <= 0 {
 		panic("block time out of range")
 	}
-	b.header.Difficulty = b.engine.CalcDifficulty(b.chainReader, b.header.Time.Uint64(), b.parent.Header())
+	b.header.BlockScore = b.engine.CalcBlockScore(b.chainReader, b.header.Time.Uint64(), b.parent.Header())
 }
 
 // GenerateChain creates a chain of n blocks. The first block's
@@ -213,10 +208,10 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 	return &types.Header{
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
-		Difficulty: engine.CalcDifficulty(chain, time.Uint64(), &types.Header{
+		BlockScore: engine.CalcBlockScore(chain, time.Uint64(), &types.Header{
 			Number:     parent.Number(),
 			Time:       new(big.Int).Sub(time, big.NewInt(10)),
-			Difficulty: parent.Difficulty(),
+			BlockScore: parent.BlockScore(),
 		}),
 		Number: new(big.Int).Add(parent.Number(), common.Big1),
 		Time:   time,

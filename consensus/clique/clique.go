@@ -63,8 +63,8 @@ var (
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signer
 	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signer.
 
-	diffInTurn = big.NewInt(2) // Block difficulty for in-turn signatures
-	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
+	scoreInTurn = big.NewInt(2) // Block blockscore for in-turn signatures
+	scoreNoTurn = big.NewInt(1) // Block blockscore for out-of-turn signatures
 )
 
 var logger = log.NewModuleLogger(log.ConsensusClique)
@@ -110,15 +110,12 @@ var (
 	// list of signers different than the one the local node calculated.
 	errMismatchingCheckpointSigners = errors.New("mismatching signer list on checkpoint block")
 
-	// errInvalidMixDigest is returned if a block's mix digest is non-zero.
-	errInvalidMixDigest = errors.New("non-zero mix digest")
+	// errInvalidBlockScore is returned if the blockScore of a block neither 1 or 2.
+	errInvalidBlockScore = errors.New("invalid blockscore")
 
-	// errInvalidDifficulty is returned if the difficulty of a block neither 1 or 2.
-	errInvalidDifficulty = errors.New("invalid difficulty")
-
-	// errWrongDifficulty is returned if the difficulty of a block doesn't match the
+	// errWrongBlockScore is returned if the blockScore of a block doesn't match the
 	// turn of the signer.
-	errWrongDifficulty = errors.New("wrong difficulty")
+	errWrongBlockScore = errors.New("wrong blockScore")
 
 	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
 	// the previous block's timestamp + the minimum block period.
@@ -161,13 +158,11 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.TxHash,
 		header.ReceiptHash,
 		header.Bloom,
-		header.Difficulty,
+		header.BlockScore,
 		header.Number,
 		header.GasUsed,
 		header.Time,
 		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
-		header.MixDigest,
-		header.Nonce,
 	})
 	hasher.Sum(hash[:0])
 	return hash
@@ -214,7 +209,7 @@ type Clique struct {
 	lock   sync.RWMutex   // Protects the signer fields
 
 	// The fields below are for testing only
-	fakeDiff bool // Skip difficulty verifications
+	fakeBlockScore bool // Skip blockScore verifications
 }
 
 // New creates a Clique proof-of-authority consensus engine with the initial
@@ -300,14 +295,10 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if checkpoint && signersBytes%common.AddressLength != 0 {
 		return errInvalidCheckpointSigners
 	}
-	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != (common.Hash{}) {
-		return errInvalidMixDigest
-	}
-	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
+	// Ensure that the block's blockScore is meaningful (may not be correct at this point)
 	if number > 0 {
-		if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
-			return errInvalidDifficulty
+		if header.BlockScore == nil || (header.BlockScore.Cmp(scoreInTurn) != 0 && header.BlockScore.Cmp(scoreNoTurn) != 0) {
+			return errInvalidBlockScore
 		}
 	}
 	// All basic checks passed, verify cascading fields
@@ -473,14 +464,14 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 			}
 		}
 	}
-	// Ensure that the difficulty corresponds to the turn-ness of the signer
-	if !c.fakeDiff {
+	// Ensure that the blockScore corresponds to the turn-ness of the signer
+	if !c.fakeBlockScore {
 		inturn := snap.inturn(header.Number.Uint64(), signer)
-		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
-			return errInvalidDifficulty
+		if inturn && header.BlockScore.Cmp(scoreInTurn) != 0 {
+			return errInvalidBlockScore
 		}
-		if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
-			return errInvalidDifficulty
+		if !inturn && header.BlockScore.Cmp(scoreNoTurn) != 0 {
+			return errInvalidBlockScore
 		}
 	}
 	return nil
@@ -524,8 +515,8 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 		}
 		c.lock.RUnlock()
 	}
-	// Set the correct difficulty
-	header.Difficulty = CalcDifficulty(snap, c.signer)
+	// Set the correct blockScore
+	header.BlockScore = CalcBlockScore(snap, c.signer)
 
 	// Ensure the extra data has all it's components
 	if len(header.Extra) < ExtraVanity {
@@ -539,9 +530,6 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 		}
 	}
 	header.Extra = append(header.Extra, make([]byte, ExtraSeal)...)
-
-	// Mix digest is reserved for now, set to empty
-	header.MixDigest = common.Hash{}
 
 	// Ensure the timestamp has the correct delay
 	parent := chain.GetHeader(header.ParentHash, number-1)
@@ -618,7 +606,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	}
 	// Sweet, the protocol permits us to sign the block, wait for our time
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
-	if header.Difficulty.Cmp(diffNoTurn) == 0 {
+	if header.BlockScore.Cmp(scoreNoTurn) == 0 {
 		// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
 		delay += time.Duration(rand.Int63n(int64(wiggle)))
@@ -642,25 +630,25 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	return block.WithSeal(header), nil
 }
 
-// CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
+// CalcBlockScore is the blockScore adjustment algorithm. It returns the blockScore
 // that a new block should have based on the previous blocks in the chain and the
 // current signer.
-func (c *Clique) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+func (c *Clique) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	snap, err := c.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 	if err != nil {
 		return nil
 	}
-	return CalcDifficulty(snap, c.signer)
+	return CalcBlockScore(snap, c.signer)
 }
 
-// CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
+// CalcBlockScore is the blockScore adjustment algorithm. It returns the blockScore
 // that a new block should have based on the previous blocks in the chain and the
 // current signer.
-func CalcDifficulty(snap *Snapshot, signer common.Address) *big.Int {
+func CalcBlockScore(snap *Snapshot, signer common.Address) *big.Int {
 	if snap.inturn(snap.Number+1, signer) {
-		return new(big.Int).Set(diffInTurn)
+		return new(big.Int).Set(scoreInTurn)
 	}
-	return new(big.Int).Set(diffNoTurn)
+	return new(big.Int).Set(scoreNoTurn)
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC API to allow

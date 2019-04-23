@@ -466,7 +466,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 	defer bc.mu.Unlock()
 
 	// Prepare the genesis block and reinitialise the chain
-	bc.hc.WriteTd(genesis.Hash(), genesis.NumberU64(), genesis.Difficulty())
+	bc.hc.WriteTd(genesis.Hash(), genesis.NumberU64(), genesis.BlockScore())
 	bc.db.WriteBlock(genesis)
 
 	bc.genesisBlock = genesis
@@ -979,7 +979,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 
 // WriteBlockWithoutState writes only the block and its metadata to the database,
 // but does not write any state. This is used to construct competing side forks
-// up to the point where they exceed the canonical total difficulty.
+// up to the point where they exceed the canonical total blockscore.
 func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -1075,11 +1075,11 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 	return false
 }
 
-// isReorganizationRequired returns if reorganization is required or not based on total difficulty.
+// isReorganizationRequired returns if reorganization is required or not based on total blockscore.
 func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *types.Block) bool {
 	reorg := externTd.Cmp(localTd) > 0
 	if !reorg && externTd.Cmp(localTd) == 0 {
-		// Split same-difficulty blocks by number, then at random
+		// Split same-blockscore blocks by number, then at random
 		reorg = block.NumberU64() < currentBlock.NumberU64() || (block.NumberU64() == currentBlock.NumberU64() && mrand.Float64() < 0.5)
 	}
 	return reorg
@@ -1129,7 +1129,7 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	defer bc.wg.Done()
 
 	var status WriteStatus
-	// Calculate the total difficulty of the block
+	// Calculate the total blockscore of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
 		return NonStatTy, consensus.ErrUnknownAncestor
@@ -1140,7 +1140,7 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 
 	currentBlock := bc.CurrentBlock()
 	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
-	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+	externTd := new(big.Int).Add(block.BlockScore(), ptd)
 
 	// Irrelevant of the canonical status, write the block itself to the database
 	bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
@@ -1157,7 +1157,7 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
-	// If the total difficulty is higher than our known, add it to the canonical chain
+	// If the total blockscore is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	currentBlock = bc.CurrentBlock()
@@ -1189,7 +1189,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	defer bc.wg.Done()
 
 	var status WriteStatus
-	// Calculate the total difficulty of the block
+	// Calculate the total blockscore of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
 		return NonStatTy, consensus.ErrUnknownAncestor
@@ -1200,7 +1200,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 
 	currentBlock := bc.CurrentBlock()
 	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
-	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+	externTd := new(big.Int).Add(block.BlockScore(), ptd)
 
 	reorg := isReorganizationRequired(localTd, externTd, currentBlock, block)
 	if reorg {
@@ -1243,7 +1243,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
-	// If the total difficulty is higher than our known, add it to the canonical chain
+	// If the total blockscore is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	currentBlock = bc.CurrentBlock()
@@ -1433,7 +1433,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			// until the competitor TD goes above the canonical TD
 			currentBlock := bc.CurrentBlock()
 			localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
-			externTd := new(big.Int).Add(bc.GetTd(block.ParentHash(), block.NumberU64()-1), block.Difficulty())
+			externTd := new(big.Int).Add(bc.GetTd(block.ParentHash(), block.NumberU64()-1), block.BlockScore())
 			if localTd.Cmp(externTd) > 0 {
 				bc.WriteBlockWithoutState(block, externTd)
 				continue
@@ -1517,7 +1517,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			lastCanon = block
 
 		case SideStatTy:
-			logger.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.Difficulty(), "elapsed",
+			logger.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.BlockScore(), "elapsed",
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed())
 
 			blockInsertTimer.UpdateSince(bstart)
@@ -1824,7 +1824,7 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 }
 
 // writeHeader writes a header into the local chain, given that its parent is
-// already known. If the total difficulty of the newly inserted header becomes
+// already known. If the total blockscore of the newly inserted header becomes
 // greater than the current known TD, the canonical chain is re-routed.
 //
 // Note: This method is not concurrent-safe with inserting blocks simultaneously
@@ -1849,13 +1849,13 @@ func (bc *BlockChain) CurrentHeader() *types.Header {
 	return bc.hc.CurrentHeader()
 }
 
-// GetTd retrieves a block's total difficulty in the canonical chain from the
+// GetTd retrieves a block's total blockscore in the canonical chain from the
 // database by hash and number, caching it if found.
 func (bc *BlockChain) GetTd(hash common.Hash, number uint64) *big.Int {
 	return bc.hc.GetTd(hash, number)
 }
 
-// GetTdByHash retrieves a block's total difficulty in the canonical chain from the
+// GetTdByHash retrieves a block's total blockscore in the canonical chain from the
 // database by hash, caching it if found.
 func (bc *BlockChain) GetTdByHash(hash common.Hash) *big.Int {
 	return bc.hc.GetTdByHash(hash)
