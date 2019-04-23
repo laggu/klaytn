@@ -17,9 +17,11 @@
 package tests
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/common"
 	"runtime/pprof"
 	"testing"
 )
@@ -88,6 +90,14 @@ func BenchmarkDataExecution_Baobab_ControlGroup(b *testing.B) {
 	dataExecutionTest(b, tc)
 }
 
+// Static variables, not to read same addresses and keys from files repeatedly.
+// If there are saved addresses and keys and the given numReceiversPerRun and testDataDir
+// match with saved ones, it will reuse saved addresses and keys.
+var savedAddresses []*common.Address = nil
+var savedKeys []*ecdsa.PrivateKey = nil
+var savedNumReceiversPerRun int
+var savedTestDataDir string
+
 // dataExecutionTest is to check the performance of Klaytn with pre-generated data.
 // It generates warmUpTxs and executionTxs first, and then initialize blockchain and database to
 // remove any effects caused by generating transactions. And then it executes warmUpTxs and executionTxs.
@@ -104,12 +114,20 @@ func dataExecutionTest(b *testing.B, tc *preGeneratedTC) {
 
 	// activeAddrs is used for both sender and receiver.
 	// len(activeAddrs) = tc.numReceiversPerRun
-	fmt.Println("Start reading addresses from files")
-	activeAddrs, activeKeys, err := getAddrsAndKeysFromFile(tc.numReceiversPerRun, testDataDir, 0, tc.filePicker)
-	if err != nil {
-		b.Fatal(err)
+	if savedAddresses == nil || savedKeys == nil || tc.numReceiversPerRun != savedNumReceiversPerRun || testDataDir != savedTestDataDir {
+		fmt.Println("Start reading addresses from files", "testDataDir", testDataDir, "numReceiversPerRun", tc.numReceiversPerRun)
+		savedAddresses, savedKeys, err = getAddrsAndKeysFromFile(tc.numReceiversPerRun, testDataDir, 0, tc.filePicker)
+		savedNumReceiversPerRun = tc.numReceiversPerRun
+		savedTestDataDir = testDataDir
+		if err != nil {
+			b.Fatal(err)
+		}
+		fmt.Println("End reading addresses from files")
+	} else {
+		fmt.Println("Reuse previously saved addresses and keys", "len(addrs)", len(savedAddresses), "len(keys)", len(savedKeys))
 	}
-	fmt.Println("End reading addresses from files")
+
+	activeAddrs, activeKeys := savedAddresses, savedKeys
 
 	bcData, err := NewBCDataForPreGeneratedTest(testDataDir, tc)
 	if err != nil {
