@@ -25,7 +25,7 @@ type bootnodesByTypes struct {
 }
 
 // MainnetBootnodes are the kni URLs of the P2P bootstrap nodes running on
-// the main klaytn network.
+// the Klaytn main network.
 var MainnetBootnodes = []string{
 	// TODO-Klaytn-Bootnode : Klaytn BootNode should be set. Now for only test.
 	//"kni://a979fb575495b8d6db44f750317d0f4622bf4c2aa3365d6af7c284339968eef29b69ad0dce72a4d8db5ebb4968de0e3bec910127f134779fbcb0cb6d3331163c@52.16.188.185:30303", // IE

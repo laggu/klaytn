@@ -47,7 +47,7 @@ var (
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the klaytn developers into the klaytn consensus.
+	// and accepted by the klaytn developers into the Klaytn consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
