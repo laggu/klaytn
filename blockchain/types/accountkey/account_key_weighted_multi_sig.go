@@ -19,7 +19,6 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"encoding/json"
-	"github.com/ground-x/klaytn/fork"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -126,11 +125,8 @@ func (a *AccountKeyWeightedMultiSig) AccountCreationGas(currentBlockNumber uint6
 	if numKeys > MaxNumKeysForMultiSig {
 		return 0, kerrors.ErrMaxKeysExceed
 	}
-	// TODO-Klaytn-HF After GasFormulaFixBlockNumber, different accountCreationGas logic will be operated.
-	if fork.IsGasFormulaFixEnabled(currentBlockNumber) {
-		return numKeys * params.TxAccountCreationGasPerKey, nil
-	}
-	return params.TxAccountCreationGasDefault + numKeys*params.TxAccountCreationGasPerKey, nil
+
+	return numKeys * params.TxAccountCreationGasPerKey, nil
 }
 
 func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {

@@ -107,8 +107,8 @@ const (
 	// TODO-Klaytn: Need to fix values
 	TxGasAccountCreation       uint64 = 21000
 	TxGasAccountUpdate         uint64 = 21000
-	TxGasFeeDelegated          uint64 = 1000
-	TxGasFeeDelegatedWithRatio uint64 = 10000
+	TxGasFeeDelegated          uint64 = 10000
+	TxGasFeeDelegatedWithRatio uint64 = 15000
 	TxGasCancel                uint64 = 21000
 
 	// Network Id
