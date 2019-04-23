@@ -35,7 +35,7 @@ const (
 	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
 	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
 	fetchTimeout  = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
-	// TODO-Klaytn klaytn is 20 times faster than ethereum, so check block height is 20 times
+	// TODO-Klaytn Klaytn is 20 times faster than ethereum, so check block height is 20 times
 	maxQueueDist = 32 * 20  // Maximum allowed distance from the chain head to queue
 	hashLimit    = 256 * 20 // Maximum number of unique blocks a peer may have announced
 	blockLimit   = 64 * 20  // Maximum number of unique blocks a peer may have delivered
