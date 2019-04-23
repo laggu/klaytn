@@ -82,10 +82,29 @@ type BridgeInfo struct {
 
 	mu                  *sync.Mutex     // mutex for pendingRequestEvent
 	pendingRequestEvent *eventSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
-	nextRequestNonce    uint64          // TODO-Klaytn Need to set initial value for recovery.
+	nextHandleNonce     uint64          // This nonce will be used for getting pending request value transfer events.
 
 	handledNonce   uint64 // the nonce from the handle value transfer event from the bridge.
 	requestedNonce uint64 // the nonce from the request value transfer event from the counter part bridge.
+}
+
+func NewBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, local bool, subscribed bool) *BridgeInfo {
+	bi := &BridgeInfo{bridge, local, subscribed, &sync.Mutex{}, newEventSortedMap(), 0, 0, 0}
+
+	handleNonce, err := bi.bridge.HandleNonce(nil)
+	if err != nil {
+		logger.Error("Failed to get handleNonce from the bridge", "err", err, "bridgeAddr", addr.Hex())
+		return bi // return bridgeInfo with zero nonce.
+		// TODO-Klaytn consider the failed case. The nonce(nextHandleNonce) should be updated later.
+	}
+
+	logger.Debug("Updated the handle nonce", "nonce", handleNonce, "bridgeAddr", addr.Hex())
+
+	bi.nextHandleNonce = handleNonce
+	bi.requestedNonce = handleNonce // This requestedNonce will be updated by counter part bridge contract's new request event.
+	bi.handledNonce = handleNonce
+
+	return bi
 }
 
 // UpdateRequestedNonce updates the requested nonce with new nonce.
@@ -118,7 +137,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*TokenReceivedEvent) {
 func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*TokenReceivedEvent {
 	bi.mu.Lock()
 	defer bi.mu.Unlock()
-	return bi.pendingRequestEvent.Ready(bi.nextRequestNonce)
+	return bi.pendingRequestEvent.Ready(bi.nextHandleNonce)
 }
 
 // DecodeRLP decodes the Klaytn
@@ -193,13 +212,16 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 
 // LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
 func (bm *BridgeManager) LogBridgeStatus() {
-	for _, b := range bm.bridges {
+	for bAddr, b := range bm.bridges {
 		diffNonce := b.requestedNonce - b.handledNonce
+
+		var headStr string
 		if b.onServiceChain {
-			logger.Info("Bridge(Main -> Service Chain)", "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
+			headStr = "Bridge(Main -> Service Chain)"
 		} else {
-			logger.Info("Bridge(Service -> Main Chain)", "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
+			headStr = "Bridge(Service -> Main Chain)"
 		}
+		logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
 	}
 }
 
@@ -245,7 +267,7 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 
 // SetBridge stores the address and bridge pair with local/remote and subscription status.
 func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.Bridge, local bool, subscribed bool) {
-	bm.bridges[addr] = &BridgeInfo{bridge, local, subscribed, &sync.Mutex{}, newEventSortedMap(), 0, 0, 0}
+	bm.bridges[addr] = NewBridgeInfo(addr, bridge, local, subscribed)
 }
 
 // LoadAllBridge reloads bridge and handles subscription by using the the journal cache.

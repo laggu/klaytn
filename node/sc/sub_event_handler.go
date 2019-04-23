@@ -217,7 +217,7 @@ func (cce *ChildChainEventHandler) processingPendingRequestEvents(handleBridgeIn
 			logger.Error("Failed handle request value transfer event", "len(RePutEvent)", len(pendingEvent[idx:]))
 			return err
 		}
-		handleBridgeInfo.nextRequestNonce++
+		handleBridgeInfo.nextHandleNonce++
 	}
 
 	return nil
