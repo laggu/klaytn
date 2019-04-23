@@ -70,6 +70,7 @@ const (
 )
 
 type Discovery interface {
+	Name() string
 	Self() *Node
 	Close()
 	Resolve(target NodeID) *Node
@@ -181,9 +182,11 @@ func newTable(cfg *Config) (Discovery, error) {
 	// expiration.
 	tab.db.ensureExpirer()
 	go tab.loop()
-	logger.Debug("new Table created", "err", nil)
+	logger.Debug("new "+tab.Name()+" created", "err", nil)
 	return tab, nil
 }
+
+func (tab *Table) Name() string { return "TableDiscovery" }
 
 func (tab *Table) seedRand() {
 	var b [8]byte
