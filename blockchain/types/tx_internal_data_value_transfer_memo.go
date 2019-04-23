@@ -234,7 +234,7 @@ func (t *TxInternalDataValueTransferMemo) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGas
+	gas := params.TxGasValueTransfer
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
 	if err != nil {
 		return 0, err

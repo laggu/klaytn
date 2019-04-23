@@ -23,9 +23,11 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -170,8 +172,7 @@ func TestGasCalculation(t *testing.T) {
 	}
 
 	// For smart contract
-	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
-		"contract")
+	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
 	assert.Equal(t, nil, err)
 
 	{
@@ -263,32 +264,29 @@ func testGasValidation(t *testing.T, bcdata *BCData, tx *types.Transaction, vali
 }
 
 func genLegacyTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
+	intrinsic := getIntrinsicGas(types.TxTypeLegacyTransaction)
 	amount := big.NewInt(100000)
 	tx := types.NewTransaction(from.GetNonce(), to.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
 	err := tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGas
-
 	return tx, intrinsic
 }
 
 func genValueTransfer(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForValueTransfer(from, to, gasPrice)
+	values, intrinsic := genMapForValueTransfer(from, to, gasPrice, types.TxTypeValueTransfer)
 	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 	assert.Equal(t, nil, err)
 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGas
-
 	return tx, intrinsic
 }
 
 func genFeeDelegatedValueTransfer(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForValueTransfer(from, to, gasPrice)
+	values, intrinsic := genMapForValueTransfer(from, to, gasPrice, types.TxTypeFeeDelegatedValueTransfer)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
@@ -300,13 +298,11 @@ func genFeeDelegatedValueTransfer(t *testing.T, signer types.Signer, from TestAc
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGas + params.TxGasFeeDelegated
-
 	return tx, intrinsic
 }
 
 func genFeeDelegatedWithRatioValueTransfer(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForValueTransfer(from, to, gasPrice)
+	values, intrinsic := genMapForValueTransfer(from, to, gasPrice, types.TxTypeFeeDelegatedValueTransferWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -319,13 +315,11 @@ func genFeeDelegatedWithRatioValueTransfer(t *testing.T, signer types.Signer, fr
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGas + params.TxGasFeeDelegatedWithRatio
-
 	return tx, intrinsic
 }
 
 func genValueTransferWithMemo(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, gasPayload := genMapForValueTransferWithMemo(from, to, gasPrice)
+	values, gasPayloadWithGas := genMapForValueTransferWithMemo(from, to, gasPrice, types.TxTypeValueTransferMemo)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransferMemo, values)
 	assert.Equal(t, nil, err)
@@ -333,13 +327,11 @@ func genValueTransferWithMemo(t *testing.T, signer types.Signer, from TestAccoun
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGas + gasPayload
-
-	return tx, intrinsic
+	return tx, gasPayloadWithGas
 }
 
 func genFeeDelegatedValueTransferWithMemo(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, gasPayload := genMapForValueTransferWithMemo(from, to, gasPrice)
+	values, gasPayloadWithGas := genMapForValueTransferWithMemo(from, to, gasPrice, types.TxTypeFeeDelegatedValueTransferMemo)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemo, values)
@@ -351,13 +343,11 @@ func genFeeDelegatedValueTransferWithMemo(t *testing.T, signer types.Signer, fro
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGas + gasPayload + params.TxGasFeeDelegated
-
-	return tx, intrinsic
+	return tx, gasPayloadWithGas
 }
 
 func genFeeDelegatedWithRatioValueTransferWithMemo(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, gasPayload := genMapForValueTransferWithMemo(from, to, gasPrice)
+	values, gasPayloadWithGas := genMapForValueTransferWithMemo(from, to, gasPrice, types.TxTypeFeeDelegatedValueTransferMemoWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -370,13 +360,11 @@ func genFeeDelegatedWithRatioValueTransferWithMemo(t *testing.T, signer types.Si
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGas + gasPayload + params.TxGasFeeDelegatedWithRatio
-
-	return tx, intrinsic
+	return tx, gasPayloadWithGas
 }
 
 func genAccountCreation(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, readable := genNewAccountWithGas(t, from)
+	newAccount, gasKey, readable := genNewAccountWithGas(t, from, types.TxTypeAccountCreation)
 
 	amount := big.NewInt(100000)
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
@@ -394,15 +382,15 @@ func genAccountCreation(t *testing.T, signer types.Signer, from TestAccount, to 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasAccountCreation + gasKey
+	intrinsic := getIntrinsicGas(types.TxTypeAccountCreation)
 
-	return tx, intrinsic
+	return tx, intrinsic + gasKey
 }
 
 func genAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, _ := genNewAccountWithGas(t, from)
+	newAccount, gasKey, _ := genNewAccountWithGas(t, from, types.TxTypeAccountUpdate)
 
-	values := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey())
+	values, intrinsic := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey(), types.TxTypeAccountUpdate)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 	assert.Equal(t, nil, err)
@@ -410,15 +398,13 @@ func genAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to Te
 	err = tx.SignWithKeys(signer, from.GetUpdateKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasAccountUpdate + gasKey
-
-	return tx, intrinsic
+	return tx, intrinsic + gasKey
 }
 
 func genFeeDelegatedAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, _ := genNewAccountWithGas(t, from)
+	newAccount, gasKey, _ := genNewAccountWithGas(t, from, types.TxTypeFeeDelegatedAccountUpdate)
 
-	values := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey())
+	values, intrinsic := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey(), types.TxTypeFeeDelegatedAccountUpdate)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
@@ -430,15 +416,13 @@ func genFeeDelegatedAccountUpdate(t *testing.T, signer types.Signer, from TestAc
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegated
-
-	return tx, intrinsic
+	return tx, intrinsic + gasKey
 }
 
 func genFeeDelegatedWithRatioAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, _ := genNewAccountWithGas(t, from)
+	newAccount, gasKey, _ := genNewAccountWithGas(t, from, types.TxTypeFeeDelegatedAccountUpdateWithRatio)
 
-	values := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey())
+	values, intrinsic := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey(), types.TxTypeFeeDelegatedAccountUpdateWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -451,9 +435,7 @@ func genFeeDelegatedWithRatioAccountUpdate(t *testing.T, signer types.Signer, fr
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio
-
-	return tx, intrinsic
+	return tx, intrinsic + gasKey
 }
 
 func genSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
@@ -550,7 +532,7 @@ func genFeeDelegatedWithRatioSmartContractExecution(t *testing.T, signer types.S
 }
 
 func genCancel(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForCancel(from, gasPrice)
+	values, intrinsic := genMapForCancel(from, gasPrice, types.TxTypeCancel)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeCancel, values)
 	assert.Equal(t, nil, err)
@@ -558,13 +540,11 @@ func genCancel(t *testing.T, signer types.Signer, from TestAccount, to TestAccou
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasCancel
-
 	return tx, intrinsic
 }
 
 func genFeeDelegatedCancel(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForCancel(from, gasPrice)
+	values, intrinsic := genMapForCancel(from, gasPrice, types.TxTypeFeeDelegatedCancel)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedCancel, values)
@@ -576,13 +556,11 @@ func genFeeDelegatedCancel(t *testing.T, signer types.Signer, from TestAccount, 
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasCancel + params.TxGasFeeDelegated
-
 	return tx, intrinsic
 }
 
 func genFeeDelegatedWithRatioCancel(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForCancel(from, gasPrice)
+	values, intrinsic := genMapForCancel(from, gasPrice, types.TxTypeFeeDelegatedCancelWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -594,8 +572,6 @@ func genFeeDelegatedWithRatioCancel(t *testing.T, signer types.Signer, from Test
 
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
-
-	intrinsic := params.TxGasCancel + params.TxGasFeeDelegatedWithRatio
 
 	return tx, intrinsic
 }
@@ -615,14 +591,15 @@ func genChainDataAnchoring(t *testing.T, signer types.Signer, from TestAccount, 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
-	gasAnchoring := params.ChainDataAnchoringGas * (uint64)(len(anchoredData))
-	intrinsic := params.TxChainDataAnchoringGas + gasAnchoring
+	gasAnchoring := params.TxDataGas * (uint64)(len(anchoredData))
+	intrinsic := getIntrinsicGas(types.TxTypeChainDataAnchoring)
 
-	return tx, intrinsic
+	return tx, intrinsic + gasAnchoring
 }
 
 // Generate map functions
-func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int) map[types.TxValueKeyType]interface{} {
+func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
 	amount := big.NewInt(100000)
 
 	values := map[types.TxValueKeyType]interface{}{
@@ -633,10 +610,12 @@ func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int)
 		types.TxValueKeyGasLimit: gasLimit,
 		types.TxValueKeyGasPrice: gasPrice,
 	}
-	return values
+	return values, intrinsic
 }
 
-func genMapForValueTransferWithMemo(from TestAccount, to TestAccount, gasPrice *big.Int) (map[types.TxValueKeyType]interface{}, uint64) {
+func genMapForValueTransferWithMemo(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+
 	nonZeroData := []byte{1, 2, 3, 4}
 	zeroData := []byte{0, 0, 0, 0}
 
@@ -654,12 +633,14 @@ func genMapForValueTransferWithMemo(from TestAccount, to TestAccount, gasPrice *
 		types.TxValueKeyData:     data,
 	}
 
-	gasPayload := uint64(len(nonZeroData))*params.TxDataNonZeroGas + uint64(len(zeroData))*params.TxDataZeroGas
+	gasPayload := uint64(len(data)) * params.TxDataGas
 
-	return values, gasPayload
+	return values, intrinsic + gasPayload
 }
 
-func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKeys accountkey.AccountKey) map[types.TxValueKeyType]interface{} {
+func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKeys accountkey.AccountKey, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.GetNonce(),
 		types.TxValueKeyFrom:       from.GetAddr(),
@@ -667,7 +648,7 @@ func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKey
 		types.TxValueKeyGasPrice:   gasPrice,
 		types.TxValueKeyAccountKey: newKeys,
 	}
-	return values
+	return values, intrinsic
 }
 
 func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
@@ -685,12 +666,19 @@ func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *b
 	if to == nil {
 		values[types.TxValueKeyTo] = (*common.Address)(nil)
 	} else {
-		addr := common.HexToAddress("12345678")
+		addr, err := common.FromHumanReadableAddress(getRandomString())
+		assert.Equal(t, nil, err)
+
 		values[types.TxValueKeyTo] = &addr
+		values[types.TxValueKeyHumanReadable] = true
 	}
 
 	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x175fd)
+
+	if values[types.TxValueKeyHumanReadable] == true {
+		intrinsicGas += params.TxGasHumanReadable
+	}
 
 	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code))
 	assert.Equal(t, nil, err)
@@ -727,20 +715,22 @@ func genMapForExecution(t *testing.T, from TestAccount, to TestAccount, gasPrice
 	return values, gasPayloadWithGas
 }
 
-func genMapForCancel(from TestAccount, gasPrice *big.Int) map[types.TxValueKeyType]interface{} {
+func genMapForCancel(from TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.GetNonce(),
 		types.TxValueKeyFrom:     from.GetAddr(),
 		types.TxValueKeyGasLimit: gasLimit,
 		types.TxValueKeyGasPrice: gasPrice,
 	}
-	return values
+	return values, intrinsic
 }
 
 // Generate TestAccount functions
 func genLegacyAccount(t *testing.T) TestAccount {
 	// For LegacyAccount
-	legacyAccount, err := createAnonymousAccount("c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec")
+	legacyAccount, err := createAnonymousAccount(getRandomPrivateKeyString(t))
 	assert.Equal(t, nil, err)
 
 	return legacyAccount
@@ -748,7 +738,7 @@ func genLegacyAccount(t *testing.T) TestAccount {
 
 func genKlaytnLegacyAccount(t *testing.T) TestAccount {
 	// For KlaytnLegacy
-	klaytnLegacy, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	klaytnLegacy, err := createAnonymousAccount(getRandomPrivateKeyString(t))
 	assert.Equal(t, nil, err)
 
 	return klaytnLegacy
@@ -756,8 +746,10 @@ func genKlaytnLegacyAccount(t *testing.T) TestAccount {
 
 func genPublicAccount(t *testing.T) TestAccount {
 	// For AccountKeyPublic
-	publicAccount, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
+	newAddress, err := common.FromHumanReadableAddress(getRandomString())
+	assert.Equal(t, nil, err)
+
+	publicAccount, err := createDecoupledAccount(getRandomPrivateKeyString(t), newAddress)
 	assert.Equal(t, nil, err)
 
 	return publicAccount
@@ -765,12 +757,12 @@ func genPublicAccount(t *testing.T) TestAccount {
 
 func genMultiSigAccount(t *testing.T) TestAccount {
 	// For AccountKeyWeightedMultiSig
+	newAddress, err := common.FromHumanReadableAddress(getRandomString())
+	assert.Equal(t, nil, err)
+
 	multisigAccount, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
-		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
-			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
-			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
-		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
+		[]string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)}, newAddress)
 	assert.Equal(t, nil, err)
 
 	return multisigAccount
@@ -778,13 +770,11 @@ func genMultiSigAccount(t *testing.T) TestAccount {
 
 func genRoleBasedWithPublicAccount(t *testing.T) TestAccount {
 	// For AccountKeyRoleBased With AccountKeyPublic
-	roleBasedWithPublicAddr, err := common.FromHumanReadableAddress("roleBasedPublic")
+	roleBasedWithPublicAddr, err := common.FromHumanReadableAddress(getRandomString())
 	assert.Equal(t, nil, err)
 
 	roleBasedWithPublic, err := createRoleBasedAccountWithAccountKeyPublic(
-		[]string{"98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab",
-			"c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-			"41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867"}, roleBasedWithPublicAddr)
+		[]string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)}, roleBasedWithPublicAddr)
 	assert.Equal(t, nil, err)
 
 	return roleBasedWithPublic
@@ -792,9 +782,9 @@ func genRoleBasedWithPublicAccount(t *testing.T) TestAccount {
 
 func genRoleBasedWithMultiSigAccount(t *testing.T) TestAccount {
 	// For AccountKeyRoleBased With AccountKeyWeightedMultiSig
-	p := genMultiSigParamForRoleBased()
+	p := genMultiSigParamForRoleBased(t)
 
-	roleBasedWithMultiSigAddr, err := common.FromHumanReadableAddress("roleBasedMultiSig")
+	roleBasedWithMultiSigAddr, err := common.FromHumanReadableAddress(getRandomString())
 	assert.Equal(t, nil, err)
 
 	roleBasedWithMultiSig, err := createRoleBasedAccountWithAccountKeyWeightedMultiSig(
@@ -805,45 +795,48 @@ func genRoleBasedWithMultiSigAccount(t *testing.T) TestAccount {
 }
 
 // Generate new Account functions for testing AccountCreation and AccountUpdate
-func genNewAccountWithGas(t *testing.T, testAccount TestAccount) (TestAccount, uint64, bool) {
+func genNewAccountWithGas(t *testing.T, testAccount TestAccount, txType types.TxType) (TestAccount, uint64, bool) {
 	var newAccount TestAccount
 	gas := uint64(0)
+	readableGas := uint64(0)
 	readable := false
 
 	// AccountKeyLegacy
 	if testAccount.GetAccKey() == nil || testAccount.GetAccKey().Type() == accountkey.AccountKeyTypeLegacy {
-		anon, err := createAnonymousAccount("4c6482f6de5c70dc69b07ab378d3ad59f4c9bc030426fa686842e90296b2d2ea")
+		anon, err := createAnonymousAccount(getRandomPrivateKeyString(t))
 		assert.Equal(t, nil, err)
 
-		return anon, gas, readable
+		return anon, gas + readableGas, readable
 	}
 
 	// humanReadableAddress for newAccount
-	newAccountAddress, err := common.FromHumanReadableAddress("newAccountAddress")
+	newAccountAddress, err := common.FromHumanReadableAddress(getRandomString())
 	assert.Equal(t, nil, err)
 	readable = true
 
+	if txType == types.TxTypeAccountCreation {
+		readableGas += params.TxGasHumanReadable
+	}
+
 	switch testAccount.GetAccKey().Type() {
 	case accountkey.AccountKeyTypePublic:
-		publicAccount, err := createDecoupledAccount("4e5a6f01c67a6f795f74c06b9cdde15ee90b69b20f20c42f5481506cbbc54abe", newAccountAddress)
+		publicAccount, err := createDecoupledAccount(getRandomPrivateKeyString(t), newAccountAddress)
 		assert.Equal(t, nil, err)
 
 		newAccount = publicAccount
 		gas += uint64(len(newAccount.GetTxKeys())) * params.TxAccountCreationGasPerKey
 	case accountkey.AccountKeyTypeWeightedMultiSig:
 		multisigAccount, err := createMultisigAccount(uint(2), []uint{1, 1, 1},
-			[]string{"d5597077c93cebd487cd33d7268a99595dbb7811be8118f2d82d530208e77397",
-				"c28959a6d845ab274b46c94edf08c5ba115fa3aaa6b1f23a8be4d78b948a7693",
-				"ab4e26754e40c5fb115e09a076b33ba8bc4526b09e9461baa36ec7bd645b96e4"}, newAccountAddress)
+			[]string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)}, newAccountAddress)
 		assert.Equal(t, nil, err)
 
 		newAccount = multisigAccount
 		gas += uint64(len(newAccount.GetTxKeys())) * params.TxAccountCreationGasPerKey
 	case accountkey.AccountKeyTypeRoleBased:
-		p := genMultiSigParamForRoleBased()
+		p := genMultiSigParamForRoleBased(t)
 
 		newRoleBasedWithMultiSig, err := createRoleBasedAccountWithAccountKeyWeightedMultiSig(
-			[]TestCreateMultisigAccountParam{p[2], p[0], p[1]}, newAccountAddress)
+			[]TestCreateMultisigAccountParam{p[0], p[1], p[2]}, newAccountAddress)
 		assert.Equal(t, nil, err)
 
 		newAccount = newRoleBasedWithMultiSig
@@ -852,36 +845,49 @@ func genNewAccountWithGas(t *testing.T, testAccount TestAccount) (TestAccount, u
 		gas += uint64(len(newAccount.GetFeeKeys())) * params.TxAccountCreationGasPerKey
 	}
 
-	return newAccount, gas, readable
+	return newAccount, gas + readableGas, readable
+}
+
+func getRandomString() string {
+	n := 20
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func getRandomPrivateKeyString(t *testing.T) string {
+	key, err := crypto.GenerateKey()
+	assert.Equal(t, nil, err)
+	keyBytes := crypto.FromECDSA(key)
+
+	return common.Bytes2Hex(keyBytes)
 }
 
 // Return multisig parameters for creating RoleBased with MultiSig
-func genMultiSigParamForRoleBased() []TestCreateMultisigAccountParam {
+func genMultiSigParamForRoleBased(t *testing.T) []TestCreateMultisigAccountParam {
 	var params []TestCreateMultisigAccountParam
 	param1 := TestCreateMultisigAccountParam{
 		Threshold: uint(2),
 		Weights:   []uint{1, 1, 1},
-		PrvKeys: []string{"8dfd76bea5baf283b89026a97d72b07b015d9ab7552d03ace04c16ee7170b6dc",
-			"7c2de9bc5273e626790ac1fd85fac3789fe1ba98e137ee745a57c2a27919b50b",
-			"50e51200c969344a60ad8441536d86565f8094f82dbcdd799b9f52e99f268b06"},
+		PrvKeys:   []string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)},
 	}
 	params = append(params, param1)
 
 	param2 := TestCreateMultisigAccountParam{
 		Threshold: uint(2),
 		Weights:   []uint{1, 1, 1},
-		PrvKeys: []string{"d0b83aec6c8aa48333b6a1c5b6fe801f6e719adb7b7e74f6e2f4d6337c9fcfc6",
-			"fef8f3687afed116e0227248b0d315207693d0e624b66661e4a68812e207ccd7",
-			"f5383f13bd1aea8681b5d3177e07dace822f0fe79087afde13ab5bc32ae467f7"},
+		PrvKeys:   []string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)},
 	}
 	params = append(params, param2)
 
 	param3 := TestCreateMultisigAccountParam{
 		Threshold: uint(2),
 		Weights:   []uint{1, 1, 1},
-		PrvKeys: []string{"2740eb27d7f71d863b7a71d4261b95559501e3a1207fab6d053faf19ef6b4fb5",
-			"626edd10bf26b5584673a702246d0fb1806bdc5f86c3e17aa912e30bd4bae07b",
-			"8435615b2e09d3725a1cdc616e123b8ee49e5c5f1044188135a9a0a37e214c01"},
+		PrvKeys:   []string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)},
 	}
 	params = append(params, param3)
 
@@ -895,17 +901,17 @@ func getIntrinsicGas(txType types.TxType) uint64 {
 	case types.TxTypeLegacyTransaction:
 		intrinsic = params.TxGas
 	case types.TxTypeValueTransfer:
-		intrinsic = params.TxGas
+		intrinsic = params.TxGasValueTransfer
 	case types.TxTypeFeeDelegatedValueTransfer:
-		intrinsic = params.TxGas + params.TxGasFeeDelegated
+		intrinsic = params.TxGasValueTransfer + params.TxGasFeeDelegated
 	case types.TxTypeFeeDelegatedValueTransferWithRatio:
-		intrinsic = params.TxGas + params.TxGasFeeDelegatedWithRatio
+		intrinsic = params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio
 	case types.TxTypeValueTransferMemo:
-		intrinsic = params.TxGas
+		intrinsic = params.TxGasValueTransfer
 	case types.TxTypeFeeDelegatedValueTransferMemo:
-		intrinsic = params.TxGas + params.TxGasFeeDelegated
+		intrinsic = params.TxGasValueTransfer + params.TxGasFeeDelegated
 	case types.TxTypeFeeDelegatedValueTransferMemoWithRatio:
-		intrinsic = params.TxGas + params.TxGasFeeDelegatedWithRatio
+		intrinsic = params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio
 	case types.TxTypeAccountCreation:
 		intrinsic = params.TxGasAccountCreation
 	case types.TxTypeAccountUpdate:
@@ -921,11 +927,11 @@ func getIntrinsicGas(txType types.TxType) uint64 {
 	case types.TxTypeFeeDelegatedSmartContractDeployWithRatio:
 		intrinsic = params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio
 	case types.TxTypeSmartContractExecution:
-		intrinsic = params.TxGas
+		intrinsic = params.TxGasContractExecution
 	case types.TxTypeFeeDelegatedSmartContractExecution:
-		intrinsic = params.TxGas + params.TxGasFeeDelegated
+		intrinsic = params.TxGasContractExecution + params.TxGasFeeDelegated
 	case types.TxTypeFeeDelegatedSmartContractExecutionWithRatio:
-		intrinsic = params.TxGas + params.TxGasFeeDelegatedWithRatio
+		intrinsic = params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio
 	case types.TxTypeChainDataAnchoring:
 		intrinsic = params.TxChainDataAnchoringGas
 	case types.TxTypeCancel:

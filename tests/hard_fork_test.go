@@ -469,7 +469,7 @@ func genBlocks(t *testing.T) {
 }
 
 func genAccountUpdateIdem(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForUpdate(from, to, gasPrice, from.GetAccKey())
+	values, intrinsic := genMapForUpdate(from, to, gasPrice, from.GetAccKey(), types.TxTypeAccountUpdate)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 	assert.Equal(t, nil, err)
@@ -477,13 +477,11 @@ func genAccountUpdateIdem(t *testing.T, signer types.Signer, from TestAccount, t
 	err = tx.SignWithKeys(signer, from.GetUpdateKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasAccountUpdate
-
 	return tx, intrinsic
 }
 
 func genFeeDelegatedAccountUpdateIdem(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForUpdate(from, to, gasPrice, from.GetAccKey())
+	values, intrinsic := genMapForUpdate(from, to, gasPrice, from.GetAccKey(), types.TxTypeFeeDelegatedAccountUpdate)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
@@ -495,13 +493,11 @@ func genFeeDelegatedAccountUpdateIdem(t *testing.T, signer types.Signer, from Te
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
 
-	intrinsic := params.TxGasAccountUpdate + params.TxGasFeeDelegated
-
 	return tx, intrinsic
 }
 
 func genFeeDelegatedWithRatioAccountUpdateIdem(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values := genMapForUpdate(from, to, gasPrice, from.GetAccKey())
+	values, intrinsic := genMapForUpdate(from, to, gasPrice, from.GetAccKey(), types.TxTypeFeeDelegatedAccountUpdateWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -513,8 +509,6 @@ func genFeeDelegatedWithRatioAccountUpdateIdem(t *testing.T, signer types.Signer
 
 	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
 	assert.Equal(t, nil, err)
-
-	intrinsic := params.TxGasAccountUpdate + params.TxGasFeeDelegatedWithRatio
 
 	return tx, intrinsic
 }

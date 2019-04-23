@@ -23,8 +23,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/common/math"
-	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -235,14 +233,14 @@ func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	nByte := (uint64)(len(t.Payload))
+	gas := params.TxChainDataAnchoringGas
 
-	// Make sure we don't exceed uint64 for all data combinations
-	if (math.MaxUint64-params.TxChainDataAnchoringGas)/params.ChainDataAnchoringGas < nByte {
-		return 0, kerrors.ErrOutOfGas
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
+	if err != nil {
+		return 0, err
 	}
 
-	return params.TxChainDataAnchoringGas + params.ChainDataAnchoringGas*nByte, nil
+	return gasPayloadWithGas, nil
 }
 
 func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64) error {

@@ -269,7 +269,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) RecoverFeePayerPubkey(txha
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGas + params.TxGasFeeDelegated
+	gas := params.TxGasValueTransfer + params.TxGasFeeDelegated
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
 	if err != nil {
 		return 0, err

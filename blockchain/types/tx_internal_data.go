@@ -448,6 +448,17 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 
 func IntrinsicGasPayload(gas uint64, data []byte) (uint64, error) {
 	// Bump the required gas by the amount of transactional data
+	length := uint64(len(data))
+	if length > 0 {
+		// Make sure we don't exceed uint64 for all data combinations
+		if (math.MaxUint64-gas)/params.TxDataGas < length {
+			return 0, kerrors.ErrOutOfGas
+		}
+	}
+	return gas + length*params.TxDataGas, nil
+}
+
+func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 	if len(data) > 0 {
 		// Zero and non-zero bytes are priced differently
 		var nz uint64
@@ -481,7 +492,7 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 	} else {
 		gas = params.TxGas
 	}
-	gasPayloadWithGas, err := IntrinsicGasPayload(gas, data)
+	gasPayloadWithGas, err := IntrinsicGasPayloadLegacy(gas, data)
 	if err != nil {
 		return 0, err
 	}

@@ -357,7 +357,12 @@ func (t *TxInternalDataAccountCreation) IntrinsicGas(currentBlockNumber uint64) 
 		return 0, err
 	}
 
-	return params.TxGasAccountCreation + gasKey, nil
+	gas := params.TxGasAccountCreation + gasKey
+	if t.HumanReadable {
+		gas += params.TxGasHumanReadable
+	}
+
+	return gas, nil
 }
 
 func (t *TxInternalDataAccountCreation) SerializeForSignToBytes() []byte {

@@ -245,6 +245,10 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 func (t *TxInternalDataSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxGasContractCreation
 
+	if t.HumanReadable {
+		gas += params.TxGasHumanReadable
+	}
+
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
 	if err != nil {
 		return 0, err
