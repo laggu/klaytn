@@ -1862,7 +1862,7 @@ func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
 	// 1. "accountK" creates a role-based account, "roleBasedAccount", with a human-readable address.
 	{
 		var txs types.Transactions
-		amount := new(big.Int).SetUint64(params.KLAY) // 1 Klay to pay for accountUpdate tx
+		amount := new(big.Int).SetUint64(params.KLAY) // 1 KLAY to pay for accountUpdate tx
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         accountK.Nonce,
 			types.TxValueKeyFrom:          accountK.Addr,

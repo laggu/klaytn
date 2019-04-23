@@ -137,7 +137,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 
 	bcVersion := chainDB.ReadDatabaseVersion()
 	if bcVersion != blockchain.BlockChainVersion && bcVersion != 0 {
-		return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run klay upgradedb.\n", bcVersion, blockchain.BlockChainVersion)
+		return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, blockchain.BlockChainVersion)
 	}
 	chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 

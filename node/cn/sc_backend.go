@@ -79,7 +79,7 @@ type ServiceChain struct {
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (klay.g. gas price and coinbase)
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
 
 	components []interface{}
 }
@@ -123,7 +123,7 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 	if !config.SkipBcVersionCheck {
 		bcVersion := chainDB.ReadDatabaseVersion()
 		if bcVersion != blockchain.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run klay upgradedb.\n", bcVersion, blockchain.BlockChainVersion)
+			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, blockchain.BlockChainVersion)
 		}
 		chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 	}

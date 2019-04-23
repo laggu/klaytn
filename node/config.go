@@ -51,8 +51,8 @@ const (
 // all registered services.
 type Config struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of klaytn is "klay". If no
-	// value is specified, the basename of the current executable is used.
+	// used in the devp2p node identifier. The instance name of klaytn is one among "kcn", "ken", and "kpn".
+	// If no value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
 
 	// UserIdent, if set, is used as an additional component in the devp2p node identifier.

@@ -508,7 +508,7 @@ func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Addre
 	return hash, nil
 }
 
-// ImportRawKey can create key store from private key string on klay node.
+// ImportRawKey can create key store from private key string on Klaytn node.
 func (ec *Client) ImportRawKey(ctx context.Context, key string, password string) (common.Address, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "personal_importRawKey", key, password)
@@ -516,7 +516,7 @@ func (ec *Client) ImportRawKey(ctx context.Context, key string, password string)
 	return address, err
 }
 
-// UnlockAccount can unlock the account on klay node.
+// UnlockAccount can unlock the account on Klaytn node.
 func (ec *Client) UnlockAccount(ctx context.Context, address common.Address, password string, time uint) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "personal_unlockAccount", address, password, time)
@@ -581,14 +581,14 @@ func (ec *Client) ChainID(ctx context.Context) (*big.Int, error) {
 	return (*big.Int)(&result), err
 }
 
-// AddPeer can add a static peer on klay node.
+// AddPeer can add a static peer on Klaytn node.
 func (ec *Client) AddPeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_addPeer", url)
 	return result, err
 }
 
-// RemovePeer can remove a static peer on klay node.
+// RemovePeer can remove a static peer on Klaytn node.
 func (ec *Client) RemovePeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_removePeer", url)

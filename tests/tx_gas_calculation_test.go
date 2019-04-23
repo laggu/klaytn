@@ -123,7 +123,7 @@ func TestGasCalculation(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// Preparing step. Send Klay to LegacyAccount.
+	// Preparing step. Send KLAY to LegacyAccount.
 	{
 		var txs types.Transactions
 
@@ -142,7 +142,7 @@ func TestGasCalculation(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
-	// Preparing step. Send Klay to KlaytnAcounts.
+	// Preparing step. Send KLAY to KlaytnAcounts.
 	for i := 1; i < len(accountTypes); i++ {
 		var txs types.Transactions
 

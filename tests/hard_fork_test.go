@@ -197,7 +197,7 @@ func genBlocks(t *testing.T) {
 	// Preparing step
 	{
 		var txs types.Transactions
-		// Preparing step. Send Klay to LegacyAccount.
+		// Preparing step. Send KLAY to LegacyAccount.
 		{
 
 			amount := new(big.Int).SetUint64(params.KLAY)
@@ -212,7 +212,7 @@ func genBlocks(t *testing.T) {
 			reservoir.AddNonce()
 		}
 
-		// Preparing step. Send Klay to KlaytnAcounts.
+		// Preparing step. Send KLAY to KlaytnAcounts.
 		for i := 1; i < len(accountTypes); i++ {
 			amount := new(big.Int).SetUint64(params.KLAY)
 			values := map[types.TxValueKeyType]interface{}{

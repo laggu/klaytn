@@ -61,7 +61,7 @@ func init() {
 //go:generate gencodec -type SCConfig -formats toml -out gen_config.go
 type SCConfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of klaytn is "klay". If no
+	// used in the devp2p node identifier. The instance name is "kscn". If no
 	// value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
 

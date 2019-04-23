@@ -302,7 +302,7 @@ func prepare(t *testing.T) testInfo {
 	return info
 }
 
-// valueTransfer requests a klay transfer transaction.
+// valueTransfer requests a KLAY transfer transaction.
 func valueTransfer(info testInfo) {
 	opts := &bind.TransactOpts{
 		From:     info.nodeAuth.From,

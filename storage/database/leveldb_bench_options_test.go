@@ -462,7 +462,7 @@ func randStrBytes(n int) []byte {
 func getPartitionForTest(keys [][]byte, index, numPartitions int) int64 {
 
 	return int64(index % numPartitions)
-	// TODO-KLAY: CHANGE BELOW LOGIC FROM ROUND-ROBIN TO USE getPartitionForTest
+	// TODO-Klaytn: CHANGE BELOW LOGIC FROM ROUND-ROBIN TO USE getPartitionForTest
 	//key := keys[index]
 	//hashString := strings.TrimPrefix(common.Bytes2Hex(key),"0x")
 	//if len(hashString) > 15 {

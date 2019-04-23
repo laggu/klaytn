@@ -57,7 +57,7 @@ type TestCmd struct {
 }
 
 // Run exec's the current binary using name as argv[0] which will trigger the
-// reexec init function for that name (e.g. "klay-test" in cmd/klay/run_test.go)
+// reexec init function for that name (e.g. "klay-test" in cmd/utils/nodecmd/run_test.go)
 func (tt *TestCmd) Run(name string, args ...string) {
 	tt.stderr = &testlogger{t: tt.T}
 	tt.cmd = &exec.Cmd{

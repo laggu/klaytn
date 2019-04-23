@@ -51,7 +51,7 @@ func TestAnchoringServiceChainDataWithAPIs(t *testing.T) {
 	//Child node's RPC endpoint.
 	cEndPoint := "http://localhost:7545"
 
-	//Child chain address can be assumed by the address which have much klay on parent chain.
+	//Child chain address can be assumed by the address which has much KLAY on parent chain.
 	expectedChainAddr := common.HexToAddress("0x569FeB666C99da7D7DD31e3EE7ACcf4c8fe9c054")
 
 	//Default values for option parameters.
