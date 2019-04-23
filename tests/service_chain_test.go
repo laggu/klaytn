@@ -36,7 +36,7 @@ import (
 // - checking if the tx is indexed by the block hash of child chain.
 // - checking is the receipt of the tx is stored in child chain.
 func TestAnchoringServiceChainDataWithAPIs(t *testing.T) {
-	// If you want to test this, you should run klaytn mainnet and service chain on your local
+	// If you want to test this, you should run Klaytn mainnet and service chain on your local
 	// and set the below parameter.
 	// And then run this test manually.
 	// For now, this test is excluded in CI test.

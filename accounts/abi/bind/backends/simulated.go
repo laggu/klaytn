@@ -54,7 +54,7 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
 	database   database.DBManager     // In memory database to store our testing data
-	blockchain *blockchain.BlockChain // klaytn blockchain to handle the consensus
+	blockchain *blockchain.BlockChain // Blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request

@@ -150,7 +150,7 @@ type BlockChain struct {
 }
 
 // NewBlockChain returns a fully initialised block chain using information
-// available in the database. It initialises the default klaytn validator and
+// available in the database. It initialises the default Klaytn validator and
 // Processor.
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
@@ -1097,7 +1097,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		status, err = bc.writeBlockWithStateSerial(block, receipts, stateDB)
 	}
 
-	// TODO-klaytn-Issue1911 After reviewing the behavior and performance, change the UpdateCacheStateObjects to update at the same time.
+	// TODO-Klaytn-Issue1911 After reviewing the behavior and performance, change the UpdateCacheStateObjects to update at the same time.
 	if err != nil {
 		return status, err
 	}

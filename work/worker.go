@@ -345,7 +345,7 @@ func (self *worker) wait() {
 				continue
 			}
 
-			// TODO-KLAYTN drop or missing tx
+			// TODO-Klaytn drop or missing tx
 			if self.nodetype != node.CONSENSUSNODE {
 				pending, err := self.backend.TxPool().Pending()
 				if err != nil {
@@ -475,7 +475,7 @@ func (self *worker) commitNewWork() {
 	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
 
-	// TODO-KLAYTN drop or missing tx
+	// TODO-Klaytn drop or missing tx
 	tstamp := tstart.Unix()
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
 		//if self.nodetype == node.ENDPOINTNODE {

@@ -542,7 +542,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
-		logger.Info("fail to validate unitprice", "klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
+		logger.Info("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
 		return ErrInvalidUnitPrice
 	}
 
