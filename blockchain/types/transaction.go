@@ -197,7 +197,26 @@ func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 	return tx.data.Validate(db, blockNumber)
 }
 
-func (tx *Transaction) ValidateMutableValue(db StateDB) bool {
+// ValidateMutableValue conducts validation of the sender's account key and additional validation for each transaction type.
+func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer) bool {
+	// validate the sender's account key
+	accKey := db.GetKey(tx.validatedSender)
+	if !accKey.Type().IsLegacyAccountKey() {
+		pubkey, err := SenderPubkey(signer, tx)
+		if err != nil || !accKey.Validate(tx.GetRoleTypeForValidation(), pubkey) {
+			return false
+		}
+	}
+	// validate the fee payer's account key
+	if tx.IsFeeDelegatedTransaction() {
+		feePayerAccKey := db.GetKey(tx.validatedFeePayer)
+		if !feePayerAccKey.Type().IsLegacyAccountKey() {
+			feePayerPubkey, err := SenderFeePayerPubkey(signer, tx)
+			if err != nil || !feePayerAccKey.Validate(accountkey.RoleFeePayer, feePayerPubkey) {
+				return false
+			}
+		}
+	}
 	return tx.data.ValidateMutableValue(db)
 }
 

@@ -347,6 +347,7 @@ type StateDB interface {
 	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 	IsProgramAccount(addr common.Address) bool
 	IsContractAvailable(addr common.Address) bool
+	GetKey(addr common.Address) accountkey.AccountKey
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {
