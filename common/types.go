@@ -21,6 +21,7 @@
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -44,6 +45,8 @@ var (
 	addressT                        = reflect.TypeOf(Address{})
 	isAlphaNumericWithFirstAlphabet = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z]+$`).MatchString
 )
+
+var LastReservedAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000004FF")
 
 var (
 	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
@@ -196,6 +199,14 @@ func IsHumanReadableAddress(s string) error {
 	}
 
 	return nil
+}
+
+// IsReservedAddress returns true if the input address is in the range of Klaytn reserved address.
+func IsReservedAddress(addr Address) bool {
+	if bytes.Compare(addr.Bytes(), LastReservedAddressHex) > 0 {
+		return false
+	}
+	return true
 }
 
 // FromHumanReadableAddress returns an Address object if the string s can be converted to a Klaytn address.

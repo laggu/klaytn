@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 )
@@ -332,7 +333,11 @@ func (t *TxInternalDataLegacy) String() string {
 }
 
 func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No more validation required for TxInternalDataLegacy.
+	if t.Recipient != nil {
+		if common.IsReservedAddress(*t.Recipient) {
+			return kerrors.ErrReservedAddress
+		}
+	}
 	return nil
 }
 

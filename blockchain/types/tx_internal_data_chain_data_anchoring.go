@@ -244,7 +244,6 @@ func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint6
 }
 
 func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No validation for TxInternalDataChainDataAnchoring
 	return nil
 }
 

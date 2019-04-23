@@ -28,6 +28,7 @@ var (
 	ErrMaxFeeRatioExceeded       = errors.New("fee ratio exceeded the maximum")
 	ErrEmptySlice                = errors.New("slice is empty")
 	ErrNotProgramAccount         = errors.New("not a program account (e.g., an account having code and storage)")
+	ErrReservedAddress           = errors.New("the address is reserved for system services")
 
 	// Error codes related to account keys.
 	ErrAccountAlreadyExists                 = errors.New("account already exists")

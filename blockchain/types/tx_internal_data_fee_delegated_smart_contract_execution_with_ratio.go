@@ -340,6 +340,9 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) SerializeFor
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
+	if common.IsReservedAddress(t.Recipient) {
+		return kerrors.ErrReservedAddress
+	}
 	// Fail if the target address is not a program account.
 	if stateDB.IsContractAvailable(t.Recipient) == false {
 		return kerrors.ErrNotProgramAccount

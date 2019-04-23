@@ -22,6 +22,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -259,7 +260,9 @@ func (t *TxInternalDataValueTransfer) SerializeForSign() []interface{} {
 }
 
 func (t *TxInternalDataValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No more validation required for TxInternalDataValueTransfer.
+	if common.IsReservedAddress(t.Recipient) {
+		return kerrors.ErrReservedAddress
+	}
 	return nil
 }
 

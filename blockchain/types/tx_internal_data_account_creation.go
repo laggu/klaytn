@@ -424,6 +424,9 @@ func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNu
 			return kerrors.ErrNotHumanReadableAddress
 		}
 	}
+	if common.IsReservedAddress(to) {
+		return kerrors.ErrReservedAddress
+	}
 	// Fail if the address is already created.
 	if stateDB.Exist(to) {
 		return kerrors.ErrAccountAlreadyExists

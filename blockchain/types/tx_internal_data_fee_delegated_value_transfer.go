@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
@@ -291,6 +292,9 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSign() []interface
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
+	if common.IsReservedAddress(t.Recipient) {
+		return kerrors.ErrReservedAddress
+	}
 	// Fail if the sender does not exist.
 	if !stateDB.Exist(t.From) {
 		return errValueKeySenderUnknown

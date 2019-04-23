@@ -315,6 +315,15 @@ func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlo
 		if stateDB.Exist(*to) {
 			return kerrors.ErrAccountAlreadyExists
 		}
+		if common.IsReservedAddress(*to) {
+			return kerrors.ErrReservedAddress
+		}
+	} else {
+		codeHash := crypto.Keccak256Hash(t.Payload)
+		newAddr := crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
+		if common.IsReservedAddress(newAddr) {
+			return kerrors.ErrReservedAddress
+		}
 	}
 	// Fail if the sender does not exist.
 	if !stateDB.Exist(t.From) {
