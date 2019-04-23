@@ -182,8 +182,6 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 
-	// TODO-Klaytn-RemoveLater Remove homestead field
-	homestead    bool
 	nonceCache   common.Cache
 	balanceCache common.Cache
 }
@@ -266,7 +264,6 @@ func (pool *TxPool) loop() {
 
 			if ev.Block != nil {
 				pool.mu.Lock()
-				pool.homestead = true
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
 
