@@ -72,8 +72,8 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.DBManager) err
 	for i, n := range nodes {
 		// Don't bother checking for errors here since hasher panics
 		// if encoding doesn't work and we're not writing to any database.
-		n, _, _ = hasher.hashChildren(n, nil)
-		hn, _ := hasher.store(n, nil, false)
+		n, _ = hasher.hashChildren(n, nil)
+		hn := hasher.store(n, nil, false)
 		if hash, ok := hn.(hashNode); ok || i == 0 {
 			// If the node's database encoding is a hash (or is the
 			// root node), it becomes a proof element.
