@@ -164,12 +164,14 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *stat
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb)
 	for addr, a := range accounts {
-		statedb.SetCode(addr, a.Code)
-		statedb.SetNonce(addr, a.Nonce)
-		statedb.SetBalance(addr, a.Balance)
+		if len(a.Code) != 0 {
+			statedb.SetCode(addr, a.Code)
+		}
 		for k, v := range a.Storage {
 			statedb.SetState(addr, k, v)
 		}
+		statedb.SetNonce(addr, a.Nonce)
+		statedb.SetBalance(addr, a.Balance)
 	}
 	// Commit and re-open to start with a clean state.
 	root, _ := statedb.Commit(false)

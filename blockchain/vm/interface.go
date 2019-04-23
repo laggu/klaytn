@@ -30,7 +30,8 @@ import (
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
-	CreateSmartContractAccount(addr common.Address, humanReadable bool, key accountkey.AccountKey)
+	CreateSmartContractAccount(addr common.Address)
+	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 
 	SubBalance(common.Address, *big.Int)

@@ -335,7 +335,7 @@ func (self *StateDB) GetCodeSize(addr common.Address) int {
 func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
-		return common.Hash{}
+		return common.BytesToHash(emptyCodeHash)
 	}
 	return common.BytesToHash(stateObject.CodeHash())
 }
@@ -441,7 +441,7 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 }
 
 func (self *StateDB) SetCode(addr common.Address, code []byte) error {
-	stateObject := self.GetOrNewStateObject(addr)
+	stateObject := self.GetOrNewSmartContract(addr)
 	if stateObject != nil {
 		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
@@ -450,7 +450,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) error {
 }
 
 func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
-	stateObject := self.GetOrNewStateObject(addr)
+	stateObject := self.GetOrNewSmartContract(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)
 	}
@@ -564,11 +564,24 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 	return stateObject
 }
 
+// Retrieve a state object or create a new state object if nil.
+func (self *StateDB) GetOrNewSmartContract(addr common.Address) *stateObject {
+	stateObject := self.getStateObject(addr)
+	if stateObject == nil || stateObject.deleted {
+		stateObject, _ = self.createObjectWithMap(addr, account.SmartContractAccountType, map[account.AccountValueKeyType]interface{}{
+			account.AccountValueKeyNonce:         uint64(1),
+			account.AccountValueKeyHumanReadable: false,
+			account.AccountValueKeyAccountKey:    accountkey.NewAccountKeyFail(),
+		})
+	}
+	return stateObject
+}
+
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	acc, err := account.NewAccountWithType(account.LegacyAccountType)
+	acc, err := account.NewAccountWithType(account.ExternallyOwnedAccountType)
 	if err != nil {
 		logger.Error("An error occurred on call NewAccountWithType", "err", err)
 	}
@@ -632,7 +645,11 @@ func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key acco
 	}
 }
 
-func (self *StateDB) CreateSmartContractAccount(addr common.Address, humanReadable bool, key accountkey.AccountKey) {
+func (self *StateDB) CreateSmartContractAccount(addr common.Address) {
+	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail())
+}
+
+func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey) {
 	values := map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         uint64(1),
 		account.AccountValueKeyHumanReadable: humanReadable,
@@ -827,14 +844,16 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)
 		case isDirty:
-			// Write any contract code associated with the state object
-			if stateObject.code != nil && stateObject.dirtyCode {
-				s.db.TrieDB().InsertBlob(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
-				stateObject.dirtyCode = false
-			}
-			// Write any storage changes in the state object to its storage trie.
-			if err := stateObject.CommitStorageTrie(s.db); err != nil {
-				return common.Hash{}, err
+			if stateObject.IsProgramAccount() {
+				// Write any contract code associated with the state object.
+				if stateObject.code != nil && stateObject.dirtyCode {
+					s.db.TrieDB().InsertBlob(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+					stateObject.dirtyCode = false
+				}
+				// Write any storage changes in the state object to its storage trie.
+				if err := stateObject.CommitStorageTrie(s.db); err != nil {
+					return common.Hash{}, err
+				}
 			}
 			// Update the object in the main account trie.
 			s.updateStateObject(stateObject)

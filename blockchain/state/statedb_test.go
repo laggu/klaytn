@@ -49,14 +49,14 @@ func TestUpdateLeaks(t *testing.T) {
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
 		addr := common.BytesToAddress([]byte{i})
-		state.AddBalance(addr, big.NewInt(int64(11*i)))
-		state.SetNonce(addr, uint64(42*i))
 		if i%2 == 0 {
 			state.SetState(addr, common.BytesToHash([]byte{i, i, i}), common.BytesToHash([]byte{i, i, i, i}))
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i})
 		}
+		state.AddBalance(addr, big.NewInt(int64(11*i)))
+		state.SetNonce(addr, uint64(42*i))
 		state.IntermediateRoot(false)
 	}
 	// Ensure that no data was leaked into the database.
@@ -81,8 +81,6 @@ func TestIntermediateLeaks(t *testing.T) {
 	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager))
 
 	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
-		state.SetBalance(addr, big.NewInt(int64(11*i)+int64(tweak)))
-		state.SetNonce(addr, uint64(42*i+tweak))
 		if i%2 == 0 {
 			state.SetState(addr, common.Hash{i, i, i, 0}, common.Hash{})
 			state.SetState(addr, common.Hash{i, i, i, tweak}, common.Hash{i, i, i, i, tweak})
@@ -90,6 +88,8 @@ func TestIntermediateLeaks(t *testing.T) {
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i, tweak})
 		}
+		state.SetBalance(addr, big.NewInt(int64(11*i)+int64(tweak)))
+		state.SetNonce(addr, uint64(42*i+tweak))
 	}
 
 	// Modify the transient state.
@@ -466,7 +466,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "CreateAccount",
 			fn: func(a testAction, s *StateDB) {
-				s.CreateAccount(addr)
+				s.CreateSmartContractAccount(addr)
 			},
 		},
 		{

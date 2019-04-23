@@ -35,7 +35,6 @@ func TestAccountSerialization(t *testing.T) {
 		Name string
 		acc  Account
 	}{
-		{"LegacyAccount", genLegacyAccount()},
 		{"EOA", genEOA()},
 		{"EOAWithPublic", genEOAWithPublicKey()},
 		{"SCA", genSCA()},

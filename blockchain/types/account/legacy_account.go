@@ -45,6 +45,7 @@ func newEmptyLegacyAccount() *LegacyAccount {
 // This object is used when an account is created.
 // Refer to StateDB.createObject().
 func newLegacyAccount() *LegacyAccount {
+	logger.CritWithStack("Legacy account is deprecated.")
 	return &LegacyAccount{
 		0, new(big.Int), common.Hash{}, emptyCodeHash,
 	}

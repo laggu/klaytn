@@ -202,7 +202,12 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 			}
 			return nil, gas, nil
 		}
-		evm.StateDB.CreateAccount(addr)
+		// TODO-Klaytn-Accounts: Later, fix this code that precompiled contracts does not create an account.
+		if precompiles[addr] != nil {
+			evm.StateDB.CreateSmartContractAccount(addr)
+		} else {
+			evm.StateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
+		}
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
@@ -394,7 +399,7 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 	}
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
-	evm.StateDB.CreateAccount(contractAddr)
+	evm.StateDB.CreateSmartContractAccount(contractAddr)
 	evm.StateDB.SetNonce(contractAddr, 1)
 	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 
@@ -481,7 +486,7 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
-	evm.StateDB.CreateSmartContractAccount(contractAddr, humanReadable, accountkey.NewAccountKeyFail())
+	evm.StateDB.CreateSmartContractAccountWithKey(contractAddr, humanReadable, accountkey.NewAccountKeyFail())
 	evm.StateDB.SetNonce(contractAddr, 1)
 	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 

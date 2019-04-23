@@ -90,7 +90,7 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 	address := common.BytesToAddress([]byte("contract"))
 	sender := vm.AccountRef(cfg.Origin)
 
-	cfg.State.CreateAccount(address)
+	cfg.State.CreateSmartContractAccount(address)
 	cfg.State.SetCode(address, code)
 
 	// Parameters for NewContract()

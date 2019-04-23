@@ -229,12 +229,14 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	}
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
-		statedb.AddBalance(addr, account.Balance)
-		statedb.SetCode(addr, account.Code)
-		statedb.SetNonce(addr, account.Nonce)
+		if len(account.Code) != 0 {
+			statedb.SetCode(addr, account.Code)
+		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)
 		}
+		statedb.AddBalance(addr, account.Balance)
+		statedb.SetNonce(addr, account.Nonce)
 	}
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{

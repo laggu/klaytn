@@ -29,6 +29,11 @@ import (
 	"github.com/ground-x/klaytn/storage/statedb"
 )
 
+var (
+	// emptyRoot is the known root hash of an empty trie.
+	emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+)
+
 type DumpAccount struct {
 	Balance  string            `json:"balance"`
 	Nonce    uint64            `json:"nonce"`
@@ -64,12 +69,16 @@ func (self *StateDB) RawDump() Dump {
 			Nonce:    data.GetNonce(),
 			Root:     common.Bytes2Hex([]byte{}),
 			CodeHash: common.Bytes2Hex([]byte{}),
-			Code:     common.Bytes2Hex(obj.Code(self.db)),
+			Code:     common.Bytes2Hex([]byte{}),
 			Storage:  make(map[string]string),
 		}
 		if pa := account.GetProgramAccount(data); pa != nil {
 			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
 			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
+			acc.Code = common.Bytes2Hex(obj.Code(self.db))
+		} else {
+			acc.Root = common.Bytes2Hex(emptyRoot.Bytes())
+			acc.CodeHash = common.Bytes2Hex(emptyCodeHash)
 		}
 		storageTrie := obj.getStorageTrie(self.db)
 		storageIt := statedb.NewIterator(storageTrie.NodeIterator(nil))

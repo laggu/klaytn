@@ -2601,13 +2601,12 @@ func TestAccountCreationWithLegacyKeyNReadableAddr(t *testing.T) {
 
 // TestAccountUpdate tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
-// 2. Key update of anon using AccountUpdate
-// 3. Create an account decoupled using TxTypeAccountCreation.
-// 4. Key update of decoupled using AccountUpdate
-// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
-// 6. Create an account colin using TxTypeAccountCreation.
-// 7. Key update of colin using AccountUpdate with multisig keys.
-// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+// 2. Create an account decoupled using TxTypeAccountCreation.
+// 3. Key update of decoupled using AccountUpdate
+// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+// 5. Create an account colin using TxTypeAccountCreation.
+// 6. Key update of colin using AccountUpdate with multisig keys.
+// 7. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 func TestAccountUpdate(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -2678,36 +2677,7 @@ func TestAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Key update of anon using AccountUpdate
-	// This test should be failed because a legacy account does not have attribute `key`.
-	{
-		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      anon.Nonce,
-			types.TxValueKeyFrom:       anon.Addr,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, anon.Keys)
-		assert.Equal(t, nil, err)
-
-		r, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		// TODO-Klaytn-Accounts: need to return more detailed status instead of ReceiptStatusErrDefault.
-		assert.Equal(t, types.ReceiptStatusErrDefault, r.Status)
-
-		// This should be failed.
-	}
-
-	// 3. Create an account decoupled using TxTypeAccountCreation.
+	// 2. Create an account decoupled using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
@@ -2736,7 +2706,7 @@ func TestAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 4. Key update of decoupled using AccountUpdate
+	// 3. Key update of decoupled using AccountUpdate
 	{
 		var txs types.Transactions
 
@@ -2768,7 +2738,7 @@ func TestAccountUpdate(t *testing.T) {
 		decoupled.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
-	// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+	// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
@@ -2795,7 +2765,7 @@ func TestAccountUpdate(t *testing.T) {
 		decoupled.Nonce += 1
 	}
 
-	// 6. Create an account colin using TxTypeAccountCreation.
+	// 5. Create an account colin using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
@@ -2824,7 +2794,7 @@ func TestAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 7. Key update of colin using AccountUpdate with multisig keys.
+	// 6. Key update of colin using AccountUpdate with multisig keys.
 	{
 		var txs types.Transactions
 
@@ -2867,7 +2837,7 @@ func TestAccountUpdate(t *testing.T) {
 		colin.AccKey = newKey
 	}
 
-	// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+	// 7. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
@@ -2901,13 +2871,12 @@ func TestAccountUpdate(t *testing.T) {
 
 // TestFeeDelegatedAccountUpdate tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
-// 2. Key update of anon using AccountUpdate
-// 3. Create an account decoupled using TxTypeAccountCreation.
-// 4. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
-// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
-// 6. Create an account colin using TxTypeAccountCreation.
-// 7. Key update of colin using TxTypeFeeDelegatedAccountUpdate
-// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+// 2. Create an account decoupled using TxTypeAccountCreation.
+// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
+// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+// 5. Create an account colin using TxTypeAccountCreation.
+// 6. Key update of colin using TxTypeFeeDelegatedAccountUpdate
+// 7. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 func TestFeeDelegatedAccountUpdate(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -2978,40 +2947,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Key update of anon using AccountUpdate
-	// This test should be failed because a legacy account does not have attribute `key`.
-	{
-		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      anon.Nonce,
-			types.TxValueKeyFrom:       anon.Addr,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
-			types.TxValueKeyFeePayer:   reservoir.Addr,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, anon.Keys)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		r, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		// TODO-Klaytn-Accounts: need to return more detailed status instead of ReceiptStatusErrDefault.
-		assert.Equal(t, types.ReceiptStatusErrDefault, r.Status)
-
-		// This should be failed.
-	}
-
-	// 3. Create an account decoupled using TxTypeAccountCreation.
+	// 2. Create an account decoupled using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
@@ -3040,7 +2976,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 4. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
+	// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
 	{
 		var txs types.Transactions
 
@@ -3076,7 +3012,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		decoupled.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
-	// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+	// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
@@ -3103,7 +3039,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		decoupled.Nonce += 1
 	}
 
-	// 6. Create an account colin using TxTypeAccountCreation.
+	// 5. Create an account colin using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
@@ -3132,7 +3068,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 7. Key update of colin using TxTypeFeeDelegatedAccountUpdate
+	// 6. Key update of colin using TxTypeFeeDelegatedAccountUpdate
 	{
 		var txs types.Transactions
 
@@ -3168,7 +3104,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		colin.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
-	// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+	// 7. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
@@ -3202,13 +3138,12 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 
 // TestFeeDelegatedAccountUpdateWithRatio tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
-// 2. Key update of anon using AccountUpdate
-// 3. Create an account decoupled using TxTypeAccountCreation.
-// 4. Key update of decoupled using TxTypeFeeDelegatedAccountUpdateWithRatio.
-// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
-// 6. Create an account colin using TxTypeAccountCreation.
-// 7. Key update of colin using TxTypeFeeDelegatedAccountUpdateWithRatio.
-// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+// 2. Create an account decoupled using TxTypeAccountCreation.
+// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdateWithRatio.
+// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+// 5. Create an account colin using TxTypeAccountCreation.
+// 6. Key update of colin using TxTypeFeeDelegatedAccountUpdateWithRatio.
+// 7. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -3279,41 +3214,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Key update of anon using AccountUpdate
-	// This test should be failed because a legacy account does not have attribute `key`.
-	{
-		newKey, err := crypto.HexToECDSA("41bd2b972564206658eab115f26ff4db617e6eb39c81a557adc18d8305d2f867")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:              anon.Nonce,
-			types.TxValueKeyFrom:               anon.Addr,
-			types.TxValueKeyGasLimit:           gasLimit,
-			types.TxValueKeyGasPrice:           gasPrice,
-			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
-			types.TxValueKeyFeePayer:           reservoir.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, anon.Keys)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		r, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		// TODO-Klaytn-Accounts: need to return more detailed status instead of ReceiptStatusErrDefault.
-		assert.Equal(t, types.ReceiptStatusErrDefault, r.Status)
-
-		// This should be failed.
-	}
-
-	// 3. Create an account decoupled using TxTypeAccountCreation.
+	// 2. Create an account decoupled using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
@@ -3342,7 +3243,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 4. Key update of decoupled using TxTypeFeeDelegatedAccountUpdateWithRatio.
+	// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdateWithRatio.
 	{
 		var txs types.Transactions
 
@@ -3379,7 +3280,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		decoupled.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
-	// 5. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+	// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
@@ -3406,7 +3307,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		decoupled.Nonce += 1
 	}
 
-	// 6. Create an account colin using TxTypeAccountCreation.
+	// 5. Create an account colin using TxTypeAccountCreation.
 	{
 		var txs types.Transactions
 
@@ -3435,7 +3336,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 7. Key update of colin using TxTypeFeeDelegatedAccountUpdateWithRatio.
+	// 6. Key update of colin using TxTypeFeeDelegatedAccountUpdateWithRatio.
 	{
 		var txs types.Transactions
 
@@ -3472,7 +3373,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		colin.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
-	// 8. Transfer (colin-> reservoir) using TxTypeValueTransfer.
+	// 7. Transfer (colin-> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
