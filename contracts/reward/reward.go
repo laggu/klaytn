@@ -315,7 +315,7 @@ func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) {
 	if stakingInfo.BlockNum < sc.minBlockNum {
 		sc.minBlockNum = stakingInfo.BlockNum
 	} else {
-		min := sc.minBlockNum
+		min := stakingInfo.BlockNum
 		for _, s := range sc.cells {
 			if s.BlockNum < min {
 				min = s.BlockNum
