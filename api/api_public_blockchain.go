@@ -37,7 +37,8 @@ import (
 	"time"
 )
 
-const defaultGasPrice = 50 * params.Ston // TODO-Klaytn-Issue136 default gasPrice
+const defaultGasPrice = 25 * params.Ston // TODO-Klaytn-Issue136 default gasPrice
+const localTxExecutionTime = 5 * time.Second
 
 var logger = log.NewModuleLogger(log.API)
 
@@ -272,7 +273,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 // Call executes the given transaction on the state for the given block number.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	result, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{}, 5*time.Second)
+	result, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{UseOpcodeCntLimit: true}, localTxExecutionTime)
 	return (hexutil.Bytes)(result), err
 }
 
@@ -297,7 +298,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	executable := func(gas uint64) bool {
 		args.Gas = hexutil.Uint64(gas)
 
-		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{}, 0)
+		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{UseOpcodeCntLimit: true}, localTxExecutionTime)
 		if err != nil || failed {
 			return false
 		}
