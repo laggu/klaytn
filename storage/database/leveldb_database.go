@@ -39,7 +39,7 @@ import (
 var OpenFileLimit = 64
 
 const (
-	minWriteBufferSize        = 4 * opt.MiB
+	minWriteBufferSize        = 2 * opt.MiB
 	minBlockCacheCapacity     = 2 * minWriteBufferSize
 	MinOpenFilesCacheCapacity = 16
 	minBitsPerKeyForFilter    = 10
@@ -102,8 +102,8 @@ func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 		WriteBuffer:                   dbc.LevelDBCacheSize / 2 * opt.MiB,
 		Filter:                        filter.NewBloomFilter(10),
 		DisableBufferPool:             !dbc.LevelDBBufferPool,
-		CompactionTableSize:           4 * opt.MiB,
-		CompactionTableSizeMultiplier: 2.0,
+		CompactionTableSize:           2 * opt.MiB,
+		CompactionTableSizeMultiplier: 1.0,
 	}
 
 	if dbc.LevelDBNoCompression {
