@@ -139,6 +139,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     function RequestTokenTransfer(uint256 _amount, address _contractAddress, address _to)
     onlyOwner
     external {
+        require(_amount > 0, "zero amount");
         IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
         balances.token[_contractAddress] = balances.token[_contractAddress].add(_amount);
         emit RequestValueTransfer(TokenKind.TOKEN, msg.sender, _amount, _contractAddress, _to, requestNonce);
@@ -153,6 +154,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     public
     returns (bytes4)
     {
+        require(_amount > 0, "zero amount");
         // TODO-Klaytn-Servicechain should add allowedToken list in this Bridge.
         //require(allowedTokens[msg.sender], "Not a valid token");
         updateToken(_amount);
@@ -181,6 +183,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
 
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
+        require(msg.value > 0, "zero msg.value");
+
         updateKLAY();
         emit RequestValueTransfer(TokenKind.KLAY, msg.sender, msg.value, address(0), msg.sender, requestNonce);
         requestNonce++;
@@ -188,6 +192,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
     function requestKLAYTransfer(address _to) external payable {
+        require(msg.value > 0, "zero msg.value");
+
         updateKLAY();
         emit RequestValueTransfer(TokenKind.KLAY, msg.sender, msg.value, address(0), _to, requestNonce);
         requestNonce++;
