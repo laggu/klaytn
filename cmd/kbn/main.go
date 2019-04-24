@@ -206,6 +206,7 @@ func main() {
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, nodecmd.CommonRPCFlags...)
 	app.Commands = []cli.Command{
+		nodecmd.VersionCommand,
 		nodecmd.AttachCommand,
 	}
 
