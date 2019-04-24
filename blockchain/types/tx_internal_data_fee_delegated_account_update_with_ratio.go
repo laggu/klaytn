@@ -232,7 +232,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) UnmarshalJSON(b []byt
 
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.Price = (*big.Int)(js.Price)
-	t.GasLimit = (uint64)(js.GasLimit)
+	t.GasLimit = uint64(js.GasLimit)
 	t.From = js.From
 	t.Key = ser.GetKey()
 	t.FeeRatio = FeeRatio(js.FeeRatio)

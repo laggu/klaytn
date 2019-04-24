@@ -411,7 +411,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) UnmarshalJSO
 
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.Price = (*big.Int)(js.Price)
-	t.GasLimit = (uint64)(js.GasLimit)
+	t.GasLimit = uint64(js.GasLimit)
 	t.Recipient = js.Recipient
 	t.Amount = (*big.Int)(js.Amount)
 	t.From = js.From

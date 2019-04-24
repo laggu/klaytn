@@ -265,7 +265,7 @@ func (t *TxInternalDataCancel) UnmarshalJSON(b []byte) error {
 
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.Price = (*big.Int)(js.Price)
-	t.GasLimit = (uint64)(js.GasLimit)
+	t.GasLimit = uint64(js.GasLimit)
 	t.From = js.From
 	t.TxSignatures = js.TxSignatures.ToTxSignatures()
 	t.Hash = js.Hash
