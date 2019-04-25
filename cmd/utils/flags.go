@@ -537,7 +537,7 @@ var (
 	VTRecoveryIntervalFlag = cli.Uint64Flag{
 		Name:  "vtrecoveryinterval",
 		Usage: "Set the value transfer recovery interval (seconds)",
-		Value: 600,
+		Value: 60,
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
