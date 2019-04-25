@@ -124,6 +124,70 @@ func makeTestWeightedCouncil(weights []int) (valSet *weightedCouncil) {
 	return
 }
 
+func TestWeightedCouncil_List(t *testing.T) {
+	validators := makeTestValidators(testZeroWeights)
+
+	valSet := makeTestWeightedCouncil(testZeroWeights)
+
+	validators_in_valset := valSet.List()
+
+	if len(validators_in_valset) != len(validators) {
+		t.Errorf("len of validators in valSet is diffrent from len of given test set %v, validators %v", len(validators_in_valset), len(validators))
+	}
+
+	for i := 0; i < len(validators); i++ {
+		if validators[i].String() != validators_in_valset[i].String() {
+			t.Errorf("The element in validators in valset is diffrent from given test set%v, validators %v", validators_in_valset[i], validators[i])
+		}
+	}
+}
+func TestWeightedCouncil_GetByIndex(t *testing.T) {
+	validators := makeTestValidators(testZeroWeights)
+	valSet := makeTestWeightedCouncil(testZeroWeights)
+
+	for i := 0; i < len(validators); i++ {
+		validatorToCheck := valSet.GetByIndex(uint64(i))
+
+		if validators[i].Address() != validatorToCheck.Address() {
+			t.Errorf("The validator with given index is diffrent. index=%v, expected validator=%v, gotten validator %v", i, validators[i], valSet.GetByIndex(uint64(i)))
+		}
+	}
+
+	for errorIndex := len(validators) + 1; errorIndex < 100; errorIndex++ {
+		validatorToCheck := valSet.GetByIndex(uint64(errorIndex))
+
+		if validatorToCheck != nil {
+			t.Errorf("The result should be nil with given index. index=%v", errorIndex)
+		}
+	}
+
+	for errorIndex := -1; errorIndex > -100; errorIndex-- {
+		validatorToCheck := valSet.GetByIndex(uint64(errorIndex))
+
+		if validatorToCheck != nil {
+			t.Errorf("The result should be nil with given index. index=%v", errorIndex)
+		}
+	}
+}
+
+func TestWeightedCouncil_GetByAddress(t *testing.T) {
+	validators := makeTestValidators(testZeroWeights)
+	valSet := makeTestWeightedCouncil(testZeroWeights)
+
+	for i := 0; i < len(validators); i++ {
+		index, validatorToCheck := valSet.getByAddress(validators[i].Address())
+
+		if validators[index].Address() != validatorToCheck.Address() {
+			t.Errorf("The validator with given address is diffrent index=%v, expected validator=%v, gotten validator %v", i, validators[i], valSet.GetByIndex(uint64(i)))
+		}
+	}
+
+	_, errorValidator := valSet.getByAddress(common.Address{})
+	if errorValidator != nil {
+		t.Errorf("The validator with given address should be nil.")
+	}
+}
+
 func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 
 	validators := makeTestValidators(testZeroWeights)
