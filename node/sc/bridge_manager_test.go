@@ -46,10 +46,10 @@ func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing
 		wg.Wait()
 		c <- struct{}{}
 	}()
-	fmt.Println("start to wait group")
+	t.Log("start to wait group")
 	select {
 	case <-c:
-		fmt.Println("waiting group is done")
+		t.Log("waiting group is done")
 	case <-time.After(duration):
 		t.Fatal("timed out waiting group")
 	}

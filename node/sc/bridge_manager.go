@@ -340,7 +340,7 @@ func (bm *BridgeManager) addRecovery(localAddress, remoteAddress common.Address)
 		return
 	}
 
-	recovery := NewValueTransferRecovery(bm.subBridge.config, bm.bridges[localAddress], bm.bridges[remoteAddress], nil)
+	recovery := NewValueTransferRecovery(bm.subBridge.config, bm.bridges[localAddress], bm.bridges[remoteAddress])
 	recovery.Start()
 	bm.recoveries = append(bm.recoveries, recovery)
 }

@@ -26,43 +26,42 @@ import (
 
 // valueTransferHint stores the last handled block number and nonce (Request or Handle).
 type valueTransferHint struct {
-	blockNumber     uint64
+	blockNumber     uint64 // block number to start searching event logs
 	requestNonce    uint64
 	handleNonce     uint64
-	lastHandleNonce uint64
+	prevHandleNonce uint64 // previous handleNonce between recovery interval
+	candidate       bool   // to check recovery candidate between recovery interval
 }
 
 // valueTransferRecovery stores status information for the value transfer recovery.
 type valueTransferRecovery struct {
-	config             *SCConfig
-	scBridgeInfo       *BridgeInfo
-	mcBridgeInfo       *BridgeInfo
+	stopCh    chan interface{}
+	isRunning bool           // to check duplicated start
+	wg        sync.WaitGroup // wait group to handle the Stop() sync
+
 	service2mainHint   *valueTransferHint
 	main2serviceHint   *valueTransferHint
 	serviceChainEvents []*bridge.BridgeRequestValueTransfer
 	mainChainEvents    []*bridge.BridgeRequestValueTransfer
-	auth               *bind.TransactOpts
-	gasLimit           uint64
-	stopCh             chan interface{}
-	status             bool // Start() or Stop() status for checking duplicated start
-	wg                 sync.WaitGroup
+
+	config       *SCConfig
+	scBridgeInfo *BridgeInfo
+	mcBridgeInfo *BridgeInfo
 }
 
 // NewValueTransferRecovery creates a new value transfer recovery structure.
-func NewValueTransferRecovery(config *SCConfig, scBridgeInfo, mcBridgeInfo *BridgeInfo, auth *bind.TransactOpts) *valueTransferRecovery {
+func NewValueTransferRecovery(config *SCConfig, scBridgeInfo, mcBridgeInfo *BridgeInfo) *valueTransferRecovery {
 	return &valueTransferRecovery{
-		config:             config,
-		scBridgeInfo:       scBridgeInfo,
-		mcBridgeInfo:       mcBridgeInfo,
+		stopCh:             make(chan interface{}),
+		isRunning:          false,
+		wg:                 sync.WaitGroup{},
 		service2mainHint:   &valueTransferHint{},
 		main2serviceHint:   &valueTransferHint{},
 		serviceChainEvents: []*bridge.BridgeRequestValueTransfer{},
 		mainChainEvents:    []*bridge.BridgeRequestValueTransfer{},
-		auth:               auth,
-		gasLimit:           100000,
-		stopCh:             make(chan interface{}),
-		status:             false,
-		wg:                 sync.WaitGroup{},
+		config:             config,
+		scBridgeInfo:       scBridgeInfo,
+		mcBridgeInfo:       mcBridgeInfo,
 	}
 }
 
@@ -72,7 +71,7 @@ func (vtr *valueTransferRecovery) Start() error {
 		logger.Debug("value transfer recovery is disabled")
 		return nil
 	}
-	if vtr.status {
+	if vtr.isRunning {
 		logger.Info("value transfer recovery is already started")
 		return nil
 	}
@@ -83,7 +82,7 @@ func (vtr *valueTransferRecovery) Start() error {
 		return err
 	}
 
-	vtr.status = true
+	vtr.isRunning = true
 	vtr.wg.Add(1)
 
 	go func() {
@@ -96,11 +95,10 @@ func (vtr *valueTransferRecovery) Start() error {
 		for {
 			select {
 			case <-vtr.stopCh:
-				vtr.status = false
 				logger.Info("value transfer recovery is stopped")
 				return
 			case <-ticker.C:
-				if vtr.status {
+				if vtr.isRunning {
 					if err := vtr.Recover(); err != nil {
 						logger.Info("value transfer recovery is failed")
 					}
@@ -114,12 +112,13 @@ func (vtr *valueTransferRecovery) Start() error {
 
 // Stop implements terminating all internal goroutines used by the value transfer recovery.
 func (vtr *valueTransferRecovery) Stop() error {
-	if !vtr.status {
+	if !vtr.isRunning {
 		logger.Info("value transfer recovery is already stopped")
 		return nil
 	}
 	close(vtr.stopCh)
 	vtr.wg.Wait()
+	vtr.isRunning = false
 	return nil
 }
 
@@ -130,20 +129,20 @@ func (vtr *valueTransferRecovery) Recover() error {
 		return nil
 	}
 
-	logger.Debug("start to get value transfer hint")
-	err := vtr.getRecoveryHint()
+	logger.Debug("update value transfer hint")
+	err := vtr.updateRecoveryHint()
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("start to get pending events")
-	err = vtr.getPendingEvents()
+	logger.Debug("retrieve pending events")
+	err = vtr.retrievePendingEvents()
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("start to recover pending transactions")
-	err = vtr.recoverTransactions()
+	logger.Debug("recover pending events")
+	err = vtr.recoverPendingEvents()
 	if err != nil {
 		return err
 	}
@@ -151,10 +150,10 @@ func (vtr *valueTransferRecovery) Recover() error {
 	return nil
 }
 
-// getRecoveryHint gets hints for value transfer transactions on the both side.
-// One is form service chain to main chain, the other is from main chain to service chain value transfers.
+// updateRecoveryHint updates hints for value transfers on the both side.
+// One is from service chain to main chain, the other is from main chain to service chain value transfers.
 // The hint includes a block number to begin search, request nonce and handle nonce.
-func (vtr *valueTransferRecovery) getRecoveryHint() error {
+func (vtr *valueTransferRecovery) updateRecoveryHint() error {
 	if vtr.scBridgeInfo == nil {
 		return errors.New("service chain bridge is nil")
 	}
@@ -163,27 +162,29 @@ func (vtr *valueTransferRecovery) getRecoveryHint() error {
 	}
 
 	var err error
-	vtr.service2mainHint, err = getRecoveryHintFromTo(vtr.scBridgeInfo.bridge, vtr.mcBridgeInfo.bridge)
+	vtr.service2mainHint, err = updateRecoveryHintFromTo(vtr.scBridgeInfo.bridge, vtr.mcBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
 
-	vtr.main2serviceHint, err = getRecoveryHintFromTo(vtr.mcBridgeInfo.bridge, vtr.scBridgeInfo.bridge)
+	vtr.main2serviceHint, err = updateRecoveryHintFromTo(vtr.mcBridgeInfo.bridge, vtr.scBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
 
-	// Update the lastHandledNode for initial status.
-	if !vtr.status {
-		vtr.service2mainHint.lastHandleNonce = vtr.service2mainHint.handleNonce
-		vtr.main2serviceHint.lastHandleNonce = vtr.main2serviceHint.handleNonce
+	// Update the hint for the initial status.
+	if !vtr.isRunning {
+		vtr.service2mainHint.prevHandleNonce = vtr.service2mainHint.handleNonce
+		vtr.main2serviceHint.prevHandleNonce = vtr.main2serviceHint.handleNonce
+		vtr.service2mainHint.candidate = true
+		vtr.main2serviceHint.candidate = true
 	}
 
 	return nil
 }
 
-// getRecoveryHint gets a hint for the one-way value transfer transactions.
-func getRecoveryHintFromTo(from, to *bridge.Bridge) (*valueTransferHint, error) {
+// updateRecoveryHint updates a hint for the one-way value transfers.
+func updateRecoveryHintFromTo(from, to *bridge.Bridge) (*valueTransferHint, error) {
 	var err error
 	var hint valueTransferHint
 
@@ -211,19 +212,19 @@ func getRecoveryHintFromTo(from, to *bridge.Bridge) (*valueTransferHint, error) 
 	return &hint, nil
 }
 
-// getPendingEvents gets pending events on the service chain or main chain.
+// retrievePendingEvents retrieves pending events on the service chain or main chain.
 // The pending event is the value transfer without processing HandleValueTransfer.
-func (vtr *valueTransferRecovery) getPendingEvents() error {
+func (vtr *valueTransferRecovery) retrievePendingEvents() error {
 	if vtr.scBridgeInfo.bridge == nil {
 		return errors.New("bridge is nil")
 	}
 
 	var err error
-	vtr.serviceChainEvents, err = getPendingEventsFrom(vtr.service2mainHint, vtr.scBridgeInfo.bridge)
+	vtr.serviceChainEvents, err = retrievePendingEventsFrom(vtr.service2mainHint, vtr.scBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
-	vtr.mainChainEvents, err = getPendingEventsFrom(vtr.main2serviceHint, vtr.mcBridgeInfo.bridge)
+	vtr.mainChainEvents, err = retrievePendingEventsFrom(vtr.main2serviceHint, vtr.mcBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
@@ -231,9 +232,9 @@ func (vtr *valueTransferRecovery) getPendingEvents() error {
 	return nil
 }
 
-// getPendingEventsFrom gets pending events from the specified bridge by using the hint provided.
+// retrievePendingEventsFrom retrieves pending events from the specified bridge by using the hint provided.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
-func getPendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*bridge.BridgeRequestValueTransfer, error) {
+func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*bridge.BridgeRequestValueTransfer, error) {
 	if br == nil {
 		return nil, errors.New("bridge is nil")
 	}
@@ -261,16 +262,38 @@ func getPendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*bridge
 	return pendingEvents, nil
 }
 
-// checkRecoveryCondition checks that the handle value transfer has any progress.
-func checkRecoveryCondition(hint *valueTransferHint) bool {
-	if hint.requestNonce != hint.handleNonce && hint.lastHandleNonce != hint.handleNonce {
-		return false
-	}
-	return true
+// checkRecoveryCandidateCondition checks if vtr is recovery candidate or not.
+// candidate is introduced to check any normal request just before checking start.
+//
+// For example,
+//
+// ======== ======== ======== ========
+// Round    R Nonce  H Nonce  Result
+// ======== ======== ======== ========
+// 1        10       10       false
+// <burst requests just before checking>
+// 2        1000     10       ? (it can be normal but candidate)
+// 3        2000     10       true
+func checkRecoveryCandidateCondition(hint *valueTransferHint) bool {
+	return hint.requestNonce != hint.handleNonce && hint.prevHandleNonce == hint.handleNonce
 }
 
-// recoverTransactions recovers all pending transactions by resending them.
-func (vtr *valueTransferRecovery) recoverTransactions() error {
+// checkRecoveryCondition checks if recovery for the handle value transfers is needed or not.
+func checkRecoveryCondition(hint *valueTransferHint) bool {
+	if checkRecoveryCandidateCondition(hint) && hint.candidate {
+		hint.candidate = false
+		return true
+	}
+	if checkRecoveryCandidateCondition(hint) && !hint.candidate {
+		hint.candidate = true
+		return false
+	}
+	hint.candidate = false
+	return false
+}
+
+// recoverPendingEvents recovers all pending events by resending them.
+func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	if !vtr.config.VTRecovery {
 		logger.Debug("value transfer recovery is disabled")
 		return nil
@@ -285,7 +308,7 @@ func (vtr *valueTransferRecovery) recoverTransactions() error {
 
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	for _, ev := range vtr.serviceChainEvents {
-		logger.Warn("try to recover service chain's value transfer transaction", ev.Raw.TxHash, "nonce", ev.RequestNonce)
+		logger.Warn("try to recover service chain's value transfer events", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
 			From:         ev.From,
@@ -299,7 +322,7 @@ func (vtr *valueTransferRecovery) recoverTransactions() error {
 
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	for _, ev := range vtr.mainChainEvents {
-		logger.Warn("try to recover main chain's value transfer transaction", ev.Raw.TxHash, "nonce", ev.RequestNonce)
+		logger.Warn("try to recover main chain's value transfer events", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
 			From:         ev.From,
