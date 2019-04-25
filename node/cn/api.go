@@ -471,11 +471,13 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
 	}
 
-	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), statedb.NewDatabase(api.cn.chainDB), 0)
+	trieDB := api.cn.blockchain.StateCache().TrieDB()
+
+	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB, 0)
 	if err != nil {
 		return nil, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), statedb.NewDatabase(api.cn.chainDB), 0)
+	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), trieDB, 0)
 	if err != nil {
 		return nil, err
 	}

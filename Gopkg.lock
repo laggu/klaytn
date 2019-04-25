@@ -10,6 +10,17 @@
   revision = "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e"
 
 [[projects]]
+  digest = "1:f96ba6ecca7ba87b1dddd70ae38cfc4ce5ea844f58d1f728e121d2e29cdfb8a2"
+  name = "github.com/allegro/bigcache"
+  packages = [
+    ".",
+    "queue",
+  ]
+  pruneopts = "UT"
+  revision = "84a0ff3f153cbd7e280a19029a864bb04b504e62"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   digest = "1:7d191fd0c54ff370eaf6116a14dafe2a328df487baea280699f597aae858d00d"
   name = "github.com/aristanetworks/goarista"
@@ -720,6 +731,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/allegro/bigcache",
     "github.com/aristanetworks/goarista/monotime",
     "github.com/cespare/cp",
     "github.com/clevergo/websocket",

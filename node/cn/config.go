@@ -115,6 +115,7 @@ type Config struct {
 	ParallelDBWrite      bool
 	StateDBCaching       bool
 	TxPoolStateCache     bool
+	TrieCacheLimit       int
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`

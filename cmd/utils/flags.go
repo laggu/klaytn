@@ -242,6 +242,11 @@ var (
 		Name:  "statedb.use-txpool-cache",
 		Usage: "Enables caching of nonce and balance for txpool.",
 	}
+	TrieCacheLimitFlag = cli.IntFlag{
+		Name:  "state.trie-cache-limit",
+		Usage: "Memory allowance (MB) to use for caching trie nodes in memory",
+		Value: 4096,
+	}
 
 	ChildChainIndexingFlag = cli.BoolFlag{
 		Name:  "childchainindexing",
@@ -1094,6 +1099,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(StateDBCachingFlag.Name) {
 		cfg.StateDBCaching = true
+	}
+	if ctx.GlobalIsSet(TrieCacheLimitFlag.Name) {
+		cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
 	}
 
 	// TODO-Klaytn-RemoveLater Later we have to remove GasPriceFlag, because we disable user configurable gasPrice

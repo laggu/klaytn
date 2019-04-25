@@ -82,6 +82,7 @@ type CacheConfig struct {
 	ArchiveMode      bool // If true, state trie is not pruned and always written to database.
 	CacheSize        int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval    uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+	TrieCacheLimit   int  // Memory allowance (MB) to use for caching trie nodes in memory
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -159,6 +160,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			ArchiveMode:    false,
 			CacheSize:      256 * 1024 * 1024,
 			BlockInterval:  DefaultBlockInterval,
+			TrieCacheLimit: 0,
 		}
 	}
 	// Initialize DeriveSha implementation
@@ -179,7 +181,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		cacheConfig:     cacheConfig,
 		db:              db,
 		triegc:          prque.New(),
-		stateCache:      state.NewDatabase(db),
+		stateCache:      state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit),
 		quit:            make(chan struct{}),
 		futureBlocks:    futureBlocks,
 		engine:          engine,
@@ -405,6 +407,11 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, bc.stateCache)
+}
+
+// StateCache returns the caching database underpinning the blockchain instance.
+func (bc *BlockChain) StateCache() state.Database {
+	return bc.stateCache
 }
 
 // StateAtWithCache returns a new mutable state based on a particular point in time.

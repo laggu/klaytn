@@ -21,11 +21,10 @@
 package state
 
 import (
-	"sync"
-
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/storage/statedb"
+	"sync"
 
 	"fmt"
 )
@@ -79,6 +78,10 @@ type Trie interface {
 }
 
 func NewDatabase(db database.DBManager) Database {
+	return NewDatabaseWithCache(db, 0)
+}
+
+func NewDatabaseWithCache(db database.DBManager, cacheSize int) Database {
 	var cacheConfig common.CacheConfiger
 	switch common.DefaultCacheType {
 	case common.LRUShardCacheType:
@@ -93,7 +96,7 @@ func NewDatabase(db database.DBManager) Database {
 	csc := common.NewCache(cacheConfig)
 
 	return &cachingDB{
-		db:            statedb.NewDatabase(db),
+		db:            statedb.NewDatabaseWithCache(db, cacheSize),
 		codeSizeCache: csc,
 	}
 }
