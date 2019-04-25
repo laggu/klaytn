@@ -229,12 +229,12 @@ type Config struct {
 	Bootnodes    []*Node           // list of bootstrap nodes
 	Unhandled    chan<- ReadPacket // unhandled packets are sent on this channel
 
-	// These setting are required for create Table and UDP
-	DiscoveryPolicy int
-	Id              NodeID
-	Addr            *net.UDPAddr
-	udp             transport
-	Conn            conn
+	// These settings are required for create Table and UDP
+	Id                    NodeID
+	Addr                  *net.UDPAddr
+	udp                   transport
+	Conn                  conn
+	DiscoveryPolicyPreset string
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.

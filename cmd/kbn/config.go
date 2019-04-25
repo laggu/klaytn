@@ -138,6 +138,10 @@ type bootnodeConfig struct {
 
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
+
+	// DiscoveryPolicies is slice of the discovery policy for using multiple discovery
+	// policy for Klaytn network.
+	DiscoveryPolicyPreset string `toml:",omitempty"`
 }
 
 // splitAndTrim splits input separated by a comma

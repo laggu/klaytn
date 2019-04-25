@@ -167,6 +167,9 @@ type Config struct {
 
 	// SBNPort is the port number of the simple bootnode.
 	SBNPort int //TODO-Klaytn-Node remove after the real bootnode is implemented
+
+	// DiscoveryPolicyPreset is the predefined discovery policy preset of each nodetype.
+	DiscoveryPolicyPreset string `toml:",omitempty"`
 }
 
 // NewServer returns a new Server interface.
@@ -353,17 +356,17 @@ func (srv *MultiChannelServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:      srv.PrivateKey,
-			AnnounceAddr:    realaddr,
-			NodeDBPath:      srv.NodeDatabase,
-			NetRestrict:     srv.NetRestrict,
-			Bootnodes:       srv.BootstrapNodes,
-			Unhandled:       unhandled,
-			Conn:            conn,
-			Addr:            realaddr,
-			Id:              discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			DiscoveryPolicy: discover.DiscoveryPolicyActive,
+			PrivateKey:   srv.PrivateKey,
+			AnnounceAddr: realaddr,
+			NodeDBPath:   srv.NodeDatabase,
+			NetRestrict:  srv.NetRestrict,
+			Bootnodes:    srv.BootstrapNodes,
+			Unhandled:    unhandled,
+			Conn:         conn,
+			Addr:         realaddr,
+			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
 		}
+
 		ntab, err := discover.ListenUDP(&cfg)
 		if err != nil {
 			return err
@@ -1251,17 +1254,17 @@ func (srv *BaseServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:      srv.PrivateKey,
-			AnnounceAddr:    realaddr,
-			NodeDBPath:      srv.NodeDatabase,
-			NetRestrict:     srv.NetRestrict,
-			Bootnodes:       srv.BootstrapNodes,
-			Unhandled:       unhandled,
-			Conn:            conn,
-			Addr:            realaddr,
-			Id:              discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			DiscoveryPolicy: discover.DiscoveryPolicyActive,
+			PrivateKey:   srv.PrivateKey,
+			AnnounceAddr: realaddr,
+			NodeDBPath:   srv.NodeDatabase,
+			NetRestrict:  srv.NetRestrict,
+			Bootnodes:    srv.BootstrapNodes,
+			Unhandled:    unhandled,
+			Conn:         conn,
+			Addr:         realaddr,
+			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
 		}
+
 		ntab, err := discover.ListenUDP(&cfg)
 		if err != nil {
 			return err

@@ -64,10 +64,30 @@ const (
 )
 
 const (
-	DiscoveryPolicyActive = iota
-	DiscoveryPolicyPassive
-	DiscoveryPolicyComposite
+	TableDiscovery = iota
+	SimpleDiscovery
+	CompositeDiscovery
 )
+
+// Discovery policy preset for CLI
+const (
+	DiscoveryPolicyPresetCBN = "cbn" // Simple discovery(cn discovery for cn)
+	DiscoveryPolicyPresetPBN = "pbn" // Composite discovery(pn Simple discovery for pn + pn Simple discovery for en)
+	DiscoveryPolicyPresetEBN = "ebn" // Table discovery(en Table discovery for en)
+	DiscoveryPolicyPresetCN  = "cn"  // Simple discovery(cn discovery for cn)
+	DiscoveryPolicyPresetPN  = "pn"  // Simple discovery(pn Simple discovery for pn)
+	DiscoveryPolicyPresetEN  = "en"  // Composite discovery(pn Simple discovery for en + en Table discovery for en)
+)
+
+// Discovery type for distinguish interface in Composite discovery
+const (
+	TypeSimpleDiscovery = iota + 1 // 0 is reserved
+	TypeTableDiscovery
+	TypePN4PNSimpleDiscovery
+	TypePN4ENSimpleDiscovery
+)
+
+type DiscoveryType uint8
 
 type Discovery interface {
 	Name() string
@@ -75,6 +95,7 @@ type Discovery interface {
 	Close()
 	Resolve(target NodeID) *Node
 	Lookup(target NodeID) []*Node
+	LookupByType(target NodeID, t DiscoveryType) []*Node
 	ReadRandomNodes([]*Node) int
 	RetrieveNodes(target common.Hash, nresults int) []*Node // replace of closest():Table
 
@@ -134,14 +155,6 @@ type bucket struct {
 	entries      []*Node // live entries, sorted by time of last contact
 	replacements []*Node // recently seen nodes to be used if revalidation fails
 	ips          netutil.DistinctNetSet
-}
-
-func NewDiscovery(cfg *Config) (Discovery, error) {
-	switch cfg.DiscoveryPolicy {
-	case DiscoveryPolicyActive:
-		return newTable(cfg)
-	}
-	return nil, fmt.Errorf("Not supported yet")
 }
 
 func newTable(cfg *Config) (Discovery, error) {
@@ -320,6 +333,14 @@ func (tab *Table) Resolve(targetID NodeID) *Node {
 		}
 	}
 	return nil
+}
+
+func (tab *Table) LookupByType(targetID NodeID, t DiscoveryType) []*Node {
+	if t != TypeTableDiscovery {
+		logger.Trace("Requested discovery type was mismatched, got: %d, expected: %d", t, TypeTableDiscovery)
+		return nil
+	}
+	return tab.Lookup(targetID)
 }
 
 // Lookup performs a network search for nodes close

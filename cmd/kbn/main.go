@@ -38,6 +38,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -76,6 +77,8 @@ func bootnode(ctx *cli.Context) error {
 			WSPort:           DefaultWSPort,
 			WSModules:        []string{"net"},
 			GRPCPort:         DefaultGRPCPort,
+
+			DiscoveryPolicyPreset: strings.TrimSpace(ctx.GlobalString(utils.DiscoveryPolicyPresetFlag.Name)),
 
 			Logger: log.NewModuleLogger(log.CMDKBN),
 		}
@@ -134,14 +137,15 @@ func bootnode(ctx *cli.Context) error {
 	}
 
 	cfg := discover.Config{
-		PrivateKey:      bcfg.nodeKey,
-		AnnounceAddr:    realaddr,
-		NetRestrict:     bcfg.restrictList,
-		Conn:            conn,
-		Addr:            realaddr,
-		Id:              discover.PubkeyID(&bcfg.nodeKey.PublicKey),
-		DiscoveryPolicy: discover.DiscoveryPolicyActive,
+		PrivateKey:            bcfg.nodeKey,
+		AnnounceAddr:          realaddr,
+		NetRestrict:           bcfg.restrictList,
+		Conn:                  conn,
+		Addr:                  realaddr,
+		Id:                    discover.PubkeyID(&bcfg.nodeKey.PublicKey),
+		DiscoveryPolicyPreset: bcfg.DiscoveryPolicyPreset,
 	}
+
 	tab, err := discover.ListenUDP(&cfg)
 	if err != nil {
 		utils.Fatalf("%v", err)
@@ -185,6 +189,7 @@ func main() {
 		cliFlags = []cli.Flag{
 			utils.SrvTypeFlag,
 			utils.DataDirFlag,
+			utils.DiscoveryPolicyPresetFlag,
 			utils.GenKeyFlag,
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,

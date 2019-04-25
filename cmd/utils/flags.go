@@ -502,6 +502,10 @@ var (
 		Name:  "writeaddress",
 		Usage: `write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"`,
 	}
+	DiscoveryPolicyPresetFlag = cli.StringFlag{
+		Name:  "discovery-policy",
+		Usage: "Set the discovery policy as predefined preset (cbn|pbn|ebn)",
+	}
 	// ServiceChain's settings
 	EnabledBridgeFlag = cli.BoolFlag{
 		Name:  "bridge",
@@ -837,6 +841,14 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NoDiscoverFlag.Name) {
 		cfg.NoDiscovery = true
 	}
+	var err error
+	// set the default discovery preset by nodetype
+	cfg.DiscoveryPolicyPreset, err = getDefaultDiscoveryPolicyByNodeType(cfg.ConnectionType)
+	if err != nil {
+		logger.Crit("Failed with set discovery policy", "err", err)
+	}
+	logger.Info("Setting Discovery policy", "DiscoveryPolicy", cfg.DiscoveryPolicyPreset)
+
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	if ctx.GlobalIsSet(BaobabFlag.Name) {
 		setupSBNURL(ctx, cfg)
@@ -856,7 +868,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		cfg.NetRestrict = list
 	}
-
 }
 
 func convertNodeType(nodetype string) p2p.ConnType {
@@ -1223,4 +1234,17 @@ func getBaobabBootnodesByConnectionType(cType int) []string {
 	}
 	logger.Crit("Does not have any bootnode of given node type", "node_type", convertNodeTypeToString(cType))
 	return []string{}
+}
+
+func getDefaultDiscoveryPolicyByNodeType(nodetype p2p.ConnType) (string, error) {
+	switch nodetype {
+	case node.CONSENSUSNODE:
+		return discover.DiscoveryPolicyPresetCN, nil
+	case node.PROXYNODE:
+		return discover.DiscoveryPolicyPresetPN, nil
+	case node.ENDPOINTNODE:
+		return discover.DiscoveryPolicyPresetEN, nil
+	default:
+		return "", fmt.Errorf("Not supported type")
+	}
 }
