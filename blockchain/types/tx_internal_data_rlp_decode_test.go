@@ -57,7 +57,6 @@ func TestTxRLPDecode(t *testing.T) {
 		fnname := getFunctionName(f)
 		fnname = fnname[strings.LastIndex(fnname, ".")+1:]
 		t.Run(fnname, func(t *testing.T) {
-			t.Parallel()
 			f(t)
 		})
 	}
@@ -444,6 +443,8 @@ func testTxRLPDecodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 		tx.Recipient,
 		tx.Amount,
 		tx.From,
+		tx.Payload,
+		tx.HumanReadable,
 		tx.TxSignatures,
 		tx.FeePayer,
 		tx.FeePayerSignatures,
