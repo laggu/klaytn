@@ -635,18 +635,15 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return nil, err
 	}
 
-	if sb.config.ProposerPolicy == istanbul.WeightedRandom {
-		// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
-		// And proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
-		// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
-		pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(snap.Number + 1))
+	if sb.config.ProposerPolicy == istanbul.WeightedRandom && params.IsProposerUpdateInterval(snap.Number) {
+		// when block number of snap is proposer update interval, refresh ValSet to make a new weighted random proposer list
+		pHeader := chain.GetHeaderByNumber(snap.Number)
 		if pHeader != nil {
 			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64()); err != nil {
-				// There are four error cases and they just don't refresh proposers
+				// There are three error cases and they just don't refresh proposers
 				// (1) no validator at all
 				// (2) invalid formatted hash
-				// (3) block number is not proposer update interval
-				// (4) no staking info available
+				// (3) no staking info available
 				logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
 			}
 		} else {
