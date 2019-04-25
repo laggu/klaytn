@@ -120,6 +120,9 @@ func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr common.Address, pBri
 		return pErr
 	}
 
+	sbapi.sc.bridgeManager.journal.insert(cBridgeAddr, pBridgeAddr, true)
+	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
+
 	sbapi.sc.bridgeManager.addRecovery(cBridgeAddr, pBridgeAddr)
 	return nil
 }
