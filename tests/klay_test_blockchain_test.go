@@ -50,8 +50,6 @@ const transactionsJournalFilename = "transactions.rlp"
 // If you don't want to remove 'chaindata', set removeChaindataOnExit = false
 const removeChaindataOnExit = true
 
-const GasLimit uint64 = 1000000000000000000
-
 var (
 	errEmptyPending = errors.New("pending is empty")
 )
@@ -407,7 +405,6 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 	if genesis == nil {
 		genesis = blockchain.DefaultGenesisBlock()
 		genesis.Config = Forks["Byzantium"]
-		genesis.GasLimit = GasLimit
 		genesis.ExtraData = extraData
 		genesis.BlockScore = big.NewInt(1)
 		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)

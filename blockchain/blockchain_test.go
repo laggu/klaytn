@@ -770,8 +770,7 @@ func TestChainTxReorgs(t *testing.T) {
 		addr3   = crypto.PubkeyToAddress(key3.PublicKey)
 		db      = database.NewMemoryDBManager()
 		gspec   = &Genesis{
-			Config:   params.TestChainConfig,
-			GasLimit: 3141592,
+			Config: params.TestChainConfig,
 			Alloc: GenesisAlloc{
 				addr1: {Balance: big.NewInt(1000000)},
 				addr2: {Balance: big.NewInt(1000000)},
@@ -1322,7 +1321,6 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 					Balance: big.NewInt(0),
 				}, // push 1, pop
 			},
-			GasLimit: 100e6, // 100 M
 		}
 		signer = types.NewEIP155Signer(gspec.Config.ChainID)
 	)

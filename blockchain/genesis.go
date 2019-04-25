@@ -50,7 +50,6 @@ type Genesis struct {
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
 	Governance []byte              `json:"governanceData"`
-	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	BlockScore *big.Int            `json:"blockScore"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
@@ -89,7 +88,6 @@ type GenesisAccount struct {
 type genesisSpecMarshaling struct {
 	Timestamp  math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
-	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
 	Number     math.HexOrDecimal64
 	BlockScore *math.HexOrDecimal256
@@ -308,7 +306,6 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
 		BlockScore: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
 	}
@@ -319,7 +316,6 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		GasLimit:   16777216,
 		BlockScore: big.NewInt(1048576),
 		Alloc:      decodePrealloc(testnetAllocData),
 	}
@@ -338,7 +334,6 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 	return &Genesis{
 		Config:     &config,
 		ExtraData:  append(append(make([]byte, 32), faucet[:]...), make([]byte, 65)...),
-		GasLimit:   6283185,
 		BlockScore: big.NewInt(1),
 		Alloc: map[common.Address]GenesisAccount{
 			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover

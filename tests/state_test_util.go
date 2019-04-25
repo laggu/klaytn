@@ -183,7 +183,6 @@ func (t *StateTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	return &blockchain.Genesis{
 		Config:     config,
 		BlockScore: t.json.Env.BlockScore,
-		GasLimit:   t.json.Env.GasLimit,
 		Number:     t.json.Env.Number,
 		Timestamp:  t.json.Env.Timestamp,
 		Alloc:      t.json.Pre,

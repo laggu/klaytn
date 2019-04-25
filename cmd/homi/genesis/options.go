@@ -57,12 +57,6 @@ func ValidatorsOfClique(signers ...common.Address) Option {
 	}
 }
 
-func GasLimit(limit uint64) Option {
-	return func(genesis *blockchain.Genesis) {
-		genesis.GasLimit = limit
-	}
-}
-
 func makeGenesisAccount(addrs []common.Address, balance *big.Int) map[common.Address]blockchain.GenesisAccount {
 	alloc := make(map[common.Address]blockchain.GenesisAccount)
 	for _, addr := range addrs {

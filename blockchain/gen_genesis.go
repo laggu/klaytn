@@ -22,7 +22,6 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
 		Governance []byte                                      `json:"governanceData"`
-		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
 		BlockScore *math.HexOrDecimal256                       `json:"blockScore"`
 		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
 		Number     math.HexOrDecimal64                         `json:"number"`
@@ -34,7 +33,6 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.Timestamp = math.HexOrDecimal64(g.Timestamp)
 	enc.ExtraData = g.ExtraData
 	enc.Governance = g.Governance
-	enc.GasLimit = math.HexOrDecimal64(g.GasLimit)
 	enc.BlockScore = (*math.HexOrDecimal256)(g.BlockScore)
 	if g.Alloc != nil {
 		enc.Alloc = make(map[common.UnprefixedAddress]GenesisAccount, len(g.Alloc))
@@ -55,7 +53,6 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
 		ExtraData  *hexutil.Bytes                              `json:"extraData"`
 		Governance []byte                                      `json:"governanceData"`
-		GasLimit   *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
 		BlockScore *math.HexOrDecimal256                       `json:"blockScore"`
 		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
 		Number     *math.HexOrDecimal64                        `json:"number"`
@@ -78,10 +75,6 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	if dec.Governance != nil {
 		g.Governance = dec.Governance
 	}
-	if dec.GasLimit == nil {
-		return errors.New("missing required field 'gasLimit' for Genesis")
-	}
-	g.GasLimit = uint64(*dec.GasLimit)
 	if dec.BlockScore != nil {
 		g.BlockScore = (*big.Int)(dec.BlockScore)
 	}

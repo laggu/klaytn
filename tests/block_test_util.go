@@ -76,7 +76,6 @@ type btHeader struct {
 	TransactionsTrie common.Hash
 	ExtraData        []byte
 	BlockScore       *big.Int
-	GasLimit         uint64
 	GasUsed          uint64
 	Timestamp        *big.Int
 }
@@ -85,7 +84,6 @@ type btHeaderMarshaling struct {
 	ExtraData  hexutil.Bytes
 	Number     *math.HexOrDecimal256
 	BlockScore *math.HexOrDecimal256
-	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
 	Timestamp  *math.HexOrDecimal256
 }
@@ -140,7 +138,6 @@ func (t *BlockTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 		Timestamp:  t.json.Genesis.Timestamp.Uint64(),
 		ParentHash: t.json.Genesis.ParentHash,
 		ExtraData:  t.json.Genesis.ExtraData,
-		GasLimit:   t.json.Genesis.GasLimit,
 		GasUsed:    t.json.Genesis.GasUsed,
 		BlockScore: t.json.Genesis.BlockScore,
 		Alloc:      t.json.Pre,
