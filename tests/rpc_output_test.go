@@ -494,7 +494,7 @@ func TestRPCOutput(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            &contract.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      common.Big0,
@@ -518,7 +518,7 @@ func TestRPCOutput(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract2.Addr,
+			types.TxValueKeyTo:            &contract2.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      common.Big0,
@@ -546,7 +546,7 @@ func TestRPCOutput(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.Nonce,
 			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 contract3.Addr,
+			types.TxValueKeyTo:                 &contract3.Addr,
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           common.Big0,
@@ -749,7 +749,6 @@ func TestRPCOutput(t *testing.T) {
 			panic(err)
 		}
 
-		amount := new(big.Int).SetUint64(10000000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:        reservoir.Nonce,
 			types.TxValueKeyFrom:         reservoir.Addr,
