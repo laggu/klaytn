@@ -19,6 +19,7 @@ package main
 import (
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/rpc"
+	"net"
 )
 
 type BN struct {
@@ -29,7 +30,24 @@ func NewBN(t discover.Discovery) *BN {
 	return &BN{ntab: t}
 }
 
-func (b *BN) CreateUpdateNode(node *discover.Node) error {
+func (b *BN) Name() string {
+	return b.ntab.Name()
+}
+
+func (b *BN) Resolve(target discover.NodeID) *discover.Node {
+	return b.ntab.Resolve(target)
+}
+
+func (b *BN) Lookup(target discover.NodeID) []*discover.Node {
+	return b.ntab.Lookup(target)
+}
+
+func (b *BN) ReadRandomNodes(buf []*discover.Node) int {
+	return b.ntab.ReadRandomNodes(buf)
+}
+
+func (b *BN) CreateUpdateNode(id discover.NodeID, ip net.IP, udpPort, tcpPort uint16) error {
+	node := discover.NewNode(id, ip, udpPort, tcpPort)
 	return b.ntab.CreateUpdateNode(node)
 }
 

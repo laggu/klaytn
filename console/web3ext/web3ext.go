@@ -43,7 +43,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'createUpdateNode',
 			call: 'bootnode_createUpdateNode',
-			params: 1
+			params: 4
 		}),
 		new web3._extend.Method({
 			name: 'getNode',
@@ -62,6 +62,26 @@ web3._extend({
 			name: 'deleteNode',
 			call: 'bootnode_deleteNode',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'name',
+			call: 'bootnode_name',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'resolve',
+			call: 'bootnode_resolve',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'lookup',
+			call: 'bootnode_lookup',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'readRandomNodes',
+			call: 'bootnode_readRandomNodes',
+			params: 0
 		})
 	],
 	properties: []
