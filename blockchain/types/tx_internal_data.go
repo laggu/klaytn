@@ -256,6 +256,9 @@ type TxInternalData interface {
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
 
+	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
+	SenderTxHash() common.Hash
+
 	// Validate returns nil if tx is validated with the given stateDB and currentBlockNumber.
 	// Otherwise, it returns an error.
 	// This function is called in TxPool.validateTx() and TxInternalData.Execute().

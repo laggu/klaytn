@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -295,6 +296,28 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 		t.Payload,
 		t.HumanReadable,
 	}
+}
+
+func (t *TxInternalDataSmartContractDeploy) SenderTxHash() common.Hash {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, t.Type())
+	rlp.Encode(hw, []interface{}{
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.Payload,
+		t.HumanReadable,
+		t.TxSignatures,
+	})
+
+	h := common.Hash{}
+
+	hw.Sum(h[:0])
+
+	return h
 }
 
 func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64) error {

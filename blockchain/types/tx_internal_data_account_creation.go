@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
+	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -409,6 +410,31 @@ func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
 		t.HumanReadable,
 		keyEnc,
 	}
+}
+
+func (t *TxInternalDataAccountCreation) SenderTxHash() common.Hash {
+	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
+	keyEnc, _ := rlp.EncodeToBytes(serializer)
+
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, t.Type())
+	rlp.Encode(hw, []interface{}{
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.From,
+		t.HumanReadable,
+		keyEnc,
+		t.TxSignatures,
+	})
+
+	h := common.Hash{}
+
+	hw.Sum(h[:0])
+
+	return h
 }
 
 func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64) error {

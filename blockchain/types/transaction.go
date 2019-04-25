@@ -54,10 +54,11 @@ func deriveSigner(V *big.Int) Signer {
 type Transaction struct {
 	data TxInternalData
 	// caches
-	hash     atomic.Value
-	size     atomic.Value
-	from     atomic.Value
-	feePayer atomic.Value
+	hash         atomic.Value
+	size         atomic.Value
+	from         atomic.Value
+	feePayer     atomic.Value
+	senderTxHash atomic.Value
 
 	// validatedSender represents the sender of the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
@@ -116,6 +117,15 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 // ChainId returns which chain id this transaction was signed for (if at all)
 func (tx *Transaction) ChainId() *big.Int {
 	return tx.data.ChainId()
+}
+
+func (tx *Transaction) SenderTxHash() common.Hash {
+	if senderTxHash := tx.senderTxHash.Load(); senderTxHash != nil {
+		return senderTxHash.(common.Hash)
+	}
+	v := tx.data.SenderTxHash()
+	tx.senderTxHash.Store(v)
+	return v
 }
 
 func validateSignature(v, r, s *big.Int) bool {
