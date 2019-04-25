@@ -46,7 +46,7 @@ var (
 	isAlphaNumericWithFirstAlphabet = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z]+$`).MatchString
 )
 
-var LastReservedAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000004FF")
+var lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
 
 var (
 	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
@@ -201,9 +201,9 @@ func IsHumanReadableAddress(s string) error {
 	return nil
 }
 
-// IsReservedAddress returns true if the input address is in the range of Klaytn reserved address.
-func IsReservedAddress(addr Address) bool {
-	if bytes.Compare(addr.Bytes(), LastReservedAddressHex) > 0 {
+// IsPrecompiledContractAddress returns true if the input address is in the range of precompiled contract addresses.
+func IsPrecompiledContractAddress(addr Address) bool {
+	if bytes.Compare(addr.Bytes(), lastPrecompiledContractAddressHex) > 0 || addr == (Address{}) {
 		return false
 	}
 	return true

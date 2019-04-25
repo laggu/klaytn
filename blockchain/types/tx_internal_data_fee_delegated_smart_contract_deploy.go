@@ -373,14 +373,14 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 		if stateDB.Exist(*to) {
 			return kerrors.ErrAccountAlreadyExists
 		}
-		if common.IsReservedAddress(*to) {
-			return kerrors.ErrReservedAddress
+		if common.IsPrecompiledContractAddress(*to) {
+			return kerrors.ErrPrecompiledContractAddress
 		}
 	} else {
 		codeHash := crypto.Keccak256Hash(t.Payload)
 		newAddr := crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
-		if common.IsReservedAddress(newAddr) {
-			return kerrors.ErrReservedAddress
+		if common.IsPrecompiledContractAddress(newAddr) {
+			return kerrors.ErrPrecompiledContractAddress
 		}
 	}
 	// Fail if the sender does not exist.

@@ -21,14 +21,14 @@ import "errors"
 // TODO-Klaytn: Use integer for error codes.
 // TODO-Klaytn: Integrate all universally accessible errors into kerrors package.
 var (
-	ErrNotHumanReadableAddress   = errors.New("not a human readable address")
-	ErrOutOfGas                  = errors.New("out of gas")
-	ErrMaxKeysExceed             = errors.New("the number of keys exceeds the limit")
-	ErrMaxKeysExceedInValidation = errors.New("the number of keys exceeds the limit in the validation check")
-	ErrMaxFeeRatioExceeded       = errors.New("fee ratio exceeded the maximum")
-	ErrEmptySlice                = errors.New("slice is empty")
-	ErrNotProgramAccount         = errors.New("not a program account (e.g., an account having code and storage)")
-	ErrReservedAddress           = errors.New("the address is reserved for system services")
+	ErrNotHumanReadableAddress    = errors.New("not a human readable address")
+	ErrOutOfGas                   = errors.New("out of gas")
+	ErrMaxKeysExceed              = errors.New("the number of keys exceeds the limit")
+	ErrMaxKeysExceedInValidation  = errors.New("the number of keys exceeds the limit in the validation check")
+	ErrMaxFeeRatioExceeded        = errors.New("fee ratio exceeded the maximum")
+	ErrEmptySlice                 = errors.New("slice is empty")
+	ErrNotProgramAccount          = errors.New("not a program account (e.g., an account having code and storage)")
+	ErrPrecompiledContractAddress = errors.New("the address is reserved for pre-compiled contracts")
 
 	// Error codes related to account keys.
 	ErrAccountAlreadyExists                 = errors.New("account already exists")

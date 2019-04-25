@@ -281,8 +281,8 @@ func (t *TxInternalDataValueTransfer) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsReservedAddress(t.Recipient) {
-		return kerrors.ErrReservedAddress
+	if common.IsPrecompiledContractAddress(t.Recipient) {
+		return kerrors.ErrPrecompiledContractAddress
 	}
 	return nil
 }

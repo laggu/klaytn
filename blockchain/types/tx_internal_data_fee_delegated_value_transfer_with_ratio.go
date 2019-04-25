@@ -335,8 +335,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SenderTxHash() common
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsReservedAddress(t.Recipient) {
-		return kerrors.ErrReservedAddress
+	if common.IsPrecompiledContractAddress(t.Recipient) {
+		return kerrors.ErrPrecompiledContractAddress
 	}
 	// Fail if the sender does not exist.
 	if !stateDB.Exist(t.From) {

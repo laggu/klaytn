@@ -356,8 +356,8 @@ func (t *TxInternalDataLegacy) String() string {
 
 func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if t.Recipient != nil {
-		if common.IsReservedAddress(*t.Recipient) {
-			return kerrors.ErrReservedAddress
+		if common.IsPrecompiledContractAddress(*t.Recipient) {
+			return kerrors.ErrPrecompiledContractAddress
 		}
 	}
 	return nil

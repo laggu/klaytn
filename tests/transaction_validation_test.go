@@ -198,10 +198,10 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 	}
 }
 
-// TestValidatingTxToReservedAddress tests validation logic for the tx sending to reserved addresses.
-// Reserved Klaytn Addresses (0x0000 ~ 0x04FF) are used for system services such as pre-compiled contracts.
-// Therefore, the address should be called only by the internal call.
-func TestValidatingTxToReservedAddress(t *testing.T) {
+// TestValidatingTxToPrecompiledContractAddress tests validation logic for the tx sending to reserved addresses.
+// PrecompiledContractAddresses (0x0001 ~ 0x03FF) are used for system services such as pre-compiled contracts.
+// Therefore, the addresses should be called only by the internal call.
+func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -247,38 +247,38 @@ func TestValidatingTxToReservedAddress(t *testing.T) {
 	account, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 	assert.Equal(t, nil, err)
 
-	// 1. tx (reservoir -> 0x04FF)
+	// 1. tx (reservoir -> 0x03FF)
 	{
-		// The test address is 0x4FF
-		account.Addr = common.BytesToAddress(hexutil.MustDecode("0x00000000000000000000000000000000000004FF"))
+		// The test address is 0x00000000000000000000000000000000000003FF
+		account.Addr = common.BytesToAddress(hexutil.MustDecode("0x00000000000000000000000000000000000003FF"))
 
 		tx := genLegacyValueTransfer(signer, reservoir, account)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, _ = genValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, _ = genFeeDelegatedValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, _ = genFeeDelegatedWithRatioValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, _ = genValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, _ = genFeeDelegatedValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, _ = genFeeDelegatedWithRatioValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
@@ -294,7 +294,7 @@ func TestValidatingTxToReservedAddress(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
 		assert.Equal(t, nil, err)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
@@ -310,7 +310,7 @@ func TestValidatingTxToReservedAddress(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
 		assert.Equal(t, nil, err)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
@@ -329,7 +329,7 @@ func TestValidatingTxToReservedAddress(t *testing.T) {
 		err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
 		assert.Equal(t, nil, err)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.GetNonce(),
@@ -349,27 +349,27 @@ func TestValidatingTxToReservedAddress(t *testing.T) {
 		err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
 		assert.Equal(t, nil, err)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrReservedAddress, err)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 
 		// Contract Execution Txs is filtered out before the validation of the recipient address.
 		// It should be tested after the installation of a smart contract on the target address.
 		//tx, _ = genSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
 		//err = txpool.AddRemote(tx)
-		//assert.Equal(t, kerrors.ErrReservedAddress, err)
+		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 		//
 		//tx, _ = genFeeDelegatedSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
 		//err = txpool.AddRemote(tx)
-		//assert.Equal(t, kerrors.ErrReservedAddress, err)
+		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 		//
 		//tx, _ = genFeeDelegatedWithRatioSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
 		//err = txpool.AddRemote(tx)
-		//assert.Equal(t, kerrors.ErrReservedAddress, err)
+		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
 	}
 
-	// 2. tx (reservoir -> 0x0500)
+	// 2. tx (reservoir -> 0x0400)
 	{
-		// The test address is 0x500
-		account.Addr = common.BytesToAddress(hexutil.MustDecode("0x0000000000000000000000000000000000000500"))
+		// The test address is 0x400
+		account.Addr = common.BytesToAddress(hexutil.MustDecode("0x0000000000000000000000000000000000000400"))
 
 		tx := genLegacyValueTransfer(signer, reservoir, account)
 		err = txpool.AddRemote(tx)
@@ -499,7 +499,140 @@ func TestValidatingTxToReservedAddress(t *testing.T) {
 		//reservoir.Nonce++
 	}
 
-	// 3. tx (reservoir -> 0x0101000000000000000000000000000000000000)
+	// 3. tx (reservoir -> 0x00)
+	{
+		// The test address is 0x00
+		account.Addr = common.BytesToAddress(hexutil.MustDecode("0x0000000000000000000000000000000000000000"))
+
+		tx := genLegacyValueTransfer(signer, reservoir, account)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, _ = genValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, _ = genFeeDelegatedValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, _ = genFeeDelegatedWithRatioValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, _ = genValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, _ = genFeeDelegatedValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, _ = genFeeDelegatedWithRatioValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, err = types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            account.GetAddr(),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    account.GetAccKey(),
+		})
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, err = types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &account.Addr,
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          []byte{},
+		})
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, err = types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &account.Addr,
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          []byte{},
+			types.TxValueKeyFeePayer:      reservoir.GetAddr(),
+		})
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+		err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
+		assert.Equal(t, nil, err)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		tx, err = types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              reservoir.GetNonce(),
+			types.TxValueKeyFrom:               reservoir.GetAddr(),
+			types.TxValueKeyTo:                 &account.Addr,
+			types.TxValueKeyAmount:             big.NewInt(0),
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyHumanReadable:      false,
+			types.TxValueKeyData:               []byte{},
+			types.TxValueKeyFeePayer:           reservoir.GetAddr(),
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
+		})
+		assert.Equal(t, nil, err)
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+		err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
+		assert.Equal(t, nil, err)
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.Nonce++
+
+		// Contract Execution Txs is filtered out before the validation of the recipient address.
+		// It should be tested after the installation of a smart contract on the target address.
+		//tx, _ = genSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
+		//err = txpool.AddRemote(tx)
+		//assert.Equal(t, nil, err)
+		//reservoir.Nonce++
+		//
+		//tx, _ = genFeeDelegatedSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
+		//err = txpool.AddRemote(tx)
+		//assert.Equal(t, nil, err)
+		//reservoir.Nonce++
+		//
+		//tx, _ = genFeeDelegatedWithRatioSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
+		//err = txpool.AddRemote(tx)
+		//assert.Equal(t, nil, err)
+		//reservoir.Nonce++
+	}
+
+	// 4. tx (reservoir -> 0x0101000000000000000000000000000000000000)
 	{
 		// The test address is 0x0101000000000000000000000000000000000000
 		account.Addr = common.BytesToAddress(hexutil.MustDecode("0x0101000000000000000000000000000000000000"))
