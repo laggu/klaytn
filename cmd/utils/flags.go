@@ -511,6 +511,11 @@ var (
 		Name:  "discovery-policy",
 		Usage: "Set the discovery policy as predefined preset (cbn|pbn|ebn)",
 	}
+	DiscoveryMaxNodes = cli.UintFlag{
+		Name:  "discovery-max-node",
+		Usage: "Set the max number of node contains in NEIGHBORS body",
+		Value: 16,
+	}
 	// ServiceChain's settings
 	EnabledBridgeFlag = cli.BoolFlag{
 		Name:  "bridge",
@@ -852,6 +857,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if err != nil {
 		logger.Crit("Failed with set discovery policy", "err", err)
 	}
+	cfg.DiscoveryMaxNeighbors = ctx.GlobalUint(DiscoveryMaxNodes.Name)
 	logger.Info("Setting Discovery policy", "DiscoveryPolicy", cfg.DiscoveryPolicyPreset)
 
 	//TODO-Klaytn-Node remove after the real bootnode is implemented

@@ -252,6 +252,20 @@ func (n *Node) UnmarshalText(text []byte) error {
 	return err
 }
 
+// CompareNode implements the compare the all node field and return its result
+func (n *Node) CompareNode(tn *Node) bool {
+	if n.ID != tn.ID {
+		return false
+	}
+	if n.TCP != tn.TCP {
+		return false
+	}
+	if n.UDP != tn.UDP {
+		return false
+	}
+	return true
+}
+
 // NodeID is a unique identifier for each node.
 // The node identifier is a marshaled elliptic curve public key.
 type NodeID [NodeIDBits / 8]byte

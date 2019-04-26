@@ -235,6 +235,9 @@ type Config struct {
 	udp                   transport
 	Conn                  conn
 	DiscoveryPolicyPreset string
+
+	// These settings are required for discovery packet control
+	MaxNeighborsNode uint
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.

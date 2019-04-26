@@ -67,6 +67,7 @@ const (
 	TableDiscovery = iota
 	SimpleDiscovery
 	CompositeDiscovery
+	DiscoveryPolicyComposite
 )
 
 // Discovery policy preset for CLI

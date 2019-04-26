@@ -142,6 +142,9 @@ type bootnodeConfig struct {
 	// DiscoveryPolicies is slice of the discovery policy for using multiple discovery
 	// policy for Klaytn network.
 	DiscoveryPolicyPreset string `toml:",omitempty"`
+
+	// MaxNeighborsNode is the maximum number of neighbor nodes in a neighbor packet of simple discovery.
+	MaxNeighborsNode uint
 }
 
 // splitAndTrim splits input separated by a comma

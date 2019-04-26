@@ -170,6 +170,9 @@ type Config struct {
 
 	// DiscoveryPolicyPreset is the predefined discovery policy preset of each nodetype.
 	DiscoveryPolicyPreset string `toml:",omitempty"`
+
+	// MaxNeighborsNode is the maximum number of neighbor nodes in a neighbor packet of simple discovery.
+	DiscoveryMaxNeighbors uint
 }
 
 // NewServer returns a new Server interface.
@@ -356,15 +359,16 @@ func (srv *MultiChannelServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:   srv.PrivateKey,
-			AnnounceAddr: realaddr,
-			NodeDBPath:   srv.NodeDatabase,
-			NetRestrict:  srv.NetRestrict,
-			Bootnodes:    srv.BootstrapNodes,
-			Unhandled:    unhandled,
-			Conn:         conn,
-			Addr:         realaddr,
-			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			PrivateKey:       srv.PrivateKey,
+			AnnounceAddr:     realaddr,
+			NodeDBPath:       srv.NodeDatabase,
+			NetRestrict:      srv.NetRestrict,
+			Bootnodes:        srv.BootstrapNodes,
+			Unhandled:        unhandled,
+			Conn:             conn,
+			Addr:             realaddr,
+			Id:               discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			MaxNeighborsNode: srv.DiscoveryMaxNeighbors,
 		}
 
 		ntab, err := discover.ListenUDP(&cfg)
@@ -1254,15 +1258,16 @@ func (srv *BaseServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:   srv.PrivateKey,
-			AnnounceAddr: realaddr,
-			NodeDBPath:   srv.NodeDatabase,
-			NetRestrict:  srv.NetRestrict,
-			Bootnodes:    srv.BootstrapNodes,
-			Unhandled:    unhandled,
-			Conn:         conn,
-			Addr:         realaddr,
-			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			PrivateKey:       srv.PrivateKey,
+			AnnounceAddr:     realaddr,
+			NodeDBPath:       srv.NodeDatabase,
+			NetRestrict:      srv.NetRestrict,
+			Bootnodes:        srv.BootstrapNodes,
+			Unhandled:        unhandled,
+			Conn:             conn,
+			Addr:             realaddr,
+			Id:               discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			MaxNeighborsNode: srv.DiscoveryMaxNeighbors,
 		}
 
 		ntab, err := discover.ListenUDP(&cfg)

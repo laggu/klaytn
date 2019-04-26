@@ -81,6 +81,8 @@ func bootnode(ctx *cli.Context) error {
 			DiscoveryPolicyPreset: strings.TrimSpace(ctx.GlobalString(utils.DiscoveryPolicyPresetFlag.Name)),
 
 			Logger: log.NewModuleLogger(log.CMDKBN),
+
+			MaxNeighborsNode: ctx.GlobalUint(utils.DiscoveryMaxNodes.Name),
 		}
 	)
 
@@ -144,6 +146,7 @@ func bootnode(ctx *cli.Context) error {
 		Addr:                  realaddr,
 		Id:                    discover.PubkeyID(&bcfg.nodeKey.PublicKey),
 		DiscoveryPolicyPreset: bcfg.DiscoveryPolicyPreset,
+		MaxNeighborsNode:      bcfg.MaxNeighborsNode,
 	}
 
 	tab, err := discover.ListenUDP(&cfg)
@@ -200,6 +203,7 @@ func main() {
 			utils.MetricsEnabledFlag,
 			utils.PrometheusExporterFlag,
 			utils.PrometheusExporterPortFlag,
+			utils.DiscoveryMaxNodes,
 		}
 	)
 	// TODO-Klaytn: remove `help` command
