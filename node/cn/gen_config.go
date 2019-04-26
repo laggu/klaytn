@@ -9,7 +9,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/consensus/gxhash"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/node/cn/gasprice"
@@ -39,11 +38,11 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		ParallelDBWrite         bool
 		StateDBCaching          bool
 		TxPoolStateCache        bool
+		TrieCacheLimit          int
 		ServiceChainSigner      common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
 		Rewardbase              common.Address `toml:",omitempty"`
-		Gxhash                  gxhash.Config
 		TxPool                  blockchain.TxPoolConfig
 		GPO                     gasprice.Config
 		EnablePreimageRecording bool
@@ -71,11 +70,11 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
 	enc.TxPoolStateCache = c.TxPoolStateCache
+	enc.TrieCacheLimit = c.TrieCacheLimit
 	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
 	enc.Rewardbase = c.Rewardbase
-	enc.Gxhash = c.Gxhash
 	enc.TxPool = c.TxPool
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
@@ -107,11 +106,11 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
 		TxPoolStateCache        *bool
+		TrieCacheLimit          *int
 		ServiceChainSigner      *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
 		Rewardbase              *common.Address `toml:",omitempty"`
-		Gxhash                  *gxhash.Config
 		TxPool                  *blockchain.TxPoolConfig
 		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
@@ -180,6 +179,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.TxPoolStateCache != nil {
 		c.TxPoolStateCache = *dec.TxPoolStateCache
 	}
+	if dec.TrieCacheLimit != nil {
+		c.TrieCacheLimit = *dec.TrieCacheLimit
+	}
 	if dec.ServiceChainSigner != nil {
 		c.ServiceChainSigner = *dec.ServiceChainSigner
 	}
@@ -191,9 +193,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.Rewardbase != nil {
 		c.Rewardbase = *dec.Rewardbase
-	}
-	if dec.Gxhash != nil {
-		c.Gxhash = *dec.Gxhash
 	}
 	if dec.TxPool != nil {
 		c.TxPool = *dec.TxPool

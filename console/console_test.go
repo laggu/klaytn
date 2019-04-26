@@ -32,7 +32,6 @@ import (
 
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/consensus/gxhash"
 	"github.com/ground-x/klaytn/console/jsre"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
@@ -102,9 +101,6 @@ func newTester(t *testing.T, confOverride func(*cn.Config)) *tester {
 	cnConf := &cn.Config{
 		Genesis:            blockchain.DeveloperGenesisBlock(15, common.Address{}),
 		ServiceChainSigner: common.HexToAddress(testAddress),
-		Gxhash: gxhash.Config{
-			PowMode: gxhash.ModeTest,
-		},
 	}
 	if confOverride != nil {
 		confOverride(cnConf)

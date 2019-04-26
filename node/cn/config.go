@@ -24,7 +24,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/consensus/gxhash"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/log"
@@ -33,8 +32,6 @@ import (
 	"math/big"
 	"os"
 	"os/user"
-	"path/filepath"
-	"runtime"
 	"time"
 )
 
@@ -42,14 +39,7 @@ var logger = log.NewModuleLogger(log.NodeCN)
 
 // DefaultConfig contains default settings for use on the Klaytn main net.
 var DefaultConfig = Config{
-	SyncMode: downloader.FullSync,
-	Gxhash: gxhash.Config{
-		CacheDir:       "gxhash",
-		CachesInMem:    2,
-		CachesOnDisk:   3,
-		DatasetsInMem:  1,
-		DatasetsOnDisk: 2,
-	},
+	SyncMode:          downloader.FullSync,
 	NetworkId:         1,
 	LevelDBCacheSize:  768,
 	TrieCacheSize:     256,
@@ -73,11 +63,6 @@ func init() {
 		if user, err := user.Current(); err == nil {
 			home = user.HomeDir
 		}
-	}
-	if runtime.GOOS == "windows" {
-		DefaultConfig.Gxhash.DatasetDir = filepath.Join(home, "AppData", "Gxhash")
-	} else {
-		DefaultConfig.Gxhash.DatasetDir = filepath.Join(home, ".gxhash")
 	}
 }
 
@@ -124,9 +109,6 @@ type Config struct {
 
 	// Reward
 	Rewardbase common.Address `toml:",omitempty"`
-
-	// Gxhash options
-	Gxhash gxhash.Config
 
 	// Transaction pool options
 	TxPool blockchain.TxPoolConfig
