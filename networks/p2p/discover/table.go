@@ -63,13 +63,6 @@ const (
 	seedMaxAge         = 5 * 24 * time.Hour
 )
 
-const (
-	TableDiscovery = iota
-	SimpleDiscovery
-	CompositeDiscovery
-	DiscoveryPolicyComposite
-)
-
 // Discovery policy preset for CLI
 const (
 	DiscoveryPolicyPresetCBN = "cbn" // Simple discovery(cn discovery for cn)
