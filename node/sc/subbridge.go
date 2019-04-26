@@ -100,8 +100,11 @@ type SubBridge struct {
 	chainHeadSub event.Subscription
 	logsCh       chan []*types.Log
 	logsSub      event.Subscription
-	txCh         chan blockchain.NewTxsEvent
-	txSub        event.Subscription
+
+	// If this channel can't be read immediately, it can lock service chain tx pool.
+	// Commented out because for now, it doesn't need.
+	//txCh         chan blockchain.NewTxsEvent
+	//txSub        event.Subscription
 
 	peers        *bridgePeerSet
 	handler      *SubBridgeHandler
@@ -135,18 +138,18 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	config.nodekey = config.NodeKey()
 
 	sc := &SubBridge{
-		config:          config,
-		chainDB:         chainDB,
-		peers:           newBridgePeerSet(),
-		newPeerCh:       make(chan BridgePeer),
-		noMorePeers:     make(chan struct{}),
-		eventMux:        ctx.EventMux,
-		accountManager:  ctx.AccountManager,
-		networkId:       config.NetworkId,
-		ctx:             ctx,
-		chainHeadCh:     make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		logsCh:          make(chan []*types.Log, chainLogChanSize),
-		txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
+		config:         config,
+		chainDB:        chainDB,
+		peers:          newBridgePeerSet(),
+		newPeerCh:      make(chan BridgePeer),
+		noMorePeers:    make(chan struct{}),
+		eventMux:       ctx.EventMux,
+		accountManager: ctx.AccountManager,
+		networkId:      config.NetworkId,
+		ctx:            ctx,
+		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		logsCh:         make(chan []*types.Log, chainLogChanSize),
+		//txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
 		quitSync:        make(chan struct{}),
 		maxPeers:        config.MaxPeer,
 		tokenReceivedCh: make(chan TokenReceivedEvent, tokenReceivedChanSize),
@@ -251,7 +254,7 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 		case *blockchain.TxPool:
 			sc.txPool = v
 			// event from core-service
-			sc.txSub = sc.txPool.SubscribeNewTxsEvent(sc.txCh)
+			// sc.txSub = sc.txPool.SubscribeNewTxsEvent(sc.txCh)
 			// TODO-Klaytn if need pending block, should use miner
 		case *work.Miner:
 		}
@@ -479,14 +482,14 @@ func (sc *SubBridge) loop() {
 				logger.Error("subbridge block event is nil")
 			}
 		// Handle NewTexsEvent
-		case ev := <-sc.txCh:
-			if ev.Txs != nil {
-				if err := sc.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
-					logger.Error("subbridge tx event", "err", err)
-				}
-			} else {
-				logger.Error("subbridge tx event is nil")
-			}
+		//case ev := <-sc.txCh:
+		//	if ev.Txs != nil {
+		//		if err := sc.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
+		//			logger.Error("subbridge tx event", "err", err)
+		//		}
+		//	} else {
+		//		logger.Error("subbridge tx event is nil")
+		//	}
 		// Handle ChainLogsEvent
 		case logs := <-sc.logsCh:
 			if err := sc.eventhandler.HandleLogsEvent(logs); err != nil {
@@ -508,11 +511,11 @@ func (sc *SubBridge) loop() {
 				logger.Error("subbridge block subscription ", "err", err)
 			}
 			return
-		case err := <-sc.txSub.Err():
-			if err != nil {
-				logger.Error("subbridge tx subscription ", "err", err)
-			}
-			return
+		//case err := <-sc.txSub.Err():
+		//	if err != nil {
+		//		logger.Error("subbridge tx subscription ", "err", err)
+		//	}
+		//	return
 		case err := <-sc.logsSub.Err():
 			if err != nil {
 				logger.Error("subbridge log subscription ", "err", err)
@@ -605,7 +608,7 @@ func (s *SubBridge) Stop() error {
 	close(s.quitSync)
 
 	s.chainHeadSub.Unsubscribe()
-	s.txSub.Unsubscribe()
+	//s.txSub.Unsubscribe()
 	s.logsSub.Unsubscribe()
 	s.tokenReceivedSub.Unsubscribe()
 	s.tokenTransferSub.Unsubscribe()
