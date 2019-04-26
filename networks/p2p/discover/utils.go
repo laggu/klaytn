@@ -18,13 +18,18 @@ package discover
 
 func NewDiscovery(cfg *Config) (Discovery, error) {
 	switch cfg.DiscoveryPolicyPreset {
-	case DiscoveryPolicyPresetPBN:
-	case DiscoveryPolicyPresetPN:
-	case DiscoveryPolicyPresetEN:
 	case DiscoveryPolicyPresetCN:
+		return newSimple(cfg)
+	case DiscoveryPolicyPresetPN:
+		return newSimple(cfg)
+	case DiscoveryPolicyPresetEN:
+		// TODO-Klaytn-Node add composite table after implementation
 	case DiscoveryPolicyPresetCBN:
-		// TODO-Klaytn-Discovery: create simple discovery interface in here
+		return newSimple(cfg)
+	case DiscoveryPolicyPresetPBN:
+		// TODO-Klaytn-Node add composite table after implementation
 	case DiscoveryPolicyPresetEBN:
+		return newTable(cfg)
 	default:
 		return newTable(cfg)
 	}
