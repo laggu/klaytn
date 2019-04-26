@@ -39,7 +39,8 @@ import (
 
 // Client defines typed wrappers for the Ethereum RPC API.
 type Client struct {
-	c *rpc.Client
+	c       *rpc.Client
+	chainID *big.Int
 }
 
 // Dial connects a client to the given URL.
@@ -57,7 +58,7 @@ func DialContext(ctx context.Context, rawurl string) (*Client, error) {
 
 // NewClient creates a client that uses the given RPC client.
 func NewClient(c *rpc.Client) *Client {
-	return &Client{c}
+	return &Client{c, nil}
 }
 
 func (ec *Client) Close() {
@@ -576,9 +577,14 @@ func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 
 // ChainID can return the chain ID of the chain.
 func (ec *Client) ChainID(ctx context.Context) (*big.Int, error) {
+	if ec.chainID != nil {
+		return ec.chainID, nil
+	}
+
 	var result hexutil.Big
 	err := ec.c.CallContext(ctx, &result, "klay_chainID")
-	return (*big.Int)(&result), err
+	ec.chainID = (*big.Int)(&result)
+	return ec.chainID, err
 }
 
 // AddPeer can add a static peer on Klaytn node.
