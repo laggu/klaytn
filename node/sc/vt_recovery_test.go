@@ -317,8 +317,8 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 		for i := 0; i < testTxCount; i++ {
 			ops[KLAY].request(info, info.localInfo.bridge)
 		}
-		info.localInfo.bridge, info.remoteInfo.bridge = info.remoteInfo.bridge, info.localInfo.bridge
 	})
+	info.localInfo.bridge, info.remoteInfo.bridge = info.remoteInfo.bridge, info.localInfo.bridge
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 	err := vtr.updateRecoveryHint()
 	if err != nil {
