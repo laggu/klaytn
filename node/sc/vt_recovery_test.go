@@ -417,8 +417,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	if err != nil {
 		t.Fatal("deploy bridge test failed", remoteAddr)
 	}
-	localInfo := bm.bridges[localAddr]
-	remoteInfo := bm.bridges[remoteAddr]
+	localInfo, _ := bm.GetBridgeInfo(localAddr)
+	remoteInfo, _ := bm.GetBridgeInfo(remoteAddr)
 	sim.Commit()
 
 	// Prepare token contract

@@ -244,7 +244,7 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 
 	for _, journal := range bm.journal.cache {
 		if journal.Paired {
-			bridgeInfo, ok := bm.bridges[journal.LocalAddress]
+			bridgeInfo, ok := bm.GetBridgeInfo(journal.LocalAddress)
 			if ok && !bridgeInfo.subscribed {
 				continue
 			}
@@ -252,7 +252,7 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 				bm.subBridge.addressManager.DeleteBridge(journal.LocalAddress)
 			}
 
-			bridgeInfo, ok = bm.bridges[journal.RemoteAddress]
+			bridgeInfo, ok = bm.GetBridgeInfo(journal.RemoteAddress)
 			if ok && !bridgeInfo.subscribed {
 				continue
 			}
@@ -266,6 +266,12 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 	bm.journal.cache = gwjs
 
 	return bm.journal.cache
+}
+
+// GetBridge returns bridge contract of the specified address.
+func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) {
+	bridge, ok := bm.bridges[addr]
+	return bridge, ok
 }
 
 // SetBridge stores the address and bridge pair with local/remote and subscription status.
@@ -331,16 +337,18 @@ func (bm *BridgeManager) LoadAllBridge() error {
 
 // addRecovery creates value transfer recovery and starts the recovery for a given addresses pair.
 func (bm *BridgeManager) addRecovery(localAddress, remoteAddress common.Address) {
-	if bm.bridges[localAddress] == nil {
+	localBridgeInfo, ok := bm.GetBridgeInfo(localAddress)
+	if !ok {
 		logger.Error("local bridge is not exist to create value transfer recovery")
 		return
 	}
-	if bm.bridges[remoteAddress] == nil {
+	remoteBridgeInfo, ok := bm.GetBridgeInfo(remoteAddress)
+	if !ok {
 		logger.Error("remote bridge is not exist to create value transfer recovery")
 		return
 	}
 
-	recovery := NewValueTransferRecovery(bm.subBridge.config, bm.bridges[localAddress], bm.bridges[remoteAddress])
+	recovery := NewValueTransferRecovery(bm.subBridge.config, localBridgeInfo, remoteBridgeInfo)
 	recovery.Start()
 	bm.recoveries = append(bm.recoveries, recovery)
 }
@@ -357,14 +365,14 @@ func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBa
 	var bridgeInfo *BridgeInfo
 
 	defer func() {
-		if bridgeInfo != nil && subscribed && !bm.bridges[addr].subscribed {
+		if bridgeInfo != nil && subscribed && !bridgeInfo.subscribed {
 			logger.Info("bridge subscription is enabled by journal", "address", addr)
 			bm.subscribeEvent(addr, bridgeInfo.bridge)
 		}
 	}()
 
-	bridgeInfo = bm.bridges[addr]
-	if bridgeInfo != nil {
+	bridgeInfo, ok := bm.GetBridgeInfo(addr)
+	if ok {
 		return nil
 	}
 
@@ -374,7 +382,7 @@ func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBa
 	}
 	logger.Info("bridge ", "address", addr)
 	bm.SetBridge(addr, bridge, local, false)
-	bridgeInfo = bm.bridges[addr]
+	bridgeInfo, _ = bm.GetBridgeInfo(addr)
 
 	return nil
 }
@@ -443,7 +451,7 @@ func (bm *BridgeManager) deployBridge(chainID *big.Int, nonce *big.Int, accountK
 
 // SubscribeEvent registers a subscription of BridgeERC20Received and BridgeTokenWithdrawn
 func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
-	bridgeInfo, ok := bm.bridges[addr]
+	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if !ok {
 		return fmt.Errorf("there is no bridge contract which address %v", addr)
 	}
@@ -474,7 +482,15 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 		return err
 	}
 	bm.withdrawEvents[addr] = withdrawnSub
-	bm.bridges[addr].subscribed = true
+	bridgeInfo, ok := bm.GetBridgeInfo(addr)
+	if !ok {
+		receivedSub.Unsubscribe()
+		withdrawnSub.Unsubscribe()
+		delete(bm.receivedEvents, addr)
+		delete(bm.withdrawEvents, addr)
+		return errors.New("fail to get bridge info")
+	}
+	bridgeInfo.subscribed = true
 
 	go bm.loop(addr, tokenReceivedCh, tokenWithdrawCh, bm.scope.Track(receivedSub), bm.scope.Track(withdrawnSub))
 
@@ -489,7 +505,10 @@ func (bm *BridgeManager) unsubscribeEvent(addr common.Address) {
 	withdrawSub := bm.withdrawEvents[addr]
 	withdrawSub.Unsubscribe()
 
-	bm.bridges[addr].subscribed = false
+	bridgeInfo, ok := bm.GetBridgeInfo(addr)
+	if ok {
+		bridgeInfo.subscribed = false
+	}
 }
 
 // Loop handles subscribed event messages.

@@ -118,7 +118,8 @@ func TestBridgeManager(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
-	bridge := bridgeManager.bridges[addr].bridge
+	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
+	bridge := bridgeInfo.bridge
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
@@ -470,7 +471,8 @@ func TestBridgeManagerJournal(t *testing.T) {
 	bm, err := NewBridgeManager(sc)
 
 	addr, err := bm.DeployBridgeTest(sim, false)
-	bridge := bm.bridges[addr].bridge
+	bridgeInfo, _ := bm.GetBridgeInfo(addr)
+	bridge := bridgeInfo.bridge
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 

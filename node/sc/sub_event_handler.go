@@ -178,7 +178,7 @@ func (cce *ChildChainEventHandler) handleRequestValueTransferEvent(bridgeInfo *B
 
 func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(ev TokenReceivedEvent) error {
 	handleBridgeAddr := cce.subbridge.AddressManager().GetCounterPartBridge(ev.ContractAddr)
-	handleBridgeInfo, ok := cce.subbridge.bridgeManager.bridges[handleBridgeAddr]
+	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(handleBridgeAddr)
 	if !ok {
 		return errors.New("there is no bridge")
 	}
@@ -224,7 +224,7 @@ func (cce *ChildChainEventHandler) processingPendingRequestEvents(handleBridgeIn
 }
 
 func (cce *ChildChainEventHandler) HandleHandleValueTransferEvent(ev TokenTransferEvent) error {
-	handleBridgeInfo, ok := cce.subbridge.bridgeManager.bridges[ev.ContractAddr]
+	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ev.ContractAddr)
 	if !ok {
 		return errors.New("there is no bridge")
 	}
