@@ -802,6 +802,11 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'unsubscribeBridge',
+			call: 'bridge_unsubscribeEventBridge',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'anchoring',
 			call: 'bridge_anchoring',
 			params: 1

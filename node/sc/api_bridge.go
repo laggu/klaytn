@@ -17,6 +17,7 @@
 package sc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -100,7 +101,7 @@ func (sbapi *SubBridgeAPI) DeployBridgeOnParentChain() (common.Address, error) {
 	return sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
 }
 
-// TODO-Klaytn needs to make unSubscribe() method and enable user can unSubscribeEvent.
+// SubscribeEventBridge enables the given service/main chain bridges to subscribe the events.
 func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
 	err := sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
 	if err != nil {
@@ -124,6 +125,21 @@ func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr common.Address, pBri
 	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
 
 	sbapi.sc.bridgeManager.addRecovery(cBridgeAddr, pBridgeAddr)
+	return nil
+}
+
+// UnsubscribeEventBridge disables the event subscription of the given service/main chain bridges.
+func (sbapi *SubBridgeAPI) UnsubscribeEventBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+		return errors.New("unexpected bridge pair")
+	}
+	_, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
+	if err != nil {
+		return err
+	}
+	sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
+	sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
+	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
 	return nil
 }
 

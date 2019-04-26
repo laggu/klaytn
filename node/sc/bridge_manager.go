@@ -498,12 +498,18 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 }
 
 // UnsubscribeEvent cancels the contract's watch logs and initializes the status.
-func (bm *BridgeManager) unsubscribeEvent(addr common.Address) {
+func (bm *BridgeManager) UnsubscribeEvent(addr common.Address) {
 	receivedSub := bm.receivedEvents[addr]
-	receivedSub.Unsubscribe()
+	if receivedSub != nil {
+		receivedSub.Unsubscribe()
+		delete(bm.receivedEvents, addr)
+	}
 
 	withdrawSub := bm.withdrawEvents[addr]
-	withdrawSub.Unsubscribe()
+	if withdrawSub != nil {
+		withdrawSub.Unsubscribe()
+		delete(bm.withdrawEvents, addr)
+	}
 
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if ok {

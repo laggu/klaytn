@@ -481,7 +481,7 @@ func TestBridgeManagerJournal(t *testing.T) {
 	bm.journal.cache = append(bm.journal.cache, &BridgeJournal{addr, addr, true})
 
 	bm.SubscribeEvent(addr)
-	bm.unsubscribeEvent(addr)
+	bm.UnsubscribeEvent(addr)
 
 	// 2. Reload bridge as if journal is loaded (it handles subscription internally)
 	bm.loadBridge(addr, sc.remoteBackend, false, true)
