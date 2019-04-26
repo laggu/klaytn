@@ -42,6 +42,16 @@ func TestState(t *testing.T) {
 	st.fails(`^stRevertTest/RevertPrecompiledTouch\.json/Byzantium`, "bug in test")
 	st.skipLoad(`^stZeroKnowledge2/ecmul_0-3_5616_28000_96\.json`) // fails with geth
 
+	// Skip since the tests transfer values to precompiled contracts
+	st.skipLoad(`^stPreCompiledContracts2/CallSha256_1_nonzeroValue.json`)
+	st.skipLoad(`^stPreCompiledContracts2/CallIdentity_1_nonzeroValue.json`)
+	st.skipLoad(`^stPreCompiledContracts2/CallEcrecover0_NoGas.json`)
+	st.skipLoad(`^stRandom2/randomStatetest644.json`)
+	st.skipLoad(`^stRandom2/randomStatetest645.json`)
+	st.skipLoad(`^stStaticCall/static_CallIdentity_1_nonzeroValue.json`)
+	st.skipLoad(`^stStaticCall/static_CallSha256_1_nonzeroValue.json`)
+	st.skipLoad(`^stArgsZeroOneBalance/callNonConst.json`)
+
 	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
 		for _, subtest := range test.Subtests() {
 			subtest := subtest

@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
 	"sync/atomic"
@@ -192,22 +193,37 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		to       = AccountRef(addr)
 		snapshot = evm.StateDB.Snapshot()
 	)
-	if !evm.StateDB.Exist(addr) {
+
+	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
+	if common.IsPrecompiledContractAddress(addr) {
 		precompiles := PrecompiledContractsByzantium
-		if precompiles[addr] == nil && value.Sign() == 0 {
-			// Calling a non existing account, don't do antything, but ping the tracer
+		if precompiles[addr] == nil || value.Sign() != 0 {
+			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
+			if evm.vmConfig.Debug && evm.depth == 0 {
+				evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+				evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
+			}
+			return nil, gas, kerrors.ErrPrecompiledContractAddress
+		}
+		// create an account object of the enabled precompiled address if not exist.
+		if !evm.StateDB.Exist(addr) {
+			evm.StateDB.CreateSmartContractAccount(addr)
+		}
+	}
+
+	// The logic below creates an EOA account if not exist.
+	// However, it does not create a contract account since `Call` is not proper method to create a contract.
+	if !evm.StateDB.Exist(addr) {
+		if value.Sign() == 0 {
+			// Calling a non-existing account (probably contract), don't do antything, but ping the tracer
 			if evm.vmConfig.Debug && evm.depth == 0 {
 				evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
 				evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
 			}
 			return nil, gas, nil
 		}
-		// TODO-Klaytn-Accounts: Later, fix this code that precompiled contracts does not create an account.
-		if precompiles[addr] != nil {
-			evm.StateDB.CreateSmartContractAccount(addr)
-		} else {
-			evm.StateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
-		}
+		// If non-existing address is called with a value, an object of the address is created.
+		evm.StateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
@@ -397,6 +413,9 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 	if evm.StateDB.GetNonce(contractAddr) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
 	}
+	if common.IsPrecompiledContractAddress(contractAddr) {
+		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
+	}
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
 	evm.StateDB.CreateSmartContractAccount(contractAddr)
@@ -472,6 +491,9 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	}
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
+	}
+	if common.IsPrecompiledContractAddress(contractAddr) {
+		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
 	}
 	// Ensure there's no existing contract already at the designated address
 	nonce := evm.StateDB.GetNonce(caller.Address())
