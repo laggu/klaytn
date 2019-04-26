@@ -41,6 +41,7 @@ type TxInternalDataSmartContractDeploy struct {
 	From          common.Address
 	Payload       []byte
 	HumanReadable bool
+	CodeFormat    params.CodeFormat
 
 	TxSignatures
 
@@ -59,6 +60,7 @@ type TxInternalDataSmartContractDeployJSON struct {
 	From          common.Address   `json:"from"`
 	Payload       hexutil.Bytes    `json:"input"`
 	HumanReadable bool             `json:"humanReadable"`
+	CodeFormat    hexutil.Uint     `json:"codeFormat"`
 	TxSignatures  TxSignaturesJSON `json:"signatures"`
 	Hash          *common.Hash     `json:"hash"`
 }
@@ -131,6 +133,13 @@ func newTxInternalDataSmartContractDeployWithMap(values map[TxValueKeyType]inter
 		return nil, errValueKeyHumanReadableMustBool
 	}
 
+	if v, ok := values[TxValueKeyCodeFormat].(params.CodeFormat); ok {
+		t.CodeFormat = v
+		delete(values, TxValueKeyCodeFormat)
+	} else {
+		return nil, errValueKeyCodeFormatInvalid
+	}
+
 	if len(values) != 0 {
 		for k := range values {
 			logger.Warn("unnecessary key", k.String())
@@ -167,7 +176,8 @@ func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
 		t.From == ta.From &&
 		bytes.Equal(t.Payload, ta.Payload) &&
 		t.HumanReadable == ta.HumanReadable &&
-		t.TxSignatures.equal(ta.TxSignatures)
+		t.TxSignatures.equal(ta.TxSignatures) &&
+		t.CodeFormat == ta.CodeFormat
 }
 
 func (t *TxInternalDataSmartContractDeploy) IsLegacyTransaction() bool {
@@ -202,6 +212,10 @@ func (t *TxInternalDataSmartContractDeploy) GetHash() *common.Hash {
 	return t.Hash
 }
 
+func (t *TxInternalDataSmartContractDeploy) GetCodeFormat() params.CodeFormat {
+	return t.CodeFormat
+}
+
 func (t *TxInternalDataSmartContractDeploy) SetHash(h *common.Hash) {
 	t.Hash = h
 }
@@ -226,6 +240,7 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 	Signature:     %s
 	Paylod:        %x
 	HumanReadable: %v
+	CodeForamt:    %s
 	Hex:           %x
 `,
 		tx.Hash(),
@@ -239,6 +254,7 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 		t.TxSignatures.string(),
 		common.Bytes2Hex(t.Payload),
 		t.HumanReadable,
+		t.CodeFormat.String(),
 		enc)
 
 }
@@ -269,6 +285,7 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSignToBytes() []byte {
 		From          common.Address
 		Payload       []byte
 		HumanReadable bool
+		CodeFormat    params.CodeFormat
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -279,6 +296,7 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSignToBytes() []byte {
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		t.CodeFormat,
 	})
 
 	return b
@@ -295,6 +313,7 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		t.CodeFormat,
 	}
 }
 
@@ -352,6 +371,12 @@ func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlo
 	if !stateDB.Exist(t.From) {
 		return errValueKeySenderUnknown
 	}
+
+	// Fail if the codeFormat is invalid.
+	if !t.CodeFormat.Validate() {
+		return errValueKeyCodeFormatInvalid
+	}
+
 	return nil
 }
 
@@ -397,6 +422,7 @@ func (t *TxInternalDataSmartContractDeploy) MakeRPCOutput() map[string]interface
 		"value":         (*hexutil.Big)(t.Amount),
 		"input":         hexutil.Bytes(t.Payload),
 		"humanReadable": t.HumanReadable,
+		"codeFormat":    hexutil.Uint(t.CodeFormat),
 		"signatures":    t.TxSignatures.ToJSON(),
 	}
 }
@@ -413,6 +439,7 @@ func (t *TxInternalDataSmartContractDeploy) MarshalJSON() ([]byte, error) {
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		(hexutil.Uint)(t.CodeFormat),
 		t.TxSignatures.ToJSON(),
 		t.Hash,
 	})
@@ -432,6 +459,7 @@ func (t *TxInternalDataSmartContractDeploy) UnmarshalJSON(b []byte) error {
 	t.From = js.From
 	t.Payload = js.Payload
 	t.HumanReadable = js.HumanReadable
+	t.CodeFormat = params.CodeFormat(js.CodeFormat)
 	t.TxSignatures = js.TxSignatures.ToTxSignatures()
 	t.Hash = js.Hash
 

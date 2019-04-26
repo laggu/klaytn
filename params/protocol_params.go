@@ -141,3 +141,26 @@ var (
 func GetMaximumExtraDataSize() uint64 {
 	return BFTMaximumExtraDataSize
 }
+
+type CodeFormat uint8
+
+const (
+	CodeFormatEVM CodeFormat = iota
+	CodeFormatLast
+)
+
+func (t CodeFormat) String() string {
+	switch t {
+	case CodeFormatEVM:
+		return "CodeFormatEVM"
+	}
+
+	return "UndefinedCodeFormat"
+}
+
+func (t CodeFormat) Validate() bool {
+	if t < CodeFormatLast {
+		return true
+	}
+	return false
+}

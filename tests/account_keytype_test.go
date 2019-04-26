@@ -241,6 +241,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyGasPrice] = amountZero
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyHumanReadable] = false
+		values[types.TxValueKeyCodeFormat] = params.CodeFormatEVM
 	case types.TxTypeFeeDelegatedSmartContractDeploy:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
@@ -251,6 +252,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyHumanReadable] = false
 		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyCodeFormat] = params.CodeFormatEVM
 	case types.TxTypeFeeDelegatedSmartContractDeployWithRatio:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
@@ -262,6 +264,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyHumanReadable] = false
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+		values[types.TxValueKeyCodeFormat] = params.CodeFormatEVM
 	case types.TxTypeSmartContractExecution:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
@@ -494,6 +497,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 				types.TxValueKeyGasPrice:      gasPrice,
 				types.TxValueKeyHumanReadable: true,
 				types.TxValueKeyData:          common.FromHex(code),
+				types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 			}
 			tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 			assert.Equal(t, nil, err)
@@ -2296,6 +2300,7 @@ func TestAccountTransferWithRoleBasedTxKey(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -2535,6 +2540,7 @@ func TestAccountTransferWithRoleBasedUpdateKey(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -2781,6 +2787,7 @@ func TestAccountTransferWithRoleBasedFeePayerKey(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -2808,6 +2815,7 @@ func TestAccountTransferWithRoleBasedFeePayerKey(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -3225,6 +3233,7 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyFeePayer:      roleBased.Addr,
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
@@ -3255,6 +3264,7 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 			types.TxValueKeyData:               common.FromHex(code),
 			types.TxValueKeyFeePayer:           roleBased.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
@@ -3285,6 +3295,7 @@ func TestAccountFeeDelegationWithRoleBasedUpdateKey(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
@@ -3764,6 +3775,7 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyFeePayer:      roleBased.Addr,
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
@@ -3794,6 +3806,7 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 			types.TxValueKeyData:               common.FromHex(code),
 			types.TxValueKeyFeePayer:           roleBased.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
@@ -3824,6 +3837,7 @@ func TestAccountFeeDelegationWithRoleBasedTxKey(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
@@ -4344,6 +4358,7 @@ func TestAccountFeeDelegationWithRoleBasedFeePayerKey(t *testing.T) {
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyFeePayer:      roleBased.Addr,
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
@@ -4379,6 +4394,7 @@ func TestAccountFeeDelegationWithRoleBasedFeePayerKey(t *testing.T) {
 			types.TxValueKeyData:               common.FromHex(code),
 			types.TxValueKeyFeePayer:           roleBased.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)

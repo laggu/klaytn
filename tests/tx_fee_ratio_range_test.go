@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/kerrors"
+	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -117,6 +118,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          code,
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -240,6 +242,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 			types.TxValueKeyData:               []byte{0x80},
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: feeRatio,
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
 		assert.Equal(t, nil, err)

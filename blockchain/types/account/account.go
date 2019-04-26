@@ -42,6 +42,7 @@ const (
 	AccountValueKeyCodeHash
 	AccountValueKeyHumanReadable
 	AccountValueKeyAccountKey
+	AccountValueKeyCodeFormat
 )
 
 func (a AccountType) String() string {

@@ -190,6 +190,7 @@ func TestGasCalculation(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -661,6 +662,7 @@ func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *b
 		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyFrom:          from.GetAddr(),
 		types.TxValueKeyData:          common.FromHex(code),
+		types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 	}
 
 	if to == nil {

@@ -233,6 +233,7 @@ func testTxRLPDecodeSmartContractDeploy(t *testing.T) {
 		tx.From,
 		tx.Payload,
 		tx.HumanReadable, // bool only allows 0 or 1.
+		tx.CodeFormat,
 		tx.TxSignatures,
 	})
 	assert.Equal(t, nil, err)
@@ -445,6 +446,7 @@ func testTxRLPDecodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 		tx.From,
 		tx.Payload,
 		tx.HumanReadable,
+		tx.CodeFormat,
 		tx.TxSignatures,
 		tx.FeePayer,
 		tx.FeePayerSignatures,
@@ -639,6 +641,7 @@ func testTxRLPDecodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		tx.Payload,
 		tx.HumanReadable,
 		tx.FeeRatio,
+		tx.CodeFormat,
 		tx.TxSignatures,
 		tx.FeePayer,
 		tx.FeePayerSignatures,

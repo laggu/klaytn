@@ -42,6 +42,7 @@ type TxInternalDataFeeDelegatedSmartContractDeploy struct {
 	From          common.Address
 	Payload       []byte
 	HumanReadable bool
+	CodeFormat    params.CodeFormat
 
 	TxSignatures
 
@@ -63,6 +64,7 @@ type TxInternalDataFeeDelegatedSmartContractDeployJSON struct {
 	From               common.Address   `json:"from"`
 	Payload            hexutil.Bytes    `json:"input"`
 	HumanReadable      bool             `json:"humanReadable"`
+	CodeFormat         hexutil.Uint     `json:"codeFormat"`
 	TxSignatures       TxSignaturesJSON `json:"signatures"`
 	FeePayer           common.Address   `json:"feePayer"`
 	FeePayerSignatures TxSignaturesJSON `json:"feePayerSignatures"`
@@ -144,6 +146,13 @@ func newTxInternalDataFeeDelegatedSmartContractDeployWithMap(values map[TxValueK
 		return nil, errValueKeyFeePayerMustAddress
 	}
 
+	if v, ok := values[TxValueKeyCodeFormat].(params.CodeFormat); ok {
+		t.CodeFormat = v
+		delete(values, TxValueKeyCodeFormat)
+	} else {
+		return nil, errValueKeyCodeFormatInvalid
+	}
+
 	if len(values) != 0 {
 		for k := range values {
 			logger.Warn("unnecessary key", k.String())
@@ -182,7 +191,8 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Equal(a TxInternalData) 
 		t.HumanReadable == ta.HumanReadable &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures) &&
+		t.CodeFormat == ta.CodeFormat
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) IsLegacyTransaction() bool {
@@ -221,6 +231,10 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayer() common.Add
 	return t.FeePayer
 }
 
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetCodeFormat() params.CodeFormat {
+	return t.CodeFormat
+}
+
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayerRawSignatureValues() TxSignatures {
 	return t.FeePayerSignatures.RawSignatureValues()
 }
@@ -256,6 +270,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
 	Value:         %#x
 	Paylod:        %x
 	HumanReadable: %v
+	CodeForamt:    %s
 	Signature:     %s
 	FeePayer:      %s
 	FeePayerSig:   %s
@@ -271,6 +286,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
 		t.Amount,
 		common.Bytes2Hex(t.Payload),
 		t.HumanReadable,
+		t.CodeFormat.String(),
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
 		t.FeePayerSignatures.string(),
@@ -304,6 +320,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SerializeForSignToBytes(
 		From          common.Address
 		Payload       []byte
 		HumanReadable bool
+		CodeFormat    params.CodeFormat
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -314,6 +331,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SerializeForSignToBytes(
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		t.CodeFormat,
 	})
 
 	return b
@@ -330,6 +348,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SerializeForSign() []int
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		t.CodeFormat,
 	}
 }
 
@@ -387,6 +406,12 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	if !stateDB.Exist(t.From) {
 		return errValueKeySenderUnknown
 	}
+
+	// Fail if the codeFormat is invalid.
+	if !t.CodeFormat.Validate() {
+		return errValueKeyCodeFormatInvalid
+	}
+
 	return nil
 }
 
@@ -432,6 +457,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) MakeRPCOutput() map[stri
 		"to":                 t.Recipient,
 		"value":              (*hexutil.Big)(t.Amount),
 		"humanReadable":      t.HumanReadable,
+		"codeFormat":         hexutil.Uint(t.CodeFormat),
 		"signatures":         t.TxSignatures.ToJSON(),
 		"feePayer":           t.FeePayer,
 		"feePayerSignatures": t.FeePayerSignatures.ToJSON(),
@@ -450,6 +476,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) MarshalJSON() ([]byte, e
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		(hexutil.Uint)(t.CodeFormat),
 		t.TxSignatures.ToJSON(),
 		t.FeePayer,
 		t.FeePayerSignatures.ToJSON(),
@@ -471,6 +498,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) UnmarshalJSON(b []byte) 
 	t.From = js.From
 	t.Payload = js.Payload
 	t.HumanReadable = js.HumanReadable
+	t.CodeFormat = params.CodeFormat(js.CodeFormat)
 	t.TxSignatures = js.TxSignatures.ToTxSignatures()
 	t.FeePayer = js.FeePayer
 	t.FeePayerSignatures = js.FeePayerSignatures.ToTxSignatures()

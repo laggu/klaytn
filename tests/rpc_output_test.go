@@ -500,6 +500,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyGasPrice:      common.Big0,
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -525,6 +526,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyFeePayer:      reservoir2.Addr,
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
 		assert.Equal(t, nil, err)
@@ -554,6 +556,7 @@ func TestRPCOutput(t *testing.T) {
 			types.TxValueKeyData:               common.FromHex(code),
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(33),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, values)
 		assert.Equal(t, nil, err)

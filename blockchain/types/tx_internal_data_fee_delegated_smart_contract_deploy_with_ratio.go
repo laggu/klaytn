@@ -47,6 +47,7 @@ type TxInternalDataFeeDelegatedSmartContractDeployWithRatio struct {
 	Payload       []byte
 	HumanReadable bool
 	FeeRatio      FeeRatio
+	CodeFormat    params.CodeFormat
 
 	TxSignatures
 
@@ -69,6 +70,7 @@ type TxInternalDataFeeDelegatedSmartContractDeployWithRatioJSON struct {
 	Payload            hexutil.Bytes    `json:"input"`
 	HumanReadable      bool             `json:"humanReadable"`
 	FeeRatio           hexutil.Uint     `json:"feeRatio"`
+	CodeFormat         hexutil.Uint     `json:"codeFormat"`
 	TxSignatures       TxSignaturesJSON `json:"signatures"`
 	FeePayer           common.Address   `json:"feePayer"`
 	FeePayerSignatures TxSignaturesJSON `json:"feePayerSignatures"`
@@ -157,6 +159,13 @@ func newTxInternalDataFeeDelegatedSmartContractDeployWithRatioWithMap(values map
 		return nil, errValueKeyFeeRatioMustUint8
 	}
 
+	if v, ok := values[TxValueKeyCodeFormat].(params.CodeFormat); ok {
+		t.CodeFormat = v
+		delete(values, TxValueKeyCodeFormat)
+	} else {
+		return nil, errValueKeyCodeFormatInvalid
+	}
+
 	if len(values) != 0 {
 		for k := range values {
 			logger.Warn("unnecessary key", k.String())
@@ -196,7 +205,8 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Equal(a TxInter
 		t.HumanReadable == ta.HumanReadable &&
 		t.TxSignatures.equal(ta.TxSignatures) &&
 		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
+		t.FeePayerSignatures.equal(ta.FeePayerSignatures) &&
+		t.CodeFormat == ta.CodeFormat
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IsLegacyTransaction() bool {
@@ -243,6 +253,10 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeeRatio() F
 	return t.FeeRatio
 }
 
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetCodeFormat() params.CodeFormat {
+	return t.CodeFormat
+}
+
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetHash(h *common.Hash) {
 	t.Hash = h
 }
@@ -277,6 +291,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) String() string
 	Signature:     %s
 	FeePayer:      %s
 	FeeRatio:      %d
+	CodeForamt:    %s
 	FeePayerSig:   %s
 	Hex:           %x
 `,
@@ -293,6 +308,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) String() string
 		t.TxSignatures.string(),
 		t.FeePayer.String(),
 		t.FeeRatio,
+		t.CodeFormat.String(),
 		t.FeePayerSignatures.string(),
 		enc)
 
@@ -325,6 +341,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SerializeForSig
 		Payload       []byte
 		HumanReadable bool
 		FeeRatio      FeeRatio
+		CodeFormat    params.CodeFormat
 	}{
 		t.Type(),
 		t.AccountNonce,
@@ -336,6 +353,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SerializeForSig
 		t.Payload,
 		t.HumanReadable,
 		t.FeeRatio,
+		t.CodeFormat,
 	})
 
 	return b
@@ -353,6 +371,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SerializeForSig
 		t.Payload,
 		t.HumanReadable,
 		t.FeeRatio,
+		t.CodeFormat,
 	}
 }
 
@@ -412,6 +431,11 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateD
 		return errValueKeySenderUnknown
 	}
 
+	// Fail if the codeFormat is invalid.
+	if !t.CodeFormat.Validate() {
+		return errValueKeyCodeFormatInvalid
+	}
+
 	return nil
 }
 
@@ -457,6 +481,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) MakeRPCOutput()
 		"value":              (*hexutil.Big)(t.Amount),
 		"humanReadable":      t.HumanReadable,
 		"feeRatio":           hexutil.Uint(t.FeeRatio),
+		"codeFormat":         hexutil.Uint(t.CodeFormat),
 		"signatures":         t.TxSignatures.ToJSON(),
 		"feePayer":           t.FeePayer,
 		"feePayerSignatures": t.FeePayerSignatures.ToJSON(),
@@ -476,6 +501,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) MarshalJSON() (
 		t.Payload,
 		t.HumanReadable,
 		(hexutil.Uint)(t.FeeRatio),
+		(hexutil.Uint)(t.CodeFormat),
 		t.TxSignatures.ToJSON(),
 		t.FeePayer,
 		t.FeePayerSignatures.ToJSON(),
@@ -498,6 +524,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) UnmarshalJSON(b
 	t.Payload = js.Payload
 	t.HumanReadable = js.HumanReadable
 	t.FeeRatio = FeeRatio(js.FeeRatio)
+	t.CodeFormat = params.CodeFormat(js.CodeFormat)
 	t.TxSignatures = js.TxSignatures.ToTxSignatures()
 	t.FeePayer = js.FeePayer
 	t.FeePayerSignatures = js.FeePayerSignatures.ToTxSignatures()
