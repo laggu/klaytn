@@ -124,6 +124,8 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyFeePayer"
 	case TxValueKeyFeeRatioOfFeePayer:
 		return "TxValueKeyFeeRatioOfFeePayer"
+	case TxValueKeyCodeFormat:
+		return "TxValueKeyCodeFormat"
 	}
 
 	return "UndefinedTxValueKeyType"

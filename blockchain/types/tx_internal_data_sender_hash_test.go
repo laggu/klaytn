@@ -241,6 +241,7 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 			v.From,
 			v.Payload,
 			v.HumanReadable,
+			v.CodeFormat,
 			v.TxSignatures,
 		})
 
@@ -262,6 +263,7 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 			v.Payload,
 			v.HumanReadable,
 			v.FeeRatio,
+			v.CodeFormat,
 			v.TxSignatures,
 		})
 

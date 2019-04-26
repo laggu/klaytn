@@ -574,6 +574,7 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          []byte{},
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		})
 		assert.Equal(t, nil, err)
 		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
@@ -592,6 +593,7 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          []byte{},
 			types.TxValueKeyFeePayer:      reservoir.GetAddr(),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		})
 		assert.Equal(t, nil, err)
 		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
@@ -613,6 +615,7 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 			types.TxValueKeyData:               []byte{},
 			types.TxValueKeyFeePayer:           reservoir.GetAddr(),
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
 		})
 		assert.Equal(t, nil, err)
 		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())

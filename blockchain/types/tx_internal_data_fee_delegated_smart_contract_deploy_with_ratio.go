@@ -388,6 +388,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SenderTxHash() 
 		t.Payload,
 		t.HumanReadable,
 		t.FeeRatio,
+		t.CodeFormat,
 		t.TxSignatures,
 	})
 

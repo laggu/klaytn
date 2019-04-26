@@ -364,6 +364,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SenderTxHash() common.Ha
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		t.CodeFormat,
 		t.TxSignatures,
 	})
 

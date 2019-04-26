@@ -329,6 +329,7 @@ func (t *TxInternalDataSmartContractDeploy) SenderTxHash() common.Hash {
 		t.From,
 		t.Payload,
 		t.HumanReadable,
+		t.CodeFormat,
 		t.TxSignatures,
 	})
 
