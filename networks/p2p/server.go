@@ -229,6 +229,8 @@ type Server interface {
 	// identifier.
 	Lookup(target discover.NodeID) []*discover.Node
 
+	LookupDiscovery(dName dialType, max int) []*discover.Node
+
 	// Resolve searches for a specific node with the given ID.
 	// It returns nil if the node could not be found.
 	Resolve(target discover.NodeID) *discover.Node
@@ -379,7 +381,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 	}
 
 	dynPeers := srv.maxDialedConns()
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey)
+	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey, nil)
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: true}
@@ -1250,11 +1252,6 @@ func (srv *BaseServer) Start() (err error) {
 		}
 	}
 
-	//if !srv.NoDiscovery && srv.DiscoveryV5 {
-	//	unhandled = make(chan discover.ReadPacket, 100)
-	//	sconn = &sharedUDPConn{conn, unhandled}
-	//}
-
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
@@ -1277,27 +1274,8 @@ func (srv *BaseServer) Start() (err error) {
 		srv.ntab = ntab
 	}
 
-	//if srv.DiscoveryV5 {
-	//	var (
-	//		ntab *discv5.Network
-	//		err  error
-	//	)
-	//	if sconn != nil {
-	//		ntab, err = discv5.ListenUDP(srv.PrivateKey, sconn, realaddr, "", srv.NetRestrict) //srv.NodeDatabase)
-	//	} else {
-	//		ntab, err = discv5.ListenUDP(srv.PrivateKey, conn, realaddr, "", srv.NetRestrict) //srv.NodeDatabase)
-	//	}
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if err := ntab.SetFallbackNodes(srv.BootstrapNodesV5); err != nil {
-	//		return err
-	//	}
-	//	srv.DiscV5 = ntab
-	//}
-
 	dynPeers := srv.maxDialedConns()
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey)
+	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey, nil)
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: false}
@@ -1836,6 +1814,10 @@ func (srv *BaseServer) CheckNilNetworkTable() bool {
 // identifier.
 func (srv *BaseServer) Lookup(target discover.NodeID) []*discover.Node {
 	return srv.ntab.Lookup(target)
+}
+
+func (srv *BaseServer) LookupDiscovery(dName dialType, max int) []*discover.Node {
+	return nil
 }
 
 // Resolve searches for a specific node with the given ID.
