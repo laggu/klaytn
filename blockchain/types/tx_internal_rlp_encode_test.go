@@ -77,7 +77,7 @@ func TestTxRLPEncode(t *testing.T) {
 	}
 }
 
-func printRLPEncode(chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, txHashRLP *bytes.Buffer, rawTx *Transaction) {
+func printRLPEncode(chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, txHashRLP *bytes.Buffer, senderTxHashRLP *bytes.Buffer, rawTx *Transaction) {
 	privateKey := crypto.FromECDSA(key)
 
 	fmt.Printf("chainid %#x\n", chainId)
@@ -86,11 +86,12 @@ func printRLPEncode(chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, txHas
 	fmt.Printf("pubkeyY %#x\n", key.Y)
 	fmt.Printf("sigRLP %#x\n", sigRLP.Bytes())
 	fmt.Printf("sigHash %s\n", signer.Hash(rawTx).String())
-	fmt.Printf("TxHash %#x\n", txHashRLP.Bytes())
+	fmt.Printf("TxHashRLP %#x\n", txHashRLP.Bytes())
+	fmt.Printf("SenderTxHashRLP %#x\n", senderTxHashRLP.Bytes())
 	fmt.Println(rawTx)
 }
 
-func printFeeDelegatedRLPEncode(t *testing.T, chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, feePayerSigRLP *bytes.Buffer, txHashRLP *bytes.Buffer, rawTx *Transaction) {
+func printFeeDelegatedRLPEncode(t *testing.T, chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, feePayerSigRLP *bytes.Buffer, txHashRLP *bytes.Buffer, senderTxHashRLP *bytes.Buffer, rawTx *Transaction) {
 	privateKey := crypto.FromECDSA(key)
 
 	fmt.Printf("chainid %#x\n", chainId)
@@ -113,7 +114,8 @@ func printFeeDelegatedRLPEncode(t *testing.T, chainId *big.Int, signer Signer, s
 	fmt.Printf("FeePayerRLP %#x\n", feePayerSigRLP.Bytes())
 	fmt.Printf("FeePayerHash %s\n", feePyaerHash.String())
 
-	fmt.Printf("TxHash %#x\n", txHashRLP.Bytes())
+	fmt.Printf("TxHashRLP %#x\n", txHashRLP.Bytes())
+	fmt.Printf("SenderTxHashRLP %#x\n", senderTxHashRLP.Bytes())
 	fmt.Println(rawTx)
 }
 
@@ -153,7 +155,7 @@ func testTxRLPEncodeLegacy(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeValueTransfer(t *testing.T) {
@@ -187,8 +189,9 @@ func testTxRLPEncodeValueTransfer(t *testing.T) {
 		tx.From,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeValueTransferMemo(t *testing.T) {
@@ -223,8 +226,9 @@ func testTxRLPEncodeValueTransferMemo(t *testing.T) {
 		tx.Payload,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeAccountCreation(t *testing.T) {
@@ -263,8 +267,9 @@ func testTxRLPEncodeAccountCreation(t *testing.T) {
 		keyEnc,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeAccountUpdate(t *testing.T) {
@@ -300,8 +305,9 @@ func testTxRLPEncodeAccountUpdate(t *testing.T) {
 		keyEnc,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeSmartContractDeploy(t *testing.T) {
@@ -335,10 +341,12 @@ func testTxRLPEncodeSmartContractDeploy(t *testing.T) {
 		tx.From,
 		tx.Payload,
 		tx.HumanReadable,
+		tx.CodeFormat,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeSmartContractExecution(t *testing.T) {
@@ -373,8 +381,9 @@ func testTxRLPEncodeSmartContractExecution(t *testing.T) {
 		tx.Payload,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeCancel(t *testing.T) {
@@ -406,8 +415,9 @@ func testTxRLPEncodeCancel(t *testing.T) {
 		tx.From,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeChainDataAnchoring(t *testing.T) {
@@ -440,8 +450,9 @@ func testTxRLPEncodeChainDataAnchoring(t *testing.T) {
 		tx.Payload,
 		tx.TxSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, rawTx)
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedValueTransfer(t *testing.T) {
@@ -489,8 +500,24 @@ func testTxRLPEncodeFeeDelegatedValueTransfer(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedValueTransferMemo(t *testing.T) {
@@ -539,8 +566,25 @@ func testTxRLPEncodeFeeDelegatedValueTransferMemo(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.Payload,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedAccountUpdate(t *testing.T) {
@@ -590,8 +634,23 @@ func testTxRLPEncodeFeeDelegatedAccountUpdate(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		keyEnc,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedSmartContractDeploy(t *testing.T) {
@@ -637,12 +696,32 @@ func testTxRLPEncodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 		tx.From,
 		tx.Payload,
 		tx.HumanReadable,
+		tx.CodeFormat,
 		tx.TxSignatures,
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.Payload,
+		tx.HumanReadable,
+		tx.CodeFormat,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedSmartContractExecution(t *testing.T) {
@@ -691,8 +770,25 @@ func testTxRLPEncodeFeeDelegatedSmartContractExecution(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.Payload,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedCancel(t *testing.T) {
@@ -738,8 +834,22 @@ func testTxRLPEncodeFeeDelegatedCancel(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
@@ -788,8 +898,25 @@ func testTxRLPEncodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.FeeRatio,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
@@ -839,8 +966,25 @@ func testTxRLPEncodeFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.FeeRatio,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
@@ -891,8 +1035,24 @@ func testTxRLPEncodeFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		keyEnc,
+		tx.FeeRatio,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
@@ -939,12 +1099,33 @@ func testTxRLPEncodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		tx.Payload,
 		tx.HumanReadable,
 		tx.FeeRatio,
+		tx.CodeFormat,
 		tx.TxSignatures,
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.Payload,
+		tx.HumanReadable,
+		tx.FeeRatio,
+		tx.CodeFormat,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
@@ -994,8 +1175,26 @@ func testTxRLPEncodeFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.From,
+		tx.Payload,
+		tx.FeeRatio,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func testTxRLPEncodeFeeDelegatedCancelWithRatio(t *testing.T) {
@@ -1042,8 +1241,23 @@ func testTxRLPEncodeFeeDelegatedCancelWithRatio(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
 
-	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, rawTx)
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.FeeRatio,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
 func defaultFeePayerKey() *ecdsa.PrivateKey {
