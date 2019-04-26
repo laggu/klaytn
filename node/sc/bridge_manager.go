@@ -315,7 +315,7 @@ func (bm *BridgeManager) LoadAllBridge() error {
 			err = bm.subscribeEvent(journal.RemoteAddress, remoteBridge)
 			if err != nil {
 				bm.subBridge.AddressManager().DeleteBridge(journal.LocalAddress)
-				bm.unsubscribeEvent(journal.LocalAddress)
+				bm.UnsubscribeEvent(journal.LocalAddress)
 				return err
 			}
 
