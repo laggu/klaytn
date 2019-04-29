@@ -177,7 +177,7 @@ func (t *TxInternalDataAccountCreation) toSerializable() *txInternalDataAccountC
 	}
 }
 
-func (t *TxInternalDataAccountCreation) fromSerializable(serialized *txInternalDataAccountCreationSerializable) {
+func (t *TxInternalDataAccountCreation) fromSerializable(serialized *txInternalDataAccountCreationSerializable) error {
 	t.AccountNonce = serialized.AccountNonce
 	t.Price = serialized.Price
 	t.GasLimit = serialized.GasLimit
@@ -188,8 +188,12 @@ func (t *TxInternalDataAccountCreation) fromSerializable(serialized *txInternalD
 	t.TxSignatures = serialized.TxSignatures
 
 	serializer := accountkey.NewAccountKeySerializer()
-	rlp.DecodeBytes(serialized.KeyData, serializer)
+	if err := rlp.DecodeBytes(serialized.KeyData, serializer); err != nil {
+		return err
+	}
 	t.Key = serializer.GetKey()
+
+	return nil
 }
 
 func (t *TxInternalDataAccountCreation) EncodeRLP(w io.Writer) error {
@@ -202,7 +206,10 @@ func (t *TxInternalDataAccountCreation) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(dec); err != nil {
 		return err
 	}
-	t.fromSerializable(dec)
+	if err := t.fromSerializable(dec); err != nil {
+		logger.Warn("DecodeRLP failed", "err", err)
+		return kerrors.ErrUnserializableKey
+	}
 
 	return nil
 }
@@ -234,7 +241,10 @@ func (t *TxInternalDataAccountCreation) UnmarshalJSON(b []byte) error {
 	}
 
 	ser := accountkey.NewAccountKeySerializer()
-	rlp.DecodeBytes(js.Key, ser)
+	if err := rlp.DecodeBytes(js.Key, ser); err != nil {
+		logger.Warn("UnmarshalJSON failed", "err", err)
+		return kerrors.ErrUnserializableKey
+	}
 
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.Price = (*big.Int)(js.Price)

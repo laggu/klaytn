@@ -17,12 +17,19 @@
 package tests
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
+	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/ser/rlp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"math/big"
 	"math/rand"
 	"os"
@@ -418,6 +425,279 @@ func TestValueTransferRing(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestWronglyEncodedAccountKey checks if accountKey field is encoded in a wrong way.
+// case 1. AccountCreation
+// case 2. AccountUpdate
+// case 3. FeeDelegatedAccountUpdate
+// case 4. FeeDelegatedAccountUpdateWithRatio
+func TestWronglyEncodedAccountKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	numTransactions := 20000
+	numAccounts := 2000
+
+	if numTransactions%numAccounts != 0 {
+		t.Fatalf("numTransactions should be divided by numAccounts! numTransactions: %v, numAccounts: %v", numTransactions, numAccounts)
+	}
+
+	opt := testOption{numTransactions, numAccounts, 4, 1, []byte{}, makeNewTransactionsToRing}
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// make txpool
+	//var txs types.Transactions
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	// case 1. AccountCreation
+	{
+		tx := new(types.Transaction)
+		txtype := types.TxTypeAccountCreation
+
+		wrongEncodedKey := []byte{0x10}
+		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
+			txtype,
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			big.NewInt(10),
+			*bcdata.addrs[0],
+			false,
+			wrongEncodedKey,
+		})
+		require.Equal(t, nil, err)
+
+		h := rlpHash(struct {
+			Byte    []byte
+			ChainId *big.Int
+			R       uint
+			S       uint
+		}{
+			serializedBytes,
+			bcdata.bc.Config().ChainID,
+			uint(0),
+			uint(0),
+		})
+		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		if err != nil {
+			panic(err)
+		}
+
+		buffer := new(bytes.Buffer)
+		err = rlp.Encode(buffer, txtype)
+		assert.Equal(t, nil, err)
+
+		err = rlp.Encode(buffer, []interface{}{
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			big.NewInt(10),
+			*bcdata.addrs[0],
+			false,
+			wrongEncodedKey,
+			sig,
+		})
+		require.Equal(t, nil, err)
+
+		err = rlp.DecodeBytes(buffer.Bytes(), tx)
+		require.Equal(t, kerrors.ErrUnserializableKey, err)
+
+		//txs = append(txs, tx)
+	}
+
+	// case 2. AccountUpdate
+	{
+		tx := new(types.Transaction)
+		txtype := types.TxTypeAccountUpdate
+
+		wrongEncodedKey := []byte{0x10}
+		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
+			txtype,
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			wrongEncodedKey,
+		})
+		require.Equal(t, nil, err)
+
+		h := rlpHash(struct {
+			Byte    []byte
+			ChainId *big.Int
+			R       uint
+			S       uint
+		}{
+			serializedBytes,
+			bcdata.bc.Config().ChainID,
+			uint(0),
+			uint(0),
+		})
+		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		if err != nil {
+			panic(err)
+		}
+
+		buffer := new(bytes.Buffer)
+		err = rlp.Encode(buffer, txtype)
+		assert.Equal(t, nil, err)
+
+		err = rlp.Encode(buffer, []interface{}{
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			wrongEncodedKey,
+			sig,
+		})
+		require.Equal(t, nil, err)
+
+		err = rlp.DecodeBytes(buffer.Bytes(), tx)
+		require.Equal(t, kerrors.ErrUnserializableKey, err)
+	}
+
+	// case 3. FeeDelegatedAccountUpdate
+	{
+		tx := new(types.Transaction)
+		txtype := types.TxTypeFeeDelegatedAccountUpdate
+
+		wrongEncodedKey := []byte{0x10}
+		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
+			txtype,
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			wrongEncodedKey,
+		})
+		require.Equal(t, nil, err)
+
+		h := rlpHash(struct {
+			Byte    []byte
+			ChainId *big.Int
+			R       uint
+			S       uint
+		}{
+			serializedBytes,
+			bcdata.bc.Config().ChainID,
+			uint(0),
+			uint(0),
+		})
+		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		if err != nil {
+			panic(err)
+		}
+
+		buffer := new(bytes.Buffer)
+		err = rlp.Encode(buffer, txtype)
+		assert.Equal(t, nil, err)
+
+		err = rlp.Encode(buffer, []interface{}{
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			wrongEncodedKey,
+			sig,
+			*bcdata.addrs[0],
+			sig,
+		})
+		require.Equal(t, nil, err)
+
+		err = rlp.DecodeBytes(buffer.Bytes(), tx)
+		require.Equal(t, kerrors.ErrUnserializableKey, err)
+	}
+
+	// case 4. FeeDelegatedAccountUpdateWithRatio
+	{
+		tx := new(types.Transaction)
+		txtype := types.TxTypeFeeDelegatedAccountUpdateWithRatio
+
+		wrongEncodedKey := []byte{0x10}
+		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
+			txtype,
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			types.FeeRatio(10),
+			wrongEncodedKey,
+		})
+		require.Equal(t, nil, err)
+
+		h := rlpHash(struct {
+			Byte    []byte
+			ChainId *big.Int
+			R       uint
+			S       uint
+		}{
+			serializedBytes,
+			bcdata.bc.Config().ChainID,
+			uint(0),
+			uint(0),
+		})
+		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		if err != nil {
+			panic(err)
+		}
+
+		buffer := new(bytes.Buffer)
+		err = rlp.Encode(buffer, txtype)
+		assert.Equal(t, nil, err)
+
+		err = rlp.Encode(buffer, []interface{}{
+			uint64(0),
+			new(big.Int).SetUint64(25 * params.Ston),
+			uint64(100000),
+			*bcdata.addrs[0],
+			wrongEncodedKey,
+			types.FeeRatio(10),
+			sig,
+			*bcdata.addrs[0],
+			sig,
+		})
+		require.Equal(t, nil, err)
+
+		err = rlp.DecodeBytes(buffer.Bytes(), tx)
+		require.Equal(t, kerrors.ErrUnserializableKey, err)
+	}
+
+	// Below code is used to check the nil dereference case.
+	//txpool := makeTxPool(bcdata, opt.numTransactions)
+	//txpool.AddRemotes(txs)
+	//
+	//for {
+	//	if err := bcdata.GenABlockWithTxpool(accountMap, txpool, prof); err != nil {
+	//		if err == errEmptyPending {
+	//			break
+	//		}
+	//		t.Fatal(err)
+	//	}
+	//}
 
 	if testing.Verbose() {
 		prof.PrintProfileInfo()

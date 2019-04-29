@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -172,7 +173,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) toSerializable() *txI
 	}
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) fromSerializable(serialized *txInternalDataFeeDelegatedAccountUpdateWithRatioSerializable) {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) fromSerializable(serialized *txInternalDataFeeDelegatedAccountUpdateWithRatioSerializable) error {
 	t.AccountNonce = serialized.AccountNonce
 	t.Price = serialized.Price
 	t.GasLimit = serialized.GasLimit
@@ -183,8 +184,12 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) fromSerializable(seri
 	t.FeeRatio = serialized.FeeRatio
 
 	serializer := accountkey.NewAccountKeySerializer()
-	rlp.DecodeBytes(serialized.Key, serializer)
+	if err := rlp.DecodeBytes(serialized.Key, serializer); err != nil {
+		return err
+	}
 	t.Key = serializer.GetKey()
+
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) EncodeRLP(w io.Writer) error {
@@ -197,7 +202,10 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) DecodeRLP(s *rlp.Stre
 	if err := s.Decode(dec); err != nil {
 		return err
 	}
-	t.fromSerializable(dec)
+	if err := t.fromSerializable(dec); err != nil {
+		logger.Warn("DecodeRLP failed", "err", err)
+		return kerrors.ErrUnserializableKey
+	}
 
 	return nil
 }
@@ -229,7 +237,10 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) UnmarshalJSON(b []byt
 	}
 
 	ser := accountkey.NewAccountKeySerializer()
-	rlp.DecodeBytes(js.Key, ser)
+	if err := rlp.DecodeBytes(js.Key, ser); err != nil {
+		logger.Warn("UnmarshalJSON failed", "err", err)
+		return kerrors.ErrUnserializableKey
+	}
 
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.Price = (*big.Int)(js.Price)
