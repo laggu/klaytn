@@ -105,6 +105,7 @@ type rawNode []byte
 func (n rawNode) canUnload(uint16, uint16) bool { panic("this should never end up in a live trie") }
 func (n rawNode) cache() (hashNode, bool)       { panic("this should never end up in a live trie") }
 func (n rawNode) fstring(ind string) string     { panic("this should never end up in a live trie") }
+func (n rawNode) lenEncoded() uint16            { panic("this should never end up in a live trie") }
 
 // rawFullNode represents only the useful data content of a full node, with the
 // caches and flags stripped out to minimize its data database. This type honors
@@ -114,6 +115,7 @@ type rawFullNode [17]node
 func (n rawFullNode) canUnload(uint16, uint16) bool { panic("this should never end up in a live trie") }
 func (n rawFullNode) cache() (hashNode, bool)       { panic("this should never end up in a live trie") }
 func (n rawFullNode) fstring(ind string) string     { panic("this should never end up in a live trie") }
+func (n rawFullNode) lenEncoded() uint16            { panic("this should never end up in a live trie") }
 
 func (n rawFullNode) EncodeRLP(w io.Writer) error {
 	var nodes [17]node
@@ -139,6 +141,7 @@ type rawShortNode struct {
 func (n rawShortNode) canUnload(uint16, uint16) bool { panic("this should never end up in a live trie") }
 func (n rawShortNode) cache() (hashNode, bool)       { panic("this should never end up in a live trie") }
 func (n rawShortNode) fstring(ind string) string     { panic("this should never end up in a live trie") }
+func (n rawShortNode) lenEncoded() uint16            { panic("this should never end up in a live trie") }
 
 // cachedNode is all the information we know about a single cached node in the
 // memory database write layer.
@@ -315,14 +318,14 @@ func (db *Database) InsertBlob(hash common.Hash, blob []byte) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	db.insert(hash, blob, rawNode(blob))
+	db.insert(hash, uint16(len(blob)), rawNode(blob))
 }
 
 // insert inserts a collapsed trie node into the memory database. This method is
 // a more generic version of InsertBlob, supporting both raw blob insertions as
 // well ex trie node insertions. The blob must always be specified to allow proper
 // size tracking.
-func (db *Database) insert(hash common.Hash, blob []byte, node node) {
+func (db *Database) insert(hash common.Hash, lenEncoded uint16, node node) {
 	// If the node's already cached, skip
 	if _, ok := db.nodes[hash]; ok {
 		return
@@ -330,7 +333,7 @@ func (db *Database) insert(hash common.Hash, blob []byte, node node) {
 	// Create the cached entry for this node
 	entry := &cachedNode{
 		node:      simplifyNode(node),
-		size:      uint16(len(blob)),
+		size:      lenEncoded,
 		flushPrev: db.newest,
 	}
 	for _, child := range entry.childs() {

@@ -95,7 +95,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	}
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildren(n, db)
-	hashed := h.store(collapsed, db, force)
+	hashed, lenEncoded := h.store(collapsed, db, force)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
@@ -103,11 +103,13 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	switch cn := cached.(type) {
 	case *shortNode:
 		cn.flags.hash = cachedHash
+		cn.flags.lenEncoded = lenEncoded
 		if db != nil {
 			cn.flags.dirty = false
 		}
 	case *fullNode:
 		cn.flags.hash = cachedHash
+		cn.flags.lenEncoded = lenEncoded
 		if db != nil {
 			cn.flags.dirty = false
 		}
@@ -152,21 +154,25 @@ func (h *hasher) hashChildren(original node, db *Database) (node, node) {
 // store hashes the node n and if we have a storage layer specified, it writes
 // the key/value pair to it and tracks any node->child references as well as any
 // node->external trie references.
-func (h *hasher) store(n node, db *Database, force bool) node {
+func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
 	// Don't store hashes or empty nodes.
 	if _, isHash := n.(hashNode); n == nil || isHash {
-		return n
+		return n, 0
 	}
-	// Generate the RLP encoding of the node
-	h.tmp.Reset()
-	if err := rlp.Encode(&h.tmp, n); err != nil {
-		panic("encode error: " + err.Error())
-	}
-	if len(h.tmp) < 32 && !force {
-		return n // Nodes smaller than 32 bytes are stored inside their parent
-	}
-	// Larger nodes are replaced by their hash and stored in the database.
 	hash, _ := n.cache()
+	lenEncoded := n.lenEncoded()
+	if hash == nil || lenEncoded == 0 {
+		// Generate the RLP encoding of the node
+		h.tmp.Reset()
+		if err := rlp.Encode(&h.tmp, n); err != nil {
+			panic("encode error: " + err.Error())
+		}
+
+		lenEncoded = uint16(len(h.tmp))
+	}
+	if lenEncoded < 32 && !force {
+		return n, lenEncoded // Nodes smaller than 32 bytes are stored inside their parent
+	}
 	if hash == nil {
 		hash = h.makeHashNode(h.tmp)
 	}
@@ -175,7 +181,7 @@ func (h *hasher) store(n node, db *Database, force bool) node {
 		hash := common.BytesToHash(hash)
 
 		db.lock.Lock()
-		db.insert(hash, h.tmp, n)
+		db.insert(hash, lenEncoded, n)
 		db.lock.Unlock()
 
 		// Track external references from account->storage trie
@@ -194,7 +200,7 @@ func (h *hasher) store(n node, db *Database, force bool) node {
 			}
 		}
 	}
-	return hash
+	return hash, lenEncoded
 }
 
 func (h *hasher) makeHashNode(data []byte) hashNode {

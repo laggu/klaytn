@@ -34,6 +34,7 @@ type node interface {
 	fstring(string) string
 	cache() (hashNode, bool)
 	canUnload(cachegen, cachelimit uint16) bool
+	lenEncoded() uint16
 }
 
 type (
@@ -73,9 +74,10 @@ func (n *shortNode) copy() *shortNode { copy := *n; return &copy }
 
 // nodeFlag contains caching-related metadata about a node.
 type nodeFlag struct {
-	hash  hashNode // cached hash of the node (may be nil)
-	gen   uint16   // cache generation counter
-	dirty bool     // whether the node has changes that must be written to the database
+	hash       hashNode // cached hash of the node (may be nil).
+	gen        uint16   // cache generation counter.
+	dirty      bool     // whether the node has changes that must be written to the database.
+	lenEncoded uint16   // lenEncoded caches the encoding length of the node.
 }
 
 // canUnload tells whether a node can be unloaded.
@@ -92,6 +94,11 @@ func (n *fullNode) cache() (hashNode, bool)  { return n.flags.hash, n.flags.dirt
 func (n *shortNode) cache() (hashNode, bool) { return n.flags.hash, n.flags.dirty }
 func (n hashNode) cache() (hashNode, bool)   { return nil, true }
 func (n valueNode) cache() (hashNode, bool)  { return nil, true }
+
+func (n *fullNode) lenEncoded() uint16  { return n.flags.lenEncoded }
+func (n *shortNode) lenEncoded() uint16 { return n.flags.lenEncoded }
+func (n hashNode) lenEncoded() uint16   { return 0 }
+func (n valueNode) lenEncoded() uint16  { return 0 }
 
 // Pretty printing.
 func (n *fullNode) String() string  { return n.fstring("") }
