@@ -166,15 +166,12 @@ type DBEntryType uint8
 const (
 	headerDB DBEntryType = iota
 	BodyDB
-	tdDB
 	ReceiptsDB
 
 	StateTrieDB
 	TxLookUpEntryDB
 
 	MiscDB
-	// indexSectionsDB must appear after MiscDB
-	indexSectionsDB
 
 	bridgeServiceDB
 
@@ -186,13 +183,11 @@ const (
 var dbDirs = [databaseEntryTypeSize]string{
 	"header",
 	"body",
-	"td",
 	"receipts",
 	"statetrie",
 	"txlookup",
 	"misc",
-	// indexSectionsDB is not a DB, it is a table.
-	"",
+
 	"bridgeservice",
 	"snapshot",
 }
@@ -202,15 +197,12 @@ var dbDirs = [databaseEntryTypeSize]string{
 var dbConfigRatio = [databaseEntryTypeSize]int{
 	6,  // headerDB
 	21, // BodyDB
-	1,  // tdDB
 	21, // ReceiptsDB
 	21, // StateTrieDB
 	21, // TXLookUpEntryDB
-	2,  // MiscDB
-	// indexSectionsDB is not a DB, it is a table.
-	0, // indexSectionsDB
-	5, // bridgeServiceDB
-	2, // snapshotDB
+	3,  // MiscDB
+	5,  // bridgeServiceDB
+	2,  // snapshotDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -290,11 +282,7 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 
 	db.Meter(dbMetricPrefix)
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		if i == int(indexSectionsDB) {
-			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
-		} else {
-			dbm.dbs[i] = db
-		}
+		dbm.dbs[i] = db
 	}
 	return dbm, nil
 }
@@ -304,18 +292,14 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	dbm := newDatabaseManager(dbc)
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		if i == int(indexSectionsDB) {
-			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
-		} else {
-			newDBC := getDBEntryConfig(dbc, DBEntryType(i))
-			db, err := newDatabase(newDBC)
-			if err != nil {
-				logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[i], "err", err)
-			}
-			dbm.dbs[i] = db
-			// Each partition collects metrics independently.
-			db.Meter(dbMetricPrefix + dbDirs[i] + "/")
+		newDBC := getDBEntryConfig(dbc, DBEntryType(i))
+		db, err := newDatabase(newDBC)
+		if err != nil {
+			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[i], "err", err)
 		}
+		dbm.dbs[i] = db
+		// Each partition collects metrics independently.
+		db.Meter(dbMetricPrefix + dbDirs[i] + "/")
 	}
 	return dbm, nil
 }
@@ -771,7 +755,7 @@ func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
 		return cachedTd
 	}
 
-	db := dbm.getDatabase(tdDB)
+	db := dbm.getDatabase(MiscDB)
 	data, _ := db.Get(headerTDKey(number, hash))
 	if len(data) == 0 {
 		return nil
@@ -789,7 +773,7 @@ func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
 
 // WriteTd stores the total blockscore of a block into the database.
 func (dbm *databaseManager) WriteTd(hash common.Hash, number uint64, td *big.Int) {
-	db := dbm.getDatabase(tdDB)
+	db := dbm.getDatabase(MiscDB)
 	data, err := rlp.EncodeToBytes(td)
 	if err != nil {
 		logger.Crit("Failed to RLP encode block total blockscore", "err", err)
@@ -804,7 +788,7 @@ func (dbm *databaseManager) WriteTd(hash common.Hash, number uint64, td *big.Int
 
 // DeleteTd removes all block total blockscore data associated with a hash.
 func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
-	db := dbm.getDatabase(tdDB)
+	db := dbm.getDatabase(MiscDB)
 	if err := db.Delete(headerTDKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete block total blockscore", "err", err)
 	}
@@ -1185,28 +1169,28 @@ func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) error {
 
 // ValidSections operation.
 func (dbm *databaseManager) ReadValidSections() ([]byte, error) {
-	db := dbm.getDatabase(indexSectionsDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Get(validSectionKey)
 }
 
 func (dbm *databaseManager) WriteValidSections(encodedSections []byte) {
-	db := dbm.getDatabase(indexSectionsDB)
+	db := dbm.getDatabase(MiscDB)
 	db.Put(validSectionKey, encodedSections)
 }
 
 // SectionHead operation.
 func (dbm *databaseManager) ReadSectionHead(encodedSection []byte) ([]byte, error) {
-	db := dbm.getDatabase(indexSectionsDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Get(sectionHeadKey(encodedSection))
 }
 
 func (dbm *databaseManager) WriteSectionHead(encodedSection []byte, hash common.Hash) {
-	db := dbm.getDatabase(indexSectionsDB)
+	db := dbm.getDatabase(MiscDB)
 	db.Put(sectionHeadKey(encodedSection), hash.Bytes())
 }
 
 func (dbm *databaseManager) DeleteSectionHead(encodedSection []byte) {
-	db := dbm.getDatabase(indexSectionsDB)
+	db := dbm.getDatabase(MiscDB)
 	db.Delete(sectionHeadKey(encodedSection))
 }
 

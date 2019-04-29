@@ -32,11 +32,6 @@ func NewLevelDBManagerForTest(dbc *DBConfig, levelDBOption *opt.Options) (DBMana
 	var ldb *levelDB
 	var err error
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		if i == int(indexSectionsDB) {
-			dbm.dbs[i] = NewTable(dbm.getDatabase(MiscDB), string(BloomBitsIndexPrefix))
-			continue
-		}
-
 		if !dbm.config.Partitioned {
 			if i == 0 {
 				ldb, err = NewLevelDBWithOption(dbc.Dir, levelDBOption)

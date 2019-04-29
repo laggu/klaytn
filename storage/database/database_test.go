@@ -254,12 +254,6 @@ func testParallelPutGet(db Database, t *testing.T) {
 func TestDBEntryLengthCheck(t *testing.T) {
 	dbRatioSum := 0
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		// indexSectionsDB is not a DB, it is a table.
-		// It does not create a DB.
-		if i == int(indexSectionsDB) {
-			continue
-		}
-
 		if dbDirs[i] == "" {
 			t.Fatalf("Database directory should be specified! index: %v", i)
 		}
