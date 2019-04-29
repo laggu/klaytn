@@ -628,40 +628,36 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 }
 
 func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
-	candidateVals := []istanbul.Validator{}
-	for _, val := range valSet.validators {
+	var candidateValsIdx []int // This is a slice which stores index of validator. it is used for shuffling
+
+	for index, val := range valSet.validators {
 		weight := val.Weight()
 		for i := 0; i < weight; i++ {
-			candidateVals = append(candidateVals, val)
+			candidateValsIdx = append(candidateValsIdx, index)
 		}
 	}
 
-	if len(candidateVals) == 0 {
+	if len(candidateValsIdx) == 0 {
 		// All validators has zero weight. Let's use all validators as candidate proposers.
-		candidateVals = valSet.validators
-		logger.Trace("Refresh uses all validators as candidate proposers, because all weight is zero.", "candidateVals", candidateVals)
+		for index := 0; index < len(valSet.validators); index++ {
+			candidateValsIdx = append(candidateValsIdx, index)
+		}
+		logger.Trace("Refresh uses all validators as candidate proposers, because all weight is zero.", "candidateValsIdx", candidateValsIdx)
 	}
 
-	proposers := make([]istanbul.Validator, len(candidateVals))
+	proposers := make([]istanbul.Validator, len(candidateValsIdx))
 
-	limit := len(candidateVals)
+	limit := len(candidateValsIdx)
 	picker := rand.New(rand.NewSource(seed))
-
-	indexs := make([]int, limit)
-	idx := 0
-	for i := 0; i < limit; i++ {
-		indexs[idx] = i
-		idx++
-	}
 
 	// shuffle
 	for i := 0; i < limit; i++ {
 		randIndex := picker.Intn(limit)
-		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
+		candidateValsIdx[i], candidateValsIdx[randIndex] = candidateValsIdx[randIndex], candidateValsIdx[i]
 	}
 
 	for i := 0; i < limit; i++ {
-		proposers[i] = candidateVals[indexs[i]]
+		proposers[i] = valSet.validators[candidateValsIdx[i]]
 		// Below log is too verbose. Use is only when debugging.
 		// logger.Trace("Refresh calculates new proposers", "i", i, "proposers[i]", proposers[i].String())
 	}
