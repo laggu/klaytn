@@ -251,7 +251,7 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	// At Refresh(), proposers is already randomly shuffled considering weights.
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
-	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum)) % uint64(numProposers)
+	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum+1)) % uint64(numProposers)
 	proposer := weightedCouncil.proposers[picker]
 
 	// Enable below more detailed log when debugging
