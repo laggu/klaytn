@@ -262,3 +262,17 @@ func (b *ServiceChainAPIBackend) ServiceFilter(ctx context.Context, session *blo
 func (b *ServiceChainAPIBackend) IsParallelDBWrite() bool {
 	return b.sc.BlockChain().IsParallelDBWrite()
 }
+
+func (b *ServiceChainAPIBackend) IsSenderTxHashIndexingEnabled() bool {
+	return b.sc.BlockChain().IsSenderTxHashIndexingEnabled()
+}
+
+func (b *ServiceChainAPIBackend) GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction {
+	tx, _, _, _ := b.sc.chainDB.ReadTxBySenderTxHash(senderTxHash)
+	return tx
+}
+
+func (b *ServiceChainAPIBackend) GetReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
+	receipt, _, _, _ := b.sc.chainDB.ReadReceiptBySenderTxHash(senderTxHash)
+	return receipt
+}

@@ -98,6 +98,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 			utils.LevelDBNoCompressionFlag,
 			utils.LevelDBNoBufferPoolFlag,
 			utils.NoParallelDBWriteFlag,
+			utils.SenderTxHashIndexingFlag,
 		},
 	},
 	{

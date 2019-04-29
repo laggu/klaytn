@@ -262,3 +262,17 @@ func (b *CNAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Mat
 func (b *CNAPIBackend) IsParallelDBWrite() bool {
 	return b.cn.BlockChain().IsParallelDBWrite()
 }
+
+func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
+	return b.cn.BlockChain().IsSenderTxHashIndexingEnabled()
+}
+
+func (b *CNAPIBackend) GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction {
+	tx, _, _, _ := b.cn.chainDB.ReadTxBySenderTxHash(senderTxHash)
+	return tx
+}
+
+func (b *CNAPIBackend) GetReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
+	receipt, _, _, _ := b.cn.chainDB.ReadReceiptBySenderTxHash(senderTxHash)
+	return receipt
+}

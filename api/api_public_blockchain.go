@@ -189,6 +189,22 @@ func (s *PublicBlockChainAPI) IsParallelDBWrite() bool {
 	return s.b.IsParallelDBWrite()
 }
 
+// IsSenderTxHashIndexingEnabled returns if senderTxHash to txHash mapping information
+// indexing is enabled or not.
+func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
+	return s.b.IsSenderTxHashIndexingEnabled()
+}
+
+// GetTransactionBySenderTxHash returns a transaction matched with the given senderTxHash.
+func (s *PublicBlockChainAPI) GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction {
+	return s.b.GetTransactionBySenderTxHash(senderTxHash)
+}
+
+// GetReceiptBySenderTxHash returns a receipt of a transaction matched with the given senderTxHash.
+func (s *PublicBlockChainAPI) GetReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
+	return s.b.GetReceiptBySenderTxHash(senderTxHash)
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From     common.Address  `json:"from"`

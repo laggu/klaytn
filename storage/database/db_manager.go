@@ -112,6 +112,11 @@ type DBManager interface {
 
 	ReadTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
+	NewSenderTxHashToTxHashBatch() Batch
+	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error
+	ReadTxBySenderTxHash(senderTxHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+	ReadReceiptBySenderTxHash(senderTxHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
+
 	ReadReceipt(hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
 
 	ReadBloomBits(bloomBitsKey []byte) ([]byte, error)
@@ -1135,6 +1140,64 @@ func (dbm *databaseManager) ReadTxAndLookupInfo(hash common.Hash) (*types.Transa
 		return nil, common.Hash{}, 0, 0
 	}
 	return body.Transactions[txIndex], blockHash, blockNumber, txIndex
+}
+
+// NewSenderTxHashToTxHashBatch returns a batch to write senderTxHash to txHash mapping information.
+func (dbm *databaseManager) NewSenderTxHashToTxHashBatch() Batch {
+	return dbm.NewBatch(MiscDB)
+}
+
+// PutSenderTxHashToTxHashToBatch 1) puts the given senderTxHash and txHash to the given batch and
+// 2) writes the information to the cache.
+func (dbm *databaseManager) PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error {
+	if err := batch.Put(SenderTxHashToTxHashKey(senderTxHash), txHash.Bytes()); err != nil {
+		return err
+	}
+
+	dbm.cm.writeSenderTxHashToTxHashCache(senderTxHash, txHash)
+
+	if batch.ValueSize() > IdealBatchSize {
+		batch.Write()
+		batch.Reset()
+	}
+
+	return nil
+}
+
+func (dbm *databaseManager) ReadTxBySenderTxHash(senderTxHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	txHash := dbm.readTxHashFromSenderTxHash(senderTxHash)
+	// If corresponding txHash does not exist, search transaction with given senderTxHash.
+	if common.EmptyHash(txHash) {
+		txHash = senderTxHash
+	}
+
+	return dbm.ReadTxAndLookupInfo(txHash)
+}
+
+func (dbm *databaseManager) ReadReceiptBySenderTxHash(senderTxHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64) {
+	txHash := dbm.readTxHashFromSenderTxHash(senderTxHash)
+	// If corresponding txHash does not exist, search receipt with given senderTxHash.
+	if common.EmptyHash(txHash) {
+		txHash = senderTxHash
+	}
+
+	return dbm.ReadReceipt(txHash)
+}
+
+// readTxHashFromSenderTxHash retrieves a txHash corresponding to the given senderTxHash.
+func (dbm *databaseManager) readTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash {
+	if txHash := dbm.cm.readSenderTxHashToTxHashCache(senderTxHash); !common.EmptyHash(txHash) {
+		return txHash
+	}
+
+	data, _ := dbm.getDatabase(MiscDB).Get(SenderTxHashToTxHashKey(senderTxHash))
+	if len(data) == 0 {
+		return common.Hash{}
+	}
+
+	txHash := common.BytesToHash(data)
+	dbm.cm.writeSenderTxHashToTxHashCache(senderTxHash, txHash)
+	return txHash
 }
 
 // Receipt read operation.

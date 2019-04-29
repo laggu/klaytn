@@ -64,6 +64,10 @@ type Backend interface {
 	IsParallelDBWrite() bool
 	GetNonceInCache(address common.Address) (uint64, bool)
 
+	IsSenderTxHashIndexingEnabled() bool
+	GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction
+	GetReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt
+
 	// TxPool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error
 	GetPoolTransactions() (types.Transactions, error)

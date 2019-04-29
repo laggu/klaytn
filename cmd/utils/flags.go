@@ -248,6 +248,10 @@ var (
 		Value: 4096,
 	}
 
+	SenderTxHashIndexingFlag = cli.BoolFlag{
+		Name:  "sendertxhashindexing",
+		Usage: "Enables storing mapping information of senderTxHash to txHash",
+	}
 	ChildChainIndexingFlag = cli.BoolFlag{
 		Name:  "childchainindexing",
 		Usage: "Enables storing transaction hash of child chain transaction for fast access to child chain data",
@@ -1097,15 +1101,12 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
-	if ctx.GlobalIsSet(ChildChainIndexingFlag.Name) {
-		cfg.ChildChainIndexing = true
-	}
 
+	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(SenderTxHashIndexingFlag.Name)
+	cfg.ChildChainIndexing = ctx.GlobalIsSet(ChildChainIndexingFlag.Name)
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
+	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 
-	if ctx.GlobalIsSet(StateDBCachingFlag.Name) {
-		cfg.StateDBCaching = true
-	}
 	if ctx.GlobalIsSet(TrieCacheLimitFlag.Name) {
 		cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
 	}

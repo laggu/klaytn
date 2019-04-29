@@ -77,12 +77,13 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching   bool // Enables caching of state objects in stateDB.
-	TxPoolStateCache bool // Enables caching of nonce and balance for txpool.
-	ArchiveMode      bool // If true, state trie is not pruned and always written to database.
-	CacheSize        int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval    uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
-	TrieCacheLimit   int  // Memory allowance (MB) to use for caching trie nodes in memory
+	StateDBCaching       bool // Enables caching of state objects in stateDB.
+	TxPoolStateCache     bool // Enables caching of nonce and balance for txpool.
+	ArchiveMode          bool // If true, state trie is not pruned and always written to database.
+	CacheSize            int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+	TrieCacheLimit       int  // Memory allowance (MB) to use for caching trie nodes in memory
+	SenderTxHashIndexing bool // Enables saving senderTxHash to txHash mapping information to database and cache.
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -1939,6 +1940,12 @@ func (bc *BlockChain) isArchiveMode() bool {
 // If enabled, data written in WriteBlockWithState is being written in parallel manner.
 func (bc *BlockChain) IsParallelDBWrite() bool {
 	return bc.parallelDBWrite
+}
+
+// IsSenderTxHashIndexingEnabled returns if storing senderTxHash to txHash mapping information
+// is enabled or not.
+func (bc *BlockChain) IsSenderTxHashIndexingEnabled() bool {
+	return bc.cacheConfig.SenderTxHashIndexing
 }
 
 // GetNonceCache returns a nonceCache.

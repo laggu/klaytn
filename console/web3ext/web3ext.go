@@ -538,6 +538,20 @@ web3._extend({
 			name: 'isParallelDBWrite',
 			call: 'klay_isParallelDBWrite',
 		}),
+		new web3._extend.Method({
+			name: 'isSenderTxHashIndexingEnabled',
+			call: 'klay_isSenderTxHashIndexingEnabled',
+		}),
+		new web3._extend.Method({
+			name: 'getTransactionBySenderTxHash',
+			call: 'klay_getTransactionBySenderTxHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getReceiptBySenderTxHash',
+			call: 'klay_getReceiptBySenderTxHash',
+			params: 1
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

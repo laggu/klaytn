@@ -107,6 +107,40 @@ func (s *CN) AddLesServer(ls LesServer) {
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
 }
 
+// senderTxHashIndexer subscribes chainEvent and stores senderTxHash to txHash mapping information.
+func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.ChainEvent, subscription event.Subscription) {
+	defer subscription.Unsubscribe()
+
+	for {
+		select {
+		case event := <-chainEvent:
+			var err error
+			batch := db.NewSenderTxHashToTxHashBatch()
+			for _, tx := range event.Block.Transactions() {
+				senderTxHash := tx.SenderTxHash()
+				txHash := tx.Hash()
+
+				if senderTxHash == txHash {
+					continue
+				}
+
+				if err = db.PutSenderTxHashToTxHashToBatch(batch, senderTxHash, txHash); err != nil {
+					logger.Error("Failed to store senderTxHash to txHash mapping to database",
+						"blockNum", event.Block.Number(), "senderTxHash", senderTxHash, "txHash", txHash, "err", err)
+					break
+				}
+			}
+
+			if err == nil {
+				batch.Write()
+			}
+
+		case <-subscription.Err():
+			return
+		}
+	}
+}
+
 // New creates a new CN object (including the
 // initialisation of the common CN object)
 func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
@@ -169,13 +203,22 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	var (
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching, ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval, TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit}
+		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
+			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
+			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit, SenderTxHashIndexing: config.SenderTxHashIndexing}
 	)
 	var err error
 	cn.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
+
+	if config.SenderTxHashIndexing {
+		ch := make(chan blockchain.ChainEvent, 255)
+		chainEventSubscription := cn.blockchain.SubscribeChainEvent(ch)
+		go senderTxHashIndexer(chainDB, ch, chainEventSubscription)
+	}
+
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		logger.Error("Rewinding chain to upgrade configuration", "err", compat)

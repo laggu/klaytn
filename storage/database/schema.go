@@ -76,6 +76,8 @@ var (
 
 	// bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
 	bloomBitsPrefix = []byte("B")
+
+	senderTxHashToTxHashPrefix = []byte("SenderTxHash")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
@@ -126,6 +128,10 @@ func blockReceiptsKey(number uint64, hash common.Hash) []byte {
 // TxLookupKey = txLookupPrefix + hash
 func TxLookupKey(hash common.Hash) []byte {
 	return append(txLookupPrefix, hash.Bytes()...)
+}
+
+func SenderTxHashToTxHashKey(senderTxHash common.Hash) []byte {
+	return append(senderTxHashToTxHashPrefix, senderTxHash.Bytes()...)
 }
 
 // preimageKey = preimagePrefix + hash

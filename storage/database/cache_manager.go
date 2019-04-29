@@ -33,11 +33,12 @@ const (
 	maxBlockNumberCache   = 2048
 	maxCanonicalHashCache = 2048
 
-	maxBodyCache           = 256
-	maxBlockCache          = 256
-	maxRecentTransactions  = 30000
-	maxRecentBlockReceipts = 30
-	maxRecentTxReceipt     = 30000
+	maxBodyCache            = 256
+	maxBlockCache           = 256
+	maxRecentTransactions   = 30000
+	maxRecentBlockReceipts  = 30
+	maxRecentTxReceipt      = 30000
+	maxSenderTxHashToTxHash = 30000
 )
 
 const (
@@ -46,11 +47,12 @@ const (
 	numShardsBlockNumberCache   = 4096
 	numShardsCanonicalHashCache = 4096
 
-	numShardsBodyCache           = 4096
-	numShardsBlockCache          = 4096
-	numShardsRecentTransactions  = 4096
-	numShardsRecentBlockReceipts = 4096
-	numShardsRecentTxReceipt     = 4096
+	numShardsBodyCache            = 4096
+	numShardsBlockCache           = 4096
+	numShardsRecentTransactions   = 4096
+	numShardsRecentBlockReceipts  = 4096
+	numShardsRecentTxReceipt      = 4096
+	numShardsSenderTxHashToTxHash = 4096
 )
 
 type cacheKey int
@@ -67,6 +69,7 @@ const (
 	recentTxAndLookupInfoIndex
 	recentBlockReceiptsIndex
 	recentTxReceiptIndex
+	senderTxHashToTxHashIndex
 
 	cacheKeySize
 )
@@ -83,6 +86,7 @@ var lruCacheConfig = [cacheKeySize]common.CacheConfiger{
 	recentTxAndLookupInfoIndex: common.LRUConfig{CacheSize: maxRecentTransactions},
 	recentBlockReceiptsIndex:   common.LRUConfig{CacheSize: maxRecentBlockReceipts},
 	recentTxReceiptIndex:       common.LRUConfig{CacheSize: maxRecentTxReceipt},
+	senderTxHashToTxHashIndex:  common.LRUConfig{CacheSize: maxSenderTxHashToTxHash},
 }
 
 var lruShardCacheConfig = [cacheKeySize]common.CacheConfiger{
@@ -97,6 +101,7 @@ var lruShardCacheConfig = [cacheKeySize]common.CacheConfiger{
 	recentTxAndLookupInfoIndex: common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
 	recentBlockReceiptsIndex:   common.LRUShardConfig{CacheSize: maxRecentBlockReceipts, NumShards: numShardsRecentBlockReceipts},
 	recentTxReceiptIndex:       common.LRUShardConfig{CacheSize: maxRecentTxReceipt, NumShards: numShardsRecentTxReceipt},
+	senderTxHashToTxHashIndex:  common.LRUShardConfig{CacheSize: maxSenderTxHashToTxHash, NumShards: numShardsSenderTxHashToTxHash},
 }
 
 var fifoCacheConfig = [cacheKeySize]common.CacheConfiger{
@@ -111,6 +116,7 @@ var fifoCacheConfig = [cacheKeySize]common.CacheConfiger{
 	recentTxAndLookupInfoIndex: common.FIFOCacheConfig{CacheSize: maxRecentTransactions},
 	recentBlockReceiptsIndex:   common.FIFOCacheConfig{CacheSize: maxRecentBlockReceipts},
 	recentTxReceiptIndex:       common.FIFOCacheConfig{CacheSize: maxRecentTxReceipt},
+	senderTxHashToTxHashIndex:  common.FIFOCacheConfig{CacheSize: maxSenderTxHashToTxHash},
 }
 
 func newCache(cacheNameKey cacheKey, cacheType common.CacheType) common.Cache {
@@ -151,6 +157,8 @@ type cacheManager struct {
 	recentTxAndLookupInfo common.Cache // recent TX and LookupInfo cache
 	recentBlockReceipts   common.Cache // recent block receipts cache
 	recentTxReceipt       common.Cache // recent TX receipt cache
+
+	senderTxHashToTxHashCache common.Cache
 }
 
 // newCacheManager returns a pointer of cacheManager with predefined configurations.
@@ -168,6 +176,8 @@ func newCacheManager() *cacheManager {
 		recentTxAndLookupInfo: newCache(recentTxAndLookupInfoIndex, common.DefaultCacheType),
 		recentBlockReceipts:   newCache(recentBlockReceiptsIndex, common.DefaultCacheType),
 		recentTxReceipt:       newCache(recentTxReceiptIndex, common.DefaultCacheType),
+
+		senderTxHashToTxHashCache: newCache(recentTxReceiptIndex, common.DefaultCacheType),
 	}
 	return cm
 }
@@ -189,6 +199,7 @@ func (cm *cacheManager) clearBlockChainCache() {
 	cm.recentTxAndLookupInfo.Purge()
 	cm.recentBlockReceipts.Purge()
 	cm.recentTxReceipt.Purge()
+	cm.senderTxHashToTxHashCache.Purge()
 }
 
 // readHeaderCache looks for cached header in headerCache.
@@ -426,8 +437,22 @@ func (cm *cacheManager) writeTxReceiptCache(txHash common.Hash, receipt *types.R
 	cm.recentTxReceipt.Add(txHash, receipt)
 }
 
-// deleteTxReceiptCache writes  writes nil as a value, blockHash as a key, to indicate given
+// deleteTxReceiptCache writes nil as a value, blockHash as a key, to indicate given
 // txHash is deleted in recentTxReceipt.
 func (cm *cacheManager) deleteTxReceiptCache(txHash common.Hash) {
 	cm.recentTxReceipt.Add(txHash, nil)
+}
+
+// writeSenderTxHashToTxHashCache writes senderTxHash to txHash mapping information to cache.
+func (cm *cacheManager) writeSenderTxHashToTxHashCache(senderTxHash, txHash common.Hash) {
+	cm.senderTxHashToTxHashCache.Add(senderTxHash, txHash)
+}
+
+// readSenderTxHashToTxHashCache looks for matching txHash from senderTxHash.
+// If txHash does not exist in the cache, it returns an empty hash.
+func (cm *cacheManager) readSenderTxHashToTxHashCache(senderTxHash common.Hash) common.Hash {
+	if matchedTxHash, ok := cm.senderTxHashToTxHashCache.Get(senderTxHash); ok && matchedTxHash != nil {
+		return matchedTxHash.(common.Hash)
+	}
+	return common.Hash{}
 }
