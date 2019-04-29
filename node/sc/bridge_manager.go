@@ -246,18 +246,18 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 		if journal.Paired {
 			bridgeInfo, ok := bm.GetBridgeInfo(journal.LocalAddress)
 			if ok && !bridgeInfo.subscribed {
+				if bm.subBridge.AddressManager() != nil {
+					bm.subBridge.addressManager.DeleteBridge(journal.LocalAddress)
+				}
 				continue
-			}
-			if bm.subBridge.AddressManager() != nil {
-				bm.subBridge.addressManager.DeleteBridge(journal.LocalAddress)
 			}
 
 			bridgeInfo, ok = bm.GetBridgeInfo(journal.RemoteAddress)
 			if ok && !bridgeInfo.subscribed {
+				if bm.subBridge.AddressManager() != nil {
+					bm.subBridge.addressManager.DeleteBridge(journal.RemoteAddress)
+				}
 				continue
-			}
-			if bm.subBridge.AddressManager() != nil {
-				bm.subBridge.addressManager.DeleteBridge(journal.RemoteAddress)
 			}
 		}
 		gwjs = append(gwjs, journal)
