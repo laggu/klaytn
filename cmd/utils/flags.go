@@ -1110,12 +1110,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
 	}
 
-	// TODO-Klaytn-RemoveLater Later we have to remove GasPriceFlag, because we disable user configurable gasPrice
-	/*
-		if ctx.GlobalIsSet(GasPriceFlag.Name) {
-			cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name) // TODO-Klaytn-Issue136 gasPrice
-		}
-	*/
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
