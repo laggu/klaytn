@@ -198,6 +198,7 @@ func (tx *Transaction) ValidatedSender() common.Address       { return tx.valida
 func (tx *Transaction) ValidatedFeePayer() common.Address     { return tx.validatedFeePayer }
 func (tx *Transaction) ValidatedIntrinsicGas() uint64         { return tx.validatedIntrinsicGas }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
+func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
 
 func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return tx.data.IntrinsicGas(currentBlockNumber)
