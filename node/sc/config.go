@@ -36,9 +36,9 @@ import (
 )
 
 const (
-	datadirChainKey        = "chainkey"          // Path within the datadir to its parent chain's private key
-	datadirNodeKey         = "nodekey"           // Path within the datadir to its service chain's private key
-	datadirMainBridgeNodes = "main-bridges.json" // Path within the datadir to the static node list
+	datadirChainKey             = "chainkey"               // Path within the datadir to its parent chain's private key
+	datadirNodeKey              = "nodekey"                // Path within the datadir to its service chain's private key
+	datadirMainChainBridgeNodes = "mainchain-bridges.json" // Path within the datadir to the static node list
 )
 
 var logger = log.NewModuleLogger(log.ServiceChain)
@@ -124,7 +124,7 @@ func (c *SCConfig) name() string {
 
 // StaticNodes returns a list of node enode URLs configured as static nodes.
 func (c *SCConfig) MainBridges() []*discover.Node {
-	return c.parsePersistentNodes(filepath.Join(c.DataDir, datadirMainBridgeNodes))
+	return c.parsePersistentNodes(filepath.Join(c.DataDir, datadirMainChainBridgeNodes))
 }
 
 func (c *SCConfig) parsePersistentNodes(path string) []*discover.Node {
