@@ -20,11 +20,13 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 var (
@@ -141,6 +143,7 @@ func TestWeightedCouncil_List(t *testing.T) {
 		}
 	}
 }
+
 func TestWeightedCouncil_GetByIndex(t *testing.T) {
 	validators := makeTestValidators(testZeroWeights)
 	valSet := makeTestWeightedCouncil(testZeroWeights)
@@ -188,6 +191,52 @@ func TestWeightedCouncil_GetByAddress(t *testing.T) {
 	}
 }
 
+func TestWeightedCouncil_GetProposer(t *testing.T) {
+	validators := makeTestValidators(testZeroWeights)
+	valSet := makeTestWeightedCouncil(testZeroWeights)
+
+	// at the first, proposer is the first validator in the validator list
+	expectedProposer := validators[0]
+	proposerToCheck := valSet.GetProposer()
+
+	if expectedProposer.Address() != proposerToCheck.Address() {
+		t.Errorf("proposer should be same. Expected proposer: %v, gotten proposer %v", expectedProposer, proposerToCheck)
+	}
+
+	// random check. give random validator to valSet and check GetProposer() if it is same as the given validator
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	for i := 0; i < 100; i++ {
+		choosenIndex := r.Intn(len(validators))
+
+		valSet.proposer.Store(validators[choosenIndex])
+
+		expectedProposer := validators[choosenIndex]
+		proposerToCheck := valSet.GetProposer()
+
+		if expectedProposer.Address() != proposerToCheck.Address() {
+			t.Errorf("proposer should be same. Expected proposer: %v, gotten proposer %v", expectedProposer, proposerToCheck)
+		}
+	}
+}
+
+func TestDefaultSet_IsProposer(t *testing.T) {
+	validators := makeTestValidators(testZeroWeights)
+	valSet := makeTestWeightedCouncil(testZeroWeights)
+
+	currentProposer := valSet.GetProposer()
+
+	for i := 0; i < len(validators); i++ {
+		validatorToTest := validators[i]
+
+		expectedResult := validatorToTest.Address() == currentProposer.Address()
+		result := valSet.IsProposer(validatorToTest.Address())
+
+		if result != expectedResult {
+			t.Errorf("The result is diffrent from the expected result. Expected Result : %v, Gotten Result : %v, CurrentProposer Address : %v, TestValidator Address : %v", expectedResult, result, currentProposer.Address(), validatorToTest.Address())
+		}
+	}
+}
+
 func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 
 	validators := makeTestValidators(testZeroWeights)
@@ -219,11 +268,42 @@ func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 	checkCalcProposerWithRound(t, valSet, testAddrs[0], 5)
 	checkCalcProposerWithRound(t, valSet, testAddrs[0], 13)
 	checkCalcProposerWithRound(t, valSet, testAddrs[0], 1000)
+
+	// 4. test calculate proposer different block number
+	for i := 0; i < 100; i++ {
+		valSet.blockNum = uint64(i)
+		checkCalcProposerWithBlockNumber(t, valSet, testAddrs[0], 0)
+	}
+
+	// 5. test calculate proposer different block number and round
+	for i := 0; i < 100; i++ {
+		valSet.blockNum = uint64(i)
+		for j := 0; j < 100; j++ {
+			round := uint64(j)
+			checkCalcProposerWithBlockNumberAndRound(t, valSet, testAddrs[0], round)
+		}
+	}
 }
 
 func checkCalcProposerWithRound(t *testing.T, valSet *weightedCouncil, lastProposer common.Address, round uint64) {
 	valSet.CalcProposer(lastProposer, round)
 	_, expectedVal := valSet.GetByAddress(testExpectedProposers[round%uint64(len(valSet.proposers))])
+	if val := valSet.GetProposer(); !reflect.DeepEqual(val, expectedVal) {
+		t.Errorf("proposer mismatch: have %v, want %v", val.String(), expectedVal.Address().String())
+	}
+}
+
+func checkCalcProposerWithBlockNumber(t *testing.T, valSet *weightedCouncil, lastProposer common.Address, round uint64) {
+	valSet.CalcProposer(lastProposer, round)
+	_, expectedVal := valSet.GetByAddress(testExpectedProposers[valSet.blockNum%uint64(len(valSet.proposers))])
+	if val := valSet.GetProposer(); !reflect.DeepEqual(val, expectedVal) {
+		t.Errorf("proposer mismatch: have %v, want %v", val.String(), expectedVal.Address().String())
+	}
+}
+
+func checkCalcProposerWithBlockNumberAndRound(t *testing.T, valSet *weightedCouncil, lastProposer common.Address, round uint64) {
+	valSet.CalcProposer(lastProposer, round)
+	_, expectedVal := valSet.GetByAddress(testExpectedProposers[(valSet.blockNum+round)%uint64(len(valSet.proposers))])
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, expectedVal) {
 		t.Errorf("proposer mismatch: have %v, want %v", val.String(), expectedVal.Address().String())
 	}
