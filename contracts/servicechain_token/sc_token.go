@@ -24,7 +24,7 @@ const AddressBinRuntime = `0x730000000000000000000000000000000000000000301460806
 // AddressBin is the compiled bytecode used for deploying new contracts.
 const AddressBin = `0x604c602c600b82828239805160001a60731460008114601c57601e565bfe5b5030600052607381538281f30073000000000000000000000000000000000000000030146080604052600080fd00a165627a7a723058201f052969e85d2738df4aa4ced17b37fb46da3b16b91cc4f5734e1a34f7e91d810029`
 
-// DeployAddress deploys a new klaytn contract, binding an instance of Address to it.
+// DeployAddress deploys a new Klaytn contract, binding an instance of Address to it.
 func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Address, error) {
 	parsed, err := abi.JSON(strings.NewReader(AddressABI))
 	if err != nil {
@@ -37,29 +37,29 @@ func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (commo
 	return address, tx, &Address{AddressCaller: AddressCaller{contract: contract}, AddressTransactor: AddressTransactor{contract: contract}, AddressFilterer: AddressFilterer{contract: contract}}, nil
 }
 
-// Address is an auto generated Go binding around a klaytn contract.
+// Address is an auto generated Go binding around a Klaytn contract.
 type Address struct {
 	AddressCaller     // Read-only binding to the contract
 	AddressTransactor // Write-only binding to the contract
 	AddressFilterer   // Log filterer for contract events
 }
 
-// AddressCaller is an auto generated read-only Go binding around a klaytn contract.
+// AddressCaller is an auto generated read-only Go binding around a Klaytn contract.
 type AddressCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressTransactor is an auto generated write-only Go binding around a klaytn contract.
+// AddressTransactor is an auto generated write-only Go binding around a Klaytn contract.
 type AddressTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressFilterer is an auto generated log filtering Go binding around a klaytn contract events.
+// AddressFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
 type AddressFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressSession is an auto generated Go binding around a klaytn contract,
+// AddressSession is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
 type AddressSession struct {
 	Contract     *Address          // Generic contract binding to set the session for
@@ -67,31 +67,31 @@ type AddressSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// AddressCallerSession is an auto generated read-only Go binding around a klaytn contract,
+// AddressCallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
 type AddressCallerSession struct {
 	Contract *AddressCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// AddressTransactorSession is an auto generated write-only Go binding around a klaytn contract,
+// AddressTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
 type AddressTransactorSession struct {
 	Contract     *AddressTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// AddressRaw is an auto generated low-level Go binding around a klaytn contract.
+// AddressRaw is an auto generated low-level Go binding around a Klaytn contract.
 type AddressRaw struct {
 	Contract *Address // Generic contract binding to access the raw methods on
 }
 
-// AddressCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
+// AddressCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
 type AddressCallerRaw struct {
 	Contract *AddressCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
+// AddressTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
 type AddressTransactorRaw struct {
 	Contract *AddressTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -188,7 +188,7 @@ const ERC20BinRuntime = `0x60806040526004361061008d5763ffffffff7c010000000000000
 // ERC20Bin is the compiled bytecode used for deploying new contracts.
 const ERC20Bin = `0x608060405234801561001057600080fd5b50610595806100206000396000f30060806040526004361061008d5763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663095ea7b3811461009257806318160ddd146100ca57806323b872dd146100f1578063395093511461011b57806370a082311461013f578063a457c2d714610160578063a9059cbb14610184578063dd62ed3e146101a8575b600080fd5b34801561009e57600080fd5b506100b6600160a060020a03600435166024356101cf565b604080519115158252519081900360200190f35b3480156100d657600080fd5b506100df61024d565b60408051918252519081900360200190f35b3480156100fd57600080fd5b506100b6600160a060020a0360043581169060243516604435610253565b34801561012757600080fd5b506100b6600160a060020a03600435166024356102f0565b34801561014b57600080fd5b506100df600160a060020a03600435166103a0565b34801561016c57600080fd5b506100b6600160a060020a03600435166024356103bb565b34801561019057600080fd5b506100b6600160a060020a0360043516602435610406565b3480156101b457600080fd5b506100df600160a060020a036004358116906024351661041c565b6000600160a060020a03831615156101e657600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a038316600090815260016020908152604080832033845290915281205482111561028357600080fd5b600160a060020a03841660009081526001602090815260408083203384529091529020546102b7908363ffffffff61044716565b600160a060020a03851660009081526001602090815260408083203384529091529020556102e684848461045e565b5060019392505050565b6000600160a060020a038316151561030757600080fd5b336000908152600160209081526040808320600160a060020a038716845290915290205461033b908363ffffffff61055016565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b600160a060020a031660009081526020819052604090205490565b6000600160a060020a03831615156103d257600080fd5b336000908152600160209081526040808320600160a060020a038716845290915290205461033b908363ffffffff61044716565b600061041333848461045e565b50600192915050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b6000808383111561045757600080fd5b5050900390565b600160a060020a03831660009081526020819052604090205481111561048357600080fd5b600160a060020a038216151561049857600080fd5b600160a060020a0383166000908152602081905260409020546104c1908263ffffffff61044716565b600160a060020a0380851660009081526020819052604080822093909355908416815220546104f6908263ffffffff61055016565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b60008282018381101561056257600080fd5b93925050505600a165627a7a7230582019d7a9ee082feb956b4ef19559e0a1fbbb8104b13a347f5374792a9a135cb7410029`
 
-// DeployERC20 deploys a new klaytn contract, binding an instance of ERC20 to it.
+// DeployERC20 deploys a new Klaytn contract, binding an instance of ERC20 to it.
 func DeployERC20(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC20, error) {
 	parsed, err := abi.JSON(strings.NewReader(ERC20ABI))
 	if err != nil {
@@ -201,29 +201,29 @@ func DeployERC20(auth *bind.TransactOpts, backend bind.ContractBackend) (common.
 	return address, tx, &ERC20{ERC20Caller: ERC20Caller{contract: contract}, ERC20Transactor: ERC20Transactor{contract: contract}, ERC20Filterer: ERC20Filterer{contract: contract}}, nil
 }
 
-// ERC20 is an auto generated Go binding around a klaytn contract.
+// ERC20 is an auto generated Go binding around a Klaytn contract.
 type ERC20 struct {
 	ERC20Caller     // Read-only binding to the contract
 	ERC20Transactor // Write-only binding to the contract
 	ERC20Filterer   // Log filterer for contract events
 }
 
-// ERC20Caller is an auto generated read-only Go binding around a klaytn contract.
+// ERC20Caller is an auto generated read-only Go binding around a Klaytn contract.
 type ERC20Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC20Transactor is an auto generated write-only Go binding around a klaytn contract.
+// ERC20Transactor is an auto generated write-only Go binding around a Klaytn contract.
 type ERC20Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC20Filterer is an auto generated log filtering Go binding around a klaytn contract events.
+// ERC20Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
 type ERC20Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC20Session is an auto generated Go binding around a klaytn contract,
+// ERC20Session is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
 type ERC20Session struct {
 	Contract     *ERC20            // Generic contract binding to set the session for
@@ -231,31 +231,31 @@ type ERC20Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC20CallerSession is an auto generated read-only Go binding around a klaytn contract,
+// ERC20CallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
 type ERC20CallerSession struct {
 	Contract *ERC20Caller  // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// ERC20TransactorSession is an auto generated write-only Go binding around a klaytn contract,
+// ERC20TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
 type ERC20TransactorSession struct {
 	Contract     *ERC20Transactor  // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC20Raw is an auto generated low-level Go binding around a klaytn contract.
+// ERC20Raw is an auto generated low-level Go binding around a Klaytn contract.
 type ERC20Raw struct {
 	Contract *ERC20 // Generic contract binding to access the raw methods on
 }
 
-// ERC20CallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
+// ERC20CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
 type ERC20CallerRaw struct {
 	Contract *ERC20Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC20TransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
+// ERC20TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
 type ERC20TransactorRaw struct {
 	Contract *ERC20Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -819,7 +819,7 @@ const IERC20BinRuntime = `0x`
 // IERC20Bin is the compiled bytecode used for deploying new contracts.
 const IERC20Bin = `0x`
 
-// DeployIERC20 deploys a new klaytn contract, binding an instance of IERC20 to it.
+// DeployIERC20 deploys a new Klaytn contract, binding an instance of IERC20 to it.
 func DeployIERC20(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *IERC20, error) {
 	parsed, err := abi.JSON(strings.NewReader(IERC20ABI))
 	if err != nil {
@@ -832,29 +832,29 @@ func DeployIERC20(auth *bind.TransactOpts, backend bind.ContractBackend) (common
 	return address, tx, &IERC20{IERC20Caller: IERC20Caller{contract: contract}, IERC20Transactor: IERC20Transactor{contract: contract}, IERC20Filterer: IERC20Filterer{contract: contract}}, nil
 }
 
-// IERC20 is an auto generated Go binding around a klaytn contract.
+// IERC20 is an auto generated Go binding around a Klaytn contract.
 type IERC20 struct {
 	IERC20Caller     // Read-only binding to the contract
 	IERC20Transactor // Write-only binding to the contract
 	IERC20Filterer   // Log filterer for contract events
 }
 
-// IERC20Caller is an auto generated read-only Go binding around a klaytn contract.
+// IERC20Caller is an auto generated read-only Go binding around a Klaytn contract.
 type IERC20Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC20Transactor is an auto generated write-only Go binding around a klaytn contract.
+// IERC20Transactor is an auto generated write-only Go binding around a Klaytn contract.
 type IERC20Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC20Filterer is an auto generated log filtering Go binding around a klaytn contract events.
+// IERC20Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
 type IERC20Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC20Session is an auto generated Go binding around a klaytn contract,
+// IERC20Session is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
 type IERC20Session struct {
 	Contract     *IERC20           // Generic contract binding to set the session for
@@ -862,31 +862,31 @@ type IERC20Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC20CallerSession is an auto generated read-only Go binding around a klaytn contract,
+// IERC20CallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
 type IERC20CallerSession struct {
 	Contract *IERC20Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// IERC20TransactorSession is an auto generated write-only Go binding around a klaytn contract,
+// IERC20TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
 type IERC20TransactorSession struct {
 	Contract     *IERC20Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC20Raw is an auto generated low-level Go binding around a klaytn contract.
+// IERC20Raw is an auto generated low-level Go binding around a Klaytn contract.
 type IERC20Raw struct {
 	Contract *IERC20 // Generic contract binding to access the raw methods on
 }
 
-// IERC20CallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
+// IERC20CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
 type IERC20CallerRaw struct {
 	Contract *IERC20Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC20TransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
+// IERC20TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
 type IERC20TransactorRaw struct {
 	Contract *IERC20Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1408,7 +1408,7 @@ const ITokenReceiverBinRuntime = `0x`
 // ITokenReceiverBin is the compiled bytecode used for deploying new contracts.
 const ITokenReceiverBin = `0x`
 
-// DeployITokenReceiver deploys a new klaytn contract, binding an instance of ITokenReceiver to it.
+// DeployITokenReceiver deploys a new Klaytn contract, binding an instance of ITokenReceiver to it.
 func DeployITokenReceiver(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ITokenReceiver, error) {
 	parsed, err := abi.JSON(strings.NewReader(ITokenReceiverABI))
 	if err != nil {
@@ -1421,29 +1421,29 @@ func DeployITokenReceiver(auth *bind.TransactOpts, backend bind.ContractBackend)
 	return address, tx, &ITokenReceiver{ITokenReceiverCaller: ITokenReceiverCaller{contract: contract}, ITokenReceiverTransactor: ITokenReceiverTransactor{contract: contract}, ITokenReceiverFilterer: ITokenReceiverFilterer{contract: contract}}, nil
 }
 
-// ITokenReceiver is an auto generated Go binding around a klaytn contract.
+// ITokenReceiver is an auto generated Go binding around a Klaytn contract.
 type ITokenReceiver struct {
 	ITokenReceiverCaller     // Read-only binding to the contract
 	ITokenReceiverTransactor // Write-only binding to the contract
 	ITokenReceiverFilterer   // Log filterer for contract events
 }
 
-// ITokenReceiverCaller is an auto generated read-only Go binding around a klaytn contract.
+// ITokenReceiverCaller is an auto generated read-only Go binding around a Klaytn contract.
 type ITokenReceiverCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ITokenReceiverTransactor is an auto generated write-only Go binding around a klaytn contract.
+// ITokenReceiverTransactor is an auto generated write-only Go binding around a Klaytn contract.
 type ITokenReceiverTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ITokenReceiverFilterer is an auto generated log filtering Go binding around a klaytn contract events.
+// ITokenReceiverFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
 type ITokenReceiverFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ITokenReceiverSession is an auto generated Go binding around a klaytn contract,
+// ITokenReceiverSession is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
 type ITokenReceiverSession struct {
 	Contract     *ITokenReceiver   // Generic contract binding to set the session for
@@ -1451,31 +1451,31 @@ type ITokenReceiverSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ITokenReceiverCallerSession is an auto generated read-only Go binding around a klaytn contract,
+// ITokenReceiverCallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
 type ITokenReceiverCallerSession struct {
 	Contract *ITokenReceiverCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts         // Call options to use throughout this session
 }
 
-// ITokenReceiverTransactorSession is an auto generated write-only Go binding around a klaytn contract,
+// ITokenReceiverTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
 type ITokenReceiverTransactorSession struct {
 	Contract     *ITokenReceiverTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
 }
 
-// ITokenReceiverRaw is an auto generated low-level Go binding around a klaytn contract.
+// ITokenReceiverRaw is an auto generated low-level Go binding around a Klaytn contract.
 type ITokenReceiverRaw struct {
 	Contract *ITokenReceiver // Generic contract binding to access the raw methods on
 }
 
-// ITokenReceiverCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
+// ITokenReceiverCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
 type ITokenReceiverCallerRaw struct {
 	Contract *ITokenReceiverCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ITokenReceiverTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
+// ITokenReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
 type ITokenReceiverTransactorRaw struct {
 	Contract *ITokenReceiverTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1593,7 +1593,7 @@ const SafeMathBinRuntime = `0x73000000000000000000000000000000000000000030146080
 // SafeMathBin is the compiled bytecode used for deploying new contracts.
 const SafeMathBin = `0x604c602c600b82828239805160001a60731460008114601c57601e565bfe5b5030600052607381538281f30073000000000000000000000000000000000000000030146080604052600080fd00a165627a7a72305820e7c8ed023500ab0804ed3d53f34f5c76bd0061b7c2bca481de32be9c19d151470029`
 
-// DeploySafeMath deploys a new klaytn contract, binding an instance of SafeMath to it.
+// DeploySafeMath deploys a new Klaytn contract, binding an instance of SafeMath to it.
 func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SafeMath, error) {
 	parsed, err := abi.JSON(strings.NewReader(SafeMathABI))
 	if err != nil {
@@ -1606,29 +1606,29 @@ func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &SafeMath{SafeMathCaller: SafeMathCaller{contract: contract}, SafeMathTransactor: SafeMathTransactor{contract: contract}, SafeMathFilterer: SafeMathFilterer{contract: contract}}, nil
 }
 
-// SafeMath is an auto generated Go binding around a klaytn contract.
+// SafeMath is an auto generated Go binding around a Klaytn contract.
 type SafeMath struct {
 	SafeMathCaller     // Read-only binding to the contract
 	SafeMathTransactor // Write-only binding to the contract
 	SafeMathFilterer   // Log filterer for contract events
 }
 
-// SafeMathCaller is an auto generated read-only Go binding around a klaytn contract.
+// SafeMathCaller is an auto generated read-only Go binding around a Klaytn contract.
 type SafeMathCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathTransactor is an auto generated write-only Go binding around a klaytn contract.
+// SafeMathTransactor is an auto generated write-only Go binding around a Klaytn contract.
 type SafeMathTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathFilterer is an auto generated log filtering Go binding around a klaytn contract events.
+// SafeMathFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
 type SafeMathFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathSession is an auto generated Go binding around a klaytn contract,
+// SafeMathSession is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
 type SafeMathSession struct {
 	Contract     *SafeMath         // Generic contract binding to set the session for
@@ -1636,31 +1636,31 @@ type SafeMathSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// SafeMathCallerSession is an auto generated read-only Go binding around a klaytn contract,
+// SafeMathCallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
 type SafeMathCallerSession struct {
 	Contract *SafeMathCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// SafeMathTransactorSession is an auto generated write-only Go binding around a klaytn contract,
+// SafeMathTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
 type SafeMathTransactorSession struct {
 	Contract     *SafeMathTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// SafeMathRaw is an auto generated low-level Go binding around a klaytn contract.
+// SafeMathRaw is an auto generated low-level Go binding around a Klaytn contract.
 type SafeMathRaw struct {
 	Contract *SafeMath // Generic contract binding to access the raw methods on
 }
 
-// SafeMathCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
+// SafeMathCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
 type SafeMathCallerRaw struct {
 	Contract *SafeMathCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// SafeMathTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
+// SafeMathTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
 type SafeMathTransactorRaw struct {
 	Contract *SafeMathTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1757,7 +1757,7 @@ const ServiceChainTokenBinRuntime = `0x6080604052600436106100cf5763ffffffff7c010
 // ServiceChainTokenBin is the compiled bytecode used for deploying new contracts.
 const ServiceChainTokenBin = `0x608060405234801561001057600080fd5b50604051602080610ab98339810160405251610041336b033b2e3c9fd0803ce8000000640100000000610066810204565b60038054600160a060020a031916600160a060020a0392909216919091179055610137565b600160a060020a038216151561007b57600080fd5b600254610095908264010000000061080f61011e82021704565b600255600160a060020a0382166000908152602081905260409020546100c8908264010000000061080f61011e82021704565b600160a060020a0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b60008282018381101561013057600080fd5b9392505050565b610973806101466000396000f3006080604052600436106100cf5763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306fdde0381146100d4578063095ea7b31461015e57806318160ddd1461019657806323b872dd146101bd5780632ff2e9dc146101e7578063313ce567146101fc57806339509351146102275780635a7df1641461024b57806370a082311461027857806395d89b4114610299578063a457c2d7146102ae578063a9059cbb146102d2578063c6b07116146102f6578063dd62ed3e1461031a575b600080fd5b3480156100e057600080fd5b506100e9610341565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561012357818101518382015260200161010b565b50505050905090810190601f1680156101505780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561016a57600080fd5b50610182600160a060020a0360043516602435610378565b604080519115158252519081900360200190f35b3480156101a257600080fd5b506101ab6103f6565b60408051918252519081900360200190f35b3480156101c957600080fd5b50610182600160a060020a03600435811690602435166044356103fc565b3480156101f357600080fd5b506101ab610499565b34801561020857600080fd5b506102116104a9565b6040805160ff9092168252519081900360200190f35b34801561023357600080fd5b50610182600160a060020a03600435166024356104ae565b34801561025757600080fd5b50610276600160a060020a03600435811690602435906044351661055e565b005b34801561028457600080fd5b506101ab600160a060020a036004351661060d565b3480156102a557600080fd5b506100e9610628565b3480156102ba57600080fd5b50610182600160a060020a036004351660243561065f565b3480156102de57600080fd5b50610182600160a060020a03600435166024356106aa565b34801561030257600080fd5b50610276600435600160a060020a03602435166106c0565b34801561032657600080fd5b506101ab600160a060020a03600435811690602435166106db565b60408051808201909152601181527f53657276696365436861696e546f6b656e000000000000000000000000000000602082015281565b6000600160a060020a038316151561038f57600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a038316600090815260016020908152604080832033845290915281205482111561042c57600080fd5b600160a060020a0384166000908152600160209081526040808320338452909152902054610460908363ffffffff61070616565b600160a060020a038516600090815260016020908152604080832033845290915290205561048f84848461071d565b5060019392505050565b6b033b2e3c9fd0803ce800000081565b601281565b6000600160a060020a03831615156104c557600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546104f9908363ffffffff61080f16565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b61056883836106aa565b5061057533848484610828565b151561060857604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603160248201527f53656e7420746f206120636f6e7472616374207768696368206973206e6f742060448201527f616e20544f4b454e207265636569766572000000000000000000000000000000606482015290519081900360840190fd5b505050565b600160a060020a031660009081526020819052604090205490565b60408051808201909152600381527f5343540000000000000000000000000000000000000000000000000000000000602082015281565b6000600160a060020a038316151561067657600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546104f9908363ffffffff61070616565b60006106b733848461071d565b50600192915050565b6003546106d790600160a060020a0316838361055e565b5050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b6000808383111561071657600080fd5b5050900390565b600160a060020a03831660009081526020819052604090205481111561074257600080fd5b600160a060020a038216151561075757600080fd5b600160a060020a038316600090815260208190526040902054610780908263ffffffff61070616565b600160a060020a0380851660009081526020819052604080822093909355908416815220546107b5908263ffffffff61080f16565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b60008282018381101561082157600080fd5b9392505050565b60008061083d85600160a060020a031661093f565b151561084c5760019150610936565b604080517ff099d9bd000000000000000000000000000000000000000000000000000000008152600160a060020a03888116600483015260248201879052858116604483015291519187169163f099d9bd916064808201926020929091908290030181600087803b1580156108c057600080fd5b505af11580156108d4573d6000803e3d6000fd5b505050506040513d60208110156108ea57600080fd5b50517fffffffff0000000000000000000000000000000000000000000000000000000081167fbc04f0af0000000000000000000000000000000000000000000000000000000014925090505b50949350505050565b6000903b11905600a165627a7a72305820226a173c7cb6848c796e542ff0e9caff0f559ca897e78253c13e9791ad1de4970029`
 
-// DeployServiceChainToken deploys a new klaytn contract, binding an instance of ServiceChainToken to it.
+// DeployServiceChainToken deploys a new Klaytn contract, binding an instance of ServiceChainToken to it.
 func DeployServiceChainToken(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address) (common.Address, *types.Transaction, *ServiceChainToken, error) {
 	parsed, err := abi.JSON(strings.NewReader(ServiceChainTokenABI))
 	if err != nil {
@@ -1770,29 +1770,29 @@ func DeployServiceChainToken(auth *bind.TransactOpts, backend bind.ContractBacke
 	return address, tx, &ServiceChainToken{ServiceChainTokenCaller: ServiceChainTokenCaller{contract: contract}, ServiceChainTokenTransactor: ServiceChainTokenTransactor{contract: contract}, ServiceChainTokenFilterer: ServiceChainTokenFilterer{contract: contract}}, nil
 }
 
-// ServiceChainToken is an auto generated Go binding around a klaytn contract.
+// ServiceChainToken is an auto generated Go binding around a Klaytn contract.
 type ServiceChainToken struct {
 	ServiceChainTokenCaller     // Read-only binding to the contract
 	ServiceChainTokenTransactor // Write-only binding to the contract
 	ServiceChainTokenFilterer   // Log filterer for contract events
 }
 
-// ServiceChainTokenCaller is an auto generated read-only Go binding around a klaytn contract.
+// ServiceChainTokenCaller is an auto generated read-only Go binding around a Klaytn contract.
 type ServiceChainTokenCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainTokenTransactor is an auto generated write-only Go binding around a klaytn contract.
+// ServiceChainTokenTransactor is an auto generated write-only Go binding around a Klaytn contract.
 type ServiceChainTokenTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainTokenFilterer is an auto generated log filtering Go binding around a klaytn contract events.
+// ServiceChainTokenFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
 type ServiceChainTokenFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainTokenSession is an auto generated Go binding around a klaytn contract,
+// ServiceChainTokenSession is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
 type ServiceChainTokenSession struct {
 	Contract     *ServiceChainToken // Generic contract binding to set the session for
@@ -1800,31 +1800,31 @@ type ServiceChainTokenSession struct {
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// ServiceChainTokenCallerSession is an auto generated read-only Go binding around a klaytn contract,
+// ServiceChainTokenCallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
 type ServiceChainTokenCallerSession struct {
 	Contract *ServiceChainTokenCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts            // Call options to use throughout this session
 }
 
-// ServiceChainTokenTransactorSession is an auto generated write-only Go binding around a klaytn contract,
+// ServiceChainTokenTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
 type ServiceChainTokenTransactorSession struct {
 	Contract     *ServiceChainTokenTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
 }
 
-// ServiceChainTokenRaw is an auto generated low-level Go binding around a klaytn contract.
+// ServiceChainTokenRaw is an auto generated low-level Go binding around a Klaytn contract.
 type ServiceChainTokenRaw struct {
 	Contract *ServiceChainToken // Generic contract binding to access the raw methods on
 }
 
-// ServiceChainTokenCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
+// ServiceChainTokenCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
 type ServiceChainTokenCallerRaw struct {
 	Contract *ServiceChainTokenCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ServiceChainTokenTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
+// ServiceChainTokenTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
 type ServiceChainTokenTransactorRaw struct {
 	Contract *ServiceChainTokenTransactor // Generic write-only contract binding to access the raw methods on
 }
