@@ -74,38 +74,3 @@ type Batch interface {
 	// Reset resets the batch for reuse
 	Reset()
 }
-
-// NewTable returns a Database object that prefixes all keys with a given
-// string.
-func NewTable(db Database, prefix string) Database {
-	switch db.Type() {
-	case LevelDB:
-		return &table{
-			db:     db,
-			prefix: prefix,
-		}
-	case BadgerDB:
-		return &badgerTable{
-			db:     db,
-			prefix: prefix,
-		}
-	case MemoryDB:
-		return NewMemDB()
-	default:
-		return nil
-	}
-}
-
-// NewTableBatch returns a Batch object which prefixes all keys with a given string.
-func NewTableBatch(db Database, prefix string) Batch {
-	switch db.Type() {
-	case LevelDB:
-		return &tableBatch{db.NewBatch(), prefix}
-	case BadgerDB:
-		return &badgerTableBatch{db.NewBatch(), prefix}
-	case MemoryDB:
-		return db.NewBatch()
-	default:
-		return nil
-	}
-}
