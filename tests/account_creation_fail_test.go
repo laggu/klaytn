@@ -148,7 +148,7 @@ func TestAccountCreationFailTxPool(t *testing.T) {
 // object into the txpool fails for an already existing account.
 // It tests the following scenario:
 // 1. Deploy smart contract (reservoir -> contract)
-// 2. Check the the smart contract is deployed well.
+// 2. Check the smart contract is deployed well.
 // 3. Add the same deploy tx into the txpool. In this case, this should fail.
 func TestSmartContractCreationFailTxPool(t *testing.T) {
 	if testing.Verbose() {
@@ -235,7 +235,7 @@ func TestSmartContractCreationFailTxPool(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Check the the smart contract is deployed well.
+	// 2. Check the smart contract is deployed well.
 	{
 		statedb, err := bcdata.bc.State()
 		if err != nil {

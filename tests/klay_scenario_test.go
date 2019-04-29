@@ -1546,7 +1546,7 @@ func TestSmartContractMalicious(t *testing.T) {
 
 // TestSmartContractScenario tests the following scenario:
 // 1. Deploy smart contract (reservoir -> contract)
-// 2. Check the the smart contract is deployed well.
+// 2. Check the smart contract is deployed well.
 // 3. Execute "reward" function with amountToSend
 // 4. Validate "reward" function is executed correctly by executing "balanceOf".
 func TestSmartContractScenario(t *testing.T) {
@@ -1637,7 +1637,7 @@ func TestSmartContractScenario(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Check the the smart contract is deployed well.
+	// 2. Check the smart contract is deployed well.
 	{
 		statedb, err := bcdata.bc.State()
 		if err != nil {
@@ -1724,7 +1724,7 @@ func TestSmartContractScenario(t *testing.T) {
 // TestSmartContractSign tests value transfer and fee delegation of smart contract accounts.
 // It performs the following scenario:
 // 1. Deploy smart contract (reservoir -> contract)
-// 2. Check the the smart contract is deployed well.
+// 2. Check the smart contract is deployed well.
 // 3. Try value transfer. It should be failed.
 // 4. Try fee delegation. It should be failed.
 func TestSmartContractSign(t *testing.T) {
@@ -1818,7 +1818,7 @@ func TestSmartContractSign(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Check the the smart contract is deployed well.
+	// 2. Check the smart contract is deployed well.
 	{
 		statedb, err := bcdata.bc.State()
 		if err != nil {
@@ -1878,7 +1878,7 @@ func TestSmartContractSign(t *testing.T) {
 
 // TestFeeDelegatedSmartContractScenario tests the following scenario:
 // 1. Deploy smart contract (reservoir -> contract) with fee-delegation.
-// 2. Check the the smart contract is deployed well.
+// 2. Check the smart contract is deployed well.
 // 3. Execute "reward" function with amountToSend with fee-delegation.
 // 4. Validate "reward" function is executed correctly by executing "balanceOf".
 func TestFeeDelegatedSmartContractScenario(t *testing.T) {
@@ -1979,7 +1979,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Check the the smart contract is deployed well.
+	// 2. Check the smart contract is deployed well.
 	{
 		statedb, err := bcdata.bc.State()
 		if err != nil {
@@ -2069,7 +2069,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 
 // TestFeeDelegatedSmartContractScenarioWithRatio tests the following scenario:
 // 1. Deploy smart contract (reservoir -> contract) with fee-delegation.
-// 2. Check the the smart contract is deployed well.
+// 2. Check the smart contract is deployed well.
 // 3. Execute "reward" function with amountToSend with fee-delegation.
 // 4. Validate "reward" function is executed correctly by executing "balanceOf".
 func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
@@ -2171,7 +2171,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Check the the smart contract is deployed well.
+	// 2. Check the smart contract is deployed well.
 	{
 		statedb, err := bcdata.bc.State()
 		if err != nil {

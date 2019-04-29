@@ -126,7 +126,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*TokenReceivedEvent) {
 	bi.mu.Lock()
 	defer bi.mu.Unlock()
 	// TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
-	// - If the the size is full and received event has the omitted nonce, it can be allowed.
+	// - If the size is full and received event has the omitted nonce, it can be allowed.
 	for _, ev := range evs {
 		bi.UpdateRequestedNonce(ev.RequestNonce)
 		bi.pendingRequestEvent.Put(ev)
@@ -279,7 +279,7 @@ func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.B
 	bm.bridges[addr] = NewBridgeInfo(addr, bridge, local, subscribed)
 }
 
-// LoadAllBridge reloads bridge and handles subscription by using the the journal cache.
+// LoadAllBridge reloads bridge and handles subscription by using the journal cache.
 func (bm *BridgeManager) LoadAllBridge() error {
 	bm.stopAllRecoveries()
 	bm.recoveries = []*valueTransferRecovery{}
