@@ -399,7 +399,6 @@ func (self *stateObject) CodeHash() []byte {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		return acc.GetCodeHash()
 	}
-	logger.Error("CodeHash() should be called only to a ProgramAccount!", "addr", self.address.String())
 	return emptyCodeHash
 }
 
