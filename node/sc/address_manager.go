@@ -45,6 +45,8 @@ func (am *AddressManager) AddBridge(bridge1 common.Address, bridge2 common.Addre
 
 	am.bridgeContracts[bridge1] = bridge2
 	am.bridgeContracts[bridge2] = bridge1
+
+	logger.Info("succeeded to AddBridge", "bridge1", bridge1.String(), "bridge2", bridge2.String())
 	return nil
 }
 
@@ -57,6 +59,7 @@ func (am *AddressManager) DeleteBridge(bridge1 common.Address) (common.Address, 
 	delete(am.bridgeContracts, bridge1)
 	delete(am.bridgeContracts, bridge2)
 
+	logger.Info("succeeded to DeleteBridge", "bridge1", bridge1.String(), "bridge2", bridge2.String())
 	return bridge1, bridge2, nil
 }
 

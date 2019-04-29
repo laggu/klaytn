@@ -287,7 +287,9 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 
 	if sc.config.VTRecovery {
 		logger.Info("value transfer recovery is enabled")
-		sc.bridgeManager.LoadAllBridge()
+		if err := sc.bridgeManager.LoadAllBridge(); err != nil {
+			logger.Error("failed to sc.bridgeManager.LoadAllBridge()", "err", err)
+		}
 	}
 
 	sc.pmwg.Add(1)
@@ -498,11 +500,11 @@ func (sc *SubBridge) loop() {
 		// Handle Bridge Event
 		case ev := <-sc.tokenReceivedCh:
 			if err := sc.eventhandler.HandleRequestValueTransferEvent(ev); err != nil {
-				logger.Error("fail to handle for request value transfer event ", err)
+				logger.Error("fail to handle for request value transfer event ", "err", err)
 			}
 		case ev := <-sc.tokenTransferCh:
 			if err := sc.eventhandler.HandleHandleValueTransferEvent(ev); err != nil {
-				logger.Error("fail to handle for handle value transfer event ", err)
+				logger.Error("fail to handle for handle value transfer event ", "err", err)
 			}
 		case <-report.C:
 			// report status

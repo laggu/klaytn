@@ -18,6 +18,7 @@ package sc
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"math/big"
@@ -180,7 +181,7 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(ev TokenRecei
 	handleBridgeAddr := cce.subbridge.AddressManager().GetCounterPartBridge(ev.ContractAddr)
 	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(handleBridgeAddr)
 	if !ok {
-		return errors.New("there is no bridge")
+		return fmt.Errorf("there is no counter part bridge(%v) of the bridge(%v)", handleBridgeAddr.String(), ev.ContractAddr.String())
 	}
 
 	// TODO-Klaytn need to manage the size limitation of pending event list.

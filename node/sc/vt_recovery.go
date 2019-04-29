@@ -308,7 +308,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	for _, ev := range vtr.serviceChainEvents {
-		logger.Warn("try to recover service chain's value transfer events", ev.Raw.TxHash, "nonce", ev.RequestNonce)
+		logger.Warn("try to recover service chain's value transfer events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
 			From:         ev.From,
@@ -322,7 +322,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	for _, ev := range vtr.mainChainEvents {
-		logger.Warn("try to recover main chain's value transfer events", ev.Raw.TxHash, "nonce", ev.RequestNonce)
+		logger.Warn("try to recover main chain's value transfer events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
 			From:         ev.From,
