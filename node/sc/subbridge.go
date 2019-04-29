@@ -46,8 +46,8 @@ import (
 const (
 	forceSyncCycle = 10 * time.Second // Time interval to force syncs, even if few peers are available
 
-	tokenReceivedChanSize = 100
-	tokenTransferChanSize = 100
+	tokenReceivedChanSize = 10000
+	tokenTransferChanSize = 10000
 )
 
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata

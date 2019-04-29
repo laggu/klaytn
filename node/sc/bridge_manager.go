@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	TokenEventChanSize = 30
+	TokenEventChanSize = 10000
 	BridgeAddrJournal  = "bridge_addrs.rlp"
 )
 

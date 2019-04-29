@@ -43,9 +43,9 @@ import (
 
 const (
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
-	chainHeadChanSize   = 10
-	chainLogChanSize    = 100
-	transactionChanSize = 500
+	chainHeadChanSize   = 10000
+	chainLogChanSize    = 10000
+	transactionChanSize = 10000
 )
 
 // NodeInfo represents a short summary of the Ethereum sub-protocol metadata
