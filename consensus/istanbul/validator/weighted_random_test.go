@@ -19,6 +19,7 @@ package validator
 import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"reflect"
@@ -421,4 +422,72 @@ func runRefreshForTest(valSet *weightedCouncil) {
 	}
 	seed, _ := strconv.ParseInt(hashString, 16, 64)
 	valSet.refreshProposers(seed, 0)
+}
+
+func TestWeightedCouncil_SetSubGroupSize(t *testing.T) {
+	validators := makeTestValidators(testNonZeroWeights)
+	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+
+	validatorsLen := len(validators)
+
+	for i := 1; i < validatorsLen; i++ {
+		valSet.SetSubGroupSize(uint64(i))
+
+		expectedSubGroupSize := uint64(i)
+		gottenSubGroupSize := valSet.SubGroupSize()
+
+		if expectedSubGroupSize != gottenSubGroupSize {
+			t.Errorf("SubGroupSize should be %v but gotten SubGroupSize is %v", expectedSubGroupSize, gottenSubGroupSize)
+		}
+	}
+}
+
+func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
+	validators := makeTestValidators(testNonZeroWeights)
+	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+
+	valSet.SetBlockNum(1)
+
+	for i := 2; i < len(validators); i++ {
+		testSubSetLen := uint64(i)
+		valSet.SetSubGroupSize(testSubSetLen)
+
+		testSubList := valSet.SubListWithProposer(crypto.Keccak256Hash([]byte("This is a test")), valSet.GetProposer().Address())
+		resultSubListLen := len(testSubList)
+
+		if int(testSubSetLen) != resultSubListLen {
+			t.Errorf("SubGroupSize should be %v but gotten SubGroupSize is %v", testSubSetLen, resultSubListLen)
+		}
+
+		for j := 0; j < resultSubListLen; j++ {
+			_, validator := valSet.getByAddress(testSubList[j].Address())
+			if validator == nil {
+				t.Errorf("validator in subGroup is not an element of weightedCouncil. validaotr address %v ", testSubList[j].Address())
+			}
+		}
+	}
+}
+
+func TestWeightedCouncil_Copy(t *testing.T) {
+	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+
+	copiedValSet := valSet.Copy().(*weightedCouncil)
+
+	// check each variable is same except selector(function)
+	if valSet.blockNum != copiedValSet.blockNum || valSet.GetProposer() != copiedValSet.GetProposer() ||
+		valSet.subSize != copiedValSet.subSize || valSet.policy != copiedValSet.policy ||
+		valSet.proposersBlockNum != copiedValSet.proposersBlockNum ||
+		!reflect.DeepEqual(valSet.validators, copiedValSet.validators) ||
+		!reflect.DeepEqual(valSet.proposers, copiedValSet.proposers) ||
+		!reflect.DeepEqual(valSet.stakingInfo, copiedValSet.stakingInfo) {
+		t.Errorf("copied weightedCouncil is diffrent from original.")
+		t.Errorf("block number. original : %v, Copied : %v", valSet.blockNum, copiedValSet.blockNum)
+		t.Errorf("proposer. original : %v, Copied : %v", valSet.GetProposer(), copiedValSet.GetProposer())
+		t.Errorf("subSize. original : %v, Copied : %v", valSet.subSize, copiedValSet.subSize)
+		t.Errorf("policy. original : %v, Copied : %v", valSet.policy, copiedValSet.policy)
+		t.Errorf("proposersBlockNum. original : %v, Copied : %v", valSet.proposersBlockNum, copiedValSet.proposersBlockNum)
+		t.Errorf("validators. original : %v, Copied : %v", valSet.validators, copiedValSet.validators)
+		t.Errorf("proposers. original : %v, Copied : %v", valSet.proposers, copiedValSet.proposers)
+		t.Errorf("staking. original : %v, Copied : %v", valSet.stakingInfo, copiedValSet.stakingInfo)
+	}
 }
