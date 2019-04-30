@@ -18,7 +18,6 @@ package sc
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
@@ -76,6 +75,13 @@ type BridgeJournal struct {
 }
 
 type BridgeInfo struct {
+	// TODO-Klaytn need to remove and replace subBridge in BridgeInfo
+	// subBridge is used for only AddressManager().GetCounterPartToken.
+	// Token pair information will be included by BridgeInfo instead of subBridge
+	subBridge *SubBridge
+
+	address        common.Address
+	account        *accountInfo
 	bridge         *bridgecontract.Bridge
 	onServiceChain bool
 	subscribed     bool
@@ -86,10 +92,27 @@ type BridgeInfo struct {
 
 	handledNonce   uint64 // the nonce from the handle value transfer event from the bridge.
 	requestedNonce uint64 // the nonce from the request value transfer event from the counter part bridge.
+
+	newEvent chan struct{}
+	closed   chan struct{}
 }
 
-func NewBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, local bool, subscribed bool) *BridgeInfo {
-	bi := &BridgeInfo{bridge, local, subscribed, &sync.Mutex{}, newEventSortedMap(), 0, 0, 0}
+func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) *BridgeInfo {
+	bi := &BridgeInfo{
+		subBridge,
+		addr,
+		account,
+		bridge,
+		local,
+		subscribed,
+		&sync.Mutex{},
+		newEventSortedMap(),
+		0,
+		0,
+		0,
+		make(chan struct{}),
+		make(chan struct{}),
+	}
 
 	handleNonce, err := bi.bridge.HandleNonce(nil)
 	if err != nil {
@@ -104,7 +127,110 @@ func NewBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, local boo
 	bi.requestedNonce = handleNonce // This requestedNonce will be updated by counter part bridge contract's new request event.
 	bi.handledNonce = handleNonce
 
+	go bi.loop()
+
 	return bi
+}
+
+func (bi *BridgeInfo) loop() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	logger.Info("start bridge loop", "addr", bi.address.String(), "onServiceChain", bi.onServiceChain)
+
+	for {
+		select {
+		case <-bi.newEvent:
+			bi.processingPendingRequestEvents()
+
+		case <-ticker.C:
+			bi.processingPendingRequestEvents()
+
+		case <-bi.closed:
+			logger.Info("stop bridge loop", "addr", bi.address.String(), "onServiceChain", bi.onServiceChain)
+			return
+		}
+	}
+}
+
+// processingPendingRequestEvents handles pending request value transfer events of the bridge.
+func (bi *BridgeInfo) processingPendingRequestEvents() error {
+	pendingEvent := bi.GetReadyRequestValueTransferEvents()
+	if pendingEvent == nil {
+		return nil
+	}
+
+	logger.Debug("Get Pending request value transfer event", "len(pendingEvent)", len(pendingEvent))
+
+	diff := bi.requestedNonce - bi.handledNonce
+	if diff > errorDiffRequestHandleNonce {
+		logger.Error("Value transfer requested/handled nonce gap is too much.", "toSC", bi.onServiceChain, "diff", diff, "requestedNonce", bi.requestedNonce, "handledNonce", bi.handledNonce)
+		// TODO-Klaytn need to consider starting value transfer recovery.
+	}
+
+	for idx, ev := range pendingEvent {
+		if err := bi.handleRequestValueTransferEvent(ev); err != nil {
+			bi.AddRequestValueTransferEvents(pendingEvent[idx:])
+			logger.Error("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(pendingEvent[idx:]))
+			return err
+		}
+		bi.nextHandleNonce++
+	}
+
+	return nil
+}
+
+// handleRequestValueTransferEvent handles the given request value transfer event.
+func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *TokenReceivedEvent) error {
+	tokenType := ev.TokenType
+	tokenAddr := bi.subBridge.AddressManager().GetCounterPartToken(ev.TokenAddr)
+	if tokenType != KLAY && tokenAddr == (common.Address{}) {
+		logger.Error("Unregisterd counter part token address.", "addr", tokenAddr.Hex())
+		// TODO-Klaytn consider the invalid token address
+		// - prevent the invalid token address in the bridge contract.
+		// - ignore and keep the request with the invalid token address during handling transaction.
+
+		// Increase only handle nonce of bridge contract.
+		ev.TokenType = KLAY
+		ev.Amount = big.NewInt(0)
+	}
+
+	to := ev.To
+
+	bridgeAcc := bi.account
+
+	bridgeAcc.Lock()
+	defer bridgeAcc.UnLock()
+
+	auth := bridgeAcc.GetTransactOpts()
+
+	switch tokenType {
+	case KLAY:
+		tx, err := bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber)
+		if err != nil {
+			return err
+		}
+		logger.Debug("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+
+	case TOKEN:
+		tx, err := bi.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+		if err != nil {
+			return err
+		}
+		logger.Debug("Bridge succeeded to HandleTokenTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+	case NFT:
+		tx, err := bi.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+		if err != nil {
+			return err
+		}
+		logger.Debug("Bridge succeeded to HandleNFTTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+	default:
+		logger.Error("Got Unknown Token Type ReceivedEvent")
+		return nil
+	}
+
+	bridgeAcc.IncNonce()
+	return nil
 }
 
 // UpdateRequestedNonce updates the requested nonce with new nonce.
@@ -130,6 +256,11 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*TokenReceivedEvent) {
 	for _, ev := range evs {
 		bi.UpdateRequestedNonce(ev.RequestNonce)
 		bi.pendingRequestEvent.Put(ev)
+	}
+
+	select {
+	case bi.newEvent <- struct{}{}:
+	default:
 	}
 }
 
@@ -275,8 +406,8 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 }
 
 // SetBridge stores the address and bridge pair with local/remote and subscription status.
-func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.Bridge, local bool, subscribed bool) {
-	bm.bridges[addr] = NewBridgeInfo(addr, bridge, local, subscribed)
+func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) {
+	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, account, local, subscribed)
 }
 
 // LoadAllBridge reloads bridge and handles subscription by using the journal cache.
@@ -301,8 +432,8 @@ func (bm *BridgeManager) LoadAllBridge() error {
 			if err != nil {
 				return err
 			}
-			bm.SetBridge(journal.LocalAddress, localBridge, true, false)
-			bm.SetBridge(journal.RemoteAddress, remoteBridge, false, false)
+			bm.SetBridge(journal.LocalAddress, localBridge, bm.subBridge.bridgeAccountManager.scAccount, true, false)
+			bm.SetBridge(journal.RemoteAddress, remoteBridge, bm.subBridge.bridgeAccountManager.mcAccount, false, false)
 
 			// 2. Set the address manager.
 			bm.subBridge.AddressManager().AddBridge(journal.LocalAddress, journal.RemoteAddress)
@@ -381,7 +512,12 @@ func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBa
 		return err
 	}
 	logger.Info("bridge ", "address", addr)
-	bm.SetBridge(addr, bridge, local, false)
+	if local {
+		bm.SetBridge(addr, bridge, bm.subBridge.bridgeAccountManager.scAccount, local, false)
+	} else {
+		bm.SetBridge(addr, bridge, bm.subBridge.bridgeAccountManager.mcAccount, local, false)
+	}
+
 	bridgeInfo, _ = bm.GetBridgeInfo(addr)
 
 	return nil
@@ -389,46 +525,36 @@ func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBa
 
 // Deploy Bridge SmartContract on same node or remote node
 func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) (common.Address, error) {
+	var acc *accountInfo
 	if local {
-		addr, bridge, err := bm.deployBridge(bm.subBridge.getChainID(), big.NewInt((int64)(bm.subBridge.handler.getServiceChainAccountNonce())), bm.subBridge.handler.nodeKey, backend, bm.subBridge.txPool.GasPrice())
-		if err != nil {
-			logger.Error("fail to deploy bridge", "err", err)
-			return common.Address{}, err
-		}
-		bm.SetBridge(addr, bridge, local, false)
-
-		return addr, err
+		acc = bm.subBridge.bridgeAccountManager.scAccount
 	} else {
-		bm.subBridge.handler.LockMainChainAccount()
-		defer bm.subBridge.handler.UnLockMainChainAccount()
-		addr, bridge, err := bm.deployBridge(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.getMainChainAccountNonce())), bm.subBridge.handler.chainKey, backend, new(big.Int).SetUint64(bm.subBridge.handler.remoteGasPrice))
-		if err != nil {
-			logger.Error("fail to deploy bridge", "err", err)
-			return common.Address{}, err
-		}
-		bm.SetBridge(addr, bridge, local, false)
-		bm.subBridge.handler.addMainChainAccountNonce(1)
-		return addr, err
+		acc = bm.subBridge.bridgeAccountManager.mcAccount
 	}
+
+	addr, bridge, err := bm.deployBridge(acc, backend)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	bm.SetBridge(addr, bridge, acc, local, false)
+	return addr, err
 }
 
 // DeployBridge handles actual smart contract deployment.
 // To create contract, the chain ID, nonce, account key, private key, contract binding and gas price are used.
 // The deployed contract address, transaction are returned. An error is also returned if any.
-func (bm *BridgeManager) deployBridge(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend bind.ContractBackend, gasPrice *big.Int) (common.Address, *bridgecontract.Bridge, error) {
-	// TODO-Klaytn change config
-	if accountKey == nil {
-		// Only for unit test
-		return common.Address{}, nil, errors.New("nil accountKey")
-	}
-
-	auth := MakeTransactOpts(accountKey, nonce, chainID, gasPrice)
-
+func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBackend) (common.Address, *bridgecontract.Bridge, error) {
+	acc.Lock()
+	defer acc.UnLock()
+	auth := acc.GetTransactOpts()
 	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend, true)
 	if err != nil {
 		logger.Error("Failed to deploy contract.", "err", err)
 		return common.Address{}, nil, err
 	}
+	acc.IncNonce()
+
 	logger.Info("Bridge is deploying...", "addr", addr, "txHash", tx.Hash().String())
 
 	back, ok := backend.(bind.DeployBackend)
@@ -565,5 +691,9 @@ func (bm *BridgeManager) loop(
 
 // Stop closes a subscribed event scope of the bridge manager.
 func (bm *BridgeManager) Stop() {
+	for _, bi := range bm.bridges {
+		close(bi.closed)
+	}
+
 	bm.scope.Close()
 }

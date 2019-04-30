@@ -167,8 +167,8 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 		return false
 	}
 
-	sbapi.sc.bridgeManager.SetBridge(cBridgeAddr, cBridge, true, false)
-	sbapi.sc.bridgeManager.SetBridge(pBridgeAddr, pBridge, false, false)
+	sbapi.sc.bridgeManager.SetBridge(cBridgeAddr, cBridge, sbapi.sc.bridgeAccountManager.scAccount, true, false)
+	sbapi.sc.bridgeManager.SetBridge(pBridgeAddr, pBridge, sbapi.sc.bridgeAccountManager.mcAccount, false, false)
 
 	return true
 }

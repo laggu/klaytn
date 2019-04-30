@@ -102,6 +102,7 @@ func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, err
 
 func (sbh *SubBridgeHandler) setParentChainID(chainId *big.Int) {
 	sbh.parentChainID = chainId
+	sbh.subbridge.bridgeAccountManager.mcAccount.SetChainID(chainId)
 }
 
 func (sbh *SubBridgeHandler) getParentChainID() *big.Int {
@@ -118,17 +119,17 @@ func (sbh *SubBridgeHandler) UnLockMainChainAccount() {
 
 // getMainChainAccountNonce returns the main chain account nonce of main chain account address.
 func (sbh *SubBridgeHandler) getMainChainAccountNonce() uint64 {
-	return sbh.mainChainAccountNonce
+	return sbh.subbridge.bridgeAccountManager.mcAccount.GetNonce()
 }
 
 // setMainChainAccountNonce sets the main chain account nonce of main chain account address.
 func (sbh *SubBridgeHandler) setMainChainAccountNonce(newNonce uint64) {
-	sbh.mainChainAccountNonce = newNonce
+	sbh.subbridge.bridgeAccountManager.mcAccount.SetNonce(newNonce)
 }
 
 // addMainChainAccountNonce increases nonce by number
 func (sbh *SubBridgeHandler) addMainChainAccountNonce(number uint64) {
-	sbh.mainChainAccountNonce += number
+	sbh.subbridge.bridgeAccountManager.mcAccount.IncNonce()
 }
 
 // getMainChainAccountNonceSynced returns whether the main chain account nonce is synced or not.
@@ -150,6 +151,7 @@ func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
 }
 
 func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
+	sbh.subbridge.bridgeAccountManager.scAccount.SetGasPrice(big.NewInt(int64(gasPrice)))
 	sbh.remoteGasPrice = gasPrice
 }
 
@@ -157,24 +159,24 @@ func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
 // If given as a parameter, it will use it. If not given, it will use the address of the public key
 // derived from chainKey.
 func (sbh *SubBridgeHandler) GetMainChainAccountAddr() *common.Address {
-	return sbh.MainChainAccountAddr
+	return &sbh.subbridge.bridgeAccountManager.mcAccount.address
 }
 
 // GetServiceChainAccountAddr returns a pointer of a hex address of an account used for service chain.
 // If given as a parameter, it will use it. If not given, it will use the address of the public key
 // derived from chainKey.
 func (sbh *SubBridgeHandler) GetServiceChainAccountAddr() *common.Address {
-	return sbh.ServiceChainAccountAddr
+	return &sbh.subbridge.bridgeAccountManager.scAccount.address
 }
 
 // getChainKey returns the private key used for signing parent chain tx.
 func (sbh *SubBridgeHandler) getChainKey() *ecdsa.PrivateKey {
-	return sbh.chainKey
+	return sbh.subbridge.bridgeAccountManager.mcAccount.key
 }
 
 // getNodeKey returns the private key used for signing service chain tx.
 func (sbh *SubBridgeHandler) getNodeKey() *ecdsa.PrivateKey {
-	return sbh.nodeKey
+	return sbh.subbridge.bridgeAccountManager.scAccount.key
 }
 
 // GetAnchoringPeriod returns the period to make and send a chain transaction to parent chain.

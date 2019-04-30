@@ -28,14 +28,17 @@ const (
 	GasLimit = 5000000
 )
 
+// TODO-Klaytn need to refactor for chainID / gasPrice
 func MakeTransactOpts(accountKey *ecdsa.PrivateKey, nonce *big.Int, chainID *big.Int, gasPrice *big.Int) *bind.TransactOpts {
+	if accountKey == nil {
+		return nil
+	}
 	auth := bind.NewKeyedTransactor(accountKey)
-	//TODO-Klaytn
 	auth.GasLimit = GasLimit
 	auth.GasPrice = gasPrice
 	auth.Nonce = nonce
 	auth.Signer = func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), accountKey)
+		return types.SignTx(tx, signer, accountKey)
 	}
 	return auth
 }

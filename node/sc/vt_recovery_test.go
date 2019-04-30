@@ -399,7 +399,13 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
-	sc := &SubBridge{config: config, peers: newBridgePeerSet()}
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
+	sc := &SubBridge{
+		config:               config,
+		peers:                newBridgePeerSet(),
+		bridgeAccountManager: bam,
+	}
 	handler, err := NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize the bridgeHandler : %v", err)

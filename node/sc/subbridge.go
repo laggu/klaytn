@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts"
+	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/api"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
@@ -49,6 +50,11 @@ const (
 	tokenReceivedChanSize = 10000
 	tokenTransferChanSize = 10000
 )
+
+// Backend wraps all methods for local/remote backend
+type Backend interface {
+	bind.ContractBackend
+}
 
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
 // known about the host peer.
@@ -111,8 +117,8 @@ type SubBridge struct {
 	eventhandler *ChildChainEventHandler
 
 	// bridgemanager for value exchange
-	localBackend  *LocalBackend
-	remoteBackend *RemoteBackend
+	localBackend  Backend
+	remoteBackend Backend
 	bridgeManager *BridgeManager
 
 	tokenReceivedCh  chan TokenReceivedEvent
@@ -120,7 +126,8 @@ type SubBridge struct {
 	tokenTransferCh  chan TokenTransferEvent
 	tokenTransferSub event.Subscription
 
-	addressManager *AddressManager
+	bridgeAccountManager *BridgeAccountManager
+	addressManager       *AddressManager
 
 	bootFail bool
 
@@ -186,6 +193,11 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		return nil, err
 	}
 	sc.addressManager, err = NewAddressManager()
+	if err != nil {
+		return nil, err
+	}
+
+	sc.bridgeAccountManager, err = NewBridgeAccountManager(sc.config.chainkey, sc.config.nodekey)
 	if err != nil {
 		return nil, err
 	}
@@ -291,6 +303,8 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 			logger.Error("failed to sc.bridgeManager.LoadAllBridge()", "err", err)
 		}
 	}
+
+	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
 
 	sc.pmwg.Add(1)
 	go sc.loop()

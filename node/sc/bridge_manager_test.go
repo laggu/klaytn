@@ -18,7 +18,6 @@ package sc
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/accounts/abi/bind/backends"
@@ -97,9 +96,12 @@ func TestBridgeManager(t *testing.T) {
 	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
 	config.MainChainAccountAddr = &chainKeyAddr
 
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
 	sc := &SubBridge{
-		config: config,
-		peers:  newBridgePeerSet(),
+		config:               config,
+		peers:                newBridgePeerSet(),
+		bridgeAccountManager: bam,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -409,6 +411,13 @@ func TestBridgeManager(t *testing.T) {
 
 	// 13. Nonce check on deploy error
 	{
+
+		nonce, err := sim.NonceAt(context.Background(), bam.scAccount.address, nil)
+		if err != nil {
+			t.Fatal("failed to sim.NonceAt", err)
+		}
+		bam.scAccount.SetNonce(nonce)
+
 		addr2, err := bridgeManager.DeployBridgeNonceTest(sim)
 		if err != nil {
 			log.Fatalf("Failed to deploy new bridge contract: %v %v", err, addr2)
@@ -454,9 +463,14 @@ func TestBridgeManagerJournal(t *testing.T) {
 	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
 	config.MainChainAccountAddr = &chainKeyAddr
 
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
 	sc := &SubBridge{
-		config: config,
-		peers:  newBridgePeerSet(),
+		config:               config,
+		peers:                newBridgePeerSet(),
+		localBackend:         sim,
+		remoteBackend:        sim,
+		bridgeAccountManager: bam,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -476,7 +490,21 @@ func TestBridgeManagerJournal(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr] = &BridgeInfo{bridge, true, true, &sync.Mutex{}, newEventSortedMap(), 0, 0, 0}
+	bm.bridges[addr] = &BridgeInfo{
+		nil,
+		addr,
+		nil,
+		bridge,
+		true,
+		true,
+		&sync.Mutex{},
+		newEventSortedMap(),
+		0,
+		0,
+		0,
+		make(chan struct{}),
+		make(chan struct{}),
+	}
 	bm.journal.cache = []*BridgeJournal{}
 	bm.journal.cache = append(bm.journal.cache, &BridgeJournal{addr, addr, true})
 
@@ -543,18 +571,20 @@ func TestBridgeManagerJournal(t *testing.T) {
 // for TestMethod
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
-		addr, bridge, err := bm.deployBridgeTest(big.NewInt(2019), big.NewInt((int64)(bm.subBridge.handler.getServiceChainAccountNonce())), bm.subBridge.handler.nodeKey, backend)
-		bm.SetBridge(addr, bridge, local, false)
+		acc := bm.subBridge.bridgeAccountManager.scAccount
+		addr, bridge, err := bm.deployBridgeTest(acc, backend)
+		bm.SetBridge(addr, bridge, acc, local, false)
 		return addr, err
 	} else {
-		addr, bridge, err := bm.deployBridgeTest(bm.subBridge.handler.parentChainID, big.NewInt((int64)(bm.subBridge.handler.mainChainAccountNonce)), bm.subBridge.handler.chainKey, backend)
-		bm.SetBridge(addr, bridge, local, false)
+		acc := bm.subBridge.bridgeAccountManager.mcAccount
+		addr, bridge, err := bm.deployBridgeTest(acc, backend)
+		bm.SetBridge(addr, bridge, acc, local, false)
 		return addr, err
 	}
 }
 
-func (bm *BridgeManager) deployBridgeTest(chainID *big.Int, nonce *big.Int, accountKey *ecdsa.PrivateKey, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
-	auth := bind.NewKeyedTransactor(accountKey)
+func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
+	auth := acc.GetTransactOpts()
 	auth.Value = big.NewInt(10000)
 	addr, tx, contract, err := bridge.DeployBridge(auth, backend, true)
 	if err != nil {
@@ -581,13 +611,13 @@ func (bm *BridgeManager) deployBridgeTest(chainID *big.Int, nonce *big.Int, acco
 
 // Nonce should not be increased when error occurs
 func (bm *BridgeManager) DeployBridgeNonceTest(backend bind.ContractBackend) (common.Address, error) {
-	key := bm.subBridge.handler.chainKey
-	nonce := bm.subBridge.handler.getMainChainAccountNonce()
-	bm.subBridge.handler.chainKey = nil
+	key := bm.subBridge.bridgeAccountManager.mcAccount.key
+	nonce := bm.subBridge.bridgeAccountManager.mcAccount.GetNonce()
+	bm.subBridge.bridgeAccountManager.mcAccount.key = nil
 	addr, _ := bm.DeployBridge(backend, false)
-	bm.subBridge.handler.chainKey = key
+	bm.subBridge.bridgeAccountManager.mcAccount.key = key
 
-	if nonce != bm.subBridge.handler.getMainChainAccountNonce() {
+	if nonce != bm.subBridge.bridgeAccountManager.mcAccount.GetNonce() {
 		return addr, errors.New("nonce is accidentally increased")
 	}
 
