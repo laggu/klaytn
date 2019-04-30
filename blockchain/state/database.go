@@ -69,6 +69,7 @@ type Database interface {
 type Trie interface {
 	TryGet(key []byte) ([]byte, error)
 	TryUpdate(key, value []byte) error
+	TryUpdateWithKeys(key, hashKey, hexKey, value []byte) error
 	TryDelete(key []byte) error
 	Commit(onleaf statedb.LeafCallback) (common.Hash, error)
 	Hash() common.Hash

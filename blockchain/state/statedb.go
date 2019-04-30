@@ -33,6 +33,7 @@ import (
 	"math/big"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 type revision struct {
@@ -494,11 +495,21 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 // updateStateObject writes the given object to the statedb.
 func (self *StateDB) updateStateObject(stateObject *stateObject) {
 	addr := stateObject.Address()
-	data, err := rlp.EncodeToBytes(stateObject)
-	if err != nil {
-		panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
+	if data := stateObject.encoded.Load(); data != nil {
+		encodedData := data.(*encodedData)
+		if encodedData.err != nil {
+			panic(fmt.Errorf("can't encode object at %x: %v", addr[:], encodedData.err))
+		}
+		self.setError(self.trie.TryUpdateWithKeys(addr[:],
+			encodedData.trieHashKey, encodedData.trieHexKey, encodedData.data))
+		stateObject.encoded = atomic.Value{}
+	} else {
+		data, err := rlp.EncodeToBytes(stateObject)
+		if err != nil {
+			panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
+		}
+		self.setError(self.trie.TryUpdate(addr[:], data))
 	}
-	self.setError(self.trie.TryUpdate(addr[:], data))
 }
 
 // deleteStateObject removes the given object from the state trie.
@@ -835,6 +846,9 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	for addr := range s.journal.dirties {
 		s.stateObjectsDirty[addr] = struct{}{}
 	}
+
+	objectEncoder := getStateObjectEncoder(len(s.stateObjects))
+	var stateObjectsToUpdate []*stateObject
 	// Commit objects to the trie.
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
@@ -856,10 +870,16 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 				}
 			}
 			// Update the object in the main account trie.
-			s.updateStateObject(stateObject)
+			stateObjectsToUpdate = append(stateObjectsToUpdate, stateObject)
+			objectEncoder.encode(stateObject)
 		}
 		delete(s.stateObjectsDirty, addr)
 	}
+
+	for _, so := range stateObjectsToUpdate {
+		s.updateStateObject(so)
+	}
+
 	// Write trie changes.
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {
 		serializer := account.NewAccountSerializer()

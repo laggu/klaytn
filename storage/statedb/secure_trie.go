@@ -111,6 +111,17 @@ func (t *SecureTrie) TryUpdate(key, value []byte) error {
 	return nil
 }
 
+// TryUpdateWithKeys does basically same thing that TryUpdate does.
+// Only difference is that it uses pre-encoded hashKey and hexKey.
+func (t *SecureTrie) TryUpdateWithKeys(key, hashKey, hexKey, value []byte) error {
+	err := t.trie.TryUpdateWithHexKey(hexKey, value)
+	if err != nil {
+		return err
+	}
+	t.getSecKeyCache()[string(hashKey)] = common.CopyBytes(key)
+	return nil
+}
+
 // Delete removes any existing value for key from the trie.
 func (t *SecureTrie) Delete(key []byte) {
 	if err := t.TryDelete(key); err != nil {

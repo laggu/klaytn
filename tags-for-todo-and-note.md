@@ -54,3 +54,4 @@ Please note that the tag name always
 | Refactoring                                    | Related to refactoring.                                   |
 | gRPC                                           | Related to gRPC.                                          |
 | HF                                             | Related to HardFork.                                      |
+| StateDB                                        | Related to StateDB and stateObject.                       |

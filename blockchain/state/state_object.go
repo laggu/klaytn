@@ -32,6 +32,7 @@ import (
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"math/big"
+	"sync/atomic"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -96,6 +97,15 @@ type stateObject struct {
 	dirtyCode bool // true if the code was updated
 	suicided  bool
 	deleted   bool
+
+	encoded atomic.Value // RLP-encoded data
+}
+
+type encodedData struct {
+	err         error  // RLP-encoding error from stateObjectEncoder
+	data        []byte // RLP-encoded stateObject
+	trieHashKey []byte // hash of key used to update trie
+	trieHexKey  []byte // hex string of tireHashKey
 }
 
 // empty returns whether the account is considered empty.

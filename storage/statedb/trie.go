@@ -200,15 +200,21 @@ func (t *Trie) Update(key, value []byte) {
 //
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryUpdate(key, value []byte) error {
-	k := keybytesToHex(key)
+	hexKey := keybytesToHex(key)
+	return t.TryUpdateWithHexKey(hexKey, value)
+}
+
+// TryUpdateWithHexKey uses pre-generated hexKey.
+// It is both called from TryUpdate and SecureTrie.TryUpdateWithKeys.
+func (t *Trie) TryUpdateWithHexKey(hexKey, value []byte) error {
 	if len(value) != 0 {
-		_, n, err := t.insert(t.root, nil, k, valueNode(value))
+		_, n, err := t.insert(t.root, nil, hexKey, valueNode(value))
 		if err != nil {
 			return err
 		}
 		t.root = n
 	} else {
-		_, n, err := t.delete(t.root, nil, k)
+		_, n, err := t.delete(t.root, nil, hexKey)
 		if err != nil {
 			return err
 		}
@@ -472,4 +478,15 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node) {
 	h := newHasher(t.cachegen, t.cachelimit, onleaf)
 	defer returnHasherToPool(h)
 	return h.hash(t.root, db, true)
+}
+
+func GetHashAndHexKey(key []byte) ([]byte, []byte) {
+	var hashKeyBuf [common.HashLength]byte
+	h := newHasher(0, 0, nil)
+	h.sha.Reset()
+	h.sha.Write(key)
+	hashKey := h.sha.Sum(hashKeyBuf[:0])
+	returnHasherToPool(h)
+	hexKey := keybytesToHex(hashKey)
+	return hashKey, hexKey
 }
