@@ -307,6 +307,9 @@ func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlock
 	if common.IsPrecompiledContractAddress(t.Recipient) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
+	if stateDB.IsProgramAccount(t.Recipient) {
+		return kerrors.ErrNotForProgramAccount
+	}
 	return nil
 }
 
