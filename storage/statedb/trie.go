@@ -26,7 +26,6 @@ import (
 
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
-	"github.com/ground-x/klaytn/metrics"
 )
 
 var (
@@ -36,25 +35,6 @@ var (
 	// emptyState is the known hash of an empty state trie entry.
 	emptyState = crypto.Keccak256Hash(nil)
 )
-
-var (
-	trieCacheMissCounter   = metrics.NewRegisteredCounter("trie/cachemiss", nil)
-	trieCacheUnloadCounter = metrics.NewRegisteredCounter("trie/cacheunload", nil)
-)
-
-// TrieCacheMisses retrieves a global counter measuring the number of cache misses
-// the trie had since process startup. This isn't useful for anything apart from
-// trie debugging purposes.
-func TrieCacheMisses() int64 {
-	return trieCacheMissCounter.Count()
-}
-
-// TrieCacheUnloads retrieves a global counter measuring the number of cache unloads
-// the trie did since process startup. This isn't useful for anything apart from
-// trie debugging purposes.
-func TrieCacheUnloads() int64 {
-	return trieCacheUnloadCounter.Count()
-}
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
 // node. It's used by state sync and commit to allow handling external references
@@ -70,23 +50,11 @@ type Trie struct {
 	db           *Database
 	root         node
 	originalRoot common.Hash
-
-	// Cache generation values.
-	// cachegen increases by one with each commit operation.
-	// new nodes are tagged with the current generation and unloaded
-	// when their generation is older than than cachegen-cachelimit.
-	cachegen, cachelimit uint16
-}
-
-// SetCacheLimit sets the number of 'cache generations' to keep.
-// A cache generation is created by a call to Commit.
-func (t *Trie) SetCacheLimit(l uint16) {
-	t.cachelimit = l
 }
 
 // newFlag returns the cache flag value for a newly created node.
 func (t *Trie) newFlag() nodeFlag {
-	return nodeFlag{dirty: true, gen: t.cachegen}
+	return nodeFlag{dirty: true}
 }
 
 // NewTrie creates a trie with an existing root node from db.
@@ -156,14 +124,12 @@ func (t *Trie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode
 		if err == nil && didResolve {
 			n = n.copy()
 			n.Val = newnode
-			n.flags.gen = t.cachegen
 		}
 		return value, n, didResolve, err
 	case *fullNode:
 		value, newnode, didResolve, err = t.tryGet(n.Children[key[pos]], key, pos+1)
 		if err == nil && didResolve {
 			n = n.copy()
-			n.flags.gen = t.cachegen
 			n.Children[key[pos]] = newnode
 		}
 		return value, n, didResolve, err
@@ -438,18 +404,12 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 }
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
-	trieCacheMissCounter.Inc(1)
-
 	hash := common.BytesToHash(n)
-	if node := t.db.node(hash, t.cachegen); node != nil {
+	if node := t.db.node(hash); node != nil {
 		return node, nil
 	}
 	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
 }
-
-// Root returns the root hash of the trie.
-// Deprecated: use Hash instead.
-func (t *Trie) Root() []byte { return t.Hash().Bytes() }
 
 // Hash returns the root hash of the trie. It does not write to the
 // database and can be used even if the trie doesn't have one.
@@ -467,7 +427,6 @@ func (t *Trie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
 	}
 	hash, cached := t.hashRoot(t.db, onleaf)
 	t.root = cached
-	t.cachegen++
 	return common.BytesToHash(hash.(hashNode)), nil
 }
 
@@ -475,14 +434,14 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node) {
 	if t.root == nil {
 		return hashNode(emptyRoot.Bytes()), nil
 	}
-	h := newHasher(t.cachegen, t.cachelimit, onleaf)
+	h := newHasher(onleaf)
 	defer returnHasherToPool(h)
 	return h.hash(t.root, db, true)
 }
 
 func GetHashAndHexKey(key []byte) ([]byte, []byte) {
 	var hashKeyBuf [common.HashLength]byte
-	h := newHasher(0, 0, nil)
+	h := newHasher(nil)
 	h.sha.Reset()
 	h.sha.Write(key)
 	hashKey := h.sha.Sum(hashKeyBuf[:0])

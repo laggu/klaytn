@@ -473,11 +473,11 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 
-	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB, 0)
+	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB)
 	if err != nil {
 		return nil, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), trieDB, 0)
+	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), trieDB)
 	if err != nil {
 		return nil, err
 	}

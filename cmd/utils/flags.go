@@ -27,7 +27,6 @@ import (
 	"github.com/ground-x/klaytn/accounts/keystore"
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/blockchain"
-	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/datasync/downloader"
@@ -206,11 +205,6 @@ var (
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
 		Value: 256,
-	}
-	TrieCacheGenFlag = cli.IntFlag{
-		Name:  "state.cache-gens",
-		Usage: "Number of the global state generations to keep in memory",
-		Value: int(state.MaxTrieCacheGen),
 	}
 	TrieBlockIntervalFlag = cli.UintFlag{
 		Name:  "state.block-interval",
@@ -1131,10 +1125,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
 		}
 	*/
-	// TODO(fjl): move trie cache generations into config
-	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
-		state.MaxTrieCacheGen = uint16(gen)
-	}
 }
 
 // RegisterCNService adds a CN client to the stack.

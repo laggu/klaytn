@@ -912,7 +912,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		return nil
 	})
-	logger.Debug("Trie cache stats after commit", "misses", statedb.TrieCacheMisses(), "unloads", statedb.TrieCacheUnloads())
 	return root, err
 }
 

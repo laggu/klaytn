@@ -68,7 +68,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.DBManager) err
 			panic(fmt.Sprintf("%T: invalid node: %v", tn, tn))
 		}
 	}
-	hasher := newHasher(0, 0, nil)
+	hasher := newHasher(nil)
 	for i, n := range nodes {
 		// Don't bother checking for errors here since hasher panics
 		// if encoding doesn't work and we're not writing to any database.
@@ -114,7 +114,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}
-		n, err := decodeNode(wantHash[:], buf, 0)
+		n, err := decodeNode(wantHash[:], buf)
 		if err != nil {
 			return nil, fmt.Errorf("bad proof node %d: %v", i, err), i
 		}

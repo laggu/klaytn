@@ -106,7 +106,6 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.StateDBCachingFlag,
 			utils.TrieMemoryCacheSizeFlag,
-			utils.TrieCacheGenFlag,
 			utils.TrieBlockIntervalFlag,
 		},
 	},

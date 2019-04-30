@@ -398,11 +398,11 @@ func (api *PrivateServiceChainDebugAPI) getModifiedAccounts(startBlock, endBlock
 		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
 	}
 
-	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), statedb.NewDatabase(api.sc.chainDB), 0)
+	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), statedb.NewDatabase(api.sc.chainDB))
 	if err != nil {
 		return nil, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), statedb.NewDatabase(api.sc.chainDB), 0)
+	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), statedb.NewDatabase(api.sc.chainDB))
 	if err != nil {
 		return nil, err
 	}

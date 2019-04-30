@@ -29,11 +29,9 @@ import (
 )
 
 type hasher struct {
-	tmp        sliceBuffer
-	sha        keccakState
-	cachegen   uint16
-	cachelimit uint16
-	onleaf     LeafCallback
+	tmp    sliceBuffer
+	sha    keccakState
+	onleaf LeafCallback
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -65,9 +63,9 @@ var hasherPool = sync.Pool{
 	},
 }
 
-func newHasher(cachegen, cachelimit uint16, onleaf LeafCallback) *hasher {
+func newHasher(onleaf LeafCallback) *hasher {
 	h := hasherPool.Get().(*hasher)
-	h.cachegen, h.cachelimit, h.onleaf = cachegen, cachelimit, onleaf
+	h.onleaf = onleaf
 	return h
 }
 
@@ -83,14 +81,13 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 		if db == nil {
 			return hash, n
 		}
-		if n.canUnload(h.cachegen, h.cachelimit) {
-			// Unload the node from cache. All of its subnodes will have a lower or equal
-			// cache generation number.
-			trieCacheUnloadCounter.Inc(1)
-			return hash, hash
-		}
 		if !dirty {
-			return hash, n
+			switch n.(type) {
+			case *fullNode, *shortNode:
+				return hash, hash
+			default:
+				return hash, n
+			}
 		}
 	}
 	// Trie not processed yet or needs storage, walk the children

@@ -56,6 +56,9 @@ func hexToCompact(hex []byte) []byte {
 }
 
 func compactToHex(compact []byte) []byte {
+	if len(compact) == 0 {
+		return compact
+	}
 	base := keybytesToHex(compact)
 	base = base[:len(base)-1]
 	// apply terminator flag

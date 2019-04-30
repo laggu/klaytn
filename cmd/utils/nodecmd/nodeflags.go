@@ -55,7 +55,6 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NoParallelDBWriteFlag,
 	utils.SenderTxHashIndexingFlag,
 	utils.TrieMemoryCacheSizeFlag,
-	utils.TrieCacheGenFlag,
 	utils.TrieBlockIntervalFlag,
 	utils.CacheTypeFlag,
 	utils.CacheScaleFlag,
