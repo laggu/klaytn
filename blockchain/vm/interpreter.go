@@ -136,6 +136,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		pcCopy              uint64              // needed for the deferred Tracer
 		gasCopy             uint64              // for Tracer to log gas remaining before execution
 		logged              bool                // deferred Tracer should ignore already logged steps
+		res                 []byte              // result of the opcode execution function
 		allocatedMemorySize = uint64(mem.Len()) // Currently allocated memory size
 	)
 	contract.Input = input
@@ -180,11 +181,11 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if !operation.valid {
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-Klaytn-Issue615
 		}
-		if err := operation.validateStack(stack); err != nil { // TODO-Klaytn-Issue615
+		if err = operation.validateStack(stack); err != nil { // TODO-Klaytn-Issue615
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
-		if err := in.enforceRestrictions(op, operation, stack); err != nil { // TODO-Klaytn-Issue615
+		if err = in.enforceRestrictions(op, operation, stack); err != nil { // TODO-Klaytn-Issue615
 			return nil, err
 		}
 
@@ -225,7 +226,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		// execute the operation
-		res, err := operation.execute(&pc, in.evm, contract, mem, stack)
+		res, err = operation.execute(&pc, in.evm, contract, mem, stack)
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.
 		if verifyPool {
