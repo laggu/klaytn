@@ -596,11 +596,19 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		headers []*types.Header
 		snap    *Snapshot
 	)
+
 	for snap == nil {
 		// If an in-memory snapshot was found, use that
 		if s, ok := sb.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
-			break
+
+			if parents != nil || headers != nil {
+				// if parents or headers have anything to append, break the routine
+				break
+			} else {
+				// if not, there is nothing to do, just return the snap
+				return snap, nil
+			}
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
