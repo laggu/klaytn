@@ -1091,10 +1091,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	} else {
 		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
 	}
-	if ctx.GlobalIsSet(CacheWriteThroughFlag.Name) {
-		common.WriteThroughCaching = ctx.GlobalBool(CacheWriteThroughFlag.Name)
-	}
+
+	common.WriteThroughCaching = ctx.GlobalIsSet(CacheWriteThroughFlag.Name)
 	cfg.TxPoolStateCache = ctx.GlobalIsSet(TxPoolStateCacheFlag.Name)
+
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}

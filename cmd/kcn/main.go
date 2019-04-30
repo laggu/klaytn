@@ -119,6 +119,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 			utils.MemorySizeFlag,
 			utils.CacheWriteThroughFlag,
 			utils.TxPoolStateCacheFlag,
+			utils.TrieCacheLimitFlag,
 		},
 	},
 	{
