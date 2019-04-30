@@ -189,6 +189,10 @@ func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error)
 func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, input []byte) (*types.Transaction, error) {
 	var err error
 
+	if opts == nil {
+		return nil, errors.New("nil transactOpts")
+	}
+
 	// Ensure a valid value field and resolve the account nonce
 	value := opts.Value
 	if value == nil {
