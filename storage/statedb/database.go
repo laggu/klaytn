@@ -21,6 +21,7 @@
 package statedb
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/allegro/bigcache"
 	"github.com/ground-x/klaytn/common"
@@ -277,6 +278,19 @@ func expandNode(hash hashNode, n node, cachegen uint16) node {
 	}
 }
 
+// trieNodeHasher is a struct to be used with BigCache, which uses a Hasher to
+// determine which shard to place an entry into. It's not a cryptographic hash,
+// just to provide a bit of anti-collision (default is FNV64a).
+//
+// Since trie keys are already hashes, we can just use the key directly to
+// map shard id.
+type trieNodeHasher struct{}
+
+// Sum64 implements the bigcache.Hasher interface.
+func (t trieNodeHasher) Sum64(key string) uint64 {
+	return binary.BigEndian.Uint64([]byte(key))
+}
+
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
@@ -295,6 +309,7 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int) *Database {
 			MaxEntriesInWindow: cacheSize * 1024,
 			MaxEntrySize:       512,
 			HardMaxCacheSize:   cacheSize,
+			Hasher:             trieNodeHasher{},
 		})
 	}
 	return &Database{
