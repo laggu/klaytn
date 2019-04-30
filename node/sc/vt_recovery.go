@@ -251,13 +251,13 @@ func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*b
 		return nil, err
 	}
 	for it.Next() {
-		logger.Debug("pending nonce in the events", it.Event.RequestNonce)
+		logger.Debug("pending nonce in the events", "requestNonce", it.Event.RequestNonce)
 		if it.Event.RequestNonce > hint.handleNonce {
-			logger.Debug("filtered pending nonce", it.Event.RequestNonce)
+			logger.Debug("filtered pending nonce", "requestNonce", it.Event.RequestNonce)
 			pendingEvents = append(pendingEvents, it.Event)
 		}
 	}
-	logger.Debug("pending events", len(pendingEvents))
+	logger.Debug("pending events", "len(pendingEvents)", len(pendingEvents))
 
 	return pendingEvents, nil
 }
