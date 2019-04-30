@@ -360,10 +360,6 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint
 		if common.IsPrecompiledContractAddress(*t.Recipient) {
 			return kerrors.ErrPrecompiledContractAddress
 		}
-		// Fail if the code format is invalid.
-		if stateDB.IsProgramAccount(*t.Recipient) && stateDB.IsValidCodeFormat(*t.Recipient) == false {
-			return kerrors.ErrInvalidCodeFormat
-		}
 	}
 	return nil
 }
