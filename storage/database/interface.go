@@ -74,3 +74,45 @@ type Batch interface {
 	// Reset resets the batch for reuse
 	Reset()
 }
+
+func WriteBatches(batches ...Batch) (int, error) {
+	bytes := 0
+	for _, batch := range batches {
+		if batch.ValueSize() > 0 {
+			bytes += batch.ValueSize()
+			if err := batch.Write(); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return bytes, nil
+}
+
+func WriteBatchesOverThreshold(batches ...Batch) (int, error) {
+	bytes := 0
+	for _, batch := range batches {
+		if batch.ValueSize() >= IdealBatchSize {
+			if err := batch.Write(); err != nil {
+				return 0, err
+			}
+			bytes += batch.ValueSize()
+			batch.Reset()
+		}
+	}
+	return bytes, nil
+}
+
+func PutAndWriteBatchesOverThreshold(batch Batch, key, val []byte) error {
+	if err := batch.Put(key, val); err != nil {
+		return err
+	}
+
+	if batch.ValueSize() >= IdealBatchSize {
+		if err := batch.Write(); err != nil {
+			return err
+		}
+		batch.Reset()
+	}
+
+	return nil
+}

@@ -869,33 +869,6 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 	return nil
 }
 
-func writeBatches(batches ...database.Batch) (int, error) {
-	bytes := 0
-	for _, batch := range batches {
-		if batch.ValueSize() > 0 {
-			bytes += batch.ValueSize()
-			if err := batch.Write(); err != nil {
-				return 0, err
-			}
-		}
-	}
-	return bytes, nil
-}
-
-func writeBatchesOverThreshold(batches ...database.Batch) (int, error) {
-	bytes := 0
-	for _, batch := range batches {
-		if batch.ValueSize() >= database.IdealBatchSize {
-			if err := batch.Write(); err != nil {
-				return 0, err
-			}
-			bytes += batch.ValueSize()
-			batch.Reset()
-		}
-	}
-	return bytes, nil
-}
-
 // InsertReceiptChain attempts to complete an already existing header chain with
 // transaction and receipt data.
 func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error) {
@@ -948,7 +921,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 
 		stats.processed++
 
-		totalBytes, err := writeBatchesOverThreshold(bodyBatch, receiptsBatch, txLookupEntriesBatch)
+		totalBytes, err := database.WriteBatchesOverThreshold(bodyBatch, receiptsBatch, txLookupEntriesBatch)
 		if err != nil {
 			return 0, err
 		} else {
@@ -956,7 +929,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		}
 	}
 
-	totalBytes, err := writeBatches(bodyBatch, receiptsBatch, txLookupEntriesBatch)
+	totalBytes, err := database.WriteBatches(bodyBatch, receiptsBatch, txLookupEntriesBatch)
 	if err != nil {
 		return 0, err
 	} else {

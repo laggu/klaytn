@@ -605,21 +605,13 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
 		enc := node.rlp()
-		if err := batch.Put(oldest[:], enc); err != nil {
+		if err := database.PutAndWriteBatchesOverThreshold(batch, oldest[:], enc); err != nil {
 			db.lock.RUnlock()
 			return err
 		}
+
 		if db.trieNodeCache != nil {
 			db.trieNodeCache.Set(string(oldest[:]), enc)
-		}
-		// If we exceeded the ideal batch size, commit and reset
-		if batch.ValueSize() >= database.IdealBatchSize {
-			if err := batch.Write(); err != nil {
-				logger.Error("Failed to write flush list to disk", "err", err)
-				db.lock.RUnlock()
-				return err
-			}
-			batch.Reset()
 		}
 		// Iterate to the next flush item, or abort if the size cap was achieved. Size
 		// is the total size, including both the useful cached data (hash -> blob), as
@@ -629,11 +621,12 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		oldest = node.flushNext
 	}
 	// Flush out any remainder data from the last batch
-	if err := batch.Write(); err != nil {
+	if _, err := database.WriteBatches(batch); err != nil {
 		logger.Error("Failed to write flush list to disk", "err", err)
 		db.lock.RUnlock()
 		return err
 	}
+
 	db.lock.RUnlock()
 
 	// Write successful, clear out the flushed data
@@ -680,16 +673,14 @@ func (db *Database) writeBatchPreimages() error {
 			logger.Error("Failed to commit preimages from trie database", "err", err)
 			return err
 		}
-		if preimagesBatch.ValueSize() > database.IdealBatchSize {
-			if err := preimagesBatch.Write(); err != nil {
-				return err
-			}
-			preimagesBatch.Reset()
+
+		if _, err := database.WriteBatchesOverThreshold(preimagesBatch); err != nil {
+			return err
 		}
 	}
 
 	// Write batch ready, unlock for readers during persistence
-	if err := preimagesBatch.Write(); err != nil {
+	if _, err := database.WriteBatches(preimagesBatch); err != nil {
 		logger.Error("Failed to write preimages to disk", "err", err)
 		return err
 	}
@@ -707,7 +698,7 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 	}
 
 	// Write batch ready, unlock for readers during persistence
-	if err := nodesBatch.Write(); err != nil {
+	if _, err := database.WriteBatches(nodesBatch); err != nil {
 		logger.Error("Failed to write trie to disk", "err", err)
 		return err
 	}
