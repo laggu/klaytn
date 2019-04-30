@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
@@ -466,7 +467,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "CreateAccount",
 			fn: func(a testAction, s *StateDB) {
-				s.CreateSmartContractAccount(addr)
+				s.CreateSmartContractAccount(addr, params.CodeFormatEVM)
 			},
 		},
 		{

@@ -24,14 +24,15 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
 
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
-	CreateSmartContractAccount(addr common.Address)
-	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey)
+	CreateSmartContractAccount(addr common.Address, format params.CodeFormat)
+	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat)
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 
 	SubBalance(common.Address, *big.Int)
@@ -75,6 +76,7 @@ type StateDB interface {
 	// IsProgramAccount returns true if the account implements ProgramAccount.
 	IsProgramAccount(address common.Address) bool
 	IsContractAvailable(address common.Address) bool
+	IsValidCodeFormat(addr common.Address) bool
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
 

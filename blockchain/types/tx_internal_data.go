@@ -338,8 +338,8 @@ type TxInternalDataPayload interface {
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
 // TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
 type VM interface {
-	Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error)
-	CreateWithAddress(caller ContractRef, code []byte, gas uint64, value *big.Int, contractAddr common.Address, humanReadable bool) ([]byte, common.Address, uint64, error)
+	Create(caller ContractRef, code []byte, gas uint64, value *big.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error)
+	CreateWithAddress(caller ContractRef, code []byte, gas uint64, value *big.Int, contractAddr common.Address, humanReadable bool, codeFormat params.CodeFormat) ([]byte, common.Address, uint64, error)
 	Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error)
 }
 
@@ -350,10 +350,11 @@ type StateDB interface {
 	Exist(common.Address) bool
 	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
-	CreateSmartContractAccount(addr common.Address)
-	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey)
+	CreateSmartContractAccount(addr common.Address, format params.CodeFormat)
+	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat)
 	IsProgramAccount(addr common.Address) bool
 	IsContractAvailable(addr common.Address) bool
+	IsValidCodeFormat(addr common.Address) bool
 	GetKey(addr common.Address) accountkey.AccountKey
 }
 

@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/crypto/sha3"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 	"math/rand"
@@ -164,6 +165,7 @@ func genSCA() *SmartContractAccount {
 		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
 		AccountValueKeyStorageRoot:   genRandomHash(),
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
+		AccountValueKeyCodeFormat:    params.CodeFormatEVM,
 	})
 }
 
@@ -181,5 +183,6 @@ func genSCAWithPublicKey() *SmartContractAccount {
 		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
 		AccountValueKeyStorageRoot:   genRandomHash(),
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
+		AccountValueKeyCodeFormat:    params.CodeFormatEVM,
 	})
 }

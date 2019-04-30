@@ -35,6 +35,7 @@ var (
 	errNotProgramAccount                 = errors.New("not a program account")
 	errAccountAlreadyExists              = errors.New("account already exists")
 	errMsgToNil                          = errors.New("msg.To() is nil")
+	errInvalidCodeFormat                 = errors.New("smart contract code format is invalid")
 )
 
 /*
@@ -289,6 +290,7 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrLegacyTransactionMustBeWithLegacyKey: types.ReceiptStatusErrLegacyTransactionMustBeWithLegacyKey,
 	kerrors.ErrDeprecated:                           types.ReceiptStatusErrDeprecated,
 	kerrors.ErrNotSupported:                         types.ReceiptStatusErrNotSupported,
+	kerrors.ErrInvalidCodeFormat:                    types.ReceiptStatusErrInvalidCodeFormat,
 }
 
 var receiptstatus2errTxFailed = map[uint]error{
@@ -321,6 +323,7 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrLegacyTransactionMustBeWithLegacyKey: kerrors.ErrLegacyTransactionMustBeWithLegacyKey,
 	types.ReceiptStatusErrDeprecated:                           kerrors.ErrDeprecated,
 	types.ReceiptStatusErrNotSupported:                         kerrors.ErrNotSupported,
+	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
 }
 
 // getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.

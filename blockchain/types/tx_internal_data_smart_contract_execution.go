@@ -308,6 +308,10 @@ func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, current
 	if stateDB.IsContractAvailable(t.Recipient) == false {
 		return kerrors.ErrNotProgramAccount
 	}
+	// Fail if the code format is invalid.
+	if stateDB.IsValidCodeFormat(t.Recipient) == false {
+		return kerrors.ErrInvalidCodeFormat
+	}
 
 	return nil
 }

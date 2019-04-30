@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/kerrors"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
 )
@@ -359,6 +360,10 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint
 		if common.IsPrecompiledContractAddress(*t.Recipient) {
 			return kerrors.ErrPrecompiledContractAddress
 		}
+		// Fail if the code format is invalid.
+		if stateDB.IsProgramAccount(*t.Recipient) && stateDB.IsValidCodeFormat(*t.Recipient) == false {
+			return kerrors.ErrInvalidCodeFormat
+		}
 	}
 	return nil
 }
@@ -375,8 +380,13 @@ func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Recei
 }
 
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+	if err := t.Validate(stateDB, currentBlockNumber); err != nil {
+		stateDB.IncNonce(sender.Address())
+		return nil, 0, err
+	}
+
 	if t.Recipient == nil {
-		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value)
+		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, params.CodeFormatEVM)
 	} else {
 		stateDB.IncNonce(sender.Address())
 		ret, usedGas, err = vm.Call(sender, *t.Recipient, t.Payload, gas, value)

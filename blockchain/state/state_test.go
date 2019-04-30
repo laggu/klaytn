@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	checker "gopkg.in/check.v1"
 	"math/big"
@@ -57,7 +58,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 	// check that dump contains the state objects that are in trie
 	got := string(s.state.Dump())
 	want := `{
-    "root": "1b01abc5976f4ac46eede82fafeb1394c4d5229389e5524e8106bc4498303665",
+    "root": "e573e669d757892d7268beaaa75643d2a704ed207ef5f3007cf8bf72eb3624a4",
     "accounts": {
         "0000000000000000000000000000000000000001": {
             "balance": "22",
@@ -97,7 +98,7 @@ func (s *StateSuite) SetUpTest(c *checker.C) {
 
 func (s *StateSuite) TestNull(c *checker.C) {
 	address := common.HexToAddress("0x823140710bf13990e4500136726d8b55")
-	s.state.CreateSmartContractAccount(address)
+	s.state.CreateSmartContractAccount(address, params.CodeFormatEVM)
 	//value := common.FromHex("0x823140710bf13990e4500136726d8b55")
 	var value common.Hash
 	s.state.SetState(address, common.Hash{}, value)

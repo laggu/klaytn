@@ -28,6 +28,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/statedb"
 	"math/big"
@@ -367,6 +368,18 @@ func (self *StateDB) IsProgramAccount(addr common.Address) bool {
 	return false
 }
 
+func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		pa := account.GetProgramAccount(stateObject.account)
+		if pa != nil {
+			return pa.GetCodeFormat().Validate()
+		}
+		return false
+	}
+	return false
+}
+
 func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
@@ -656,15 +669,16 @@ func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key acco
 	}
 }
 
-func (self *StateDB) CreateSmartContractAccount(addr common.Address) {
-	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail())
+func (self *StateDB) CreateSmartContractAccount(addr common.Address, format params.CodeFormat) {
+	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail(), format)
 }
 
-func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey) {
+func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat) {
 	values := map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         uint64(1),
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
+		account.AccountValueKeyCodeFormat:    format,
 	}
 	new, prev := self.createObjectWithMap(addr, account.SmartContractAccountType, values)
 	if prev != nil {

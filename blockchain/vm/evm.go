@@ -207,7 +207,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		}
 		// create an account object of the enabled precompiled address if not exist.
 		if !evm.StateDB.Exist(addr) {
-			evm.StateDB.CreateSmartContractAccount(addr)
+			evm.StateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM)
 		}
 	}
 
@@ -391,7 +391,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 }
 
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value *big.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -416,7 +416,7 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 	}
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
-	evm.StateDB.CreateSmartContractAccount(contractAddr)
+	evm.StateDB.CreateSmartContractAccount(contractAddr, codeFormat)
 	evm.StateDB.SetNonce(contractAddr, 1)
 	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 
@@ -479,7 +479,7 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 
 // CreateWithAddress creates a new contract using code as deployment code with given address and humanReadable.
 func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uint64, value *big.Int,
-	contractAddr common.Address, humanReadable bool) ([]byte, common.Address, uint64, error) {
+	contractAddr common.Address, humanReadable bool, codeFormat params.CodeFormat) ([]byte, common.Address, uint64, error) {
 
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -505,7 +505,7 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
-	evm.StateDB.CreateSmartContractAccountWithKey(contractAddr, humanReadable, accountkey.NewAccountKeyFail())
+	evm.StateDB.CreateSmartContractAccountWithKey(contractAddr, humanReadable, accountkey.NewAccountKeyFail(), codeFormat)
 	evm.StateDB.SetNonce(contractAddr, 1)
 	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 

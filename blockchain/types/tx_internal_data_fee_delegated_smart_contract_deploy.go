@@ -439,9 +439,9 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Execute(sender ContractR
 	}
 
 	if t.Recipient == nil {
-		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value)
+		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, t.CodeFormat)
 	} else {
-		ret, _, usedGas, err = vm.CreateWithAddress(sender, t.Payload, gas, value, *t.Recipient, t.HumanReadable)
+		ret, _, usedGas, err = vm.CreateWithAddress(sender, t.Payload, gas, value, *t.Recipient, t.HumanReadable, t.CodeFormat)
 	}
 
 	return

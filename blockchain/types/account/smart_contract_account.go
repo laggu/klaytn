@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 )
@@ -32,6 +33,7 @@ type SmartContractAccount struct {
 	*AccountCommon
 	storageRoot common.Hash // merkle root of the storage trie
 	codeHash    []byte
+	codeFormat  params.CodeFormat
 }
 
 // smartContractAccountSerializable is an internal data structure for RLP serialization.
@@ -40,6 +42,7 @@ type smartContractAccountSerializable struct {
 	CommonSerializable *accountCommonSerializable
 	StorageRoot        common.Hash
 	CodeHash           []byte
+	CodeFormat         params.CodeFormat
 }
 
 func newSmartContractAccount() *SmartContractAccount {
@@ -47,6 +50,7 @@ func newSmartContractAccount() *SmartContractAccount {
 		newAccountCommon(),
 		common.Hash{},
 		emptyCodeHash,
+		params.CodeFormatEVM,
 	}
 }
 
@@ -55,6 +59,7 @@ func newSmartContractAccountWithMap(values map[AccountValueKeyType]interface{}) 
 		newAccountCommonWithMap(values),
 		common.Hash{},
 		emptyCodeHash,
+		params.CodeFormatEVM,
 	}
 
 	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
@@ -63,6 +68,10 @@ func newSmartContractAccountWithMap(values map[AccountValueKeyType]interface{}) 
 
 	if v, ok := values[AccountValueKeyCodeHash].([]byte); ok {
 		sca.codeHash = v
+	}
+
+	if v, ok := values[AccountValueKeyCodeFormat].(params.CodeFormat); ok {
+		sca.codeFormat = v
 	}
 
 	return sca
@@ -79,6 +88,7 @@ func (sca *SmartContractAccount) toSerializable() *smartContractAccountSerializa
 		CommonSerializable: sca.AccountCommon.toSerializable(),
 		StorageRoot:        sca.storageRoot,
 		CodeHash:           sca.codeHash,
+		CodeFormat:         sca.codeFormat,
 	}
 }
 
@@ -86,6 +96,7 @@ func (sca *SmartContractAccount) fromSerializable(o *smartContractAccountSeriali
 	sca.AccountCommon.fromSerializable(o.CommonSerializable)
 	sca.storageRoot = o.StorageRoot
 	sca.codeHash = o.CodeHash
+	sca.codeFormat = o.CodeFormat
 }
 
 func (sca *SmartContractAccount) EncodeRLP(w io.Writer) error {
@@ -97,6 +108,7 @@ func (sca *SmartContractAccount) DecodeRLP(s *rlp.Stream) error {
 		newAccountCommonSerializable(),
 		common.Hash{},
 		[]byte{},
+		params.CodeFormatEVM,
 	}
 
 	if err := s.Decode(serialized); err != nil {
@@ -136,12 +148,20 @@ func (sca *SmartContractAccount) GetCodeHash() []byte {
 	return sca.codeHash
 }
 
+func (sca *SmartContractAccount) GetCodeFormat() params.CodeFormat {
+	return sca.codeFormat
+}
+
 func (sca *SmartContractAccount) SetStorageRoot(h common.Hash) {
 	sca.storageRoot = h
 }
 
 func (sca *SmartContractAccount) SetCodeHash(h []byte) {
 	sca.codeHash = h
+}
+
+func (sca *SmartContractAccount) SetCodeFormat(cf params.CodeFormat) {
+	sca.codeFormat = cf
 }
 
 func (sca *SmartContractAccount) Empty() bool {
@@ -160,7 +180,8 @@ func (sca *SmartContractAccount) Equal(a Account) bool {
 
 	return sca.AccountCommon.Equal(sca2.AccountCommon) &&
 		sca.storageRoot == sca2.storageRoot &&
-		bytes.Equal(sca.codeHash, sca2.codeHash)
+		bytes.Equal(sca.codeHash, sca2.codeHash) &&
+		sca.codeFormat == sca2.codeFormat
 }
 
 func (sca *SmartContractAccount) DeepCopy() Account {
@@ -168,14 +189,17 @@ func (sca *SmartContractAccount) DeepCopy() Account {
 		AccountCommon: sca.AccountCommon.DeepCopy(),
 		storageRoot:   sca.storageRoot,
 		codeHash:      common.CopyBytes(sca.codeHash),
+		codeFormat:    sca.codeFormat,
 	}
 }
 
 func (sca *SmartContractAccount) String() string {
 	return fmt.Sprintf(`Common:%s
 	StorageRoot: %s
-	CodeHash: %s`,
+	CodeHash: %s
+	CodeFormat: %s`,
 		sca.AccountCommon.String(),
 		sca.storageRoot.String(),
-		common.Bytes2Hex(sca.codeHash))
+		common.Bytes2Hex(sca.codeHash),
+		sca.codeFormat.String())
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
 
@@ -110,9 +111,11 @@ type ProgramAccount interface {
 
 	GetStorageRoot() common.Hash
 	GetCodeHash() []byte
+	GetCodeFormat() params.CodeFormat
 
 	SetStorageRoot(h common.Hash)
 	SetCodeHash(h []byte)
+	SetCodeFormat(cf params.CodeFormat)
 }
 
 type AccountWithKey interface {
