@@ -434,7 +434,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateD
 
 	// Fail if the codeFormat is invalid.
 	if !t.CodeFormat.Validate() {
-		return errValueKeyCodeFormatInvalid
+		return kerrors.ErrInvalidCodeFormat
 	}
 
 	return nil
