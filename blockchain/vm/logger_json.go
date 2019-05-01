@@ -16,29 +16,28 @@
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from cmd/evm/json_logger.go (2018/06/04).
+// This file is moved to core/vm/logger_json.go by go-ethereum/#17914.
 // Modified and improved for the klaytn development.
 
-package main
+package vm
 
 import (
 	"encoding/json"
+	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/math"
 	"io"
 	"math/big"
 	"time"
-
-	"github.com/ground-x/klaytn/blockchain/vm"
-	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/common/math"
 )
 
 type JSONLogger struct {
 	encoder *json.Encoder
-	cfg     *vm.LogConfig
+	cfg     *LogConfig
 }
 
 // NewJSONLogger creates a new EVM tracer that prints execution steps as JSON objects
 // into the provided stream.
-func NewJSONLogger(cfg *vm.LogConfig, writer io.Writer) *JSONLogger {
+func NewJSONLogger(cfg *LogConfig, writer io.Writer) *JSONLogger {
 	return &JSONLogger{json.NewEncoder(writer), cfg}
 }
 
@@ -47,8 +46,8 @@ func (l *JSONLogger) CaptureStart(from common.Address, to common.Address, create
 }
 
 // CaptureState outputs state information on the logger.
-func (l *JSONLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
-	log := vm.StructLog{
+func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
+	log := StructLog{
 		Pc:         pc,
 		Op:         op,
 		Gas:        gas,
@@ -68,7 +67,7 @@ func (l *JSONLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 }
 
 // CaptureFault outputs state information on the logger.
-func (l *JSONLogger) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+func (l *JSONLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
 	return nil
 }
 
