@@ -1756,8 +1756,10 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 	bc.addBadBlock(block)
 
 	var receiptString string
-	for _, receipt := range receipts {
-		receiptString += fmt.Sprintf("\t%v\n", receipt)
+	for i, receipt := range receipts {
+		receiptString += fmt.Sprintf("\t %d: tx: %v status: %v gas: %v contract: %v bloom: %x logs: %v\n",
+			i, receipt.TxHash.Hex(), receipt.Status, receipt.GasUsed, receipt.ContractAddress.Hex(),
+			receipt.Bloom, receipt.Logs)
 	}
 	logger.Error(fmt.Sprintf(`
 ########## BAD BLOCK #########
