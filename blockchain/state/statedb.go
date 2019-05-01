@@ -303,6 +303,14 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	return nil
 }
 
+func (self *StateDB) GetAccount(addr common.Address) account.Account {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.account
+	}
+	return nil
+}
+
 func (self *StateDB) IsContractAccount(addr common.Address) bool {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {

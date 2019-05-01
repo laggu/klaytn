@@ -506,6 +506,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
+			name: 'getAccount',
+			call: 'klay_getAccount'
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
 			name: 'getBlockWithConsensusInfo',
 			call: blockWithConsensusInfoCall,
 			params: 1,

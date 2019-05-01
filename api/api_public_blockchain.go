@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/account"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
@@ -126,6 +127,20 @@ func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common
 		return false, err
 	}
 	return state.Exist(address), state.Error()
+}
+
+// GetAccount returns account information of an input address.
+func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*account.AccountSerializer, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if err != nil {
+		return &account.AccountSerializer{}, err
+	}
+	acc := state.GetAccount(address)
+	if acc == nil {
+		return &account.AccountSerializer{}, err
+	}
+	serAcc := account.NewAccountSerializerWithAccount(acc)
+	return serAcc, state.Error()
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
