@@ -17,7 +17,6 @@
 package sc
 
 import (
-	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
@@ -102,44 +101,48 @@ func (sbapi *SubBridgeAPI) DeployBridgeOnParentChain() (common.Address, error) {
 }
 
 // SubscribeEventBridge enables the given service/main chain bridges to subscribe the events.
-func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	err := sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
 	if err != nil {
 		return err
 	}
 
-	cErr := sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
-	if cErr != nil {
-		logger.Error("Failed to SubscribeEventBridge Child Bridge", "addr", cBridgeAddr, "err", cErr)
-		return cErr
+	err = sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
+	if err != nil {
+		logger.Error("Failed to SubscribeEventBridge Child Bridge", "addr", cBridgeAddr, "err", err)
+		return err
 	}
 
-	pErr := sbapi.sc.bridgeManager.SubscribeEvent(pBridgeAddr)
-	if pErr != nil {
-		logger.Error("Failed to SubscribeEventBridge Parent Bridge", "addr", pBridgeAddr, "err", pErr)
-		// TODO-Klaytn needs to unsubscribe cBridgeAddr in this case.
-		return pErr
+	err = sbapi.sc.bridgeManager.SubscribeEvent(pBridgeAddr)
+	if err != nil {
+		logger.Error("Failed to SubscribeEventBridge Parent Bridge", "addr", pBridgeAddr, "err", err)
+		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
+		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
+		return err
 	}
 
-	sbapi.sc.bridgeManager.journal.insert(cBridgeAddr, pBridgeAddr, true)
-	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
-
-	sbapi.sc.bridgeManager.addRecovery(cBridgeAddr, pBridgeAddr)
+	err = sbapi.sc.bridgeManager.AddRecovery(cBridgeAddr, pBridgeAddr)
+	if err != nil {
+		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
+		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
+		sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
+		return err
+	}
 	return nil
 }
 
 // UnsubscribeEventBridge disables the event subscription of the given service/main chain bridges.
-func (sbapi *SubBridgeAPI) UnsubscribeEventBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
-	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
-		return errors.New("unexpected bridge pair")
-	}
-	_, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
-	if err != nil {
-		return err
-	}
+func (sbapi *SubBridgeAPI) UnsubscribeEventBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 	sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
-	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
+
+	if _, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr); err != nil {
+		return err
+	}
+
+	if err := sbapi.sc.bridgeManager.DeleteRecovery(cBridgeAddr, pBridgeAddr); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -309,7 +309,7 @@ type BridgeManager struct {
 	scope event.SubscriptionScope
 
 	journal    *bridgeAddrJournal
-	recoveries []*valueTransferRecovery
+	recoveries map[common.Address]*valueTransferRecovery
 	auth       *bind.TransactOpts
 }
 
@@ -322,7 +322,7 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 		withdrawEvents: make(map[common.Address]event.Subscription),
 		bridges:        make(map[common.Address]*BridgeInfo),
 		journal:        bridgeAddrJournal,
-		recoveries:     []*valueTransferRecovery{},
+		recoveries:     make(map[common.Address]*valueTransferRecovery),
 	}
 
 	logger.Info("Load Bridge Address from JournalFiles ", "path", bridgeManager.journal.path)
@@ -413,7 +413,6 @@ func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.B
 // LoadAllBridge reloads bridge and handles subscription by using the journal cache.
 func (bm *BridgeManager) LoadAllBridge() error {
 	bm.stopAllRecoveries()
-	bm.recoveries = []*valueTransferRecovery{}
 
 	for _, journal := range bm.journal.cache {
 		if journal.Paired {
@@ -451,7 +450,7 @@ func (bm *BridgeManager) LoadAllBridge() error {
 			}
 
 			// 4. Add recovery.
-			bm.addRecovery(journal.LocalAddress, journal.RemoteAddress)
+			bm.AddRecovery(journal.LocalAddress, journal.RemoteAddress)
 		} else {
 			err := bm.loadBridge(journal.LocalAddress, bm.subBridge.localBackend, true, false)
 			if err != nil {
@@ -466,22 +465,42 @@ func (bm *BridgeManager) LoadAllBridge() error {
 	return nil
 }
 
-// addRecovery creates value transfer recovery and starts the recovery for a given addresses pair.
-func (bm *BridgeManager) addRecovery(localAddress, remoteAddress common.Address) {
+// AddRecovery writes journal and creates value transfer recovery for a given addresses pair.
+func (bm *BridgeManager) AddRecovery(localAddress, remoteAddress common.Address) error {
+	// Write journal information.
+	bm.journal.insert(localAddress, remoteAddress, true)
+	bm.journal.rotate(bm.GetAllBridge())
+
+	// Check if bridge information is exist.
 	localBridgeInfo, ok := bm.GetBridgeInfo(localAddress)
 	if !ok {
-		logger.Error("local bridge is not exist to create value transfer recovery")
-		return
+		return errors.New("local bridge is not exist to create value transfer recovery")
 	}
 	remoteBridgeInfo, ok := bm.GetBridgeInfo(remoteAddress)
 	if !ok {
-		logger.Error("remote bridge is not exist to create value transfer recovery")
-		return
+		return errors.New("remote bridge is not exist to create value transfer recovery")
 	}
 
+	// Create and start value transfer recovery.
 	recovery := NewValueTransferRecovery(bm.subBridge.config, localBridgeInfo, remoteBridgeInfo)
 	recovery.Start()
-	bm.recoveries = append(bm.recoveries, recovery)
+	bm.recoveries[localAddress] = recovery // suppose local/remote is always a pair.
+	return nil
+}
+
+// DeleteRecovery deletes the journal and stop the value transfer recovery for a given address pair.
+func (bm *BridgeManager) DeleteRecovery(localAddress, remoteAddress common.Address) error {
+	// Stop the recovery.
+	recovery, ok := bm.recoveries[localAddress]
+	if !ok {
+		return errors.New("recovery is not exist")
+	}
+	recovery.Stop()
+	delete(bm.recoveries, localAddress)
+
+	// Delete the journal.
+	bm.journal.rotate(bm.GetAllBridge())
+	return nil
 }
 
 // stopAllRecoveries stops the internal value transfer recoveries.
@@ -489,6 +508,7 @@ func (bm *BridgeManager) stopAllRecoveries() {
 	for _, recovery := range bm.recoveries {
 		recovery.Stop()
 	}
+	bm.recoveries = make(map[common.Address]*valueTransferRecovery)
 }
 
 // LoadBridge creates new bridge contract for a given address and subscribes an event if needed.
