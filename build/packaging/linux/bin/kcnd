@@ -107,6 +107,10 @@ start() {
         OPTIONS="$OPTIONS --port $PORT"
     fi
 
+    if [ ! -z $SUBPORT ]; then
+        OPTIONS="$OPTIONS --subport $SUBPORT"
+    fi
+
     if [ ! -z $SERVER_TYPE ]; then
         OPTIONS="$OPTIONS --srvtype $SERVER_TYPE"
     fi
