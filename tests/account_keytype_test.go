@@ -43,12 +43,6 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleFeePayer].PublicKey),
 	}
 
-	// a role-based rlp fix key
-	roleRLPAccKey := accountkey.AccountKeyRoleBasedRlpFix{
-		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleTransaction].PublicKey),
-		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleAccountUpdate].PublicKey),
-		accountkey.NewAccountKeyPublicWithValue(&keys[accountkey.RoleFeePayer].PublicKey),
-	}
 	// default account setting
 	account := &TestAccountType{
 		Addr:   crypto.PubkeyToAddress(keys[0].PublicKey), // default
@@ -73,9 +67,6 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 	case accountkey.AccountKeyTypeRoleBased:
 		account.Keys = keys
 		account.AccKey = accountkey.NewAccountKeyRoleBasedWithValues(roleAccKey)
-	case accountkey.AccountKeyTypeRoleBasedRlpFix:
-		account.Keys = keys
-		account.AccKey = accountkey.NewAccountKeyRoleBasedRlpFixWithValues(roleRLPAccKey)
 	default:
 		return nil, kerrors.ErrDifferentAccountKeyType
 	}

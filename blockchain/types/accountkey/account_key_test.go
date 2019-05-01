@@ -34,7 +34,6 @@ func TestAccountKeySerialization(t *testing.T) {
 		{"Fail", genAccountKeyFail()},
 		{"WeightedMultisig", genAccountKeyWeightedMultisig()},
 		{"RoleBased", genAccountKeyRoleBased()},
-		{"RoleBasedRlpFix", genAccountKeyRoleBasedRlpFix()},
 	}
 
 	var testcases = []struct {
@@ -161,31 +160,4 @@ func genAccountKeyRoleBased() AccountKey {
 	feeKey := NewAccountKeyPublicWithValue(&k3.PublicKey)
 
 	return NewAccountKeyRoleBasedWithValues(AccountKeyRoleBased{txKey, updateKey, feeKey})
-}
-
-func genAccountKeyRoleBasedRlpFix() AccountKey {
-	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
-	if err != nil {
-		panic(err)
-	}
-	txKey := NewAccountKeyPublicWithValue(&k1.PublicKey)
-
-	k2, err := crypto.HexToECDSA("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c")
-	if err != nil {
-		panic(err)
-	}
-	threshold := uint(2)
-	keys := WeightedPublicKeys{
-		NewWeightedPublicKey(1, (*PublicKeySerializable)(&k1.PublicKey)),
-		NewWeightedPublicKey(1, (*PublicKeySerializable)(&k2.PublicKey)),
-	}
-	updateKey := NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
-
-	k3, err := crypto.HexToECDSA("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
-	if err != nil {
-		panic(err)
-	}
-	feeKey := NewAccountKeyPublicWithValue(&k3.PublicKey)
-
-	return NewAccountKeyRoleBasedRlpFixWithValues(AccountKeyRoleBasedRlpFix{txKey, updateKey, feeKey})
 }

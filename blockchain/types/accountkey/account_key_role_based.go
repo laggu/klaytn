@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
-	"github.com/ground-x/klaytn/fork"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -98,24 +97,31 @@ func (a *AccountKeyRoleBased) Equal(b AccountKey) bool {
 }
 
 func (a *AccountKeyRoleBased) EncodeRLP(w io.Writer) error {
-	serializers := make([]*AccountKeySerializer, len(*a))
+	enc := make([][]byte, len(*a))
 
 	for i, k := range *a {
-		serializers[i] = NewAccountKeySerializerWithAccountKey(k)
+		enc[i], _ = rlp.EncodeToBytes(NewAccountKeySerializerWithAccountKey(k))
 	}
 
-	return rlp.Encode(w, serializers)
+	return rlp.Encode(w, enc)
 }
 
 func (a *AccountKeyRoleBased) DecodeRLP(s *rlp.Stream) error {
-	serializers := []*AccountKeySerializer{}
-	if err := s.Decode(&serializers); err != nil {
+	enc := [][]byte{}
+	if err := s.Decode(&enc); err != nil {
 		return err
 	}
-	*a = make(AccountKeyRoleBased, len(serializers))
-	for i, s := range serializers {
-		(*a)[i] = s.key
+
+	keys := make([]AccountKey, len(enc))
+	for i, b := range enc {
+		serializer := NewAccountKeySerializer()
+		if err := rlp.DecodeBytes(b, &serializer); err != nil {
+			return err
+		}
+		keys[i] = serializer.key
 	}
+
+	*a = (AccountKeyRoleBased)(keys)
 
 	return nil
 }
@@ -235,9 +241,6 @@ func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r Role
 }
 
 func (a *AccountKeyRoleBased) Init(currentBlockNumber uint64) error {
-	if fork.IsRoleBasedRLPFixEnabled(currentBlockNumber) {
-		return kerrors.ErrDeprecated
-	}
 	// A zero-role key is not allowed.
 	if len(*a) == 0 {
 		return kerrors.ErrZeroLength
@@ -262,9 +265,6 @@ func (a *AccountKeyRoleBased) Init(currentBlockNumber uint64) error {
 }
 
 func (a *AccountKeyRoleBased) Update(key AccountKey, currentBlockNumber uint64) error {
-	if fork.IsRoleBasedRLPFixEnabled(currentBlockNumber) {
-		return kerrors.ErrDeprecated
-	}
 	if ak, ok := key.(*AccountKeyRoleBased); ok {
 		lenAk := len(*ak)
 		lenA := len(*a)

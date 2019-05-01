@@ -37,16 +37,6 @@ type HardForkConfig struct {
 	GasFormulaFixBlockNumber   uint64
 }
 
-// IsRoleBasedRLPFixEnabled returns true if the blockNumber is greater than or equal to
-// the block number defined in hardForkConfig.
-func IsRoleBasedRLPFixEnabled(blockNumber uint64) bool {
-	return blockNumber >= hardForkConfig.RoleBasedRLPFixBlockNumber
-}
-
-func IsGasFormulaFixEnabled(blockNumber uint64) bool {
-	return blockNumber >= hardForkConfig.GasFormulaFixBlockNumber
-}
-
 // UpdateHardForkConfig sets values in HardForkConfig if it is not nil.
 // NOTE: this is only for test code to give flexibility of the test code.
 func UpdateHardForkConfig(h *HardForkConfig) {
