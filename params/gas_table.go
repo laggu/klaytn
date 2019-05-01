@@ -24,6 +24,7 @@ package params
 type GasTable struct {
 	ExtcodeSize uint64
 	ExtcodeCopy uint64
+	ExtcodeHash uint64
 	Balance     uint64
 	SLoad       uint64
 	Calls       uint64
@@ -70,11 +71,11 @@ var (
 	//	CreateBySuicide: 25000,
 	//}
 
-	// GasTableEIP158 contain the gas re-prices for
-	// the EIP15* phase.
-	GasTableEIP158 = GasTable{
-		ExtcodeSize: 700,  // G_extcode
-		ExtcodeCopy: 700,  // G_extcode
+	// GasTableBaobab contain the gas re-prices for Baobab.
+	GasTableBaobab = GasTable{
+		ExtcodeSize: 700, // G_extcode
+		ExtcodeCopy: 700, // G_extcode
+		ExtcodeHash: 400,
 		Balance:     400,  // G_balance
 		SLoad:       200,  // G_sload
 		Calls:       700,  // G_call
