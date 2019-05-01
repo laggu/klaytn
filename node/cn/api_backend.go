@@ -272,7 +272,7 @@ func (b *CNAPIBackend) GetTransactionBySenderTxHash(senderTxHash common.Hash) *t
 	return tx
 }
 
-func (b *CNAPIBackend) GetReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
+func (b *CNAPIBackend) GetTransactionReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
 	receipt, _, _, _ := b.cn.chainDB.ReadReceiptBySenderTxHash(senderTxHash)
 	return receipt
 }

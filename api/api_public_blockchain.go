@@ -200,9 +200,9 @@ func (s *PublicBlockChainAPI) GetTransactionBySenderTxHash(senderTxHash common.H
 	return s.b.GetTransactionBySenderTxHash(senderTxHash)
 }
 
-// GetReceiptBySenderTxHash returns a receipt of a transaction matched with the given senderTxHash.
-func (s *PublicBlockChainAPI) GetReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
-	return s.b.GetReceiptBySenderTxHash(senderTxHash)
+// GetTransactionReceiptBySenderTxHash returns a receipt of a transaction matched with the given senderTxHash.
+func (s *PublicBlockChainAPI) GetTransactionReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
+	return s.b.GetTransactionReceiptBySenderTxHash(senderTxHash)
 }
 
 // CallArgs represents the arguments for a call.

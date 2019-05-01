@@ -272,7 +272,7 @@ func (b *ServiceChainAPIBackend) GetTransactionBySenderTxHash(senderTxHash commo
 	return tx
 }
 
-func (b *ServiceChainAPIBackend) GetReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
+func (b *ServiceChainAPIBackend) GetTransactionReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
 	receipt, _, _, _ := b.sc.chainDB.ReadReceiptBySenderTxHash(senderTxHash)
 	return receipt
 }

@@ -566,8 +566,8 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getReceiptBySenderTxHash',
-			call: 'klay_getReceiptBySenderTxHash',
+			name: 'getTransactionReceiptBySenderTxHash',
+			call: 'klay_getTransactionReceiptBySenderTxHash',
 			params: 1
 		}),
 	],
