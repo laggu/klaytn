@@ -164,7 +164,7 @@ func (e *AccountCommon) SetKey(k accountkey.AccountKey) {
 }
 
 func (e *AccountCommon) Empty() bool {
-	return e.nonce == 0 && e.balance.Sign() == 0
+	return e.nonce == 0 && e.balance.Sign() == 0 && e.key == accountkey.NewAccountKeyLegacy()
 }
 
 func (e *AccountCommon) DeepCopy() *AccountCommon {

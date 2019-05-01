@@ -165,7 +165,7 @@ func (sca *SmartContractAccount) SetCodeFormat(cf params.CodeFormat) {
 }
 
 func (sca *SmartContractAccount) Empty() bool {
-	return sca.AccountCommon.Empty() && bytes.Equal(sca.codeHash, emptyCodeHash)
+	return sca.nonce == 0 && sca.balance.Sign() == 0 && bytes.Equal(sca.codeHash, emptyCodeHash)
 }
 
 func (sca *SmartContractAccount) UpdateKey(key accountkey.AccountKey, currentBlockNumber uint64) error {

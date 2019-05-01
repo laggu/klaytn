@@ -784,3 +784,180 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 		prof.PrintProfileInfo()
 	}
 }
+
+// TestEmptyAccountGeneration tries to generate the same account twice with zero value.
+// The second try will return `kerrors.ErrAccountAlreadyExists` since the account is generated at the first time.
+// The stateDB does not remove an empty account which has zero value and zero nonce.
+func TestEmptyAccountGeneration(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	EOA, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
+	assert.Equal(t, nil, err)
+
+	legacy, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
+	assert.Equal(t, nil, err)
+
+	legacyForLegacyTx, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
+	assert.Equal(t, nil, err)
+
+	amount := big.NewInt(0)
+
+	// zero value legacy transaction to non-existing address (result: no creation)
+	{
+		var txs types.Transactions
+
+		tx := types.NewTransaction(reservoir.Nonce, legacyForLegacyTx.Addr, big.NewInt(0), gasLimit, gasPrice, nil)
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+		reservoir.Nonce += 1
+
+		// one more creation
+		tx2 := types.NewTransaction(reservoir.Nonce, legacyForLegacyTx.Addr, big.NewInt(0), gasLimit, gasPrice, nil)
+		err = tx2.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx2)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// zero value account creation with legacy key (result: no creation)
+	{
+		var txs types.Transactions
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            legacy.GetAddr(),
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    legacy.GetAccKey(),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+		reservoir.Nonce += 1
+
+		// one more creation
+		tx2, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            legacy.GetAddr(),
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    legacy.GetAccKey(),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx2.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx2)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// zero value account creation with public key (result: creation)
+	{
+		var txs types.Transactions
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            EOA.GetAddr(),
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    EOA.GetAccKey(),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+
+		// one more creation
+		tx2, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            EOA.GetAddr(),
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    EOA.GetAccKey(),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx2.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx2)
+		assert.Equal(t, kerrors.ErrAccountAlreadyExists, err)
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
