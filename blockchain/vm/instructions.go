@@ -25,7 +25,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
-	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
@@ -384,12 +384,19 @@ func opSAR(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 func opSha3(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	offset, size := stack.pop(), stack.pop()
 	data := memory.Get(offset.Int64(), size.Int64())
-	hash := crypto.Keccak256(data)
+
+	if evm.interpreter.hasher == nil {
+		evm.interpreter.hasher = sha3.NewKeccak256().(keccakState)
+	} else {
+		evm.interpreter.hasher.Reset()
+	}
+	evm.interpreter.hasher.Write(data)
+	evm.interpreter.hasher.Read(evm.interpreter.hasherBuf[:])
 
 	if evm.vmConfig.EnablePreimageRecording {
-		evm.StateDB.AddPreimage(common.BytesToHash(hash), data)
+		evm.StateDB.AddPreimage(evm.interpreter.hasherBuf, data)
 	}
-	stack.push(evm.interpreter.intPool.get().SetBytes(hash))
+	stack.push(evm.interpreter.intPool.get().SetBytes(evm.interpreter.hasherBuf[:]))
 
 	evm.interpreter.intPool.put(offset, size)
 	return nil, nil

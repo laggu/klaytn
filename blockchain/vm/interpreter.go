@@ -22,9 +22,11 @@ package vm
 
 import (
 	"fmt"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
+	"hash"
 	"sync/atomic"
 )
 
@@ -51,6 +53,14 @@ type Config struct {
 	UseOpcodeCntLimit bool
 }
 
+// keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
+// Read to get a variable amount of data from the hash state. Read is faster than Sum
+// because it doesn't copy the internal state, but also modifies the internal state.
+type keccakState interface {
+	hash.Hash
+	Read([]byte) (int, error)
+}
+
 // Interpreter is used to run Ethereum based contracts and will utilise the
 // passed environment to query external sources for state information.
 // The Interpreter will run the byte code VM based on the passed
@@ -59,7 +69,11 @@ type Interpreter struct {
 	evm      *EVM
 	cfg      *Config
 	gasTable params.GasTable
-	intPool  *intPool
+
+	intPool *intPool
+
+	hasher    keccakState // Keccak256 hasher instance shared across opcodes
+	hasherBuf common.Hash // Keccak256 hasher result array shared aross opcodes
 
 	readOnly   bool   // Whether to throw on stateful modifications
 	returnData []byte // Last CALL's return data for subsequent reuse
