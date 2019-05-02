@@ -225,6 +225,9 @@ func genBlocks(t *testing.T) {
 				types.TxValueKeyHumanReadable: false,
 				types.TxValueKeyAccountKey:    accountTypes[i].account.GetAccKey(),
 			}
+			if common.IsHumanReadableAddress(accountTypes[i].account.GetAddr()) {
+				values[types.TxValueKeyHumanReadable] = true
+			}
 			tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 			assert.Equal(t, nil, err)
 
@@ -247,7 +250,7 @@ func genBlocks(t *testing.T) {
 				types.TxValueKeyAmount:        amount,
 				types.TxValueKeyGasLimit:      gasLimit,
 				types.TxValueKeyGasPrice:      gasPrice,
-				types.TxValueKeyHumanReadable: false,
+				types.TxValueKeyHumanReadable: true,
 				types.TxValueKeyData:          common.FromHex(code),
 				types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 			}

@@ -17,7 +17,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
@@ -450,14 +449,12 @@ func (t *TxInternalDataAccountCreation) SenderTxHash() common.Hash {
 func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	to := t.Recipient
 	if t.HumanReadable {
-		addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
-			if r == rune(0x0) {
-				return true
-			}
-			return false
-		}))
-		if err := common.IsHumanReadableAddress(addrString); err != nil {
+		if !common.IsHumanReadableAddress(to) {
 			return kerrors.ErrNotHumanReadableAddress
+		}
+	} else {
+		if common.IsReservedAddressForHumanReadable(to) {
+			return kerrors.ErrNotNonHumanReadableAddress
 		}
 	}
 	if common.IsPrecompiledContractAddress(to) {

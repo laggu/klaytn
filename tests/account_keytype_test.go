@@ -1370,7 +1370,7 @@ func TestAccountCreationHumanReadableFail(t *testing.T) {
 	// 1. Non-alphanumeric characters in the address.
 	{
 		readable := &TestAccountType{
-			Addr:   common.HexToAddress("68756d616e5265616461626c655f000000000000"), // humanReadable_
+			Addr:   common.HexToAddress("68756d616e5265616461626c655f2e6b6c6179746e"), // humanReadable_ + .klaytn
 			Keys:   []*ecdsa.PrivateKey{key},
 			Nonce:  uint64(0),
 			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
@@ -1407,7 +1407,7 @@ func TestAccountCreationHumanReadableFail(t *testing.T) {
 	// 2. The first character of the address is a number.
 	{
 		readable := &TestAccountType{
-			Addr:   common.HexToAddress("3068756d616e5265616461626c65000000000000"), // 0humanReadable
+			Addr:   common.HexToAddress("30756d616e5265616461626c652e6b6c6179746e"), // 0umanReadable + .klaytn
 			Keys:   []*ecdsa.PrivateKey{key},
 			Nonce:  uint64(0),
 			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
@@ -1444,7 +1444,7 @@ func TestAccountCreationHumanReadableFail(t *testing.T) {
 	// 3. A valid address, "humanReadable"
 	{
 		readable := &TestAccountType{
-			Addr:   common.HexToAddress("68756d616e5265616461626c6500000000000000"), // humanReadable
+			Addr:   common.HexToAddress("68756d616e5265616461626c652e6b6c6179746e"), // humanReadable + .klaytn
 			Keys:   []*ecdsa.PrivateKey{key},
 			Nonce:  uint64(0),
 			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
@@ -1768,7 +1768,7 @@ func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
 	user_key_1 := "e62544af405e9e6512ebbef81721ba7428a7914dadacb44bea2a86426d8a8b96"
 	user_key_2 := "227ffb0a420d70f344be9410a9918e411dd8bc1c46ee0e966751db4a6c086de3"
 	user_key_3 := "cc2e738550d8df28ad840d7aa8bfb87bf21798e3f3cbd953e0fdc1dea39bc14f"
-	humanReadableAddr, err := common.FromHumanReadableAddress("humanReadableAddr")
+	humanReadableAddr, err := common.FromHumanReadableAddress("humanReadable" + ".klaytn")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1865,7 +1865,7 @@ func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyHumanReadable: true,
 			types.TxValueKeyAccountKey:    roleBasedAccount.AccKey,
 		}
 

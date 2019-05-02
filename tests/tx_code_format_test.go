@@ -150,7 +150,7 @@ func genFeeDelegatedWithRatioSmartContractDeployWithCodeFormat(t *testing.T, sig
 }
 
 func genMapForDeployWithCodeFormat(t *testing.T, from TestAccount, gasPrice *big.Int, codeFormat params.CodeFormat) map[types.TxValueKeyType]interface{} {
-	addr, err := common.FromHumanReadableAddress(getRandomString())
+	addr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
 	assert.Equal(t, nil, err)
 
 	values := map[types.TxValueKeyType]interface{}{

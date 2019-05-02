@@ -113,7 +113,7 @@ func createHumanReadableAccount(prvKeyHex string, humanReadableAddr string) (*Te
 		return nil, err
 	}
 
-	addr, err := common.FromHumanReadableAddress(humanReadableAddr)
+	addr, err := common.FromHumanReadableAddress(humanReadableAddr + ".klaytn")
 	if err != nil {
 		return nil, err
 	}
@@ -499,13 +499,13 @@ func TestAccountCreationWithNilKey(t *testing.T) {
 	// Create account with Nil key
 	{
 		// an account has a Nil key
-		addr, err := common.FromHumanReadableAddress("addrNilKey")
+		addr, err := common.FromHumanReadableAddress("addrNilKey.klaytn")
 		assert.Equal(t, nil, err)
 		prvKeyHex := "c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"
 		key, err := crypto.HexToECDSA(prvKeyHex)
 		assert.Equal(t, nil, err)
 
-		anon, err := &TestAccountType{
+		decoupled, err := &TestAccountType{
 			Addr:   addr,
 			Keys:   []*ecdsa.PrivateKey{key},
 			Nonce:  uint64(0),
@@ -515,7 +515,7 @@ func TestAccountCreationWithNilKey(t *testing.T) {
 
 		if testing.Verbose() {
 			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-			fmt.Println("anonAddr = ", anon.Addr.String())
+			fmt.Println("decoupledAddr = ", decoupled.Addr.String())
 		}
 
 		var txs types.Transactions
@@ -523,12 +523,12 @@ func TestAccountCreationWithNilKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            anon.Addr,
+			types.TxValueKeyTo:            decoupled.Addr,
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    anon.AccKey,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    decoupled.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
@@ -1144,7 +1144,7 @@ func TestSmartContractDeployNonHumanReadableAddressSuccess(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// assign invalid human readable address
-	contract.Addr.SetBytesFromFront([]byte("1contract"))
+	contract.Addr.SetBytesFromFront([]byte("#1contract"))
 
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(250000000)
@@ -2540,7 +2540,7 @@ func TestAccountCreationWithLegacyKeyNReadableAddr(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// Set human readable address
-	addr, err := common.FromHumanReadableAddress("addrLegacyKey")
+	addr, err := common.FromHumanReadableAddress("addrLegacyKey.klaytn")
 	assert.Equal(t, nil, err)
 
 	anon, err := &TestAccountType{

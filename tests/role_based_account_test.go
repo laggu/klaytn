@@ -91,7 +91,7 @@ func TestRoleBasedAccount(t *testing.T) {
 	}
 
 	// Create an account having a role-based key
-	colinAddr, err := common.FromHumanReadableAddress("colin")
+	colinAddr, err := common.FromHumanReadableAddress("colin.klaytn")
 	keys := genTestKeys(3)
 	accKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
 		accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),

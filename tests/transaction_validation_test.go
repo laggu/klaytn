@@ -18,12 +18,14 @@ package tests
 
 import (
 	"crypto/ecdsa"
+	"crypto/rand"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
@@ -31,6 +33,542 @@ import (
 	"testing"
 	"time"
 )
+
+// TestHumanReadableAddrValidationInTxPool tests human-readable address validation logic in TxPool.
+// A human-readable account should have an alphanumeric address string with an alphabet in the current convention.
+// Also, the address should consist of 5 ~ 13 characters.
+func TestHumanReadableAddrValidationInTxPool(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+	amount := big.NewInt(100)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// creating account setting
+	hex := make([]byte, 32)
+	rand.Read(hex)
+	EOAKey, _ := crypto.HexToECDSA(hexutil.Encode(hex)[2:])
+	assert.Equal(t, nil, err)
+
+	EOAAccKey := accountkey.NewAccountKeyPublicWithValue(&EOAKey.PublicKey)
+	code := "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	invalidAddress := [][]byte{
+		[]byte("ABCD.klaytn"),                // short address (length 4)
+		[]byte("A23456789012341.klaytn"),     // long address (length 14)
+		[]byte("1234567890.klaytn"),          // invalid address (number first)
+		[]byte("ABCDE..klaytn"),              // invalid address (special character, dot)
+		[]byte("ABCDEF"),                     // invalid address (no suffix)
+		{0x66, 0x66, 0x66, 0x66, 0x88, 0x66}, // invalid address (non-alphanumeric)
+	}
+
+	// invalid address test
+	for _, addr := range invalidAddress {
+		var humanReadbleAddr common.Address
+		humanReadbleAddr.SetBytesFromFront(addr)
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    EOAAccKey,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+
+		tx2, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx2.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx2)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+
+		tx3, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:      reservoir.Addr,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx3)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+
+		tx4, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              reservoir.Nonce,
+			types.TxValueKeyFrom:               reservoir.Addr,
+			types.TxValueKeyTo:                 &humanReadbleAddr,
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyHumanReadable:      true,
+			types.TxValueKeyData:               common.FromHex(code),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:           reservoir.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(99),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx4)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+	}
+
+	// valid address test
+	{
+		var humanReadbleAddr common.Address
+		humanReadbleAddr.SetBytesFromFront([]byte("aidan.klaytn"))
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    EOAAccKey,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+
+		tx2, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx2.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx2)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+
+		tx3, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:      reservoir.Addr,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx3)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+
+		tx4, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              reservoir.Nonce,
+			types.TxValueKeyFrom:               reservoir.Addr,
+			types.TxValueKeyTo:                 &humanReadbleAddr,
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyHumanReadable:      true,
+			types.TxValueKeyData:               common.FromHex(code),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:           reservoir.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(99),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx4)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestNonHumanReadableAddrValidationInTxPool tests non-human-readable address validation logic in TxPool.
+// Non-human-readable account cannot have alphanumeric address w/ or w/o dot in the current convention.
+func TestNonHumanReadableAddrValidationInTxPool(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+	amount := big.NewInt(100)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// creating account setting
+	hex := make([]byte, 32)
+	rand.Read(hex)
+	EOAKey, _ := crypto.HexToECDSA(hexutil.Encode(hex)[2:])
+	assert.Equal(t, nil, err)
+
+	EOAAccKey := accountkey.NewAccountKeyPublicWithValue(&EOAKey.PublicKey)
+	code := "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	invalidAddress := [][]byte{
+		[]byte("ABC"),               // short alphanumeric
+		[]byte("ABCDDE"),            // alphanumeric
+		[]byte("ABCCDE12345"),       // alphanumeric
+		[]byte("A2345678901234567"), // long alphanumeric
+		[]byte("1234567890"),        // numeric
+		[]byte("......."),           // dot
+	}
+
+	validAddress := [][]byte{
+		{0x88, 0x88, 0x88, 0x88, 0x88, 0x88}, // non-alphanumeric
+		{0x66, 0x66, 0x66, 0x66, 0x66, 0x88}, // alphanumeric + non-alphanumeric
+		{0x77, 0x33, 0x22},                   // short non-alphanumeric
+		{0x77, 0x33, 0x22, 0x33, 0x22, 0x33, 0x22, 0x33, 0x22, 0x33, 0x22, 0x33, 0x22, 0x33, 0x22}, // long non-alphanumeric
+	}
+
+	for _, addr := range invalidAddress {
+		var humanReadbleAddr common.Address
+		humanReadbleAddr.SetBytesFromFront(addr)
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    EOAAccKey,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, kerrors.ErrNotNonHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+
+		tx2, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx2.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx2)
+		assert.Equal(t, kerrors.ErrNotNonHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+
+		tx3, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:      reservoir.Addr,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx3)
+		assert.Equal(t, kerrors.ErrNotNonHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+
+		tx4, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              reservoir.Nonce,
+			types.TxValueKeyFrom:               reservoir.Addr,
+			types.TxValueKeyTo:                 &humanReadbleAddr,
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyHumanReadable:      false,
+			types.TxValueKeyData:               common.FromHex(code),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:           reservoir.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(99),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx4)
+		assert.Equal(t, kerrors.ErrNotNonHumanReadableAddress, err)
+
+		reservoir.Nonce += 1
+	}
+
+	for _, addr := range validAddress {
+		var humanReadbleAddr common.Address
+		humanReadbleAddr.SetBytesFromFront(addr)
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    EOAAccKey,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+
+		tx2, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx2.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx2)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+
+		tx3, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &humanReadbleAddr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:      reservoir.Addr,
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx3.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx3)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+
+		tx4, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              reservoir.Nonce,
+			types.TxValueKeyFrom:               reservoir.Addr,
+			types.TxValueKeyTo:                 &humanReadbleAddr,
+			types.TxValueKeyAmount:             amount,
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyHumanReadable:      false,
+			types.TxValueKeyData:               common.FromHex(code),
+			types.TxValueKeyCodeFormat:         params.CodeFormatEVM,
+			types.TxValueKeyFeePayer:           reservoir.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(99),
+		})
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx4.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx4)
+		assert.Equal(t, nil, err)
+
+		reservoir.Nonce += 1
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
 
 // TestValidatingUnavailableContractExecution tests validation logic of invalid contract execution transaction.
 // TxPool will invalidate contract execution transactions sending to un-executable account even though the recipient is a contract account.

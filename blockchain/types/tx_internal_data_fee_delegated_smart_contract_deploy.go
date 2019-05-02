@@ -379,14 +379,12 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	if t.Recipient != nil {
 		to := t.Recipient
 		if t.HumanReadable {
-			addrString := string(bytes.TrimRightFunc(to.Bytes(), func(r rune) bool {
-				if r == rune(0x0) {
-					return true
-				}
-				return false
-			}))
-			if err := common.IsHumanReadableAddress(addrString); err != nil {
+			if !common.IsHumanReadableAddress(*to) {
 				return kerrors.ErrNotHumanReadableAddress
+			}
+		} else {
+			if common.IsReservedAddressForHumanReadable(*to) {
+				return kerrors.ErrNotNonHumanReadableAddress
 			}
 		}
 		// Fail if the address is already created.

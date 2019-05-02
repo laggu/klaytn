@@ -32,18 +32,27 @@ import (
 	"math/rand"
 	"reflect"
 	"regexp"
+	"strings"
 )
 
 const (
-	HashLength      = 32
-	AddressLength   = 20
-	SignatureLength = 65
+	HashLength                = 32
+	AddressLength             = 20
+	SignatureLength           = 65
+	HumanReadableSuffixLength = 7
+	HumanReadableMinLength    = 5 + HumanReadableSuffixLength  // 12
+	HumanReadableMaxLength    = 13 + HumanReadableSuffixLength // 20
 )
 
 var (
 	hashT                           = reflect.TypeOf(Hash{})
 	addressT                        = reflect.TypeOf(Address{})
 	isAlphaNumericWithFirstAlphabet = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z]+$`).MatchString
+	isAlphaNumericWithOrWithoutDot  = regexp.MustCompile(`^[0-9A-Za-z.]+$`).MatchString
+	humanReadableSuffixDelimiter    = "."
+	humanReadableSuffix             = []string{
+		humanReadableSuffixDelimiter + "klaytn", // default human-readable address suffix
+	}
 )
 
 var lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
@@ -182,23 +191,42 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 // If s is larger than len(h), s will be cropped from the left.
 func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 
-// IsHumanReadableAddress returns an error if the string cannot be a human-readable address.
-// Otherwise, it returns nil.
-func IsHumanReadableAddress(s string) error {
-	if len(s) > AddressLength {
-		return errStringLengthExceedsAddressLength
+// IsHumanReadableAddress returns true if the address is a human-readable address.
+// Otherwise, it returns false.
+func IsHumanReadableAddress(addr Address) bool {
+	addrString := AddressTrimRight(addr)
+	strLen := len(addrString)
+	suffixPosition := strLen - HumanReadableSuffixLength
+	if strLen < HumanReadableMinLength || HumanReadableMaxLength < strLen {
+		return false
 	}
-	if len(s) == 0 {
-		return errEmptyString
+	// Be careful, the modification! Invalid 'suffixPosition' can cause a panic
+	if !validateHumanReadableSuffix(addrString[suffixPosition:]) {
+		return false
 	}
-
-	if !isAlphaNumericWithFirstAlphabet(s) {
+	if !isAlphaNumericWithFirstAlphabet(addrString[:suffixPosition]) {
 		// NOTE-Klaytn-Accounts: For now, only alphanumeric characters are allowed for human-readable addresses.
 		// The first character should be an alphabet. Numeric is not allowed for the first character.
-		return kerrors.ErrNotHumanReadableAddress
+		return false
 	}
+	return true
+}
 
-	return nil
+// AddressTrimRight removes successive zero values from the right side of an input address, and returns the sliced string.
+func AddressTrimRight(addr Address) string {
+	return string(bytes.TrimRightFunc(addr.Bytes(), func(r rune) bool {
+		if r == rune(0x0) {
+			return true
+		}
+		return false
+	}))
+}
+
+// IsReservedAddressForHumanReadable returns true if the address is in the reserved address range for human-readable address.
+// Otherwise, it returns false.
+func IsReservedAddressForHumanReadable(addr Address) bool {
+	addrString := AddressTrimRight(addr)
+	return isAlphaNumericWithOrWithoutDot(addrString)
 }
 
 // IsPrecompiledContractAddress returns true if the input address is in the range of precompiled contract addresses.
@@ -209,15 +237,26 @@ func IsPrecompiledContractAddress(addr Address) bool {
 	return true
 }
 
+// validateHumanReadableSuffix returns true if the string is one of the valid suffixes of Klaytn
+func validateHumanReadableSuffix(s string) bool {
+	for _, suffix := range humanReadableSuffix {
+		if strings.Compare(s, suffix) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // FromHumanReadableAddress returns an Address object if the string s can be converted to a Klaytn address.
 // Otherwise, it returns an error.
 func FromHumanReadableAddress(s string) (Address, error) {
-	if err := IsHumanReadableAddress(s); err != nil {
-		return Address{}, err
-	}
-
 	var a Address
 	a.SetBytesFromFront([]byte(s))
+
+	if !IsHumanReadableAddress(a) {
+		return Address{}, kerrors.ErrNotHumanReadableAddress
+	}
+
 	return a, nil
 }
 

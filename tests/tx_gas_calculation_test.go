@@ -157,6 +157,9 @@ func TestGasCalculation(t *testing.T) {
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    accountTypes[i].account.GetAccKey(),
 		}
+		if common.IsHumanReadableAddress(accountTypes[i].account.GetAddr()) {
+			values[types.TxValueKeyHumanReadable] = true
+		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
@@ -164,7 +167,6 @@ func TestGasCalculation(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
-
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
@@ -668,7 +670,7 @@ func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *b
 	if to == nil {
 		values[types.TxValueKeyTo] = (*common.Address)(nil)
 	} else {
-		addr, err := common.FromHumanReadableAddress(getRandomString())
+		addr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
 		assert.Equal(t, nil, err)
 
 		values[types.TxValueKeyTo] = &addr
@@ -748,7 +750,7 @@ func genKlaytnLegacyAccount(t *testing.T) TestAccount {
 
 func genPublicAccount(t *testing.T) TestAccount {
 	// For AccountKeyPublic
-	newAddress, err := common.FromHumanReadableAddress(getRandomString())
+	newAddress, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
 	assert.Equal(t, nil, err)
 
 	publicAccount, err := createDecoupledAccount(getRandomPrivateKeyString(t), newAddress)
@@ -759,7 +761,7 @@ func genPublicAccount(t *testing.T) TestAccount {
 
 func genMultiSigAccount(t *testing.T) TestAccount {
 	// For AccountKeyWeightedMultiSig
-	newAddress, err := common.FromHumanReadableAddress(getRandomString())
+	newAddress, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
 	assert.Equal(t, nil, err)
 
 	multisigAccount, err := createMultisigAccount(uint(2),
@@ -772,7 +774,7 @@ func genMultiSigAccount(t *testing.T) TestAccount {
 
 func genRoleBasedWithPublicAccount(t *testing.T) TestAccount {
 	// For AccountKeyRoleBased With AccountKeyPublic
-	roleBasedWithPublicAddr, err := common.FromHumanReadableAddress(getRandomString())
+	roleBasedWithPublicAddr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
 	assert.Equal(t, nil, err)
 
 	roleBasedWithPublic, err := createRoleBasedAccountWithAccountKeyPublic(
@@ -786,7 +788,7 @@ func genRoleBasedWithMultiSigAccount(t *testing.T) TestAccount {
 	// For AccountKeyRoleBased With AccountKeyWeightedMultiSig
 	p := genMultiSigParamForRoleBased(t)
 
-	roleBasedWithMultiSigAddr, err := common.FromHumanReadableAddress(getRandomString())
+	roleBasedWithMultiSigAddr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
 	assert.Equal(t, nil, err)
 
 	roleBasedWithMultiSig, err := createRoleBasedAccountWithAccountKeyWeightedMultiSig(
@@ -812,7 +814,7 @@ func genNewAccountWithGas(t *testing.T, testAccount TestAccount, txType types.Tx
 	}
 
 	// humanReadableAddress for newAccount
-	newAccountAddress, err := common.FromHumanReadableAddress(getRandomString())
+	newAccountAddress, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
 	assert.Equal(t, nil, err)
 	readable = true
 
@@ -851,7 +853,7 @@ func genNewAccountWithGas(t *testing.T, testAccount TestAccount, txType types.Tx
 }
 
 func getRandomString() string {
-	n := 20
+	n := 10
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 	b := make([]rune, n)
