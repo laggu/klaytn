@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
@@ -38,6 +39,10 @@ type PublicKeySerializable ecdsa.PublicKey
 
 type publicKeySerializableInternal struct {
 	X, Y *big.Int
+}
+
+type publicKeySerializableInternalJSON struct {
+	X, Y *hexutil.Big
 }
 
 // newPublicKeySerializable creates a PublicKeySerializable object.
@@ -87,21 +92,21 @@ func (p *PublicKeySerializable) MarshalJSON() ([]byte, error) {
 	if !crypto.S256().IsOnCurve(p.X, p.Y) {
 		return nil, errNotS256Curve
 	}
-	return json.Marshal(&publicKeySerializableInternal{
-		p.X, p.Y})
+	return json.Marshal(&publicKeySerializableInternalJSON{
+		(*hexutil.Big)(p.X), (*hexutil.Big)(p.Y)})
 }
 
 // UnmarshalJSON decodes PublicKeySerializable using JSON.
 // For now, it supports S256 curve only.
 // For that reason, this function deserializes only X and Y. Refer to MarshalJSON() above.
 func (p *PublicKeySerializable) UnmarshalJSON(b []byte) error {
-	var dec publicKeySerializableInternal
+	var dec publicKeySerializableInternalJSON
 	if err := json.Unmarshal(b, &dec); err != nil {
 		return err
 	}
 
-	p.X = dec.X
-	p.Y = dec.Y
+	p.X = (*big.Int)(dec.X)
+	p.Y = (*big.Int)(dec.Y)
 
 	return nil
 }

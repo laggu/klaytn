@@ -26,6 +26,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/account"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
@@ -190,6 +191,18 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	}
 	res := state.GetState(address, common.HexToHash(key))
 	return res[:], state.Error()
+}
+
+// GetAccountKey returns the account key of EOA at a given address.
+// If the account of the given address is a Legacy Account or a Smart Contract Account, it will return nil.
+func (s *PublicBlockChainAPI) GetAccountKey(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*accountkey.AccountKeySerializer, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if err != nil {
+		return &accountkey.AccountKeySerializer{}, err
+	}
+	accountKey := state.GetKey(address)
+	serAccKey := accountkey.NewAccountKeySerializerWithAccountKey(accountKey)
+	return serAccKey, state.Error()
 }
 
 // WriteThroughCaching returns if write through caching is enabled or not.
