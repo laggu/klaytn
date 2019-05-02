@@ -149,7 +149,17 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
 		return statedb, fmt.Errorf("post state logs hash mismatch: got %x, want %x", logs, post.Logs)
 	}
+
 	root, _ := statedb.Commit(true)
+	// Add 0-value mining reward. This only makes a difference in the cases
+	// where
+	// - the coinbase suicided, or
+	// - there are only 'bad' transactions, which aren't executed. In those cases,
+	//   the coinbase gets no txfee, so isn't created, and thus needs to be touched
+	statedb.AddBalance(block.Rewardbase(), new(big.Int))
+	// And _now_ get the state root
+	root = statedb.IntermediateRoot(true)
+
 	if root != common.Hash(post.Root) {
 		return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
 	}

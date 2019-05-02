@@ -34,11 +34,11 @@ func TestBlockchain(t *testing.T) {
 	//bt.skipLoad(`^bcForgedTest/bcForkUncle\.json`)
 	bt.skipLoad(`^bcMultiChainTest/(ChainAtoChainB_blockorder|CallContractFromNotBestBlock)`)
 	bt.skipLoad(`^bcTotalDifficultyTest/(lotsOfLeafs|lotsOfBranches|sideChainWithMoreTransactions)`)
-	// Constantinople is not implemented yet.
-	bt.skipLoad(`(?i)(constantinople)`)
+	// This test is broken
+	bt.fails(`blockhashNonConstArg_Constantinople`, "Broken test")
 
 	// Still failing tests
-	bt.skipLoad(`^bcWalletTest.*_Byzantium$`)
+	// bt.skipLoad(`^bcWalletTest.*_Byzantium$`)
 
 	// TODO-Klaytn Update BlockchainTests first to enable this test, since block header has been changed in Klaytn.
 	//bt.walk(t, blockTestDir, func(t *testing.T, name string, test *BlockTest) {
