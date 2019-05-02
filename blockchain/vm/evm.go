@@ -390,8 +390,20 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 	return ret, contract.Gas, err
 }
 
+type codeAndHash struct {
+	code []byte
+	hash common.Hash
+}
+
+func (c *codeAndHash) Hash() common.Hash {
+	if c.hash == (common.Hash{}) {
+		c.hash = crypto.Keccak256Hash(c.code)
+	}
+	return c.hash
+}
+
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) create(caller types.ContractRef, code []byte, gas uint64, value *big.Int, address common.Address, codeHash common.Hash, humanReadable bool, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address, humanReadable bool, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -424,14 +436,14 @@ func (evm *EVM) create(caller types.ContractRef, code []byte, gas uint64, value 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, AccountRef(address), value, gas)
-	contract.SetCallCode(&address, codeHash, code)
+	contract.SetCodeOptionalHash(&address, codeAndHash)
 
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, address, gas, nil
 	}
 
 	if evm.vmConfig.Debug && evm.depth == 0 {
-		evm.vmConfig.Tracer.CaptureStart(caller.Address(), address, true, code, gas, value)
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), address, true, codeAndHash.code, gas, value)
 	}
 	start := time.Now()
 
@@ -480,9 +492,9 @@ func (evm *EVM) create(caller types.ContractRef, code []byte, gas uint64, value 
 
 // Create creates a new contract using code as deployment code.
 func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value *big.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
-	codeHash := crypto.Keccak256Hash(code)
-	address := crypto.CreateAddress(caller.Address(), evm.StateDB.GetNonce(caller.Address()), codeHash)
-	return evm.create(caller, code, gas, value, address, codeHash, false, codeFormat)
+	codeAndHash := &codeAndHash{code: code}
+	contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.GetNonce(caller.Address()), codeAndHash.Hash())
+	return evm.create(caller, codeAndHash, gas, value, contractAddr, false, codeFormat)
 }
 
 // Create2 creates a new contract using code as deployment code.
@@ -490,15 +502,16 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 // The different between Create2 with Create is Create2 uses sha3(0xff ++ msg.sender ++ salt ++ sha3(init_code))[12:]
 // instead of the usual sender-and-nonce-hash as the address where the contract is initialized at.
 func (evm *EVM) Create2(caller types.ContractRef, code []byte, gas uint64, endowment *big.Int, salt *big.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
-	codeHash := crypto.Keccak256Hash(code)
-	address := crypto.CreateAddress2(caller.Address(), common.BigToHash(salt), code)
-	return evm.create(caller, code, gas, endowment, address, codeHash, false, codeFormat)
+	codeAndHash := &codeAndHash{code: code}
+	contractAddr = crypto.CreateAddress2(caller.Address(), common.BigToHash(salt), codeAndHash.Hash().Bytes())
+	return evm.create(caller, codeAndHash, gas, endowment, contractAddr, false, codeFormat)
 }
 
 // CreateWithAddress creates a new contract using code as deployment code with given address and humanReadable.
 func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uint64, value *big.Int, contractAddr common.Address, humanReadable bool, codeFormat params.CodeFormat) ([]byte, common.Address, uint64, error) {
-	codeHash := crypto.Keccak256Hash(code)
-	return evm.create(caller, code, gas, value, contractAddr, codeHash, humanReadable, codeFormat)
+	codeAndHash := &codeAndHash{code: code}
+	codeAndHash.Hash()
+	return evm.create(caller, codeAndHash, gas, value, contractAddr, humanReadable, codeFormat)
 }
 
 // ChainConfig returns the environment's chain configuration
