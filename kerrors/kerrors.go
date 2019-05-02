@@ -23,6 +23,7 @@ import "errors"
 var (
 	ErrNotHumanReadableAddress    = errors.New("not a human readable address")
 	ErrOutOfGas                   = errors.New("out of gas")
+	ErrTxGasLimit                 = errors.New("exceeds transaction gas limit")
 	ErrMaxKeysExceed              = errors.New("the number of keys exceeds the limit")
 	ErrMaxKeysExceedInValidation  = errors.New("the number of keys exceeds the limit in the validation check")
 	ErrMaxFeeRatioExceeded        = errors.New("fee ratio exceeded the maximum")

@@ -189,7 +189,7 @@ func TestSmartContractCreationFailTxPool(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-	gasLimit := uint64(250000000)
+	gasLimit := uint64(2000000)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 
