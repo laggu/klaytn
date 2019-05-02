@@ -298,6 +298,9 @@ func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transaction
 		if !tx.ValidateMutableValue(pool.currentState, pool.signer) {
 			return true
 		}
+		if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
+			return true
+		}
 		// In case of fee-delegated transactions, the comparison value should consider tx fee and fee ratio.
 		if tx.IsFeeDelegatedTransaction() {
 			feePayer, _ := tx.FeePayer()
