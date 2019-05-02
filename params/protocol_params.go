@@ -51,6 +51,7 @@ const (
 	LogGas                uint64 = 375   // Per LOG* operation.                                                          // G_log
 	CopyGas               uint64 = 3     // Partial payment for COPY operations, multiplied by words copied, rounded up. // G_copy
 	CreateGas             uint64 = 32000 // Once per CREATE operation & contract-creation transaction.               // G_create
+	Create2Gas            uint64 = 32000 // Once per CREATE2 operation
 	SuicideRefundGas      uint64 = 24000 // Refunded following a suicide operation.                                  // R_selfdestruct
 	MemoryGas             uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL. // G_memory
 	LogTopicGas           uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
