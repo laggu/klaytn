@@ -339,9 +339,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
 	// Fail if the target address is not a program account.
 	if stateDB.IsContractAvailable(t.Recipient) == false {
 		return kerrors.ErrNotProgramAccount
