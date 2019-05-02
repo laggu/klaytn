@@ -251,13 +251,13 @@ func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*b
 		return nil, err
 	}
 	for it.Next() {
-		logger.Debug("pending nonce in the events", "requestNonce", it.Event.RequestNonce)
+		logger.Trace("pending nonce in the event", "requestNonce", it.Event.RequestNonce)
 		if it.Event.RequestNonce > hint.handleNonce {
-			logger.Debug("filtered pending nonce", "requestNonce", it.Event.RequestNonce)
+			logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
 			pendingEvents = append(pendingEvents, it.Event)
 		}
 	}
-	logger.Debug("pending events", "len(pendingEvents)", len(pendingEvents))
+	logger.Debug("retrieved pending events", "len(pendingEvents)", len(pendingEvents))
 
 	return pendingEvents, nil
 }
@@ -307,8 +307,9 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	var evs []*TokenReceivedEvent
 
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
+	logger.Warn("try to recover service chain's value transfer events", "len(events)", len(vtr.serviceChainEvents))
 	for _, ev := range vtr.serviceChainEvents {
-		logger.Warn("try to recover service chain's value transfer events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
+		logger.Trace("recover event", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
 			From:         ev.From,
@@ -321,8 +322,9 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtr.mcBridgeInfo.AddRequestValueTransferEvents(evs)
 
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
+	logger.Warn("try to recover main chain's value transfer events", "len(events)", len(vtr.mainChainEvents))
 	for _, ev := range vtr.mainChainEvents {
-		logger.Warn("try to recover main chain's value transfer events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
+		logger.Trace("recover events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
 			From:         ev.From,

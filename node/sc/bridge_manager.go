@@ -210,22 +210,22 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *TokenReceivedEvent) er
 		if err != nil {
 			return err
 		}
-		logger.Debug("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
 
 	case TOKEN:
 		tx, err := bi.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 		if err != nil {
 			return err
 		}
-		logger.Debug("Bridge succeeded to HandleTokenTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+		logger.Trace("Bridge succeeded to HandleTokenTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
 	case NFT:
 		tx, err := bi.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 		if err != nil {
 			return err
 		}
-		logger.Debug("Bridge succeeded to HandleNFTTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+		logger.Trace("Bridge succeeded to HandleNFTTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
 	default:
-		logger.Error("Got Unknown Token Type ReceivedEvent")
+		logger.Warn("Got Unknown Token Type ReceivedEvent", "bridge", ev.ContractAddr, "nonce", ev.RequestNonce, "from", ev.From)
 		return nil
 	}
 
