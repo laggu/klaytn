@@ -314,7 +314,7 @@ func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlock
 }
 
 func (t *TxInternalDataValueTransferMemo) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+	return !stateDB.IsProgramAccount(t.Recipient)
 }
 
 func (t *TxInternalDataValueTransferMemo) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

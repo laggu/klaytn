@@ -327,7 +327,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, curr
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+	return !stateDB.IsProgramAccount(t.Recipient)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
