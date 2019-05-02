@@ -573,12 +573,12 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 	if local {
 		acc := bm.subBridge.bridgeAccountManager.scAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend)
-		bm.SetBridge(addr, bridge, acc, local, false)
+		bm.SetBridgeInfo(addr, bridge, acc, local, false)
 		return addr, err
 	} else {
 		acc := bm.subBridge.bridgeAccountManager.mcAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend)
-		bm.SetBridge(addr, bridge, acc, local, false)
+		bm.SetBridgeInfo(addr, bridge, acc, local, false)
 		return addr, err
 	}
 }

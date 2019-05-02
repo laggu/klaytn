@@ -405,8 +405,8 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 	return bridge, ok
 }
 
-// SetBridge stores the address and bridge pair with local/remote and subscription status.
-func (bm *BridgeManager) SetBridge(addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) {
+// SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
+func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) {
 	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, account, local, subscribed)
 }
 
@@ -431,8 +431,8 @@ func (bm *BridgeManager) LoadAllBridge() error {
 			if err != nil {
 				return err
 			}
-			bm.SetBridge(journal.LocalAddress, localBridge, bm.subBridge.bridgeAccountManager.scAccount, true, false)
-			bm.SetBridge(journal.RemoteAddress, remoteBridge, bm.subBridge.bridgeAccountManager.mcAccount, false, false)
+			bm.SetBridgeInfo(journal.LocalAddress, localBridge, bm.subBridge.bridgeAccountManager.scAccount, true, false)
+			bm.SetBridgeInfo(journal.RemoteAddress, remoteBridge, bm.subBridge.bridgeAccountManager.mcAccount, false, false)
 
 			// 2. Set the address manager.
 			bm.subBridge.AddressManager().AddBridge(journal.LocalAddress, journal.RemoteAddress)
@@ -533,9 +533,9 @@ func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBa
 	}
 	logger.Info("bridge ", "address", addr)
 	if local {
-		bm.SetBridge(addr, bridge, bm.subBridge.bridgeAccountManager.scAccount, local, false)
+		bm.SetBridgeInfo(addr, bridge, bm.subBridge.bridgeAccountManager.scAccount, local, false)
 	} else {
-		bm.SetBridge(addr, bridge, bm.subBridge.bridgeAccountManager.mcAccount, local, false)
+		bm.SetBridgeInfo(addr, bridge, bm.subBridge.bridgeAccountManager.mcAccount, local, false)
 	}
 
 	bridgeInfo, _ = bm.GetBridgeInfo(addr)
@@ -557,7 +557,7 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 		return common.Address{}, err
 	}
 
-	bm.SetBridge(addr, bridge, acc, local, false)
+	bm.SetBridgeInfo(addr, bridge, acc, local, false)
 	return addr, err
 }
 
