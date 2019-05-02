@@ -313,7 +313,7 @@ func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, current
 }
 
 func (t *TxInternalDataSmartContractExecution) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+	return stateDB.IsContractAvailable(t.Recipient)
 }
 
 func (t *TxInternalDataSmartContractExecution) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
