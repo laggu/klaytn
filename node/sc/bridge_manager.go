@@ -444,7 +444,7 @@ func (bm *BridgeManager) LoadAllBridge() error {
 			}
 			err = bm.subscribeEvent(journal.RemoteAddress, remoteBridge)
 			if err != nil {
-				bm.subBridge.AddressManager().DeleteBridge(journal.LocalAddress)
+				// TODO-Klaytn need to consider how to retry.
 				bm.UnsubscribeEvent(journal.LocalAddress)
 				return err
 			}
