@@ -367,10 +367,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) Validate(sta
 	if stateDB.IsContractAvailable(t.Recipient) == false {
 		return kerrors.ErrNotProgramAccount
 	}
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
-	}
 	return nil
 }
 

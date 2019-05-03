@@ -369,10 +369,6 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB 
 	if stateDB.IsProgramAccount(t.Recipient) {
 		return kerrors.ErrNotForProgramAccount
 	}
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
-	}
 	return nil
 }
 

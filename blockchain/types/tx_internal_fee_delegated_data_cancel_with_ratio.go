@@ -298,10 +298,6 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
-	}
 	return nil
 }
 
