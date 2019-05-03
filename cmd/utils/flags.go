@@ -846,9 +846,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
 	}
-	if ctx.GlobalIsSet(NoDiscoverFlag.Name) {
-		cfg.NoDiscovery = true
-	}
+
+	cfg.NoDiscovery = ctx.GlobalIsSet(NoDiscoverFlag.Name)
+
 	var err error
 	// set the default discovery preset by nodetype
 	cfg.DiscoveryPolicyPreset, err = getDefaultDiscoveryPolicyByNodeType(cfg.ConnectionType)
@@ -921,14 +921,8 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setgRPC(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
-	// dbtype is leveldb or badger
-	if ctx.GlobalIsSet(DbTypeFlag.Name) {
-		cfg.DBType = ctx.GlobalString(DbTypeFlag.Name)
-	}
-
-	if ctx.GlobalIsSet(DataDirFlag.Name) {
-		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	}
+	cfg.DBType = ctx.GlobalString(DbTypeFlag.Name)
+	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
 		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
@@ -1034,10 +1028,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
 	cfg.LevelDBNoCompression = ctx.GlobalIsSet(LevelDBNoCompressionFlag.Name)
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
-
-	if ctx.GlobalIsSet(LevelDBCacheSizeFlag.Name) {
-		cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
-	}
+	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
@@ -1058,15 +1049,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.AnchoringPeriod = ctx.GlobalUint64(AnchoringPeriodFlag.Name)
 	cfg.SentChainTxsLimit = ctx.GlobalUint64(SentChainTxsLimit.Name)
 
-	if ctx.GlobalIsSet(TrieMemoryCacheSizeFlag.Name) {
-		cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
-	}
-	if ctx.GlobalIsSet(CacheTypeFlag.Name) {
-		common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
-	}
-	if ctx.GlobalIsSet(TrieBlockIntervalFlag.Name) {
-		cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
-	}
+	cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
+	common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
+	cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
+
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
 	}
@@ -1100,10 +1086,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.ChildChainIndexing = ctx.GlobalIsSet(ChildChainIndexingFlag.Name)
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
 	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
-
-	if ctx.GlobalIsSet(TrieCacheLimitFlag.Name) {
-		cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
-	}
+	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
