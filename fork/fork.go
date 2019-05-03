@@ -16,25 +16,15 @@
 
 package fork
 
-const (
-	// HardFork block numbers for Baobab
-	FirstBaobabHardFork uint64 = 86400 * 37
-)
-
 var (
 	// hardForkConfig is a global variable defined in params package.
 	// This value will not be changed unless it is a test code.
 	// The test code can override this value via `UpdateHardForkConfig`.
-	hardForkConfig = &HardForkConfig{
-		RoleBasedRLPFixBlockNumber: FirstBaobabHardFork,
-		GasFormulaFixBlockNumber:   FirstBaobabHardFork,
-	}
+	hardForkConfig = &HardForkConfig{}
 )
 
 // HardForkConfig defines a block number for each hard fork feature.
 type HardForkConfig struct {
-	RoleBasedRLPFixBlockNumber uint64
-	GasFormulaFixBlockNumber   uint64
 }
 
 // UpdateHardForkConfig sets values in HardForkConfig if it is not nil.
