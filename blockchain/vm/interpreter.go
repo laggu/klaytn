@@ -95,20 +95,6 @@ func NewInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	}
 }
 
-func (in *Interpreter) enforceRestrictions(op OpCode, operation operation, stack *Stack) error {
-	if in.readOnly {
-		// If the interpreter is operating in readonly mode, make sure no
-		// state-modifying operation is performed. The 3rd stack item
-		// for a call operation is the value. Transferring value from one
-		// account to the others means the state is modified and should also
-		// return with an error.
-		if operation.writes || (op == CALL && stack.Back(2).BitLen() > 0) {
-			return ErrWriteProtection
-		}
-	}
-	return nil
-}
-
 // Run loops and evaluates the contract's code with the given input data and returns
 // the return byte-slice and an error if one occurred.
 //
@@ -195,20 +181,37 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if !operation.valid {
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-Klaytn-Issue615
 		}
-		if err = operation.validateStack(stack); err != nil { // TODO-Klaytn-Issue615
-			return nil, err
+		// Validate stack
+		if sLen := stack.len(); sLen < operation.minStack {
+			return nil, fmt.Errorf("stack underflow (%d <=> %d)", sLen, operation.minStack)
+		} else if sLen > operation.maxStack {
+			return nil, fmt.Errorf("stack limit reached %d (%d)", sLen, operation.maxStack)
 		}
 		// If the operation is valid, enforce and write restrictions
-		if err = in.enforceRestrictions(op, operation, stack); err != nil { // TODO-Klaytn-Issue615
-			return nil, err
+		if in.readOnly {
+			// If the interpreter is operating in readonly mode, make sure no
+			// state-modifying operation is performed. The 3rd stack item
+			// for a call operation is the value. Transferring value from one
+			// account to the others means the state is modified and should also
+			// return with an error.
+			if operation.writes || (op == CALL && stack.Back(2).Sign() != 0) {
+				return nil, ErrWriteProtection
+			}
+		}
+
+		// Static portion of gas
+		if !contract.UseGas(operation.constantGas) {
+			return nil, kerrors.ErrOutOfGas
 		}
 
 		var memorySize uint64
 		var extraSize uint64
 		// calculate the new memory size and expand the memory to fit
 		// the operation
+		// Memory check needs to be done prior to evaluating the dynamic gas portion,
+		// to detect calculation overflows
 		if operation.memorySize != nil {
-			memSize, overflow := bigUint64(operation.memorySize(stack))
+			memSize, overflow := operation.memorySize(stack)
 			if overflow {
 				return nil, errGasUintOverflow // TODO-Klaytn-Issue615
 			}
@@ -222,12 +225,15 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			}
 		}
 		// TODO-Klaytn-Issue136
+		// Dynamic portion of gas
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
-		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
-		// TODO-Klaytn-Issue136
-		if err != nil || !contract.UseGas(cost) {
-			return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue136 TODO-Klaytn-Issue615
+		if operation.dynamicGas != nil {
+			// TODO-Klaytn-Issue136
+			cost, err = operation.dynamicGas(in.gasTable, in.evm, contract, stack, mem, memorySize)
+			if err != nil || !contract.UseGas(cost) {
+				return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue136 TODO-Klaytn-Issue615
+			}
 		}
 		if extraSize > 0 {
 			mem.Increase(extraSize)
