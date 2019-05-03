@@ -258,7 +258,7 @@ func TestSimple_Lookup(t *testing.T) {
 	}
 	discv, _ := newSimple(&conf)
 	s := discv.(*Simple)
-	defer s.Close()
+	s.Close()
 
 	seed := s.randNode(simpleLookupTestnet.knownNodes)
 	s.stuff([]*Node{seed})
