@@ -46,8 +46,9 @@ const (
 	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
 	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
 	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
-	JumpdestGas           uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero. // G_jumpdest
+	JumpdestGas           uint64 = 1     // Once per JUMPDEST operation.
 	CreateDataGas         uint64 = 200   // Paid per byte for a CREATE operation to succeed in placing code into state. // G_codedeposit
+	ExpGas                uint64 = 10    // Once per EXP instruction
 	LogGas                uint64 = 375   // Per LOG* operation.                                                          // G_log
 	CopyGas               uint64 = 3     // Partial payment for COPY operations, multiplied by words copied, rounded up. // G_copy
 	CreateGas             uint64 = 32000 // Once per CREATE operation & contract-creation transaction.               // G_create
