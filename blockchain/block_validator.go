@@ -58,6 +58,8 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	}
 	if !v.bc.HasBlockAndState(block.ParentHash(), block.NumberU64()-1) {
 		if !v.bc.HasBlock(block.ParentHash(), block.NumberU64()-1) {
+			logger.Error("unknown ancestor (ValidateBody)", "num", block.NumberU64(),
+				"hash", block.Hash(), "parentHash", block.ParentHash())
 			return consensus.ErrUnknownAncestor
 		}
 		return consensus.ErrPrunedAncestor

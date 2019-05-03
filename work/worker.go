@@ -415,6 +415,9 @@ func (self *worker) wait() {
 			if stat == blockchain.CanonStatTy {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
 			}
+
+			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
+				"hash", block.Hash(), "txs", len(block.Transactions()))
 			self.chain.PostChainEvents(events, logs)
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.

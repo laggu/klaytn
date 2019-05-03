@@ -117,6 +117,8 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	// Calculate the total blockscore of the header
 	ptd := hc.GetTd(header.ParentHash, number-1)
 	if ptd == nil {
+		logger.Error("unknown ancestor (WriteHeader)", "num", number,
+			"hash", hash, "parentHash", header.ParentHash)
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
 	localTd := hc.GetTd(hc.currentHeaderHash, hc.CurrentHeader().Number.Uint64())

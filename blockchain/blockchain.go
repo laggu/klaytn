@@ -1113,6 +1113,8 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	// Calculate the total blockscore of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
+		logger.Error("unknown ancestor (writeBlockWithStateSerial)", "num", block.NumberU64(),
+			"hash", block.Hash(), "parentHash", block.ParentHash())
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
 	// Make sure no inconsistent state is leaked during insertion
@@ -1173,6 +1175,8 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	// Calculate the total blockscore of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
+		logger.Error("unknown ancestor (writeBlockWithStateParallel)", "num", block.NumberU64(),
+			"hash", block.Hash(), "parentHash", block.ParentHash())
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
 	// Make sure no inconsistent state is leaked during insertion
