@@ -405,8 +405,7 @@ func (api *PrivateDebugAPI) TraceBadBlock(ctx context.Context, hash common.Hash,
 	}
 	for _, block := range blocks {
 		if block.Hash == hash {
-			blk := api.cn.blockchain.GetBlockByHash(block.Hash)
-			return api.traceBlock(ctx, blk, config)
+			return api.traceBlock(ctx, block.Block, config)
 		}
 	}
 	return nil, fmt.Errorf("bad block %#x not found", hash)
@@ -433,8 +432,7 @@ func (api *PrivateDebugAPI) StandardTraceBadBlockToFile(ctx context.Context, has
 	}
 	for _, block := range blocks {
 		if block.Hash == hash {
-			blk := api.cn.blockchain.GetBlockByHash(block.Hash)
-			return api.standardTraceBlockToFile(ctx, blk, config)
+			return api.standardTraceBlockToFile(ctx, block.Block, config)
 		}
 	}
 	return nil, fmt.Errorf("bad block %#x not found", hash)

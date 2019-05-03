@@ -1716,13 +1716,13 @@ func (bc *BlockChain) update() {
 
 // BadBlockArgs represents the entries in the list returned when bad blocks are queried.
 type BadBlockArgs struct {
-	Hash   common.Hash   `json:"hash"`
-	Header *types.Header `json:"header"`
+	Hash  common.Hash  `json:"hash"`
+	Block *types.Block `json:"block"`
 }
 
 // BadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
 func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
-	headers := make([]BadBlockArgs, 0, bc.badBlocks.Len())
+	blocks := make([]BadBlockArgs, 0, bc.badBlocks.Len())
 	for _, hash := range bc.badBlocks.Keys() {
 		hashKey, ok := hash.(common.CacheKey)
 		if !ok {
@@ -1730,15 +1730,15 @@ func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
 			continue
 		}
 
-		if hdr, exist := bc.badBlocks.Peek(hashKey); exist {
+		if blk, exist := bc.badBlocks.Peek(hashKey); exist {
 			cacheGetBadBlockHitMeter.Mark(1)
-			header := hdr.(*types.Header)
-			headers = append(headers, BadBlockArgs{header.Hash(), header})
+			block := blk.(*types.Block)
+			blocks = append(blocks, BadBlockArgs{block.Hash(), block})
 		} else {
 			cacheGetBadBlockMissMeter.Mark(1)
 		}
 	}
-	return headers, nil
+	return blocks, nil
 }
 
 // istanbul BFT
@@ -1748,7 +1748,7 @@ func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
 
 // addBadBlock adds a bad block to the bad-block LRU cache
 func (bc *BlockChain) addBadBlock(block *types.Block) {
-	bc.badBlocks.Add(block.Header().Hash(), block.Header())
+	bc.badBlocks.Add(block.Header().Hash(), block)
 }
 
 // reportBlock logs a bad block error.
