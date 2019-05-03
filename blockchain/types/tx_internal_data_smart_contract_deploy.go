@@ -341,36 +341,29 @@ func (t *TxInternalDataSmartContractDeploy) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
+	var to common.Address
 	if t.Recipient != nil {
-		to := t.Recipient
-		if t.HumanReadable {
-			if !common.IsHumanReadableAddress(*to) {
-				return kerrors.ErrNotHumanReadableAddress
-			}
-		} else {
-			if common.IsReservedAddressForHumanReadable(*to) {
-				return kerrors.ErrNotNonHumanReadableAddress
-			}
-		}
-		// Fail if the address is already created.
-		if stateDB.Exist(*to) {
-			return kerrors.ErrAccountAlreadyExists
-		}
-		if common.IsPrecompiledContractAddress(*to) {
-			return kerrors.ErrPrecompiledContractAddress
-		}
+		to = *t.Recipient
 	} else {
 		codeHash := crypto.Keccak256Hash(t.Payload)
-		newAddr := crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
-		if common.IsPrecompiledContractAddress(newAddr) {
-			return kerrors.ErrPrecompiledContractAddress
+		to = crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
+	}
+	if t.HumanReadable {
+		if !common.IsHumanReadableAddress(to) {
+			return kerrors.ErrNotHumanReadableAddress
+		}
+	} else {
+		if common.IsReservedAddressForHumanReadable(to) {
+			return kerrors.ErrNotNonHumanReadableAddress
 		}
 	}
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
+	if common.IsPrecompiledContractAddress(to) {
+		return kerrors.ErrPrecompiledContractAddress
 	}
-
+	// Fail if the address is already created.
+	if stateDB.Exist(to) {
+		return kerrors.ErrAccountAlreadyExists
+	}
 	// Fail if the codeFormat is invalid.
 	if !t.CodeFormat.Validate() {
 		return kerrors.ErrInvalidCodeFormat
