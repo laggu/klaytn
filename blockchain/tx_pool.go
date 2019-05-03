@@ -41,7 +41,6 @@ import (
 const (
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
-	txGasLimit        = 3000000
 )
 
 var (
@@ -542,10 +541,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
 		logger.Info("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
 		return ErrInvalidUnitPrice
-	}
-
-	if tx.Gas() > txGasLimit {
-		return kerrors.ErrTxGasLimit
 	}
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks

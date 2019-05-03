@@ -24,7 +24,6 @@ var (
 	ErrNotHumanReadableAddress    = errors.New("a human readable address should be alphanumeric starting with an alphabet, and ending with a suffix (default suffix: .klaytn)")
 	ErrNotNonHumanReadableAddress = errors.New("you cannot create an alphanumeric (with dot) address when humanReadable is false")
 	ErrOutOfGas                   = errors.New("out of gas")
-	ErrTxGasLimit                 = errors.New("exceeds transaction gas limit")
 	ErrMaxKeysExceed              = errors.New("the number of keys exceeds the limit")
 	ErrMaxKeysExceedInValidation  = errors.New("the number of keys exceeds the limit in the validation check")
 	ErrMaxFeeRatioExceeded        = errors.New("fee ratio exceeded the maximum")
