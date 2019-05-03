@@ -22,97 +22,139 @@ package vm
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
+	"io/ioutil"
 	"math/big"
 	"testing"
-
-	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/params"
 )
 
-type twoOperandTest struct {
-	x        string
-	y        string
-	expected string
+type TwoOperandTestcase struct {
+	X        string
+	Y        string
+	Expected string
 }
 
-func testTwoOperandOp(t *testing.T, tests []twoOperandTest, opFn func(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)) {
+type twoOperandParams struct {
+	x string
+	y string
+}
+
+var commonParams []*twoOperandParams
+var twoOpMethods map[string]executionFunc
+
+func init() {
+
+	// Params is a list of common edgecases that should be used for some common tests
+	params := []string{
+		"0000000000000000000000000000000000000000000000000000000000000000", // 0
+		"0000000000000000000000000000000000000000000000000000000000000001", // +1
+		"0000000000000000000000000000000000000000000000000000000000000005", // +5
+		"7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe", // + max -1
+		"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // + max
+		"8000000000000000000000000000000000000000000000000000000000000000", // - max
+		"8000000000000000000000000000000000000000000000000000000000000001", // - max+1
+		"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb", // - 5
+		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // - 1
+	}
+	// Params are combined so each param is used on each 'side'
+	commonParams = make([]*twoOperandParams, len(params)*len(params))
+	for i, x := range params {
+		for j, y := range params {
+			commonParams[i*len(params)+j] = &twoOperandParams{x, y}
+		}
+	}
+	twoOpMethods = map[string]executionFunc{
+		"add":     opAdd,
+		"sub":     opSub,
+		"mul":     opMul,
+		"div":     opDiv,
+		"sdiv":    opSdiv,
+		"mod":     opMod,
+		"smod":    opSmod,
+		"exp":     opExp,
+		"signext": opSignExtend,
+		"lt":      opLt,
+		"gt":      opGt,
+		"slt":     opSlt,
+		"sgt":     opSgt,
+		"eq":      opEq,
+		"and":     opAnd,
+		"or":      opOr,
+		"xor":     opXor,
+		"byte":    opByte,
+		"shl":     opSHL,
+		"shr":     opSHR,
+		"sar":     opSAR,
+	}
+}
+
+func testTwoOperandOp(t *testing.T, tests []TwoOperandTestcase, opFn executionFunc, name string) {
+
 	var (
-		env   = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
-		stack = newstack()
-		pc    = uint64(0)
+		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		stack          = newstack()
+		pc             = uint64(0)
+		evmInterpreter = env.interpreter
 	)
-	env.interpreter.intPool = poolOfIntPools.get()
+	// Stuff a couple of nonzero bigints into pool, to ensure that ops do not rely on pooled integers to be zero
+	evmInterpreter.intPool = poolOfIntPools.get()
+	evmInterpreter.intPool.put(big.NewInt(-1337))
+	evmInterpreter.intPool.put(big.NewInt(-1337))
+	evmInterpreter.intPool.put(big.NewInt(-1337))
+
 	for i, test := range tests {
-		x := new(big.Int).SetBytes(common.Hex2Bytes(test.x))
-		shift := new(big.Int).SetBytes(common.Hex2Bytes(test.y))
-		expected := new(big.Int).SetBytes(common.Hex2Bytes(test.expected))
+		x := new(big.Int).SetBytes(common.Hex2Bytes(test.X))
+		y := new(big.Int).SetBytes(common.Hex2Bytes(test.Y))
+		expected := new(big.Int).SetBytes(common.Hex2Bytes(test.Expected))
 		stack.push(x)
-		stack.push(shift)
+		stack.push(y)
 		opFn(&pc, env, nil, nil, stack)
 		actual := stack.pop()
+
 		if actual.Cmp(expected) != 0 {
-			t.Errorf("Testcase %d, expected  %v, got %v", i, expected, actual)
+			t.Errorf("Testcase %v %d, %v(%x, %x): expected  %x, got %x", name, i, name, x, y, expected, actual)
 		}
 		// Check pool usage
 		// 1.pool is not allowed to contain anything on the stack
 		// 2.pool is not allowed to contain the same pointers twice
-		if env.interpreter.intPool.pool.len() > 0 {
+		if evmInterpreter.intPool.pool.len() > 0 {
 
 			poolvals := make(map[*big.Int]struct{})
 			poolvals[actual] = struct{}{}
 
-			for env.interpreter.intPool.pool.len() > 0 {
-				key := env.interpreter.intPool.get()
+			for evmInterpreter.intPool.pool.len() > 0 {
+				key := evmInterpreter.intPool.get()
 				if _, exist := poolvals[key]; exist {
-					t.Errorf("Testcase %d, pool contains double-entry", i)
+					t.Errorf("Testcase %v %d, pool contains double-entry", name, i)
 				}
 				poolvals[key] = struct{}{}
 			}
 		}
 	}
-	poolOfIntPools.put(env.interpreter.intPool)
+	poolOfIntPools.put(evmInterpreter.intPool)
 }
 
 func TestByteOp(t *testing.T) {
-	var (
-		env   = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
-		stack = newstack()
-	)
-	env.interpreter.intPool = poolOfIntPools.get()
-	tests := []struct {
-		v        string
-		th       uint64
-		expected *big.Int
-	}{
-		{"ABCDEF0908070605040302010000000000000000000000000000000000000000", 0, big.NewInt(0xAB)},
-		{"ABCDEF0908070605040302010000000000000000000000000000000000000000", 1, big.NewInt(0xCD)},
-		{"00CDEF090807060504030201ffffffffffffffffffffffffffffffffffffffff", 0, big.NewInt(0x00)},
-		{"00CDEF090807060504030201ffffffffffffffffffffffffffffffffffffffff", 1, big.NewInt(0xCD)},
-		{"0000000000000000000000000000000000000000000000000000000000102030", 31, big.NewInt(0x30)},
-		{"0000000000000000000000000000000000000000000000000000000000102030", 30, big.NewInt(0x20)},
-		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 32, big.NewInt(0x0)},
-		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 0xFFFFFFFFFFFFFFFF, big.NewInt(0x0)},
+	tests := []TwoOperandTestcase{
+		{"ABCDEF0908070605040302010000000000000000000000000000000000000000", "00", "AB"},
+		{"ABCDEF0908070605040302010000000000000000000000000000000000000000", "01", "CD"},
+		{"00CDEF090807060504030201ffffffffffffffffffffffffffffffffffffffff", "00", "00"},
+		{"00CDEF090807060504030201ffffffffffffffffffffffffffffffffffffffff", "01", "CD"},
+		{"0000000000000000000000000000000000000000000000000000000000102030", "1F", "30"},
+		{"0000000000000000000000000000000000000000000000000000000000102030", "1E", "20"},
+		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "20", "00"},
+		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "FFFFFFFFFFFFFFFF", "00"},
 	}
-	pc := uint64(0)
-	for _, test := range tests {
-		val := new(big.Int).SetBytes(common.Hex2Bytes(test.v))
-		th := new(big.Int).SetUint64(test.th)
-		stack.push(val)
-		stack.push(th)
-		opByte(&pc, env, nil, nil, stack)
-		actual := stack.pop()
-		if actual.Cmp(test.expected) != 0 {
-			t.Fatalf("Expected  [%v] %v:th byte to be %v, was %v.", test.v, test.th, test.expected, actual)
-		}
-	}
-	poolOfIntPools.put(env.interpreter.intPool)
+	testTwoOperandOp(t, tests, opByte, "byte")
 }
 
 func TestSHL(t *testing.T) {
 	// Testcases from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-145.md#shl-shift-left
-	tests := []twoOperandTest{
-		{"0000000000000000000000000000000000000000000000000000000000000001", "00", "0000000000000000000000000000000000000000000000000000000000000001"},
+	tests := []TwoOperandTestcase{
 		{"0000000000000000000000000000000000000000000000000000000000000001", "01", "0000000000000000000000000000000000000000000000000000000000000002"},
 		{"0000000000000000000000000000000000000000000000000000000000000001", "ff", "8000000000000000000000000000000000000000000000000000000000000000"},
 		{"0000000000000000000000000000000000000000000000000000000000000001", "0100", "0000000000000000000000000000000000000000000000000000000000000000"},
@@ -124,12 +166,12 @@ func TestSHL(t *testing.T) {
 		{"0000000000000000000000000000000000000000000000000000000000000000", "01", "0000000000000000000000000000000000000000000000000000000000000000"},
 		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "01", "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"},
 	}
-	testTwoOperandOp(t, tests, opSHL)
+	testTwoOperandOp(t, tests, opSHL, "shl")
 }
 
 func TestSHR(t *testing.T) {
 	// Testcases from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-145.md#shr-logical-shift-right
-	tests := []twoOperandTest{
+	tests := []TwoOperandTestcase{
 		{"0000000000000000000000000000000000000000000000000000000000000001", "00", "0000000000000000000000000000000000000000000000000000000000000001"},
 		{"0000000000000000000000000000000000000000000000000000000000000001", "01", "0000000000000000000000000000000000000000000000000000000000000000"},
 		{"8000000000000000000000000000000000000000000000000000000000000000", "01", "4000000000000000000000000000000000000000000000000000000000000000"},
@@ -142,12 +184,12 @@ func TestSHR(t *testing.T) {
 		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0100", "0000000000000000000000000000000000000000000000000000000000000000"},
 		{"0000000000000000000000000000000000000000000000000000000000000000", "01", "0000000000000000000000000000000000000000000000000000000000000000"},
 	}
-	testTwoOperandOp(t, tests, opSHR)
+	testTwoOperandOp(t, tests, opSHR, "shr")
 }
 
 func TestSAR(t *testing.T) {
 	// Testcases from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-145.md#sar-arithmetic-shift-right
-	tests := []twoOperandTest{
+	tests := []TwoOperandTestcase{
 		{"0000000000000000000000000000000000000000000000000000000000000001", "00", "0000000000000000000000000000000000000000000000000000000000000001"},
 		{"0000000000000000000000000000000000000000000000000000000000000001", "01", "0000000000000000000000000000000000000000000000000000000000000000"},
 		{"8000000000000000000000000000000000000000000000000000000000000000", "01", "c000000000000000000000000000000000000000000000000000000000000000"},
@@ -166,52 +208,69 @@ func TestSAR(t *testing.T) {
 		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0100", "0000000000000000000000000000000000000000000000000000000000000000"},
 	}
 
-	testTwoOperandOp(t, tests, opSAR)
+	testTwoOperandOp(t, tests, opSAR, "sar")
 }
 
-func TestSGT(t *testing.T) {
-	tests := []twoOperandTest{
-
-		{"0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"0000000000000000000000000000000000000000000000000000000000000001", "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000001"},
-		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000001"},
-		{"0000000000000000000000000000000000000000000000000000000000000001", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"8000000000000000000000000000000000000000000000000000000000000001", "8000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"8000000000000000000000000000000000000000000000000000000000000001", "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000001"},
-		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "8000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb", "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", "0000000000000000000000000000000000000000000000000000000000000001"},
-		{"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb", "0000000000000000000000000000000000000000000000000000000000000000"},
+// getResult is a convenience function to generate the expected values
+func getResult(args []*twoOperandParams, opFn executionFunc) []TwoOperandTestcase {
+	var (
+		env         = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		stack       = newstack()
+		pc          = uint64(0)
+		interpreter = env.interpreter
+	)
+	interpreter.intPool = poolOfIntPools.get()
+	result := make([]TwoOperandTestcase, len(args))
+	for i, param := range args {
+		x := new(big.Int).SetBytes(common.Hex2Bytes(param.x))
+		y := new(big.Int).SetBytes(common.Hex2Bytes(param.y))
+		stack.push(x)
+		stack.push(y)
+		opFn(&pc, env, nil, nil, stack)
+		actual := stack.pop()
+		result[i] = TwoOperandTestcase{param.x, param.y, fmt.Sprintf("%064x", actual)}
 	}
-	testTwoOperandOp(t, tests, opSgt)
+	return result
 }
 
-func TestSLT(t *testing.T) {
-	tests := []twoOperandTest{
-		{"0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"0000000000000000000000000000000000000000000000000000000000000001", "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000001"},
-		{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"0000000000000000000000000000000000000000000000000000000000000001", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000001"},
-		{"8000000000000000000000000000000000000000000000000000000000000001", "8000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"8000000000000000000000000000000000000000000000000000000000000001", "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "8000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000001"},
-		{"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb", "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", "0000000000000000000000000000000000000000000000000000000000000000"},
-		{"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb", "0000000000000000000000000000000000000000000000000000000000000001"},
+// utility function to fill the json-file with testcases
+// Enable this test to generate the 'testcases_xx.json' files
+func xTestWriteExpectedValues(t *testing.T) {
+	for name, method := range twoOpMethods {
+		data, err := json.Marshal(getResult(commonParams, method))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = ioutil.WriteFile(fmt.Sprintf("testdata/testcases_%v.json", name), data, 0644)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	testTwoOperandOp(t, tests, opSlt)
+	t.Fatal("This test should not be activated")
+}
+
+// TestJsonTestcases runs through all the testcases defined as json-files
+func TestJsonTestcases(t *testing.T) {
+	for name := range twoOpMethods {
+		data, err := ioutil.ReadFile(fmt.Sprintf("testdata/testcases_%v.json", name))
+		if err != nil {
+			t.Fatal("Failed to read file", err)
+		}
+		var testcases []TwoOperandTestcase
+		json.Unmarshal(data, &testcases)
+		testTwoOperandOp(t, testcases, twoOpMethods[name], name)
+	}
 }
 
 func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error), args ...string) {
 	var (
-		env   = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
-		stack = newstack()
+		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		stack          = newstack()
+		evmInterpreter = NewInterpreter(env, env.vmConfig)
 	)
-	env.interpreter.intPool = poolOfIntPools.get()
+
+	env.interpreter = evmInterpreter
+	evmInterpreter.intPool = poolOfIntPools.get()
 	// convert args
 	byteArgs := make([][]byte, len(args))
 	for i, arg := range args {
@@ -227,7 +286,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 		op(&pc, env, nil, nil, stack)
 		stack.pop()
 	}
-	poolOfIntPools.put(env.interpreter.intPool)
+	poolOfIntPools.put(evmInterpreter.intPool)
 }
 
 func BenchmarkOpAdd64(b *testing.B) {
@@ -440,11 +499,14 @@ func BenchmarkOpIsZero(b *testing.B) {
 
 func TestOpMstore(t *testing.T) {
 	var (
-		env   = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
-		stack = newstack()
-		mem   = NewMemory()
+		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		stack          = newstack()
+		mem            = NewMemory()
+		evmInterpreter = NewInterpreter(env, env.vmConfig)
 	)
-	env.interpreter.intPool = poolOfIntPools.get()
+
+	env.interpreter = evmInterpreter
+	evmInterpreter.intPool = poolOfIntPools.get()
 	mem.Resize(64)
 	pc := uint64(0)
 	v := "abcdef00000000000000abba000000000deaf000000c0de00100000000133700"
@@ -458,16 +520,19 @@ func TestOpMstore(t *testing.T) {
 	if common.Bytes2Hex(mem.Get(0, 32)) != "0000000000000000000000000000000000000000000000000000000000000001" {
 		t.Fatalf("Mstore failed to overwrite previous value")
 	}
-	poolOfIntPools.put(env.interpreter.intPool)
+	poolOfIntPools.put(evmInterpreter.intPool)
 }
 
 func BenchmarkOpMstore(bench *testing.B) {
 	var (
-		env   = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
-		stack = newstack()
-		mem   = NewMemory()
+		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		stack          = newstack()
+		mem            = NewMemory()
+		evmInterpreter = NewInterpreter(env, env.vmConfig)
 	)
-	env.interpreter.intPool = poolOfIntPools.get()
+
+	env.interpreter = evmInterpreter
+	evmInterpreter.intPool = poolOfIntPools.get()
 	mem.Resize(64)
 	pc := uint64(0)
 	memStart := big.NewInt(0)
@@ -478,17 +543,17 @@ func BenchmarkOpMstore(bench *testing.B) {
 		stack.pushN(value, memStart)
 		opMstore(&pc, env, nil, mem, stack)
 	}
-	poolOfIntPools.put(env.interpreter.intPool)
+	poolOfIntPools.put(evmInterpreter.intPool)
 }
 
 func BenchmarkOpSHA3(bench *testing.B) {
 	var (
-		env         = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
-		stack       = newstack()
-		mem         = NewMemory()
-		interpreter = NewInterpreter(env, env.vmConfig)
+		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		stack          = newstack()
+		mem            = NewMemory()
+		evmInterpreter = NewInterpreter(env, env.vmConfig)
 	)
-	env.interpreter = interpreter
+	env.interpreter = evmInterpreter
 	env.interpreter.intPool = poolOfIntPools.get()
 	mem.Resize(32)
 	pc := uint64(0)
@@ -499,7 +564,7 @@ func BenchmarkOpSHA3(bench *testing.B) {
 		stack.pushN(big.NewInt(32), start)
 		opSha3(&pc, env, nil, mem, stack)
 	}
-	poolOfIntPools.put(env.interpreter.intPool)
+	poolOfIntPools.put(evmInterpreter.intPool)
 }
 
 func TestCreate2Addreses(t *testing.T) {
