@@ -29,7 +29,6 @@ import (
 	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/params"
 	"math"
-	"math/big"
 	"math/rand"
 	"reflect"
 	"sort"
@@ -566,30 +565,11 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
 
-	// Before calculate proposers with staking information,
-	// let's update weightedValidator information with staking info
-	// (1) Update rewardAddress
-	// (2) Calculate total staking amount
-	totalStaking := big.NewInt(0)
-	for _, val := range valSet.validators {
-		i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
-		weightedVal, ok := val.(*weightedValidator)
-		if !ok {
-			return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
-		}
-		if i != -1 {
-			weightedVal.rewardAddress = valSet.stakingInfo.CouncilRewardAddrs[i]
-			totalStaking.Add(totalStaking, valSet.stakingInfo.CouncilStakingAmounts[i])
-		} else {
-			weightedVal.rewardAddress = common.Address{}
-		}
-	}
+	stakingAmounts, totalStaking := valSet.stakingInfo.GetStakingAmountsAndTotalStaking()
 
 	// one of exception cases (issue #1400)
-	if totalStaking.Cmp(common.Big0) > 0 {
+	if totalStaking > 0 {
 		// update weight
-		tmp := big.NewInt(0)
-		tmp100 := big.NewInt(100)
 		for _, val := range valSet.validators {
 			i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
 			weightedVal, ok := val.(*weightedValidator)
@@ -597,16 +577,17 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 				return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
 			}
 			if i != -1 {
-				stakingAmount := valSet.stakingInfo.CouncilStakingAmounts[i]
-				weight := int(tmp.Div(tmp.Mul(stakingAmount, tmp100), totalStaking).Int64()) // No overflow occurs here.
+				weight := int(math.Round(stakingAmounts[i] * 100 / totalStaking))
 				if weight <= 0 {
 					// A validator, who holds small stake, has minimum weight, 1.
 					weight = 1
 				}
+				weightedVal.rewardAddress = valSet.stakingInfo.CouncilRewardAddrs[i]
 				weightedVal.weight = weight
 			} else {
 				// Let's give a minimum opportunity to be selected as a proposer even for validator without staking value (Issue #2060)
 				weightedVal.weight = 1
+				weightedVal.rewardAddress = common.Address{}
 			}
 		}
 	} else {

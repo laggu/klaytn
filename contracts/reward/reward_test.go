@@ -23,6 +23,7 @@ import (
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
+	"math"
 	"math/big"
 	"testing"
 )
@@ -457,6 +458,90 @@ func TestStakingInfoCache_Get(t *testing.T) {
 
 		if testStakingInfo != nil {
 			t.Errorf("The result should be nil. result : %v", testStakingInfo)
+		}
+	}
+}
+
+func TestCalcGiniCoefficient(t *testing.T) {
+	testCase := []struct {
+		testdata []*big.Int
+		result   float64
+	}{
+		{[]*big.Int{big.NewInt(1), big.NewInt(1), big.NewInt(1)}, 0.0},
+		{[]*big.Int{big.NewInt(0), big.NewInt(8), big.NewInt(0), big.NewInt(0), big.NewInt(0)}, 0.8},
+		{[]*big.Int{big.NewInt(5), big.NewInt(4), big.NewInt(3), big.NewInt(2), big.NewInt(1)}, 0.27},
+	}
+
+	for i := 0; i < len(testCase); i++ {
+		result := calcGiniCoefficient(testCase[i].testdata)
+
+		if result != testCase[i].result {
+			t.Errorf("The result is diffrent from the expected result. result : %v, expected : %v", result, testCase[i].result)
+		}
+	}
+}
+
+func TestGiniReflectToExpectedCCO(t *testing.T) {
+	testCase := []struct {
+		ccoToken        []*big.Int
+		beforeReflected []float64
+		adjustment      []float64
+		afterReflected  []float64
+	}{
+		{[]*big.Int{big.NewInt(66666667), big.NewInt(233333333), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
+			big.NewInt(77777778), big.NewInt(5000000), big.NewInt(33333333), big.NewInt(20000000), big.NewInt(16666667),
+			big.NewInt(10000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
+			big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
+			big.NewInt(5000000),
+		},
+			[]float64{13, 44, 1, 1, 1, 15, 1, 6, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+			[]float64{42612, 89426, 9202, 9202, 9202, 46682, 9202, 28275, 20900, 18762, 13868, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202},
+			[]float64{11, 23, 2, 2, 2, 12, 2, 7, 5, 5, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+		},
+		{[]*big.Int{big.NewInt(400000000), big.NewInt(233333333), big.NewInt(233333333), big.NewInt(150000000), big.NewInt(108333333),
+			big.NewInt(83333333), big.NewInt(66666667), big.NewInt(33333333), big.NewInt(20000000), big.NewInt(16666667),
+			big.NewInt(10000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
+			big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
+			big.NewInt(5000000),
+		},
+			[]float64{28, 17, 17, 11, 8, 6, 5, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+			[]float64{123020, 89426, 89426, 68853, 56793, 48627, 42612, 28275, 20900, 18762, 13868, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202},
+			[]float64{18, 13, 13, 10, 8, 7, 6, 4, 3, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+		},
+	}
+	for i := 0; i < len(testCase); i++ {
+		stakingInfo, _ := newEmptyStakingInfo(nil, uint64(1))
+		stakingInfo.CouncilStakingAmounts = testCase[i].ccoToken
+		for j := 0; j < len(stakingInfo.CouncilStakingAmounts); j++ {
+			stakingInfo.CouncilStakingAmounts[j].Mul(stakingInfo.CouncilStakingAmounts[j], big.NewInt(params.KLAY))
+		}
+		stakingInfo.Gini = calcGiniCoefficient(testCase[i].ccoToken)
+
+		stakingAmounts, totalAmount := stakingInfo.GetStakingAmountsAndTotalStaking()
+		for j := 0; j < len(testCase[i].ccoToken); j++ {
+			stakingAmounts[j] = math.Round(stakingAmounts[j] * 100 / totalAmount)
+			if stakingAmounts[j] < 1 {
+				stakingAmounts[j] = 1
+			}
+			if stakingAmounts[j] != testCase[i].beforeReflected[j] {
+				t.Errorf("normal weight is incorrect. result : %v expected : %v", stakingAmounts[j], testCase[i].beforeReflected[j])
+			}
+		}
+
+		stakingInfo.useGini = true
+		stakingAmountsGiniReflected, totalAmountGiniReflected := stakingInfo.GetStakingAmountsAndTotalStaking()
+
+		for j := 0; j < len(testCase[i].ccoToken); j++ {
+			if stakingAmountsGiniReflected[j] != testCase[i].adjustment[j] {
+				t.Errorf("staking amount reflected gini is diffrent. result : %v expected : %v", stakingAmountsGiniReflected[j], testCase[i].adjustment[j])
+			}
+		}
+
+		for j := 0; j < len(testCase[i].ccoToken); j++ {
+			stakingAmountsGiniReflected[j] = math.Round(stakingAmountsGiniReflected[j] * 100 / totalAmountGiniReflected)
+			if stakingAmountsGiniReflected[j] != testCase[i].afterReflected[j] {
+				t.Errorf("weight reflected gini is diffrent. result : %v expected : %v", stakingAmountsGiniReflected[j], testCase[i].afterReflected[j])
+			}
 		}
 	}
 }

@@ -33,6 +33,7 @@ import (
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -56,6 +57,9 @@ type StakingInfo struct {
 	CouncilRewardAddrs   []common.Address // Address of Council account which will get block reward
 	KIRAddr              common.Address   // Address of KIR contract
 	PoCAddr              common.Address   // Address of PoC contract
+
+	useGini bool
+	Gini    float64 // gini coefficient
 
 	// Derived from CouncilStakingAddrs
 	CouncilStakingAmounts []*big.Int // Staking amounts of Council
@@ -125,6 +129,22 @@ func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) *big.Int {
 		return s.CouncilStakingAmounts[i]
 	}
 	return nil
+}
+
+func (s *StakingInfo) GetStakingAmountsAndTotalStaking() ([]float64, float64) {
+	var stakingAmounts []float64
+	totalStaking := 0.0
+	stakingAmountLen := len(s.CouncilStakingAmounts)
+	stakingAmounts = make([]float64, stakingAmountLen)
+	for i := 0; i < stakingAmountLen; i++ {
+		tempStakingAmount := float64(big.NewInt(0).Div(s.CouncilStakingAmounts[i], big.NewInt(params.KLAY)).Int64())
+		if s.useGini {
+			tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+s.Gini)))
+		}
+		stakingAmounts[i] = tempStakingAmount
+		totalStaking += tempStakingAmount
+	}
+	return stakingAmounts, totalStaking
 }
 
 func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, contractBackend bind.ContractBackend) (*Reward, error) {
@@ -431,6 +451,8 @@ func newEmptyStakingInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 		KIRAddr:               common.Address{},
 		PoCAddr:               common.Address{},
 		CouncilStakingAmounts: make([]*big.Int, 0, 0),
+		Gini:                  0.0,
+		useGini:               false,
 	}
 	return stakingInfo, nil
 }
@@ -454,6 +476,12 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 		stakingAmounts[i] = statedb.GetBalance(stakingAddr)
 	}
 
+	useGini := bc.Config().Governance.Reward.UseGiniCoeff
+	gini := float64(0)
+	if useGini {
+		gini = calcGiniCoefficient(stakingAmounts)
+	}
+
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
 		CouncilNodeIds:        nodeIds,
@@ -462,8 +490,54 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 		KIRAddr:               KIRAddr,
 		PoCAddr:               PoCAddr,
 		CouncilStakingAmounts: stakingAmounts,
+		Gini:                  gini,
+		useGini:               useGini,
 	}
 	return stakingInfo, nil
+}
+
+func calcGiniCoefficient(stakingAmount []*big.Int) float64 {
+	var sortedStakingAmount []*big.Int
+	sortedStakingAmount = make([]*big.Int, len(stakingAmount))
+
+	// insertion sort
+	for i := 0; i < len(stakingAmount); i++ {
+		j := i
+		for j > 0 {
+			if sortedStakingAmount[j-1].Cmp(stakingAmount[i]) > 0 {
+				sortedStakingAmount[j] = sortedStakingAmount[j-1]
+				j--
+			} else {
+				break
+			}
+		}
+		sortedStakingAmount[j] = stakingAmount[i]
+	}
+
+	// calculate gini coefficient
+	sumOfAbsoluteDifferences := big.NewInt(0)
+	subSum := big.NewInt(0)
+
+	for i, x := range sortedStakingAmount {
+		temp := big.NewInt(0).Set(x)
+		temp = temp.Mul(temp, big.NewInt(int64(i)))
+		temp = temp.Sub(temp, subSum)
+
+		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences.Add(sumOfAbsoluteDifferences, temp)
+		subSum = subSum.Add(subSum, x)
+	}
+
+	result := new(big.Float).SetInt(sumOfAbsoluteDifferences)
+	result = result.Quo(result, new(big.Float).SetInt(subSum))
+
+	lenOfStakingAmount := big.NewFloat(float64(len(sortedStakingAmount)))
+	result = result.Quo(result, lenOfStakingAmount)
+
+	// type convert to float64 and round. make the result like 0.**
+	resultFloat64, _ := result.Float64()
+	resultFloat64 = math.Round(resultFloat64*100) / 100
+
+	return resultFloat64
 }
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.

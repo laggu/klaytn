@@ -340,9 +340,7 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 }
 
 func TestWeightedCouncil_RemoveValidator(t *testing.T) {
-
 	validators := makeTestValidators(testNonZeroWeights)
-
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
 	valSet.Refresh(testPrevHash, 1)
 
@@ -377,9 +375,7 @@ func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 }
 
 func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
-
 	validators := makeTestValidators(testNonZeroWeights)
-
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
 	valSet.Refresh(testPrevHash, 1)
 
