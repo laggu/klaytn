@@ -128,8 +128,6 @@ type worker struct {
 	snapshotBlock *types.Block
 	snapshotState *state.StateDB
 
-	unconfirmed *unconfirmedBlocks // set of locally mined blocks pending canonicalness confirmations
-
 	// atomic status counters
 	mining int32
 	atWork int32
@@ -151,7 +149,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 		chain:       backend.BlockChain(),
 		proc:        backend.BlockChain().Validator(),
 		agents:      make(map[Agent]struct{}),
-		unconfirmed: newUnconfirmedBlocks(backend.BlockChain(), miningLogAtDepth),
 		nodetype:    nodetype,
 		rewardbase:  rewardbase,
 	}
@@ -420,9 +417,6 @@ func (self *worker) wait() {
 			}
 			self.chain.PostChainEvents(events, logs)
 
-			// Insert the block into the set of pending ones to wait for confirmations
-			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
-
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			if mustCommitNewWork {
@@ -526,7 +520,6 @@ func (self *worker) commitNewWork() {
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
 		logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))
-		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 
 	self.push(work)
