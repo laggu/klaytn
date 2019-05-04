@@ -104,7 +104,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.LevelDBCacheSizeFlag,
 			utils.NoPartitionedDBFlag,
-			utils.LevelDBNoCompressionFlag,
+			utils.LevelDBCompressionTypeFlag,
 			utils.LevelDBNoBufferPoolFlag,
 			utils.NoParallelDBWriteFlag,
 			utils.SenderTxHashIndexingFlag,

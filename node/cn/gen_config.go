@@ -12,6 +12,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/node/cn/gasprice"
+	"github.com/ground-x/klaytn/storage/database"
 )
 
 var _ = (*configMarshaling)(nil)
@@ -28,12 +29,13 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		SentChainTxsLimit       uint64
 		SkipBcVersionCheck      bool `toml:"-"`
 		PartitionedDB           bool
-		LevelDBNoCompression    bool
+		LevelDBCompression      database.LevelDBCompressionType
 		LevelDBBufferPool       bool
 		LevelDBCacheSize        int
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
+		SenderTxHashIndexing    bool
 		ChildChainIndexing      bool
 		ParallelDBWrite         bool
 		StateDBCaching          bool
@@ -60,12 +62,13 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.PartitionedDB = c.PartitionedDB
-	enc.LevelDBNoCompression = c.LevelDBNoCompression
+	enc.LevelDBCompression = c.LevelDBCompression
 	enc.LevelDBBufferPool = c.LevelDBBufferPool
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
+	enc.SenderTxHashIndexing = c.SenderTxHashIndexing
 	enc.ChildChainIndexing = c.ChildChainIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
@@ -96,12 +99,13 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		SentChainTxsLimit       *uint64
 		SkipBcVersionCheck      *bool `toml:"-"`
 		PartitionedDB           *bool
-		LevelDBNoCompression    *bool
+		LevelDBCompression      *database.LevelDBCompressionType
 		LevelDBBufferPool       *bool
 		LevelDBCacheSize        *int
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
+		SenderTxHashIndexing    *bool
 		ChildChainIndexing      *bool
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
@@ -149,8 +153,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.PartitionedDB != nil {
 		c.PartitionedDB = *dec.PartitionedDB
 	}
-	if dec.LevelDBNoCompression != nil {
-		c.LevelDBNoCompression = *dec.LevelDBNoCompression
+	if dec.LevelDBCompression != nil {
+		c.LevelDBCompression = *dec.LevelDBCompression
 	}
 	if dec.LevelDBBufferPool != nil {
 		c.LevelDBBufferPool = *dec.LevelDBBufferPool
@@ -166,6 +170,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TrieBlockInterval != nil {
 		c.TrieBlockInterval = *dec.TrieBlockInterval
+	}
+	if dec.SenderTxHashIndexing != nil {
+		c.SenderTxHashIndexing = *dec.SenderTxHashIndexing
 	}
 	if dec.ChildChainIndexing != nil {
 		c.ChildChainIndexing = *dec.ChildChainIndexing

@@ -36,7 +36,7 @@ func initTestDB(valueSize int) (string, Database, [][]byte, error) {
 		return "", nil, nil, errors.New(fmt.Sprintf("can't create temporary directory: %v", err))
 	}
 	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: levelDBMemDBSize, OpenFilesLimit: 0, ChildChainIndexing: false}
-	db, err := newDatabase(dbc)
+	db, err := newDatabase(dbc, 0)
 	if err != nil {
 		return "", nil, nil, errors.New(fmt.Sprintf("can't create database: %v", err))
 	}

@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/node/cn/gasprice"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
 	"math/big"
 	"os"
 	"os/user"
@@ -90,7 +91,7 @@ type Config struct {
 	// Database options
 	SkipBcVersionCheck   bool `toml:"-"`
 	PartitionedDB        bool
-	LevelDBNoCompression bool
+	LevelDBCompression   database.LevelDBCompressionType
 	LevelDBBufferPool    bool
 	LevelDBCacheSize     int
 	TrieCacheSize        int

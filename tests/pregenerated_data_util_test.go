@@ -408,7 +408,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 func genAspenOptions() (*database.DBConfig, *opt.Options) {
 	aspenDBConfig := defaultDBConfig()
 	aspenDBConfig.DBType = database.LevelDB
-	aspenDBConfig.LevelDBNoCompression = false
+	aspenDBConfig.LevelDBCompression = database.AllSnappyCompression
 
 	aspenLevelDBOptions := &opt.Options{WriteBuffer: 256 * opt.MiB}
 
@@ -422,6 +422,8 @@ func genBaobabOptions() (*database.DBConfig, *opt.Options) {
 	opts.CompactionTableSize = 4 * opt.MiB
 	opts.CompactionTableSizeMultiplier = 2
 
+	dbc.LevelDBCompression = database.AllSnappyCompression
+
 	return dbc, opts
 }
 
@@ -429,8 +431,8 @@ func genBaobabOptions() (*database.DBConfig, *opt.Options) {
 func genCandidateLevelDBOptions() (*database.DBConfig, *opt.Options) {
 	dbc, opts := genAspenOptions()
 
-	dbc.LevelDBNoCompression = true
 	dbc.LevelDBBufferPool = true
+	dbc.LevelDBCompression = database.AllNoCompression
 
 	return dbc, opts
 }

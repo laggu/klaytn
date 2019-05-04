@@ -266,9 +266,9 @@ type DBConfig struct {
 	OpenFilesLimit  int
 
 	// LevelDB related configurations.
-	LevelDBCacheSize     int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
-	LevelDBNoCompression bool
-	LevelDBBufferPool    bool
+	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
+	LevelDBCompression LevelDBCompressionType
+	LevelDBBufferPool  bool
 
 	// Service chain related configurations.
 	ChildChainIndexing bool
@@ -280,7 +280,7 @@ const dbMetricPrefix = "klay/db/chaindata/"
 // Each Database will share one common Database.
 func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	dbm := newDatabaseManager(dbc)
-	db, err := newDatabase(dbc)
+	db, err := newDatabase(dbc, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,7 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	dbm := newDatabaseManager(dbc)
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
 		newDBC := getDBEntryConfig(dbc, DBEntryType(i))
-		db, err := newDatabase(newDBC)
+		db, err := newDatabase(newDBC, DBEntryType(i))
 		if err != nil {
 			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[i], "err", err)
 		}
@@ -310,17 +310,17 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 }
 
 // newDatabase returns Database interface with given DBConfig.
-func newDatabase(dbc *DBConfig) (Database, error) {
+func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	switch dbc.DBType {
 	case LevelDB:
-		return NewLevelDB(dbc)
+		return NewLevelDB(dbc, entryType)
 	case BadgerDB:
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
 		return NewMemDB(), nil
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
-		return NewLevelDB(dbc)
+		return NewLevelDB(dbc, 0)
 	}
 }
 

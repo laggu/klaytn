@@ -39,6 +39,7 @@ import (
 	"github.com/ground-x/klaytn/node/cn"
 	"github.com/ground-x/klaytn/node/sc"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"net"
@@ -188,10 +189,11 @@ var (
 		Usage: "Size of in-memory cache in LevelDB (MiB)",
 		Value: 768,
 	}
-	// TODO-Klaytn-Database LevelDBNoCompressionFlag should be removed before main-net release.
-	LevelDBNoCompressionFlag = cli.BoolFlag{
-		Name:  "db.leveldb.no-compression",
-		Usage: "Disables LevelDB data compression by Snappy algorithm",
+	// TODO-Klaytn-Database LevelDBCompressionTypeFlag should be removed before main-net release.
+	LevelDBCompressionTypeFlag = cli.IntFlag{
+		Name:  "db.leveldb.compression",
+		Usage: "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
+		Value: 0,
 	}
 	LevelDBNoBufferPoolFlag = cli.BoolFlag{
 		Name:  "db.leveldb.no-buffer-pool",
@@ -1026,7 +1028,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
-	cfg.LevelDBNoCompression = ctx.GlobalIsSet(LevelDBNoCompressionFlag.Name)
+	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 

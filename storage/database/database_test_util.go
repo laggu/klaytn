@@ -39,11 +39,8 @@ func NewLevelDBManagerForTest(dbc *DBConfig, levelDBOption *opt.Options) (DBMana
 		} else {
 			partitionDir := filepath.Join(dbc.Dir, dbDirs[i])
 			partitionLDBOption := getLevelDBOptionByPartition(levelDBOption, DBEntryType(i))
-			if i != int(ReceiptsDB) && dbc.LevelDBNoCompression {
-				partitionLDBOption.Compression = opt.NoCompression
-			} else {
-				partitionLDBOption.Compression = opt.SnappyCompression
-			}
+			partitionLDBOption.Compression = getCompressionType(dbc.LevelDBCompression, DBEntryType(i))
+
 			ldb, err = NewLevelDBWithOption(partitionDir, partitionLDBOption)
 
 			fmt.Printf("Database: %-15s Compression: %-15s DisableBufferPool: %v \n", dbDirs[i], partitionLDBOption.Compression, levelDBOption.DisableBufferPool)

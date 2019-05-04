@@ -38,6 +38,15 @@ import (
 
 var OpenFileLimit = 64
 
+type LevelDBCompressionType uint8
+
+const (
+	AllNoCompression LevelDBCompressionType = iota
+	ReceiptOnlySnappyCompression
+	StateTrieOnlyNoCompression
+	AllSnappyCompression
+)
+
 const (
 	minWriteBufferSize        = 2 * opt.MiB
 	minBlockCacheCapacity     = 2 * minWriteBufferSize
@@ -106,14 +115,10 @@ func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 		CompactionTableSizeMultiplier: 1.0,
 	}
 
-	if dbc.LevelDBNoCompression {
-		newOption.Compression = opt.NoCompression
-	}
-
 	return newOption
 }
 
-func NewLevelDB(dbc *DBConfig) (*levelDB, error) {
+func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 	localLogger := logger.NewWith("path", dbc.Dir)
 
 	// Ensure we have some minimal caching and file guarantees
@@ -123,8 +128,14 @@ func NewLevelDB(dbc *DBConfig) (*levelDB, error) {
 	if dbc.OpenFilesLimit < 16 {
 		dbc.OpenFilesLimit = 16
 	}
-	localLogger.Info("Allocated LevelDB with write buffer and file OpenFilesLimit",
-		"levelDBCacheSize", dbc.LevelDBCacheSize, "openFilesLimit", dbc.OpenFilesLimit, "useBufferPool", dbc.LevelDBBufferPool)
+
+	ldbOpts := getLevelDBOptions(dbc)
+	ldbOpts.Compression = getCompressionType(dbc.LevelDBCompression, entryType)
+
+	localLogger.Info("LevelDB configurations",
+		"levelDBCacheSize", (ldbOpts.WriteBuffer+ldbOpts.BlockCacheCapacity)/opt.MiB, "openFilesLimit", ldbOpts.OpenFilesCacheCapacity,
+		"useBufferPool", !ldbOpts.DisableBufferPool, "compressionType", ldbOpts.Compression,
+		"compactionTableSize", ldbOpts.CompactionTableSize/opt.MiB, "compactionTableSizeMultiplier", ldbOpts.CompactionTableSizeMultiplier)
 
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(dbc.Dir, getLevelDBOptions(dbc))
@@ -155,6 +166,33 @@ func setMinLevelDBOption(ldbOption *opt.Options) {
 	if ldbOption.OpenFilesCacheCapacity < MinOpenFilesCacheCapacity {
 		ldbOption.OpenFilesCacheCapacity = MinOpenFilesCacheCapacity
 	}
+}
+
+func getCompressionType(ct LevelDBCompressionType, dbEntryType DBEntryType) opt.Compression {
+	if ct == AllSnappyCompression {
+		return opt.SnappyCompression
+	}
+
+	if ct == AllNoCompression {
+		return opt.NoCompression
+	}
+
+	if ct == ReceiptOnlySnappyCompression {
+		if dbEntryType == ReceiptsDB {
+			return opt.SnappyCompression
+		} else {
+			return opt.NoCompression
+		}
+	}
+
+	if ct == StateTrieOnlyNoCompression {
+		if dbEntryType == StateTrieDB {
+			return opt.NoCompression
+		} else {
+			return opt.SnappyCompression
+		}
+	}
+	return opt.NoCompression
 }
 
 // NewLevelDBWithOption explicitly receives LevelDB option to construct a LevelDB object.
