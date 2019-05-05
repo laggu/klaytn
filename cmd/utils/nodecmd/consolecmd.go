@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/console"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
@@ -75,7 +76,7 @@ func localConsole(ctx *cli.Context) error {
 	// Attach to the newly started node and start the JavaScript console
 	client, err := node.Attach()
 	if err != nil {
-		utils.Fatalf("Failed to attach to the inproc node: %v", err)
+		log.Fatalf("Failed to attach to the inproc node: %v", err)
 	}
 	config := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
@@ -86,7 +87,7 @@ func localConsole(ctx *cli.Context) error {
 
 	console, err := console.New(config)
 	if err != nil {
-		utils.Fatalf("Failed to start the JavaScript console: %v", err)
+		log.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
 	defer console.Stop(false)
 
@@ -121,7 +122,7 @@ func remoteConsole(ctx *cli.Context) error {
 	}
 	client, err := dialRPC(endpoint)
 	if err != nil {
-		utils.Fatalf("Unable to attach to remote node: %v", err)
+		log.Fatalf("Unable to attach to remote node: %v", err)
 	}
 	config := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
@@ -132,7 +133,7 @@ func remoteConsole(ctx *cli.Context) error {
 
 	console, err := console.New(config)
 	if err != nil {
-		utils.Fatalf("Failed to start the JavaScript console: %v", err)
+		log.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
 	defer console.Stop(false)
 

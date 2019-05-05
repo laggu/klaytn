@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
 	"github.com/ground-x/klaytn/node/sc"
@@ -117,7 +118,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	// Load config file.
 	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
-			utils.Fatalf("%v", err)
+			log.Fatalf("%v", err)
 		}
 	}
 
@@ -125,7 +126,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
-		utils.Fatalf("Failed to create the protocol stack: %v", err)
+		log.Fatalf("Failed to create the protocol stack: %v", err)
 	}
 	utils.SetKlayConfig(ctx, stack, &cfg.CN)
 

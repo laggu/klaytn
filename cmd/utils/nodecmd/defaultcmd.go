@@ -26,6 +26,7 @@ import (
 	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/client"
 	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
 	"gopkg.in/urfave/cli.v1"
@@ -75,7 +76,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		// Create a chain state reader for self-derivation
 		rpcClient, err := stack.Attach()
 		if err != nil {
-			utils.Fatalf("Failed to attach to self: %v", err)
+			log.Fatalf("Failed to attach to self: %v", err)
 		}
 		stateReader := client.NewClient(rpcClient)
 
@@ -119,23 +120,23 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 func startKlaytnAuxiliaryService(ctx *cli.Context, stack *node.Node) {
 	var cn *cn.CN
 	if err := stack.Service(&cn); err != nil {
-		utils.Fatalf("Klaytn service not running: %v", err)
+		log.Fatalf("Klaytn service not running: %v", err)
 	}
 
 	// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
 	if err := cn.StartMining(false); err != nil {
-		utils.Fatalf("Failed to start mining: %v", err)
+		log.Fatalf("Failed to start mining: %v", err)
 	}
 }
 
 func startServiceChainService(ctx *cli.Context, stack *node.Node) {
 	var scn *cn.ServiceChain
 	if err := stack.Service(&scn); err != nil {
-		utils.Fatalf("Klaytn service not running: %v", err)
+		log.Fatalf("Klaytn service not running: %v", err)
 	}
 
 	// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
 	if err := scn.StartMining(false); err != nil {
-		utils.Fatalf("Failed to start mining: %v", err)
+		log.Fatalf("Failed to start mining: %v", err)
 	}
 }

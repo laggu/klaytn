@@ -25,7 +25,7 @@ import (
 	"github.com/ground-x/klaytn/cmd/homi/docker/compose"
 	"github.com/ground-x/klaytn/cmd/homi/docker/service"
 	"github.com/ground-x/klaytn/cmd/homi/genesis"
-	"github.com/ground-x/klaytn/cmd/utils"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -156,7 +156,7 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	mintingAmount := new(big.Int)
 	mintingAmountString := ctx.String(rewardMintAmountFlag.Name)
 	if _, ok := mintingAmount.SetString(mintingAmountString, 10); !ok {
-		utils.Fatalf("Minting amount must be a number", "value", mintingAmountString)
+		log.Fatalf("Minting amount must be a number", "value", mintingAmountString)
 	}
 	ratio := ctx.String(rewardRatioFlag.Name)
 	giniCoeff := ctx.Bool(rewardGiniCoeffFlag.Name)
@@ -186,7 +186,7 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	govMode := ctx.String(govModeFlag.Name)
 	governingNode := ctx.String(governingNodeFlag.Name)
 	if !common.IsHexAddress(governingNode) {
-		utils.Fatalf("Governing Node is invalid hex address", "value", governingNode)
+		log.Fatalf("Governing Node is invalid hex address", "value", governingNode)
 	}
 	govUnitPrice := ctx.Uint64(govUnitPriceFlag.Name)
 
@@ -243,7 +243,7 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 	stakingInterval := ctx.Uint64(stakingFlag.Name)
 	proposerInterval := ctx.Uint64(proposerFlag.Name)
 	if ok := ctx.Bool(governanceFlag.Name); ok {
-		utils.Fatalf("Currently, governance is not supported for clique consensus", "--governance", ok)
+		log.Fatalf("Currently, governance is not supported for clique consensus", "--governance", ok)
 	}
 
 	genesisJson := genesis.NewClique(

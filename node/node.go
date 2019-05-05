@@ -134,7 +134,7 @@ func New(conf *Config) (*Node, error) {
 		return nil, err
 	}
 	if conf.Logger == nil {
-		conf.Logger = logger.NewWith()
+		conf.Logger = logger
 	}
 
 	// Note: any interaction with Config that would create/touch files

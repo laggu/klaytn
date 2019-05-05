@@ -21,13 +21,10 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
-	"path"
-	"path/filepath"
 	"sync"
 )
 
-var zlManager = zapLoggerManager{"klaytn-log",
+var zlManager = zapLoggerManager{"stderr", // Use stderr to outputPath instead of stdout to be aligned with log15.
 	"json", zapcore.InfoLevel,
 	sync.Mutex{}, make(map[ModuleID][]*zapLogger),
 }
@@ -48,10 +45,14 @@ type zapLogger struct {
 
 // A zapLogger generated from NewWith inherits InitialFields and ModuleID from its parent.
 func (zl *zapLogger) NewWith(keysAndValues ...interface{}) Logger {
+	zlManager.mutex.Lock()
+	defer zlManager.mutex.Unlock()
+
 	newCfg := genDefaultConfig()
 	for k, v := range zl.cfg.InitialFields {
 		newCfg.InitialFields[k] = v
 	}
+	newCfg.Level.SetLevel(zl.cfg.Level.Level())
 	return genLoggerZap(zl.mi, newCfg)
 }
 
@@ -85,8 +86,6 @@ func (zl *zapLogger) Error(msg string, keysAndValues ...interface{}) {
 }
 
 func (zl *zapLogger) ErrorWithStack(msg string, keysAndValues ...interface{}) {
-	// TODO-Klaytn: First check stack trace is printed by default.
-	// If not, print stack trace here.
 	zl.sl.Errorw(msg, keysAndValues...)
 }
 
@@ -95,8 +94,6 @@ func (zl *zapLogger) Crit(msg string, keysAndValues ...interface{}) {
 }
 
 func (zl *zapLogger) CritWithStack(msg string, keysAndValues ...interface{}) {
-	// TODO-Klaytn: First check stack trace is printed by default.
-	// If not, print stack trace here.
 	zl.sl.Fatalw(msg, keysAndValues...)
 }
 
@@ -118,12 +115,6 @@ func (zl *zapLogger) register() {
 }
 
 func genBaseLoggerZap() Logger {
-	ex, err := os.Executable()
-	if err != nil {
-		// TODO-Klaytn Error should be handled.
-	}
-	// TODO-Klaytn Output path should be set properly.
-	zlManager.outputPath = path.Join(filepath.Dir(ex), zlManager.outputPath)
 	return genLoggerZap(BaseLogger, genDefaultConfig())
 }
 
@@ -131,7 +122,7 @@ func genBaseLoggerZap() Logger {
 func genLoggerZap(mi ModuleID, cfg *zap.Config) Logger {
 	logger, err := cfg.Build()
 	if err != nil {
-		// TODO-Klaytn Error should be handled.
+		Fatalf("Error while building zapLogger from the config. ModuleID: %v, err: %v", mi, err)
 	}
 	newLogger := &zapLogger{mi, cfg, logger.Sugar()}
 	newLogger.register()
@@ -174,7 +165,10 @@ func ChangeGlobalLogLevel(glogger *GlogHandler, lvl Lvl) error {
 			logger.setLevel(lvl)
 		}
 	}
-	glogger.Verbosity(lvl)
+
+	if glogger != nil {
+		glogger.Verbosity(lvl)
+	}
 	return nil
 }
 

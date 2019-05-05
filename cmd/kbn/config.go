@@ -191,7 +191,7 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 		}
 	}
 	if len(set) > 1 {
-		utils.Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
+		log.Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
 	}
 }
 
@@ -286,10 +286,10 @@ func (ctx *bootnodeConfig) checkCMDState() int {
 func (ctx *bootnodeConfig) generateNodeKey() {
 	nodeKey, err := crypto.GenerateKey()
 	if err != nil {
-		utils.Fatalf("could not generate key: %v", err)
+		log.Fatalf("could not generate key: %v", err)
 	}
 	if err = crypto.SaveECDSA(ctx.genKeyPath, nodeKey); err != nil {
-		utils.Fatalf("%v", err)
+		log.Fatalf("%v", err)
 	}
 	os.Exit(0)
 }
@@ -297,7 +297,7 @@ func (ctx *bootnodeConfig) generateNodeKey() {
 func (ctx *bootnodeConfig) doWriteOutAddress() {
 	err := ctx.readNodeKey()
 	if err != nil {
-		utils.Fatalf("Failed to read node key: %v", err)
+		log.Fatalf("Failed to read node key: %v", err)
 	}
 	fmt.Printf("%v\n", discover.PubkeyID(&(ctx.nodeKey).PublicKey))
 	os.Exit(0)

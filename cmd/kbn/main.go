@@ -119,12 +119,12 @@ func bootnode(ctx *cli.Context) error {
 
 	addr, err := net.ResolveUDPAddr("udp", bcfg.listenAddr)
 	if err != nil {
-		utils.Fatalf("Failed to ResolveUDPAddr: %v", err)
+		log.Fatalf("Failed to ResolveUDPAddr: %v", err)
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		utils.Fatalf("Failed to ListenUDP: %v", err)
+		log.Fatalf("Failed to ListenUDP: %v", err)
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
@@ -151,7 +151,7 @@ func bootnode(ctx *cli.Context) error {
 
 	tab, err := discover.ListenUDP(&cfg)
 	if err != nil {
-		utils.Fatalf("%v", err)
+		log.Fatalf("%v", err)
 	}
 
 	node, err := New(&bcfg)

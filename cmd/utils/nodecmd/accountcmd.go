@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/console"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 )
@@ -225,7 +226,7 @@ func accountList(ctx *cli.Context) error {
 func UnlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
 	account, err := utils.MakeAddress(ks, address)
 	if err != nil {
-		utils.Fatalf("Could not list accounts: %v", err)
+		log.Fatalf("Could not list accounts: %v", err)
 	}
 	for trials := 0; trials < 3; trials++ {
 		prompt := fmt.Sprintf("Unlocking account %s | Attempt %d/%d", address, trials+1, 3)
@@ -245,7 +246,7 @@ func UnlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i in
 		}
 	}
 	// All trials expended to unlock account, bail out
-	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
+	log.Fatalf("Failed to unlock account %s (%v)", address, err)
 
 	return accounts.Account{}, ""
 }
@@ -266,15 +267,15 @@ func getPassPhrase(prompt string, confirmation bool, i int, passwords []string) 
 	}
 	password, err := console.Stdin.PromptPassword("Passphrase: ")
 	if err != nil {
-		utils.Fatalf("Failed to read passphrase: %v", err)
+		log.Fatalf("Failed to read passphrase: %v", err)
 	}
 	if confirmation {
 		confirm, err := console.Stdin.PromptPassword("Repeat passphrase: ")
 		if err != nil {
-			utils.Fatalf("Failed to read passphrase confirmation: %v", err)
+			log.Fatalf("Failed to read passphrase confirmation: %v", err)
 		}
 		if password != confirm {
-			utils.Fatalf("Passphrases do not match")
+			log.Fatalf("Passphrases do not match")
 		}
 	}
 	return password
@@ -294,7 +295,7 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 		}
 	}
 	if match == nil {
-		utils.Fatalf("None of the listed files could be unlocked.")
+		log.Fatalf("None of the listed files could be unlocked.")
 	}
 	fmt.Printf("Your passphrase unlocked %s\n", match.URL)
 	fmt.Println("In order to avoid this warning, you need to remove the following duplicate key files:")
@@ -312,14 +313,14 @@ func accountCreate(ctx *cli.Context) error {
 	// Load config file.
 	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
-			utils.Fatalf("%v", err)
+			log.Fatalf("%v", err)
 		}
 	}
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
 
 	if err != nil {
-		utils.Fatalf("Failed to read configuration: %v", err)
+		log.Fatalf("Failed to read configuration: %v", err)
 	}
 
 	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
@@ -327,7 +328,7 @@ func accountCreate(ctx *cli.Context) error {
 	address, err := keystore.StoreKey(keydir, password, scryptN, scryptP)
 
 	if err != nil {
-		utils.Fatalf("Failed to create account: %v", err)
+		log.Fatalf("Failed to create account: %v", err)
 	}
 	fmt.Printf("Address: {%x}\n", address)
 	return nil
@@ -337,7 +338,7 @@ func accountCreate(ctx *cli.Context) error {
 // one, also providing the possibility to change the pass-phrase.
 func accountUpdate(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 {
-		utils.Fatalf("No accounts specified to update")
+		log.Fatalf("No accounts specified to update")
 	}
 	stack, _ := makeConfigNode(ctx)
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -346,7 +347,7 @@ func accountUpdate(ctx *cli.Context) error {
 		account, oldPassword := UnlockAccount(ctx, ks, addr, 0, nil)
 		newPassword := getPassPhrase("Please give a new password. Do not forget this password.", true, 0, nil)
 		if err := ks.Update(account, oldPassword, newPassword); err != nil {
-			utils.Fatalf("Could not update the account: %v", err)
+			log.Fatalf("Could not update the account: %v", err)
 		}
 	}
 	return nil
@@ -355,11 +356,11 @@ func accountUpdate(ctx *cli.Context) error {
 func importWallet(ctx *cli.Context) error {
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {
-		utils.Fatalf("keyfile must be given as argument")
+		log.Fatalf("keyfile must be given as argument")
 	}
 	keyJSON, err := ioutil.ReadFile(keyfile)
 	if err != nil {
-		utils.Fatalf("Could not read wallet file: %v", err)
+		log.Fatalf("Could not read wallet file: %v", err)
 	}
 
 	stack, _ := makeConfigNode(ctx)
@@ -368,7 +369,7 @@ func importWallet(ctx *cli.Context) error {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	acct, err := ks.ImportPreSaleKey(keyJSON, passphrase)
 	if err != nil {
-		utils.Fatalf("%v", err)
+		log.Fatalf("%v", err)
 	}
 	fmt.Printf("Address: {%x}\n", acct.Address)
 	return nil
@@ -377,11 +378,11 @@ func importWallet(ctx *cli.Context) error {
 func accountImport(ctx *cli.Context) error {
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {
-		utils.Fatalf("keyfile must be given as argument")
+		log.Fatalf("keyfile must be given as argument")
 	}
 	key, err := crypto.LoadECDSA(keyfile)
 	if err != nil {
-		utils.Fatalf("Failed to load the private key: %v", err)
+		log.Fatalf("Failed to load the private key: %v", err)
 	}
 	stack, _ := makeConfigNode(ctx)
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
@@ -389,7 +390,7 @@ func accountImport(ctx *cli.Context) error {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	acct, err := ks.ImportECDSA(key, passphrase)
 	if err != nil {
-		utils.Fatalf("Could not create the account: %v", err)
+		log.Fatalf("Could not create the account: %v", err)
 	}
 	fmt.Printf("Address: {%x}\n", acct.Address)
 	return nil

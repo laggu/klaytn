@@ -30,6 +30,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/datasync/downloader"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
@@ -559,7 +560,7 @@ func MakeDataDir(ctx *cli.Context) string {
 		}
 		return path
 	}
-	Fatalf("Cannot determine default data directory, please set manually (--datadir)")
+	log.Fatalf("Cannot determine default data directory, please set manually (--datadir)")
 	return ""
 }
 
@@ -575,15 +576,15 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 	)
 	switch {
 	case file != "" && hex != "":
-		Fatalf("Options %q and %q are mutually exclusive", NodeKeyFileFlag.Name, NodeKeyHexFlag.Name)
+		log.Fatalf("Options %q and %q are mutually exclusive", NodeKeyFileFlag.Name, NodeKeyHexFlag.Name)
 	case file != "":
 		if key, err = crypto.LoadECDSA(file); err != nil {
-			Fatalf("Option %q: %v", NodeKeyFileFlag.Name, err)
+			log.Fatalf("Option %q: %v", NodeKeyFileFlag.Name, err)
 		}
 		cfg.PrivateKey = key
 	case hex != "":
 		if key, err = crypto.HexToECDSA(hex); err != nil {
-			Fatalf("Option %q: %v", NodeKeyHexFlag.Name, err)
+			log.Fatalf("Option %q: %v", NodeKeyHexFlag.Name, err)
 		}
 		cfg.PrivateKey = key
 	}
@@ -640,7 +641,7 @@ func setNAT(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NATFlag.Name) {
 		natif, err := nat.Parse(ctx.GlobalString(NATFlag.Name))
 		if err != nil {
-			Fatalf("Option %s: %v", NATFlag.Name, err)
+			log.Fatalf("Option %s: %v", NATFlag.Name, err)
 		}
 		cfg.NAT = natif
 	}
@@ -755,7 +756,7 @@ func setServiceChainSigner(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Conf
 	if ctx.GlobalIsSet(ServiceChainSignerFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(ServiceChainSignerFlag.Name))
 		if err != nil {
-			Fatalf("Option %q: %v", ServiceChainSignerFlag.Name, err)
+			log.Fatalf("Option %q: %v", ServiceChainSignerFlag.Name, err)
 		}
 		cfg.ServiceChainSigner = account.Address
 	}
@@ -767,7 +768,7 @@ func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	if ctx.GlobalIsSet(RewardbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(RewardbaseFlag.Name))
 		if err != nil {
-			Fatalf("Option %q: %v", RewardbaseFlag.Name, err)
+			log.Fatalf("Option %q: %v", RewardbaseFlag.Name, err)
 		}
 		cfg.Rewardbase = account.Address
 	}
@@ -781,7 +782,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 	}
 	text, err := ioutil.ReadFile(path)
 	if err != nil {
-		Fatalf("Failed to read password file: %v", err)
+		log.Fatalf("Failed to read password file: %v", err)
 	}
 	lines := strings.Split(string(text), "\n")
 	// Sanitise DOS line endings.
@@ -813,7 +814,7 @@ func setupSBNURL(ctx *cli.Context, cfg *p2p.Config) {
 	}
 	port := ctx.GlobalInt(SBNPortFlag.Name)
 	if port > 65535 {
-		Fatalf("SBN port number is not valid")
+		log.Fatalf("SBN port number is not valid")
 	}
 	cfg.SBNPort = port
 	logger.Info("SBN is enabled. The address: http://%s:%d", cfg.SBNHost, cfg.SBNPort)
@@ -865,7 +866,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		setupSBNURL(ctx, cfg)
 	} else if ctx.GlobalIsSet(EnableSBNFlag.Name) {
 		if !ctx.GlobalIsSet(SBNAddrFlag.Name) {
-			Fatalf("Simple-bootnode's address is not defined. Use --sbnaddr. ex) --sbnaddr sbn.my-simple-bootnode.com")
+			log.Fatalf("Simple-bootnode's address is not defined. Use --sbnaddr. ex) --sbnaddr sbn.my-simple-bootnode.com")
 		}
 		setupSBNURL(ctx, cfg)
 	} else {
@@ -875,7 +876,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
 		list, err := netutil.ParseNetlist(netrestrict)
 		if err != nil {
-			Fatalf("Option %q: %v", NetrestrictFlag.Name, err)
+			log.Fatalf("Option %q: %v", NetrestrictFlag.Name, err)
 		}
 		cfg.NetRestrict = list
 	}
@@ -1001,7 +1002,7 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 		}
 	}
 	if len(set) > 1 {
-		Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
+		log.Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
 	}
 }
 
@@ -1033,7 +1034,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
-		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 	logger.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
@@ -1121,7 +1122,7 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 		return fullNode, err
 	})
 	if err != nil {
-		Fatalf("Failed to register the CN service: %v", err)
+		log.Fatalf("Failed to register the CN service: %v", err)
 	}
 }
 
@@ -1133,7 +1134,7 @@ func RegisterServiceChainService(stack *node.Node, cfg *cn.Config) {
 		return fullNode, err
 	})
 	if err != nil {
-		Fatalf("Failed to register the SCN service: %v", err)
+		log.Fatalf("Failed to register the SCN service: %v", err)
 	}
 }
 
@@ -1149,7 +1150,7 @@ func RegisterService(stack *node.Node, cfg *sc.SCConfig) {
 			}
 		})
 		if err != nil {
-			Fatalf("Failed to register the service: %v", err)
+			log.Fatalf("Failed to register the service: %v", err)
 		}
 	}
 }
