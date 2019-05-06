@@ -443,7 +443,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	// get the proposed block hash and clear it if the seal() is completed.
 	sb.sealMu.Lock()
 	sb.proposedBlockHash = block.Hash()
-	sb.setLastMinedBlockHash(sb.proposedBlockHash)
 	clear := func() {
 		sb.proposedBlockHash = common.Hash{}
 		sb.sealMu.Unlock()
@@ -461,6 +460,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 			// if the block hash and the hash from channel are the same,
 			// return the result. Otherwise, keep waiting the next hash.
 			if block.Hash() == result.Hash() {
+				sb.setLastMinedBlockHash(sb.proposedBlockHash)
 				return result, nil
 			}
 		case <-stop:

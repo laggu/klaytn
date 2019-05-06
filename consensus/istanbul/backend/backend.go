@@ -270,9 +270,7 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 		return nil
 	}
 
-	// don’t insert self-mined block
-	proposer, _ := sb.Author(h)
-	if sb.broadcaster != nil && proposer != sb.Address() {
+	if sb.broadcaster != nil {
 		sb.broadcaster.Enqueue(fetcherID, block)
 	}
 	return nil
