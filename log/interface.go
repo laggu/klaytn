@@ -27,7 +27,7 @@ const module = "module"
 const (
 	ZapLogger     = "zap"
 	Log15Logger   = "log15"
-	DefaultLogger = ZapLogger
+	DefaultLogger = Log15Logger
 )
 
 var baseLogger Logger
