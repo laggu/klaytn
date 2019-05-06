@@ -580,6 +580,11 @@ func (self *StateDB) getStateObject(addr common.Address) *stateObject {
 	// Insert into the live set.
 	obj := newObject(self, addr, data)
 	self.setStateObject(obj)
+
+	if self.UseCachedStateObjects() {
+		self.cachedStateObjects.Add(addr, obj.deepCopy(self))
+	}
+
 	return obj
 }
 
