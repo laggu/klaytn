@@ -61,10 +61,6 @@ func (a *AccountKeyLegacy) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool
 	return false
 }
 
-func (a *AccountKeyLegacy) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
-	return nil
-}
-
 func (a *AccountKeyLegacy) String() string {
 	return "AccountKeyLegacy"
 }
@@ -84,17 +80,19 @@ func (a *AccountKeyLegacy) SigValidationGas(currentBlockNumber uint64, r RoleTyp
 	return 0, nil
 }
 
-func (a *AccountKeyLegacy) Init(currentBlockNumber uint64) error {
+func (a *AccountKeyLegacy) CheckInstallable(currentBlockNumber uint64) error {
 	// Since it has no data and it can be assigned to an account, it always returns nil.
 	return nil
 }
 
-func (a *AccountKeyLegacy) Update(key AccountKey, currentBlockNumber uint64) error {
-	if _, ok := key.(*AccountKeyLegacy); ok {
-		// If `key` is the same type, it returns always nil. No need to set any value.
-		return nil
+func (a *AccountKeyLegacy) CheckUpdatable(newKey AccountKey, currentBlockNumber uint64) error {
+	if _, ok := newKey.(*AccountKeyLegacy); ok {
+		return a.CheckInstallable(currentBlockNumber)
 	}
-
-	// If `key` is not the type of AccountKeyLegacy, it cannot be assigned.
+	// Update is not possible if the type is different.
 	return kerrors.ErrDifferentAccountKeyType
+}
+
+func (a *AccountKeyLegacy) Update(newKey AccountKey, currentBlockNumber uint64) error {
+	return a.CheckUpdatable(newKey, currentBlockNumber)
 }

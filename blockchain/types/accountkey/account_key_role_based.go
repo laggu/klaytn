@@ -157,31 +157,6 @@ func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) b
 	return a.getDefaultKey().Validate(r, pubkeys)
 }
 
-func (a *AccountKeyRoleBased) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
-	lenAk := len(*a)
-	// If no key is to be replaced, it is regarded as a fail.
-	if lenAk == 0 {
-		return kerrors.ErrZeroLength
-	}
-
-	// Do not allow undefined roles.
-	if lenAk > (int)(RoleLast) {
-		return kerrors.ErrLengthTooLong
-	}
-
-	for i := 0; i < lenAk; i++ {
-		// A composite key is not allowed.
-		if (*a)[i].IsCompositeType() {
-			return kerrors.ErrNestedCompositeType
-		}
-
-		if err := (*a)[i].ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // ValidateAccountCreation validates keys when creating an account with this key.
 func (a *AccountKeyRoleBased) ValidateAccountCreation() error {
 	// 1. RoleTransaction should exist at least.
@@ -240,7 +215,7 @@ func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r Role
 	return gas, nil
 }
 
-func (a *AccountKeyRoleBased) Init(currentBlockNumber uint64) error {
+func (a *AccountKeyRoleBased) CheckInstallable(currentBlockNumber uint64) error {
 	// A zero-role key is not allowed.
 	if len(*a) == 0 {
 		return kerrors.ErrZeroLength
@@ -254,52 +229,67 @@ func (a *AccountKeyRoleBased) Init(currentBlockNumber uint64) error {
 		if (*a)[i].IsCompositeType() {
 			return kerrors.ErrNestedCompositeType
 		}
-
 		// If any key in the role cannot be initialized, return an error.
-		if err := (*a)[i].Init(currentBlockNumber); err != nil {
+		if err := (*a)[i].CheckInstallable(currentBlockNumber); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (a *AccountKeyRoleBased) Update(key AccountKey, currentBlockNumber uint64) error {
-	if ak, ok := key.(*AccountKeyRoleBased); ok {
-		lenAk := len(*ak)
-		lenA := len(*a)
+func (a *AccountKeyRoleBased) CheckUpdatable(newKey AccountKey, currentBlockNumber uint64) error {
+	if newKey, ok := newKey.(*AccountKeyRoleBased); ok {
+		lenOldKey := len(*a)
+		lenNewKey := len(*newKey)
 		// If no key is to be replaced, it is regarded as a fail.
-		if lenAk == 0 {
+		if lenNewKey == 0 {
 			return kerrors.ErrZeroLength
 		}
 		// Do not allow undefined roles.
-		if lenAk > (int)(RoleLast) {
+		if lenNewKey > (int)(RoleLast) {
 			return kerrors.ErrLengthTooLong
 		}
-		if lenA < lenAk {
-			*a = append(*a, (*ak)[lenA:]...)
-		}
-		for i := 0; i < lenAk; i++ {
+		for i := 0; i < lenNewKey; i++ {
 			switch {
 			// A composite key is not allowed.
-			case (*ak)[i].IsCompositeType():
+			case (*newKey)[i].IsCompositeType():
 				return kerrors.ErrNestedCompositeType
-			// Do nothing for AccountKeyTypeNil
-			case (*ak)[i].Type() == AccountKeyTypeNil:
-			// Update AccountKeyTypeFail
-			case (*ak)[i].Type() == AccountKeyTypeFail:
-				(*a)[i] = (*ak)[i]
-			default:
-				if err := (*ak)[i].Init(currentBlockNumber); err != nil {
+			// If newKey is longer than oldKey, init the new attributes.
+			case i >= lenOldKey:
+				if err := (*newKey)[i].CheckInstallable(currentBlockNumber); err != nil {
 					return err
 				}
-				(*a)[i] = (*ak)[i]
+			// Do nothing for AccountKeyTypeNil
+			case (*newKey)[i].Type() == AccountKeyTypeNil:
+
+			// Check whether the newKey is replacable or not
+			default:
+				if err := CheckReplacable((*a)[i], (*newKey)[i], currentBlockNumber); err != nil {
+					return err
+				}
 			}
 		}
-
 		return nil
 	}
-
 	// Update is not possible if the type is different.
 	return kerrors.ErrDifferentAccountKeyType
+}
+
+func (a *AccountKeyRoleBased) Update(newKey AccountKey, currentBlockNumber uint64) error {
+	if err := a.CheckUpdatable(newKey, currentBlockNumber); err != nil {
+		return err
+	}
+	newRoleKey, _ := newKey.(*AccountKeyRoleBased)
+	lenNewKey := len(*newRoleKey)
+	lenOldKey := len(*a)
+	if lenOldKey < lenNewKey {
+		*a = append(*a, (*newRoleKey)[lenOldKey:]...)
+	}
+	for i := 0; i < lenNewKey; i++ {
+		if (*newRoleKey)[i].Type() == AccountKeyTypeNil {
+			continue
+		}
+		(*a)[i] = (*newRoleKey)[i]
+	}
+	return nil
 }

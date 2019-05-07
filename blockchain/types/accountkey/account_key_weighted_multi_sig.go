@@ -110,10 +110,6 @@ func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, pubkeys []*ecdsa.Publi
 	return false
 }
 
-func (a *AccountKeyWeightedMultiSig) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
-	return a.Init(currentBlockNumber)
-}
-
 func (a *AccountKeyWeightedMultiSig) String() string {
 	serializer := NewAccountKeySerializerWithAccountKey(a)
 	b, _ := json.Marshal(serializer)
@@ -143,18 +139,15 @@ func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64,
 	return (numKeys - 1) * params.TxValidationGasPerKey, nil
 }
 
-func (a *AccountKeyWeightedMultiSig) Init(currentBlockNumber uint64) error {
+func (a *AccountKeyWeightedMultiSig) CheckInstallable(currentBlockNumber uint64) error {
 	sum := uint(0)
 	prevSum := uint(0)
-
 	if len(a.Keys) == 0 {
 		return kerrors.ErrZeroLength
 	}
-
 	if uint64(len(a.Keys)) > MaxNumKeysForMultiSig {
 		return kerrors.ErrMaxKeysExceed
 	}
-
 	keyMap := make(map[string]bool)
 	for _, k := range a.Keys {
 		// Do not allow zero weight.
@@ -184,22 +177,26 @@ func (a *AccountKeyWeightedMultiSig) Init(currentBlockNumber uint64) error {
 	if sum < a.Threshold {
 		return kerrors.ErrUnsatisfiableThreshold
 	}
-
 	return nil
 }
 
-func (a *AccountKeyWeightedMultiSig) Update(key AccountKey, currentBlockNumber uint64) error {
-	if ak, ok := key.(*AccountKeyWeightedMultiSig); ok {
-		if err := ak.Init(currentBlockNumber); err != nil {
-			return err
-		}
-		a.Threshold = ak.Threshold
-		copy(a.Keys, ak.Keys)
-		return nil
+func (a *AccountKeyWeightedMultiSig) CheckUpdatable(newKey AccountKey, currentBlockNumber uint64) error {
+	if newKey, ok := newKey.(*AccountKeyWeightedMultiSig); ok {
+		return newKey.CheckInstallable(currentBlockNumber)
 	}
-
 	// Update is not possible if the type is different.
 	return kerrors.ErrDifferentAccountKeyType
+}
+
+func (a *AccountKeyWeightedMultiSig) Update(newKey AccountKey, currentBlockNumber uint64) error {
+	if err := a.CheckUpdatable(newKey, currentBlockNumber); err != nil {
+		return err
+	}
+	newMultiKey, _ := newKey.(*AccountKeyWeightedMultiSig)
+	a.Threshold = newMultiKey.Threshold
+	a.Keys = make(WeightedPublicKeys, len(newMultiKey.Keys))
+	copy(a.Keys, newMultiKey.Keys)
+	return nil
 }
 
 // WeightedPublicKey contains a public key and its weight.

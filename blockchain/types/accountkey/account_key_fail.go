@@ -52,10 +52,6 @@ func (a *AccountKeyFail) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	return false
 }
 
-func (a *AccountKeyFail) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
-	return nil
-}
-
 func (a *AccountKeyFail) String() string {
 	return "AccountKeyFail"
 }
@@ -74,12 +70,17 @@ func (a *AccountKeyFail) SigValidationGas(currentBlockNumber uint64, r RoleType)
 	return 0, nil
 }
 
-func (a *AccountKeyFail) Init(currentBlockNumber uint64) error {
+func (a *AccountKeyFail) CheckInstallable(currentBlockNumber uint64) error {
 	// AccountKeyFail can be assigned to an account. Since it does not have any value, it returns always nil.
 	return nil
 }
 
-func (a *AccountKeyFail) Update(key AccountKey, currentBlockNumber uint64) error {
+func (a *AccountKeyFail) CheckUpdatable(newKey AccountKey, currentBlockNumber uint64) error {
+	// AccountKeyFail cannot be updated with any key, hence it returns always an error.
+	return kerrors.ErrAccountKeyFailNotUpdatable
+}
+
+func (a *AccountKeyFail) Update(newKey AccountKey, currentBlockNumber uint64) error {
 	// AccountKeyFail cannot be updated with any key, hence it returns always an error.
 	return kerrors.ErrAccountKeyFailNotUpdatable
 }

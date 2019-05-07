@@ -71,10 +71,6 @@ func (a *AccountKeyPublic) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool
 	return a.PublicKeySerializable.Equal((*PublicKeySerializable)(pubkeys[0]))
 }
 
-func (a *AccountKeyPublic) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
-	return a.Init(currentBlockNumber)
-}
-
 func (a *AccountKeyPublic) String() string {
 	return fmt.Sprintf("AccountKeyPublic: %s", a.PublicKeySerializable.String())
 }
@@ -87,25 +83,28 @@ func (a *AccountKeyPublic) SigValidationGas(currentBlockNumber uint64, r RoleTyp
 	return (numKeys - 1) * params.TxValidationGasPerKey, nil
 }
 
-func (a *AccountKeyPublic) Init(currentBlockNumber uint64) error {
+func (a *AccountKeyPublic) CheckInstallable(currentBlockNumber uint64) error {
 	// If the point is not on the curve, return an error.
 	if a.IsOnCurve(a.X, a.Y) == false {
 		return kerrors.ErrNotOnCurve
 	}
-
 	return nil
 }
 
-func (a *AccountKeyPublic) Update(key AccountKey, currentBlockNumber uint64) error {
-	if ak, ok := key.(*AccountKeyPublic); ok {
-		if err := ak.Init(currentBlockNumber); err != nil {
-			return err
-		}
-		a.X = ak.X
-		a.Y = ak.Y
-		return nil
+func (a *AccountKeyPublic) CheckUpdatable(newKey AccountKey, currentBlockNumber uint64) error {
+	if newKey, ok := newKey.(*AccountKeyPublic); ok {
+		return newKey.CheckInstallable(currentBlockNumber)
 	}
-
 	// Update is not possible if the type is different.
 	return kerrors.ErrDifferentAccountKeyType
+}
+
+func (a *AccountKeyPublic) Update(newKey AccountKey, currentBlockNumber uint64) error {
+	if err := a.CheckUpdatable(newKey, currentBlockNumber); err != nil {
+		return err
+	}
+	newPubKey, _ := newKey.(*AccountKeyPublic)
+	a.X = newPubKey.X
+	a.Y = newPubKey.Y
+	return nil
 }

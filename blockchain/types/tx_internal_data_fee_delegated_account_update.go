@@ -417,7 +417,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if err := t.Key.ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
+	oldKey := stateDB.GetKey(t.From)
+	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err
 	}
 	// Fail if the sender does not exist.

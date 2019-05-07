@@ -446,7 +446,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SenderTxHash() common
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if err := t.Key.ValidateBeforeKeyUpdate(currentBlockNumber); err != nil {
+	oldKey := stateDB.GetKey(t.From)
+	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err
 	}
 	return nil

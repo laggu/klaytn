@@ -65,9 +65,6 @@ type AccountKey interface {
 	// Validate returns true if the given public keys are verifiable with the AccountKey.
 	Validate(RoleType, []*ecdsa.PublicKey) bool
 
-	// ValidateBeforeKeyUpdate returns nil if the given account key can be used as a new key.
-	ValidateBeforeKeyUpdate(currentBlockNumber uint64) error
-
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey
 
@@ -77,12 +74,15 @@ type AccountKey interface {
 	// SigValidationGas returns gas required to validate a tx with the account.
 	SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error)
 
-	// Init returns an error if all data in the key is invalid.
+	// CheckInstallable returns an error if any data in the key is invalid.
 	// This checks that the key is ready to be assigned to an account.
-	Init(currentBlockNumber uint64) error
+	CheckInstallable(currentBlockNumber uint64) error
 
-	// Update returns an error if `key` cannot be assigned to itself.
-	Update(key AccountKey, currentBlockNumber uint64) error
+	// CheckUpdatable returns nil if the given account key can be used as a new key. The newKey should be the same type with the oldKey's type.
+	CheckUpdatable(newKey AccountKey, currentBlockNumber uint64) error
+
+	// Update returns an error if `key` cannot be assigned to itself. The newKey should be the same type with the oldKey's type.
+	Update(newKey AccountKey, currentBlockNumber uint64) error
 
 	// IsCompositeType returns true if the account type is a composite type.
 	// Composite types are AccountKeyRoleBased and AccountKeyRoleBasedRLPBytes.
@@ -121,4 +121,12 @@ func ValidateAccountKey(from common.Address, accKey AccountKey, pubkeys []*ecdsa
 		return errInvalidSignature
 	}
 	return nil
+}
+
+// CheckReplacable returns nil if newKey can replace oldKey. The function checks updatability of newKey regardless of the newKey type.
+func CheckReplacable(oldKey AccountKey, newKey AccountKey, currentBlockNumber uint64) error {
+	if oldKey.Type() == newKey.Type() {
+		return oldKey.CheckUpdatable(newKey, currentBlockNumber)
+	}
+	return newKey.CheckInstallable(currentBlockNumber)
 }

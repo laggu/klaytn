@@ -84,7 +84,7 @@ type Account interface {
 	SetHumanReadable(b bool)
 
 	// UpdateKey updates the account's key with the given key.
-	UpdateKey(key accountkey.AccountKey, currentBlockNumber uint64) error
+	UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error
 
 	// Empty returns whether the account is considered empty.
 	// The "empty" account may be defined differently depending on the actual account type.

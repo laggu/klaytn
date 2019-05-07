@@ -124,7 +124,7 @@ func (a *LegacyAccount) Empty() bool {
 	return a.GetNonce() == 0 && a.GetBalance().Sign() == 0 && bytes.Equal(a.GetCodeHash(), emptyCodeHash)
 }
 
-func (a *LegacyAccount) UpdateKey(key accountkey.AccountKey, currentBlockNumber uint64) error {
+func (a *LegacyAccount) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	return ErrAccountKeyNotModifiable
 }
 

@@ -479,10 +479,10 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 }
 
 // UpdateKey updates the account's key with the given key.
-func (self *StateDB) UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error {
+func (self *StateDB) UpdateKey(addr common.Address, newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.UpdateKey(key, currentBlockNumber)
+		return stateObject.UpdateKey(newKey, currentBlockNumber)
 	}
 
 	return errAccountDoesNotExist

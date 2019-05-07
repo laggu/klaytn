@@ -67,10 +67,6 @@ func (a *AccountKeyNil) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	return false
 }
 
-func (a *AccountKeyNil) ValidateBeforeKeyUpdate(currentBlockNumber uint64) error {
-	return nil
-}
-
 func (a *AccountKeyNil) String() string {
 	return "AccountKeyNil"
 }
@@ -89,16 +85,17 @@ func (a *AccountKeyNil) SigValidationGas(currentBlockNumber uint64, r RoleType) 
 	return 0, nil
 }
 
-func (a *AccountKeyNil) Init(currentBlockNumber uint64) error {
+func (a *AccountKeyNil) CheckInstallable(currentBlockNumber uint64) error {
 	// Since AccountKeyNil cannot be assigned to an account, it always returns error.
 	return kerrors.ErrAccountKeyNilUninitializable
 }
 
-func (a *AccountKeyNil) Update(key AccountKey, currentBlockNumber uint64) error {
-	if _, ok := key.(*AccountKeyNil); ok {
-		// Since AccountKeyNil can be updated, it returns nil.
-		// No need to update any value because it does not have a field.
-		return nil
-	}
+func (a *AccountKeyNil) CheckUpdatable(newKey AccountKey, currentBlockNumber uint64) error {
+	// Since AccountKeyNil cannot be assigned to an account, it should not be called.
+	return kerrors.ErrAccountKeyNilUninitializable
+}
+
+func (a *AccountKeyNil) Update(newKey AccountKey, currentBlockNumber uint64) error {
+	// Since AccountKeyNil cannot be assigned to an account, it should not be called.
 	return kerrors.ErrDifferentAccountKeyType
 }

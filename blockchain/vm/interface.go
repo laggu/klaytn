@@ -58,7 +58,7 @@ type StateDB interface {
 	HasSuicided(common.Address) bool
 
 	// UpdateKey updates the account's key with the given key.
-	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
+	UpdateKey(addr common.Address, newKey accountkey.AccountKey, currentBlockNumber uint64) error
 
 	// Exist reports whether the given account exists in state.
 	// Notably this should also return true for suicided accounts.

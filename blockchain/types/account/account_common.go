@@ -163,6 +163,14 @@ func (e *AccountCommon) SetKey(k accountkey.AccountKey) {
 	e.key = k
 }
 
+func (e *AccountCommon) ReplaceKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
+	if err := newKey.CheckInstallable(currentBlockNumber); err != nil {
+		return err
+	}
+	e.SetKey(newKey)
+	return nil
+}
+
 func (e *AccountCommon) Empty() bool {
 	return e.nonce == 0 && e.balance.Sign() == 0 && e.key == accountkey.NewAccountKeyLegacy()
 }
@@ -175,21 +183,11 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 		key:           e.key.DeepCopy()}
 }
 
-func (e *AccountCommon) UpdateKey(key accountkey.AccountKey, currentBlockNumber uint64) error {
-	if e.key.Type() == key.Type() {
-		// If the type is same, call Update() to set fields in key into e.key.
-		if err := e.key.Update(key, currentBlockNumber); err != nil {
-			return err
-		}
-	} else {
-		// If the type is different, check it can be initialized and assigned.
-		if err := key.Init(currentBlockNumber); err != nil {
-			return err
-		}
-		// If assignable, assign it.
-		e.key = key
+func (e *AccountCommon) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
+	if e.key.Type() == newKey.Type() {
+		return e.key.Update(newKey, currentBlockNumber)
 	}
-	return nil
+	return e.ReplaceKey(newKey, currentBlockNumber)
 }
 
 func (e *AccountCommon) Equal(ta *AccountCommon) bool {
