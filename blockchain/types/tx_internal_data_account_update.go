@@ -384,10 +384,6 @@ func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumb
 	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err
 	}
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
-	}
 	return nil
 }
 
