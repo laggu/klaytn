@@ -37,10 +37,6 @@ var (
 // It is used for AccountKey as an internal structure.
 type PublicKeySerializable ecdsa.PublicKey
 
-type publicKeySerializableInternal struct {
-	X, Y *big.Int
-}
-
 type publicKeySerializableInternalJSON struct {
 	X, Y *hexutil.Big
 }
@@ -58,28 +54,30 @@ func newPublicKeySerializable() *PublicKeySerializable {
 	}
 }
 
-// EncodeRLP encodes PublicKeySerializable using RLP.
+// EncodeRLP encodes ecdsa.PublicKey using RLP.
 // For now, it supports S256 curve only.
-// For that reason, this function serializes only X and Y.
+// For that reason, this function serializes only X and Y using CompressPubkey().
 func (p *PublicKeySerializable) EncodeRLP(w io.Writer) error {
 	// Do not serialize if it is not on S256 curve.
 	if !crypto.S256().IsOnCurve(p.X, p.Y) {
 		return errNotS256Curve
 	}
-	return rlp.Encode(w, &publicKeySerializableInternal{
-		p.X, p.Y})
+	return rlp.Encode(w, crypto.CompressPubkey((*ecdsa.PublicKey)(p)))
 }
 
 // DecodeRLP decodes PublicKeySerializable using RLP.
 // For now, it supports S256 curve only.
-// This function deserializes only X and Y. Refer to EncodeRLP() above.
+// This function deserializes using UncompressPubkey().
 func (p *PublicKeySerializable) DecodeRLP(s *rlp.Stream) error {
-	var dec publicKeySerializableInternal
-	if err := s.Decode(&dec); err != nil {
+	b := []byte{}
+	if err := s.Decode(&b); err != nil {
 		return err
 	}
-	p.X = dec.X
-	p.Y = dec.Y
+	pubkey, err := crypto.DecompressPubkey(b)
+	if err != nil {
+		return err
+	}
+	*p = *((*PublicKeySerializable)(pubkey))
 
 	return nil
 }
