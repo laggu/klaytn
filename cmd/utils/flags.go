@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/datasync/dbsyncer"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
@@ -48,6 +49,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func InitHelper() {
@@ -544,6 +546,80 @@ var (
 		Name:  "vtrecoveryinterval",
 		Usage: "Set the value transfer recovery interval (seconds)",
 		Value: 60,
+	}
+	// DBSyncer
+	EnableDBSyncerFlag = cli.BoolFlag{
+		Name:  "dbsyncer",
+		Usage: "Enable the DBSyncer",
+	}
+	DBHostFlag = cli.StringFlag{
+		Name:  "dbsyncer.db.host",
+		Usage: "db.host in dbsyncer",
+	}
+	DBPortFlag = cli.StringFlag{
+		Name:  "dbsyncer.db.port",
+		Usage: "db.port in dbsyncer",
+	}
+	DBNameFlag = cli.StringFlag{
+		Name:  "dbsyncer.db.name",
+		Usage: "db.name in dbsyncer",
+	}
+	DBUserFlag = cli.StringFlag{
+		Name:  "dbsyncer.db.user",
+		Usage: "db.user in dbsyncer",
+	}
+	DBPasswordFlag = cli.StringFlag{
+		Name:  "dbsyncer.db.password",
+		Usage: "db.password in dbsyncer",
+	}
+	EnabledLogModeFlag = cli.BoolFlag{
+		Name:  "dbsyncer.logmode",
+		Usage: "Enable the dbsyncer logmode",
+	}
+	MaxIdleConnsFlag = cli.IntFlag{
+		Name:  "dbsyncer.db.max.idle",
+		Usage: "The maximum number of connections in the idle connection pool",
+		Value: 50,
+	}
+	MaxOpenConnsFlag = cli.IntFlag{
+		Name:  "dbsyncer.db.max.open",
+		Usage: "The maximum number of open connections to the database",
+		Value: 30,
+	}
+	ConnMaxLifeTimeFlag = cli.DurationFlag{
+		Name:  "dbsyncer.db.max.lifetime",
+		Usage: "The maximum amount of time a connection may be reused (default : 1h), ex: 300ms, 2h45m, 60s, ...",
+		Value: 1 * time.Hour,
+	}
+	BlockSyncChannelSizeFlag = cli.IntFlag{
+		Name:  "dbsyncer.block.channel.size",
+		Usage: "Block received channel size",
+		Value: 5,
+	}
+	DBSyncerModeFlag = cli.StringFlag{
+		Name:  "dbsyncer.mode",
+		Usage: "The mode of dbsyncer is way which handle block/tx data to insert db (multi, single, context)",
+		Value: "multi",
+	}
+	GenQueryThreadFlag = cli.IntFlag{
+		Name:  "dbsyncer.genquery.th",
+		Usage: "The amount of thread of generation query in multi mode",
+		Value: 50,
+	}
+	InsertThreadFlag = cli.IntFlag{
+		Name:  "dbsyncer.insert.th",
+		Usage: "The amount of thread of insert operation in multi mode",
+		Value: 30,
+	}
+	BulkInsertSizeFlag = cli.IntFlag{
+		Name:  "dbsyncer.bulk.size",
+		Usage: "The amount of row for bulk-insert",
+		Value: 200,
+	}
+	EventModeFlag = cli.StringFlag{
+		Name:  "dbsyncer.event.mode",
+		Usage: "The way how to sync all block or last block (block, head)",
+		Value: "head",
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
@@ -1148,6 +1224,19 @@ func RegisterService(stack *node.Node, cfg *sc.SCConfig) {
 				subBridge, err := sc.NewSubBridge(ctx, cfg)
 				return subBridge, err
 			}
+		})
+		if err != nil {
+			log.Fatalf("Failed to register the service: %v", err)
+		}
+	}
+}
+
+// RegisterDBSyncerService adds a DBSyncer to the stack
+func RegisterDBSyncerService(stack *node.Node, cfg *dbsyncer.DBConfig) {
+	if cfg.EnabledDBSyncer {
+		err := stack.RegisterSubService(func(ctx *node.ServiceContext) (node.Service, error) {
+			dbImporter, err := dbsyncer.NewDBSyncer(ctx, cfg)
+			return dbImporter, err
 		})
 		if err != nil {
 			log.Fatalf("Failed to register the service: %v", err)

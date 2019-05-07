@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/datasync/dbsyncer"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
@@ -34,6 +35,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"reflect"
+	"strings"
 	"unicode"
 
 	"github.com/naoina/toml"
@@ -135,6 +137,64 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	return stack, cfg
 }
 
+func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
+	cfg := dbsyncer.DefaultDBConfig
+
+	if ctx.GlobalBool(utils.EnableDBSyncerFlag.Name) {
+		cfg.EnabledDBSyncer = true
+
+		if ctx.GlobalIsSet(utils.DBHostFlag.Name) {
+			dbhost := ctx.GlobalString(utils.DBHostFlag.Name)
+			cfg.DBHost = dbhost
+		}
+		if ctx.GlobalIsSet(utils.DBPortFlag.Name) {
+			dbports := ctx.GlobalString(utils.DBPortFlag.Name)
+			cfg.DBPort = dbports
+		}
+		if ctx.GlobalIsSet(utils.DBUserFlag.Name) {
+			dbuser := ctx.GlobalString(utils.DBUserFlag.Name)
+			cfg.DBUser = dbuser
+		}
+		if ctx.GlobalIsSet(utils.DBPasswordFlag.Name) {
+			dbpasswd := ctx.GlobalString(utils.DBPasswordFlag.Name)
+			cfg.DBPassword = dbpasswd
+		}
+		if ctx.GlobalIsSet(utils.DBNameFlag.Name) {
+			dbname := ctx.GlobalString(utils.DBNameFlag.Name)
+			cfg.DBName = dbname
+		}
+		if ctx.GlobalBool(utils.EnabledLogModeFlag.Name) {
+			cfg.EnabledLogMode = true
+		}
+		if ctx.GlobalIsSet(utils.MaxIdleConnsFlag.Name) {
+			cfg.MaxIdleConns = ctx.GlobalInt(utils.MaxIdleConnsFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.MaxOpenConnsFlag.Name) {
+			cfg.MaxOpenConns = ctx.GlobalInt(utils.MaxOpenConnsFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.ConnMaxLifeTimeFlag.Name) {
+			cfg.ConnMaxLifetime = ctx.GlobalDuration(utils.ConnMaxLifeTimeFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.DBSyncerModeFlag.Name) {
+			cfg.Mode = strings.ToLower(ctx.GlobalString(utils.DBSyncerModeFlag.Name))
+		}
+		if ctx.GlobalIsSet(utils.GenQueryThreadFlag.Name) {
+			cfg.GenQueryThread = ctx.GlobalInt(utils.GenQueryThreadFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.InsertThreadFlag.Name) {
+			cfg.InsertThread = ctx.GlobalInt(utils.InsertThreadFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.BulkInsertSizeFlag.Name) {
+			cfg.BulkInsertSize = ctx.GlobalInt(utils.BulkInsertSizeFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.EventModeFlag.Name) {
+			cfg.EventMode = strings.ToLower(ctx.GlobalString(utils.EventModeFlag.Name))
+		}
+	}
+
+	return *cfg
+}
+
 func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg := sc.SCConfig{
 		// TODO-Klaytn this value is temp for test
@@ -188,6 +248,9 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 	scfg.DataDir = cfg.Node.DataDir
 	scfg.Name = cfg.Node.Name
 	utils.RegisterService(stack, &scfg)
+
+	dbfg := makeDBSyncerConfig(ctx)
+	utils.RegisterDBSyncerService(stack, &dbfg)
 
 	return stack
 }

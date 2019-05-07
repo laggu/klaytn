@@ -122,6 +122,23 @@ var KENFlags = []cli.Flag{
 	utils.EnabledBridgeFlag,
 	utils.IsMainBridgeFlag,
 	utils.BridgeListenPortFlag,
+	// DBSyncer
+	utils.EnableDBSyncerFlag,
+	utils.DBHostFlag,
+	utils.DBPortFlag,
+	utils.DBNameFlag,
+	utils.DBUserFlag,
+	utils.DBPasswordFlag,
+	utils.EnabledLogModeFlag,
+	utils.MaxIdleConnsFlag,
+	utils.MaxOpenConnsFlag,
+	utils.ConnMaxLifeTimeFlag,
+	utils.BlockSyncChannelSizeFlag,
+	utils.DBSyncerModeFlag,
+	utils.GenQueryThreadFlag,
+	utils.InsertThreadFlag,
+	utils.BulkInsertSizeFlag,
+	utils.EventModeFlag,
 }
 
 var KSCNFlags = []cli.Flag{
