@@ -136,7 +136,7 @@ var (
 var (
 	// TODO-Klaytn Determine more practical values through actual running experience
 	TotalTimeLimit = 250 * time.Millisecond // Execution time limit for all txs in a block
-	OpcodeCntLimit = uint64(3000000)        // Opcode count limit for tx
+	OpcodeCntLimit = uint64(1000000)        // Opcode count limit for tx
 )
 
 // istanbul BFT
