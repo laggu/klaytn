@@ -490,7 +490,10 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 
 	output := tx.MakeRPCOutput()
 
-	output["senderTxHash"] = tx.SenderTxHash()
+	if h, ok := tx.SenderTxHash(); ok {
+		output["senderTxHash"] = h
+	}
+
 	output["blockHash"] = blockHash
 	output["blockNumber"] = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
 	output["from"] = from

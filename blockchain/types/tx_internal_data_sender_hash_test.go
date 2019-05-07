@@ -97,10 +97,12 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 
 	switch v := rawTx.data.(type) {
 	case *TxInternalDataLegacy:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataValueTransfer:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataFeeDelegatedValueTransfer:
 		hw := sha3.NewKeccak256()
@@ -118,7 +120,8 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataFeeDelegatedValueTransferWithRatio:
 		hw := sha3.NewKeccak256()
@@ -137,10 +140,12 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataValueTransferMemo:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataFeeDelegatedValueTransferMemo:
 		hw := sha3.NewKeccak256()
@@ -159,7 +164,8 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataFeeDelegatedValueTransferMemoWithRatio:
 		hw := sha3.NewKeccak256()
@@ -179,13 +185,16 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataAccountCreation:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataAccountUpdate:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataFeeDelegatedAccountUpdate:
 		serializer := accountkey.NewAccountKeySerializerWithAccountKey(v.Key)
@@ -204,7 +213,8 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataFeeDelegatedAccountUpdateWithRatio:
 		serializer := accountkey.NewAccountKeySerializerWithAccountKey(v.Key)
@@ -224,10 +234,12 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataSmartContractDeploy:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataFeeDelegatedSmartContractDeploy:
 		hw := sha3.NewKeccak256()
@@ -248,7 +260,8 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataFeeDelegatedSmartContractDeployWithRatio:
 		hw := sha3.NewKeccak256()
@@ -270,10 +283,12 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataSmartContractExecution:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataFeeDelegatedSmartContractExecution:
 		hw := sha3.NewKeccak256()
@@ -292,7 +307,8 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio:
 		hw := sha3.NewKeccak256()
@@ -312,10 +328,12 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataCancel:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataFeeDelegatedCancel:
 		hw := sha3.NewKeccak256()
@@ -331,7 +349,8 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataFeeDelegatedCancelWithRatio:
 		hw := sha3.NewKeccak256()
@@ -348,10 +367,12 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		h := common.Hash{}
 
 		hw.Sum(h[:0])
-		assert.Equal(t, h, rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	case *TxInternalDataChainDataAnchoring:
-		assert.Equal(t, rawTx.Hash(), rawTx.SenderTxHash())
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	default:
 		t.Fatal("Undefined tx type.")

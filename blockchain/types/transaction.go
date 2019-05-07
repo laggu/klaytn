@@ -119,13 +119,17 @@ func (tx *Transaction) ChainId() *big.Int {
 	return tx.data.ChainId()
 }
 
-func (tx *Transaction) SenderTxHash() common.Hash {
+func (tx *Transaction) SenderTxHash() (common.Hash, bool) {
+	if tx.Type().IsFeeDelegatedTransaction() == false {
+		// Do not compute SenderTxHash for non-fee-delegated txs
+		return common.Hash{}, false
+	}
 	if senderTxHash := tx.senderTxHash.Load(); senderTxHash != nil {
-		return senderTxHash.(common.Hash)
+		return senderTxHash.(common.Hash), tx.Type().IsFeeDelegatedTransaction()
 	}
 	v := tx.data.SenderTxHash()
 	tx.senderTxHash.Store(v)
-	return v
+	return v, tx.Type().IsFeeDelegatedTransaction()
 }
 
 func validateSignature(v, r, s *big.Int) bool {
