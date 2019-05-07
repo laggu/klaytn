@@ -186,7 +186,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	}
 	// Fail if we're trying to transfer more than the available balance
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
+		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
 	var (
@@ -411,7 +411,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
+		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 	// Ensure there's no existing contract already at the designated address
 	nonce := evm.StateDB.GetNonce(caller.Address())
@@ -468,7 +468,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 				err = ErrFailedOnSetCode
 			}
 		} else {
-			err = ErrCodeStoreOutOfGas // TODO-Klaytn-Issue136 // TODO-Klaytn-Issue615
+			err = ErrCodeStoreOutOfGas // TODO-Klaytn-Issue615
 		}
 	}
 

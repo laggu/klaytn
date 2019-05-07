@@ -445,7 +445,6 @@ func (pool *TxPool) GasPrice() *big.Int {
 	return new(big.Int).Set(pool.gasPrice)
 }
 
-// TODO-Klaytn-Issue136 gasPrice
 // SetGasPrice updates the minimum price required by the transaction pool for a
 // new transaction, and drops all transactions below this threshold.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
@@ -561,7 +560,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 	from := tx.ValidatedSender()
 
-	// TODO-Klaytn-Issue136
 	// 원격 트랜잭션이 drop 되어 버리는 문제를 해결하기 위해 주석 처리함. Andy
 	// Drop non-local transactions under our own minimal accepted gas price
 	// local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
@@ -573,7 +571,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrNonceTooLow
 	}
 
-	// TODO-Klaytn-Issue136
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	senderBalance := pool.getBalance(from)
@@ -622,7 +619,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
-	// TODO-Klaytn-Issue136
 	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
 	intrGas += gasFrom + gasFeePayer
 	if err != nil {
@@ -677,7 +673,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		logger.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
-	// TODO-Klaytn-Issue136
 	// If the transaction fails basic validation, discard it
 	if err := pool.validateTx(tx); err != nil {
 		logger.Trace("Discarding invalid transaction", "hash", hash, "err", err)
@@ -712,14 +707,12 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		}
 
 		// (4) discard underpriced transactions
-		// TODO-Klaytn-Issue136 gasPrice
 		// If the new transaction is underpriced, don't accept it
 		if !local && pool.priced.Underpriced(tx, pool.locals) {
 			logger.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
 			return false, ErrUnderpriced
 		}
-		// TODO-Klaytn-Issue136 gasPrice
 		// New transaction is better than our worse ones, make room for it
 		drop := pool.priced.Discard(len(pool.all)-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll-1), pool.locals)
 		for _, tx := range drop {
@@ -732,7 +725,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
-		inserted, old := list.Add(tx, pool.config.PriceBump) // TODO-Klaytn-Issue136 gasPrice
+		inserted, old := list.Add(tx, pool.config.PriceBump)
 		if !inserted {
 			pendingDiscardCounter.Inc(1)
 			return false, ErrReplaceUnderpriced
@@ -778,7 +771,7 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
-	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump) // TODO-Klaytn-Issue136 gasPrice
+	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump)
 	if !inserted {
 		// An older transaction was better, discard this
 		queuedDiscardCounter.Inc(1)

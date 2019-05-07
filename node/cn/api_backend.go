@@ -232,7 +232,7 @@ func (b *CNAPIBackend) ProtocolVersion() int {
 	return b.cn.ProtocolVersion()
 }
 
-func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) { // TODO-Klaytn-Issue136 gasPrice
+func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 

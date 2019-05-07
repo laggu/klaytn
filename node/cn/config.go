@@ -46,7 +46,7 @@ var DefaultConfig = Config{
 	TrieCacheSize:     256,
 	TrieTimeout:       5 * time.Minute,
 	TrieBlockInterval: blockchain.DefaultBlockInterval,
-	GasPrice:          big.NewInt(18 * params.Ston), // TODO-Klaytn-Issue136 default gasPrice
+	GasPrice:          big.NewInt(18 * params.Ston),
 
 	TxPool: blockchain.DefaultTxPoolConfig,
 	GPO: gasprice.Config{

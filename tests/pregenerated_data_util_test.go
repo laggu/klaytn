@@ -260,7 +260,6 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return errEmptyPending
 	}
 
-	// TODO-Klaytn-Issue136 gasPrice
 	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending)
 
 	// Set the block header

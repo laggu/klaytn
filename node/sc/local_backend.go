@@ -87,12 +87,12 @@ func (lb *LocalBackend) CallContract(ctx context.Context, call klaytn.CallMsg, b
 
 func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
 	// Set default gas & gas price if none were set
-	gas, gasPrice := uint64(call.Gas), call.GasPrice // TODO-Klaytn-Issue136 gasPrice
+	gas, gasPrice := uint64(call.Gas), call.GasPrice
 	if gas == 0 {
 		gas = math.MaxUint64 / 2
 	}
 	if gasPrice == nil || gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice) // TODO-Klaytn-Issue136 default gasPrice
+		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
 	intrinsicGas, err := types.IntrinsicGas(call.Data, call.To == nil, true)

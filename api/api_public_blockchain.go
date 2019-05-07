@@ -39,7 +39,7 @@ import (
 	"time"
 )
 
-const defaultGasPrice = 25 * params.Ston // TODO-Klaytn-Issue136 default gasPrice
+const defaultGasPrice = 25 * params.Ston
 const localTxExecutionTime = 5 * time.Second
 
 var logger = log.NewModuleLogger(log.API)
@@ -260,12 +260,12 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		}
 	}
 	// Set default gas & gas price if none were set
-	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt() // TODO-Klaytn-Issue136 gasPrice
+	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt()
 	if gas == 0 {
 		gas = math.MaxUint64 / 2
 	}
 	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice) // TODO-Klaytn-Issue136 default gasPrice
+		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
 	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, true)

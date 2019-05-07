@@ -38,7 +38,7 @@ func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
 }
 
 // GasPrice returns a suggestion for a gas price.
-func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*big.Int, error) { // TODO-Klaytn-Issue136 gasPrice
+func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*big.Int, error) {
 	return s.b.SuggestPrice(ctx)
 }
 

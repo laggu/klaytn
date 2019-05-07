@@ -277,7 +277,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 					}
 					txs[acc] = append(txs[acc], tx)
 				}
-				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs) // TODO-Klaytn-Issue136 gasPrice
+				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
 				self.current.commitTransactions(self.mux, txset, self.chain, self.rewardbase)
 				self.updateSnapshot()
 				self.current.stateMu.Unlock()
@@ -512,7 +512,7 @@ func (self *worker) commitNewWork() {
 
 	// Create the current work task
 	work := self.current
-	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending) // TODO-Klaytn-Issue136 gasPrice
+	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 
 	// Create the new block to seal with the consensus engine
@@ -639,7 +639,6 @@ CommitTransactionLoop:
 
 		err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		switch err {
-		// TODO-Klaytn-Issue136
 		case blockchain.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)

@@ -224,15 +224,13 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 				extraSize = memorySize - allocatedMemorySize
 			}
 		}
-		// TODO-Klaytn-Issue136
 		// Dynamic portion of gas
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
 		if operation.dynamicGas != nil {
-			// TODO-Klaytn-Issue136
 			cost, err = operation.dynamicGas(in.gasTable, in.evm, contract, stack, mem, memorySize)
 			if err != nil || !contract.UseGas(cost) {
-				return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue136 TODO-Klaytn-Issue615
+				return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue615
 			}
 		}
 		if extraSize > 0 {
