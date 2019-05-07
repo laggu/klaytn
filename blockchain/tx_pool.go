@@ -703,7 +703,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		if maxTx != tx {
 			// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
 			pool.removeTx(maxTx.Hash(), true)
-			logger.Info("Removing an old Tx with the max nonce to insert a new Tx with missing nonce, because TxPool is full", "account", from, "new nonce(previously missing)", tx.Nonce(), "removed max nonce", maxTx.Nonce())
+			logger.Trace("Removing an old Tx with the max nonce to insert a new Tx with missing nonce, because TxPool is full", "account", from, "new nonce(previously missing)", tx.Nonce(), "removed max nonce", maxTx.Nonce())
 		} else {
 			// (3) discard a new Tx if the new Tx does not have a missing nonce
 			logger.Trace("Rejecting a new Tx, because TxPool is full and a new TX does not have missing nonce", "hash", tx.Hash())
