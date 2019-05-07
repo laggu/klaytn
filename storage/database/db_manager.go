@@ -172,15 +172,11 @@ const (
 	headerDB DBEntryType = iota
 	BodyDB
 	ReceiptsDB
-
 	StateTrieDB
 	TxLookUpEntryDB
-
 	MiscDB
-
 	bridgeServiceDB
 
-	snapshotDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -192,9 +188,7 @@ var dbDirs = [databaseEntryTypeSize]string{
 	"statetrie",
 	"txlookup",
 	"misc",
-
 	"bridgeservice",
-	"snapshot",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -203,11 +197,10 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	6,  // headerDB
 	21, // BodyDB
 	21, // ReceiptsDB
-	21, // StateTrieDB
+	23, // StateTrieDB
 	21, // TXLookUpEntryDB
 	3,  // MiscDB
 	5,  // bridgeServiceDB
-	2,  // snapshotDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -1008,12 +1001,12 @@ func (dbm *databaseManager) FindCommonAncestor(a, b *types.Header) *types.Header
 
 // Istanbul Snapshot operations.
 func (dbm *databaseManager) ReadIstanbulSnapshot(hash common.Hash) ([]byte, error) {
-	db := dbm.getDatabase(snapshotDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Get(snapshotKey(hash))
 }
 
 func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) error {
-	db := dbm.getDatabase(snapshotDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Put(snapshotKey(hash), blob)
 }
 
@@ -1451,11 +1444,11 @@ func (dbm *databaseManager) ReadTxReceiptInCache(txHash common.Hash) *types.Rece
 }
 
 func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error {
-	db := dbm.getDatabase(snapshotDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot)
 }
 
 func (dbm *databaseManager) ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error) {
-	db := dbm.getDatabase(snapshotDB)
+	db := dbm.getDatabase(MiscDB)
 	return db.Get(snapshotKey(snapshotBlockHash))
 }
