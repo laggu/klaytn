@@ -464,12 +464,12 @@ func TestStakingInfoCache_Get(t *testing.T) {
 
 func TestCalcGiniCoefficient(t *testing.T) {
 	testCase := []struct {
-		testdata []*big.Int
+		testdata []uint64
 		result   float64
 	}{
-		{[]*big.Int{big.NewInt(1), big.NewInt(1), big.NewInt(1)}, 0.0},
-		{[]*big.Int{big.NewInt(0), big.NewInt(8), big.NewInt(0), big.NewInt(0), big.NewInt(0)}, 0.8},
-		{[]*big.Int{big.NewInt(5), big.NewInt(4), big.NewInt(3), big.NewInt(2), big.NewInt(1)}, 0.27},
+		{[]uint64{1, 1, 1}, 0.0},
+		{[]uint64{0, 8, 0, 0, 0}, 0.8},
+		{[]uint64{5, 4, 3, 2, 1}, 0.27},
 	}
 
 	for i := 0; i < len(testCase); i++ {
@@ -483,26 +483,26 @@ func TestCalcGiniCoefficient(t *testing.T) {
 
 func TestGiniReflectToExpectedCCO(t *testing.T) {
 	testCase := []struct {
-		ccoToken        []*big.Int
+		ccoToken        []uint64
 		beforeReflected []float64
 		adjustment      []float64
 		afterReflected  []float64
 	}{
-		{[]*big.Int{big.NewInt(66666667), big.NewInt(233333333), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
-			big.NewInt(77777778), big.NewInt(5000000), big.NewInt(33333333), big.NewInt(20000000), big.NewInt(16666667),
-			big.NewInt(10000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
-			big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
-			big.NewInt(5000000),
+		{[]uint64{66666667, 233333333, 5000000, 5000000, 5000000,
+			77777778, 5000000, 33333333, 20000000, 16666667,
+			10000000, 5000000, 5000000, 5000000, 5000000,
+			5000000, 5000000, 5000000, 5000000, 5000000,
+			5000000,
 		},
 			[]float64{13, 44, 1, 1, 1, 15, 1, 6, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			[]float64{42612, 89426, 9202, 9202, 9202, 46682, 9202, 28275, 20900, 18762, 13868, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202},
 			[]float64{11, 23, 2, 2, 2, 12, 2, 7, 5, 5, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
 		},
-		{[]*big.Int{big.NewInt(400000000), big.NewInt(233333333), big.NewInt(233333333), big.NewInt(150000000), big.NewInt(108333333),
-			big.NewInt(83333333), big.NewInt(66666667), big.NewInt(33333333), big.NewInt(20000000), big.NewInt(16666667),
-			big.NewInt(10000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
-			big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000), big.NewInt(5000000),
-			big.NewInt(5000000),
+		{[]uint64{400000000, 233333333, 233333333, 150000000, 108333333,
+			83333333, 66666667, 33333333, 20000000, 16666667,
+			10000000, 5000000, 5000000, 5000000, 5000000,
+			5000000, 5000000, 5000000, 5000000, 5000000,
+			5000000,
 		},
 			[]float64{28, 17, 17, 11, 8, 6, 5, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			[]float64{123020, 89426, 89426, 68853, 56793, 48627, 42612, 28275, 20900, 18762, 13868, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202},
@@ -512,9 +512,6 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 	for i := 0; i < len(testCase); i++ {
 		stakingInfo, _ := newEmptyStakingInfo(nil, uint64(1))
 		stakingInfo.CouncilStakingAmounts = testCase[i].ccoToken
-		for j := 0; j < len(stakingInfo.CouncilStakingAmounts); j++ {
-			stakingInfo.CouncilStakingAmounts[j].Mul(stakingInfo.CouncilStakingAmounts[j], big.NewInt(params.KLAY))
-		}
 		stakingInfo.Gini = calcGiniCoefficient(testCase[i].ccoToken)
 
 		stakingAmounts, totalAmount := stakingInfo.GetStakingAmountsAndTotalStaking()

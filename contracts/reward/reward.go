@@ -62,7 +62,7 @@ type StakingInfo struct {
 	Gini    float64 // gini coefficient
 
 	// Derived from CouncilStakingAddrs
-	CouncilStakingAmounts []*big.Int // Staking amounts of Council
+	CouncilStakingAmounts []uint64 // Staking amounts of Council
 }
 
 func (s *StakingInfo) String() string {
@@ -108,8 +108,14 @@ func (s *StakingInfo) String() string {
 	str = append(str, kirAddr)
 
 	// stakingAmounts
-	stakingAmounts := fmt.Sprintf(", CouncilStakingAmounts:%v }", s.CouncilStakingAmounts)
+	stakingAmounts := fmt.Sprintf(", CouncilStakingAmounts:%v", s.CouncilStakingAmounts)
 	str = append(str, stakingAmounts)
+
+	gini := fmt.Sprintf(", Gini:%v", s.Gini)
+	str = append(str, gini)
+
+	useGini := fmt.Sprintf(", useGini:%v }", s.useGini)
+	str = append(str, useGini)
 
 	return strings.Join(str, " ")
 }
@@ -123,12 +129,12 @@ func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) int {
 	return -1
 }
 
-func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) *big.Int {
+func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) uint64 {
 	i := s.GetIndexByNodeId(nodeId)
 	if i != -1 {
 		return s.CouncilStakingAmounts[i]
 	}
-	return nil
+	return 0
 }
 
 func (s *StakingInfo) GetStakingAmountsAndTotalStaking() ([]float64, float64) {
@@ -137,7 +143,7 @@ func (s *StakingInfo) GetStakingAmountsAndTotalStaking() ([]float64, float64) {
 	stakingAmountLen := len(s.CouncilStakingAmounts)
 	stakingAmounts = make([]float64, stakingAmountLen)
 	for i := 0; i < stakingAmountLen; i++ {
-		tempStakingAmount := float64(big.NewInt(0).Div(s.CouncilStakingAmounts[i], big.NewInt(params.KLAY)).Int64())
+		tempStakingAmount := float64(s.CouncilStakingAmounts[i])
 		if s.useGini {
 			tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+s.Gini)))
 		}
@@ -442,6 +448,14 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 	return stakingInfo, nil
 }
 
+const (
+	maxStakingLimit = uint64(100000000000)
+)
+
+var (
+	maxStakingLimitBigInt = big.NewInt(0).SetUint64(maxStakingLimit)
+)
+
 func newEmptyStakingInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
@@ -450,7 +464,7 @@ func newEmptyStakingInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 		CouncilRewardAddrs:    make([]common.Address, 0, 0),
 		KIRAddr:               common.Address{},
 		PoCAddr:               common.Address{},
-		CouncilStakingAmounts: make([]*big.Int, 0, 0),
+		CouncilStakingAmounts: make([]uint64, 0, 0),
 		Gini:                  0.0,
 		useGini:               false,
 	}
@@ -470,10 +484,14 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 	}
 
 	// Get balance of rewardAddrs
-	var stakingAmounts []*big.Int
-	stakingAmounts = make([]*big.Int, len(stakingAddrs))
+	var stakingAmounts []uint64
+	stakingAmounts = make([]uint64, len(stakingAddrs))
 	for i, stakingAddr := range stakingAddrs {
-		stakingAmounts[i] = statedb.GetBalance(stakingAddr)
+		tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KLAY))
+		if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
+			tempStakingAmount.SetUint64(maxStakingLimit)
+		}
+		stakingAmounts[i] = tempStakingAmount.Uint64()
 	}
 
 	useGini := bc.Config().Governance.Reward.UseGiniCoeff
@@ -496,15 +514,15 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 	return stakingInfo, nil
 }
 
-func calcGiniCoefficient(stakingAmount []*big.Int) float64 {
-	var sortedStakingAmount []*big.Int
-	sortedStakingAmount = make([]*big.Int, len(stakingAmount))
+func calcGiniCoefficient(stakingAmount []uint64) float64 {
+	var sortedStakingAmount []uint64
+	sortedStakingAmount = make([]uint64, len(stakingAmount))
 
 	// insertion sort
 	for i := 0; i < len(stakingAmount); i++ {
 		j := i
 		for j > 0 {
-			if sortedStakingAmount[j-1].Cmp(stakingAmount[i]) > 0 {
+			if sortedStakingAmount[j-1] > stakingAmount[i] {
 				sortedStakingAmount[j] = sortedStakingAmount[j-1]
 				j--
 			} else {
@@ -515,29 +533,20 @@ func calcGiniCoefficient(stakingAmount []*big.Int) float64 {
 	}
 
 	// calculate gini coefficient
-	sumOfAbsoluteDifferences := big.NewInt(0)
-	subSum := big.NewInt(0)
+	sumOfAbsoluteDifferences := uint64(0)
+	subSum := uint64(0)
 
 	for i, x := range sortedStakingAmount {
-		temp := big.NewInt(0).Set(x)
-		temp = temp.Mul(temp, big.NewInt(int64(i)))
-		temp = temp.Sub(temp, subSum)
+		temp := x*uint64(i) - subSum
 
-		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences.Add(sumOfAbsoluteDifferences, temp)
-		subSum = subSum.Add(subSum, x)
+		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences + temp
+		subSum = subSum + x
 	}
 
-	result := new(big.Float).SetInt(sumOfAbsoluteDifferences)
-	result = result.Quo(result, new(big.Float).SetInt(subSum))
+	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(sortedStakingAmount))
+	result = math.Round(result*100) / 100
 
-	lenOfStakingAmount := big.NewFloat(float64(len(sortedStakingAmount)))
-	result = result.Quo(result, lenOfStakingAmount)
-
-	// type convert to float64 and round. make the result like 0.**
-	resultFloat64, _ := result.Float64()
-	resultFloat64 = math.Round(resultFloat64*100) / 100
-
-	return resultFloat64
+	return result
 }
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
