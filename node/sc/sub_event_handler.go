@@ -110,21 +110,9 @@ func (cce *ChildChainEventHandler) HandleHandleValueTransferEvent(ev TokenTransf
 	return nil
 }
 
-// GetChildChainIndexingEnabled returns the current child chain indexing configuration.
-func (cce *ChildChainEventHandler) GetChildChainIndexingEnabled() bool {
-	return cce.subbridge.chainDB.ChildChainIndexingEnabled()
-}
-
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
 // ChainHashes, with the key made with given child chain block hash.
 // Index is built when child chain indexing is enabled.
 func (cce *ChildChainEventHandler) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	return cce.subbridge.chainDB.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
-}
-
-// WriteChildChainTxHash stores a transaction hash of a transaction which contains
-// ChainHashes, with the key made with given child chain block hash.
-// Index is built when child chain indexing is enabled.
-func (cce *ChildChainEventHandler) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
-	cce.subbridge.chainDB.WriteChildChainTxHash(ccBlockHash, ccTxHash)
 }

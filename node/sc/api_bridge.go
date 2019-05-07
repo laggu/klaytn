@@ -64,10 +64,6 @@ type SubBridgeAPI struct {
 	sc *SubBridge
 }
 
-func (sbapi *SubBridgeAPI) GetChildChainIndexingEnabled() bool {
-	return sbapi.sc.eventhandler.GetChildChainIndexingEnabled()
-}
-
 func (sbapi *SubBridgeAPI) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
 	return sbapi.sc.eventhandler.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 }
