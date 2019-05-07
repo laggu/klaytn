@@ -416,9 +416,10 @@ func gen(ctx *cli.Context) error {
 func downLoadGrafanaJson() {
 	for _, file := range GrafanaFiles {
 		resp, err := http.Get(file.url)
-		if err != nil || resp.StatusCode != 200 {
-			fmt.Printf("Failed to download the imgs dashboard file(%s) [%s] - %v\n", file.url,
-				resp.Status, err)
+		if err != nil {
+			fmt.Printf("Failed to download the imgs dashboard file(%s) - %v\n", file.url, err)
+		} else if resp.StatusCode != 200 {
+			fmt.Printf("Failed to download the imgs dashboard file(%s) [%s] - %v\n", file.url, resp.Status, err)
 		} else {
 			bytes, e := ioutil.ReadAll(resp.Body)
 			if e != nil {
