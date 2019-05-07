@@ -595,8 +595,11 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 			}
 
 			if timeout && evm != nil {
-				// The total time limit reached, thus we stop the currently running EVM.
-				evm.Cancel(vm.CancelByTotalTimeLimit)
+				// Allow the first transaction to complete although it exceeds the time limit.
+				if env.tcount > 0 {
+					// The total time limit reached, thus we stop the currently running EVM.
+					evm.Cancel(vm.CancelByTotalTimeLimit)
+				}
 				evm = nil
 			}
 		}
