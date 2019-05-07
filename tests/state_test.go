@@ -51,6 +51,8 @@ func TestState(t *testing.T) {
 	st.skipLoad(`^stStaticCall/static_CallIdentity_1_nonzeroValue.json`)
 	st.skipLoad(`^stStaticCall/static_CallSha256_1_nonzeroValue.json`)
 	st.skipLoad(`^stArgsZeroOneBalance/callNonConst.json`)
+	st.skipLoad(`^stPreCompiledContracts2/modexpRandomInput.json`)
+	st.skipLoad(`^stRandom2/randomStatetest642.json`)
 
 	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
 		for _, subtest := range test.Subtests() {

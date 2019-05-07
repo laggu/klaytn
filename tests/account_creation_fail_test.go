@@ -336,9 +336,9 @@ func TestAccountCreationFailBlock(t *testing.T) {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	var txs types.Transactions
 	// 1. Create an account decoupled using TxTypeAccountCreation.
 	{
+		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
@@ -359,11 +359,15 @@ func TestAccountCreationFailBlock(t *testing.T) {
 
 		txs = append(txs, tx)
 
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
 		reservoir.Nonce += 1
 	}
 
 	// 2. Create the same account decoupled using TxTypeAccountCreation again.
 	{
+		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
@@ -384,13 +388,8 @@ func TestAccountCreationFailBlock(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		reservoir2.Nonce += 1
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountAlreadyExists, err)
 	}
-
-	_, receipts, err := bcdata.MineABlock(txs, signer, prof)
-	assert.Equal(t, nil, err)
-
-	assert.Equal(t, types.ReceiptStatusSuccessful, receipts[0].Status)
-	// The second transaction should be failed with the error `AddressAlreadyExists`.
-	assert.Equal(t, types.ReceiptStatusErrAddressAlreadyExists, receipts[1].Status)
 }

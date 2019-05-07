@@ -428,18 +428,13 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) FillContractAddress(from
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
-	if err := t.Validate(stateDB, currentBlockNumber); err != nil {
-		stateDB.IncNonce(sender.Address())
-		return nil, 0, err
-	}
-
+	// Sender's nonce will be increased in '`vm.Create()` or `vm.CreateWithAddress()`
 	if t.Recipient == nil {
 		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, t.CodeFormat)
 	} else {
 		ret, _, usedGas, err = vm.CreateWithAddress(sender, t.Payload, gas, value, *t.Recipient, t.HumanReadable, t.CodeFormat)
 	}
-
-	return
+	return ret, usedGas, err
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) MakeRPCOutput() map[string]interface{} {

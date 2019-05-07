@@ -450,10 +450,8 @@ func TestHumanReadableAddress(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNotHumanReadableAddress, receipt.Status)
-
-		reservoir.Nonce += 1
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 	}
 
 	if testing.Verbose() {
@@ -537,10 +535,8 @@ func TestAccountCreationWithNilKey(t *testing.T) {
 		txs = append(txs, tx)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
-
-		reservoir.Nonce += 1
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
 
 	if testing.Verbose() {
@@ -782,8 +778,8 @@ func TestTransactionScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrAddressAlreadyExists, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountAlreadyExists, err)
 	}
 
 	// 3. Transfer (reservoir -> decoupled) using TxTypeValueTransfer.
@@ -1272,8 +1268,8 @@ func TestSmartContractDeployNonHumanReadableAddressFail(t *testing.T) {
 
 		// check receipt
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNotHumanReadableAddress, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 	}
 }
 
@@ -1469,8 +1465,9 @@ func TestSmartContractMalicious(t *testing.T) {
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyData:     []byte{},
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)

@@ -101,7 +101,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 
 	// a default recipient address of smart contract execution to "contract"
 	var contractAddr common.Address
-	contractAddr.SetBytesFromFront([]byte("contract"))
+	contractAddr.SetBytesFromFront([]byte("contract.klaytn"))
 
 	// Smart contract data for TxTypeSmartContractDeploy, TxTypeSmartContractExecution Txs
 	var code string
@@ -745,10 +745,8 @@ func TestAccountCreationMultiSigKeyBigThreshold(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrUnsatisfiableThreshold, receipt.Status)
-
-		reservoir.Nonce += 1
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrUnsatisfiableThreshold, err)
 	}
 
 	if testing.Verbose() {
@@ -842,8 +840,8 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 	}
 
 	// 2. A key for the second role, RoleAccountUpdate, is nested.
@@ -881,9 +879,8 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
-
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 	}
 
 	// 3. A key for the third role, RoleFeePayer, is nested.
@@ -921,8 +918,8 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 	}
 
 	if testing.Verbose() {
@@ -1031,8 +1028,8 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNestedRoleBasedKey, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 	}
 
 	if testing.Verbose() {
@@ -1114,8 +1111,8 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrLengthTooLong, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrLengthTooLong, err)
 	}
 
 	// 2. try to create an account with a RoleBased key which contains 0 sub-key.
@@ -1141,8 +1138,8 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrZeroLength, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrZeroLength, err)
 	}
 
 	if testing.Verbose() {
@@ -1224,10 +1221,8 @@ func TestAccountCreationMultiSigKeyDupPrvKeys(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrDuplicatedKey, receipt.Status)
-
-		reservoir.Nonce += 1
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrDuplicatedKey, err)
 	}
 
 	if testing.Verbose() {
@@ -1314,10 +1309,8 @@ func TestAccountCreationMultiSigKeyWeightOverflow(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrWeightedSumOverflow, receipt.Status)
-
-		reservoir.Nonce += 1
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrWeightedSumOverflow, err)
 	}
 
 	if testing.Verbose() {
@@ -1400,8 +1393,8 @@ func TestAccountCreationHumanReadableFail(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNotHumanReadableAddress, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 	}
 
 	// 2. The first character of the address is a number.
@@ -1437,8 +1430,8 @@ func TestAccountCreationHumanReadableFail(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrNotHumanReadableAddress, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 	}
 
 	// 3. A valid address, "humanReadable"
@@ -1560,8 +1553,8 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
 
 	// 2. a RoleBased key contains an AccountKeyNil type sub-key as a second sub-key. (fail)
@@ -1591,8 +1584,8 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
 
 	// 3. a RoleBased key contains an AccountKeyNil type sub-key as a third sub-key. (fail)
@@ -1622,8 +1615,8 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
 
 	// 4. a RoleBased key contains an AccountKeyFail type sub-key as a first sub-key. (success)
@@ -1802,7 +1795,6 @@ func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
 	// new account key will replace the old account key
 	newRoleBasedAccKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
 		accountkey.NewAccountKeyPublicWithValue(&newTxKey.PublicKey),
-		accountkey.NewAccountKeyNil(),
 		accountkey.NewAccountKeyNil(),
 	})
 

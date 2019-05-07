@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -361,8 +362,8 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
 
 	// 3. Update key to RoleBasedKey. If anyone is AccountKeyNil, it should fail. Second nil key.
@@ -388,8 +389,8 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrAccountKeyNilUninitializable, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
 }
 
@@ -492,8 +493,8 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrLengthTooLong, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrLengthTooLong, err)
 	}
 
 	// 3. Update key to RoleBasedKey with zero role. It should fail.
@@ -514,8 +515,8 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusErrZeroLength, receipt.Status)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, kerrors.ErrZeroLength, err)
 	}
 }
 

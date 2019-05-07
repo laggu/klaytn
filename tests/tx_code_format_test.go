@@ -21,6 +21,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -76,20 +77,25 @@ func TestCodeFormat(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	testCodeFormat := func(tx *types.Transaction, state uint) {
+	testCodeFormat := func(tx *types.Transaction, state error) {
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, receipt.Status, state)
-		assert.Equal(t, nil, err)
+		if err != nil {
+			assert.Equal(t, state, err)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+		} else {
+			assert.Equal(t, nil, err)
+			assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+		}
 	}
 
 	for _, f := range testFunctions {
 		codeFormat := params.CodeFormatEVM
-		state := types.ReceiptStatusSuccessful
+		state := error(nil)
 		var tx *types.Transaction
 
 		if strings.Contains(f.Name, "WithInvalid") {
 			codeFormat = params.CodeFormatLast
-			state = types.ReceiptStatusErrInvalidCodeFormat
+			state = kerrors.ErrInvalidCodeFormat
 		}
 
 		if strings.Contains(f.Name, "FeeDelegated") {

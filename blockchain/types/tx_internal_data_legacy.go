@@ -376,18 +376,13 @@ func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Recei
 }
 
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
-	if err := t.Validate(stateDB, currentBlockNumber); err != nil {
-		stateDB.IncNonce(sender.Address())
-		return nil, 0, err
-	}
-
 	if t.Recipient == nil {
+		// Sender's nonce will be increased in '`vm.Create()`
 		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, params.CodeFormatEVM)
 	} else {
 		stateDB.IncNonce(sender.Address())
 		ret, usedGas, err = vm.Call(sender, *t.Recipient, t.Payload, gas, value)
 	}
-
 	return ret, usedGas, err
 }
 

@@ -103,6 +103,9 @@ type Message interface {
 	// Type returns the transaction type of the message.
 	Type() types.TxType
 
+	// Validate performs additional validation for each transaction type
+	Validate(stateDB types.StateDB, currentBlockNumber uint64) error
+
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 }
@@ -213,6 +216,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return
 	}
 	msg := st.msg
+	blockNumber := st.evm.BlockNumber.Uint64()
+
+	// Additional validation for each transaction type before execution
+	if err := msg.Validate(st.state, blockNumber); err != nil {
+		kerr.ErrTxInvalid = err
+		kerr.Status = getReceiptStatusFromErrTxFailed(nil)
+		return nil, 0, kerr
+	}
 
 	// Pay intrinsic gas.
 	if kerr.ErrTxInvalid = st.useGas(msg.ValidatedIntrinsicGas()); kerr.ErrTxInvalid != nil {
@@ -227,7 +238,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		errTxFailed error
 	)
 
-	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
+	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, blockNumber, st.gas, st.value)
 
 	if errTxFailed != nil {
 		logger.Debug("VM returned with error", "err", errTxFailed)

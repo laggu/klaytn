@@ -479,16 +479,10 @@ func (t *TxInternalDataAccountCreation) ValidateMutableValue(stateDB StateDB) bo
 }
 
 func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
-	if err := t.Validate(stateDB, currentBlockNumber); err != nil {
-		stateDB.IncNonce(sender.Address())
-		return nil, 0, err
-	}
 	to := t.Recipient
-	stateDB.CreateEOA(to, t.HumanReadable, t.Key)
 	stateDB.IncNonce(sender.Address())
-	ret, usedGas, err = vm.Call(sender, to, []byte{}, gas, value)
-
-	return
+	stateDB.CreateEOA(to, t.HumanReadable, t.Key)
+	return vm.Call(sender, to, []byte{}, gas, value)
 }
 
 func (t *TxInternalDataAccountCreation) MakeRPCOutput() map[string]interface{} {
