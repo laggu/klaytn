@@ -351,7 +351,7 @@ contract MultisigBase {
     /*
      * Getter functions
      */
-    /// @dev 현재 adminList 반환
+    /// @dev return current adminList
     function getAdminInfo() public view returns(address[]) {
         return (adminList);
     }
@@ -490,7 +490,7 @@ contract InitContract is MultisigBase {
         require(isInitialized == false); 
         require(bytes(_branchName).length > 0);
 
-        //adminList 검증
+        // adminList validation
         for (uint i = 0; i < _adminList.length; i++) {
             require(!isAdmin[_adminList[i]] && _adminList[i] != 0);
             isAdmin[_adminList[i]] = true;

@@ -560,12 +560,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 	from := tx.ValidatedSender()
 
-	// 원격 트랜잭션이 drop 되어 버리는 문제를 해결하기 위해 주석 처리함. Andy
-	// Drop non-local transactions under our own minimal accepted gas price
-	// local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
-	// if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
-	// 	return ErrUnderpriced
-	// }
 	// Ensure the transaction adheres to nonce ordering
 	if pool.getNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
