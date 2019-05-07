@@ -949,35 +949,6 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	return err
 }
 
-// handleServiceChainTxDataMsg handles service chain transactions from child chain.
-// It will return an error if given tx is not TxTypeChainDataAnchoring type.
-func handleServiceChainTxDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
-	//pm.txMsgLock.Lock()
-	// Transactions can be processed, parse all of them and deliver to the pool
-	var txs []*types.Transaction
-	if err := msg.Decode(&txs); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-
-	// Only valid txs should be pushed into the pool.
-	validTxs := make([]*types.Transaction, 0, len(txs))
-	var err error
-	for i, tx := range txs {
-		if tx == nil {
-			err = errResp(ErrDecode, "tx %d is nil", i)
-			continue
-		}
-		if tx.Type() != types.TxTypeChainDataAnchoring {
-			err = errResp(ErrUnexpectedTxType, "tx %d should be TxTypeChainDataAnchoring, but %s", i, tx.Type())
-			continue
-		}
-		p.AddToKnownTxs(tx.Hash())
-		validTxs = append(validTxs, tx)
-	}
-	pm.txpool.AddRemotes(validTxs)
-	return err
-}
-
 // getPeersWithoutBlock returns a list of peers without given block.
 // If current node is CN, it returns all peers without block.
 // If not, it returns all peers without block except CNs.
