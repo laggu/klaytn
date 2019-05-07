@@ -21,10 +21,17 @@
 package sc
 
 import (
+	"errors"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"os"
+)
+
+var (
+	errNoActiveAddressJournal = errors.New("no active address journal")
+	errDuplicatedJournal      = errors.New("duplicated journal is inserted")
+	errEmptyBridgeAddress     = errors.New("empty bridge address is not allowed")
 )
 
 // bridgeAddrJournal is a rotating log of addresses with the aim of storing locally
@@ -33,7 +40,7 @@ type bridgeAddrJournal struct {
 	path   string // Filesystem path to store the addresses at
 	config *SCConfig
 	writer io.WriteCloser // Output stream to write new addresses into
-	cache  []*BridgeJournal
+	cache  map[common.Address]*BridgeJournal
 }
 
 // newBridgeAddrJournal creates a new bridge addr journal to
@@ -41,7 +48,7 @@ func newBridgeAddrJournal(path string, config *SCConfig) *bridgeAddrJournal {
 	return &bridgeAddrJournal{
 		path:   path,
 		config: config,
-		cache:  []*BridgeJournal{},
+		cache:  make(map[common.Address]*BridgeJournal),
 	}
 }
 
@@ -93,23 +100,31 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 }
 
 // insert adds the specified address to the local disk journal.
-func (journal *bridgeAddrJournal) insert(localAddress common.Address, remoteAddress common.Address, paired bool) error {
+func (journal *bridgeAddrJournal) insert(localAddress common.Address, remoteAddress common.Address) error {
 	if !journal.config.VTRecovery {
 		logger.Debug("Value Transfer Recovery journal is disabled")
 		return nil
 	}
-	if journal.writer == nil {
-		return errNoActiveJournal
+	if journal.cache[localAddress] != nil {
+		return errDuplicatedJournal
 	}
+	if journal.writer == nil {
+		return errNoActiveAddressJournal
+	}
+	empty := common.Address{}
+	if localAddress == empty || remoteAddress == empty {
+		return errEmptyBridgeAddress
+	}
+	// TODO-Klaytn-ServiceChain: support false paired
 	item := BridgeJournal{
 		localAddress,
 		remoteAddress,
-		paired,
+		true,
 	}
 	if err := rlp.Encode(journal.writer, &item); err != nil {
 		return err
 	}
-	journal.cache = append(journal.cache, &item)
+	journal.cache[localAddress] = &item
 	return nil
 }
 

@@ -117,8 +117,17 @@ func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.
 		return err
 	}
 
+	err = sbapi.sc.bridgeManager.AddJournal(cBridgeAddr, pBridgeAddr)
+	if err != nil {
+		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
+		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
+		sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
+		return err
+	}
+
 	err = sbapi.sc.bridgeManager.AddRecovery(cBridgeAddr, pBridgeAddr)
 	if err != nil {
+		// TODO-Klaytn-ServiceChain: delete the journal
 		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 		sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)

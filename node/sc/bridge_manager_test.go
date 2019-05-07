@@ -18,6 +18,7 @@ package sc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/accounts/abi/bind/backends"
@@ -28,7 +29,7 @@ import (
 	"github.com/ground-x/klaytn/contracts/servicechain_token"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
-	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"math/big"
 	"os"
@@ -427,8 +428,8 @@ func TestBridgeManager(t *testing.T) {
 	bridgeManager.Stop()
 }
 
-// TestBridgeManagerJournal tests journal functionality.
-func TestBridgeManagerJournal(t *testing.T) {
+// TestBasicJournal tests basic journal functionality.
+func TestBasicJournal(t *testing.T) {
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -505,8 +506,7 @@ func TestBridgeManagerJournal(t *testing.T) {
 		make(chan struct{}),
 		make(chan struct{}),
 	}
-	bm.journal.cache = []*BridgeJournal{}
-	bm.journal.cache = append(bm.journal.cache, &BridgeJournal{addr, addr, true})
+	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 
 	bm.SubscribeEvent(addr)
 	bm.UnsubscribeEvent(addr)
@@ -564,6 +564,184 @@ func TestBridgeManagerJournal(t *testing.T) {
 	}
 
 	wg.Wait()
+
+	bm.Stop()
+}
+
+// TestMethodGetAllBridge tests a method GetAllBridge.
+func TestMethodGetAllBridge(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	sc := &SubBridge{
+		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		peers:  newBridgePeerSet(),
+	}
+	bm, err := NewBridgeManager(sc)
+	if err != nil {
+		t.Fatalf("fail to create bridge manager %v", err)
+	}
+
+	testBridge1 := common.BytesToAddress([]byte("test1"))
+	testBridge2 := common.BytesToAddress([]byte("test2"))
+
+	bm.journal.insert(testBridge1, testBridge2)
+	bm.journal.insert(testBridge2, testBridge1)
+
+	bridges := bm.GetAllBridge()
+	assert.Equal(t, 2, len(bridges))
+
+	bm.Stop()
+}
+
+// TestErrorDuplication tests if duplication of journal insertion is ignored or not.
+func TestErrorDuplication(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	sc := &SubBridge{
+		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		peers:  newBridgePeerSet(),
+	}
+	bm, err := NewBridgeManager(sc)
+	if err != nil {
+		t.Fatalf("fail to create bridge manager %v", err)
+	}
+
+	localAddr := common.BytesToAddress([]byte("test1"))
+	remoteAddr := common.BytesToAddress([]byte("test2"))
+
+	err = bm.journal.insert(localAddr, remoteAddr)
+	assert.Equal(t, nil, err)
+	err = bm.journal.insert(remoteAddr, localAddr)
+	assert.Equal(t, nil, err)
+
+	// try duplicated insert.
+	err = bm.journal.insert(localAddr, remoteAddr)
+	assert.NotEqual(t, nil, err)
+	err = bm.journal.insert(remoteAddr, localAddr)
+	assert.NotEqual(t, nil, err)
+
+	// check cache size for checking duplication
+	bridges := bm.GetAllBridge()
+	assert.Equal(t, 2, len(bridges))
+
+	bm.Stop()
+}
+
+// TestErrorEmptyAccount tests empty account error in case of journal insertion.
+func TestErrorEmptyAccount(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	sc := &SubBridge{
+		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		peers:  newBridgePeerSet(),
+	}
+	bm, err := NewBridgeManager(sc)
+	if err != nil {
+		t.Fatalf("fail to create bridge manager %v", err)
+	}
+
+	localAddr := common.BytesToAddress([]byte("test1"))
+	remoteAddr := common.BytesToAddress([]byte("test2"))
+
+	err = bm.journal.insert(localAddr, common.Address{})
+	assert.NotEqual(t, nil, err)
+
+	err = bm.journal.insert(common.Address{}, remoteAddr)
+	assert.NotEqual(t, nil, err)
+
+	bm.Stop()
+}
+
+// TestErrorDupSubscription tests duplicated subscription error.
+func TestErrorDupSubscription(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// Generate a new random account and a funded simulator
+	key, _ := crypto.GenerateKey()
+	auth := bind.NewKeyedTransactor(key)
+
+	key2, _ := crypto.GenerateKey()
+	auth2 := bind.NewKeyedTransactor(key2)
+
+	key4, _ := crypto.GenerateKey()
+	auth4 := bind.NewKeyedTransactor(key4)
+
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	config := &SCConfig{}
+	config.nodekey = key
+	config.chainkey = key2
+	config.DataDir = os.TempDir()
+	config.VTRecovery = true
+
+	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
+	config.MainChainAccountAddr = &chainKeyAddr
+
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
+	sc := &SubBridge{
+		config:               config,
+		peers:                newBridgePeerSet(),
+		localBackend:         sim,
+		remoteBackend:        sim,
+		bridgeAccountManager: bam,
+	}
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	// 1. Prepare manager and subscribe event
+	bm, err := NewBridgeManager(sc)
+
+	addr, err := bm.DeployBridgeTest(sim, false)
+	bridgeInfo, _ := bm.GetBridgeInfo(addr)
+	bridge := bridgeInfo.bridge
+	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	sim.Commit() // block
+
+	bm.bridges[addr] = &BridgeInfo{
+		nil,
+		addr,
+		nil,
+		bridge,
+		true,
+		true,
+		&sync.Mutex{},
+		newEventSortedMap(),
+		0,
+		0,
+		0,
+		make(chan struct{}),
+		make(chan struct{}),
+	}
+	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
+
+	bm.SubscribeEvent(addr)
+	err = bm.SubscribeEvent(addr)
+	assert.NotEqual(t, nil, err)
 
 	bm.Stop()
 }

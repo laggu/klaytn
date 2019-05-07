@@ -326,12 +326,12 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 	}
 
 	logger.Info("Load Bridge Address from JournalFiles ", "path", bridgeManager.journal.path)
-	bridgeManager.journal.cache = []*BridgeJournal{}
+	bridgeManager.journal.cache = make(map[common.Address]*BridgeJournal)
 
 	if err := bridgeManager.journal.load(func(gwjournal BridgeJournal) error {
 		logger.Info("Load Bridge Address from JournalFiles ",
 			"local address", gwjournal.LocalAddress.Hex(), "remote address", gwjournal.RemoteAddress.Hex())
-		bridgeManager.journal.cache = append(bridgeManager.journal.cache, &gwjournal)
+		bridgeManager.journal.cache[gwjournal.LocalAddress] = &gwjournal
 		return nil
 	}); err != nil {
 		logger.Error("fail to load bridge address", "err", err)
@@ -369,34 +369,15 @@ func (bm *BridgeManager) SubscribeTokenWithDraw(ch chan<- TokenTransferEvent) ev
 	return bm.scope.Track(bm.tokenWithdraw.Subscribe(ch))
 }
 
-// GetAllBridge returns a journal cache while removing unnecessary address pair.
+// GetAllBridge returns a slice of journal cache while removing unnecessary address pair.
+// TODO-Klaytn-ServiceChain: remove the dirty hack for deleting journals from the cache.
 func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
-	gwjs := []*BridgeJournal{}
+	var gwjs []*BridgeJournal
 
 	for _, journal := range bm.journal.cache {
-		if journal.Paired {
-			bridgeInfo, ok := bm.GetBridgeInfo(journal.LocalAddress)
-			if ok && !bridgeInfo.subscribed {
-				if bm.subBridge.AddressManager() != nil {
-					bm.subBridge.addressManager.DeleteBridge(journal.LocalAddress)
-				}
-				continue
-			}
-
-			bridgeInfo, ok = bm.GetBridgeInfo(journal.RemoteAddress)
-			if ok && !bridgeInfo.subscribed {
-				if bm.subBridge.AddressManager() != nil {
-					bm.subBridge.addressManager.DeleteBridge(journal.RemoteAddress)
-				}
-				continue
-			}
-		}
 		gwjs = append(gwjs, journal)
 	}
-
-	bm.journal.cache = gwjs
-
-	return bm.journal.cache
+	return gwjs
 }
 
 // GetBridge returns bridge contract of the specified address.
@@ -410,8 +391,8 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, account, local, subscribed)
 }
 
-// LoadAllBridge reloads bridge and handles subscription by using the journal cache.
-func (bm *BridgeManager) LoadAllBridge() error {
+// RestoreBridges setups bridge subscription by using the journal cache.
+func (bm *BridgeManager) RestoreBridges() error {
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
@@ -465,12 +446,16 @@ func (bm *BridgeManager) LoadAllBridge() error {
 	return nil
 }
 
-// AddRecovery writes journal and creates value transfer recovery for a given addresses pair.
-func (bm *BridgeManager) AddRecovery(localAddress, remoteAddress common.Address) error {
-	// Write journal information.
-	bm.journal.insert(localAddress, remoteAddress, true)
-	bm.journal.rotate(bm.GetAllBridge())
+// AddJournal writes journal for a given addresses pair.
+func (bm *BridgeManager) AddJournal(localAddress, remoteAddress common.Address) error {
+	if err := bm.journal.insert(localAddress, remoteAddress); err != nil {
+		return err
+	}
+	return nil
+}
 
+// AddRecovery starts value transfer recovery for a given addresses pair.
+func (bm *BridgeManager) AddRecovery(localAddress, remoteAddress common.Address) error {
 	// Check if bridge information is exist.
 	localBridgeInfo, ok := bm.GetBridgeInfo(localAddress)
 	if !ok {
@@ -600,6 +585,9 @@ func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if !ok {
 		return fmt.Errorf("there is no bridge contract which address %v", addr)
+	}
+	if bridgeInfo.subscribed {
+		return errors.New("already subscribed")
 	}
 	err := bm.subscribeEvent(addr, bridgeInfo.bridge)
 	if err != nil {

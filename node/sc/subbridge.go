@@ -299,8 +299,8 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 
 	if sc.config.VTRecovery {
 		logger.Info("value transfer recovery is enabled")
-		if err := sc.bridgeManager.LoadAllBridge(); err != nil {
-			logger.Error("failed to sc.bridgeManager.LoadAllBridge()", "err", err)
+		if err := sc.bridgeManager.RestoreBridges(); err != nil {
+			logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
 		}
 	}
 

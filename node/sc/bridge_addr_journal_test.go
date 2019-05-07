@@ -17,8 +17,8 @@
 package sc
 
 import (
-	"fmt"
 	"github.com/ground-x/klaytn/common"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"testing"
@@ -34,9 +34,9 @@ func TestBridgeJournal(t *testing.T) {
 
 	journal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
 	if err := journal.load(func(journal BridgeJournal) error {
-		fmt.Println("Local address ", journal.LocalAddress.Hex())
-		fmt.Println("Remote address ", journal.RemoteAddress.Hex())
-		fmt.Println("Paired", journal.Paired)
+		t.Log("Local address ", journal.LocalAddress.Hex())
+		t.Log("Remote address ", journal.RemoteAddress.Hex())
+		t.Log("Paired", journal.Paired)
 		return nil
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
@@ -45,15 +45,15 @@ func TestBridgeJournal(t *testing.T) {
 		t.Fatalf("fail to rotate journal %v", err)
 	}
 
-	err := journal.insert(common.BytesToAddress([]byte("test1")), common.BytesToAddress([]byte("test2")), false)
+	err := journal.insert(common.BytesToAddress([]byte("test1")), common.BytesToAddress([]byte("test2")))
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}
-	err = journal.insert(common.BytesToAddress([]byte("test2")), common.BytesToAddress([]byte("test3")), true)
+	err = journal.insert(common.BytesToAddress([]byte("test2")), common.BytesToAddress([]byte("test3")))
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}
-	err = journal.insert(common.BytesToAddress([]byte("test3")), common.BytesToAddress([]byte("test1")), true)
+	err = journal.insert(common.BytesToAddress([]byte("test3")), common.BytesToAddress([]byte("test1")))
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}
@@ -65,26 +65,22 @@ func TestBridgeJournal(t *testing.T) {
 	journal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
 
 	if err := journal.load(func(journal BridgeJournal) error {
-		if journal.LocalAddress.Hex() == "0x0000000000000000000000000000007465737431" {
-			if journal.Paired {
-				t.Fatalf("insert and load info mismatch: have %v, want %v", journal.Paired, false)
+		switch address := journal.LocalAddress.Hex(); address {
+		case "0x0000000000000000000000000000007465737431":
+			if journal.RemoteAddress.Hex() != "0x0000000000000000000000000000007465737432" {
+				t.Fatalf("unknown remoteAddress")
 			}
-		}
-		if journal.LocalAddress.Hex() == "0x0000000000000000000000000000007465737432" &&
-			journal.RemoteAddress.Hex() == "0x0000000000000000000000000000007465737433" {
-			if !journal.Paired {
-				t.Fatalf("insert and load info mismatch: have %v, want %v", journal.Paired, true)
+		case "0x0000000000000000000000000000007465737432":
+			if journal.RemoteAddress.Hex() != "0x0000000000000000000000000000007465737433" {
+				t.Fatalf("unknown remoteAddress")
 			}
-		}
-		if journal.LocalAddress.Hex() == "0x0000000000000000000000000000007465737433" &&
-			journal.RemoteAddress.Hex() == "0x0000000000000000000000000000007465737431" {
-			if !journal.Paired {
-				t.Fatalf("insert and load info mismatch: have %v, want %v", journal.Paired, true)
+		case "0x0000000000000000000000000000007465737433":
+			if journal.RemoteAddress.Hex() != "0x0000000000000000000000000000007465737431" {
+				t.Fatalf("unknown remoteAddress")
 			}
+		default:
+			t.Fatalf("unknown localAddress")
 		}
-		fmt.Println("Local address ", journal.LocalAddress.Hex())
-		fmt.Println("Remote address ", journal.RemoteAddress.Hex())
-		fmt.Println("Paired", journal.Paired)
 		return nil
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
@@ -103,9 +99,9 @@ func TestBridgeJournalDisable(t *testing.T) {
 	addrJournal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: false})
 
 	if err := addrJournal.load(func(journal BridgeJournal) error {
-		fmt.Println("Local address ", journal.LocalAddress.Hex())
-		fmt.Println("Remote address ", journal.RemoteAddress.Hex())
-		fmt.Println("Paired", journal.Paired)
+		t.Log("Local address ", journal.LocalAddress.Hex())
+		t.Log("Remote address ", journal.RemoteAddress.Hex())
+		t.Log("Paired", journal.Paired)
 		return nil
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
@@ -114,7 +110,7 @@ func TestBridgeJournalDisable(t *testing.T) {
 		t.Fatalf("fail to rotate journal %v", err)
 	}
 
-	err := addrJournal.insert(common.BytesToAddress([]byte("test1")), common.BytesToAddress([]byte("test2")), false)
+	err := addrJournal.insert(common.BytesToAddress([]byte("test1")), common.BytesToAddress([]byte("test2")))
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}
@@ -127,17 +123,49 @@ func TestBridgeJournalDisable(t *testing.T) {
 	addrJournal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
 
 	if err := addrJournal.load(func(journal BridgeJournal) error {
-		fmt.Println("Local address ", journal.LocalAddress.Hex())
-		fmt.Println("Remote address ", journal.RemoteAddress.Hex())
-		fmt.Println("Paired", journal.Paired)
-		addrJournal.cache = append(addrJournal.cache, &journal)
+		t.Log("Local address ", journal.LocalAddress.Hex())
+		t.Log("Remote address ", journal.RemoteAddress.Hex())
+		t.Log("Paired", journal.Paired)
+		addrJournal.cache[journal.LocalAddress] = &journal
 		return nil
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
 	}
 
-	fmt.Println("journal cache length", len(addrJournal.cache))
 	if len(addrJournal.cache) > 0 {
 		t.Fatalf("fail to disabling journal option %v", err)
+	}
+}
+
+// TestBridgeJournalCache tests the journal cache.
+func TestBridgeJournalCache(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), "test.rlp")); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// Step 1: Make new journal
+	journals := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
+
+	if err := journals.load(func(journal BridgeJournal) error { return nil }); err != nil {
+		t.Fatalf("fail to load journal %v", err)
+	}
+	if err := journals.rotate([]*BridgeJournal{}); err != nil {
+		t.Fatalf("fail to rotate journal %v", err)
+	}
+
+	localAddr := common.BytesToAddress([]byte("test1"))
+	remoteAddr := common.BytesToAddress([]byte("test2"))
+
+	err := journals.insert(localAddr, remoteAddr)
+	if err != nil {
+		t.Fatalf("fail to insert address %v", err)
+	}
+
+	assert.Equal(t, 1, len(journals.cache))
+	for _, journal := range journals.cache {
+		assert.Equal(t, localAddr, journal.LocalAddress)
+		assert.Equal(t, remoteAddr, journal.RemoteAddress)
 	}
 }
