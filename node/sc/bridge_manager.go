@@ -65,13 +65,13 @@ type TokenTransferEvent struct {
 	HandleNonce  uint64
 }
 
-// BridgeJournal has two types. When a single address is inserted, the Paired is disabled.
+// BridgeJournal has two types. When a single address is inserted, the Subscribed is disabled.
 // In this case, only one of the LocalAddress or RemoteAddress is filled with the address.
 // If two address in a pair is inserted, the Pared is enabled.
 type BridgeJournal struct {
 	LocalAddress  common.Address `json:"localAddress"`
 	RemoteAddress common.Address `json:"remoteAddress"`
-	Paired        bool           `json:"paired"`
+	Subscribed    bool           `json:"subscribed"`
 }
 
 type BridgeInfo struct {
@@ -281,7 +281,7 @@ func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&elem); err != nil {
 		return err
 	}
-	b.LocalAddress, b.RemoteAddress, b.Paired = elem.LocalAddress, elem.RemoteAddress, elem.Paired
+	b.LocalAddress, b.RemoteAddress, b.Subscribed = elem.LocalAddress, elem.RemoteAddress, elem.Paired
 	return nil
 }
 
@@ -290,7 +290,7 @@ func (b *BridgeJournal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		b.LocalAddress,
 		b.RemoteAddress,
-		b.Paired,
+		b.Subscribed,
 	})
 }
 
@@ -396,7 +396,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
-		if journal.Paired {
+		if journal.Subscribed {
 			if bm.subBridge.AddressManager() == nil {
 				return errors.New("address manager is not exist")
 			}
@@ -446,12 +446,15 @@ func (bm *BridgeManager) RestoreBridges() error {
 	return nil
 }
 
-// AddJournal writes journal for a given addresses pair.
-func (bm *BridgeManager) AddJournal(localAddress, remoteAddress common.Address) error {
-	if err := bm.journal.insert(localAddress, remoteAddress); err != nil {
-		return err
+// SetJournal inserts or updates journal for a given addresses pair.
+func (bm *BridgeManager) SetJournal(localAddress, remoteAddress common.Address) error {
+	err := bm.journal.insert(localAddress, remoteAddress)
+	if err == errDuplicatedJournal && !bm.journal.cache[localAddress].Subscribed {
+		bm.journal.cache[localAddress].Subscribed = true
+		bm.journal.rotate(bm.GetAllBridge())
+		return nil
 	}
-	return nil
+	return err
 }
 
 // AddRecovery starts value transfer recovery for a given addresses pair.

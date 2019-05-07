@@ -117,7 +117,7 @@ func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.
 		return err
 	}
 
-	err = sbapi.sc.bridgeManager.AddJournal(cBridgeAddr, pBridgeAddr)
+	err = sbapi.sc.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
 	if err != nil {
 		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
@@ -145,9 +145,7 @@ func (sbapi *SubBridgeAPI) UnsubscribeEventBridge(cBridgeAddr, pBridgeAddr commo
 		return err
 	}
 
-	if err := sbapi.sc.bridgeManager.DeleteRecovery(cBridgeAddr, pBridgeAddr); err != nil {
-		return err
-	}
+	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
 	return nil
 }
 

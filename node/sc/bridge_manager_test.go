@@ -635,6 +635,46 @@ func TestErrorDuplication(t *testing.T) {
 	bm.Stop()
 }
 
+// TestMethodSetJournal tests if duplication of journal insertion is ignored or not.
+func TestMethodSetJournal(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	sc := &SubBridge{
+		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		peers:  newBridgePeerSet(),
+	}
+	bm, err := NewBridgeManager(sc)
+	if err != nil {
+		t.Fatalf("fail to create bridge manager %v", err)
+	}
+
+	localAddr := common.BytesToAddress([]byte("test1"))
+	remoteAddr := common.BytesToAddress([]byte("test2"))
+
+	// Simple insert case
+	err = bm.SetJournal(localAddr, remoteAddr)
+	assert.Equal(t, nil, err)
+
+	// Update case
+	bm.journal.cache[localAddr].Subscribed = false
+	err = bm.SetJournal(localAddr, remoteAddr)
+	assert.Equal(t, nil, err)
+
+	// Error case
+	err = bm.SetJournal(localAddr, remoteAddr)
+	assert.NotEqual(t, nil, err)
+
+	// Check the number of bridge elements for checking duplication
+	bridges := bm.GetAllBridge()
+	assert.Equal(t, 1, len(bridges))
+
+	bm.Stop()
+}
+
 // TestErrorEmptyAccount tests empty account error in case of journal insertion.
 func TestErrorEmptyAccount(t *testing.T) {
 	defer func() {

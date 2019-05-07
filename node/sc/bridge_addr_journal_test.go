@@ -36,7 +36,7 @@ func TestBridgeJournal(t *testing.T) {
 	if err := journal.load(func(journal BridgeJournal) error {
 		t.Log("Local address ", journal.LocalAddress.Hex())
 		t.Log("Remote address ", journal.RemoteAddress.Hex())
-		t.Log("Paired", journal.Paired)
+		t.Log("Subscribed", journal.Subscribed)
 		return nil
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
@@ -101,7 +101,7 @@ func TestBridgeJournalDisable(t *testing.T) {
 	if err := addrJournal.load(func(journal BridgeJournal) error {
 		t.Log("Local address ", journal.LocalAddress.Hex())
 		t.Log("Remote address ", journal.RemoteAddress.Hex())
-		t.Log("Paired", journal.Paired)
+		t.Log("Subscribed", journal.Subscribed)
 		return nil
 	}); err != nil {
 		t.Fatalf("fail to load journal %v", err)
@@ -125,7 +125,7 @@ func TestBridgeJournalDisable(t *testing.T) {
 	if err := addrJournal.load(func(journal BridgeJournal) error {
 		t.Log("Local address ", journal.LocalAddress.Hex())
 		t.Log("Remote address ", journal.RemoteAddress.Hex())
-		t.Log("Paired", journal.Paired)
+		t.Log("Subscribed", journal.Subscribed)
 		addrJournal.cache[journal.LocalAddress] = &journal
 		return nil
 	}); err != nil {
