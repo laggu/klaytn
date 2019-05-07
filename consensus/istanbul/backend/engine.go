@@ -460,7 +460,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 			// if the block hash and the hash from channel are the same,
 			// return the result. Otherwise, keep waiting the next hash.
 			if block.Hash() == result.Hash() {
-				sb.setLastMinedBlockHash(sb.proposedBlockHash)
 				return result, nil
 			}
 		case <-stop:
@@ -508,7 +507,7 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 }
 
 // Start implements consensus.Istanbul.Start
-func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, setLastMinedBlockHash func(hash common.Hash)) error {
+func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 	if sb.coreStarted {
@@ -525,7 +524,6 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.chain = chain
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
-	sb.setLastMinedBlockHash = setLastMinedBlockHash
 
 	if err := sb.core.Start(); err != nil {
 		return err

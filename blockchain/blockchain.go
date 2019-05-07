@@ -147,8 +147,6 @@ type BlockChain struct {
 
 	nonceCache   common.Cache
 	balanceCache common.Cache
-
-	lastMinedBlockHash common.Hash
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1121,6 +1119,10 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
+	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
+		return NonStatTy, ErrKnownBlock
+	}
+
 	currentBlock := bc.CurrentBlock()
 	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.BlockScore(), ptd)
@@ -1182,6 +1184,10 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	// Make sure no inconsistent state is leaked during insertion
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
+
+	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
+		return NonStatTy, ErrKnownBlock
+	}
 
 	currentBlock := bc.CurrentBlock()
 	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
@@ -1318,11 +1324,6 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 	// Sanity check that we have something meaningful to import
 	if len(chain) == 0 {
-		return 0, nil, nil, nil
-	}
-
-	// To avoid self-mined block insertion.
-	if len(chain) == 1 && chain[0].Hash() == bc.lastMinedBlockHash {
 		return 0, nil, nil, nil
 	}
 	// Do a sanity check that the provided chain is actually ordered and linked
@@ -1489,8 +1490,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
+			if err == ErrKnownBlock {
+				continue
+			}
 			return i, events, coalescedLogs, err
 		}
+
 		switch status {
 		case CanonStatTy:
 			logger.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
@@ -1935,11 +1940,6 @@ func (bc *BlockChain) GetNonceCache() common.Cache {
 // GetBalanceCache returns a balanceCache.
 func (bc *BlockChain) GetBalanceCache() common.Cache {
 	return bc.balanceCache
-}
-
-// SetLastMinedBlock sets lastly mined block.
-func (bc *BlockChain) SetLastMinedBlock(lastMinedBlock common.Hash) {
-	bc.lastMinedBlockHash = lastMinedBlock
 }
 
 // GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.

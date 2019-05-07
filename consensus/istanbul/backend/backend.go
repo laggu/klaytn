@@ -79,17 +79,16 @@ func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.P
 // ----------------------------------------------------------------------------
 
 type backend struct {
-	config                *istanbul.Config
-	istanbulEventMux      *event.TypeMux
-	privateKey            *ecdsa.PrivateKey
-	address               common.Address
-	core                  istanbulCore.Engine
-	logger                log.Logger
-	db                    database.DBManager
-	chain                 consensus.ChainReader
-	currentBlock          func() *types.Block
-	hasBadBlock           func(hash common.Hash) bool
-	setLastMinedBlockHash func(hash common.Hash)
+	config           *istanbul.Config
+	istanbulEventMux *event.TypeMux
+	privateKey       *ecdsa.PrivateKey
+	address          common.Address
+	core             istanbulCore.Engine
+	logger           log.Logger
+	db               database.DBManager
+	chain            consensus.ChainReader
+	currentBlock     func() *types.Block
+	hasBadBlock      func(hash common.Hash) bool
 
 	// the channels for istanbul engine notifications
 	commitCh          chan *types.Block
