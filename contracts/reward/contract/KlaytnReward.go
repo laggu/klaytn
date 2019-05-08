@@ -22,7 +22,7 @@ const KlaytnRewardBinRuntime = `0x6080604052600436106100615763ffffffff7c01000000
 // KlaytnRewardBin is the compiled bytecode used for deploying new contracts.
 const KlaytnRewardBin = `0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a723058200328c97654866fd7cb18d8f3e902b9bf0331281c7d5d6c1e47a8b1c50634b1100029`
 
-// DeployKlaytnReward deploys a new klaytn contract, binding an instance of KlaytnReward to it.
+// DeployKlaytnReward deploys a new Klaytn contract, binding an instance of KlaytnReward to it.
 func DeployKlaytnReward(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *KlaytnReward, error) {
 	parsed, err := abi.JSON(strings.NewReader(KlaytnRewardABI))
 	if err != nil {
@@ -35,29 +35,29 @@ func DeployKlaytnReward(auth *bind.TransactOpts, backend bind.ContractBackend) (
 	return address, tx, &KlaytnReward{KlaytnRewardCaller: KlaytnRewardCaller{contract: contract}, KlaytnRewardTransactor: KlaytnRewardTransactor{contract: contract}, KlaytnRewardFilterer: KlaytnRewardFilterer{contract: contract}}, nil
 }
 
-// KlaytnReward is an auto generated Go binding around a klaytn contract.
+// KlaytnReward is an auto generated Go binding around a Klaytn contract.
 type KlaytnReward struct {
 	KlaytnRewardCaller     // Read-only binding to the contract
 	KlaytnRewardTransactor // Write-only binding to the contract
 	KlaytnRewardFilterer   // Log filterer for contract events
 }
 
-// KlaytnRewardCaller is an auto generated read-only Go binding around a klaytn contract.
+// KlaytnRewardCaller is an auto generated read-only Go binding around a Klaytn contract.
 type KlaytnRewardCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// KlaytnRewardTransactor is an auto generated write-only Go binding around a klaytn contract.
+// KlaytnRewardTransactor is an auto generated write-only Go binding around a Klaytn contract.
 type KlaytnRewardTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// KlaytnRewardFilterer is an auto generated log filtering Go binding around a klaytn contract events.
+// KlaytnRewardFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
 type KlaytnRewardFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// KlaytnRewardSession is an auto generated Go binding around a klaytn contract,
+// KlaytnRewardSession is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
 type KlaytnRewardSession struct {
 	Contract     *KlaytnReward     // Generic contract binding to set the session for
@@ -65,31 +65,31 @@ type KlaytnRewardSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// KlaytnRewardCallerSession is an auto generated read-only Go binding around a klaytn contract,
+// KlaytnRewardCallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
 type KlaytnRewardCallerSession struct {
 	Contract *KlaytnRewardCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// KlaytnRewardTransactorSession is an auto generated write-only Go binding around a klaytn contract,
+// KlaytnRewardTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
 type KlaytnRewardTransactorSession struct {
 	Contract     *KlaytnRewardTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// KlaytnRewardRaw is an auto generated low-level Go binding around a klaytn contract.
+// KlaytnRewardRaw is an auto generated low-level Go binding around a Klaytn contract.
 type KlaytnRewardRaw struct {
 	Contract *KlaytnReward // Generic contract binding to access the raw methods on
 }
 
-// KlaytnRewardCallerRaw is an auto generated low-level read-only Go binding around a klaytn contract.
+// KlaytnRewardCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
 type KlaytnRewardCallerRaw struct {
 	Contract *KlaytnRewardCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// KlaytnRewardTransactorRaw is an auto generated low-level write-only Go binding around a klaytn contract.
+// KlaytnRewardTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
 type KlaytnRewardTransactorRaw struct {
 	Contract *KlaytnRewardTransactor // Generic write-only contract binding to access the raw methods on
 }

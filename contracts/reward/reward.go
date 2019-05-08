@@ -16,7 +16,6 @@
 
 //go:generate abigen --sol contract/KlaytnReward.sol --pkg contract --out contract/KlaytnReward.go
 //go:generate abigen --sol contract/AddressBook.sol --pkg contract --out contract/AddressBook.go
-//go:generate abigen --sol contract/InitContractForPlatform.sol --pkg contract --out contract/InitContractForPlatform.go
 
 package reward
 
@@ -604,7 +603,7 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 }
 
 func MakeGetAllAddressFromInitContractMsg() (*types.Transaction, error) {
-	abiStr := contract.InitContractABI
+	abiStr := contract.AddressBookABI
 	abii, err := abi.JSON(strings.NewReader(abiStr))
 	if err != nil {
 		return nil, err
@@ -620,7 +619,7 @@ func MakeGetAllAddressFromInitContractMsg() (*types.Transaction, error) {
 		return nil, err
 	}
 
-	addr := common.HexToAddress(contract.InitContractAddress)
+	addr := common.HexToAddress(contract.AddressBookContractAddress)
 
 	// Create new call message
 	// TODO-Klaytn-Issue1166 Decide who will be sender(i.e. from)
@@ -649,7 +648,7 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		return nil, nil, nil, common.Address{}, common.Address{}, errInitContractIncomplete
 	}
 
-	abiStr := contract.InitContractABI
+	abiStr := contract.AddressBookABI
 	abii, err := abi.JSON(strings.NewReader(abiStr))
 	if err != nil {
 		return nil, nil, nil, common.Address{}, common.Address{}, err

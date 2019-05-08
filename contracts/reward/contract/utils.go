@@ -17,7 +17,7 @@
 package contract
 
 const (
-	InitContractAddress = "0x0000000000000000000000000000000000000400"
+	AddressBookContractAddress = "0x0000000000000000000000000000000000000400"
 
 	// TODO-Klaytn-Issue1587 Decide whether to cleanup below three addresses after discussing issue1587
 	RewardContractAddress = "0x0000000000000000000000000000000000000441"
