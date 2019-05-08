@@ -217,6 +217,8 @@ func BenchmarkDataGeneration_CandidateLevelDB(b *testing.B) {
 	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_CandidateLevelDB"
 	tc.originalDataDir = candidate500LevelDB_orig
+	tc.cacheConfig.StateDBCaching = false
+	tc.cacheConfig.TxPoolStateCache = false
 
 	tc.cacheConfig = defaultCacheConfig()
 
@@ -327,5 +329,6 @@ func getGenerationTestDefaultTC() *preGeneratedTC {
 		isGenerateTest:             true,
 		numTotalAccountsToGenerate: 500 * 10000, numTxsPerGen: 10000,
 		numTotalSenders: 10000, numReceiversPerRun: 10000,
-		filePicker: sequentialIndex, addrPicker: sequentialIndex}
+		filePicker: sequentialIndex, addrPicker: sequentialIndex,
+		cacheConfig: defaultCacheConfig()}
 }
