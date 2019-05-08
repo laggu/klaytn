@@ -390,7 +390,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	assert.Equal(b, nil, err)
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(250000000)
+	gasLimit := uint64(100000000000)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 

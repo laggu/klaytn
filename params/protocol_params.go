@@ -81,7 +81,7 @@ const (
 	VMLogBaseGas            uint64 = 100    // Base price for a VMLOG operation
 	VMLogPerByteGas         uint64 = 20     // Per-byte price for a VMLOG operation
 	FeePayerGas             uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
-	ValidateSenderGas       uint64 = 300    // Gas needed for validating the signature of a message.
+	ValidateSenderGas       uint64 = 5000   // Gas needed for validating the signature of a message.
 
 	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
@@ -121,7 +121,7 @@ const (
 	TxGasContractExecution uint64 = 21000
 
 	// TODO-Klaytn-Gas: TxGasHumanReadable should be based on ENS.
-	TxGasHumanReadable uint64 = 500000
+	TxGasHumanReadable uint64 = 4000000000
 	TxDataGas          uint64 = 100
 )
 

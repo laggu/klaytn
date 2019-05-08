@@ -84,7 +84,7 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 // The address "contact" should exist before calling this function.
 func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType) (*types.Transaction, *ecdsa.PrivateKey, error) {
 	gasPrice := new(big.Int).SetUint64(25)
-	gasLimit := uint64(1000000)
+	gasLimit := uint64(100000000000)
 	amount := new(big.Int).SetUint64(1000000000)
 
 	// generate a random private key for account creation/update Txs or contract deploy Txs
@@ -345,7 +345,7 @@ func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, tx
 // TxTypeChainDataAnchoring is excluded because it is not fully developed.
 func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(25)
-	gasLimit := uint64(1000000)
+	gasLimit := uint64(100000000000)
 
 	if testing.Verbose() {
 		enableLog()
@@ -449,7 +449,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 		{
 			var txs types.Transactions
 
-			amount := new(big.Int).SetUint64(1000000000000)
+			amount := new(big.Int).SetUint64(params.KLAY)
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:         reservoir.Nonce,
 				types.TxValueKeyFrom:          reservoir.Addr,
@@ -984,7 +984,7 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(params.KLAY)
+		amount := new(big.Int).Mul(big.NewInt(2500), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -1820,7 +1820,7 @@ func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
 	// 0. create an account creator's account, "accountK".
 	{
 		var txs types.Transactions
-		amount := new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(5000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -1849,7 +1849,7 @@ func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
 	// 1. "accountK" creates a role-based account, "roleBasedAccount", with a human-readable address.
 	{
 		var txs types.Transactions
-		amount := new(big.Int).SetUint64(params.KLAY) // 1 KLAY to pay for accountUpdate tx
+		amount := new(big.Int).Mul(big.NewInt(2500), new(big.Int).SetUint64(params.KLAY)) // 2500 KLAY to pay for accountUpdate tx
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         accountK.Nonce,
 			types.TxValueKeyFrom:          accountK.Addr,
@@ -1994,7 +1994,7 @@ func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
 	// 0. create an account with a roleBased key.
 	{
 		var txs types.Transactions
-		amount := new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(2500), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
