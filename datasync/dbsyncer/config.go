@@ -54,11 +54,7 @@ var DefaultDBConfig = &DBConfig{
 	EnabledDBSyncer: false,
 	EnabledLogMode:  false,
 
-	DBHost:     "scope-dev.ce6mzo6rvvxh.ap-northeast-2.rds.amazonaws.com",
-	DBPort:     "3306",
-	DBName:     "klaytnscope_baobab",
-	DBUser:     "klaytnscope",
-	DBPassword: "SuperSecret1231",
+	DBPort: "3306",
 
 	MaxIdleConns:     50,
 	MaxOpenConns:     30,

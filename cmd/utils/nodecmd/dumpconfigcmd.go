@@ -146,6 +146,8 @@ func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
 		if ctx.GlobalIsSet(utils.DBHostFlag.Name) {
 			dbhost := ctx.GlobalString(utils.DBHostFlag.Name)
 			cfg.DBHost = dbhost
+		} else {
+			logger.Crit("DBHost must be set !", "key", utils.DBHostFlag.Name)
 		}
 		if ctx.GlobalIsSet(utils.DBPortFlag.Name) {
 			dbports := ctx.GlobalString(utils.DBPortFlag.Name)
@@ -154,14 +156,20 @@ func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
 		if ctx.GlobalIsSet(utils.DBUserFlag.Name) {
 			dbuser := ctx.GlobalString(utils.DBUserFlag.Name)
 			cfg.DBUser = dbuser
+		} else {
+			logger.Crit("DBUser must be set !", "key", utils.DBUserFlag.Name)
 		}
 		if ctx.GlobalIsSet(utils.DBPasswordFlag.Name) {
 			dbpasswd := ctx.GlobalString(utils.DBPasswordFlag.Name)
 			cfg.DBPassword = dbpasswd
+		} else {
+			logger.Crit("DBPassword must be set !", "key", utils.DBPasswordFlag.Name)
 		}
 		if ctx.GlobalIsSet(utils.DBNameFlag.Name) {
 			dbname := ctx.GlobalString(utils.DBNameFlag.Name)
 			cfg.DBName = dbname
+		} else {
+			logger.Crit("DBName must be set !", "key", utils.DBNameFlag.Name)
 		}
 		if ctx.GlobalBool(utils.EnabledLogModeFlag.Name) {
 			cfg.EnabledLogMode = true

@@ -28,6 +28,7 @@ import (
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/work"
+	"github.com/pkg/errors"
 	"strings"
 	"time"
 )
@@ -70,9 +71,19 @@ func NewDBSyncer(ctx *node.ServiceContext, cfg *DBConfig) (*DBSyncer, error) {
 
 	logger.Info("initialize DBSyncer", "db.host",
 		cfg.DBHost, "db.port", cfg.DBPort, "db.name", cfg.DBName, "db.user", cfg.DBUser, "db.max.idle",
-		cfg.MaxIdleConns, "db.max.open", cfg.MaxOpenConns, "db.max.lifetime", cfg.ConnMaxLifetime, "block.ch.size",
-		cfg.BlockChannelSize, "mode", cfg.Mode, "genquery.th", cfg.GenQueryThread, "insert.th", cfg.InsertThread,
-		"bulk.size", cfg.BulkInsertSize, "event.mode", cfg.EventMode)
+		cfg.MaxIdleConns, "db.password", cfg.DBPassword, "db.max.open", cfg.MaxOpenConns, "db.max.lifetime",
+		cfg.ConnMaxLifetime, "block.ch.size", cfg.BlockChannelSize, "mode", cfg.Mode, "genquery.th",
+		cfg.GenQueryThread, "insert.th", cfg.InsertThread, "bulk.size", cfg.BulkInsertSize, "event.mode", cfg.EventMode)
+
+	if cfg.DBHost == "" {
+		return nil, errors.New("db config must be set (db.host)")
+	} else if cfg.DBName == "" {
+		return nil, errors.New("db config must be set (db.name)")
+	} else if cfg.DBUser == "" {
+		return nil, errors.New("db config must be set (db.user)")
+	} else if cfg.DBPassword == "" {
+		return nil, errors.New("db config must be set (db.password)")
+	}
 
 	return &DBSyncer{
 		cfg:            cfg,

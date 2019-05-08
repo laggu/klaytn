@@ -563,6 +563,7 @@ var (
 	DBPortFlag = cli.StringFlag{
 		Name:  "dbsyncer.db.port",
 		Usage: "db.port in dbsyncer",
+		Value: "3306",
 	}
 	DBNameFlag = cli.StringFlag{
 		Name:  "dbsyncer.db.name",
