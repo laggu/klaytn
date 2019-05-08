@@ -182,11 +182,11 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		db.WriteChainConfig(stored, newcfg)
 		return newcfg, stored, nil
 	} else {
-		if storedcfg.StakingUpdateInterval != 0 {
-			params.SetStakingUpdateInterval(storedcfg.StakingUpdateInterval)
+		if storedcfg.Governance.Reward.StakingUpdateInterval != 0 {
+			params.SetStakingUpdateInterval(storedcfg.Governance.Reward.StakingUpdateInterval)
 		}
-		if storedcfg.ProposerUpdateInterval != 0 {
-			params.SetProposerUpdateInterval(storedcfg.ProposerUpdateInterval)
+		if storedcfg.Governance.Reward.ProposerUpdateInterval != 0 {
+			params.SetProposerUpdateInterval(storedcfg.Governance.Reward.ProposerUpdateInterval)
 		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new

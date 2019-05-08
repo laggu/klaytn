@@ -22,6 +22,7 @@ package backend
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
@@ -33,13 +34,11 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul/validator"
 	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto/sha3"
-	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/hashicorp/golang-lru"
 	"math/big"
-	"reflect"
 	"time"
 )
 
@@ -157,39 +156,15 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	if parent.Time.Uint64()+sb.config.BlockPeriod > header.Time.Uint64() {
 		return errInvalidTimestamp
 	}
-	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
 	if err := sb.verifySigner(chain, header, parents); err != nil {
 		return err
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
-	if number%sb.config.Epoch == 0 {
-		return sb.verifyGovernance(header.Governance, snap.PendingGovernanceConfig)
+	if number%sb.governance.ChainConfig.Istanbul.Epoch == 0 && len(header.Governance) > 0 {
+		return sb.governance.VerifyGovernance(header.Governance)
 	}
 	return sb.verifyCommittedSeals(chain, header, parents)
-}
-
-// verifyGovernance verifies if received governance configuration is same as what the node has
-func (sb *backend) verifyGovernance(src []byte, pending *params.GovernanceConfig) error {
-	rcv := params.GovernanceConfig{}
-
-	if err := rlp.DecodeBytes(src, &rcv); err != nil {
-		return errors.New("Received governance config coulnd't be decoded")
-	}
-
-	if reflect.DeepEqual(rcv.Reward, pending.Reward) &&
-		reflect.DeepEqual(rcv.Istanbul, pending.Istanbul) &&
-		rcv.GovernanceMode == pending.GovernanceMode &&
-		rcv.GoverningNode == pending.GoverningNode &&
-		rcv.UnitPrice == pending.UnitPrice {
-		return nil
-	} else {
-		return errors.New("Received governance config is different from that this node has")
-	}
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -272,7 +247,6 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		// 2. Get the original address by seal and parent block hash
 		addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
 		if err != nil {
-			sb.logger.Error("not a valid address", "err", err)
 			return errInvalidSignature
 		}
 		// Every validator can have only one seal. If more than one seals are signed by a
@@ -330,16 +304,18 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the Epoch, governance config will be added to block header
-	if number%sb.config.Epoch == 0 {
-		if governanceConfig, err := governance.MakeGovernanceData(snap.PendingGovernanceConfig); err != nil {
-			logger.Error("Failed to make governance data and header can't contain updated configuration", "Raw Governance Config", snap.PendingGovernanceConfig)
-		} else {
-			header.Governance = governanceConfig
+	if number%sb.governance.ChainConfig.Istanbul.Epoch == 0 {
+		if g := sb.governance.GetGovernanceChange(); g != nil {
+			if data, err := json.Marshal(g); err != nil {
+				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
+			} else {
+				header.Governance, _ = rlp.EncodeToBytes(data)
+			}
 		}
 	}
 
 	// if there is a vote to attach, attach it to the header
-	header.Vote = sb.governance.GetEncodedVote(sb.address)
+	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
 
 	// add validators in snapshot to extraData's validators section
 	extra, err := prepareExtra(header, snap.validators())
@@ -558,7 +534,15 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	snap := newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewValidatorSet(istanbulExtra.Validators, sb.config.ProposerPolicy, sb.config.SubGroupSize, chain), chain.Config().Governance)
+	proposerPolicy, ok := sb.governance.GetGovernanceValue("istanbul.policy").(uint64)
+	if !ok {
+		proposerPolicy = params.DefaultProposerPolicy
+	}
+	committeeSize, ok := sb.governance.GetGovernanceValue("istanbul.committeesize").(uint64)
+	if !ok {
+		committeeSize = params.DefaultSubGroupSize
+	}
+	snap := newSnapshot(sb.governance, 0, genesis.Hash(), validator.NewValidatorSet(istanbulExtra.Validators, istanbul.ProposerPolicy(proposerPolicy), committeeSize, chain), chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
 		return nil, err
@@ -610,7 +594,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(sb.config.Epoch, sb.config.SubGroupSize, sb.db, hash, chain.Config().Governance); err == nil {
+			if s, err := loadSnapshot(sb.db, hash); err == nil {
 				logger.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
 				break
@@ -636,7 +620,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, sb.governance, sb.address, sb.config.Epoch)
+	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.ChainConfig.Istanbul.Epoch)
 	if err != nil {
 		return nil, err
 	}

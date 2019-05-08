@@ -130,12 +130,12 @@ func Clique(config *params.CliqueConfig) Option {
 
 func StakingInterval(interval uint64) Option {
 	return func(genesis *blockchain.Genesis) {
-		genesis.Config.StakingUpdateInterval = interval
+		genesis.Config.Governance.Reward.StakingUpdateInterval = interval
 	}
 }
 
 func ProposerInterval(interval uint64) Option {
 	return func(genesis *blockchain.Genesis) {
-		genesis.Config.ProposerUpdateInterval = interval
+		genesis.Config.Governance.Reward.ProposerUpdateInterval = interval
 	}
 }

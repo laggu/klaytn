@@ -25,8 +25,10 @@ import (
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
+	"github.com/pkg/errors"
 	"math/big"
 	"path/filepath"
+	"reflect"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -164,6 +166,13 @@ type DBManager interface {
 	// snapshot in clique(ConsensusClique) consensus
 	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error
 	ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
+
+	// Governance related functions
+	WriteGovernance(data map[string]interface{}, num uint64) error
+	WriteGovernanceIdx(num uint64) error
+	ReadGovernance(num uint64) (map[string]interface{}, error)
+	ReadRecentGovernanceIdx(count int) ([]uint64, error)
+	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 }
 
 type DBEntryType uint8
@@ -1451,4 +1460,96 @@ func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, e
 func (dbm *databaseManager) ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(snapshotKey(snapshotBlockHash))
+}
+
+func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	if err := dbm.WriteGovernanceIdx(num); err != nil {
+		return err
+	}
+	return db.Put(governanceKey(num), b)
+}
+
+func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	newSlice := make([]uint64, 0)
+
+	if data, err := db.Get(governanceHistoryKey); err == nil {
+		if err = json.Unmarshal(data, &newSlice); err != nil {
+			return err
+		}
+	}
+	newSlice = append(newSlice, num)
+
+	data, err := json.Marshal(newSlice)
+	if err != nil {
+		return err
+	}
+	return db.Put(governanceHistoryKey, data)
+}
+
+func (dbm *databaseManager) ReadGovernance(num uint64) (map[string]interface{}, error) {
+	db := dbm.getDatabase(MiscDB)
+
+	if data, err := db.Get(governanceKey(num)); err != nil {
+		return nil, err
+	} else {
+		result := make(map[string]interface{})
+		if e := json.Unmarshal(data, &result); e != nil {
+			return nil, e
+		}
+		for k, v := range result {
+			x := reflect.ValueOf(v)
+			if x.Kind() == reflect.Float64 {
+				result[k] = uint64(v.(float64))
+			}
+		}
+		return result, nil
+	}
+}
+
+// ReadRecentGovernanceIdx returns latest `count` number of indices. If `count` is 0, it returns all indices.
+func (dbm *databaseManager) ReadRecentGovernanceIdx(count int) ([]uint64, error) {
+	db := dbm.getDatabase(MiscDB)
+
+	if history, err := db.Get(governanceHistoryKey); err != nil {
+		return nil, err
+	} else {
+		idxHistory := make([]uint64, 0)
+		if e := json.Unmarshal(history, &idxHistory); e != nil {
+			return nil, e
+		}
+
+		max := 0
+		leng := len(idxHistory)
+		if leng < count || count == 0 {
+			max = leng
+		} else {
+			max = count
+		}
+		if count > 0 {
+			return idxHistory[leng-max:], nil
+		}
+		return idxHistory, nil
+	}
+}
+
+// ReadGovernanceAtNumber returns the block number and governance information which to be used for the block `num`
+func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error) {
+	var minimum = num - (num % epoch)
+	if minimum >= epoch {
+		minimum -= epoch
+	}
+	totalIdx, _ := dbm.ReadRecentGovernanceIdx(0)
+	for i := len(totalIdx) - 1; i >= 0; i-- {
+		if totalIdx[i] <= minimum {
+			result, err := dbm.ReadGovernance(totalIdx[i])
+			return totalIdx[i], result, err
+		}
+	}
+	return 0, nil, errors.New("No governance data found")
 }

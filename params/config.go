@@ -119,20 +119,16 @@ type ChainConfig struct {
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
-	UnitPrice              uint64            `json:"unitPrice"`
-	DeriveShaImpl          int               `json:"deriveShaImpl"`
-	Governance             *GovernanceConfig `json:"governance"`
-	StakingUpdateInterval  uint64            `json:"stakingUpdateInterval"`
-	ProposerUpdateInterval uint64            `json:"proposerUpdateInterval"`
+	UnitPrice     uint64            `json:"unitPrice"`
+	DeriveShaImpl int               `json:"deriveShaImpl"`
+	Governance    *GovernanceConfig `json:"governance"`
 }
 
 // GovernanceConfig stores governance information for a network
 type GovernanceConfig struct {
-	GoverningNode  common.Address  `json:"governingNode"`
-	GovernanceMode string          `json:"governanceMode"`
-	Reward         *RewardConfig   `json:"reward,omitempty"`
-	Istanbul       *IstanbulConfig `json:"bft,omitempty"`
-	UnitPrice      uint64          `json:"unitPrice"`
+	GoverningNode  common.Address `json:"governingNode"`
+	GovernanceMode string         `json:"governanceMode"`
+	Reward         *RewardConfig  `json:"reward,omitempty"`
 }
 
 func (g *GovernanceConfig) DeferredTxFee() bool {
@@ -141,10 +137,13 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 
 // RewardConfig stores information about the network's token economy
 type RewardConfig struct {
-	MintingAmount *big.Int `json:"mintingAmount"`
-	Ratio         string   `json:"ratio"`         // Define how much portion of reward be distributed to CN/PoC/KIR
-	UseGiniCoeff  bool     `json:"useGiniCoeff"`  // Decide if Gini Coefficient will be used or not
-	DeferredTxFee bool     `json:"deferredTxFee"` // Decide if TX fee will be handled instantly or handled later at block finalization
+	MintingAmount          *big.Int `json:"mintingAmount"`
+	Ratio                  string   `json:"ratio"`                  // Define how much portion of reward be distributed to CN/PoC/KIR
+	UseGiniCoeff           bool     `json:"useGiniCoeff"`           // Decide if Gini Coefficient will be used or not
+	DeferredTxFee          bool     `json:"deferredTxFee"`          // Decide if TX fee will be handled instantly or handled later at block finalization
+	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
+	ProposerUpdateInterval uint64   `json:"proposerUpdateInterval"` // Interval when proposer information is updated
+	MinimumStake           *big.Int `json:"minimumStake"`           // Minimum amount of peb to join CCO
 }
 
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
@@ -314,17 +313,14 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 // Copy copies self to a new governance config and return it
 func (g *GovernanceConfig) Copy() *GovernanceConfig {
 	newConfig := &GovernanceConfig{
-		Reward:   &RewardConfig{},
-		Istanbul: &IstanbulConfig{},
+		Reward: &RewardConfig{},
 	}
 	newConfig.GovernanceMode = g.GovernanceMode
 	newConfig.Reward.MintingAmount = big.NewInt(0).Set(g.Reward.MintingAmount)
 	newConfig.Reward.Ratio = g.Reward.Ratio
 	newConfig.Reward.UseGiniCoeff = g.Reward.UseGiniCoeff
 	newConfig.Reward.DeferredTxFee = g.Reward.DeferredTxFee
-	newConfig.UnitPrice = g.UnitPrice
 	newConfig.GoverningNode = g.GoverningNode
-	newConfig.Istanbul = g.Istanbul.Copy()
 
 	return newConfig
 }

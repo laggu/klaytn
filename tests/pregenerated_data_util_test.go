@@ -488,7 +488,7 @@ func generateGovernaceDataForTest() *governance.Governance {
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
 		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
-	})
+	}, nil)
 }
 
 // setUpTest sets up test data directory, verbosity and profile file.

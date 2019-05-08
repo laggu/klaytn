@@ -278,7 +278,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 		t.Errorf("Fail to get balance from addr(%s)", proposerAddr.String())
 	} else {
 		gasUsed := new(big.Int).SetUint64(header.GasUsed)
-		unitPrice := new(big.Int).SetUint64(config.Governance.UnitPrice)
+		unitPrice := new(big.Int).SetUint64(config.UnitPrice)
 		tmpInt := new(big.Int).Mul(gasUsed, unitPrice)
 		expectedBalance := tmpInt.Add(tmpInt, config.Governance.Reward.MintingAmount)
 
@@ -308,7 +308,7 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 		t.Errorf("Fail to get balance from addr(%s)", proposerAddr.String())
 	} else {
 		gasUsed := new(big.Int).SetUint64(header.GasUsed)
-		unitPrice := new(big.Int).SetUint64(config.Governance.UnitPrice)
+		unitPrice := new(big.Int).SetUint64(config.UnitPrice)
 		tmpInt := new(big.Int).Mul(gasUsed, unitPrice)
 		expectedBalance := tmpInt.Add(tmpInt, config.Governance.Reward.MintingAmount)
 
@@ -383,7 +383,7 @@ func TestBlockRewardWithCustomRewardRatio(t *testing.T) {
 		t.Errorf("Fail to get balance from addr(%s)", proposerAddr.String())
 	} else {
 		gasUsed := new(big.Int).SetUint64(header.GasUsed)
-		unitPrice := new(big.Int).SetUint64(config.Governance.UnitPrice)
+		unitPrice := new(big.Int).SetUint64(config.UnitPrice)
 		tmpInt := new(big.Int).Mul(gasUsed, unitPrice)
 		expectedBalance := tmpInt.Add(tmpInt, config.Governance.Reward.MintingAmount)
 

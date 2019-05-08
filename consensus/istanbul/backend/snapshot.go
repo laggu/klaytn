@@ -29,7 +29,6 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul/validator"
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
-	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
 )
 
@@ -37,54 +36,56 @@ const (
 	dbKeySnapshotPrefix = "istanbul-snapshot"
 )
 
-// Vote represents a single vote that an authorized validator made to modify the
-// list of authorizations.
-type Vote struct {
-	Validator common.Address `json:"validator"` // Authorized validator that cast this vote
-	Block     uint64         `json:"block"`     // Block number the vote was cast in (expire old votes)
-	Address   common.Address `json:"address"`   // Account being voted on to change its authorization
-	Authorize bool           `json:"authorize"` // Whether to authorize or deauthorize the voted account
-}
-
-// Tally is a simple vote tally to keep the current score of votes. Votes that
-// go against the proposal aren't counted since it's equivalent to not voting.
-type Tally struct {
-	Authorize bool   `json:"authorize"` // Whether the vote it about authorizing or kicking someone
-	Votes     uint64 `json:"votes"`     // Number of votes until now wanting to pass the proposal
-}
-
 // Snapshot is the state of the authorization voting at a given point in time.
 type Snapshot struct {
-	Epoch                   uint64                        // The number of blocks after which to checkpoint and reset the pending votes
-	Number                  uint64                        // Block number where the snapshot was created
-	Hash                    common.Hash                   // Block hash where the snapshot was created
-	Votes                   []*Vote                       // List of votes cast in chronological order
-	GovernanceVotes         []*governance.GovernanceVote  // List of governance related votes cast in chronological order
-	Tally                   map[common.Address]Tally      // Current vote tally to avoid recalculating
-	ValSet                  istanbul.ValidatorSet         // Set of authorized validators at this moment
-	GovernanceTally         []*governance.GovernanceTally // Current governance vote tally to avoid recalculating
-	GovernanceConfig        *params.GovernanceConfig      // Pointer to the GovernanceConfig
-	PendingGovernanceConfig *params.GovernanceConfig      // Stores current GovernanceConfig which haven't been applied yet
+	Epoch         uint64                // The number of blocks after which to checkpoint and reset the pending votes
+	Number        uint64                // Block number where the snapshot was created
+	Hash          common.Hash           // Block hash where the snapshot was created
+	ValSet        istanbul.ValidatorSet // Set of authorized validators at this moment
+	Policy        uint64
+	CommitteeSize uint64
+}
+
+func getGovernanceValue(gov *governance.Governance) (epoch uint64, policy uint64, committeeSize uint64) {
+	if r := gov.GetGovernanceValue("istanbul.epoch"); r != nil {
+		epoch = r.(uint64)
+	} else {
+		epoch = params.DefaultEpoch
+	}
+
+	if r := gov.GetGovernanceValue("istanbul.policy"); r != nil {
+		policy = r.(uint64)
+	} else {
+		policy = params.DefaultProposerPolicy
+	}
+
+	if r := gov.GetGovernanceValue("istanbul.committeesize"); r != nil {
+		committeeSize = r.(uint64)
+	} else {
+		committeeSize = params.DefaultSubGroupSize
+	}
+	return
 }
 
 // newSnapshot create a new snapshot with the specified startup parameters. This
 // method does not initialize the set of recent validators, so only ever use if for
 // the genesis block.
-func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, gconfig *params.GovernanceConfig) *Snapshot {
+func newSnapshot(gov *governance.Governance, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
+	epoch, policy, committeeSize := getGovernanceValue(gov)
+
 	snap := &Snapshot{
-		Epoch:                   gconfig.Istanbul.Epoch,
-		Number:                  number,
-		Hash:                    hash,
-		ValSet:                  valSet,
-		Tally:                   make(map[common.Address]Tally),
-		GovernanceConfig:        gconfig,
-		PendingGovernanceConfig: gconfig.Copy(),
+		Epoch:         epoch,
+		Number:        number,
+		Hash:          hash,
+		ValSet:        valSet,
+		Policy:        policy,
+		CommitteeSize: committeeSize,
 	}
 	return snap
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, subSize uint64, db database.DBManager, hash common.Hash, gconfig *params.GovernanceConfig) (*Snapshot, error) {
+func loadSnapshot(db database.DBManager, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.ReadIstanbulSnapshot(hash)
 	if err != nil {
 		return nil, err
@@ -93,13 +94,6 @@ func loadSnapshot(epoch uint64, subSize uint64, db database.DBManager, hash comm
 	if err := json.Unmarshal(blob, snap); err != nil {
 		return nil, err
 	}
-	snap.GovernanceConfig = gconfig
-	snap.Epoch = snap.GovernanceConfig.Istanbul.Epoch
-	snap.ValSet.SetSubGroupSize(snap.GovernanceConfig.Istanbul.SubGroupSize)
-	if snap.PendingGovernanceConfig == nil {
-		snap.PendingGovernanceConfig = snap.GovernanceConfig.Copy()
-	}
-
 	return snap, nil
 }
 
@@ -116,24 +110,13 @@ func (s *Snapshot) store(db database.DBManager) error {
 // copy creates a deep copy of the snapshot, though not the individual votes.
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
-		Epoch:                   s.Epoch,
-		Number:                  s.Number,
-		Hash:                    s.Hash,
-		ValSet:                  s.ValSet.Copy(),
-		Votes:                   make([]*Vote, len(s.Votes)),
-		GovernanceVotes:         make([]*governance.GovernanceVote, len(s.GovernanceVotes)),
-		Tally:                   make(map[common.Address]Tally),
-		GovernanceTally:         make([]*governance.GovernanceTally, len(s.GovernanceTally)),
-		GovernanceConfig:        s.GovernanceConfig.Copy(),
-		PendingGovernanceConfig: s.PendingGovernanceConfig.Copy(),
+		Epoch:         s.Epoch,
+		Number:        s.Number,
+		Hash:          s.Hash,
+		ValSet:        s.ValSet.Copy(),
+		Policy:        s.Policy,
+		CommitteeSize: s.CommitteeSize,
 	}
-
-	for address, tally := range s.Tally {
-		cpy.Tally[address] = tally
-	}
-	copy(cpy.Votes, s.Votes)
-	copy(cpy.GovernanceTally, s.GovernanceTally)
-	copy(cpy.GovernanceVotes, s.GovernanceVotes)
 	return cpy
 }
 
@@ -160,8 +143,8 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		return nil, errInvalidVotingChain
 	}
 
-	// Copy received epoch to snapshot.Epoch because it might be changed by governance vote
-	s.Epoch = epoch
+	// Copy values which might be changed by governance vote
+	s.Epoch, s.Policy, s.CommitteeSize = getGovernanceValue(gov)
 
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
@@ -171,10 +154,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		number := header.Number.Uint64()
 
 		if number%s.Epoch == 0 {
-			snap.Votes = nil
-			snap.Tally = make(map[common.Address]Tally)
-			snap.GovernanceVotes = nil
-			snap.GovernanceTally = nil
 			gov.ClearVotes(number)
 		}
 
@@ -187,10 +166,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			return nil, errUnauthorized
 		}
 
-		// Check if this governance vote duplicates
-		// Handle Governance related vote
-		gVote := new(governance.GovernanceVote)
-		snap.handleGovernanceVote(snap, header, validator, gVote, gov)
+		snap.ValSet = gov.HandleGovernanceVote(snap.ValSet, header, validator)
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
@@ -202,8 +178,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 
 	// Save GovernanceTally for APIs
 	gov.GovernanceTallyLock.Lock()
-	gov.GovernanceTally = make([]*governance.GovernanceTally, len(s.GovernanceTally))
-	copy(gov.GovernanceTally, s.GovernanceTally)
 	gov.GovernanceTallyLock.Unlock()
 	gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())
 	gov.SetMyVotingPower(snap.getMyVotingPower(addr))
@@ -218,128 +192,6 @@ func (s *Snapshot) getMyVotingPower(addr common.Address) uint64 {
 		}
 	}
 	return 0
-}
-
-func (s *Snapshot) handleGovernanceVote(snap *Snapshot, header *types.Header, validator common.Address, gVote *governance.GovernanceVote, gov *governance.Governance) {
-
-	governanceMode := governance.GovernanceModeMap[gov.ChainConfig.Governance.GovernanceMode]
-	governingNode := gov.ChainConfig.Governance.GoverningNode
-
-	if len(header.Vote) > 0 {
-		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
-			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
-		} else {
-			// Parse vote.Value and make it has appropriate type
-			gVote = gov.ParseVoteValue(gVote)
-
-			if governance.GovernanceKeyMap[gVote.Key] == params.GoverningNode {
-				_, addr := snap.ValSet.GetByAddress(gVote.Value.(common.Address))
-				if addr == nil {
-					logger.Warn("Invalid governing node address", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
-					return
-				}
-			} else if governance.GovernanceKeyMap[gVote.Key] == params.AddValidator {
-				if !s.checkVote(common.HexToAddress(gVote.Value.(string)), true) {
-					return
-				}
-			} else if governance.GovernanceKeyMap[gVote.Key] == params.RemoveValidator {
-				if !s.checkVote(common.HexToAddress(gVote.Value.(string)), false) {
-					return
-				}
-			}
-
-			// Check vote's validity
-			if _, ok := gov.CheckVoteValidity(gVote.Key, gVote.Value); ok {
-				// Remove old vote with same validator and key
-				s.removePreviousVote(snap, validator, gVote)
-
-				// Add new Vote to snapshot.GovernanceVotes
-				snap.GovernanceVotes = append(snap.GovernanceVotes, gVote)
-
-				// Tally up the new vote. This will be cleared when Epoch ends.
-				// Add to GovernanceTally if it doesn't exist
-				s.addNewVote(snap, gVote, governanceMode, governingNode)
-			} else {
-				logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
-			}
-		}
-	}
-}
-
-func (s *Snapshot) addNewVote(snap *Snapshot, gVote *governance.GovernanceVote, governanceMode int, governingNode common.Address) {
-	_, v := snap.ValSet.GetByAddress(gVote.Validator)
-	if v != nil {
-		vp := v.VotingPower()
-		currentVotes := changeGovernanceTally(snap, gVote.Key, gVote.Value, vp, true)
-		if governanceMode == params.GovernanceMode_None || (governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode) ||
-			(governanceMode == params.GovernanceMode_Ballot && currentVotes > snap.ValSet.TotalVotingPower()/2) {
-
-			switch governance.GovernanceKeyMap[gVote.Key] {
-			case params.AddValidator:
-				s.ValSet.AddValidator(common.HexToAddress(gVote.Value.(string)))
-			case params.RemoveValidator:
-				target := common.HexToAddress(gVote.Value.(string))
-				s.ValSet.RemoveValidator(target)
-				s.removeVotesFromRemovedNode(target)
-			default:
-				governance.ReflectVotes(*gVote, snap.PendingGovernanceConfig)
-			}
-		}
-	}
-}
-
-func (s *Snapshot) removeVotesFromRemovedNode(addr common.Address) {
-	for i := 0; i < len(s.GovernanceVotes); i++ {
-		if s.GovernanceVotes[i].Validator == addr {
-			// Uncast the vote from the chronological list
-			s.GovernanceVotes = append(s.GovernanceVotes[:i], s.GovernanceVotes[i+1:]...)
-
-			i--
-		}
-	}
-}
-
-func (s *Snapshot) removePreviousVote(snap *Snapshot, validator common.Address, gVote *governance.GovernanceVote) {
-	// Removing duplicated previous GovernanceVotes
-	for idx, vote := range snap.GovernanceVotes {
-		// Check if previous vote from same validator exists
-		if vote.Validator == validator && vote.Key == gVote.Key {
-			// Reduce Tally
-			_, v := snap.ValSet.GetByAddress(vote.Validator)
-			vp := v.VotingPower()
-			changeGovernanceTally(snap, vote.Key, vote.Value, vp, false)
-
-			// Remove the old vote from GovernanceVotes
-			snap.GovernanceVotes = append(snap.GovernanceVotes[:idx], snap.GovernanceVotes[idx+1:]...)
-			break
-		}
-	}
-}
-
-// changeGovernanceTally updates snapshot's tally for governance votes.
-func changeGovernanceTally(snap *Snapshot, key string, value interface{}, vote uint64, isAdd bool) uint64 {
-	found := false
-	var currentVote uint64
-
-	for idx, v := range snap.GovernanceTally {
-		if v.Key == key && v.Value == value {
-			if isAdd {
-				snap.GovernanceTally[idx].Votes += vote
-			} else {
-				snap.GovernanceTally[idx].Votes -= vote
-			}
-			currentVote = snap.GovernanceTally[idx].Votes
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		snap.GovernanceTally = append(snap.GovernanceTally, &governance.GovernanceTally{Key: key, Value: value, Votes: vote})
-		return vote
-	} else {
-		return currentVote
-	}
 }
 
 // validators retrieves the list of authorized validators in ascending order.
@@ -363,15 +215,9 @@ func sortValidatorArray(validators []common.Address) []common.Address {
 }
 
 type snapshotJSON struct {
-	Epoch                   uint64                        `json:"epoch"`
-	Number                  uint64                        `json:"number"`
-	Hash                    common.Hash                   `json:"hash"`
-	Votes                   []*Vote                       `json:"votes"`
-	GovernanceVotes         []*governance.GovernanceVote  `json:"governancevotes"`
-	Tally                   map[common.Address]Tally      `json:"tally"`
-	GovernanceTally         []*governance.GovernanceTally `json:"governancetally"`
-	GovernanceConfig        *params.GovernanceConfig      `json:"governanceconfig"`
-	PendingGovernanceConfig *params.GovernanceConfig      `json:"pendinggovernanceconfig"`
+	Epoch  uint64      `json:"epoch"`
+	Number uint64      `json:"number"`
+	Hash   common.Hash `json:"hash"`
 
 	// for validator set
 	Validators   []common.Address        `json:"validators"`
@@ -399,23 +245,17 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	}
 
 	return &snapshotJSON{
-		Epoch:                   s.GovernanceConfig.Istanbul.Epoch, // s.Epoch
-		Number:                  s.Number,
-		Hash:                    s.Hash,
-		Votes:                   s.Votes,
-		Tally:                   s.Tally,
-		Validators:              s.validators(),
-		Policy:                  istanbul.ProposerPolicy(s.GovernanceConfig.Istanbul.ProposerPolicy), //s.ValSet.Policy(),
-		SubGroupSize:            s.GovernanceConfig.Istanbul.SubGroupSize,                            // s.ValSet.SubGroupSize(),
-		RewardAddrs:             rewardAddrs,
-		VotingPowers:            votingPowers,
-		Weights:                 weights,
-		Proposers:               proposers,
-		ProposersBlockNum:       proposersBlockNum,
-		GovernanceVotes:         s.GovernanceVotes,
-		GovernanceTally:         s.GovernanceTally,
-		GovernanceConfig:        s.GovernanceConfig,
-		PendingGovernanceConfig: s.PendingGovernanceConfig,
+		Epoch:             s.Epoch,
+		Number:            s.Number,
+		Hash:              s.Hash,
+		Validators:        s.validators(),
+		Policy:            istanbul.ProposerPolicy(s.Policy),
+		SubGroupSize:      s.CommitteeSize,
+		RewardAddrs:       rewardAddrs,
+		VotingPowers:      votingPowers,
+		Weights:           weights,
+		Proposers:         proposers,
+		ProposersBlockNum: proposersBlockNum,
 	}
 }
 
@@ -429,24 +269,13 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Epoch = j.Epoch
 	s.Number = j.Number
 	s.Hash = j.Hash
-	s.Votes = j.Votes
-	s.Tally = j.Tally
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if j.Policy == istanbul.WeightedRandom {
-		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.RewardAddrs, j.VotingPowers, j.Weights, istanbul.ProposerPolicy(j.GovernanceConfig.Istanbul.ProposerPolicy), j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
+		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.RewardAddrs, j.VotingPowers, j.Weights, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
 		validator.RecoverWeightedCouncilProposer(s.ValSet, j.Proposers)
 	} else {
-		s.ValSet = validator.NewSubSet(j.Validators, istanbul.ProposerPolicy(j.GovernanceConfig.Istanbul.ProposerPolicy), j.GovernanceConfig.Istanbul.SubGroupSize)
-	}
-	s.GovernanceVotes = j.GovernanceVotes
-	s.GovernanceTally = j.GovernanceTally
-	s.GovernanceConfig = j.GovernanceConfig
-
-	if j.PendingGovernanceConfig == nil {
-		s.PendingGovernanceConfig = j.GovernanceConfig.Copy()
-	} else {
-		s.PendingGovernanceConfig = j.PendingGovernanceConfig
+		s.ValSet = validator.NewSubSet(j.Validators, j.Policy, j.SubGroupSize)
 	}
 	return nil
 }

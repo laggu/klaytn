@@ -78,6 +78,9 @@ var (
 	bloomBitsPrefix = []byte("B")
 
 	senderTxHashToTxHashPrefix = []byte("SenderTxHash")
+
+	governancePrefix     = []byte("governance")
+	governanceHistoryKey = []byte("governanceIdxHistory")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
@@ -168,4 +171,10 @@ func BloomBitsKey(bit uint, section uint64, hash common.Hash) []byte {
 	binary.BigEndian.PutUint64(key[3:], section)
 
 	return key
+}
+
+func governanceKey(num uint64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, num)
+	return append(governancePrefix[:], b[:]...)
 }

@@ -69,18 +69,21 @@ const (
 
 const (
 	// Governance Key
-	GovernanceMode = iota
+	GovernanceMode int = iota
 	GoverningNode
 	Epoch
 	Policy
-	Sub
+	CommitteeSize
 	UnitPrice
 	MintingAmount
 	Ratio
 	UseGiniCoeff
 	DeferredTxFee
+	MinimumStake
 	AddValidator
 	RemoveValidator
+	StakeUpdateInterval
+	ProposerRefreshInterval
 )
 
 const (

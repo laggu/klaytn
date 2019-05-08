@@ -172,7 +172,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	logger.Info("Initialised chain configuration", "config", chainConfig)
-	governance := governance.NewGovernance(chainConfig)
+	governance := governance.NewGovernance(chainConfig, chainDB)
 
 	cn := &CN{
 		config:         config,
@@ -261,7 +261,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	cn.protocolManager.SetRewardbase(cn.rewardbase)
 
-	if chainConfig.Istanbul != nil && cn.chainConfig.Governance.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
+	if chainConfig.Istanbul != nil && cn.chainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
 		reward.Subscribe(cn.blockchain)
 	}
 
@@ -330,14 +330,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
-	} else {
-		if chainConfig.Governance.Istanbul != nil {
-			config.Istanbul.Epoch = chainConfig.Governance.Istanbul.Epoch
-			config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Governance.Istanbul.ProposerPolicy)
-			config.Istanbul.SubGroupSize = chainConfig.Governance.Istanbul.SubGroupSize
-		} else {
-			chainConfig.Governance.Istanbul = governance.GetDefaultIstanbulConfig()
-		}
 	}
 	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
 }

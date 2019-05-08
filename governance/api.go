@@ -96,7 +96,7 @@ func (api *PublicGovernanceAPI) TotalVotingPower() interface{} {
 	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0
 }
 
-func (api *PublicGovernanceAPI) MyVotes() map[string]interface{} {
+func (api *PublicGovernanceAPI) MyVotes() map[string]voteStatus {
 	return api.governance.voteMap
 }
 

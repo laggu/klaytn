@@ -22,15 +22,11 @@ package backend
 
 import (
 	"errors"
-	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
-	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/node"
-	"github.com/ground-x/klaytn/params"
-	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -129,116 +125,10 @@ func (sb *backend) NewChainHead() error {
 	}
 
 	// Start a goroutine to update governance information
-	go sb.updateGovernance(sb.chain.CurrentHeader().Number.Uint64())
+	header := sb.chain.CurrentHeader()
+	proposer, _ := ecrecover(header)
+	go sb.governance.UpdateGovernance(header, proposer, sb.address)
 
 	go sb.istanbulEventMux.Post(istanbul.FinalCommittedEvent{})
 	return nil
-}
-
-// updateGovernance manages GovernanceCache and updates the backend's Governance config
-// To reduce timing issues, we are using GovernanceConfig which was decided at two Epochs ago
-func (sb *backend) updateGovernance(curr uint64) {
-	rem := curr % sb.config.Epoch
-
-	// Current block has new Governance information in it's header
-	if rem == 0 {
-		// Save current header's governance data in cache
-		_ = sb.makeGovernanceCacheFromHeader(curr)
-
-		// Retrieve the cache older by single Epoch
-		num := curr - sb.config.Epoch
-		if config, ok := sb.getGovernanceCache(num); ok {
-			sb.replaceGovernanceConfig(config)
-		} else {
-			ret := sb.makeGovernanceCacheFromHeader(num)
-			sb.replaceGovernanceConfig(ret)
-		}
-
-		sb.lastGovernanceBlock = num
-	} else {
-		// Required Governance config's block number
-		var num uint64
-
-		// To prevent underflow, compare it first
-		if curr > (rem + sb.config.Epoch) {
-			num = curr - rem - sb.config.Epoch
-		} else {
-			num = 0
-		}
-
-		// If blocks passed more than an Epoch without making cache
-		if num > sb.lastGovernanceBlock {
-			ret := sb.makeGovernanceCacheFromHeader(num)
-			sb.replaceGovernanceConfig(ret)
-			sb.lastGovernanceBlock = num
-		}
-	}
-
-	// if this block has a vote from this node, remove it
-	if proposer, err := ecrecover(sb.chain.CurrentHeader()); err == nil {
-		if len(sb.chain.CurrentHeader().Vote) > 0 && sb.address == proposer {
-			sb.removeDuplicatedVote(sb.chain.CurrentHeader().Vote, sb.governance)
-		}
-	}
-}
-
-func (sb *backend) removeDuplicatedVote(rawvote []byte, gov *governance.Governance) {
-	vote := new(governance.GovernanceVote)
-	if err := rlp.DecodeBytes(rawvote, vote); err != nil {
-		// Vote data might be corrupted
-		logger.Error("Failed to decode vote data from header", "vote")
-	} else {
-		vote = gov.ParseVoteValue(vote)
-		gov.RemoveVote(vote.Key, vote.Value)
-	}
-}
-
-// getGovernanceCacheKey returns cache key of the given block number
-func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
-	v := fmt.Sprintf("%v", num)
-	return common.GovernanceCacheKey(params.GovernanceCachePrefix + "_" + v)
-}
-
-// getGovernanceCache returns cached governance config as a byte slice
-func (sb *backend) getGovernanceCache(num uint64) ([]byte, bool) {
-	cKey := getGovernanceCacheKey(num)
-
-	if ret, ok := sb.GovernanceCache.Get(cKey); ok && ret != nil {
-		return ret.([]byte), true
-	}
-	return nil, false
-}
-
-// makeGovernanceCacheFromHeader retrieves governance information from the given number of block header
-// and store it in the cache
-func (sb *backend) makeGovernanceCacheFromHeader(num uint64) []byte {
-	head := sb.chain.GetHeaderByNumber(num)
-	cKey := getGovernanceCacheKey(num)
-
-	sb.GovernanceCache.Add(cKey, head.Governance)
-	return head.Governance
-}
-
-// replaceGovernanceConfig updates backend's governance with rlp decoded governance information
-func (sb *backend) replaceGovernanceConfig(g []byte) bool {
-	newGovernance := params.GovernanceConfig{}
-	if err := rlp.DecodeBytes(g, &newGovernance); err != nil {
-		logger.Error("Failed to replace Governance Config", "err", err)
-		return false
-
-	} else {
-		// deep copy new governance
-		sb.chain.Config().Governance = newGovernance.Copy()
-		sb.governance.ChainConfig.Governance = newGovernance.Copy()
-		// TODO-Klaytn-Governance Code for compatibility
-		// Need to be cleaned up when developers use same template for genesis.json
-		sb.config.Epoch = newGovernance.Istanbul.Epoch
-		sb.config.SubGroupSize = newGovernance.Istanbul.SubGroupSize
-		sb.config.ProposerPolicy = istanbul.ProposerPolicy(newGovernance.Istanbul.ProposerPolicy)
-		sb.chain.Config().Istanbul = newGovernance.Istanbul.Copy()
-		sb.chain.Config().UnitPrice = newGovernance.UnitPrice
-		logger.Info("Governance config updated", "config", sb.chain.Config())
-
-		return true
-	}
 }

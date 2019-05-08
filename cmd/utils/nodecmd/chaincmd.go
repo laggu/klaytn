@@ -27,6 +27,7 @@ import (
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"os"
@@ -84,22 +85,22 @@ func initGenesis(ctx *cli.Context) error {
 		}
 	}
 
-	genesis.Governance, err = governance.MakeGovernanceData(genesis.Config.Governance)
-
-	if genesis.Config.StakingUpdateInterval != 0 {
-		params.SetStakingUpdateInterval(genesis.Config.StakingUpdateInterval)
+	if genesis.Config.Governance.Reward.StakingUpdateInterval != 0 {
+		params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
 	} else {
-		genesis.Config.StakingUpdateInterval = params.StakingUpdateInterval()
+		genesis.Config.Governance.Reward.StakingUpdateInterval = params.StakingUpdateInterval()
 	}
 
-	if genesis.Config.ProposerUpdateInterval != 0 {
-		params.SetProposerUpdateInterval(genesis.Config.ProposerUpdateInterval)
+	if genesis.Config.Governance.Reward.ProposerUpdateInterval != 0 {
+		params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
 	} else {
-		genesis.Config.ProposerUpdateInterval = params.ProposerUpdateInterval()
+		genesis.Config.Governance.Reward.ProposerUpdateInterval = params.ProposerUpdateInterval()
 	}
 
-	if err != nil {
-		logger.Crit("Error in making governance data", "err", err)
+	data := getGovernanceItemsFromGenesis(genesis)
+	gbytes, _ := json.Marshal(data)
+	if genesis.Governance, err = rlp.EncodeToBytes(gbytes); err != nil {
+		logger.Crit("Failed to encode initial settings. Check your genesis.json", "err", err)
 	}
 
 	// Open an initialise both full and light databases
@@ -119,9 +120,41 @@ func initGenesis(ctx *cli.Context) error {
 			log.Fatalf("Failed to write genesis block: %v", err)
 		}
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash)
+
+		gov := governance.NewGovernance(genesis.Config, chaindb)
+		if err := gov.WriteGovernance(0, data, nil); err != nil {
+			logger.Error("Error in storing governance information. Resolve issues and try it again : %v", err)
+		}
 		chaindb.Close()
 	}
 	return nil
+}
+
+func getGovernanceItemsFromGenesis(genesis *blockchain.Genesis) governance.GovernanceSet {
+	g := make(governance.GovernanceSet)
+
+	// Error checking is not needed here because it was already done in CheckGenesisValues
+	if genesis.Config.Governance != nil {
+		governance := genesis.Config.Governance
+		g.SetValue(params.GovernanceMode, governance.GovernanceMode)
+		g.SetValue(params.GoverningNode, governance.GoverningNode)
+		g.SetValue(params.UnitPrice, genesis.Config.UnitPrice)
+		g.SetValue(params.MintingAmount, governance.Reward.MintingAmount.String())
+		g.SetValue(params.Ratio, governance.Reward.Ratio)
+		g.SetValue(params.UseGiniCoeff, governance.Reward.UseGiniCoeff)
+		g.SetValue(params.DeferredTxFee, governance.Reward.DeferredTxFee)
+		g.SetValue(params.MinimumStake, governance.Reward.MinimumStake.String())
+		g.SetValue(params.StakeUpdateInterval, governance.Reward.StakingUpdateInterval)
+		g.SetValue(params.ProposerRefreshInterval, governance.Reward.ProposerUpdateInterval)
+	}
+
+	if genesis.Config.Istanbul != nil {
+		istanbul := genesis.Config.Istanbul
+		g.SetValue(params.Epoch, istanbul.Epoch)
+		g.SetValue(params.Policy, istanbul.ProposerPolicy)
+		g.SetValue(params.CommitteeSize, istanbul.SubGroupSize)
+	}
+	return g
 }
 
 func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain.Genesis {
@@ -147,35 +180,10 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 		logger.Crit("Both clique and istanbul configuration exists. Only one configuration can be applied. Exiting..")
 	}
 
-	// We have governance config
-	if genesis.Config.Governance != nil {
-		// and also we have istanbul config. Then use governance's value prior to istanbul's value
-		if engine == params.UseIstanbul && genesis.Config.Governance.Istanbul != nil {
-			if genesis.Config.Istanbul != nil {
-				if genesis.Config.Istanbul.Epoch != genesis.Config.Governance.Istanbul.Epoch ||
-					genesis.Config.Istanbul.ProposerPolicy != genesis.Config.Governance.Istanbul.ProposerPolicy ||
-					genesis.Config.Istanbul.SubGroupSize != genesis.Config.Governance.Istanbul.SubGroupSize {
-					valueChanged = true
-				}
-			} else {
-				genesis.Config.Istanbul = new(params.IstanbulConfig)
-			}
-
-			genesis.Config.UnitPrice = genesis.Config.Governance.UnitPrice
-			genesis.Config.Istanbul.Epoch = genesis.Config.Governance.Istanbul.Epoch
-			genesis.Config.Istanbul.SubGroupSize = genesis.Config.Governance.Istanbul.SubGroupSize
-			genesis.Config.Istanbul.ProposerPolicy = genesis.Config.Governance.Istanbul.ProposerPolicy
-		}
-	} else {
+	// If we don't have governance config
+	if genesis.Config.Governance == nil {
 		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
-
-		// We don't have governance config and engine is istanbul
-		if engine == params.UseIstanbul && genesis.Config.Istanbul != nil {
-			genesis.Config.Governance.UnitPrice = genesis.Config.UnitPrice
-			genesis.Config.Governance.Istanbul.Epoch = genesis.Config.Istanbul.Epoch
-			genesis.Config.Governance.Istanbul.SubGroupSize = genesis.Config.Istanbul.SubGroupSize
-			genesis.Config.Governance.Istanbul.ProposerPolicy = genesis.Config.Istanbul.ProposerPolicy
-		}
+		valueChanged = true
 	}
 
 	if valueChanged {

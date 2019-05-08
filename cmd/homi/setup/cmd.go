@@ -188,14 +188,10 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	if !common.IsHexAddress(governingNode) {
 		log.Fatalf("Governing Node is invalid hex address", "value", governingNode)
 	}
-	govUnitPrice := ctx.Uint64(govUnitPriceFlag.Name)
-
 	return &params.GovernanceConfig{
 		GoverningNode:  common.HexToAddress(governingNode),
 		GovernanceMode: govMode,
 		Reward:         genRewardConfig(ctx),
-		Istanbul:       genIstanbulConfig(ctx),
-		UnitPrice:      govUnitPrice,
 	}
 }
 
@@ -226,6 +222,7 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchai
 		genesis.DeriveShaImpl(deriveShaImpl),
 		genesis.StakingInterval(stakingInterval),
 		genesis.ProposerInterval(proposerInterval),
+		genesis.UnitPrice(unitPrice),
 	}
 
 	if ok := ctx.Bool(governanceFlag.Name); ok {
@@ -278,18 +275,18 @@ func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 			Governance: &params.GovernanceConfig{
 				GoverningNode:  nodeAddrs[0],
 				GovernanceMode: "single",
-				Istanbul: &params.IstanbulConfig{
-					ProposerPolicy: 2,
-					SubGroupSize:   13,
-				},
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
 					UseGiniCoeff:  false,
 					DeferredTxFee: true,
 				},
-				UnitPrice: 25000000000,
 			},
+			Istanbul: &params.IstanbulConfig{
+				ProposerPolicy: 2,
+				SubGroupSize:   13,
+			},
+			UnitPrice: 25000000000,
 		},
 	}
 	assignExtraData := genesis.Validators(nodeAddrs...)
@@ -300,9 +297,9 @@ func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 
 func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	genesisJson := genBaobabCommonGenesis(nodeAddrs)
-	genesisJson.Config.Governance.Istanbul.Epoch = 604800
-	genesisJson.Config.StakingUpdateInterval = 86400
-	genesisJson.Config.ProposerUpdateInterval = 3600
+	genesisJson.Config.Istanbul.Epoch = 604800
+	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
+	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
 	allocationFunction := genesis.AllocWithBaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
@@ -310,9 +307,9 @@ func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 
 func genBaobabTestGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	testGenesis := genBaobabCommonGenesis(nodeAddrs)
-	testGenesis.Config.Governance.Istanbul.Epoch = 30
-	testGenesis.Config.StakingUpdateInterval = 60
-	testGenesis.Config.ProposerUpdateInterval = 30
+	testGenesis.Config.Istanbul.Epoch = 30
+	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
+	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
 	allocationFunction := genesis.AllocWithPrebaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
 	writeFile([]byte(baobabOperatorAddress), "baobab_operator", "address")

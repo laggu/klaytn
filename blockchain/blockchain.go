@@ -1047,8 +1047,8 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 		return true
 	}
 
-	if bc.chainConfig.Governance != nil && bc.chainConfig.Governance.Istanbul != nil {
-		return bc.chainConfig.Governance.Istanbul.ProposerPolicy == params.WeightedRandom &&
+	if bc.chainConfig.Istanbul != nil {
+		return bc.chainConfig.Istanbul.ProposerPolicy == params.WeightedRandom &&
 			params.IsStakingUpdatePossible(blockNum)
 	}
 	return false
