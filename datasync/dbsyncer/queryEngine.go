@@ -116,10 +116,6 @@ func (qe *QueryEngine) make(block *types.Block, tx *types.Transaction, receipt *
 }
 
 func (qe *QueryEngine) execute(insertQuery *BulkInsertQuery, result chan *BulkInsertResult) {
-	if err := qe.ds.bulkInsert(insertQuery.parameters, insertQuery.vals, insertQuery.blockNumber, insertQuery.insertCount); err != nil {
-		logger.Error("fail to bulkinsert (tx/summary/senderHash)", "err", err)
-		result <- &BulkInsertResult{err}
-	}
 	defer func() {
 		// recover from panic caused by writing to a closed channel
 		if r := recover(); r != nil {
@@ -127,6 +123,10 @@ func (qe *QueryEngine) execute(insertQuery *BulkInsertQuery, result chan *BulkIn
 			return
 		}
 	}()
+	if err := qe.ds.bulkInsert(insertQuery.parameters, insertQuery.vals, insertQuery.blockNumber, insertQuery.insertCount); err != nil {
+		logger.Error("fail to bulkinsert (tx/summary/senderHash)", "err", err)
+		result <- &BulkInsertResult{err}
+	}
 	result <- &BulkInsertResult{nil}
 }
 
