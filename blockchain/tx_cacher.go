@@ -22,11 +22,17 @@ package blockchain
 
 import (
 	"github.com/ground-x/klaytn/blockchain/types"
+	"math"
 	"runtime"
 )
 
 // senderCacher is a concurrent tranaction sender recoverer anc cacher.
-var senderCacher = newTxSenderCacher(runtime.NumCPU())
+var senderCacher = newTxSenderCacher(calcNumSenderCachers())
+
+func calcNumSenderCachers() int {
+	numWorkers := math.Ceil(float64(runtime.NumCPU()) * 2.0 / 3.0)
+	return int(numWorkers)
+}
 
 // txSenderCacherRequest is a request for recovering transaction senders with a
 // specific signature scheme and caching it into the transactions themselves.

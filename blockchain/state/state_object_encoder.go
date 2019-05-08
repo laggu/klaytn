@@ -19,11 +19,19 @@ package state
 import (
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/statedb"
+	"math"
 	"runtime"
 )
 
-// TODO-Klaytn-StateDB Need to provide a way to properly adjust below values.
-var stateObjEncoderDefaultWorkers = runtime.NumCPU()
+var stateObjEncoderDefaultWorkers = calcNumStateObjectEncoderWorkers()
+
+func calcNumStateObjectEncoderWorkers() int {
+	numWorkers := math.Ceil(float64(runtime.NumCPU()) / 4.0)
+	if numWorkers > stateObjEncoderMaxWorkers {
+		return stateObjEncoderMaxWorkers
+	}
+	return int(numWorkers)
+}
 
 const stateObjEncoderMaxWorkers = 16
 const stateObjEncoderDefaultCap = 20000
@@ -35,11 +43,6 @@ var stateObjEncoder = newStateObjectEncoder(stateObjEncoderDefaultWorkers, state
 func newStateObjectEncoder(numGoRoutines, tasksChSize int) *stateObjectEncoder {
 	soe := &stateObjectEncoder{
 		tasksCh: make(chan *stateObject, tasksChSize),
-	}
-
-	// Adjust numGoRoutines if it is larger than the max value.
-	if numGoRoutines > stateObjEncoderMaxWorkers {
-		numGoRoutines = stateObjEncoderMaxWorkers
 	}
 
 	for i := 0; i < numGoRoutines; i++ {
