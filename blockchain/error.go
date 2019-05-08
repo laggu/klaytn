@@ -99,4 +99,7 @@ var (
 
 	// ErrVMDefault is returned if status of receipt is ReceiptStatusErrDefault from GetVMerrFromReceiptStatus
 	ErrVMDefault = errors.New("VM error occurs while running smart contract")
+
+	// ErrAccountCreationPrevented is returned if account creation is inserted in the service chain's txpool.
+	ErrAccountCreationPrevented = errors.New("account creation is prevented for the service chain")
 )

@@ -107,6 +107,8 @@ type TxPoolConfig struct {
 	NonExecSlotsAll     uint64 // Maximum number of non-executable transaction slots for all accounts
 
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
+
+	IsServiceChain bool // Whether TxPool is created by service chain or not
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -535,6 +537,13 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
+
+	// TODO-Klaytn-ServiceChain: do not prevent new account creation after proper account sync.
+	if pool.config.IsServiceChain {
+		if tx.Type().IsAccountCreation() {
+			return ErrAccountCreationPrevented
+		}
+	}
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
