@@ -97,15 +97,15 @@ Args :
 			p2pPortFlag,
 			dataDirFlag,
 			logDirFlag,
-			stakingFlag,
-			proposerFlag,
 			governanceFlag,
 			govModeFlag,
 			governingNodeFlag,
-			govUnitPriceFlag,
 			rewardMintAmountFlag,
 			rewardRatioFlag,
 			rewardGiniCoeffFlag,
+			rewardStakingFlag,
+			rewardProposerFlag,
+			rewardMinimumStakeFlag,
 			rewardDeferredTxFeeFlag,
 			istEpochFlag,
 			istProposerPolicyFlag,
@@ -161,12 +161,22 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	ratio := ctx.String(rewardRatioFlag.Name)
 	giniCoeff := ctx.Bool(rewardGiniCoeffFlag.Name)
 	deferredTxFee := ctx.Bool(rewardDeferredTxFeeFlag.Name)
+	stakingInterval := ctx.Uint64(rewardStakingFlag.Name)
+	proposalInterval := ctx.Uint64(rewardProposerFlag.Name)
+	minimumStake := new(big.Int)
+	minimumStakeString := ctx.String(rewardMinimumStakeFlag.Name)
+	if _, ok := minimumStake.SetString(minimumStakeString, 10); !ok {
+		log.Fatalf("Minimum stake must be a number", "value", minimumStakeString)
+	}
 
 	return &params.RewardConfig{
-		MintingAmount: mintingAmount,
-		Ratio:         ratio,
-		UseGiniCoeff:  giniCoeff,
-		DeferredTxFee: deferredTxFee,
+		MintingAmount:          mintingAmount,
+		Ratio:                  ratio,
+		UseGiniCoeff:           giniCoeff,
+		DeferredTxFee:          deferredTxFee,
+		StakingUpdateInterval:  stakingInterval,
+		ProposerUpdateInterval: proposalInterval,
+		MinimumStake:           minimumStake,
 	}
 }
 
@@ -208,8 +218,6 @@ func genCliqueConfig(ctx *cli.Context) *params.CliqueConfig {
 func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchain.Genesis {
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	deriveShaImpl := ctx.Int(deriveShaImplFlag.Name)
-	stakingInterval := ctx.Uint64(stakingFlag.Name)
-	proposerInterval := ctx.Uint64(proposerFlag.Name)
 
 	config := genGovernanceConfig(ctx)
 	if len(nodeAddrs) > 0 && config.GoverningNode.String() == params.DefaultGoverningNode {
@@ -220,8 +228,6 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchai
 		genesis.Validators(nodeAddrs...),
 		genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 		genesis.DeriveShaImpl(deriveShaImpl),
-		genesis.StakingInterval(stakingInterval),
-		genesis.ProposerInterval(proposerInterval),
 		genesis.UnitPrice(unitPrice),
 	}
 
@@ -237,8 +243,6 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchai
 func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*ecdsa.PrivateKey) *blockchain.Genesis {
 	config := genCliqueConfig(ctx)
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
-	stakingInterval := ctx.Uint64(stakingFlag.Name)
-	proposerInterval := ctx.Uint64(proposerFlag.Name)
 	if ok := ctx.Bool(governanceFlag.Name); ok {
 		log.Fatalf("Currently, governance is not supported for clique consensus", "--governance", ok)
 	}
@@ -248,8 +252,6 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 		genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 		genesis.UnitPrice(unitPrice),
 		genesis.Clique(config),
-		genesis.StakingInterval(stakingInterval),
-		genesis.ProposerInterval(proposerInterval),
 	)
 
 	path := path.Join(outputPath, DirKeys)
@@ -310,6 +312,7 @@ func genBaobabTestGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	testGenesis.Config.Istanbul.Epoch = 30
 	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
 	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
+	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
 	allocationFunction := genesis.AllocWithPrebaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
 	writeFile([]byte(baobabOperatorAddress), "baobab_operator", "address")

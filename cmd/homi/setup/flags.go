@@ -174,18 +174,6 @@ var (
 		Value: "/var/klay/log",
 	}
 
-	stakingFlag = cli.Uint64Flag{
-		Name:  "staking-interval",
-		Usage: "staking update interval flag",
-		Value: 86400,
-	}
-
-	proposerFlag = cli.Uint64Flag{
-		Name:  "proposer-interval",
-		Usage: "proposer update interval flag",
-		Value: 3600,
-	}
-
 	// Governance flags
 	governanceFlag = cli.BoolFlag{
 		Name:  "governance",
@@ -202,12 +190,6 @@ var (
 		Name:  "governing-node",
 		Usage: "the governing node [default: 0x0000000000000000000000000000000000000000]",
 		Value: params.DefaultGoverningNode,
-	}
-
-	govUnitPriceFlag = cli.Uint64Flag{
-		Name:  "gov-unit-price",
-		Usage: "governance unit price [default: 250000000000]",
-		Value: params.DefaultUnitPrice,
 	}
 
 	rewardMintAmountFlag = cli.StringFlag{
@@ -230,6 +212,24 @@ var (
 	rewardDeferredTxFeeFlag = cli.BoolFlag{
 		Name:  "reward-deferred-tx",
 		Usage: "governance deferred transaction",
+	}
+
+	rewardStakingFlag = cli.Uint64Flag{
+		Name:  "reward-staking-interval",
+		Usage: "reward staking update interval flag",
+		Value: 86400,
+	}
+
+	rewardProposerFlag = cli.Uint64Flag{
+		Name:  "reward-proposer-interval",
+		Usage: "reward proposer update interval flag",
+		Value: 3600,
+	}
+
+	rewardMinimumStakeFlag = cli.StringFlag{
+		Name:  "reward-minimum-stake",
+		Usage: "reward minimum stake flag",
+		Value: "2000000",
 	}
 
 	istEpochFlag = cli.Uint64Flag{
