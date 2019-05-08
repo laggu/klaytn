@@ -547,6 +547,10 @@ var (
 		Usage: "Set the value transfer recovery interval (seconds)",
 		Value: 60,
 	}
+	ServiceChainNewAccountFlag = cli.BoolFlag{
+		Name:  "scnewaccount",
+		Usage: "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the main chain.",
+	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
 		Name:  "dbsyncer",

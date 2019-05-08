@@ -227,6 +227,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 			cfg.ParentChainURL = ctx.GlobalString(utils.ParentChainURLFlag.Name)
 			cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
 			cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
+			cfg.ServiceChainNewAccount = ctx.GlobalBool(utils.ServiceChainNewAccountFlag.Name)
 		}
 
 	} else {

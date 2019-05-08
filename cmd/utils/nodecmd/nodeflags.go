@@ -151,4 +151,5 @@ var KSCNFlags = []cli.Flag{
 	utils.ParentChainURLFlag,
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
+	utils.ServiceChainNewAccountFlag,
 }

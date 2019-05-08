@@ -32,6 +32,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		ParentChainURL          string
 		VTRecovery              bool
 		VTRecoveryInterval      uint64
+		ServiceChainNewAccount  bool
 	}
 	var enc SCConfig
 	enc.Name = s.Name
