@@ -96,8 +96,30 @@ func (api *PublicGovernanceAPI) TotalVotingPower() interface{} {
 	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0
 }
 
-func (api *PublicGovernanceAPI) MyVotes() map[string]voteStatus {
-	return api.governance.voteMap
+type VoteList struct {
+	Key      string
+	Value    interface{}
+	Casted   bool
+	BlockNum uint64
+}
+
+func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
+
+	ret := []*VoteList{}
+	api.governance.voteMapLock.RLock()
+	defer api.governance.voteMapLock.RUnlock()
+
+	for k, v := range api.governance.voteMap {
+		item := &VoteList{
+			Key:      k,
+			Value:    v.value,
+			Casted:   v.casted,
+			BlockNum: v.num,
+		}
+		ret = append(ret, item)
+	}
+
+	return ret
 }
 
 func (api *PublicGovernanceAPI) MyVotingPower() interface{} {
