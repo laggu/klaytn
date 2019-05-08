@@ -353,7 +353,7 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 	serverConfig.PrivateKey = s.ctx.NodeKey()
 	serverConfig.Name = s.ctx.NodeType().String()
 	serverConfig.Logger = logger
-	serverConfig.ListenAddr = s.config.BridgePort
+	serverConfig.NoListen = true
 	serverConfig.MaxPhysicalConnections = s.maxPeers
 	serverConfig.NoDiscovery = true
 	serverConfig.EnableMultiChannelServer = false

@@ -72,16 +72,14 @@ func (c *testTransport) close(err error) {
 	c.closeErr = err
 }
 
-func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer)) Server {
-	config := Config{
-		Name:                   "test",
-		MaxPhysicalConnections: 10,
-		ListenAddr:             "127.0.0.1:0",
-		PrivateKey:             newkey(),
-	}
+func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer), config *Config) Server {
+	config.Name = "test"
+	config.MaxPhysicalConnections = 10
+	config.ListenAddr = "127.0.0.1:0"
+	config.PrivateKey = newkey()
 	server := &SingleChannelServer{
 		&BaseServer{
-			Config:      config,
+			Config:      *config,
 			newPeerHook: pf,
 			newTransport: func(fd net.Conn) transport {
 				return newTestTransport(id, fd)
@@ -111,7 +109,7 @@ func TestServerListen(t *testing.T) {
 			t.Error("peer func called with nil conn")
 		}
 		connected <- p
-	})
+	}, &Config{})
 	defer close(connected)
 	defer srv.Stop()
 
@@ -141,6 +139,29 @@ func TestServerListen(t *testing.T) {
 	}
 }
 
+func TestServerNoListen(t *testing.T) {
+	// start the test server
+	connected := make(chan *Peer)
+	remid := randomID()
+	srv := startTestServer(t, remid, func(p *Peer) {
+		if p.ID() != remid {
+			t.Error("peer func called with wrong node id")
+		}
+		if p == nil {
+			t.Error("peer func called with nil conn")
+		}
+		connected <- p
+	}, &Config{NoListen: true})
+	defer close(connected)
+	defer srv.Stop()
+
+	// dial the test server that will be failed
+	_, err := net.DialTimeout("tcp", srv.GetListenAddress(), 10*time.Millisecond)
+	if err == nil {
+		t.Fatalf("server started with listening")
+	}
+}
+
 func TestServerDial(t *testing.T) {
 	// run a one-shot TCP server to handle the connection.
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -164,7 +185,7 @@ func TestServerDial(t *testing.T) {
 	// start the server
 	connected := make(chan *Peer)
 	remid := randomID()
-	srv := startTestServer(t, remid, func(p *Peer) { connected <- p })
+	srv := startTestServer(t, remid, func(p *Peer) { connected <- p }, &Config{})
 	defer close(connected)
 	defer srv.Stop()
 

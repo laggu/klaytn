@@ -261,6 +261,7 @@ func (s *MainBridge) Start(srvr p2p.Server) error {
 	serverConfig.MaxPhysicalConnections = s.maxPeers
 	serverConfig.NoDiscovery = true
 	serverConfig.EnableMultiChannelServer = false
+	serverConfig.NoDial = true
 
 	p2pServer := p2p.NewServer(serverConfig)
 

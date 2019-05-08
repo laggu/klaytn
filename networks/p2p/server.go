@@ -134,6 +134,9 @@ type Config struct {
 	// the server is started.
 	ListenAddr string
 
+	// NoListen can be used to disable the listening for incoming connections.
+	NoListen bool
+
 	// SubListenAddr is the list of the secondary listen address used for peer-to-peer connections.
 	SubListenAddr []string
 
@@ -396,14 +399,18 @@ func (srv *MultiChannelServer) Start() (err error) {
 			}
 		}
 	}
-	// listen/dial
-	if srv.ListenAddrs != nil && len(srv.ListenAddrs) != 0 && srv.ListenAddrs[ConnDefault] != "" {
-		if err := srv.startListening(); err != nil {
-			return err
-		}
 
-		if srv.NoDial {
-			srv.logger.Error("P2P server will be useless, neither dialing nor listening")
+	// listen/dial
+	if srv.NoDial && srv.NoListen {
+		srv.logger.Error("P2P server will be useless, neither dialing nor listening")
+	}
+	if !srv.NoListen {
+		if srv.ListenAddrs != nil && len(srv.ListenAddrs) != 0 && srv.ListenAddrs[ConnDefault] != "" {
+			if err := srv.startListening(); err != nil {
+				return err
+			}
+		} else {
+			srv.logger.Error("P2P server might be useless, listening address is missing")
 		}
 	}
 
@@ -1283,13 +1290,17 @@ func (srv *BaseServer) Start() (err error) {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
 	// listen/dial
-	if srv.ListenAddr != "" {
-		if err := srv.startListening(); err != nil {
-			return err
-		}
-	}
-	if srv.NoDial && srv.ListenAddr == "" {
+	if srv.NoDial && srv.NoListen {
 		srv.logger.Error("P2P server will be useless, neither dialing nor listening")
+	}
+	if !srv.NoListen {
+		if srv.ListenAddr != "" {
+			if err := srv.startListening(); err != nil {
+				return err
+			}
+		} else {
+			srv.logger.Error("P2P server might be useless, listening address is missing")
+		}
 	}
 
 	srv.loopWG.Add(1)
