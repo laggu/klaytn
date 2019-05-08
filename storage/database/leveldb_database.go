@@ -135,10 +135,10 @@ func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 	localLogger.Info("LevelDB configurations",
 		"levelDBCacheSize", (ldbOpts.WriteBuffer+ldbOpts.BlockCacheCapacity)/opt.MiB, "openFilesLimit", ldbOpts.OpenFilesCacheCapacity,
 		"useBufferPool", !ldbOpts.DisableBufferPool, "compressionType", ldbOpts.Compression,
-		"compactionTableSize", ldbOpts.CompactionTableSize/opt.MiB, "compactionTableSizeMultiplier", ldbOpts.CompactionTableSizeMultiplier)
+		"compactionTableSize(MB)", ldbOpts.CompactionTableSize/opt.MiB, "compactionTableSizeMultiplier", ldbOpts.CompactionTableSizeMultiplier)
 
 	// Open the db and recover any potential corruptions
-	db, err := leveldb.OpenFile(dbc.Dir, getLevelDBOptions(dbc))
+	db, err := leveldb.OpenFile(dbc.Dir, ldbOpts)
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
 		db, err = leveldb.RecoverFile(dbc.Dir, nil)
 	}
