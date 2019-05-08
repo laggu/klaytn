@@ -29,6 +29,7 @@ const (
 	// mysql driver (go) has query parameter max size (65535)
 	// transaction record has 15 parameters
 	BULK_INSERT_SIZE = 3000
+	TX_KEY_FACTOR    = 100000
 )
 
 func getProposerAndValidatorsFromBlock(block *types.Block) (proposer string, validators string, err error) {

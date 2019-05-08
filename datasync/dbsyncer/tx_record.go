@@ -49,7 +49,7 @@ type BulkInsertQuery struct {
 	insertCount int
 }
 
-func MakeTxDBRow(block *types.Block, tx *types.Transaction, receipt *types.Receipt) (string, []interface{}, TxMapArguments, SummaryArguments, error) {
+func MakeTxDBRow(block *types.Block, txKey uint64, tx *types.Transaction, receipt *types.Receipt) (string, []interface{}, TxMapArguments, SummaryArguments, error) {
 
 	cols := ""
 	vals := []interface{}{}
@@ -81,7 +81,7 @@ func MakeTxDBRow(block *types.Block, tx *types.Transaction, receipt *types.Recei
 	}
 
 	gas := tx.Gas()
-	txGasPrice := tx.GasPrice().Uint64()
+	txGasPrice := tx.GasPrice().String()
 	txGasUsed := receipt.GasUsed
 
 	input := hexutil.Bytes(tx.Data()).String()
@@ -98,7 +98,7 @@ func MakeTxDBRow(block *types.Block, tx *types.Transaction, receipt *types.Recei
 	timestamp := block.Time().Uint64()
 	txHash := tx.Hash().Hex()
 	txtype := tx.Type().String()
-	value := tx.Value().Uint64()
+	value := tx.Value().String()
 
 	feePayer := ""
 	feeRatio := uint8(0)
@@ -121,8 +121,8 @@ func MakeTxDBRow(block *types.Block, tx *types.Transaction, receipt *types.Recei
 		senderHash = senderTxHash.Hex()
 	}
 
-	cols = "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-	vals = append(vals, blockHash, blockNumber, contractAddress, from, gas, txGasPrice, txGasUsed, input, nonce, status, to,
+	cols = "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+	vals = append(vals, txKey, blockHash, blockNumber, contractAddress, from, gas, txGasPrice, txGasUsed, input, nonce, status, to,
 		timestamp, txHash, txtype, value, feePayer, feeRatio, senderHash)
 
 	TxMapArg := TxMapArguments{senderHash, txHash}

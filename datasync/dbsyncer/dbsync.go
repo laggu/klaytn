@@ -125,7 +125,7 @@ func (ds *DBSyncer) Start(server p2p.Server) error {
 		"number, parentHash, proposer, reward, size, " +
 		"timestamp, timestampFoS)" + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
 
-	ds.txInsertQuery = "INSERT INTO " + ds.cfg.DBName + ".transaction " + "(blockHash, blockNumber, " +
+	ds.txInsertQuery = "INSERT INTO " + ds.cfg.DBName + ".transaction " + "(id, blockHash, blockNumber, " +
 		"contractAddress, `from`, gas, gasPrice, gasUsed, input, nonce, status, `to`, " +
 		"timestamp, txHash, type, value, feePayer, feeRatio, senderTxHash) VALUES "
 
@@ -305,6 +305,7 @@ func (ds *DBSyncer) syncBlockHeader(block *types.Block) error {
 
 func (ds *DBSyncer) SyncTransactions(block *types.Block) error {
 
+	txKey := block.NumberU64() * TX_KEY_FACTOR
 	txStr, vals, insertCount := ds.resetTxParameter()
 	summaryStr, summaryVals, summaryInsertCount := ds.resetSummaryParameter()
 	txMapStr, txMapVals, txMapInsertCount := ds.resetTxMapParameter()
@@ -312,7 +313,8 @@ func (ds *DBSyncer) SyncTransactions(block *types.Block) error {
 	receipts := ds.blockchain.GetReceiptsByBlockHash(block.Hash())
 
 	for index, tx := range block.Transactions() {
-		cols, val, txMapArg, summaryArg, err := MakeTxDBRow(block, tx, receipts[index])
+		txKey += uint64(index)
+		cols, val, txMapArg, summaryArg, err := MakeTxDBRow(block, txKey, tx, receipts[index])
 		if err != nil {
 			return err
 		}

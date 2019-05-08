@@ -21,10 +21,12 @@ import (
 )
 
 type MakeQueryRequest struct {
-	block    *types.Block
-	txs      []*types.Transaction
-	receipts []*types.Receipt
-	inc      int
+	block       *types.Block
+	blockBase   uint64
+	txIndexBase int
+	txs         []*types.Transaction
+	receipts    []*types.Receipt
+	inc         int
 
 	result chan *MakeQueryResult
 }
@@ -84,9 +86,9 @@ func newQueryEngine(ds *DBSyncer, taskQueue int, insertQueue int) *QueryEngine {
 	return queryEngine
 }
 
-func (qe *QueryEngine) make(block *types.Block, tx *types.Transaction, receipt *types.Receipt, result chan *MakeQueryResult) {
+func (qe *QueryEngine) make(block *types.Block, txKey uint64, tx *types.Transaction, receipt *types.Receipt, result chan *MakeQueryResult) {
 
-	cols, val, txMapArg, summaryArg, err := MakeTxDBRow(block, tx, receipt)
+	cols, val, txMapArg, summaryArg, err := MakeTxDBRow(block, txKey, tx, receipt)
 	scols, sval, count, serr := MakeSummaryDBRow(summaryArg)
 	tcols, tval, tcount, terr := MakeTxMappingRow(txMapArg)
 
@@ -133,7 +135,8 @@ func (qe *QueryEngine) execute(insertQuery *BulkInsertQuery, result chan *BulkIn
 func (qe *QueryEngine) processing() {
 	for task := range qe.tasks {
 		for i := 0; i < len(task.txs); i += task.inc {
-			qe.make(task.block, task.txs[i], task.receipts[i], task.result)
+			txKey := task.blockBase + uint64(task.txIndexBase+i)
+			qe.make(task.block, txKey, task.txs[i], task.receipts[i], task.result)
 		}
 	}
 }
@@ -152,6 +155,8 @@ func (qe *QueryEngine) insertTransactions(block *types.Block, txs types.Transact
 		return
 	}
 
+	blockBase := block.NumberU64() * TX_KEY_FACTOR
+
 	// Ensure we have meaningful task sizes and schedule the recoveries
 	tasks := qe.taskQueue
 	if len(txs) < tasks*4 {
@@ -159,11 +164,13 @@ func (qe *QueryEngine) insertTransactions(block *types.Block, txs types.Transact
 	}
 	for i := 0; i < tasks; i++ {
 		qe.tasks <- &MakeQueryRequest{
-			block:    block,
-			txs:      txs[i:],
-			receipts: receipts[i:],
-			inc:      tasks,
-			result:   result,
+			block:       block,
+			blockBase:   blockBase,
+			txIndexBase: i,
+			txs:         txs[i:],
+			receipts:    receipts[i:],
+			inc:         tasks,
+			result:      result,
 		}
 	}
 }

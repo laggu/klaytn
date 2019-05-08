@@ -115,6 +115,7 @@ func (ds *DBSyncer) syncBlockHeaderContext(ctx context.Context, tx *sql.Tx, bloc
 }
 
 func (ds *DBSyncer) syncTransactionsContext(ctx context.Context, syncTx *sql.Tx, block *types.Block) error {
+	txKey := block.NumberU64() * TX_KEY_FACTOR
 	txStr, vals, insertCount := ds.resetTxParameter()
 	summaryStr, summaryVals, summaryInsertCount := ds.resetSummaryParameter()
 	txMapStr, txMapVals, txMapInsertCount := ds.resetTxMapParameter()
@@ -122,7 +123,8 @@ func (ds *DBSyncer) syncTransactionsContext(ctx context.Context, syncTx *sql.Tx,
 	receipts := ds.blockchain.GetReceiptsByBlockHash(block.Hash())
 
 	for index, tx := range block.Transactions() {
-		cols, val, txMapArg, summaryArg, err := MakeTxDBRow(block, tx, receipts[index])
+		txKey += uint64(index)
+		cols, val, txMapArg, summaryArg, err := MakeTxDBRow(block, txKey, tx, receipts[index])
 		if err != nil {
 			return err
 		}
