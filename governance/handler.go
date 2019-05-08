@@ -128,7 +128,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 	// address comes as a form of string from JS console
 	if reqType == addressT && reflect.TypeOf(val) == stringT {
 		if common.IsHexAddress(val.(string)) {
-			x = common.StringToAddress(val.(string))
+			x = common.HexToAddress(val.(string))
 			return x
 		}
 	}
@@ -219,7 +219,7 @@ func checkAddress(k string, v interface{}) bool {
 	return true
 }
 
-func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header *types.Header, proposer common.Address) istanbul.ValidatorSet {
+func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header *types.Header, proposer common.Address, self common.Address) istanbul.ValidatorSet {
 	gVote := new(GovernanceVote)
 
 	if len(header.Vote) > 0 {
@@ -227,7 +227,6 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
 			return valset
 		}
-
 		gVote = gov.ParseVoteValue(gVote)
 
 		key := GovernanceKeyMap[gVote.Key]
@@ -239,11 +238,11 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 				return valset
 			}
 		case params.AddValidator:
-			if !gov.checkVote(common.HexToAddress(gVote.Value.(string)), true, valset) {
+			if !gov.checkVote(gVote.Value.(common.Address), true, valset) {
 				return valset
 			}
 		case params.RemoveValidator:
-			if !gov.checkVote(common.HexToAddress(gVote.Value.(string)), false, valset) {
+			if !gov.checkVote(gVote.Value.(common.Address), false, valset) {
 				return valset
 			}
 		}
@@ -260,6 +259,11 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 			governanceMode := GovernanceModeMap[gov.currentSet["governance.governancemode"].(string)]
 			governingNode := common.HexToAddress(gov.currentSet["governance.governingnode"].(string))
 			valset = gov.addNewVote(valset, gVote, governanceMode, governingNode)
+
+			// If this vote was casted by this node, remove it
+			if self == proposer {
+				gov.removeDuplicatedVote(gVote, header.Number.Uint64())
+			}
 		} else {
 			logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 		}
@@ -324,9 +328,9 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, gVote *Governanc
 			(governanceMode == params.GovernanceMode_Ballot && currentVotes > valset.TotalVotingPower()/2) {
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
-				valset.AddValidator(common.HexToAddress(gVote.Value.(string)))
+				valset.AddValidator(gVote.Value.(common.Address))
 			case params.RemoveValidator:
-				target := common.HexToAddress(gVote.Value.(string))
+				target := gVote.Value.(common.Address)
 				valset.RemoveValidator(target)
 				gov.removeVotesFromRemovedNode(target)
 			default:

@@ -166,7 +166,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			return nil, errUnauthorized
 		}
 
-		snap.ValSet = gov.HandleGovernanceVote(snap.ValSet, header, validator)
+		snap.ValSet = gov.HandleGovernanceVote(snap.ValSet, header, validator, addr)
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()

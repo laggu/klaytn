@@ -101,7 +101,7 @@ var goodVotes = []voteValue{
 	{k: "istanbul.committeesize", v: uint64(7), e: true},
 	{k: "istanbul.policy", v: "sticky", e: true},
 	{k: "governance.governancemode", v: "single", e: true},
-	{k: "governance.governingnode", v: "0x0000000000000000000000000000000000000000", e: true},
+	{k: "governance.governingnode", v: common.HexToAddress("0x0000000000000000000000000000000000000000"), e: true},
 	{k: "governance.unitprice", v: uint64(25000000000), e: true},
 	{k: "reward.useginicoeff", v: false, e: true},
 	{k: "reward.mintingamount", v: "9600000000000000000", e: true},

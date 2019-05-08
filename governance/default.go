@@ -208,44 +208,6 @@ func (g *Governance) getKey(k string) string {
 	return strings.Trim(strings.ToLower(k), " ")
 }
 
-func (g *Governance) checkValueType(key string, val interface{}) (interface{}, bool) {
-	keyIdx := GovernanceKeyMap[key]
-	switch t := val.(type) {
-	case uint64:
-		if keyIdx == params.Epoch || keyIdx == params.CommitteeSize || keyIdx == params.UnitPrice || keyIdx == params.ProposerRefreshInterval || keyIdx == params.StakeUpdateInterval {
-			return val, true
-		}
-	case string:
-		if keyIdx == params.GovernanceMode || keyIdx == params.MintingAmount || keyIdx == params.MinimumStake || keyIdx == params.Ratio || keyIdx == params.Policy {
-			return strings.ToLower(val.(string)), true
-		} else if keyIdx == params.GoverningNode || keyIdx == params.AddValidator || keyIdx == params.RemoveValidator {
-			if common.IsHexAddress(val.(string)) {
-				return val, true
-			}
-		}
-	case bool:
-		if keyIdx == params.UseGiniCoeff || keyIdx == params.DeferredTxFee {
-			return val, true
-		}
-	case common.Address:
-		if keyIdx == params.GoverningNode || keyIdx == params.AddValidator || keyIdx == params.RemoveValidator {
-			return val, true
-		}
-	case float64:
-		// When value comes from JS console, all numbers come in a form of float64
-		if keyIdx == params.Epoch || keyIdx == params.CommitteeSize || keyIdx == params.UnitPrice {
-			if val.(float64) >= 0 && val.(float64) == float64(uint64(val.(float64))) {
-				val = uint64(val.(float64))
-				return val, true
-			}
-		}
-	default:
-		logger.Warn("Unknown value type of the given vote", "key", key, "value", val, "type", t)
-
-	}
-	return val, false
-}
-
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 	g.voteMapLock.Lock()
@@ -278,8 +240,10 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
 	k := GovernanceKeyMap[gVote.Key]
 
 	switch k {
-	case params.GovernanceMode, params.GoverningNode, params.MintingAmount, params.MinimumStake, params.Ratio, params.Policy, params.AddValidator, params.RemoveValidator:
+	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio, params.Policy:
 		val = string(gVote.Value.([]uint8))
+	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
+		val = common.BytesToAddress(gVote.Value.([]uint8))
 	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
@@ -309,7 +273,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 
 	switch GovernanceKeyMap[vote.Key] {
 	case params.GoverningNode:
-		gov.changeSet[vote.Key] = common.HexToAddress(vote.Value.(string))
+		gov.changeSet[vote.Key] = vote.Value.(common.Address)
 		return true
 	case params.GovernanceMode, params.Ratio:
 		gov.changeSet[vote.Key] = vote.Value.(string)
@@ -547,22 +511,10 @@ func (gov *Governance) UpdateGovernance(header *types.Header, proposer common.Ad
 		gov.ClearVotes(number)
 		gov.updateCurrentGovernance(number)
 	}
-
-	// if this block has a vote from this node, remove it
-	if len(header.Vote) > 0 && self == proposer {
-		gov.removeDuplicatedVote(header.Vote, header.Number.Uint64())
-	}
 }
 
-func (gov *Governance) removeDuplicatedVote(rawvote []byte, number uint64) {
-	vote := new(GovernanceVote)
-	if err := rlp.DecodeBytes(rawvote, vote); err != nil {
-		// Vote data might be corrupted
-		logger.Error("Failed to decode vote data from header", "vote")
-	} else {
-		vote = gov.ParseVoteValue(vote)
-		gov.RemoveVote(vote.Key, vote.Value, number)
-	}
+func (gov *Governance) removeDuplicatedVote(vote *GovernanceVote, number uint64) {
+	gov.RemoveVote(vote.Key, vote.Value, number)
 }
 
 func (gov *Governance) updateCurrentGovernance(num uint64) {
@@ -612,9 +564,14 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 
 	if len(rChangeSet) == len(gov.changeSet) {
 		for k, v := range rChangeSet {
+			if GovernanceKeyMap[k] == params.GoverningNode {
+				if reflect.TypeOf(v) == stringT {
+					v = common.HexToAddress(v.(string))
+				}
+			}
 			if gov.changeSet[k] != v {
-				logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", gov.changeSet[k])
-				return errors.New("Received change mismatch with that this node have!!")
+				logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", gov.changeSet[k], "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(gov.changeSet[k]))
+				return errors.New("Received change mismatches with the value this node has!!")
 			}
 		}
 	}
