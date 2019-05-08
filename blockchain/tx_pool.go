@@ -108,7 +108,7 @@ type TxPoolConfig struct {
 
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
 
-	IsServiceChain bool // Whether TxPool is created by service chain or not
+	NoAccountCreation bool // Whether account creation transactions should be disabled
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -539,10 +539,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
 
 	// TODO-Klaytn-ServiceChain: do not prevent new account creation after proper account sync.
-	if pool.config.IsServiceChain {
-		if tx.Type().IsAccountCreation() {
-			return ErrAccountCreationPrevented
-		}
+	if pool.config.NoAccountCreation && tx.Type().IsAccountCreation() {
+		return ErrAccountCreationPrevented
 	}
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice

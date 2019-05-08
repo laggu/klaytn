@@ -39,6 +39,7 @@ import (
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn/filters"
 	"github.com/ground-x/klaytn/node/cn/gasprice"
+	"github.com/ground-x/klaytn/node/sc"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/work"
@@ -86,7 +87,7 @@ type ServiceChain struct {
 
 // New creates a new ServiceChain object (including the
 // initialisation of the common ServiceChain object)
-func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, error) {
+func NewServiceChain(ctx *node.ServiceContext, config *Config, scconfig *sc.SCConfig) (*ServiceChain, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
@@ -147,7 +148,9 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	config.TxPool.IsServiceChain = true
+	if scconfig.ServiceChainNewAccount {
+		config.TxPool.NoAccountCreation = true
+	}
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType()); err != nil {

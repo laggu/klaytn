@@ -1768,7 +1768,7 @@ func TestErrorNoAccountCreationFromServiceChain(t *testing.T) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	testTxPoolConfig := testTxPoolConfig // prevent race condition
-	testTxPoolConfig.IsServiceChain = true
+	testTxPoolConfig.NoAccountCreation = true
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
 	defer pool.Stop()
 

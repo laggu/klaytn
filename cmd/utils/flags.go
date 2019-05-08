@@ -1207,10 +1207,10 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 }
 
 // RegisterServiceChainService adds a ServiceChain node to the stack.
-func RegisterServiceChainService(stack *node.Node, cfg *cn.Config) {
+func RegisterServiceChainService(stack *node.Node, cfg *cn.Config, scfg *sc.SCConfig) {
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
-		fullNode, err := cn.NewServiceChain(ctx, cfg)
+		fullNode, err := cn.NewServiceChain(ctx, cfg, scfg)
 		return fullNode, err
 	})
 	if err != nil {
