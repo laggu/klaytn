@@ -294,7 +294,7 @@ func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transaction
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
 		// Since there are mutable values such as accountKey in the state, a tx can be invalidated with the state change.
-		if !tx.ValidateMutableValue(pool.currentState, pool.signer) {
+		if tx.ValidateMutableValue(pool.currentState, pool.signer, pool.currentBlockNumber) != nil {
 			return true
 		}
 		if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {

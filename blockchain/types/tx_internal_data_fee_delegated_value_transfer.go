@@ -316,18 +316,18 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, curr
 	if common.IsPrecompiledContractAddress(t.Recipient) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
-	if stateDB.IsProgramAccount(t.Recipient) {
-		return kerrors.ErrNotForProgramAccount
-	}
 	// Fail if the sender does not exist.
 	if !stateDB.Exist(t.From) {
 		return errValueKeySenderUnknown
 	}
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) ValidateMutableValue(stateDB StateDB) bool {
-	return !stateDB.IsProgramAccount(t.Recipient)
+func (t *TxInternalDataFeeDelegatedValueTransfer) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	if stateDB.IsProgramAccount(t.Recipient) {
+		return kerrors.ErrNotForProgramAccount
+	}
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

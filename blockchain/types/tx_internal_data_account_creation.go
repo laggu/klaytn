@@ -460,22 +460,19 @@ func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNu
 	if common.IsPrecompiledContractAddress(to) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
-	// Fail if the address is already created.
-	if stateDB.Exist(to) {
-		return kerrors.ErrAccountAlreadyExists
-	}
 	if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {
 		return err
 	}
 
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataAccountCreation) ValidateMutableValue(stateDB StateDB) bool {
+func (t *TxInternalDataAccountCreation) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	// Fail if the address is already created.
 	if stateDB.Exist(t.Recipient) {
-		return false
+		return kerrors.ErrAccountAlreadyExists
 	}
-	return true
+	return nil
 }
 
 func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

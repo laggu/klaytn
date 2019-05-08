@@ -338,14 +338,14 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB Stat
 	if common.IsPrecompiledContractAddress(t.Recipient) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	if stateDB.IsProgramAccount(t.Recipient) {
 		return kerrors.ErrNotForProgramAccount
 	}
 	return nil
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) ValidateMutableValue(stateDB StateDB) bool {
-	return !stateDB.IsProgramAccount(t.Recipient)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

@@ -395,10 +395,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	if common.IsPrecompiledContractAddress(to) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
-	// Fail if the address is already created.
-	if stateDB.Exist(to) {
-		return kerrors.ErrAccountAlreadyExists
-	}
 	// Fail if the sender does not exist.
 	if !stateDB.Exist(t.From) {
 		return errValueKeySenderUnknown
@@ -407,15 +403,15 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	if !t.CodeFormat.Validate() {
 		return kerrors.ErrInvalidCodeFormat
 	}
-
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) ValidateMutableValue(stateDB StateDB) bool {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	// Fail if the address is already created.
 	if t.Recipient != nil && stateDB.Exist(*t.Recipient) {
-		return false
+		return kerrors.ErrAccountAlreadyExists
 	}
-	return true
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) FillContractAddress(from common.Address, r *Receipt) {

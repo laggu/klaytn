@@ -240,11 +240,12 @@ func (t *TxInternalDataCancel) SenderTxHash() common.Hash {
 
 func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No more validation required for TxTypeCancel for now.
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataCancel) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+func (t *TxInternalDataCancel) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	// No more validation required for TxTypeCancel for now.
+	return nil
 }
 
 func (t *TxInternalDataCancel) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

@@ -298,11 +298,13 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return nil
+	// No more validation required for TxTypeFeeDelegatedCancelWithRatio for now.
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	// No more validation required for TxTypeFeeDelegatedCancelWithRatio for now.
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

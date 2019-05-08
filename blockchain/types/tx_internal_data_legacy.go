@@ -361,11 +361,11 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint
 			return kerrors.ErrPrecompiledContractAddress
 		}
 	}
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataLegacy) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+func (t *TxInternalDataLegacy) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	return nil
 }
 
 func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {

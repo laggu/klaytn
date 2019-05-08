@@ -446,15 +446,15 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SenderTxHash() common
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+}
+
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	oldKey := stateDB.GetKey(t.From)
 	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) ValidateMutableValue(stateDB StateDB) bool {
-	return true
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

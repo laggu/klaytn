@@ -264,11 +264,11 @@ func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint6
 }
 
 func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataChainDataAnchoring) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+func (t *TxInternalDataChainDataAnchoring) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	return nil
 }
 
 func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

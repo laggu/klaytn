@@ -360,23 +360,19 @@ func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlo
 	if common.IsPrecompiledContractAddress(to) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
-	// Fail if the address is already created.
-	if stateDB.Exist(to) {
-		return kerrors.ErrAccountAlreadyExists
-	}
 	// Fail if the codeFormat is invalid.
 	if !t.CodeFormat.Validate() {
 		return kerrors.ErrInvalidCodeFormat
 	}
-
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataSmartContractDeploy) ValidateMutableValue(stateDB StateDB) bool {
+func (t *TxInternalDataSmartContractDeploy) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	// Fail if the address is already created.
 	if t.Recipient != nil && stateDB.Exist(*t.Recipient) {
-		return false
+		return kerrors.ErrAccountAlreadyExists
 	}
-	return true
+	return nil
 }
 
 func (t *TxInternalDataSmartContractDeploy) FillContractAddress(from common.Address, r *Receipt) {

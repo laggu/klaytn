@@ -417,19 +417,19 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	oldKey := stateDB.GetKey(t.From)
-	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
-		return err
-	}
 	// Fail if the sender does not exist.
 	if !stateDB.Exist(t.From) {
 		return errValueKeySenderUnknown
 	}
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) ValidateMutableValue(stateDB StateDB) bool {
-	return true
+func (t *TxInternalDataFeeDelegatedAccountUpdate) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	oldKey := stateDB.GetKey(t.From)
+	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

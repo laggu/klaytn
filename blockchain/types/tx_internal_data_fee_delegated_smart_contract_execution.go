@@ -339,19 +339,19 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// Fail if the target address is not a program account.
-	if stateDB.IsContractAvailable(t.Recipient) == false {
-		return kerrors.ErrNotProgramAccount
-	}
 	// Fail if the sender does not exist.
 	if !stateDB.Exist(t.From) {
 		return errValueKeySenderUnknown
 	}
-	return nil
+	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) ValidateMutableValue(stateDB StateDB) bool {
-	return stateDB.IsContractAvailable(t.Recipient)
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	// Fail if the target address is not a program account.
+	if !stateDB.IsContractAvailable(t.Recipient) {
+		return kerrors.ErrNotProgramAccount
+	}
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
