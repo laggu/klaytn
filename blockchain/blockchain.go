@@ -993,6 +993,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		return err
 	}
 	trieDB := bc.stateCache.TrieDB()
+	trieDB.UpdateMetricNodes()
 
 	// If we're running an archive node, always flush
 	if bc.isArchiveMode() {

@@ -53,6 +53,8 @@ var (
 	memcacheCleanMissMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
 	memcacheCleanReadMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
 	memcacheCleanWriteMeter = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
+
+	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
 )
 
 // secureKeyPrefix is the database key prefix used to store trie node preimages.
@@ -901,4 +903,9 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 		}
 	}
 	return lastNodeHash
+}
+
+// UpdateMetricNodes updates the size of Database.nodes
+func (db *Database) UpdateMetricNodes() {
+	memcacheNodesGauge.Update(int64(len(db.nodes)))
 }
