@@ -218,22 +218,26 @@ func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBlockNumber uint64) error {
 	// validate the sender's account key
 	accKey := db.GetKey(tx.validatedSender)
-	if !accKey.Type().IsLegacyAccountKey() {
+	if tx.IsLegacyTransaction() {
+		if !accKey.Type().IsLegacyAccountKey() {
+			return ErrInvalidSigSender
+		}
+	} else {
 		pubkey, err := SenderPubkey(signer, tx)
-		if err != nil || !accKey.Validate(tx.GetRoleTypeForValidation(), pubkey) {
+		if err != nil || accountkey.ValidateAccountKey(tx.validatedSender, accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
 			return ErrInvalidSigSender
 		}
 	}
+
 	// validate the fee payer's account key
 	if tx.IsFeeDelegatedTransaction() {
 		feePayerAccKey := db.GetKey(tx.validatedFeePayer)
-		if !feePayerAccKey.Type().IsLegacyAccountKey() {
-			feePayerPubkey, err := SenderFeePayerPubkey(signer, tx)
-			if err != nil || !feePayerAccKey.Validate(accountkey.RoleFeePayer, feePayerPubkey) {
-				return ErrInvalidSigFeePayer
-			}
+		feePayerPubkey, err := SenderFeePayerPubkey(signer, tx)
+		if err != nil || accountkey.ValidateAccountKey(tx.validatedFeePayer, feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+			return ErrInvalidSigFeePayer
 		}
 	}
+
 	return tx.data.ValidateMutableValue(db, currentBlockNumber)
 }
 
