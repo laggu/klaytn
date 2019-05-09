@@ -71,6 +71,8 @@ type Transaction struct {
 	validatedIntrinsicGas uint64
 	// The account's nonce is checked only if `checkNonce` is true.
 	checkNonce bool
+	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
+	markedUnexecutable bool
 }
 
 func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (*Transaction, error) {
@@ -483,6 +485,14 @@ func (tx *Transaction) SetFeePayerSignatures(s TxSignatures) error {
 
 func (tx *Transaction) SetSignature(signature TxSignatures) {
 	tx.data.SetSignature(signature)
+}
+
+func (tx *Transaction) MarkUnexecutable(b bool) {
+	tx.markedUnexecutable = b
+}
+
+func (tx *Transaction) IsMarkedUnexecutable() bool {
+	return tx.markedUnexecutable
 }
 
 func (tx *Transaction) RawSignatureValues() TxSignatures {

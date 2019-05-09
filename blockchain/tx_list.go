@@ -293,6 +293,10 @@ func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transaction
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		// Drop a tx if it is marked as un-executable on block generation process.
+		if tx.IsMarkedUnexecutable() {
+			return true
+		}
 		// Since there are mutable values such as accountKey in the state, a tx can be invalidated with the state change.
 		if tx.ValidateMutableValue(pool.currentState, pool.signer, pool.currentBlockNumber) != nil {
 			return true
