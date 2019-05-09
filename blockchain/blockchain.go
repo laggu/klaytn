@@ -49,9 +49,9 @@ import (
 )
 
 var (
-	blockInsertTimer = metrics.NewRegisteredTimer("chain/inserts", nil)
-	ErrNoGenesis     = errors.New("Genesis not found in chain")
-	logger           = log.NewModuleLogger(log.Blockchain)
+	blockInsertTimeGauge = metrics.NewRegisteredGauge("chain/inserts", nil)
+	ErrNoGenesis         = errors.New("Genesis not found in chain")
+	logger               = log.NewModuleLogger(log.Blockchain)
 )
 
 // Below is the list of the constants for cache size.
@@ -1502,7 +1502,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
 			coalescedLogs = append(coalescedLogs, logs...)
-			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainEvent{block, block.Hash(), logs})
 			lastCanon = block
 
@@ -1510,9 +1509,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			logger.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.BlockScore(), "elapsed",
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed())
 
-			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainSideEvent{block})
 		}
+		blockInsertTimeGauge.Update(int64(time.Since(bstart)))
 		stats.processed++
 		stats.usedGas += usedGas
 

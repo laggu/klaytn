@@ -37,15 +37,15 @@ import (
 var (
 	logger = log.NewModuleLogger(log.StorageStateDB)
 
-	memcacheFlushTimeTimer  = metrics.NewRegisteredResettingTimer("trie/memcache/flush/time", nil)
+	memcacheFlushTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/flush/time", nil)
 	memcacheFlushNodesMeter = metrics.NewRegisteredMeter("trie/memcache/flush/nodes", nil)
 	memcacheFlushSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/flush/size", nil)
 
-	memcacheGCTimeTimer  = metrics.NewRegisteredResettingTimer("trie/memcache/gc/time", nil)
+	memcacheGCTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/gc/time", nil)
 	memcacheGCNodesMeter = metrics.NewRegisteredMeter("trie/memcache/gc/nodes", nil)
 	memcacheGCSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/gc/size", nil)
 
-	memcacheCommitTimeTimer  = metrics.NewRegisteredResettingTimer("trie/memcache/commit/time", nil)
+	memcacheCommitTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/commit/time", nil)
 	memcacheCommitNodesMeter = metrics.NewRegisteredMeter("trie/memcache/commit/nodes", nil)
 	memcacheCommitSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/commit/size", nil)
 
@@ -526,7 +526,7 @@ func (db *Database) Dereference(root common.Hash) {
 	db.gcsize += storage - db.nodesSize
 	db.gctime += time.Since(start)
 
-	memcacheGCTimeTimer.Update(time.Since(start))
+	memcacheGCTimeGauge.Update(int64(time.Since(start)))
 	memcacheGCSizeMeter.Mark(int64(storage - db.nodesSize))
 	memcacheGCNodesMeter.Mark(int64(nodes - len(db.nodes)))
 
@@ -651,7 +651,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	db.flushsize += nodeSize - db.nodesSize
 	db.flushtime += time.Since(start)
 
-	memcacheFlushTimeTimer.Update(time.Since(start))
+	memcacheFlushTimeGauge.Update(int64(time.Since(start)))
 	memcacheFlushSizeMeter.Mark(int64(nodeSize - db.nodesSize))
 	memcacheFlushNodesMeter.Mark(int64(nodes - len(db.nodes)))
 
@@ -739,7 +739,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 
 	db.uncache(node)
 
-	memcacheCommitTimeTimer.Update(time.Since(start))
+	memcacheCommitTimeGauge.Update(int64(time.Since(start)))
 	memcacheCommitSizeMeter.Mark(int64(nodesSize - db.nodesSize))
 	memcacheCommitNodesMeter.Mark(int64(numNodes - len(db.nodes)))
 
