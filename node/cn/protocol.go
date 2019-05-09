@@ -66,10 +66,10 @@ const (
 	NewBlockMsg                 = 0x0b
 
 	// Protocol messages belonging to klay/63
-	NodeDataRequestMsg = 0x11
-	NodeDataMsg        = 0x12
-	ReceiptsRequestMsg = 0x13
-	ReceiptsMsg        = 0x14
+	NodeDataRequestMsg = 0x0c
+	NodeDataMsg        = 0x0d
+	ReceiptsRequestMsg = 0x0e
+	ReceiptsMsg        = 0x0f
 )
 
 type errCode int
