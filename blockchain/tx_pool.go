@@ -411,8 +411,11 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.txMu.Lock()
 	// Update all accounts to the latest known pending nonce
 	for addr, list := range pool.pending {
-		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
-		pool.setPendingNonce(addr, txs[len(txs)-1].Nonce()+1)
+		txs := list.Flatten()
+		if len(txs) > 0 {
+			// Heavy but will be cached and is needed by the miner anyway
+			pool.setPendingNonce(addr, txs[len(txs)-1].Nonce()+1)
+		}
 	}
 	pool.txMu.Unlock()
 	// Check the queue and move transactions over to the pending if possible
@@ -1200,33 +1203,32 @@ func (pool *TxPool) demoteUnexecutables() {
 
 		// demoteUnexecutables does full-validation for a limited number of txs. Otherwise, it only validate nonce.
 		// The logic below loosely checks the tx count for the efficiency and the simplicity.
-		if cnt > demoteUnexecutablesFullValidationTxLimit {
-			continue
+		if cnt < demoteUnexecutablesFullValidationTxLimit {
+			// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
+			drops, invalids := list.Filter(pool.getBalance(addr), pool)
+			for _, tx := range drops {
+				hash := tx.Hash()
+				logger.Trace("Removed unpayable pending transaction", "hash", hash)
+				delete(pool.all, hash)
+				pool.priced.Removed()
+				pendingNofundsCounter.Inc(1)
+			}
+			for _, tx := range invalids {
+				hash := tx.Hash()
+				logger.Trace("Demoting pending transaction", "hash", hash)
+				pool.enqueueTx(hash, tx)
+			}
+			// If there's a gap in front, warn (should never happen) and postpone all transactions
+			if list.Len() > 0 && list.txs.Get(nonce) == nil {
+				for _, tx := range list.Cap(0) {
+					hash := tx.Hash()
+					logger.Error("Demoting invalidated transaction", "hash", hash)
+					pool.enqueueTx(hash, tx)
+				}
+			}
 		}
 		cnt += list.Len()
 
-		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.getBalance(addr), pool)
-		for _, tx := range drops {
-			hash := tx.Hash()
-			logger.Trace("Removed unpayable pending transaction", "hash", hash)
-			delete(pool.all, hash)
-			pool.priced.Removed()
-			pendingNofundsCounter.Inc(1)
-		}
-		for _, tx := range invalids {
-			hash := tx.Hash()
-			logger.Trace("Demoting pending transaction", "hash", hash)
-			pool.enqueueTx(hash, tx)
-		}
-		// If there's a gap in front, warn (should never happen) and postpone all transactions
-		if list.Len() > 0 && list.txs.Get(nonce) == nil {
-			for _, tx := range list.Cap(0) {
-				hash := tx.Hash()
-				logger.Error("Demoting invalidated transaction", "hash", hash)
-				pool.enqueueTx(hash, tx)
-			}
-		}
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.pending, addr)
