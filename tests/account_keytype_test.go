@@ -2407,6 +2407,11 @@ func TestAccountTransferWithRoleBasedUpdateKey(t *testing.T) {
 		"contract")
 	assert.Equal(t, nil, err)
 
+	// smart contract account
+	contractExist, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
+		"contractEx")
+	assert.Equal(t, nil, err)
+
 	// smart contract used to test TxTypeSmartContractDeploy, TxTypeSmartContractExecution transactions
 	var code string
 	var abiStr string
@@ -2440,8 +2445,38 @@ func TestAccountTransferWithRoleBasedUpdateKey(t *testing.T) {
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 
+	// 0. deploy a contract to test contract execution
+	{
+		var txs types.Transactions
+		amount := new(big.Int).SetUint64(0)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            &contractExist.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		reservoir.Nonce += 1
+	}
 	// 1. create an account with a role-based key.
 	{
+		var txs types.Transactions
 		amount := new(big.Int).SetUint64(1000000000000000)
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
@@ -2460,9 +2495,13 @@ func TestAccountTransferWithRoleBasedUpdateKey(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		reservoir.Nonce += 1
 	}
 
 	// 2. TxTypeValueTransfer signed by a RoleAccountUpdate key.
@@ -2548,7 +2587,7 @@ func TestAccountTransferWithRoleBasedUpdateKey(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    roleBased.Nonce,
 			types.TxValueKeyFrom:     roleBased.Addr,
-			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyTo:       contractExist.Addr,
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
