@@ -24,9 +24,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain/state"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/storage/database"
 	"io/ioutil"
 	"math/big"
 	"testing"
@@ -262,15 +265,79 @@ func TestJsonTestcases(t *testing.T) {
 	}
 }
 
+func initStateDB(db database.DBManager) *state.StateDB {
+	sdb := state.NewDatabase(db)
+	statedb, _ := state.New(common.Hash{}, sdb)
+
+	contractAddress := common.HexToAddress("0x18f30de96ce789fe778b9a5f420f6fdbbd9b34d8")
+	code := "60ca60205260005b612710811015630000004557602051506020515060205150602051506020515060205150602051506020515060205150602051506001016300000007565b00"
+	statedb.CreateSmartContractAccount(contractAddress, params.CodeFormatEVM)
+	statedb.SetCode(contractAddress, common.Hex2Bytes(code))
+	stateHash := common.HexToHash("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe")
+	statedb.SetState(contractAddress, stateHash, stateHash)
+	statedb.SetBalance(contractAddress, big.NewInt(1000))
+	statedb.SetNonce(contractAddress, uint64(1))
+
+	// Commit and re-open to start with a clean state.
+	root, _ := statedb.Commit(false)
+	statedb, _ = state.New(root, sdb)
+
+	return statedb
+}
+
 func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error), args ...string) {
 	var (
-		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		initialCall = true
+		canTransfer = func(db StateDB, address common.Address, amount *big.Int) bool {
+			if initialCall {
+				initialCall = false
+				return true
+			}
+			return db.GetBalance(address).Cmp(amount) >= 0
+		}
+
+		ctx = Context{
+			BlockNumber: big1024,
+			BlockScore:  big.NewInt(0),
+			Coinbase:    common.HexToAddress("0xf4b0cb429b7d341bf467f2d51c09b64cd9add37c"),
+			GasPrice:    big.NewInt(1),
+			GasLimit:    uint64(1000000000000000),
+			Time:        big.NewInt(1488928920),
+			GetHash: func(num uint64) common.Hash {
+				return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(num)).String())))
+			},
+			CanTransfer: canTransfer,
+			Transfer:    func(db StateDB, sender, recipient common.Address, amount *big.Int) {},
+		}
+
+		memDBManager = database.NewMemoryDBManager()
+		statedb      = initStateDB(memDBManager)
+
+		env            = NewEVM(ctx, statedb, params.TestChainConfig, &Config{})
 		stack          = newstack()
+		mem            = NewMemory()
 		evmInterpreter = NewInterpreter(env, env.vmConfig)
 	)
 
+	env.Origin = common.HexToAddress("0x9d19bb4553940f422104b1d0c8e5704c5aab63c9")
+	env.callGasTemp = uint64(100000000000)
 	env.interpreter = evmInterpreter
 	evmInterpreter.intPool = poolOfIntPools.get()
+	evmInterpreter.returnData = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	mem.Resize(64)
+	mem.Set(uint64(1), uint64(20), common.Hex2Bytes("000164865d7db79197021449b4a6aa650193b09e"))
+
+	// make contract
+	senderAddress := common.HexToAddress("0x91fb186da8f327f999782d1ae1ceacbd4fbbf146")
+	payerAddress := common.HexToAddress("0x18f30de96ce789fe778b9a5f420f6fdbbd9b34d8")
+
+	caller := types.NewAccountRefWithFeePayer(senderAddress, payerAddress)
+	object := types.NewAccountRefWithFeePayer(payerAddress, senderAddress)
+	contract := NewContract(caller, object, big.NewInt(0), uint64(1000))
+	contract.Input = senderAddress.Bytes()
+	contract.Gas = uint64(1000)
+	contract.Code = common.Hex2Bytes("60ca60205260005b612710811015630000004557602051506020515060205150602051506020515060205150602051506020515060205150602051506001016300000007565b00")
+
 	// convert args
 	byteArgs := make([][]byte, len(args))
 	for i, arg := range args {
@@ -283,8 +350,10 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			a := new(big.Int).SetBytes(arg)
 			stack.push(a)
 		}
-		op(&pc, env, nil, nil, stack)
-		stack.pop()
+		op(&pc, env, contract, mem, stack)
+		if stack.len() > 0 {
+			stack.pop()
+		}
 	}
 	poolOfIntPools.put(evmInterpreter.intPool)
 }
@@ -554,7 +623,7 @@ func BenchmarkOpSHA3(bench *testing.B) {
 		evmInterpreter = NewInterpreter(env, env.vmConfig)
 	)
 	env.interpreter = evmInterpreter
-	env.interpreter.intPool = poolOfIntPools.get()
+	evmInterpreter.intPool = poolOfIntPools.get()
 	mem.Resize(32)
 	pc := uint64(0)
 	start := big.NewInt(0)
@@ -640,4 +709,657 @@ func TestCreate2Addreses(t *testing.T) {
 		}
 
 	}
+}
+
+func BenchmarkOpStop(b *testing.B) {
+	opBenchmark(b, opStop)
+}
+
+func BenchmarkOpNot(b *testing.B) {
+	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
+	opBenchmark(b, opNot, x)
+}
+
+func BenchmarkOpAddress(b *testing.B) {
+	opBenchmark(b, opAddress)
+}
+
+func BenchmarkOpBalance(b *testing.B) {
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	opBenchmark(b, opBalance, addr)
+}
+
+func BenchmarkOpOrigin(b *testing.B) {
+	opBenchmark(b, opOrigin)
+}
+
+func BenchmarkOpCaller(b *testing.B) {
+	opBenchmark(b, opCaller)
+}
+
+func BenchmarkOpCallValue(b *testing.B) {
+	opBenchmark(b, opCallValue)
+}
+
+func BenchmarkOpCallDataLoad(b *testing.B) {
+	x := "0000000000000000000000000000000000000000000000000000000000000001" // 1
+	opBenchmark(b, opCallDataLoad, x)
+}
+
+func BenchmarkOpCallDataSize(b *testing.B) {
+	opBenchmark(b, opCallDataSize)
+}
+
+func BenchmarkOpCallDataCopy(b *testing.B) {
+	length := "0000000000000000000000000000000000000000000000000000000000000013"     // 19
+	dataOffset := "0000000000000000000000000000000000000000000000000000000000000001" // 1
+	memOffset := "0000000000000000000000000000000000000000000000000000000000000001"  // 1
+	opBenchmark(b, opCallDataCopy, length, dataOffset, memOffset)
+}
+
+func BenchmarkOpReturnDataSize(b *testing.B) {
+	opBenchmark(b, opReturnDataSize)
+}
+
+func BenchmarkOpReturnDataCopy(b *testing.B) {
+	length := "0000000000000000000000000000000000000000000000000000000000000009"     // 9
+	dataOffset := "0000000000000000000000000000000000000000000000000000000000000001" // 1
+	memOffset := "0000000000000000000000000000000000000000000000000000000000000001"  // 1
+	opBenchmark(b, opReturnDataCopy, length, dataOffset, memOffset)
+}
+
+func BenchmarkOpExtCodeSize(b *testing.B) {
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	opBenchmark(b, opExtCodeSize, addr)
+}
+
+func BenchmarkOpCodeSize(b *testing.B) {
+	opBenchmark(b, opCodeSize)
+}
+
+func BenchmarkOpCodeCopy(b *testing.B) {
+	length := "000000000000000000000000000000000000000000000000000000000000003c"     // 60
+	dataOffset := "0000000000000000000000000000000000000000000000000000000000000001" // 1
+	memOffset := "0000000000000000000000000000000000000000000000000000000000000001"  // 1
+	opBenchmark(b, opCodeCopy, length, dataOffset, memOffset)
+}
+
+func BenchmarkOpExtCodeCopy(b *testing.B) {
+	length := "000000000000000000000000000000000000000000000000000000000000003c"     // 60
+	codeOffset := "0000000000000000000000000000000000000000000000000000000000000001" // 1
+	memOffset := "0000000000000000000000000000000000000000000000000000000000000001"  // 1
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	opBenchmark(b, opExtCodeCopy, length, codeOffset, memOffset, addr)
+}
+
+func BenchmarkOpExtCodeHash(b *testing.B) {
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	opBenchmark(b, opExtCodeHash, addr)
+}
+
+func BenchmarkOpGasprice(b *testing.B) {
+	opBenchmark(b, opGasprice)
+}
+
+func BenchmarkOpBlockhash(b *testing.B) {
+	num := "00000000000000000000000000000000000000000000000000000000000003E8" // 1000
+	opBenchmark(b, opBlockhash, num)
+}
+
+func BenchmarkOpCoinbase(b *testing.B) {
+	opBenchmark(b, opCoinbase)
+}
+
+func BenchmarkOpTimestamp(b *testing.B) {
+	opBenchmark(b, opTimestamp)
+}
+
+func BenchmarkOpNumber(b *testing.B) {
+	opBenchmark(b, opNumber)
+}
+
+func BenchmarkOpDifficulty(b *testing.B) {
+	opBenchmark(b, opDifficulty)
+}
+
+func BenchmarkOpGasLimit(b *testing.B) {
+	opBenchmark(b, opGasLimit)
+}
+
+func BenchmarkOpPop(b *testing.B) {
+	x := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	opBenchmark(b, opPop, x)
+}
+
+func BenchmarkOpMload(b *testing.B) {
+	offset := "0000000000000000000000000000000000000000000000000000000000000001"
+	opBenchmark(b, opMload, offset)
+}
+
+func BenchmarkOpMstore8(b *testing.B) {
+	val := "7FFFFFFFFFFFFFFF"
+	off := "0000000000000000000000000000000000000000000000000000000000000001"
+	opBenchmark(b, opMstore8, val, off)
+}
+
+func BenchmarkOpSload(b *testing.B) {
+	loc := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	opBenchmark(b, opSload, loc)
+}
+
+func BenchmarkOpSstore(bench *testing.B) {
+	var (
+		memDBManager = database.NewMemoryDBManager()
+		statedb      = initStateDB(memDBManager)
+
+		env            = NewEVM(Context{}, statedb, params.TestChainConfig, &Config{})
+		stack          = newstack()
+		evmInterpreter = NewInterpreter(env, env.vmConfig)
+	)
+
+	env.interpreter = evmInterpreter
+	evmInterpreter.intPool = poolOfIntPools.get()
+
+	// make contract
+	senderAddress := common.HexToAddress("0x91fb186da8f327f999782d1ae1ceacbd4fbbf146")
+	payerAddress := common.HexToAddress("0x18f30de96ce789fe778b9a5f420f6fdbbd9b34d8")
+
+	caller := types.NewAccountRefWithFeePayer(senderAddress, payerAddress)
+	object := types.NewAccountRefWithFeePayer(payerAddress, senderAddress)
+	contract := NewContract(caller, object, big.NewInt(0), uint64(1000))
+
+	// convert args
+	byteArgs := make([][]byte, 2)
+	byteArgs[0] = common.Hex2Bytes("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd") // val
+	byteArgs[1] = common.Hex2Bytes("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")  // loc
+
+	pc := uint64(0)
+	bench.ResetTimer()
+	for i := 0; i < bench.N; i++ {
+		stack.push(new(big.Int).SetBytes(byteArgs[0]))
+		stack.push(new(big.Int).SetBytes(append(byteArgs[1], byte(i))))
+		opSstore(&pc, env, contract, nil, stack)
+		if stack.len() > 0 {
+			stack.pop()
+		}
+	}
+	poolOfIntPools.put(evmInterpreter.intPool)
+}
+
+func BenchmarkOpJump(b *testing.B) {
+	pos := "0000000000000000000000000000000000000000000000000000000000000045"
+	opBenchmark(b, opJump, pos)
+}
+
+func BenchmarkOpJumpi(b *testing.B) {
+	cond := "0000000000000000000000000000000000000000000000000000000000000001"
+	pos := "0000000000000000000000000000000000000000000000000000000000000045"
+	opBenchmark(b, opJumpi, cond, pos)
+}
+
+func BenchmarkOpJumpdest(b *testing.B) {
+	opBenchmark(b, opJumpdest)
+}
+
+func BenchmarkOpPc(b *testing.B) {
+	opBenchmark(b, opPc)
+}
+
+func BenchmarkOpMsize(b *testing.B) {
+	opBenchmark(b, opMsize)
+}
+
+func BenchmarkOpGas(b *testing.B) {
+	opBenchmark(b, opGas)
+}
+
+func BenchmarkOpCreate(b *testing.B) {
+	size := "0000000000000014"
+	offset := "0000000000000001"
+	value := "7FFFFFFFFFFFFFFF"
+	opBenchmark(b, opCreate, size, offset, value)
+}
+
+func BenchmarkOpCreate2(b *testing.B) {
+	salt := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	size := "0000000000000014"
+	offset := "0000000000000001"
+	endowment := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	opBenchmark(b, opCreate2, salt, size, offset, endowment)
+}
+
+func BenchmarkOpCall(b *testing.B) {
+	retSize := "0000000000000000000000000000000000000000000000000000000000000001"
+	retOffset := "0000000000000000000000000000000000000000000000000000000000000001"
+	inSize := "0000000000000014"
+	inOffset := "0000000000000001"
+	value := "0000000000000000000000000000000000000000000000000000000000000001"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	opBenchmark(b, opCall, retSize, retOffset, inSize, inOffset, value, addr, gas)
+}
+
+func BenchmarkOpCallCode(b *testing.B) {
+	retSize := "0000000000000000000000000000000000000000000000000000000000000001"
+	retOffset := "0000000000000000000000000000000000000000000000000000000000000001"
+	inSize := "0000000000000014"
+	inOffset := "0000000000000001"
+	value := "0000000000000000000000000000000000000000000000000000000000000001"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	opBenchmark(b, opCallCode, retSize, retOffset, inSize, inOffset, value, addr, gas)
+}
+
+func BenchmarkOpDelegateCall(b *testing.B) {
+	retSize := "0000000000000000000000000000000000000000000000000000000000000001"
+	retOffset := "0000000000000000000000000000000000000000000000000000000000000001"
+	inSize := "0000000000000014"
+	inOffset := "0000000000000001"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	opBenchmark(b, opDelegateCall, retSize, retOffset, inSize, inOffset, addr, gas)
+}
+
+func BenchmarkOpStaticCall(b *testing.B) {
+	retSize := "0000000000000000000000000000000000000000000000000000000000000001"
+	retOffset := "0000000000000000000000000000000000000000000000000000000000000001"
+	inSize := "0000000000000014"
+	inOffset := "0000000000000001"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+	opBenchmark(b, opStaticCall, retSize, retOffset, inSize, inOffset, addr, gas)
+}
+
+func BenchmarkOpReturn(b *testing.B) {
+	size := "0000000000000014"
+	offset := "0000000000000001"
+	opBenchmark(b, opReturn, size, offset)
+}
+
+func BenchmarkOpRevert(b *testing.B) {
+	size := "0000000000000014"
+	offset := "0000000000000001"
+	opBenchmark(b, opRevert, size, offset)
+}
+
+func BenchmarkOpSuicide(b *testing.B) {
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	opBenchmark(b, opSuicide, addr)
+}
+
+func BenchmarkOpPush1(b *testing.B) {
+	opBenchmark(b, opPush1)
+}
+
+func BenchmarkOpPush2(b *testing.B) {
+	opBenchmark(b, makePush(uint64(2), 2))
+}
+
+func BenchmarkOpPush3(b *testing.B) {
+	opBenchmark(b, makePush(uint64(3), 3))
+}
+
+func BenchmarkOpPush4(b *testing.B) {
+	opBenchmark(b, makePush(uint64(4), 4))
+}
+
+func BenchmarkOpPush5(b *testing.B) {
+	opBenchmark(b, makePush(uint64(5), 5))
+}
+
+func BenchmarkOpPush6(b *testing.B) {
+	opBenchmark(b, makePush(uint64(6), 6))
+}
+
+func BenchmarkOpPush7(b *testing.B) {
+	opBenchmark(b, makePush(uint64(7), 7))
+}
+
+func BenchmarkOpPush8(b *testing.B) {
+	opBenchmark(b, makePush(uint64(8), 8))
+}
+
+func BenchmarkOpPush9(b *testing.B) {
+	opBenchmark(b, makePush(uint64(9), 9))
+}
+
+func BenchmarkOpPush10(b *testing.B) {
+	opBenchmark(b, makePush(uint64(10), 10))
+}
+
+func BenchmarkOpPush11(b *testing.B) {
+	opBenchmark(b, makePush(uint64(11), 11))
+}
+
+func BenchmarkOpPush12(b *testing.B) {
+	opBenchmark(b, makePush(uint64(12), 12))
+}
+
+func BenchmarkOpPush13(b *testing.B) {
+	opBenchmark(b, makePush(uint64(13), 13))
+}
+
+func BenchmarkOpPush14(b *testing.B) {
+	opBenchmark(b, makePush(uint64(14), 14))
+}
+
+func BenchmarkOpPush15(b *testing.B) {
+	opBenchmark(b, makePush(uint64(15), 15))
+}
+
+func BenchmarkOpPush16(b *testing.B) {
+	opBenchmark(b, makePush(uint64(16), 16))
+}
+
+func BenchmarkOpPush17(b *testing.B) {
+	opBenchmark(b, makePush(uint64(17), 17))
+}
+
+func BenchmarkOpPush18(b *testing.B) {
+	opBenchmark(b, makePush(uint64(18), 18))
+}
+
+func BenchmarkOpPush19(b *testing.B) {
+	opBenchmark(b, makePush(uint64(19), 19))
+}
+
+func BenchmarkOpPush20(b *testing.B) {
+	opBenchmark(b, makePush(uint64(20), 20))
+}
+
+func BenchmarkOpPush21(b *testing.B) {
+	opBenchmark(b, makePush(uint64(21), 21))
+}
+
+func BenchmarkOpPush22(b *testing.B) {
+	opBenchmark(b, makePush(uint64(22), 22))
+}
+
+func BenchmarkOpPush23(b *testing.B) {
+	opBenchmark(b, makePush(uint64(23), 23))
+}
+
+func BenchmarkOpPush24(b *testing.B) {
+	opBenchmark(b, makePush(uint64(24), 24))
+}
+
+func BenchmarkOpPush25(b *testing.B) {
+	opBenchmark(b, makePush(uint64(25), 25))
+}
+
+func BenchmarkOpPush26(b *testing.B) {
+	opBenchmark(b, makePush(uint64(26), 26))
+}
+
+func BenchmarkOpPush27(b *testing.B) {
+	opBenchmark(b, makePush(uint64(27), 27))
+}
+
+func BenchmarkOpPush28(b *testing.B) {
+	opBenchmark(b, makePush(uint64(28), 28))
+}
+
+func BenchmarkOpPush29(b *testing.B) {
+	opBenchmark(b, makePush(uint64(29), 29))
+}
+
+func BenchmarkOpPush30(b *testing.B) {
+	opBenchmark(b, makePush(uint64(30), 30))
+}
+
+func BenchmarkOpPush31(b *testing.B) {
+	opBenchmark(b, makePush(uint64(31), 31))
+}
+
+func BenchmarkOpPush32(b *testing.B) {
+	opBenchmark(b, makePush(uint64(32), 32))
+}
+
+func BenchmarkOpDup1(b *testing.B) {
+	size := 1
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup2(b *testing.B) {
+	size := 2
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup3(b *testing.B) {
+	size := 3
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup4(b *testing.B) {
+	size := 4
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup5(b *testing.B) {
+	size := 5
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup6(b *testing.B) {
+	size := 6
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup7(b *testing.B) {
+	size := 7
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup8(b *testing.B) {
+	size := 8
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup9(b *testing.B) {
+	size := 9
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup10(b *testing.B) {
+	size := 10
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup11(b *testing.B) {
+	size := 11
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup12(b *testing.B) {
+	size := 12
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup13(b *testing.B) {
+	size := 13
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup14(b *testing.B) {
+	size := 14
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup15(b *testing.B) {
+	size := 15
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpDup16(b *testing.B) {
+	size := 16
+	stacks := genStacksForDup(size)
+	opBenchmark(b, makeDup(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap1(b *testing.B) {
+	size := 1
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap2(b *testing.B) {
+	size := 2
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap3(b *testing.B) {
+	size := 3
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap4(b *testing.B) {
+	size := 4
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap5(b *testing.B) {
+	size := 5
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap6(b *testing.B) {
+	size := 6
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap7(b *testing.B) {
+	size := 7
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap8(b *testing.B) {
+	size := 8
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap9(b *testing.B) {
+	size := 9
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap10(b *testing.B) {
+	size := 10
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap11(b *testing.B) {
+	size := 11
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap12(b *testing.B) {
+	size := 12
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap13(b *testing.B) {
+	size := 13
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap14(b *testing.B) {
+	size := 14
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap15(b *testing.B) {
+	size := 15
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpSwap16(b *testing.B) {
+	size := 16
+	stacks := genStacksForSwap(size)
+	opBenchmark(b, makeSwap(int64(size)), stacks...)
+}
+
+func BenchmarkOpLog0(b *testing.B) {
+	size := 0
+	stacks := genStacksForLog(size)
+	opBenchmark(b, makeLog(size), stacks...)
+}
+
+func BenchmarkOpLog1(b *testing.B) {
+	size := 1
+	stacks := genStacksForLog(size)
+	opBenchmark(b, makeLog(size), stacks...)
+}
+
+func BenchmarkOpLog2(b *testing.B) {
+	size := 2
+	stacks := genStacksForLog(size)
+	opBenchmark(b, makeLog(size), stacks...)
+}
+
+func BenchmarkOpLog3(b *testing.B) {
+	size := 3
+	stacks := genStacksForLog(size)
+	opBenchmark(b, makeLog(size), stacks...)
+}
+
+func BenchmarkOpLog4(b *testing.B) {
+	size := 4
+	stacks := genStacksForLog(size)
+	opBenchmark(b, makeLog(size), stacks...)
+}
+
+func genStacksForDup(size int) []string {
+	stacks := make([]string, size)
+	return fillStacks(stacks, size)
+}
+
+func genStacksForSwap(size int) []string {
+	stacks := make([]string, size+1)
+	fillStacks(stacks, size)
+	stacks[len(stacks)-1] = "ABCDEF090807060504030201ffffffffffffffffffffffffffffffffffffffff"
+	return stacks
+}
+
+func genStacksForLog(size int) []string {
+	stacks := make([]string, size+2)
+	fillStacks(stacks, size)
+	stacks[len(stacks)-2] = "0000000000000000000000000000000000000000000000000000000000000014" // 20
+	stacks[len(stacks)-1] = "0000000000000000000000000000000000000000000000000000000000000001" // 1
+	return stacks
+}
+
+func fillStacks(stacks []string, n int) []string {
+	for i := 0; i < n; i++ {
+		stacks[i] = "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
+	}
+	return stacks
 }
