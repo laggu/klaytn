@@ -41,6 +41,8 @@ import (
 const (
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
+	// demoteUnexecutablesFullValidationTxLimit is the number of txs will be fully validated in demoteUnexecutables.
+	demoteUnexecutablesFullValidationTxLimit = 1000
 )
 
 var (
@@ -1181,6 +1183,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 func (pool *TxPool) demoteUnexecutables() {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
+
+	// full-validation count. demoteUnexecutables does full-validation for a limited number of txs.
+	cnt := 0
 	// Iterate over all accounts and demote any non-executable transactions
 	for addr, list := range pool.pending {
 		nonce := pool.getNonce(addr)
@@ -1192,6 +1197,13 @@ func (pool *TxPool) demoteUnexecutables() {
 			delete(pool.all, hash)
 			pool.priced.Removed()
 		}
+
+		// demoteUnexecutables does full-validation for a limited number of txs. Otherwise, it only validate nonce.
+		// The logic below loosely checks the tx count for the efficiency and the simplicity.
+		if cnt > demoteUnexecutablesFullValidationTxLimit {
+			continue
+		}
+		cnt += list.Len()
 
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		drops, invalids := list.Filter(pool.getBalance(addr), pool)
