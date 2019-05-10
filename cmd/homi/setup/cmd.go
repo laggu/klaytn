@@ -302,6 +302,7 @@ func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	genesisJson.Config.Istanbul.Epoch = 604800
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
+	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
 	allocationFunction := genesis.AllocWithBaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
