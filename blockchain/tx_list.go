@@ -224,17 +224,14 @@ func (m *txSortedMap) Flatten() types.Transactions {
 type txList struct {
 	strict bool         // Whether nonces are strictly continuous or not
 	txs    *txSortedMap // Heap indexed sorted hash map of the transactions
-
-	costcap *big.Int // Price of the highest costing transaction (reset only if exceeds balance)
 }
 
 // newTxList create a new transaction list for maintaining nonce-indexable fast,
 // gapped, sortable transaction lists.
 func newTxList(strict bool) *txList {
 	return &txList{
-		strict:  strict,
-		txs:     newTxSortedMap(),
-		costcap: new(big.Int),
+		strict: strict,
+		txs:    newTxSortedMap(),
 	}
 }
 
@@ -262,9 +259,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 	}
 	// Otherwise overwrite the old transaction with the current one
 	l.txs.Put(tx)
-	if cost := tx.Cost(); l.costcap.Cmp(cost) < 0 {
-		l.costcap = cost
-	}
+
 	return true, old
 }
 
@@ -285,12 +280,6 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // is lower than the costcap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
 func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transactions, types.Transactions) {
-	// If all transactions are below the threshold, short circuit
-	if l.costcap.Cmp(senderBalance) <= 0 {
-		return nil, nil
-	}
-	l.costcap = new(big.Int).Set(senderBalance) // Lower the caps to the thresholds
-
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
 		// Drop a tx if it is marked as un-executable on block generation process.
