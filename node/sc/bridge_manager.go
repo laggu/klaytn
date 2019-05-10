@@ -556,7 +556,7 @@ func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBac
 	acc.Lock()
 	defer acc.UnLock()
 	auth := acc.GetTransactOpts()
-	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend, true)
+	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend)
 	if err != nil {
 		logger.Error("Failed to deploy contract.", "err", err)
 		return common.Address{}, nil, err

@@ -122,14 +122,14 @@ func TestBridgeDeployWithKLAY(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, bridge, err := bridge.DeployBridge(bridgeAccount, backend, true)
+	bridgeAddress, tx, _, err := bridge.DeployBridge(bridgeAccount, backend)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
 	backend.Commit()
 	WaitMined(tx, backend, t)
 
-	balanceContract, err := bridge.GetKLAY(nil)
+	balanceContract, err := backend.BalanceAt(nil, bridgeAddress, nil)
 	if err != nil {
 		t.Fatalf("fail to GetKLAY %v", err)
 	}
@@ -156,7 +156,7 @@ func TestBridgeRequestValueTransferNonce(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	addr, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, true)
+	addr, tx, b, err := bridge.DeployBridge(bridgeAccount, backend)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
@@ -220,7 +220,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, true)
+	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}

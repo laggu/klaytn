@@ -12,19 +12,9 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     address public counterpartBridge;
     bool public isRunning;
 
-    bool public onServiceChain;
-
     mapping (address => address) public allowedTokens; // <token, counterpart token>
 
     using SafeMath for uint256;
-
-    struct Balance {
-        uint256 klay;
-        mapping(address => uint256) token;
-        mapping(address => mapping(uint256 => bool)) nft;
-    }
-
-    Balance balances;
 
     uint64 public requestNonce;
     uint64 public handleNonce;
@@ -37,9 +27,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         NFT
     }
 
-    constructor (bool _onServiceChain) public payable {
-        onServiceChain = _onServiceChain;
-        updateKLAY();
+    constructor () public payable {
         isRunning = true;
     }
 
@@ -112,19 +100,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         delete allowedTokens[_token];
     }
 
-    // Internal Deposit functions update the balance in this contract.
-    function updateKLAY() private {
-        balances.klay = balances.klay.add(msg.value);
-    }
-
-    function updateToken(uint256 _amount) private {
-        balances.token[msg.sender] = balances.token[msg.sender].add(_amount);
-    }
-
-    function updateNFT(uint256 _uid) private {
-        balances.nft[msg.sender][_uid] = true;
-    }
-
     // handleTokenTransfer sends the token by the request.
     function handleTokenTransfer(uint256 _amount, address _to, address _contractAddress, uint64 _requestNonce, uint64 _requestBlockNumber)
     onlyOwner
@@ -132,9 +107,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        if (onServiceChain == false){
-            balances.token[_contractAddress] = balances.token[_contractAddress].sub(_amount);
-        }
         IERC20(_contractAddress).transfer(_to, _amount);
         emit HandleValueTransfer(_to, TokenKind.TOKEN, _contractAddress, _amount, handleNonce);
 
@@ -150,8 +122,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        // TODO-Klaytn-Servicechain for KLAY, we can replace below variable with embedded variable.
-        balances.klay = balances.klay.sub(_amount);
         _to.transfer(_amount); // ensure it's not reentrant
         emit HandleValueTransfer(_to, TokenKind.KLAY, address(0), _amount, handleNonce);
 
@@ -166,11 +136,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     external
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
-
-        if (onServiceChain == false){
-            require(balances.nft[_contractAddress][_uid], "Does not own token");
-            delete balances.nft[_contractAddress][_uid];
-        }
 
         IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
         emit HandleValueTransfer(_to, TokenKind.NFT, _contractAddress, _uid, handleNonce);
@@ -191,8 +156,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
         require(_amount > 0, "zero amount");
-
-        updateToken(_amount);
         emit RequestValueTransfer(TokenKind.TOKEN, _from, _amount, msg.sender, _to, requestNonce);
         requestNonce++;
         return TOKEN_RECEIVED;
@@ -212,7 +175,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
 
-        updateNFT(tokenId);
         emit RequestValueTransfer(TokenKind.NFT, from, tokenId, msg.sender, to, requestNonce);
         requestNonce++;
         return ERC721_RECEIVED;
@@ -223,7 +185,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
 
-        updateKLAY();
         emit RequestValueTransfer(TokenKind.KLAY, msg.sender, msg.value, address(0), msg.sender, requestNonce);
         requestNonce++;
     }
@@ -233,29 +194,12 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
 
-        updateKLAY();
         emit RequestValueTransfer(TokenKind.KLAY, msg.sender, msg.value, address(0), _to, requestNonce);
         requestNonce++;
     }
 
     // chargeWithoutEvent sends KLAY to this contract without event for increasing the withdrawal limit.
     function chargeWithoutEvent() external payable {
-        updateKLAY();
     }
     //////////////////////////////////////////////////////////////////////////////
-
-    // getKLAY returns KLAY withdrawal limit
-    function getKLAY() external view returns (uint256) {
-        return balances.klay;
-    }
-
-    // getToken returns given Token withdrawal limit
-    function getToken(address contractAddress) external view returns (uint256) {
-        return balances.token[contractAddress];
-    }
-
-    // getNFT returns whether the given NFT is owned or not.
-    function getNFT(address owner, uint256 uid, address contractAddress) external view returns (bool) {
-        return balances.nft[contractAddress][uid];
-    }
 }

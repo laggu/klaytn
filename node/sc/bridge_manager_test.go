@@ -816,7 +816,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
 	auth := acc.GetTransactOpts()
 	auth.Value = big.NewInt(10000)
-	addr, tx, contract, err := bridge.DeployBridge(auth, backend, true)
+	addr, tx, contract, err := bridge.DeployBridge(auth, backend)
 	if err != nil {
 		logger.Error("", "err", err)
 		return common.Address{}, nil, err
