@@ -278,6 +278,16 @@ func initStateDB(db database.DBManager) *state.StateDB {
 	statedb.SetBalance(contractAddress, big.NewInt(1000))
 	statedb.SetNonce(contractAddress, uint64(1))
 
+	{
+		// create a contract having a STOP operation.
+		contractAddress := common.HexToAddress("0x18f30de96ce789fe778b9a5f420f6fdbbd9b34d9")
+		code := "00"
+		statedb.CreateSmartContractAccount(contractAddress, params.CodeFormatEVM)
+		statedb.SetCode(contractAddress, common.Hex2Bytes(code))
+		statedb.SetBalance(contractAddress, big.NewInt(1000))
+		statedb.SetNonce(contractAddress, uint64(1))
+	}
+
 	// Commit and re-open to start with a clean state.
 	root, _ := statedb.Commit(false)
 	statedb, _ = state.New(root, sdb)
@@ -934,7 +944,7 @@ func BenchmarkOpCall(b *testing.B) {
 	inSize := "0000000000000014"
 	inOffset := "0000000000000001"
 	value := "0000000000000000000000000000000000000000000000000000000000000001"
-	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d9"
 	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
 	opBenchmark(b, opCall, retSize, retOffset, inSize, inOffset, value, addr, gas)
 }
@@ -945,7 +955,7 @@ func BenchmarkOpCallCode(b *testing.B) {
 	inSize := "0000000000000014"
 	inOffset := "0000000000000001"
 	value := "0000000000000000000000000000000000000000000000000000000000000001"
-	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d9"
 	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
 	opBenchmark(b, opCallCode, retSize, retOffset, inSize, inOffset, value, addr, gas)
 }
@@ -955,7 +965,7 @@ func BenchmarkOpDelegateCall(b *testing.B) {
 	retOffset := "0000000000000000000000000000000000000000000000000000000000000001"
 	inSize := "0000000000000014"
 	inOffset := "0000000000000001"
-	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d9"
 	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
 	opBenchmark(b, opDelegateCall, retSize, retOffset, inSize, inOffset, addr, gas)
 }
@@ -965,7 +975,7 @@ func BenchmarkOpStaticCall(b *testing.B) {
 	retOffset := "0000000000000000000000000000000000000000000000000000000000000001"
 	inSize := "0000000000000014"
 	inOffset := "0000000000000001"
-	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
+	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d9"
 	gas := "7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
 	opBenchmark(b, opStaticCall, retSize, retOffset, inSize, inOffset, addr, gas)
 }
