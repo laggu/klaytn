@@ -23,6 +23,9 @@ package vm
 import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
+	"github.com/ground-x/klaytn/crypto"
+	"github.com/stretchr/testify/require"
 	"math/big"
 	"testing"
 
@@ -366,6 +369,15 @@ var feePayerTests = []precompiledTest{
 	},
 }
 
+// validateSenderTest is the test data for the feePayer precompiled contract.
+var validateSenderTest = []precompiledTest{
+	{
+		input:    "00000000000000000000000000000001234567890000000000000000000000000000000000000000000000000000000000000000db38e383310a432f1cec0bfbd765fe67c9932b02295b1f2062a785eec288b2f962d578d163a8b13c9cee127e0b24c01d1906979ac3bc6a763bf95c50999ca97c01",
+		expected: "01",
+		name:     "validateSenderTest1",
+	},
+}
+
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
@@ -512,6 +524,127 @@ func BenchmarkPrecompiledBn256Pairing(bench *testing.B) {
 	}
 }
 
+func BenchmarkPrecompiledVmLog(b *testing.B) {
+	// Only stdout logging is tested to avoid file handling.
+	params.VMLogTarget = params.VMLogToStdout
+
+	p := PrecompiledContractsByzantium[common.HexToAddress("09")]
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
+	statedb.Prepare(txhash, common.Hash{}, 0)
+	evm := NewEVM(Context{}, statedb, params.TestChainConfig, &Config{})
+
+	for _, test := range vmlogTests {
+		in := common.Hex2Bytes(test.input)
+		reqGas := p.RequiredGas(in)
+		contract := NewContract(AccountRef(common.HexToAddress("1337")),
+			nil, new(big.Int), reqGas)
+
+		var (
+			res  []byte
+			err  error
+			data = make([]byte, len(in))
+		)
+
+		b.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				contract.Gas = reqGas
+				copy(data, in)
+				res, err = RunVMLogContract(p, data, contract, evm)
+			}
+			b.StopTimer()
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			if common.Bytes2Hex(res) != test.expected {
+				b.Error(fmt.Sprintf("Expected %v, got %v", test.expected, common.Bytes2Hex(res)))
+				return
+			}
+		})
+	}
+}
+
+func BenchmarkPrecompiledFeePayer(b *testing.B) {
+	p := PrecompiledContractsByzantium[common.HexToAddress("0A")]
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
+	statedb.Prepare(txhash, common.Hash{}, 0)
+
+	for _, test := range feePayerTests {
+		in := common.Hex2Bytes(test.input)
+		reqGas := p.RequiredGas(in)
+		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
+			nil, new(big.Int), reqGas)
+
+		var (
+			res  []byte
+			err  error
+			data = make([]byte, len(in))
+		)
+
+		b.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				contract.Gas = reqGas
+				copy(data, in)
+				res, err = RunFeePayerContract(p, data, contract)
+			}
+			b.StopTimer()
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			if common.Bytes2Hex(res) != test.expected {
+				b.Error(fmt.Sprintf("Expected %v, got %v", test.expected, common.Bytes2Hex(res)))
+				return
+			}
+		})
+	}
+}
+
+func BenchmarkPrecompiledValidateSender(b *testing.B) {
+	p := PrecompiledContractsByzantium[common.HexToAddress("0B")]
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	k, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	require.NoError(b, err)
+	accKey := accountkey.NewAccountKeyPublicWithValue(&k.PublicKey)
+	addr := common.HexToAddress("0x123456789")
+	statedb.CreateEOA(addr, false, accKey)
+
+	for _, test := range validateSenderTest {
+		in := common.Hex2Bytes(test.input)
+		reqGas := p.RequiredGas(in)
+		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
+			nil, new(big.Int), reqGas)
+
+		var (
+			res  []byte
+			err  error
+			data = make([]byte, len(in))
+		)
+
+		b.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				contract.Gas = reqGas
+				copy(data, in)
+				res, err = RunValidateSenderContract(p, data, contract, statedb)
+			}
+			b.StopTimer()
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			if common.Bytes2Hex(res) != test.expected {
+				b.Error(fmt.Sprintf("Expected %v, got %v", test.expected, common.Bytes2Hex(res)))
+				return
+			}
+		})
+	}
+}
+
 // Tests the vmlog precompiled contract.
 func TestPrecompiledVMLog(t *testing.T) {
 	for _, test := range vmlogTests {
@@ -556,6 +689,29 @@ func TestRunFeePayerContract(t *testing.T) {
 			nil, new(big.Int), p.RequiredGas(in))
 		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
 			if res, err := RunFeePayerContract(p, in, contract); err != nil {
+				t.Error(err)
+			} else if common.Bytes2Hex(res) != test.expected {
+				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))
+			}
+		})
+	}
+}
+
+func TestRunValidateSenderContract(t *testing.T) {
+	p := PrecompiledContractsByzantium[common.HexToAddress("0B")]
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	k, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	require.NoError(t, err)
+	accKey := accountkey.NewAccountKeyPublicWithValue(&k.PublicKey)
+	addr := common.HexToAddress("0x123456789")
+	statedb.CreateEOA(addr, false, accKey)
+
+	for _, test := range validateSenderTest {
+		in := common.Hex2Bytes(test.input)
+		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
+			nil, new(big.Int), p.RequiredGas(in))
+		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
+			if res, err := RunValidateSenderContract(p, in, contract, statedb); err != nil {
 				t.Error(err)
 			} else if common.Bytes2Hex(res) != test.expected {
 				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))
