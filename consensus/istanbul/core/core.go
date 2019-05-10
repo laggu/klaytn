@@ -52,9 +52,9 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
 
-		roundMeter:     metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
-		sequenceMeter:  metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
-		consensusTimer: metrics.NewRegisteredTimer("consensus/istanbul/core/timer", nil),
+		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
+		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
+		consensusTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -95,8 +95,8 @@ type core struct {
 	roundMeter metrics.Meter
 	// the meter to record the sequence update rate
 	sequenceMeter metrics.Meter
-	// the timer to record consensus duration (from accepting a preprepare to final committed stage)
-	consensusTimer metrics.Timer
+	// the gauge to record consensus duration (from accepting a preprepare to final committed stage)
+	consensusTimeGauge metrics.Gauge
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -212,7 +212,7 @@ func (c *core) startNewRound(round *big.Int) {
 		c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
 
 		if !c.consensusTimestamp.IsZero() {
-			c.consensusTimer.UpdateSince(c.consensusTimestamp)
+			c.consensusTimeGauge.Update(int64(time.Since(c.consensusTimestamp)))
 			c.consensusTimestamp = time.Time{}
 		}
 		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
