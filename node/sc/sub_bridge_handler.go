@@ -151,7 +151,7 @@ func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
 }
 
 func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
-	sbh.subbridge.bridgeAccountManager.scAccount.SetGasPrice(big.NewInt(int64(gasPrice)))
+	sbh.subbridge.bridgeAccountManager.mcAccount.SetGasPrice(big.NewInt(int64(gasPrice)))
 	sbh.remoteGasPrice = gasPrice
 }
 
