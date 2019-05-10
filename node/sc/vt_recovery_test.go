@@ -22,7 +22,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
-	"github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/contracts/servicechain_nft"
 	"github.com/ground-x/klaytn/contracts/servicechain_token"
 	"github.com/ground-x/klaytn/crypto"
@@ -66,7 +65,7 @@ const (
 	testToken        = 123
 	testNFT          = int64(7321)
 	testChargeToken  = 100000
-	testTimeout      = 600 * time.Second
+	testTimeout      = 10 * time.Second
 	testTxCount      = 7
 	testBlockOffset  = 3 // +2 for genesis and bridge contract, +1 by a hardcoded hint
 	testPendingCount = 3
@@ -74,9 +73,9 @@ const (
 )
 
 type operations struct {
-	request     func(*testInfo, *bridge.Bridge)
-	handle      func(*testInfo, *bridge.Bridge, *TokenReceivedEvent)
-	dummyHandle func(*testInfo, *bridge.Bridge)
+	request     func(*testInfo, *BridgeInfo)
+	handle      func(*testInfo, *BridgeInfo, *TokenReceivedEvent)
+	dummyHandle func(*testInfo, *BridgeInfo)
 }
 
 var (
@@ -110,7 +109,7 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	// 1. Init dummy chain and do some value transfers.
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo.bridge)
+			ops[KLAY].request(info, info.localInfo)
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
@@ -148,7 +147,7 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	// 5. Recover pending events
 	info.recoveryCh <- true
 	assert.Equal(t, nil, vtr.recoverPendingEvents())
-	ops[KLAY].dummyHandle(info, info.remoteInfo.bridge)
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
 
 	// 6. Check empty pending events.
 	err = vtr.updateRecoveryHint()
@@ -174,7 +173,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[TOKEN].request(info, info.localInfo.bridge)
+			ops[TOKEN].request(info, info.localInfo)
 		}
 	})
 
@@ -191,7 +190,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[TOKEN].dummyHandle(info, info.remoteInfo.bridge)
+	ops[TOKEN].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -211,7 +210,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[NFT].request(info, info.localInfo.bridge)
+			ops[NFT].request(info, info.localInfo)
 		}
 	})
 
@@ -228,7 +227,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[NFT].dummyHandle(info, info.remoteInfo.bridge)
+	ops[NFT].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -247,7 +246,7 @@ func TestMethodRecover(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo.bridge)
+			ops[KLAY].request(info, info.localInfo)
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
@@ -262,7 +261,7 @@ func TestMethodRecover(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[KLAY].dummyHandle(info, info.remoteInfo.bridge)
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -281,7 +280,7 @@ func TestMethodStop(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo.bridge)
+			ops[KLAY].request(info, info.localInfo)
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
@@ -314,7 +313,7 @@ func TestFlagVTRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo.bridge)
+			ops[KLAY].request(info, info.localInfo)
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
@@ -330,7 +329,7 @@ func TestFlagVTRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[KLAY].dummyHandle(info, info.remoteInfo.bridge)
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -348,12 +347,11 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		info.localInfo.bridge, info.remoteInfo.bridge = info.remoteInfo.bridge, info.localInfo.bridge
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo.bridge)
+			ops[KLAY].request(info, info.remoteInfo)
 		}
 	})
-	info.localInfo.bridge, info.remoteInfo.bridge = info.remoteInfo.bridge, info.localInfo.bridge
+
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 	err := vtr.updateRecoveryHint()
 	if err != nil {
@@ -366,7 +364,7 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[KLAY].dummyHandle(info, info.localInfo.bridge)
+	ops[KLAY].dummyHandle(info, info.localInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -385,7 +383,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo.bridge)
+			ops[KLAY].request(info, info.localInfo)
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
@@ -400,7 +398,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to start the value transfer")
 	}
-	ops[KLAY].dummyHandle(info, info.remoteInfo.bridge)
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -450,11 +448,11 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
-	localAddr, err := bm.DeployBridgeTest(sim, false)
+	localAddr, err := bm.DeployBridgeTest(sim, true)
 	if err != nil {
 		t.Fatal("deploy bridge test failed", localAddr)
 	}
-	remoteAddr, err := bm.DeployBridgeTest(sim, false) // mimic remote by local
+	remoteAddr, err := bm.DeployBridgeTest(sim, false)
 	if err != nil {
 		t.Fatal("deploy bridge test failed", remoteAddr)
 	}
@@ -491,10 +489,19 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	}
 	sim.Commit()
 
+	// Register tokens on the bridge
+	nodeOpts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
+	chainOpts := &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
+	_, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr)
+	_, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr)
+	_, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr)
+	_, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr)
+	sim.Commit()
+
 	// Register an NFT to chain account (minting)
 	for i := 0; i < testTxCount; i++ {
 		opts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
-		_, err = nftLocal.Register(opts, chainAuth.From, big.NewInt(testNFT+int64(i)))
+		_, err = nftLocal.Register(opts, nodeAuth.From, big.NewInt(testNFT+int64(i)))
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}
@@ -552,7 +559,12 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 					default:
 						t.Fatal("received TokenType is unknown")
 					}
-					ops[ev.TokenType].handle(&info, info.remoteInfo.bridge, &ev)
+
+					if ev.ContractAddr == info.localInfo.address {
+						ops[ev.TokenType].handle(&info, info.remoteInfo, &ev)
+					} else {
+						ops[ev.TokenType].handle(&info, info.localInfo, &ev)
+					}
 				}
 
 				if !isRecovery {
@@ -573,22 +585,26 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	return &info
 }
 
-func requestKLAYTransfer(info *testInfo, bridge *bridge.Bridge) {
-	value := big.NewInt(testAmount)
-	auth := info.nodeAuth
-	opts := &bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: value, GasLimit: testGasLimit}
-	_, err := bridge.RequestKLAYTransfer(opts, info.aliceAuth.From)
+func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
+	bi.account.Lock()
+	defer bi.account.UnLock()
+
+	opts := bi.account.GetTransactOpts()
+	opts.Value = big.NewInt(testAmount)
+	_, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From)
 	if err != nil {
 		log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 	}
 	info.sim.Commit()
 }
 
-func handleKLAYTransfer(info *testInfo, to *bridge.Bridge, ev *TokenReceivedEvent) {
+func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) {
+	bi.account.Lock()
+	defer bi.account.UnLock()
+
 	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.Amount)
-	auth := info.chainAuth
-	opts := &bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}
-	_, err := to.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+	opts := bi.account.GetTransactOpts()
+	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
@@ -596,38 +612,42 @@ func handleKLAYTransfer(info *testInfo, to *bridge.Bridge, ev *TokenReceivedEven
 }
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
-func dummyHandleRequestKLAYTransfer(info *testInfo, bridge *bridge.Bridge) {
+func dummyHandleRequestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	info.localInfo.nextHandleNonce = math.MaxUint64 // set a large value to get all events
 	events := info.localInfo.GetReadyRequestValueTransferEvents()
 	for _, ev := range events {
-		handleKLAYTransfer(info, bridge, ev)
+		handleKLAYTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
 }
 
-func requestTokenTransfer(info *testInfo, bridge *bridge.Bridge) {
-	info.mu.Lock()
-	defer info.mu.Unlock()
+func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
+	bi.account.Lock()
+	defer bi.account.UnLock()
 
 	testToken := big.NewInt(testToken)
-	auth := info.nodeAuth
-	opts := &bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}
-	_, err := info.tokenLocalBridge.RequestValueTransfer(opts, testToken, info.chainAuth.From)
+	opts := bi.account.GetTransactOpts()
+
+	var err error
+	if bi.onServiceChain {
+		_, err = info.tokenLocalBridge.RequestValueTransfer(opts, testToken, info.chainAuth.From)
+	} else {
+		_, err = info.tokenRemoteBridge.RequestValueTransfer(opts, testToken, info.nodeAuth.From)
+	}
+
 	if err != nil {
 		log.Fatalf("Failed to RequestValueTransfer for charging: %v", err)
 	}
 	info.sim.Commit()
 }
 
-func handleTokenTransfer(info *testInfo, bridge *bridge.Bridge, ev *TokenReceivedEvent) {
-	info.mu.Lock()
-	defer info.mu.Unlock()
+func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) {
+	bi.account.Lock()
+	defer bi.account.UnLock()
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.Amount)
-	_, err := bridge.HandleTokenTransfer(&bind.TransactOpts{
-		From:     info.chainAuth.From,
-		Signer:   info.chainAuth.Signer,
-		GasLimit: testGasLimit},
+	_, err := bi.bridge.HandleTokenTransfer(
+		bi.account.GetTransactOpts(),
 		ev.Amount, ev.To, info.tokenRemoteAddr, ev.RequestNonce, ev.BlockNumber)
 	if err != nil {
 		log.Fatalf("Failed to HandleTokenTransfer: %v", err)
@@ -636,23 +656,30 @@ func handleTokenTransfer(info *testInfo, bridge *bridge.Bridge, ev *TokenReceive
 }
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
-func dummyHandleRequestTokenTransfer(info *testInfo, bridge *bridge.Bridge) {
+func dummyHandleRequestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	info.localInfo.nextHandleNonce = math.MaxUint64 // set a large value to get all events
 	events := info.localInfo.GetReadyRequestValueTransferEvents()
 	for _, ev := range events {
-		handleTokenTransfer(info, bridge, ev)
+		handleTokenTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
 }
 
-func requestNFTTransfer(info *testInfo, bridge *bridge.Bridge) {
-	info.mu.Lock()
-	defer info.mu.Unlock()
+func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
+	bi.account.Lock()
+	defer bi.account.UnLock()
 
-	auth := info.chainAuth
-	opts := &bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}
+	opts := bi.account.GetTransactOpts()
+	// TODO-Klaytn need to separate service / main chain nftIndex.
 	nftIndex := new(big.Int).SetInt64(info.nftIndex)
-	_, err := info.nftLocalBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From)
+
+	var err error
+	if bi.onServiceChain {
+		_, err = info.nftLocalBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From)
+	} else {
+		_, err = info.nftRemoteBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From)
+	}
+
 	if err != nil {
 		log.Fatalf("Failed to requestNFTTransfer for charging: %v", err)
 	}
@@ -660,15 +687,21 @@ func requestNFTTransfer(info *testInfo, bridge *bridge.Bridge) {
 	info.sim.Commit()
 }
 
-func handleNFTTransfer(info *testInfo, bridge *bridge.Bridge, ev *TokenReceivedEvent) {
-	info.mu.Lock()
-	defer info.mu.Unlock()
+func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) {
+	bi.account.Lock()
+	defer bi.account.UnLock()
 
-	_, err := bridge.HandleNFTTransfer(&bind.TransactOpts{
-		From:     info.chainAuth.From,
-		Signer:   info.chainAuth.Signer,
-		GasLimit: testGasLimit},
-		ev.Amount, ev.To, info.nftRemoteAddr, ev.RequestNonce, ev.BlockNumber)
+	var nftAddr common.Address
+
+	if bi.onServiceChain {
+		nftAddr = info.nftLocalAddr
+	} else {
+		nftAddr = info.nftRemoteAddr
+	}
+
+	_, err := bi.bridge.HandleNFTTransfer(
+		bi.account.GetTransactOpts(),
+		ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber)
 	if err != nil {
 		log.Fatalf("Failed to handleNFTTransfer: %v", err)
 	}
@@ -676,11 +709,11 @@ func handleNFTTransfer(info *testInfo, bridge *bridge.Bridge, ev *TokenReceivedE
 }
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
-func dummyHandleRequestNFTTransfer(info *testInfo, bridge *bridge.Bridge) {
+func dummyHandleRequestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	info.localInfo.nextHandleNonce = math.MaxUint64 // set a large value to get all events
 	events := info.localInfo.GetReadyRequestValueTransferEvents()
 	for _, ev := range events {
-		handleNFTTransfer(info, bridge, ev)
+		handleNFTTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
 }

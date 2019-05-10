@@ -6,7 +6,6 @@ import "./INFTReceiver.sol";
 
 
 contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), Ownable {
-    mapping(address => bool) private registered;
     address public bridge;
 
     constructor (address _bridge) public { bridge = _bridge; }

@@ -141,6 +141,18 @@ func TestBridgeManager(t *testing.T) {
 	}
 	sim.Commit() // block
 
+	// Register tokens on the bridge
+	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
+	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
+	sim.Commit() // block
+
+	cTokenAddr, err := bridge.AllowedTokens(nil, tokenAddr)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, cTokenAddr, tokenAddr)
+	cNftAddr, err := bridge.AllowedTokens(nil, nftAddr)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, cNftAddr, nftAddr)
+
 	// TODO-Klaytn-Servicechain needs to support WaitDeployed
 	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
 	//defer cancelTimeout()
@@ -188,7 +200,7 @@ func TestBridgeManager(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
 					}
@@ -197,7 +209,7 @@ func TestBridgeManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := bridge.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
@@ -212,7 +224,7 @@ func TestBridgeManager(t *testing.T) {
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
-					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawERC721: %v", err)
 					}
@@ -238,7 +250,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 5. transfer from auth to auth2 for charging and check balances
 	{
-		tx, err = token.Transfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 999999}, auth2.From, testToken)
+		tx, err = token.Transfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, auth2.From, testToken)
 		if err != nil {
 			log.Fatalf("Failed to Transfer for charging: %v", err)
 		}
@@ -282,7 +294,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 6. Register (Mint) an NFT to Auth4
 	{
-		tx, err = nft.Register(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: 999999}, auth4.From, big.NewInt(int64(nftTokenID)))
+		tx, err = nft.Register(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, auth4.From, big.NewInt(int64(nftTokenID)))
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}
@@ -304,7 +316,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 7. RequestValueTransfer from auth2 to auth3
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 99999}, testToken, auth3.From)
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, testToken, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
 		}
@@ -326,7 +338,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 8. DepositKLAY from auth to auth3
 	{
-		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}
@@ -337,7 +349,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 9. Request NFT value transfer from auth4 to auth3
 	{
-		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: auth4.From, Signer: auth4.Signer, GasLimit: 999999}, big.NewInt(int64(nftTokenID)), auth3.From)
+		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: auth4.From, Signer: auth4.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), auth3.From)
 		if err != nil {
 			log.Fatalf("Failed to nft.RequestValueTransfer: %v", err)
 		}
@@ -535,7 +547,7 @@ func TestBasicJournal(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: 999999}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)

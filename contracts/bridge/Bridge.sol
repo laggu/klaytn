@@ -8,7 +8,13 @@ import "../servicechain_nft/INFTReceiver.sol";
 import "../servicechain_token/ITokenReceiver.sol";
 
 contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
+    uint public constant  version = 1;
+    address public counterpartBridge;
+    bool public isRunning;
+
     bool public onServiceChain;
+
+    mapping (address => address) public allowedTokens; // <token, counterpart token>
 
     using SafeMath for uint256;
 
@@ -34,6 +40,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     constructor (bool _onServiceChain) public payable {
         onServiceChain = _onServiceChain;
         updateKLAY();
+        isRunning = true;
     }
 
     /**
@@ -64,6 +71,46 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         address contractAddress,
         uint256 value,
         uint64 handleNonce);
+
+    // start allows the value transfer request.
+    function start()
+    onlyOwner
+    external
+    {
+        isRunning = true;
+    }
+
+    // stop prevent the value transfer request.
+    function stop()
+    onlyOwner
+    external
+    {
+        isRunning = false;
+    }
+
+    // stop prevent the value transfer request.
+    function setCounterPartBridge(address _bridge)
+    onlyOwner
+    external
+    {
+        counterpartBridge = _bridge;
+    }
+
+    // registerToken can update the allowed token with the counterpart token.
+    function registerToken(address _token, address _cToken)
+    onlyOwner
+    external
+    {
+        allowedTokens[_token] = _cToken;
+    }
+
+    // deregisterToken can remove the token in allowedToken list.
+    function deregisterToken(address _token)
+    onlyOwner
+    external
+    {
+        delete allowedTokens[_token];
+    }
 
     // Internal Deposit functions update the balance in this contract.
     function updateKLAY() private {
@@ -133,19 +180,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         handleNonce++;
     }
 
-    // Approve and Deposit function for 2-step deposits
-    // Requires first to have called `approve` on the specified TOKEN contract
-    // TODO-Klaytn need to consider whether this method is necessary or not.
-    function RequestTokenTransfer(uint256 _amount, address _contractAddress, address _to)
-    onlyOwner
-    external {
-        require(_amount > 0, "zero amount");
-        IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
-        balances.token[_contractAddress] = balances.token[_contractAddress].add(_amount);
-        emit RequestValueTransfer(TokenKind.TOKEN, msg.sender, _amount, _contractAddress, _to, requestNonce);
-        requestNonce++;
-    }
-
     //////////////////////////////////////////////////////////////////////////////
     // Receiver functions of Token for 1-step deposits to the Bridge
     bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
@@ -154,9 +188,10 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     public
     returns (bytes4)
     {
+        require(isRunning, "stopped bridge");
+        require(allowedTokens[msg.sender] != address(0), "Not a valid token");
         require(_amount > 0, "zero amount");
-        // TODO-Klaytn-Servicechain should add allowedToken list in this Bridge.
-        //require(allowedTokens[msg.sender], "Not a valid token");
+
         updateToken(_amount);
         emit RequestValueTransfer(TokenKind.TOKEN, _from, _amount, msg.sender, _to, requestNonce);
         requestNonce++;
@@ -174,7 +209,9 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     public
     returns(bytes4)
     {
-        //require(allowedTokens[msg.sender], "Not a valid token");
+        require(isRunning, "stopped bridge");
+        require(allowedTokens[msg.sender] != address(0), "Not a valid token");
+
         updateNFT(tokenId);
         emit RequestValueTransfer(TokenKind.NFT, from, tokenId, msg.sender, to, requestNonce);
         requestNonce++;
@@ -183,6 +220,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
 
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
+        require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
 
         updateKLAY();
@@ -192,6 +230,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
     function requestKLAYTransfer(address _to) external payable {
+        require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
 
         updateKLAY();
