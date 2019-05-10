@@ -88,14 +88,6 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 	return []common.Address{localAddr, remoteAddr}, nil
 }
 
-func (sbapi *SubBridgeAPI) DeployBridgeOnLocalChain() (common.Address, error) {
-	return sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
-}
-
-func (sbapi *SubBridgeAPI) DeployBridgeOnParentChain() (common.Address, error) {
-	return sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
-}
-
 // SubscribeEventBridge enables the given service/main chain bridges to subscribe the events.
 func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	err := sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)

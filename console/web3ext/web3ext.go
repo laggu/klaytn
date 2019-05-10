@@ -831,16 +831,6 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'deployBridgeOnLocal',
-			call: 'bridge_deployBridgeOnLocalChain',
-			params: 0
-		}),
-		new web3._extend.Method({
-			name: 'deployBridgeOnRemote',
-			call: 'bridge_deployBridgeOnParentChain',
-			params: 0
-		}),
-		new web3._extend.Method({
 			name: 'subscribeBridge',
 			call: 'bridge_subscribeEventBridge',
 			params: 2
