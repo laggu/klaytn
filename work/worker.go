@@ -689,7 +689,9 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc *blockchain.BlockCh
 
 	receipt, _, err := blockchain.ApplyTransaction(env.config, bc, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
-		tx.MarkUnexecutable(true)
+		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+			tx.MarkUnexecutable(true)
+		}
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
