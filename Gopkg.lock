@@ -119,6 +119,14 @@
   revision = "f6d5545993d68e9e42df43eb57958f898dea3623"
 
 [[projects]]
+  digest = "1:ec6f9bf5e274c833c911923c9193867f3f18788c461f76f05f62bb1510e0ae65"
+  name = "github.com/go-sql-driver/mysql"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "72cd26f257d44c1114970e19afddcd812016007e"
+  version = "v1.4.1"
+
+[[projects]]
   digest = "1:c4a2528ccbcabf90f9f3c464a5fc9e302d592861bbfd0b7135a7de8a943d0406"
   name = "github.com/go-stack/stack"
   packages = ["."]
@@ -619,6 +627,14 @@
   revision = "8c39fb57ad842377bfea6ab5eff7608e4e8f6765"
 
 [[projects]]
+  digest = "1:c25289f43ac4a68d88b02245742347c94f1e108c534dda442188015ff80669b3"
+  name = "google.golang.org/appengine"
+  packages = ["cloudsql"]
+  pruneopts = "UT"
+  revision = "54a98f90d1c46b7731eb8fb305d2a321c30ef610"
+  version = "v1.5.0"
+
+[[projects]]
   branch = "master"
   digest = "1:077c1c599507b3b3e9156d17d36e1e61928ee9b53a5b420f10f28ebd4a0b275c"
   name = "google.golang.org/genproto"
@@ -741,6 +757,7 @@
     "github.com/edsrzf/mmap-go",
     "github.com/fatih/color",
     "github.com/fjl/memsize/memsizeui",
+    "github.com/go-sql-driver/mysql",
     "github.com/go-stack/stack",
     "github.com/golang/protobuf/proto",
     "github.com/golang/snappy",
