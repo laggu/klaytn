@@ -235,7 +235,7 @@ func (t *TxInternalDataAccountUpdate) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataAccountUpdate) GetRecipient() *common.Address {
-	return &common.Address{}
+	return nil
 }
 
 func (t *TxInternalDataAccountUpdate) GetAmount() *big.Int {

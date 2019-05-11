@@ -150,7 +150,7 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetRecipient() *common.Address {
-	return &common.Address{}
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetAmount() *big.Int {

@@ -229,7 +229,7 @@ func (t *TxInternalDataChainDataAnchoring) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataChainDataAnchoring) GetRecipient() *common.Address {
-	return &common.Address{}
+	return nil
 }
 
 func (t *TxInternalDataChainDataAnchoring) GetAmount() *big.Int {
