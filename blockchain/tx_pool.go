@@ -1192,6 +1192,7 @@ func (pool *TxPool) demoteUnexecutables() {
 	// Iterate over all accounts and demote any non-executable transactions
 	for addr, list := range pool.pending {
 		nonce := pool.getNonce(addr)
+		var drops, invalids types.Transactions
 
 		// Drop all transactions that are deemed too old (low nonce)
 		for _, tx := range list.Forward(nonce) {
@@ -1204,30 +1205,34 @@ func (pool *TxPool) demoteUnexecutables() {
 		// demoteUnexecutables does full-validation for a limited number of txs. Otherwise, it only validate nonce.
 		// The logic below loosely checks the tx count for the efficiency and the simplicity.
 		if cnt < demoteUnexecutablesFullValidationTxLimit {
-			// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-			drops, invalids := list.Filter(pool.getBalance(addr), pool)
-			for _, tx := range drops {
-				hash := tx.Hash()
-				logger.Trace("Removed unpayable pending transaction", "hash", hash)
-				delete(pool.all, hash)
-				pool.priced.Removed()
-				pendingNofundsCounter.Inc(1)
-			}
-			for _, tx := range invalids {
-				hash := tx.Hash()
-				logger.Trace("Demoting pending transaction", "hash", hash)
-				pool.enqueueTx(hash, tx)
-			}
-			// If there's a gap in front, warn (should never happen) and postpone all transactions
-			if list.Len() > 0 && list.txs.Get(nonce) == nil {
-				for _, tx := range list.Cap(0) {
-					hash := tx.Hash()
-					logger.Error("Demoting invalidated transaction", "hash", hash)
-					pool.enqueueTx(hash, tx)
-				}
-			}
+			drops, invalids = list.Filter(pool.getBalance(addr), pool)
+		} else {
+			drops, invalids = list.FilterUnexecutable()
 		}
 		cnt += list.Len()
+
+		// Drop all transactions that are unexecutable, and queue any invalids back for later
+		for _, tx := range drops {
+			hash := tx.Hash()
+			logger.Trace("Removed unexecutable pending transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+
+		for _, tx := range invalids {
+			hash := tx.Hash()
+			logger.Trace("Demoting pending transaction", "hash", hash)
+			pool.enqueueTx(hash, tx)
+		}
+		// If there's a gap in front, warn (should never happen) and postpone all transactions
+		if list.Len() > 0 && list.txs.Get(nonce) == nil {
+			for _, tx := range list.Cap(0) {
+				hash := tx.Hash()
+				logger.Error("Demoting invalidated transaction", "hash", hash)
+				pool.enqueueTx(hash, tx)
+			}
+		}
 
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
