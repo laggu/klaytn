@@ -369,8 +369,7 @@ func (bm *BridgeManager) SubscribeTokenWithDraw(ch chan<- TokenTransferEvent) ev
 	return bm.scope.Track(bm.tokenWithdraw.Subscribe(ch))
 }
 
-// GetAllBridge returns a slice of journal cache while removing unnecessary address pair.
-// TODO-Klaytn-ServiceChain: remove the dirty hack for deleting journals from the cache.
+// GetAllBridge returns a slice of journal cache.
 func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 	var gwjs []*BridgeJournal
 
