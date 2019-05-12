@@ -856,6 +856,10 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
+	poolSize := uint64(len(pool.all))
+	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+		return fmt.Errorf("txpool is full: %d", poolSize)
+	}
 	return pool.addTx(tx, !pool.config.NoLocals)
 }
 
@@ -870,6 +874,14 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 // marking the senders as a local ones in the mean time, ensuring they go around
 // the local pricing constraints.
 func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
+	poolSize := uint64(len(pool.all))
+	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+		errors := make([]error, 0, len(txs))
+		err := fmt.Errorf("txpool is full: %d", poolSize)
+		for i := 0; i < len(txs); i++ {
+			errors = append(errors, err)
+		}
+	}
 	return pool.addTxs(txs, !pool.config.NoLocals)
 }
 
