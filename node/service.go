@@ -70,10 +70,6 @@ func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
 	return ctx.config.NodeKey()
 }
 
-func (ctx *ServiceContext) ChainKey() *ecdsa.PrivateKey {
-	return ctx.config.ChainKey()
-}
-
 func (ctx *ServiceContext) NodeType() p2p.ConnType {
 	return ctx.config.P2P.ConnectionType
 }
