@@ -94,7 +94,7 @@ type SCConfig struct {
 	AnchoringPeriod         uint64
 	SentChainTxsLimit       uint64
 
-	ParentChainURL         string
+	MainChainURL           string
 	VTRecovery             bool
 	VTRecoveryInterval     uint64
 	ServiceChainNewAccount bool

@@ -273,10 +273,10 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	}
 
 	var err error
-	if sc.config.ParentChainURL != "" {
-		sc.remoteBackend, err = NewRemoteBackend(sc, sc.config.ParentChainURL)
+	if sc.config.MainChainURL != "" {
+		sc.remoteBackend, err = NewRemoteBackend(sc, sc.config.MainChainURL)
 		if err != nil {
-			logger.Error("fail to initialize RemoteBackend", "err", err, "url", sc.config.ParentChainURL)
+			logger.Error("fail to initialize RemoteBackend", "err", err, "url", sc.config.MainChainURL)
 			sc.bootFail = true
 			return
 		}

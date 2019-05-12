@@ -148,7 +148,7 @@ var KSCNFlags = []cli.Flag{
 	utils.SentChainTxsLimit,
 	utils.EnabledBridgeFlag,
 	utils.BridgeListenPortFlag,
-	utils.ParentChainURLFlag,
+	utils.MainChainURLFlag,
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,

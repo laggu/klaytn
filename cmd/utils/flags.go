@@ -533,9 +533,9 @@ var (
 		Usage: "bridge listen port",
 		Value: 50505,
 	}
-	ParentChainURLFlag = cli.StringFlag{
-		Name:  "parentchainws",
-		Usage: "parentchain ws url",
+	MainChainURLFlag = cli.StringFlag{
+		Name:  "mainchainws",
+		Usage: "mainchain ws url",
 		Value: "ws://0.0.0.0:8546",
 	}
 	VTRecoveryFlag = cli.BoolFlag{

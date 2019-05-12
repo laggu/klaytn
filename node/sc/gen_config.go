@@ -29,7 +29,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
-		ParentChainURL          string
+		MainChainURL            string
 		VTRecovery              bool
 		VTRecoveryInterval      uint64
 		ServiceChainNewAccount  bool
@@ -53,7 +53,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.ServiceChainAccountAddr = s.ServiceChainAccountAddr
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
-	enc.ParentChainURL = s.ParentChainURL
+	enc.MainChainURL = s.MainChainURL
 	enc.VTRecovery = s.VTRecovery
 	enc.VTRecoveryInterval = s.VTRecoveryInterval
 	enc.ServiceChainNewAccount = s.ServiceChainNewAccount
@@ -81,7 +81,7 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
-		ParentChainURL          *string
+		MainChainURL            *string
 		VTRecovery              *bool
 		VTRecoveryInterval      *uint64
 		ServiceChainNewAccount  *bool
@@ -144,8 +144,8 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SentChainTxsLimit != nil {
 		s.SentChainTxsLimit = *dec.SentChainTxsLimit
 	}
-	if dec.ParentChainURL != nil {
-		s.ParentChainURL = *dec.ParentChainURL
+	if dec.MainChainURL != nil {
+		s.MainChainURL = *dec.MainChainURL
 	}
 	if dec.VTRecovery != nil {
 		s.VTRecovery = *dec.VTRecovery
