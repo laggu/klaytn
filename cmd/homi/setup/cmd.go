@@ -79,6 +79,7 @@ Args :
 			numOfCNsFlag,
 			numOfPNsFlag,
 			numOfENsFlag,
+			numOfTestKeyFlag,
 			unitPriceFlag,
 			deriveShaImplFlag,
 			fundingAddrFlag,
@@ -132,6 +133,7 @@ const (
 	DirKeys               = "keys"
 	DirPnScript           = "scripts_pn"
 	DirPnKeys             = "keys_pn"
+	DirTestKeys           = "keys_test"
 	CNIpNetwork           = "10.11.2"
 	PNIpNetwork1          = "10.11.10"
 	PNIpNetwork2          = "10.11.11"
@@ -215,7 +217,7 @@ func genCliqueConfig(ctx *cli.Context) *params.CliqueConfig {
 	}
 }
 
-func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchain.Genesis {
+func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	deriveShaImpl := ctx.Int(deriveShaImplFlag.Name)
 
@@ -226,7 +228,7 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchai
 
 	options := []genesis.Option{
 		genesis.Validators(nodeAddrs...),
-		genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
+		genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 		genesis.DeriveShaImpl(deriveShaImpl),
 		genesis.UnitPrice(unitPrice),
 	}
@@ -240,7 +242,7 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs []common.Address) *blockchai
 	return genesis.New(options...)
 }
 
-func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*ecdsa.PrivateKey) *blockchain.Genesis {
+func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, privKeys []*ecdsa.PrivateKey) *blockchain.Genesis {
 	config := genCliqueConfig(ctx)
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	if ok := ctx.Bool(governanceFlag.Name); ok {
@@ -249,7 +251,7 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 
 	genesisJson := genesis.NewClique(
 		genesis.ValidatorsOfClique(nodeAddrs...),
-		genesis.Alloc(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
+		genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 		genesis.UnitPrice(unitPrice),
 		genesis.Clique(config),
 	)
@@ -265,7 +267,7 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs []common.Address, privKeys []*
 	return genesisJson
 }
 
-func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
+func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -297,24 +299,24 @@ func genBaobabCommonGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
 	return genesisJson
 }
 
-func genBaobabGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
-	genesisJson := genBaobabCommonGenesis(nodeAddrs)
+func genBaobabGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genBaobabCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 604800
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithBaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithBaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
 
-func genBaobabTestGenesis(nodeAddrs []common.Address) *blockchain.Genesis {
-	testGenesis := genBaobabCommonGenesis(nodeAddrs)
+func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	testGenesis := genBaobabCommonGenesis(nodeAddrs, testAddrs)
 	testGenesis.Config.Istanbul.Epoch = 30
 	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
 	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
 	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithPrebaobabContract(nodeAddrs, new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithPrebaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
 	writeFile([]byte(baobabOperatorAddress), "baobab_operator", "address")
 	writeFile([]byte(baobabOperatorKey), "baobab_operator", "private")
@@ -340,21 +342,23 @@ func gen(ctx *cli.Context) error {
 	num := ctx.Int(numOfCNsFlag.Name)
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
 	enNum := ctx.Int(numOfENsFlag.Name)
+	numTestAccs := ctx.Int(numOfTestKeyFlag.Name)
 	baobab := ctx.Bool(baobabFlag.Name)
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
+	_, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
 	var genesisJsonBytes []byte
 
 	if baobabTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(nodeAddrs), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(nodeAddrs, testAddrs), "", "    ")
 	} else if baobab {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(nodeAddrs), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(nodeAddrs, testAddrs), "", "    ")
 	} else if cliqueFlag {
-		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, nodeAddrs, privKeys), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, nodeAddrs, testAddrs, privKeys), "", "    ")
 	} else {
-		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, nodeAddrs), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, nodeAddrs, testAddrs), "", "    ")
 	}
 
 	switch genType {
@@ -397,9 +401,11 @@ func gen(ctx *cli.Context) error {
 		downLoadGrafanaJson()
 	case TypeLocal:
 		writeNodeFiles(true, num, proxyNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeTestKeys(DirTestKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeRemote:
 		writeNodeFiles(false, num, proxyNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeTestKeys(DirTestKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeDeploy:
 		writeCNInfoKey(num, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
@@ -608,10 +614,10 @@ func makeProxys(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 }
 
 func writeValidatorsAndNodesToFile(validators []*ValidatorInfo, parentDir string, nodekeys []string) {
-	for i, v := range validators {
-		parentPath := path.Join(outputPath, parentDir)
-		os.MkdirAll(parentPath, os.ModePerm)
+	parentPath := path.Join(outputPath, parentDir)
+	os.MkdirAll(parentPath, os.ModePerm)
 
+	for i, v := range validators {
 		nodeKeyFilePath := path.Join(parentPath, "nodekey"+strconv.Itoa(i+1))
 		ioutil.WriteFile(nodeKeyFilePath, []byte(nodekeys[i]), os.ModePerm)
 		fmt.Println("Created : ", nodeKeyFilePath)
@@ -620,6 +626,17 @@ func writeValidatorsAndNodesToFile(validators []*ValidatorInfo, parentDir string
 		validatorInfoFilePath := path.Join(parentPath, "validator"+strconv.Itoa(i+1))
 		ioutil.WriteFile(validatorInfoFilePath, []byte(str), os.ModePerm)
 		fmt.Println("Created : ", validatorInfoFilePath)
+	}
+}
+
+func writeTestKeys(parentDir string, keys []string) {
+	parentPath := path.Join(outputPath, parentDir)
+	os.MkdirAll(parentPath, os.ModePerm)
+
+	for i, key := range keys {
+		testKeyFilePath := path.Join(parentPath, "testkey"+strconv.Itoa(i+1))
+		ioutil.WriteFile(testKeyFilePath, []byte(key), os.ModePerm)
+		fmt.Println("Created : ", testKeyFilePath)
 	}
 }
 

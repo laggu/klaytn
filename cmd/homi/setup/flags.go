@@ -60,6 +60,12 @@ var (
 		Value: 0,
 	}
 
+	numOfTestKeyFlag = cli.IntFlag{
+		Name:  "test-num",
+		Usage: "Number of test key",
+		Value: 0,
+	}
+
 	unitPriceFlag = cli.Uint64Flag{
 		Name:  "unitPrice",
 		Usage: "Price of unit",
