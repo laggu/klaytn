@@ -624,6 +624,66 @@ func TestMethodSetJournal(t *testing.T) {
 	bm.Stop()
 }
 
+// TestErrorDuplicatedSetBridgeInfo tests if duplication of bridge info insertion.
+func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// Generate a new random account and a funded simulator
+	key, _ := crypto.GenerateKey()
+	auth := bind.NewKeyedTransactor(key)
+
+	key2, _ := crypto.GenerateKey()
+	auth2 := bind.NewKeyedTransactor(key2)
+
+	key4, _ := crypto.GenerateKey()
+	auth4 := bind.NewKeyedTransactor(key4)
+
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	config := &SCConfig{}
+	config.nodekey = key
+	config.chainkey = key2
+	config.DataDir = os.TempDir()
+	config.VTRecovery = true
+
+	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
+	config.MainChainAccountAddr = &chainKeyAddr
+
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
+	sc := &SubBridge{
+		config:               config,
+		peers:                newBridgePeerSet(),
+		localBackend:         sim,
+		remoteBackend:        sim,
+		bridgeAccountManager: bam,
+	}
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	// Prepare manager
+	bm, err := NewBridgeManager(sc)
+	addr, err := bm.DeployBridgeTest(sim, false)
+	bridgeInfo, _ := bm.GetBridgeInfo(addr)
+
+	// Try to call duplicated SetBridgeInfo
+	err = bm.SetBridgeInfo(addr, bridgeInfo.bridge, sc.bridgeAccountManager.mcAccount, false, false)
+	assert.NotEqual(t, nil, err)
+	bm.Stop()
+}
+
 // TestScenarioUnsubJournal tests whether journal is deleted with unsubscribe or not.
 func TestScenarioUnsubJournal(t *testing.T) {
 	defer func() {
