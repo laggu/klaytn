@@ -56,7 +56,7 @@ var GovernanceItems = map[int]check{
 	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateGovernanceConfig},
 	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateGovernanceConfig},
 	params.Epoch:                   {uint64T, checkUint64andBool, updateGovernanceConfig},
-	params.Policy:                  {stringT, checkProposerPolicy, updateGovernanceConfig},
+	params.Policy:                  {uint64T, checkUint64andBool, updateGovernanceConfig},
 	params.CommitteeSize:           {uint64T, checkUint64andBool, updateGovernanceConfig},
 }
 

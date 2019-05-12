@@ -338,7 +338,7 @@ func CheckGenesisValues(c *params.ChainConfig) error {
 	var tstMap = map[string]interface{}{
 		"istanbul.epoch":                c.Istanbul.Epoch,
 		"istanbul.committeesize":        c.Istanbul.SubGroupSize,
-		"istanbul.policy":               ProposerPolicyMapReverse[int(c.Istanbul.ProposerPolicy)],
+		"istanbul.policy":               uint64(c.Istanbul.ProposerPolicy),
 		"governance.governancemode":     c.Governance.GovernanceMode,
 		"governance.governingnode":      c.Governance.GoverningNode,
 		"governance.unitprice":          c.UnitPrice,

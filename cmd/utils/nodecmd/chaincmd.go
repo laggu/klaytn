@@ -133,28 +133,58 @@ func initGenesis(ctx *cli.Context) error {
 func getGovernanceItemsFromGenesis(genesis *blockchain.Genesis) governance.GovernanceSet {
 	g := make(governance.GovernanceSet)
 
-	// Error checking is not needed here because it was already done in CheckGenesisValues
 	if genesis.Config.Governance != nil {
 		governance := genesis.Config.Governance
-		g.SetValue(params.GovernanceMode, governance.GovernanceMode)
-		g.SetValue(params.GoverningNode, governance.GoverningNode)
-		g.SetValue(params.UnitPrice, genesis.Config.UnitPrice)
-		g.SetValue(params.MintingAmount, governance.Reward.MintingAmount.String())
-		g.SetValue(params.Ratio, governance.Reward.Ratio)
-		g.SetValue(params.UseGiniCoeff, governance.Reward.UseGiniCoeff)
-		g.SetValue(params.DeferredTxFee, governance.Reward.DeferredTxFee)
-		g.SetValue(params.MinimumStake, governance.Reward.MinimumStake.String())
-		g.SetValue(params.StakeUpdateInterval, governance.Reward.StakingUpdateInterval)
-		g.SetValue(params.ProposerRefreshInterval, governance.Reward.ProposerUpdateInterval)
+		if err := g.SetValue(params.GovernanceMode, governance.GovernanceMode); err != nil {
+			writeFailLog(params.GovernanceMode, err)
+		}
+		if err := g.SetValue(params.GoverningNode, governance.GoverningNode); err != nil {
+			writeFailLog(params.GoverningNode, err)
+		}
+		if err := g.SetValue(params.UnitPrice, genesis.Config.UnitPrice); err != nil {
+			writeFailLog(params.UnitPrice, err)
+		}
+		if err := g.SetValue(params.MintingAmount, governance.Reward.MintingAmount.String()); err != nil {
+			writeFailLog(params.MintingAmount, err)
+		}
+		if err := g.SetValue(params.Ratio, governance.Reward.Ratio); err != nil {
+			writeFailLog(params.Ratio, err)
+		}
+		if err := g.SetValue(params.UseGiniCoeff, governance.Reward.UseGiniCoeff); err != nil {
+			writeFailLog(params.UseGiniCoeff, err)
+		}
+		if err := g.SetValue(params.DeferredTxFee, governance.Reward.DeferredTxFee); err != nil {
+			writeFailLog(params.DeferredTxFee, err)
+		}
+		if err := g.SetValue(params.MinimumStake, governance.Reward.MinimumStake.String()); err != nil {
+			writeFailLog(params.MinimumStake, err)
+		}
+		if err := g.SetValue(params.StakeUpdateInterval, governance.Reward.StakingUpdateInterval); err != nil {
+			writeFailLog(params.StakeUpdateInterval, err)
+		}
+		if err := g.SetValue(params.ProposerRefreshInterval, governance.Reward.ProposerUpdateInterval); err != nil {
+			writeFailLog(params.ProposerRefreshInterval, err)
+		}
 	}
 
 	if genesis.Config.Istanbul != nil {
 		istanbul := genesis.Config.Istanbul
-		g.SetValue(params.Epoch, istanbul.Epoch)
-		g.SetValue(params.Policy, istanbul.ProposerPolicy)
-		g.SetValue(params.CommitteeSize, istanbul.SubGroupSize)
+		if err := g.SetValue(params.Epoch, istanbul.Epoch); err != nil {
+			writeFailLog(params.Epoch, err)
+		}
+		if err := g.SetValue(params.Policy, istanbul.ProposerPolicy); err != nil {
+			writeFailLog(params.Policy, err)
+		}
+		if err := g.SetValue(params.CommitteeSize, istanbul.SubGroupSize); err != nil {
+			writeFailLog(params.CommitteeSize, err)
+		}
 	}
 	return g
+}
+
+func writeFailLog(key int, err error) {
+	msg := "Failed to set " + governance.GovernanceKeyMapReverse[key]
+	logger.Crit(msg, "err", err)
 }
 
 func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain.Genesis {
