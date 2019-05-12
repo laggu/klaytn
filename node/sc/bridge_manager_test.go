@@ -522,6 +522,119 @@ func TestBasicJournal(t *testing.T) {
 	assert.Equal(t, sc.addressManager.GetCounterPartBridge(remoteAddr), localAddr)
 }
 
+// TestMethodRestoreBridges tests restoring bridges from the journal.
+func TestMethodRestoreBridges(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// Generate a new random account and a funded simulator
+	key, _ := crypto.GenerateKey()
+	auth := bind.NewKeyedTransactor(key)
+
+	key2, _ := crypto.GenerateKey()
+	auth2 := bind.NewKeyedTransactor(key2)
+
+	key4, _ := crypto.GenerateKey()
+	auth4 := bind.NewKeyedTransactor(key4)
+
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	config := &SCConfig{VTRecovery: true, VTRecoveryInterval: 60}
+	config.nodekey = key
+	config.chainkey = key2
+	config.DataDir = os.TempDir()
+	config.VTRecovery = true
+
+	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
+	config.MainChainAccountAddr = &chainKeyAddr
+
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
+	sc := &SubBridge{
+		config:               config,
+		peers:                newBridgePeerSet(),
+		localBackend:         sim,
+		remoteBackend:        sim,
+		bridgeAccountManager: bam,
+	}
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	// Prepare manager and deploy bridge contract.
+	bm, err := NewBridgeManager(sc)
+	if sc.addressManager, err = NewAddressManager(); err != nil {
+		t.Fatal("new address manager is failed")
+	}
+
+	var bridgeAddrs [4]common.Address
+	for i := 0; i < 4; i++ {
+		if i%2 == 0 {
+			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, true)
+		} else {
+			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, false)
+		}
+		if err != nil {
+			t.Fatal("deploy bridge test failed", bridgeAddrs[i])
+		}
+		bm.DeleteBridgeInfo(bridgeAddrs[i])
+	}
+	sim.Commit()
+
+	// Set journal
+	sc.addressManager.AddBridge(bridgeAddrs[0], bridgeAddrs[1])
+	bm.SetJournal(bridgeAddrs[0], bridgeAddrs[1])
+	bm.journal.cache[bridgeAddrs[0]].Subscribed = true
+	sc.addressManager.AddBridge(bridgeAddrs[2], bridgeAddrs[3])
+	bm.SetJournal(bridgeAddrs[2], bridgeAddrs[3])
+	bm.journal.cache[bridgeAddrs[2]].Subscribed = true
+
+	// Call RestoreBridges
+	if err := bm.RestoreBridges(); err != nil {
+		t.Fatal("bm restoring bridges failed")
+	}
+
+	// Case 1: check bridge contract creation.
+	for i := 0; i < 4; i++ {
+		info, _ := bm.GetBridgeInfo(bridgeAddrs[i])
+		assert.NotEqual(t, nil, info.bridge)
+	}
+
+	// Case 2: check address manager
+	am := bm.subBridge.addressManager
+	assert.Equal(t, bridgeAddrs[1], am.GetCounterPartBridge(bridgeAddrs[0]))
+	assert.Equal(t, bridgeAddrs[3], am.GetCounterPartBridge(bridgeAddrs[2]))
+
+	// Case 3: check subscription
+	for i := 0; i < 4; i++ {
+		info, _ := bm.GetBridgeInfo(bridgeAddrs[i])
+		assert.Equal(t, true, info.subscribed)
+	}
+
+	// Case 4: check recovery
+	recovery1 := bm.recoveries[bridgeAddrs[0]]
+	assert.NotEqual(t, nil, recovery1)
+	recovery1.Start()
+	assert.Equal(t, true, recovery1.isRunning)
+	recovery2 := bm.recoveries[bridgeAddrs[2]]
+	assert.NotEqual(t, nil, recovery2)
+	recovery2.Start()
+	assert.Equal(t, true, recovery2.isRunning)
+
+	bm.stopAllRecoveries()
+	bm.Stop()
+}
+
 // TestMethodGetAllBridge tests a method GetAllBridge.
 func TestMethodGetAllBridge(t *testing.T) {
 	defer func() {
