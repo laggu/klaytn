@@ -684,8 +684,8 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	bm.Stop()
 }
 
-// TestScenarioUnsubJournal tests whether journal is deleted with unsubscribe or not.
-func TestScenarioUnsubJournal(t *testing.T) {
+// TestScenarioSubUnsub tests subscription and unsubscription scenario.
+func TestScenarioSubUnsub(t *testing.T) {
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -745,7 +745,11 @@ func TestScenarioUnsubJournal(t *testing.T) {
 	}
 
 	bm.SubscribeEvent(localAddr)
+	bridgeInfo, ok := bm.GetBridgeInfo(localAddr)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, bridgeInfo.subscribed)
 	bm.UnsubscribeEvent(localAddr)
+	assert.Equal(t, false, bridgeInfo.subscribed)
 
 	// Journal is irrelevant to the bridge unsubscription.
 	journal := bm.journal.cache[localAddr]
