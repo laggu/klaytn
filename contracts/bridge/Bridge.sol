@@ -1,9 +1,9 @@
 pragma solidity ^0.4.24;
 
-import "../openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "../openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "../openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
-import "../openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
+import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../servicechain_nft/INFTReceiver.sol";
 import "../servicechain_token/ITokenReceiver.sol";
 
