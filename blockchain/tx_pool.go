@@ -127,7 +127,7 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	NonExecSlotsAccount: 64,
 	NonExecSlotsAll:     1024,
 
-	Lifetime: 3 * time.Hour,
+	Lifetime: 5 * time.Minute,
 }
 
 // sanitize checks the provided user configurations and changes anything that's

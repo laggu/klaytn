@@ -117,7 +117,7 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 		NonExecSlotsAccount: 64,
 		NonExecSlotsAll:     40000,
 
-		Lifetime: 3 * time.Hour,
+		Lifetime: 5 * time.Minute,
 	}
 	txpool := blockchain.NewTxPool(poolConfig, bcdata.bc.Config(), bcdata.bc)
 

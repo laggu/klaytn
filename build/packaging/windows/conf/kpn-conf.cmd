@@ -15,6 +15,7 @@ set TXPOOL_EXEC_SLOTS_ALL=65535
 set TXPOOL_NONEXEC_SLOTS_ALL=65535
 set TXPOOL_EXEC_SLOTS_ACCOUNT=65535
 set TXPOOL_NONEXEC_SLOTS_ACCOUNT=65535
+set TXPOOL_LIFE_TIME="5m"
 
 REM rpc options setting
 set RPC_ENABLE=0 &:: if this is set, the following options will be used
