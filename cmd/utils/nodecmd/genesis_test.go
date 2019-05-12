@@ -72,7 +72,7 @@ var customGenesisTests = []struct {
 				"homesteadBlock" : 314,
 				"daoForkBlock"   : 141,
 				"daoForkSupport" : true
-			},
+			}
 		}`,
 		query:  "klay.getBlock(0).parentHash",
 		result: "0x0000000000000000000000000000000000000000000000000000000000000000",

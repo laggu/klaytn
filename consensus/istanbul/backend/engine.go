@@ -344,7 +344,8 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	receipts []*types.Receipt) (*types.Block, error) {
 
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && sb.config.ProposerPolicy == istanbul.WeightedRandom {
+	logger.Error("Finalize", "policy", sb.governance.ChainConfig.Istanbul.ProposerPolicy, "value", uint64(istanbul.WeightedRandom))
+	if sb.chain != nil && sb.governance.ChainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		pocAddr := common.Address{}
@@ -624,8 +625,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	if err != nil {
 		return nil, err
 	}
-
-	if sb.config.ProposerPolicy == istanbul.WeightedRandom && params.IsProposerUpdateInterval(snap.Number) {
+	logger.Error("Check", "number", snap.Number, "policy", sb.governance.ChainConfig.Istanbul.ProposerPolicy)
+	if sb.governance.ChainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) && params.IsProposerUpdateInterval(snap.Number) {
 		// when block number of snap is proposer update interval, refresh ValSet to make a new weighted random proposer list
 		pHeader := chain.GetHeaderByNumber(snap.Number)
 		if pHeader != nil {
