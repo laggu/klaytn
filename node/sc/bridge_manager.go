@@ -19,7 +19,6 @@ package sc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
 	"github.com/ground-x/klaytn/common"
 	bridgecontract "github.com/ground-x/klaytn/contracts/bridge"
@@ -41,6 +40,13 @@ const (
 	KLAY uint8 = iota
 	TOKEN
 	NFT
+)
+
+var (
+	errNoBridgeInfo         = errors.New("bridge information does not exist")
+	errDuplicatedBridgeInfo = errors.New("bridge information is duplicated")
+	errNoRecovery           = errors.New("recovery does not exist")
+	errAlreadySubscribed    = errors.New("already subscribed")
 )
 
 // RequestValueTransfer Event from SmartContract
@@ -388,7 +394,7 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 // DeleteBridgeInfo deletes the bridge info of the specified address.
 func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
 	if bm.bridges[addr] == nil {
-		return errors.New("bridge information is not exist")
+		return errNoBridgeInfo
 	}
 	delete(bm.bridges, addr)
 	return nil
@@ -397,7 +403,7 @@ func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
 // SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
 func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) error {
 	if bm.bridges[addr] != nil {
-		return errors.New("bridge information is duplicated")
+		return errDuplicatedBridgeInfo
 	}
 	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, account, local, subscribed)
 	return nil
@@ -468,11 +474,11 @@ func (bm *BridgeManager) AddRecovery(localAddress, remoteAddress common.Address)
 	// Check if bridge information is exist.
 	localBridgeInfo, ok := bm.GetBridgeInfo(localAddress)
 	if !ok {
-		return errors.New("local bridge is not exist to create value transfer recovery")
+		return errNoBridgeInfo
 	}
 	remoteBridgeInfo, ok := bm.GetBridgeInfo(remoteAddress)
 	if !ok {
-		return errors.New("remote bridge is not exist to create value transfer recovery")
+		return errNoBridgeInfo
 	}
 
 	// Create and start value transfer recovery.
@@ -487,7 +493,7 @@ func (bm *BridgeManager) DeleteRecovery(localAddress, remoteAddress common.Addre
 	// Stop the recovery.
 	recovery, ok := bm.recoveries[localAddress]
 	if !ok {
-		return errors.New("recovery is not exist")
+		return errNoRecovery
 	}
 	recovery.Stop()
 	delete(bm.recoveries, localAddress)
@@ -565,10 +571,10 @@ func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBac
 func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if !ok {
-		return fmt.Errorf("there is no bridge contract which address %v", addr)
+		return errNoBridgeInfo
 	}
 	if bridgeInfo.subscribed {
-		return errors.New("already subscribed")
+		return errAlreadySubscribed
 	}
 	err := bm.subscribeEvent(addr, bridgeInfo.bridge)
 	if err != nil {
@@ -603,7 +609,7 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 		withdrawnSub.Unsubscribe()
 		delete(bm.receivedEvents, addr)
 		delete(bm.withdrawEvents, addr)
-		return errors.New("fail to get bridge info")
+		return errNoBridgeInfo
 	}
 	bridgeInfo.subscribed = true
 
