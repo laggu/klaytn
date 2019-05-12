@@ -386,9 +386,22 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 	return bridge, ok
 }
 
+// DeleteBridgeInfo deletes the bridge info of the specified address.
+func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
+	if bm.bridges[addr] == nil {
+		return errors.New("bridge information is not exist")
+	}
+	delete(bm.bridges, addr)
+	return nil
+}
+
 // SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
-func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, acc *accountInfo, local, sub bool) {
-	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, acc, local, sub)
+func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) error {
+	if bm.bridges[addr] != nil {
+		return errors.New("bridge information is duplicated")
+	}
+	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, account, local, subscribed)
+	return nil
 }
 
 // RestoreBridges setups bridge subscription by using the journal cache.
@@ -409,8 +422,16 @@ func (bm *BridgeManager) RestoreBridges() error {
 			continue
 		}
 		bam := bm.subBridge.bridgeAccountManager
-		bm.SetBridgeInfo(localAddr, localBridge, bam.scAccount, true, false)
-		bm.SetBridgeInfo(remoteAddr, remoteBridge, bam.mcAccount, false, false)
+		err = bm.SetBridgeInfo(localAddr, localBridge, bam.scAccount, true, false)
+		if err != nil {
+			logger.Error("setting local bridge info is failed", err)
+			continue
+		}
+		err = bm.SetBridgeInfo(remoteAddr, remoteBridge, bam.mcAccount, false, false)
+		if err != nil {
+			logger.Error("setting remote bridge info is failed", err)
+			continue
+		}
 		bm.subBridge.AddressManager().AddBridge(localAddr, remoteAddr)
 
 		if journal.Subscribed {
@@ -435,11 +456,6 @@ func (bm *BridgeManager) RestoreBridges() error {
 // SetJournal inserts or updates journal for a given addresses pair.
 func (bm *BridgeManager) SetJournal(localAddress, remoteAddress common.Address) error {
 	err := bm.journal.insert(localAddress, remoteAddress)
-	if err == errDuplicatedJournal && !bm.journal.cache[localAddress].Subscribed {
-		bm.journal.cache[localAddress].Subscribed = true
-		bm.journal.rotate(bm.GetAllBridge())
-		return nil
-	}
 	return err
 }
 
@@ -504,7 +520,11 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 		return common.Address{}, err
 	}
 
-	bm.SetBridgeInfo(addr, bridge, acc, local, false)
+	err = bm.SetBridgeInfo(addr, bridge, acc, local, false)
+	if err != nil {
+		return common.Address{}, err
+	}
+
 	return addr, err
 }
 

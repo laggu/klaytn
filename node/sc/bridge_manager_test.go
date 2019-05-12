@@ -513,12 +513,12 @@ func TestBasicJournal(t *testing.T) {
 
 	localInfo, ok := bm.GetBridgeInfo(localAddr)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, true, localInfo.subscribed)
+	assert.Equal(t, false, localInfo.subscribed)
 	assert.Equal(t, sc.addressManager.GetCounterPartBridge(localAddr), remoteAddr)
 
 	remoteInfo, ok := bm.GetBridgeInfo(remoteAddr)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, true, remoteInfo.subscribed)
+	assert.Equal(t, false, remoteInfo.subscribed)
 	assert.Equal(t, sc.addressManager.GetCounterPartBridge(remoteAddr), localAddr)
 }
 
@@ -610,11 +610,6 @@ func TestMethodSetJournal(t *testing.T) {
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
 	// Simple insert case
-	err = bm.SetJournal(localAddr, remoteAddr)
-	assert.Equal(t, nil, err)
-
-	// Update case
-	bm.journal.cache[localAddr].Subscribed = false
 	err = bm.SetJournal(localAddr, remoteAddr)
 	assert.Equal(t, nil, err)
 
@@ -813,12 +808,18 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 	if local {
 		acc := bm.subBridge.bridgeAccountManager.scAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend)
-		bm.SetBridgeInfo(addr, bridge, acc, local, false)
+		err = bm.SetBridgeInfo(addr, bridge, acc, local, false)
+		if err != nil {
+			return common.Address{}, err
+		}
 		return addr, err
 	} else {
 		acc := bm.subBridge.bridgeAccountManager.mcAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend)
-		bm.SetBridgeInfo(addr, bridge, acc, local, false)
+		err = bm.SetBridgeInfo(addr, bridge, acc, local, false)
+		if err != nil {
+			return common.Address{}, err
+		}
 		return addr, err
 	}
 }

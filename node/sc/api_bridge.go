@@ -85,6 +85,12 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = sbapi.sc.bridgeManager.SetJournal(localAddr, remoteAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	return []common.Address{localAddr, remoteAddr}, nil
 }
 
@@ -109,13 +115,8 @@ func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.
 		return err
 	}
 
-	err = sbapi.sc.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
-	if err != nil {
-		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
-		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
-		sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
-		return err
-	}
+	// Update the journal's subscribed flag.
+	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
 
 	err = sbapi.sc.bridgeManager.AddRecovery(cBridgeAddr, pBridgeAddr)
 	if err != nil {
@@ -157,18 +158,33 @@ func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 	return sbapi.sc.GetAnchoringTx()
 }
 
-func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) bool {
-	cBridge, cErr := bridge.NewBridge(cBridgeAddr, sbapi.sc.localBackend)
-	pBridge, pErr := bridge.NewBridge(pBridgeAddr, sbapi.sc.remoteBackend)
-
-	if cErr != nil || pErr != nil {
-		return false
+func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+	cBridge, err := bridge.NewBridge(cBridgeAddr, sbapi.sc.localBackend)
+	if err != nil {
+		return err
+	}
+	pBridge, err := bridge.NewBridge(pBridgeAddr, sbapi.sc.remoteBackend)
+	if err != nil {
+		return err
 	}
 
-	sbapi.sc.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, sbapi.sc.bridgeAccountManager.scAccount, true, false)
-	sbapi.sc.bridgeManager.SetBridgeInfo(pBridgeAddr, pBridge, sbapi.sc.bridgeAccountManager.mcAccount, false, false)
+	bm := sbapi.sc.bridgeManager
+	err = bm.SetBridgeInfo(cBridgeAddr, cBridge, sbapi.sc.bridgeAccountManager.scAccount, true, false)
+	if err != nil {
+		return err
+	}
+	err = bm.SetBridgeInfo(pBridgeAddr, pBridge, sbapi.sc.bridgeAccountManager.mcAccount, false, false)
+	if err != nil {
+		bm.DeleteBridgeInfo(cBridgeAddr)
+		return err
+	}
 
-	return true
+	err = sbapi.sc.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (sbapi *SubBridgeAPI) UnRegisterBridge(bridge common.Address) {
