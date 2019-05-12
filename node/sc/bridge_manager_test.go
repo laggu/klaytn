@@ -458,9 +458,6 @@ func TestBasicJournal(t *testing.T) {
 	key2, _ := crypto.GenerateKey()
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	key3, _ := crypto.GenerateKey()
-	auth3 := bind.NewKeyedTransactor(key3)
-
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
 
@@ -492,92 +489,37 @@ func TestBasicJournal(t *testing.T) {
 		return
 	}
 
-	testKLAY := big.NewInt(321)
-
-	// 1. Prepare manager and subscribe event
+	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
-
-	addr, err := bm.DeployBridgeTest(sim, false)
-	bridgeInfo, _ := bm.GetBridgeInfo(addr)
-	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
-	sim.Commit() // block
-
-	bm.bridges[addr] = &BridgeInfo{
-		nil,
-		addr,
-		nil,
-		bridge,
-		true,
-		true,
-		&sync.Mutex{},
-		newEventSortedMap(),
-		0,
-		0,
-		0,
-		make(chan struct{}),
-		make(chan struct{}),
-	}
-	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
-
-	bm.SubscribeEvent(addr)
-	bm.UnsubscribeEvent(addr)
-
-	// 2. Reload bridge as if journal is loaded (it handles subscription internally)
-	bm.loadBridge(addr, sc.remoteBackend, false, true)
-
-	// 3. Run automatic subscription checker
-	tokenCh := make(chan TokenReceivedEvent)
-	tokenSendCh := make(chan TokenTransferEvent)
-	bm.SubscribeTokenReceived(tokenCh)
-	bm.SubscribeTokenWithDraw(tokenSendCh)
-
-	go func() {
-		for {
-			select {
-			case ev := <-tokenCh:
-				fmt.Println("Deposit Event",
-					"type", ev.TokenType,
-					"amount", ev.Amount,
-					"from", ev.From.String(),
-					"to", ev.To.String(),
-					"contract", ev.ContractAddr.String(),
-					"token", ev.TokenAddr.String())
-
-				switch ev.TokenType {
-				case 0:
-					// WithdrawKLAY by Event
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
-
-					if err != nil {
-						log.Fatalf("Failed to WithdrawKLAY: %v", err)
-					}
-					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
-					sim.Commit() // block
-				}
-				wg.Done()
-
-			case ev := <-tokenSendCh:
-				fmt.Println("receive token withdraw event ", ev.ContractAddr.Hex())
-				wg.Done()
-			}
-		}
-	}()
-
-	// 4. DepositKLAY from auth to auth3 to check subscription
-	{
-		tx, err := bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: 99999}, auth3.From)
-		if err != nil {
-			log.Fatalf("Failed to DepositKLAY: %v", err)
-		}
-		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
-
-		sim.Commit() // block
+	if sc.addressManager, err = NewAddressManager(); err != nil {
+		t.Fatal("new address manager is failed")
 	}
 
-	wg.Wait()
+	localAddr, err := bm.DeployBridgeTest(sim, true)
+	if err != nil {
+		t.Fatal("deploy bridge test failed", localAddr)
+	}
+	remoteAddr, err := bm.DeployBridgeTest(sim, false)
+	if err != nil {
+		t.Fatal("deploy bridge test failed", remoteAddr)
+	}
 
-	bm.Stop()
+	sc.addressManager.AddBridge(localAddr, remoteAddr)
+	bm.SetJournal(localAddr, remoteAddr)
+
+	if err := bm.RestoreBridges(); err != nil {
+		t.Fatal("bm restoring bridges failed")
+	}
+
+	localInfo, ok := bm.GetBridgeInfo(localAddr)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, localInfo.subscribed)
+	assert.Equal(t, sc.addressManager.GetCounterPartBridge(localAddr), remoteAddr)
+
+	remoteInfo, ok := bm.GetBridgeInfo(remoteAddr)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, remoteInfo.subscribed)
+	assert.Equal(t, sc.addressManager.GetCounterPartBridge(remoteAddr), localAddr)
 }
 
 // TestMethodGetAllBridge tests a method GetAllBridge.

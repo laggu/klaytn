@@ -387,8 +387,8 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 }
 
 // SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
-func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) {
-	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, account, local, subscribed)
+func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, acc *accountInfo, local, sub bool) {
+	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, acc, local, sub)
 }
 
 // RestoreBridges setups bridge subscription by using the journal cache.
@@ -396,51 +396,37 @@ func (bm *BridgeManager) RestoreBridges() error {
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
+		localAddr := journal.LocalAddress
+		remoteAddr := journal.RemoteAddress
+		localBridge, err := bridgecontract.NewBridge(localAddr, bm.subBridge.localBackend)
+		if err != nil {
+			logger.Error("local bridge creation is failed", err)
+			continue
+		}
+		remoteBridge, err := bridgecontract.NewBridge(remoteAddr, bm.subBridge.remoteBackend)
+		if err != nil {
+			logger.Error("remote bridge creation is failed", err)
+			continue
+		}
+		bam := bm.subBridge.bridgeAccountManager
+		bm.SetBridgeInfo(localAddr, localBridge, bam.scAccount, true, false)
+		bm.SetBridgeInfo(remoteAddr, remoteBridge, bam.mcAccount, false, false)
+		bm.subBridge.AddressManager().AddBridge(localAddr, remoteAddr)
+
 		if journal.Subscribed {
-			if bm.subBridge.AddressManager() == nil {
-				return errors.New("address manager is not exist")
+			logger.Info("automatic bridge subscription", "local", localAddr, "remote", remoteAddr)
+			if err := bm.subscribeEvent(localAddr, localBridge); err != nil {
+				logger.Error("local bridge subscription is failed", err)
+				continue
 			}
-
-			logger.Info("automatic bridge subscription", "local address", journal.LocalAddress, "remote address", journal.RemoteAddress)
-
-			// 1. Register bridge.
-			localBridge, err := bridgecontract.NewBridge(journal.LocalAddress, bm.subBridge.localBackend)
-			if err != nil {
-				return err
-			}
-			remoteBridge, err := bridgecontract.NewBridge(journal.RemoteAddress, bm.subBridge.remoteBackend)
-			if err != nil {
-				return err
-			}
-			bm.SetBridgeInfo(journal.LocalAddress, localBridge, bm.subBridge.bridgeAccountManager.scAccount, true, false)
-			bm.SetBridgeInfo(journal.RemoteAddress, remoteBridge, bm.subBridge.bridgeAccountManager.mcAccount, false, false)
-
-			// 2. Set the address manager.
-			bm.subBridge.AddressManager().AddBridge(journal.LocalAddress, journal.RemoteAddress)
-
-			// 3. Subscribe event.
-			err = bm.subscribeEvent(journal.LocalAddress, localBridge)
-			if err != nil {
-				return err
-			}
-			err = bm.subscribeEvent(journal.RemoteAddress, remoteBridge)
-			if err != nil {
+			if err := bm.subscribeEvent(remoteAddr, remoteBridge); err != nil {
 				// TODO-Klaytn need to consider how to retry.
-				bm.UnsubscribeEvent(journal.LocalAddress)
-				return err
+				bm.subBridge.AddressManager().DeleteBridge(localAddr)
+				bm.UnsubscribeEvent(localAddr)
+				logger.Error("local bridge subscription is failed", err)
+				continue
 			}
-
-			// 4. Add recovery.
-			bm.AddRecovery(journal.LocalAddress, journal.RemoteAddress)
-		} else {
-			err := bm.loadBridge(journal.LocalAddress, bm.subBridge.localBackend, true, false)
-			if err != nil {
-				return err
-			}
-			err = bm.loadBridge(journal.RemoteAddress, bm.subBridge.remoteBackend, false, false)
-			if err != nil {
-				return err
-			}
+			bm.AddRecovery(localAddr, remoteAddr)
 		}
 	}
 	return nil
@@ -459,6 +445,11 @@ func (bm *BridgeManager) SetJournal(localAddress, remoteAddress common.Address) 
 
 // AddRecovery starts value transfer recovery for a given addresses pair.
 func (bm *BridgeManager) AddRecovery(localAddress, remoteAddress common.Address) error {
+	if !bm.subBridge.config.VTRecovery {
+		logger.Info("value transfer recovery is disabled")
+		return nil
+	}
+
 	// Check if bridge information is exist.
 	localBridgeInfo, ok := bm.GetBridgeInfo(localAddress)
 	if !ok {
@@ -497,38 +488,6 @@ func (bm *BridgeManager) stopAllRecoveries() {
 		recovery.Stop()
 	}
 	bm.recoveries = make(map[common.Address]*valueTransferRecovery)
-}
-
-// LoadBridge creates new bridge contract for a given address and subscribes an event if needed.
-func (bm *BridgeManager) loadBridge(addr common.Address, backend bind.ContractBackend, local bool, subscribed bool) error {
-	var bridgeInfo *BridgeInfo
-
-	defer func() {
-		if bridgeInfo != nil && subscribed && !bridgeInfo.subscribed {
-			logger.Info("bridge subscription is enabled by journal", "address", addr)
-			bm.subscribeEvent(addr, bridgeInfo.bridge)
-		}
-	}()
-
-	bridgeInfo, ok := bm.GetBridgeInfo(addr)
-	if ok {
-		return nil
-	}
-
-	bridge, err := bridgecontract.NewBridge(addr, backend)
-	if err != nil {
-		return err
-	}
-	logger.Info("bridge ", "address", addr)
-	if local {
-		bm.SetBridgeInfo(addr, bridge, bm.subBridge.bridgeAccountManager.scAccount, local, false)
-	} else {
-		bm.SetBridgeInfo(addr, bridge, bm.subBridge.bridgeAccountManager.mcAccount, local, false)
-	}
-
-	bridgeInfo, _ = bm.GetBridgeInfo(addr)
-
-	return nil
 }
 
 // Deploy Bridge SmartContract on same node or remote node

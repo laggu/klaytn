@@ -68,7 +68,7 @@ func NewValueTransferRecovery(config *SCConfig, scBridgeInfo, mcBridgeInfo *Brid
 // Start implements starting all internal goroutines used by the value transfer recovery.
 func (vtr *valueTransferRecovery) Start() error {
 	if !vtr.config.VTRecovery {
-		logger.Debug("value transfer recovery is disabled")
+		logger.Info("value transfer recovery is disabled")
 		return nil
 	}
 	if vtr.isRunning {
@@ -124,11 +124,6 @@ func (vtr *valueTransferRecovery) Stop() error {
 
 // Recover implements the whole recovery process of the value transfer recovery.
 func (vtr *valueTransferRecovery) Recover() error {
-	if !vtr.config.VTRecovery {
-		logger.Debug("value transfer recovery is disabled")
-		return nil
-	}
-
 	logger.Debug("update value transfer hint")
 	err := vtr.updateRecoveryHint()
 	if err != nil {
@@ -294,11 +289,6 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 
 // recoverPendingEvents recovers all pending events by resending them.
 func (vtr *valueTransferRecovery) recoverPendingEvents() error {
-	if !vtr.config.VTRecovery {
-		logger.Debug("value transfer recovery is disabled")
-		return nil
-	}
-
 	defer func() {
 		vtr.serviceChainEvents = []*bridge.BridgeRequestValueTransfer{}
 		vtr.mainChainEvents = []*bridge.BridgeRequestValueTransfer{}

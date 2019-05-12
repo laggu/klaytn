@@ -316,26 +316,16 @@ func TestFlagVTRecovery(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err := vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.NotEqual(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
 
-	info.recoveryCh <- true
-	vtr.config.VTRecovery = false
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	ops[KLAY].dummyHandle(info, info.remoteInfo)
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
+	vtr.Start()
+	assert.Equal(t, true, vtr.isRunning)
+	vtr.Stop()
 
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.NotEqual(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	vtr = NewValueTransferRecovery(&SCConfig{VTRecovery: false}, info.localInfo, info.remoteInfo)
+	vtr.Start()
+	assert.Equal(t, false, vtr.isRunning)
+	vtr.Stop()
 }
 
 // TestScenarioMainChainRecovery tests the value transfer recovery of the main chain to service chain value transfers.

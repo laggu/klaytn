@@ -297,11 +297,8 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	sc.tokenReceivedSub = sc.bridgeManager.SubscribeTokenReceived(sc.tokenReceivedCh)
 	sc.tokenTransferSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.tokenTransferCh)
 
-	if sc.config.VTRecovery {
-		logger.Info("value transfer recovery is enabled")
-		if err := sc.bridgeManager.RestoreBridges(); err != nil {
-			logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
-		}
+	if err := sc.bridgeManager.RestoreBridges(); err != nil {
+		logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
 	}
 
 	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
