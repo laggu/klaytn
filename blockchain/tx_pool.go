@@ -452,18 +452,23 @@ func (pool *TxPool) GasPrice() *big.Int {
 	return new(big.Int).Set(pool.gasPrice)
 }
 
-// SetGasPrice updates the minimum price required by the transaction pool for a
-// new transaction, and drops all transactions below this threshold.
+// SetGasPrice updates the gas price of the transaction pool for new transactions, and drops all old transactions.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	logger.Debug("TxPool.SetGasPrice", "before", pool.gasPrice, "after", price)
-	pool.gasPrice = price
-	for _, tx := range pool.priced.Cap(price, pool.locals) {
-		pool.removeTx(tx.Hash(), false)
+	if pool.gasPrice.Cmp(price) != 0 {
+		pool.gasPrice = price
+		pool.pending = make(map[common.Address]*txList)
+		pool.queue = make(map[common.Address]*txList)
+		pool.beats = make(map[common.Address]time.Time)
+		pool.all = make(map[common.Hash]*types.Transaction)
+		pool.pendingNonce = make(map[common.Address]uint64)
+		pool.locals = newAccountSet(pool.signer)
+		pool.priced = newTxPricedList(&pool.all)
+
+		logger.Info("TxPool.SetGasPrice", "before", pool.gasPrice, "after", price)
 	}
-	logger.Info("Transaction pool price threshold updated", "price", price)
 }
 
 // Stats retrieves the current pool stats, namely the number of pending and the
