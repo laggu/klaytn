@@ -687,6 +687,74 @@ func TestMethodSetJournal(t *testing.T) {
 	bm.Stop()
 }
 
+// TestScenarioUnsubJournal tests whether journal is deleted with unsubscribe or not.
+func TestScenarioUnsubJournal(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// Generate a new random account and a funded simulator
+	key, _ := crypto.GenerateKey()
+	auth := bind.NewKeyedTransactor(key)
+
+	key2, _ := crypto.GenerateKey()
+	auth2 := bind.NewKeyedTransactor(key2)
+
+	key4, _ := crypto.GenerateKey()
+	auth4 := bind.NewKeyedTransactor(key4)
+
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	config := &SCConfig{}
+	config.nodekey = key
+	config.chainkey = key2
+	config.DataDir = os.TempDir()
+	config.VTRecovery = true
+
+	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
+	config.MainChainAccountAddr = &chainKeyAddr
+
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
+	sc := &SubBridge{
+		config:               config,
+		peers:                newBridgePeerSet(),
+		localBackend:         sim,
+		remoteBackend:        sim,
+		bridgeAccountManager: bam,
+	}
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	// Prepare manager and deploy bridge contract.
+	bm, err := NewBridgeManager(sc)
+	if sc.addressManager, err = NewAddressManager(); err != nil {
+		t.Fatal("new address manager is failed")
+	}
+
+	localAddr, err := bm.DeployBridgeTest(sim, true)
+	if err != nil {
+		t.Fatal("deploy bridge test failed", localAddr)
+	}
+
+	bm.SubscribeEvent(localAddr)
+	bm.UnsubscribeEvent(localAddr)
+
+	// Journal is irrelevant to the bridge unsubscription.
+	journal := bm.journal.cache[localAddr]
+	assert.NotEqual(t, nil, journal)
+}
+
 // TestErrorEmptyAccount tests empty account error in case of journal insertion.
 func TestErrorEmptyAccount(t *testing.T) {
 	defer func() {
