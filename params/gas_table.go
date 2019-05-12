@@ -43,39 +43,11 @@ type GasTable struct {
 
 // Variables containing gas prices for different Klaytn phases.
 var (
-	// TODO-Klaytn-RemoveLater Remove GasTableHomestead
-	// GasTableHomestead contain the gas prices for
-	// the homestead phase.
-	//GasTableHomestead = GasTable{
-	//	ExtcodeSize: 20,
-	//	ExtcodeCopy: 20,
-	//	Balance:     20,
-	//	SLoad:       50,
-	//	Calls:       40,
-	//	Suicide:     0,
-	//	ExpByte:     10,
-	//}
-
-	// TODO-Klaytn-RemoveLater Remove GasTableEIP150
-	// GasTableHomestead contain the gas re-prices for
-	// the homestead phase.
-	//GasTableEIP150 = GasTable{
-	//	ExtcodeSize: 700,
-	//	ExtcodeCopy: 700,
-	//	Balance:     400,
-	//	SLoad:       200,
-	//	Calls:       700,
-	//	Suicide:     5000,
-	//	ExpByte:     10,
-	//
-	//	CreateBySuicide: 25000,
-	//}
-
-	// GasTableBaobab contain the gas re-prices for Baobab.
-	GasTableBaobab = GasTable{
-		ExtcodeSize: 700, // G_extcode
-		ExtcodeCopy: 700, // G_extcode
-		ExtcodeHash: 400,
+	// GasTableCypress contains the gas prices for the Klaytn mainnet, Cypress.
+	GasTableCypress = GasTable{
+		ExtcodeSize: 700,  // G_extcodesize
+		ExtcodeCopy: 700,  // G_extcodecopy
+		ExtcodeHash: 400,  // G_extcodehash
 		Balance:     400,  // G_balance
 		SLoad:       200,  // G_sload
 		Calls:       700,  // G_call
