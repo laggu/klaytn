@@ -160,6 +160,12 @@ func (ec *Client) BridgeUnsubscribeBridge(ctx context.Context, scBridge common.A
 
 // BridgeRegisterTokenContract can register the given pair of deployed service/main chain token contracts.
 // If the registering is failed, it returns an error.
-func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, scToken common.Address, mcToken common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_registerToken", scToken, mcToken)
+func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, scBridge, mcBridge, scToken, mcToken common.Address) error {
+	return ec.c.CallContext(ctx, nil, "bridge_registerToken", scBridge, mcBridge, scToken, mcToken)
+}
+
+// BridgeDeregisterTokenContract can deregister the given pair of deployed service/main chain token contracts.
+// If the registering is failed, it returns an error.
+func (ec *Client) BridgeDeregisterTokenContract(ctx context.Context, scBridge, mcBridge, scToken, mcToken common.Address) error {
+	return ec.c.CallContext(ctx, nil, "bridge_deregisterToken", scBridge, mcBridge, scToken, mcToken)
 }

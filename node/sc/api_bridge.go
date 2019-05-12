@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/node"
+	"github.com/pkg/errors"
 )
 
 // MainBridgeAPI Implementation for main-bridge node
@@ -79,10 +80,12 @@ func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *typ
 func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 	localAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
 	if err != nil {
+		logger.Error("Failed to deploy scBridge.", "err", err)
 		return nil, err
 	}
 	remoteAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
 	if err != nil {
+		logger.Error("Failed to deploy mcBridge.", "err", err)
 		return nil, err
 	}
 
@@ -191,17 +194,78 @@ func (sbapi *SubBridgeAPI) UnRegisterBridge(bridge common.Address) {
 	sbapi.sc.AddressManager().DeleteBridge(bridge)
 }
 
-func (sbapi *SubBridgeAPI) RegisterToken(token1 common.Address, token2 common.Address) error {
-	if err := sbapi.sc.AddressManager().AddToken(token1, token2); err != nil {
+func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
+	cBi, cExist := sbapi.sc.bridgeManager.GetBridgeInfo(cBridgeAddr)
+	pBi, pExist := sbapi.sc.bridgeManager.GetBridgeInfo(pBridgeAddr)
+
+	if !cExist || !pExist {
+		return errors.New("bridge does not exist")
+	}
+
+	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+		return errors.New("invalid bridge pair")
+	}
+
+	cBi.account.Lock()
+	tx, err := cBi.bridge.RegisterToken(cBi.account.GetTransactOpts(), cTokenAddr, pTokenAddr)
+	if err != nil {
+		cBi.account.UnLock()
 		return err
 	}
-	logger.Info("Register token", "token1", token1.String(), "token2", token2.String())
+	cBi.account.IncNonce()
+	cBi.account.UnLock()
+	logger.Debug("scBridge registered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+
+	pBi.account.Lock()
+	tx, err = pBi.bridge.RegisterToken(pBi.account.GetTransactOpts(), pTokenAddr, cTokenAddr)
+	if err != nil {
+		pBi.account.UnLock()
+		return err
+	}
+	pBi.account.IncNonce()
+	pBi.account.UnLock()
+
+	logger.Debug("mcBridge registered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+
+	if err := sbapi.sc.AddressManager().AddToken(cTokenAddr, pTokenAddr); err != nil {
+		return err
+	}
+	logger.Info("Register token", "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
 	return nil
 }
 
-func (sbapi *SubBridgeAPI) UnRegisterToken(token common.Address) ([]common.Address, error) {
-	token1, token2, err := sbapi.sc.AddressManager().DeleteToken(token)
-	return []common.Address{token1, token2}, err
+func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
+	if sbapi.sc.AddressManager().GetCounterPartToken(cTokenAddr) != pTokenAddr {
+		return errors.New("invalid toke pair")
+	}
+
+	cBi, cExist := sbapi.sc.bridgeManager.bridges[cBridgeAddr]
+	pBi, pExist := sbapi.sc.bridgeManager.bridges[pBridgeAddr]
+
+	if !cExist || !pExist {
+		return errors.New("bridge does not exist")
+	}
+
+	cBi.account.Lock()
+	defer cBi.account.UnLock()
+	tx, err := cBi.bridge.DeregisterToken(cBi.account.GetTransactOpts(), cTokenAddr)
+	if err != nil {
+		return err
+	}
+	cBi.account.IncNonce()
+	logger.Debug("scBridge deregistered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+
+	pBi.account.Lock()
+	defer pBi.account.UnLock()
+	tx, err = pBi.bridge.DeregisterToken(pBi.account.GetTransactOpts(), pTokenAddr)
+	if err != nil {
+		return err
+	}
+	pBi.account.IncNonce()
+	logger.Debug("mcBridge deregistered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+
+	_, _, err = sbapi.sc.AddressManager().DeleteToken(cTokenAddr)
+	return err
 }
 
 // AddPeer requests connecting to a remote node, and also maintaining the new

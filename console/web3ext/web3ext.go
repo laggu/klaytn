@@ -858,12 +858,12 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'registerToken',
 			call: 'bridge_registerToken',
-			params: 2
+			params: 4
 		}),
 		new web3._extend.Method({
-			name: 'unRegisterToken',
-			call: 'bridge_unRegisterToken',
-			params: 1
+			name: 'deregisterToken',
+			call: 'bridge_deregisterToken',
+			params: 4
 		}),
 	],
     properties: [
