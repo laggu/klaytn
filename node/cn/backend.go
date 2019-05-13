@@ -215,7 +215,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if config.SenderTxHashIndexing {
 		ch := make(chan blockchain.ChainEvent, 255)
 		chainEventSubscription := cn.blockchain.SubscribeChainEvent(ch)

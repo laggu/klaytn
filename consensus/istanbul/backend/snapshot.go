@@ -167,6 +167,13 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		}
 
 		snap.ValSet = gov.HandleGovernanceVote(snap.ValSet, header, validator, addr)
+
+		if number%s.Epoch == 0 {
+			if len(header.Governance) > 0 {
+				go gov.UpdateGovernance(number, header.Governance)
+			}
+			gov.UpdateCurrentGovernance(number)
+		}
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()

@@ -20,7 +20,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
@@ -454,7 +453,12 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, GovernanceSet, error) {
 			return gBlockNum, data, nil
 		}
 	}
-	return g.db.ReadGovernanceAtNumber(num, g.ChainConfig.Istanbul.Epoch)
+	if g.db != nil {
+		return g.db.ReadGovernanceAtNumber(num, g.ChainConfig.Istanbul.Epoch)
+	} else {
+		// For CI tests which don't have a database
+		return 0, nil, nil
+	}
 }
 
 func CalcGovernanceInfoBlock(num uint64, epoch uint64) uint64 {
@@ -475,7 +479,7 @@ func (g *Governance) GetGovernanceChange() GovernanceSet {
 	return nil
 }
 
-func (gov *Governance) UpdateGovernance(header *types.Header, proposer common.Address, self common.Address) {
+func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 	var epoch uint64
 	var ok bool
 
@@ -487,13 +491,12 @@ func (gov *Governance) UpdateGovernance(header *types.Header, proposer common.Ad
 	}
 
 	// Store updated governance information if exist
-	number := header.Number.Uint64()
 	if number%epoch == 0 {
-		if len(header.Governance) > 0 {
+		if len(governance) > 0 {
 			tempData := []byte("")
 			tempSet := GovernanceSet{}
-			if err := rlp.DecodeBytes(header.Governance, &tempData); err != nil {
-				logger.Error("Failed to decode governance data", "err", err, "data", header.Governance)
+			if err := rlp.DecodeBytes(governance, &tempData); err != nil {
+				logger.Error("Failed to decode governance data", "err", err, "data", governance)
 				return
 			}
 			if err := json.Unmarshal(tempData, &tempSet); err != nil {
@@ -509,7 +512,6 @@ func (gov *Governance) UpdateGovernance(header *types.Header, proposer common.Ad
 			}
 		}
 		gov.ClearVotes(number)
-		gov.updateCurrentGovernance(number)
 	}
 }
 
@@ -517,13 +519,16 @@ func (gov *Governance) removeDuplicatedVote(vote *GovernanceVote, number uint64)
 	gov.RemoveVote(vote.Key, vote.Value, number)
 }
 
-func (gov *Governance) updateCurrentGovernance(num uint64) {
+func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
 
-	gov.actualGovernanceBlock = newNumber
-	gov.currentSet = newGovernanceSet
-	gov.triggerChange(newGovernanceSet)
-	gov.currentGovernanceBlock = CalcGovernanceInfoBlock(num, gov.currentSet["istanbul.epoch"].(uint64))
+	// Do the change only when the governance actually changed
+	if newGovernanceSet != nil && newNumber != gov.actualGovernanceBlock {
+		gov.actualGovernanceBlock = newNumber
+		gov.currentSet = newGovernanceSet
+		gov.triggerChange(newGovernanceSet)
+		gov.currentGovernanceBlock = CalcGovernanceInfoBlock(num, gov.currentSet["istanbul.epoch"].(uint64))
+	}
 }
 
 func (gov *Governance) triggerChange(set GovernanceSet) {

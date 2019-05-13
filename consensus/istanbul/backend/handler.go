@@ -129,11 +129,6 @@ func (sb *backend) NewChainHead() error {
 		return istanbul.ErrStoppedEngine
 	}
 
-	// Start a goroutine to update governance information
-	header := sb.chain.CurrentHeader()
-	proposer, _ := ecrecover(header)
-	go sb.governance.UpdateGovernance(header, proposer, sb.address)
-
 	go sb.istanbulEventMux.Post(istanbul.FinalCommittedEvent{})
 	return nil
 }
