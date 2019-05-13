@@ -182,6 +182,10 @@ start() {
         fi
     fi
 
+    if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
+        OPTIONS="$OPTIONS --vtrecovery"
+    fi
+
     if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
         OPTIONS="$OPTIONS $ADDITIONAL"
     fi
