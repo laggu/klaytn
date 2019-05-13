@@ -306,7 +306,7 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 
 		newDBC := getDBEntryConfig(dbc, entryType)
 
-		if entryType == StateTrieDB {
+		if entryType == StateTrieDB && dbc.NumStateTriePartitions > 1 {
 			db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
 		} else {
 			db, err = newDatabase(newDBC, entryType)
