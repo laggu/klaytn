@@ -5546,11 +5546,6 @@ var properties = function () {
             outputFormatter: formatters.outputSyncingFormatter
         }),
         new Property({
-            name: 'gasPrice',
-            getter: 'klay_gasPrice',
-            outputFormatter: formatters.outputBigNumberFormatter
-        }),
-        new Property({
             name: 'accounts',
             getter: 'klay_accounts'
         }),

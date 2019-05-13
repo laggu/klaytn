@@ -17,8 +17,12 @@
 package governance
 
 import (
+	"errors"
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/params"
+	"math/big"
 	"reflect"
 	"strings"
 	"sync/atomic"
@@ -36,6 +40,38 @@ type returnTally struct {
 
 func NewGovernanceAPI(gov *Governance) *PublicGovernanceAPI {
 	return &PublicGovernanceAPI{governance: gov}
+}
+
+type GovernanceKlayAPI struct {
+	governance *Governance
+	chain      *blockchain.BlockChain
+}
+
+func NewGovernanceKlayAPI(gov *Governance, chain *blockchain.BlockChain) *GovernanceKlayAPI {
+	return &GovernanceKlayAPI{governance: gov, chain: chain}
+}
+
+var (
+	errUnknownBlock = errors.New("Unknown block")
+)
+
+func (api *GovernanceKlayAPI) GasPrice(num *rpc.BlockNumber) (*big.Int, error) {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		ret := api.governance.GetLatestGovernanceItem("governance.unitprice").(uint64)
+		return big.NewInt(0).SetUint64(ret), nil
+	} else {
+		blockNum := num.Int64()
+
+		if blockNum > api.chain.CurrentHeader().Number.Int64() {
+			return nil, errUnknownBlock
+		}
+
+		if ret, err := api.GasPriceAtNumber(blockNum); err != nil {
+			return nil, err
+		} else {
+			return big.NewInt(0).SetUint64(ret), nil
+		}
+	}
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
@@ -142,4 +178,12 @@ func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 		return true
 	}
 	return false
+}
+
+func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
+	val, err := api.governance.GetGovernanceItemAtNumber(uint64(num), "governance.unitprice")
+	if err != nil {
+		return 0, err
+	}
+	return val.(uint64), nil
 }

@@ -500,6 +500,13 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'gasPrice',
+			call: 'klay_gasPrice',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
 			name: 'accountCreated',
 			call: 'klay_accountCreated'
 			params: 2,

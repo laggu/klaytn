@@ -391,6 +391,11 @@ func (s *CN) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   governance.NewGovernanceAPI(s.governance),
 			Public:    true,
+		}, {
+			Namespace: "klay",
+			Version:   "1.0",
+			Service:   governance.NewGovernanceKlayAPI(s.governance, s.blockchain),
+			Public:    true,
 		},
 	}...)
 }

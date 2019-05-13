@@ -17,6 +17,7 @@
 package governance
 
 import (
+	"errors"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
@@ -359,4 +360,19 @@ func (gov *Governance) removeVotesFromRemovedNode(addr common.Address) {
 			i--
 		}
 	}
+}
+
+func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error) {
+	_, data, err := gov.ReadGovernance(num)
+	if err != nil {
+		logger.Warn("Couldn't retrieve governance information for the given block number", "num", num)
+		return nil, errors.New("Coulnd't retrieve configuration data")
+	}
+	return data[key], nil
+}
+
+func (gov *Governance) GetLatestGovernanceItem(key string) interface{} {
+	gov.mu.RLock()
+	defer gov.mu.RUnlock()
+	return gov.currentSet[key]
 }
