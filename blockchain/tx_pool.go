@@ -456,10 +456,11 @@ func (pool *TxPool) GasPrice() *big.Int {
 
 // SetGasPrice updates the gas price of the transaction pool for new transactions, and drops all old transactions.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
 	if pool.gasPrice.Cmp(price) != 0 {
+		pool.mu.Lock()
+
+		logger.Info("TxPool.SetGasPrice", "before", pool.gasPrice, "after", price)
+
 		pool.gasPrice = price
 		pool.pending = make(map[common.Address]*txList)
 		pool.queue = make(map[common.Address]*txList)
@@ -469,7 +470,7 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 		pool.locals = newAccountSet(pool.signer)
 		pool.priced = newTxPricedList(&pool.all)
 
-		logger.Info("TxPool.SetGasPrice", "before", pool.gasPrice, "after", price)
+		pool.mu.Unlock()
 	}
 }
 
