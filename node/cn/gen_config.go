@@ -29,6 +29,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		SentChainTxsLimit       uint64
 		SkipBcVersionCheck      bool `toml:"-"`
 		PartitionedDB           bool
+		NumStateTriePartitions  uint
 		LevelDBCompression      database.LevelDBCompressionType
 		LevelDBBufferPool       bool
 		LevelDBCacheSize        int
@@ -62,6 +63,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.PartitionedDB = c.PartitionedDB
+	enc.NumStateTriePartitions = c.NumStateTriePartitions
 	enc.LevelDBCompression = c.LevelDBCompression
 	enc.LevelDBBufferPool = c.LevelDBBufferPool
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
@@ -99,6 +101,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		SentChainTxsLimit       *uint64
 		SkipBcVersionCheck      *bool `toml:"-"`
 		PartitionedDB           *bool
+		NumStateTriePartitions  *uint
 		LevelDBCompression      *database.LevelDBCompressionType
 		LevelDBBufferPool       *bool
 		LevelDBCacheSize        *int
@@ -152,6 +155,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.PartitionedDB != nil {
 		c.PartitionedDB = *dec.PartitionedDB
+	}
+	if dec.NumStateTriePartitions != nil {
+		c.NumStateTriePartitions = *dec.NumStateTriePartitions
 	}
 	if dec.LevelDBCompression != nil {
 		c.LevelDBCompression = *dec.LevelDBCompression

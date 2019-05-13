@@ -187,6 +187,11 @@ var (
 		Name:  "db.no-partitioning",
 		Usage: "Disable partitioned databases for persistent storage",
 	}
+	NumStateTriePartitionsFlag = cli.UintFlag{
+		Name:  "db.num-statetrie-partitions",
+		Usage: "Number of internal partitions of state trie partition. Should be power of 2",
+		Value: 4,
+	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
 		Name:  "db.leveldb.cache-size",
 		Usage: "Size of in-memory cache in LevelDB (MiB)",
@@ -1110,6 +1115,11 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
+	cfg.NumStateTriePartitions = ctx.GlobalUint(NumStateTriePartitionsFlag.Name)
+	if !database.IsPow2(cfg.NumStateTriePartitions) {
+		log.Fatalf("--db.num-statetrie-partitions should be power of 2 but %v is not!", cfg.NumStateTriePartitions)
+	}
+
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
@@ -1253,17 +1263,6 @@ func RegisterDBSyncerService(stack *node.Node, cfg *dbsyncer.DBConfig) {
 func SetupNetwork(ctx *cli.Context) {
 	// TODO(fjl): move target gas limit into config
 	params.TargetGasLimit = ctx.GlobalUint64(TargetGasLimitFlag.Name)
-}
-
-func IsParallelDBWrite(ctx *cli.Context) bool {
-	return !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
-}
-
-func IsPartitionedDB(ctx *cli.Context) bool {
-	if ctx.GlobalIsSet(NoPartitionedDBFlag.Name) {
-		return false
-	}
-	return true
 }
 
 // MakeConsolePreloads retrieves the absolute paths for the console JavaScript

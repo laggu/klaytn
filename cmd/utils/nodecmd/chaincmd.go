@@ -44,6 +44,7 @@ var (
 		Flags: []cli.Flag{
 			utils.DbTypeFlag,
 			utils.NoPartitionedDBFlag,
+			utils.NumStateTriePartitionsFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
 		},
@@ -106,10 +107,12 @@ func initGenesis(ctx *cli.Context) error {
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
 
-	parallelDBWrite := utils.IsParallelDBWrite(ctx)
-	partitioned := utils.IsPartitionedDB(ctx)
+	parallelDBWrite := !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
+	partitioned := !ctx.GlobalIsSet(utils.NoPartitionedDBFlag.Name)
+	numStateTriePartitions := ctx.GlobalUint(utils.NumStateTriePartitionsFlag.Name)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite, Partitioned: partitioned,
+		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite,
+			Partitioned: partitioned, NumStateTriePartitions: numStateTriePartitions,
 			LevelDBCacheSize: 0, OpenFilesLimit: 0, ChildChainIndexing: false}
 		chaindb := stack.OpenDatabase(dbc)
 		// Initialize DeriveSha implementation

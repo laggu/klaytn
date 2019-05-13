@@ -95,6 +95,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.LevelDBCacheSizeFlag,
 			utils.NoPartitionedDBFlag,
+			utils.NumStateTriePartitionsFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.LevelDBNoBufferPoolFlag,
 			utils.NoParallelDBWriteFlag,

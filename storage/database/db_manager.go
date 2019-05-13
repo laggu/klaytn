@@ -261,11 +261,12 @@ func NewMemoryDBManager() DBManager {
 // DBConfig handles database related configurations.
 type DBConfig struct {
 	// General configurations for all types of DB.
-	Dir             string
-	DBType          DBType
-	Partitioned     bool
-	ParallelDBWrite bool
-	OpenFilesLimit  int
+	Dir                    string
+	DBType                 DBType
+	Partitioned            bool
+	NumStateTriePartitions uint
+	ParallelDBWrite        bool
+	OpenFilesLimit         int
 
 	// LevelDB related configurations.
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
@@ -298,15 +299,24 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 // Each Database will have its own separated Database.
 func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	dbm := newDatabaseManager(dbc)
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		newDBC := getDBEntryConfig(dbc, DBEntryType(i))
-		db, err := newDatabase(newDBC, DBEntryType(i))
-		if err != nil {
-			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[i], "err", err)
+	var db Database
+	var err error
+	for et := 0; et < int(databaseEntryTypeSize); et++ {
+		entryType := DBEntryType(et)
+
+		newDBC := getDBEntryConfig(dbc, entryType)
+
+		if entryType == StateTrieDB {
+			db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
+		} else {
+			db, err = newDatabase(newDBC, entryType)
 		}
-		dbm.dbs[i] = db
-		// Each partition collects metrics independently.
-		db.Meter(dbMetricPrefix + dbDirs[i] + "/")
+
+		if err != nil {
+			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[et], "err", err)
+		}
+		dbm.dbs[et] = db
+		db.Meter(dbMetricPrefix + dbDirs[et] + "/") // Each partition collects metrics independently.
 	}
 	return dbm, nil
 }

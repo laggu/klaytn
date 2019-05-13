@@ -30,6 +30,7 @@ const (
 	LevelDB
 	BadgerDB
 	MemoryDB
+	PartitionedDB
 )
 
 func (dbType DBType) String() string {
@@ -40,6 +41,8 @@ func (dbType DBType) String() string {
 		return "BadgerDB"
 	case MemoryDB:
 		return "MemoryDB"
+	case PartitionedDB:
+		return "PartitionedDB"
 	default:
 		logger.Error("Undefined DBType entered.", "entered DBType", dbType)
 		return "undefined"

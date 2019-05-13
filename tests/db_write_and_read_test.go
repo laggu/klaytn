@@ -37,11 +37,11 @@ type testEntry struct {
 
 var testEntries = []testEntry{
 	{"BadgerDB-NonPartitioned", &database.DBConfig{DBType: database.BadgerDB, Partitioned: false}},
-	{"BadgerDB-Partitioned", &database.DBConfig{DBType: database.BadgerDB, Partitioned: true}},
+	{"BadgerDB-Partitioned", &database.DBConfig{DBType: database.BadgerDB, Partitioned: true, NumStateTriePartitions: 4}},
 	{"MemoryDB-NonPartitioned", &database.DBConfig{DBType: database.MemoryDB, Partitioned: false}},
-	{"MemoryDB-Partitioned", &database.DBConfig{DBType: database.MemoryDB, Partitioned: true}},
+	{"MemoryDB-Partitioned", &database.DBConfig{DBType: database.MemoryDB, Partitioned: true, NumStateTriePartitions: 4}},
 	{"LevelDB-NonPartitioned", &database.DBConfig{DBType: database.LevelDB, Partitioned: false, LevelDBCacheSize: 128, OpenFilesLimit: 32}},
-	{"LevelDB-Partitioned", &database.DBConfig{DBType: database.LevelDB, Partitioned: true, LevelDBCacheSize: 128, OpenFilesLimit: 32}},
+	{"LevelDB-Partitioned", &database.DBConfig{DBType: database.LevelDB, Partitioned: true, LevelDBCacheSize: 128, OpenFilesLimit: 32, NumStateTriePartitions: 4}},
 }
 
 // TestDBManager_WriteAndRead_Functional checks basic functionality of database.DBManager interface

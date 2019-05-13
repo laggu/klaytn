@@ -49,6 +49,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.LightKDFFlag,
 	utils.StateDBCachingFlag,
 	utils.NoPartitionedDBFlag,
+	utils.NumStateTriePartitionsFlag,
 	utils.LevelDBCompressionTypeFlag,
 	utils.LevelDBNoBufferPoolFlag,
 	utils.LevelDBCacheSizeFlag,
