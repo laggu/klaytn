@@ -500,8 +500,8 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'gasPrice',
-			call: 'klay_gasPrice',
+			name: 'gasPriceAt',
+			call: 'klay_gasPriceAt',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
@@ -605,8 +605,12 @@ web3._extend({
 		}),
         new web3._extend.Property({
             name : 'rewardbase',
-            getter: 'klay_rewardbase',
-           
+            getter: 'klay_rewardbase'
+        }),
+        new web3._extend.Property({
+            name : 'gasPrice',
+            getter: 'klay_gasPrice',
+            outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
 	]
 });

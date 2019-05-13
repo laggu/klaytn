@@ -55,7 +55,7 @@ var (
 	errUnknownBlock = errors.New("Unknown block")
 )
 
-func (api *GovernanceKlayAPI) GasPrice(num *rpc.BlockNumber) (*big.Int, error) {
+func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		ret := api.governance.GetLatestGovernanceItem("governance.unitprice").(uint64)
 		return big.NewInt(0).SetUint64(ret), nil
@@ -72,6 +72,11 @@ func (api *GovernanceKlayAPI) GasPrice(num *rpc.BlockNumber) (*big.Int, error) {
 			return big.NewInt(0).SetUint64(ret), nil
 		}
 	}
+}
+
+func (api *GovernanceKlayAPI) GasPrice() *big.Int {
+	ret := api.governance.GetLatestGovernanceItem("governance.unitprice").(uint64)
+	return big.NewInt(0).SetUint64(ret)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
