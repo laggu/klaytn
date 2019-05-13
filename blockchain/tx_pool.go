@@ -48,6 +48,8 @@ const (
 var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
+
+	txPoolIsFullErr = fmt.Errorf("txpool is full")
 )
 
 var (
@@ -874,22 +876,37 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 // marking the senders as a local ones in the mean time, ensuring they go around
 // the local pricing constraints.
 func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
-	poolSize := uint64(len(pool.all))
-	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
-		errors := make([]error, 0, len(txs))
-		err := fmt.Errorf("txpool is full: %d", poolSize)
-		for i := 0; i < len(txs); i++ {
-			errors = append(errors, err)
-		}
-	}
-	return pool.addTxs(txs, !pool.config.NoLocals)
+	return pool.checkAndAddTxs(txs, !pool.config.NoLocals)
 }
 
 // AddRemotes enqueues a batch of transactions into the pool if they are valid.
 // If the senders are not among the locally tracked ones, full pricing constraints
 // will apply.
 func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
-	return pool.addTxs(txs, false)
+	return pool.checkAndAddTxs(txs, false)
+}
+
+// checkAndAddTxs compares the size of given transactions and the capacity of TxPool.
+// If given transactions exceed the capacity of TxPool, it slices the given transactions
+// so it can fit into TxPool's capacity.
+func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error {
+	poolSize := uint64(len(pool.all))
+	poolCapacity := int(pool.config.ExecSlotsAll + pool.config.NonExecSlotsAll - poolSize)
+	numTxs := len(txs)
+
+	if poolCapacity < numTxs {
+		txs = txs[:poolCapacity]
+	}
+
+	errs := pool.addTxs(txs, local)
+
+	if poolCapacity < numTxs {
+		for i := 0; i < numTxs-poolCapacity; i++ {
+			errs = append(errs, txPoolIsFullErr)
+		}
+	}
+
+	return errs
 }
 
 // addTx enqueues a single transaction into the pool if it is valid.
