@@ -233,7 +233,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
-
+	governance.TxPool = cn.txPool
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType()); err != nil {
 		return nil, err
 	}

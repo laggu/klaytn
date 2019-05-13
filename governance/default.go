@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
@@ -140,6 +141,8 @@ type Governance struct {
 	currentSet GovernanceSet
 	changeSet  GovernanceSet
 	mu         sync.RWMutex
+
+	TxPool *blockchain.TxPool
 }
 
 func (gs GovernanceSet) SetValue(itemType int, value interface{}) error {
