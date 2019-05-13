@@ -345,12 +345,16 @@ func (sbapi *SubBridgeAPI) GetMainChainAccountAddr() string {
 	return sbapi.sc.config.MainChainAccountAddr.Hex()
 }
 
+func (sbapi *SubBridgeAPI) GetServiceChainAccountAddr() string {
+	return sbapi.sc.config.ServiceChainAccountAddr.Hex()
+}
+
 func (sbapi *SubBridgeAPI) GetMainChainAccountNonce() uint64 {
 	return sbapi.sc.handler.getMainChainAccountNonce()
 }
 
-func (sbapi *SubBridgeAPI) GetServiceChainAccountAddr() string {
-	return sbapi.sc.config.ServiceChainAccountAddr.Hex()
+func (sbapi *SubBridgeAPI) GetServiceChainAccountNonce() uint64 {
+	return sbapi.sc.handler.getServiceChainAccountNonce()
 }
 
 func (sbapi *SubBridgeAPI) GetAnchoringPeriod() uint64 {
