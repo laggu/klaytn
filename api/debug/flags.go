@@ -21,6 +21,7 @@
 package debug
 
 import (
+	"fmt"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
@@ -109,6 +110,13 @@ func init() {
 		output = colorable.NewColorableStderr()
 	}
 	glogger = log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+}
+
+func GetGlogger() (*log.GlogHandler, error) {
+	if glogger != nil {
+		return glogger, nil
+	}
+	return nil, fmt.Errorf("glogger is nil")
 }
 
 // CreateLogDir creates a directory whose path is logdir as well as empty log files.

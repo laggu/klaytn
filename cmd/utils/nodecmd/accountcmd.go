@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/accounts"
 	"github.com/ground-x/klaytn/accounts/keystore"
+	"github.com/ground-x/klaytn/api/debug"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/console"
 	"github.com/ground-x/klaytn/crypto"
@@ -216,6 +217,9 @@ nodes.
 )
 
 func accountList(ctx *cli.Context) error {
+	if glogger, err := debug.GetGlogger(); err == nil {
+		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
+	}
 	stack, _ := makeConfigNode(ctx)
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
@@ -314,6 +318,9 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
+	if glogger, err := debug.GetGlogger(); err == nil {
+		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
+	}
 	cfg := klayConfig{Node: defaultNodeConfig()}
 	// Load config file.
 	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
@@ -342,6 +349,9 @@ func accountCreate(ctx *cli.Context) error {
 // accountUpdate transitions an account from a previous format to the current
 // one, also providing the possibility to change the pass-phrase.
 func accountUpdate(ctx *cli.Context) error {
+	if glogger, err := debug.GetGlogger(); err == nil {
+		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
+	}
 	if len(ctx.Args()) == 0 {
 		log.Fatalf("No accounts specified to update")
 	}
@@ -359,6 +369,9 @@ func accountUpdate(ctx *cli.Context) error {
 }
 
 func importWallet(ctx *cli.Context) error {
+	if glogger, err := debug.GetGlogger(); err == nil {
+		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
+	}
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {
 		log.Fatalf("keyfile must be given as argument")
@@ -381,6 +394,9 @@ func importWallet(ctx *cli.Context) error {
 }
 
 func accountImport(ctx *cli.Context) error {
+	if glogger, err := debug.GetGlogger(); err == nil {
+		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
+	}
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {
 		log.Fatalf("keyfile must be given as argument")
