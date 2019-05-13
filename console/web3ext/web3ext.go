@@ -816,8 +816,8 @@ web3._extend({
 			call: 'bridge_getChildChainIndexingEnabled'
 		}),
 		new web3._extend.Method({
-			name: 'convertChildChainBlockHashToParentChainTxHash',
-			call: 'bridge_convertChildChainBlockHashToParentChainTxHash',
+			name: 'convertServiceChainBlockHashToMainChainTxHash',
+			call: 'bridge_convertServiceChainBlockHashToMainChainTxHash',
 			params: 1
 		}),
 		new web3._extend.Method({

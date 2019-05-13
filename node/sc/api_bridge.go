@@ -36,8 +36,8 @@ func (mbapi *MainBridgeAPI) GetChildChainIndexingEnabled() bool {
 	return mbapi.sc.eventhandler.GetChildChainIndexingEnabled()
 }
 
-func (mbapi *MainBridgeAPI) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
-	return mbapi.sc.eventhandler.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
+func (mbapi *MainBridgeAPI) ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash {
+	return mbapi.sc.eventhandler.ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash)
 }
 
 // Peers retrieves all the information we know about each individual peer at the
@@ -65,8 +65,8 @@ type SubBridgeAPI struct {
 	sc *SubBridge
 }
 
-func (sbapi *SubBridgeAPI) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
-	return sbapi.sc.eventhandler.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
+func (sbapi *SubBridgeAPI) ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash {
+	return sbapi.sc.eventhandler.ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash)
 }
 
 func (sbapi *SubBridgeAPI) GetLatestAnchoredBlockNumber() uint64 {

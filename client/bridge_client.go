@@ -63,11 +63,11 @@ func (ec *Client) BridgeGetChildChainIndexingEnabled(ctx context.Context) (bool,
 	return result, err
 }
 
-// BridgeConvertChildChainBlockHashToParentChainTxHash can convert child chain block hash to
-// anchoring tx hash which contain anchored data.
-func (ec *Client) BridgeConvertChildChainBlockHashToParentChainTxHash(ctx context.Context, ccBlockHash common.Hash) (common.Hash, error) {
+// BridgeConvertServiceChainBlockHashToMainChainTxHash can convert service chain block hash to
+// anchoring tx hash which contains anchored data.
+func (ec *Client) BridgeConvertServiceChainBlockHashToMainChainTxHash(ctx context.Context, scBlockHash common.Hash) (common.Hash, error) {
 	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "bridge_convertChildChainBlockHashToParentChainTxHash", ccBlockHash)
+	err := ec.c.CallContext(ctx, &txHash, "bridge_convertServiceChainBlockHashToMainChainTxHash", scBlockHash)
 	return txHash, err
 }
 

@@ -141,10 +141,10 @@ type DBManager interface {
 	ReadPreimage(hash common.Hash) []byte
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
-	// below operations are used in parent chain side, not child chain side.
+	// below operations are used in main chain side, not service chain side.
 	ChildChainIndexingEnabled() bool
 	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
-	ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash
+	ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash
 
 	WriteLastIndexedBlockNumber(blockNum uint64)
 	GetLastIndexedBlockNumber() uint64
@@ -1356,10 +1356,10 @@ func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxH
 	}
 }
 
-// ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
+// ConvertServiceChainBlockHashToMainChainTxHash returns a transaction hash of a transaction which contains
 // ChainHashes, with the key made with given child chain block hash.
-func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash common.Hash) common.Hash {
-	key := childChainTxHashKey(ccBlockHash)
+func (dbm *databaseManager) ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash {
+	key := childChainTxHashKey(scBlockHash)
 	db := dbm.getDatabase(bridgeServiceDB)
 	data, _ := db.Get(key)
 	if len(data) == 0 {

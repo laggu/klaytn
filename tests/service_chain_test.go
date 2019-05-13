@@ -140,7 +140,7 @@ func TestAnchoringServiceChainDataWithAPIs(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	//Get the anchoring tx hash of the block hash.
-	txHash, err := pClient.ConvertChildChainBlockHashToParentChainTxHash(ctx, cBlock.Hash())
+	txHash, err := pClient.ConvertServiceChainBlockHashToMainChainTxHash(ctx, cBlock.Hash())
 	if err != nil {
 		t.Fatalf("parent anchoring tx hash Err %v", err)
 	}
