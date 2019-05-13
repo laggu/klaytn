@@ -457,11 +457,15 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 }
 
 func (self *worker) commitNewWork() {
-	// Check any fork transitions needed
-	pending, err := self.backend.TxPool().Pending()
-	if err != nil {
-		logger.Error("Failed to fetch pending transactions", "err", err)
-		return
+	var pending map[common.Address]types.Transactions
+	var err error
+	if self.nodetype == node.CONSENSUSNODE {
+		// Check any fork transitions needed
+		pending, err = self.backend.TxPool().Pending()
+		if err != nil {
+			logger.Error("Failed to fetch pending transactions", "err", err)
+			return
+		}
 	}
 
 	self.mu.Lock()
@@ -503,6 +507,10 @@ func (self *worker) commitNewWork() {
 	err = self.makeCurrent(parent, header)
 	if err != nil {
 		logger.Error("Failed to create mining context", "err", err)
+		return
+	}
+	if self.nodetype != node.CONSENSUSNODE {
+		self.push(NewTask(nil, nil, nil, nil))
 		return
 	}
 
