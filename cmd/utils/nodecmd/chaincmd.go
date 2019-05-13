@@ -23,6 +23,7 @@ package nodecmd
 import (
 	"encoding/json"
 	"github.com/ground-x/klaytn/blockchain"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
@@ -31,6 +32,7 @@ import (
 	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"os"
+	"strings"
 )
 
 var logger = log.NewModuleLogger(log.CMDUtilsNodeCMD)
@@ -83,6 +85,24 @@ func initGenesis(ctx *cli.Context) error {
 	if genesis.Config.Istanbul != nil {
 		if err := governance.CheckGenesisValues(genesis.Config); err != nil {
 			logger.Crit("Error in genesis json values", "err", err)
+		}
+
+		// Check if governingNode is properly set
+		if strings.ToLower(genesis.Config.Governance.GovernanceMode) == "single" {
+			if istanbulExtra, err := decodeExtra(genesis.ExtraData); err != nil {
+				logger.Crit("Extra data couldn't be decoded. Please check if your extra data is correct", "err", err)
+			} else {
+				var found bool
+				for _, v := range istanbulExtra.Validators {
+					if v == genesis.Config.Governance.GoverningNode {
+						found = true
+						break
+					}
+				}
+				if !found {
+					logger.Crit("GoverningNode is not in the validator list. Please check if your governingNode address is correct")
+				}
+			}
 		}
 	}
 
@@ -223,4 +243,12 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 		logger.Warn("Some input value of genesis.json have been set to default or changed")
 	}
 	return genesis
+}
+
+func decodeExtra(extraData []byte) (*types.IstanbulExtra, error) {
+	istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: extraData})
+	if err != nil {
+		return nil, err
+	}
+	return istanbulExtra, nil
 }
