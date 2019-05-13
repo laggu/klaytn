@@ -59,7 +59,7 @@ const (
 
 const (
 	ConnDefault = iota
-	ConnBlockMsg
+	ConnTxMsg
 )
 
 // protoHandshake is the RLP structure of the protocol handshake.
@@ -238,7 +238,7 @@ func (p *Peer) run() (remoteRequested bool, err error) {
 		return false, errors.New("The size of rws should be 1")
 	}
 	p.wg.Add(2)
-	go p.readLoop(p.rws[ConnDefault], readErr)
+	go p.readLoop(ConnDefault, p.rws[ConnDefault], readErr)
 	go p.pingLoop(p.rws[ConnDefault])
 
 	// Start all protocol handlers.
@@ -308,7 +308,7 @@ func (p *Peer) runWithRWs() (remoteRequested bool, err error) {
 
 	for i, rw := range p.rws {
 		p.wg.Add(2)
-		go p.readLoop(rw, readErr[i])
+		go p.readLoop(i, rw, readErr[i])
 		go p.pingLoop(rw)
 		writeStarts[i] <- struct{}{}
 	}
@@ -389,7 +389,7 @@ func (p *Peer) pingLoop(rw *conn) {
 	}
 }
 
-func (p *Peer) readLoop(rw *conn, errc chan<- error) {
+func (p *Peer) readLoop(connectionOrder int, rw *conn, errc chan<- error) {
 	defer p.wg.Done()
 	for {
 		msg, err := rw.ReadMsg()
@@ -399,7 +399,7 @@ func (p *Peer) readLoop(rw *conn, errc chan<- error) {
 			return
 		}
 		msg.ReceivedAt = time.Now()
-		if err = p.handle(rw, msg); err != nil {
+		if err = p.handle(connectionOrder, rw, msg); err != nil {
 			errc <- err
 			logger.Debug(fmt.Sprintf("readLoop stopped, peer: %v", p.ID()))
 			return
@@ -407,7 +407,7 @@ func (p *Peer) readLoop(rw *conn, errc chan<- error) {
 	}
 }
 
-func (p *Peer) handle(rw *conn, msg Msg) error {
+func (p *Peer) handle(connectionOrder int, rw *conn, msg Msg) error {
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
@@ -423,7 +423,7 @@ func (p *Peer) handle(rw *conn, msg Msg) error {
 		return msg.Discard()
 	default:
 		// it's a subprotocol message
-		proto, err := p.getProto(msg.Code)
+		proto, err := p.getProto(connectionOrder, msg.Code)
 		if err != nil {
 			return fmt.Errorf("msg code out of range: %v", msg.Code)
 		}
@@ -559,10 +559,10 @@ func (p *Peer) startProtocolsWithRWs(writeStarts []chan struct{}, writeErrs []ch
 
 // getProto finds the protocol responsible for handling
 // the given message code.
-func (p *Peer) getProto(code uint64) (*protoRW, error) {
+func (p *Peer) getProto(connectionOrder int, code uint64) (*protoRW, error) {
 	for _, proto := range p.running {
-		if code >= proto[ConnDefault].offset && code < proto[ConnDefault].offset+proto[ConnDefault].Length {
-			return proto[ConnDefault], nil
+		if code >= proto[connectionOrder].offset && code < proto[connectionOrder].offset+proto[connectionOrder].Length {
+			return proto[connectionOrder], nil
 		}
 	}
 	return nil, newPeerError(errInvalidMsgCode, "%d", code)

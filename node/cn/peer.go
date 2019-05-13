@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/datasync/downloader"
 	"github.com/ground-x/klaytn/networks/p2p"
@@ -214,6 +215,9 @@ type Peer interface {
 
 	// Peer encapsulates the methods required to synchronise with a remote full peer.
 	downloader.Peer
+
+	// RegisterConsensusMsgCode registers the channel of consensus msg.
+	RegisterConsensusMsgCode(msgCode uint64)
 }
 
 // basePeer is a common data structure used by implementation of Peer.
@@ -275,23 +279,28 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 // ChannelOfMessage is a map with the index of the channel per message
 var ChannelOfMessage = map[uint64]int{
 	StatusMsg:                   p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
-	NewBlockHashesMsg:           p2p.ConnBlockMsg,
-	BlockHeaderFetchRequestMsg:  p2p.ConnBlockMsg,
-	BlockHeaderFetchResponseMsg: p2p.ConnBlockMsg,
-	BlockBodiesFetchRequestMsg:  p2p.ConnBlockMsg,
-	BlockBodiesFetchResponseMsg: p2p.ConnBlockMsg,
-	TxMsg:                       p2p.ConnDefault,
-	BlockHeadersRequestMsg:      p2p.ConnBlockMsg,
-	BlockHeadersMsg:             p2p.ConnBlockMsg,
-	BlockBodiesRequestMsg:       p2p.ConnBlockMsg,
-	BlockBodiesMsg:              p2p.ConnBlockMsg,
-	NewBlockMsg:                 p2p.ConnBlockMsg,
+	NewBlockHashesMsg:           p2p.ConnDefault,
+	BlockHeaderFetchRequestMsg:  p2p.ConnDefault,
+	BlockHeaderFetchResponseMsg: p2p.ConnDefault,
+	BlockBodiesFetchRequestMsg:  p2p.ConnDefault,
+	BlockBodiesFetchResponseMsg: p2p.ConnDefault,
+	TxMsg:                       p2p.ConnTxMsg,
+	BlockHeadersRequestMsg:      p2p.ConnDefault,
+	BlockHeadersMsg:             p2p.ConnDefault,
+	BlockBodiesRequestMsg:       p2p.ConnDefault,
+	BlockBodiesMsg:              p2p.ConnDefault,
+	NewBlockMsg:                 p2p.ConnDefault,
 
 	// Protocol messages belonging to klay/63
 	NodeDataRequestMsg: p2p.ConnDefault,
 	NodeDataMsg:        p2p.ConnDefault,
 	ReceiptsRequestMsg: p2p.ConnDefault,
 	ReceiptsMsg:        p2p.ConnDefault,
+}
+
+var ConcurrentOfChannel = []int{
+	p2p.ConnDefault: 1,
+	p2p.ConnTxMsg:   3,
 }
 
 // newPeerWithRWs creates a new Peer object with a slice of p2p.MsgReadWriter.
@@ -317,6 +326,7 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 		return &multiChannelPeer{
 			basePeer: bPeer,
 			rws:      rws,
+			chMgr:    NewChannelManager(len(rws)),
 		}, nil
 	} else {
 		return nil, errors.New("len(rws) should be greater than zero.")
@@ -711,6 +721,11 @@ func (p *basePeer) UpdateRWImplementationVersion() {
 	}
 }
 
+// RegisterConsensusMsgCode is not supported by this peer.
+func (p *basePeer) RegisterConsensusMsgCode(msgCode uint64) {
+	logger.Error("RegisterConsensusMsgCode is not supported by this peer.")
+}
+
 // singleChannelPeer is a peer that uses a single channel.
 type singleChannelPeer struct {
 	*basePeer
@@ -720,6 +735,18 @@ type singleChannelPeer struct {
 type multiChannelPeer struct {
 	*basePeer                     // basePeer is a set of data structures that the peer implementation has in common
 	rws       []p2p.MsgReadWriter // rws is a slice of p2p.MsgReadWriter for peer-to-peer transmission and reception
+
+	chMgr *ChannelManager
+}
+
+// RegisterMsgCode registers the channel id corresponding to msgCode.
+func (p *multiChannelPeer) RegisterMsgCode(channelId uint, msgCode uint64) {
+	p.chMgr.RegisterMsgCode(channelId, msgCode)
+}
+
+// RegisterConsensusMsgCode registers the channel of consensus msg.
+func (p *multiChannelPeer) RegisterConsensusMsgCode(msgCode uint64) {
+	p.chMgr.RegisterMsgCode(ConsensusChannel, msgCode)
 }
 
 // Broadcast is a write loop that multiplexes block propagations, announcements
@@ -904,7 +931,7 @@ func (p *multiChannelPeer) UpdateRWImplementationVersion() {
 	p.basePeer.UpdateRWImplementationVersion()
 }
 
-func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, msgCh chan<- p2p.Msg, errCh chan<- error, wg *sync.WaitGroup, closed <-chan struct{}) {
+func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, errCh chan<- error, wg *sync.WaitGroup, closed <-chan struct{}) {
 	defer wg.Done()
 	for {
 		msg, err := rw.ReadMsg()
@@ -913,6 +940,13 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, msgCh chan<- p2p.Msg, e
 			errCh <- err
 			return
 		}
+
+		msgCh, err := p.chMgr.GetChannelWithMsgCode(connectionOrder, msg.Code)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
 		if msg.Size > ProtocolMaxMsgSize {
 			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 			p.GetP2PPeer().Log().Debug("ProtocolManager over max msg size", "err", err)
@@ -981,17 +1015,51 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 
 	var wg sync.WaitGroup
 	// TODO-GX check global worker and peer worker
-	messageChannel := make(chan p2p.Msg, channelSizePerPeer*lenRWs)
-	defer close(messageChannel)
-	errChannel := make(chan error, channelSizePerPeer*lenRWs)
+	messageChannels := make([]chan p2p.Msg, 0, lenRWs)
+	var consensusChannel chan p2p.Msg
+	isCN := false
+
+	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == node.CONSENSUSNODE {
+		consensusChannel = make(chan p2p.Msg, channelSizePerPeer)
+		defer close(consensusChannel)
+		pm.engine.(consensus.Handler).RegisterConsensusMsgCode(p)
+		isCN = true
+	}
+
+	for idx := range p.rws {
+		channel := make(chan p2p.Msg, channelSizePerPeer)
+		defer close(channel)
+		messageChannels = append(messageChannels, channel)
+
+		p.chMgr.RegisterChannelWithIndex(idx, BlockChannel, channel)
+		p.chMgr.RegisterChannelWithIndex(idx, TxChannel, channel)
+		p.chMgr.RegisterChannelWithIndex(idx, MiscChannel, channel)
+
+		if isCN {
+			p.chMgr.RegisterChannelWithIndex(idx, ConsensusChannel, consensusChannel)
+		}
+	}
+
+	sumOfGoroutineForProcessMessage := 1 // 1 is for consensusChannel
+	for connIdx := range messageChannels {
+		sumOfGoroutineForProcessMessage += ConcurrentOfChannel[connIdx]
+	}
+	errChannel := make(chan error, lenRWs+sumOfGoroutineForProcessMessage) // errChannel size should be set to count of goroutine use errChannel
 	closed := make(chan struct{})
 
-	for w := 1; w <= concurrentPerPeer; w++ {
-		go pm.processMsg(messageChannel, p, addr, errChannel)
+	if isCN {
+		go pm.processConsensusMsg(consensusChannel, p, addr, errChannel)
 	}
-	for _, rw := range p.rws {
+
+	for connIdx, messageChannel := range messageChannels {
+		for i := 0; i < ConcurrentOfChannel[connIdx]; i++ {
+			go pm.processMsg(messageChannel, p, addr, errChannel)
+		}
+	}
+
+	for idx, rw := range p.rws {
 		wg.Add(1)
-		go p.ReadMsg(rw, messageChannel, errChannel, &wg, closed)
+		go p.ReadMsg(rw, idx, errChannel, &wg, closed)
 	}
 
 	err = <-errChannel

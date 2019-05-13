@@ -427,13 +427,30 @@ func (pm *ProtocolManager) handle(p Peer) error {
 func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
 		if err := pm.handleMsg(p, addr, msg); err != nil {
-			p.GetP2PPeer().Log().Debug("ProtocolManager failed to handle message", "msg", msg, "err", err)
+			p.GetP2PPeer().Log().Error("ProtocolManager failed to handle message", "msg", msg, "err", err)
 			errCh <- err
 			return
 		}
 		msg.Discard()
 	}
 	p.GetP2PPeer().Log().Debug("ProtocolManager.processMsg closed", "PeerName", p.GetP2PPeer().Name())
+}
+
+// processConsensusMsg processes the consensus message.
+func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
+	for msg := range msgCh {
+		if handler, ok := pm.engine.(consensus.Handler); ok {
+			_, err := handler.HandleMsg(addr, msg)
+			// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+			if err != nil {
+				p.GetP2PPeer().Log().Error("ProtocolManager failed to handle consensus message", "msg", msg, "err", err)
+				errCh <- err
+				return
+			}
+		}
+		msg.Discard()
+	}
+	p.GetP2PPeer().Log().Info("ProtocolManager.processConsensusMsg closed", "PeerName", p.GetP2PPeer().Name())
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote

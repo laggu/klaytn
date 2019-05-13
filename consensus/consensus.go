@@ -120,6 +120,9 @@ type Handler interface {
 
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster, p2p.ConnType)
+
+	// RegisterConsensusMsgCode registers the channel of consensus msg.
+	RegisterConsensusMsgCode(Peer)
 }
 
 // Istanbul is a consensus engine to avoid byzantine failure

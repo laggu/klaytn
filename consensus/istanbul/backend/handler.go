@@ -117,6 +117,11 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype p2
 	}
 }
 
+// RegisterConsensusMsgCode registers the channel of consensus msg.
+func (sb *backend) RegisterConsensusMsgCode(peer consensus.Peer) {
+	peer.RegisterConsensusMsgCode(istanbulMsg)
+}
+
 func (sb *backend) NewChainHead() error {
 	sb.coreMu.RLock()
 	defer sb.coreMu.RUnlock()
