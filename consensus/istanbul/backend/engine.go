@@ -309,7 +309,9 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 			if data, err := json.Marshal(g); err != nil {
 				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
 			} else {
-				header.Governance, _ = rlp.EncodeToBytes(data)
+				if header.Governance, err = rlp.EncodeToBytes(data); err != nil {
+					logger.Error("Failed to encode governance data for the header", "num", number)
+				}
 			}
 		}
 	}
