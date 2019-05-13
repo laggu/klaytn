@@ -182,7 +182,7 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 		return err
 	}
 
-	err = sbapi.sc.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+	err = bm.SetJournal(cBridgeAddr, pBridgeAddr)
 	if err != nil {
 		return err
 	}
@@ -190,8 +190,18 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 	return nil
 }
 
-func (sbapi *SubBridgeAPI) UnRegisterBridge(bridge common.Address) {
-	sbapi.sc.AddressManager().DeleteBridge(bridge)
+func (sbapi *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+		return errors.New("invalid bridge pair")
+	}
+
+	_, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
+	if err != nil {
+		return err
+	}
+
+	// TODO-Klaytn Add removing journal and pair information
+	return nil
 }
 
 func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {

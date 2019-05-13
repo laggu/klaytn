@@ -851,8 +851,8 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'unRegisterBridge',
-			call: 'bridge_unRegisterBridge',
+			name: 'deregisterBridge',
+			call: 'bridge_deregisterBridge',
 			params: 1
 		}),
 		new web3._extend.Method({

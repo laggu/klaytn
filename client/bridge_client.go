@@ -146,6 +146,13 @@ func (ec *Client) BridgeRegisterBridge(ctx context.Context, scBridge common.Addr
 	return result, err
 }
 
+// BridgeDeregisterBridge can deregister the given pair of deployed child/parent bridges.
+func (ec *Client) BridgeDeregisterBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) (bool, error) {
+	var result bool
+	err := ec.c.CallContext(ctx, &result, "bridge_deregisterBridge", scBridge, mcBridge)
+	return result, err
+}
+
 // BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given service/main chain bridges.
 // If the subscribing is failed, it returns an error.
 func (ec *Client) BridgeSubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
