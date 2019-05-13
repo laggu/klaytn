@@ -58,6 +58,16 @@ var GovernanceItems = map[int]check{
 	params.Epoch:                   {uint64T, checkUint64andBool, updateGovernanceConfig},
 	params.Policy:                  {uint64T, checkUint64andBool, updateGovernanceConfig},
 	params.CommitteeSize:           {uint64T, checkUint64andBool, updateGovernanceConfig},
+	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateParams},
+}
+
+func updateParams(g *Governance, k string, v interface{}) bool {
+	switch GovernanceKeyMap[k] {
+	case params.ConstTxGasHumanReadable:
+		params.TxGasHumanReadable = v.(uint64)
+		logger.Info("TxGasHumanReadable changed", "New value", params.TxGasHumanReadable)
+	}
+	return true
 }
 
 func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {

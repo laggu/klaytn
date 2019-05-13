@@ -84,6 +84,7 @@ const (
 	RemoveValidator
 	StakeUpdateInterval
 	ProposerRefreshInterval
+	ConstTxGasHumanReadable
 )
 
 const (

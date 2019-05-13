@@ -120,16 +120,15 @@ const (
 	TxGasValueTransfer     uint64 = 21000
 	TxGasContractExecution uint64 = 21000
 
-	// TODO-Klaytn-Gas: TxGasHumanReadable should be based on ENS.
-	TxGasHumanReadable uint64 = 4000000000
-	TxDataGas          uint64 = 100
+	TxDataGas uint64 = 100
 )
 
 var (
-	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
-	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
-	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
-	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+	TxGasHumanReadable     uint64 = 4000000000
+	BlockScoreBoundDivisor        = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
+	GenesisBlockScore             = big.NewInt(131072) // BlockScore of the Genesis block.
+	MinimumBlockScore             = big.NewInt(131072) // The minimum that the blockscore may ever be.
+	DurationLimit                 = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
 )
 
 // Parameters for execution time limit
