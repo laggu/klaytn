@@ -78,33 +78,34 @@ func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *typ
 }
 
 func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
-	localAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
+	cBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
 	if err != nil {
-		logger.Error("Failed to deploy scBridge.", "err", err)
+		logger.Error("Failed to deploy service chain bridge.", "err", err)
 		return nil, err
 	}
-	remoteAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
+	pBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
 	if err != nil {
-		logger.Error("Failed to deploy mcBridge.", "err", err)
-		return nil, err
-	}
-
-	err = sbapi.sc.bridgeManager.SetJournal(localAddr, remoteAddr)
-	if err != nil {
+		logger.Error("Failed to deploy main chain bridge.", "err", err)
 		return nil, err
 	}
 
-	return []common.Address{localAddr, remoteAddr}, nil
+	err = sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sbapi.sc.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+	if err != nil {
+		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
+		return nil, err
+	}
+
+	return []common.Address{cBridgeAddr, pBridgeAddr}, nil
 }
 
 // SubscribeEventBridge enables the given service/main chain bridges to subscribe the events.
 func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.Address) error {
-	err := sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
-	if err != nil {
-		return err
-	}
-
-	err = sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
+	err := sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
 	if err != nil {
 		logger.Error("Failed to SubscribeEventBridge Child Bridge", "addr", cBridgeAddr, "err", err)
 		return err
@@ -182,8 +183,14 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 		return err
 	}
 
+	err = sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
+	if err != nil {
+		return err
+	}
+
 	err = bm.SetJournal(cBridgeAddr, pBridgeAddr)
 	if err != nil {
+		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		return err
 	}
 
