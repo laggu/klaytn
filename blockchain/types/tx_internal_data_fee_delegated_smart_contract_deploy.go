@@ -256,6 +256,13 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) RecoverFeePayerPubkey(tx
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
+	var to common.Address
+	if t.Recipient != nil {
+		to = *t.Recipient
+	} else {
+		codeHash := crypto.Keccak256Hash(t.Payload)
+		to = crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
+	}
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}
 	enc, _ := rlp.EncodeToBytes(ser)
@@ -279,7 +286,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
 		tx.Hash(),
 		t.Type().String(),
 		t.From.String(),
-		t.Recipient.String(),
+		to.String(),
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
