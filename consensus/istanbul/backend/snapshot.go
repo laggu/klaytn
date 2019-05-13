@@ -210,6 +210,16 @@ func (s *Snapshot) validators() []common.Address {
 	return sortValidatorArray(validators)
 }
 
+func (s *Snapshot) committee(prevHash common.Hash) []common.Address {
+	committeeList := s.ValSet.SubList(prevHash)
+
+	committee := make([]common.Address, 0, len(committeeList))
+	for _, v := range committeeList {
+		committee = append(committee, v.Address())
+	}
+	return committee
+}
+
 func sortValidatorArray(validators []common.Address) []common.Address {
 	for i := 0; i < len(validators); i++ {
 		for j := i + 1; j < len(validators); j++ {
