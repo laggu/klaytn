@@ -47,6 +47,8 @@ type DBConfig struct {
 
 	Mode      string `toml:",omitempty"`
 	EventMode string `toml:",omitempty"`
+
+	MaxBlockDiff uint64 `toml:",omitempty"`
 }
 
 var DefaultDBConfig = &DBConfig{
@@ -68,4 +70,6 @@ var DefaultDBConfig = &DBConfig{
 
 	Mode:      "multi",
 	EventMode: HEAD_MODE,
+
+	MaxBlockDiff: 0,
 }

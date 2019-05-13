@@ -198,6 +198,9 @@ func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
 		if ctx.GlobalIsSet(utils.EventModeFlag.Name) {
 			cfg.EventMode = strings.ToLower(ctx.GlobalString(utils.EventModeFlag.Name))
 		}
+		if ctx.GlobalIsSet(utils.MaxBlockDiffFlag.Name) {
+			cfg.MaxBlockDiff = ctx.GlobalUint64(utils.MaxBlockDiffFlag.Name)
+		}
 	}
 
 	return *cfg

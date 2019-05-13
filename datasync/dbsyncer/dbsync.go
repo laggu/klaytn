@@ -65,6 +65,8 @@ type DBSyncer struct {
 	bulkInsertSize int
 
 	eventMode string
+
+	maxBlockDiff uint64
 }
 
 func NewDBSyncer(ctx *node.ServiceContext, cfg *DBConfig) (*DBSyncer, error) {
@@ -73,7 +75,8 @@ func NewDBSyncer(ctx *node.ServiceContext, cfg *DBConfig) (*DBSyncer, error) {
 		cfg.DBHost, "db.port", cfg.DBPort, "db.name", cfg.DBName, "db.user", cfg.DBUser, "db.max.idle",
 		cfg.MaxIdleConns, "db.password", cfg.DBPassword, "db.max.open", cfg.MaxOpenConns, "db.max.lifetime",
 		cfg.ConnMaxLifetime, "block.ch.size", cfg.BlockChannelSize, "mode", cfg.Mode, "genquery.th",
-		cfg.GenQueryThread, "insert.th", cfg.InsertThread, "bulk.size", cfg.BulkInsertSize, "event.mode", cfg.EventMode)
+		cfg.GenQueryThread, "insert.th", cfg.InsertThread, "bulk.size", cfg.BulkInsertSize, "event.mode",
+		cfg.EventMode, "max.block.diff", cfg.MaxBlockDiff)
 
 	if cfg.DBHost == "" {
 		return nil, errors.New("db config must be set (db.host)")
@@ -90,6 +93,7 @@ func NewDBSyncer(ctx *node.ServiceContext, cfg *DBConfig) (*DBSyncer, error) {
 		logMode:        cfg.EnabledLogMode,
 		bulkInsertSize: cfg.BulkInsertSize,
 		eventMode:      cfg.EventMode,
+		maxBlockDiff:   cfg.MaxBlockDiff,
 	}, nil
 }
 
@@ -200,17 +204,13 @@ func (ds *DBSyncer) loop() {
 		// Handle ChainEvent
 		case ev := <-ds.chainCh:
 			if ev.Block != nil {
-				if err := ds.HandleBlock(ev.Block); err != nil {
-					logger.Error("dbsyncer block event", "block", ev.Block.Number(), "err", err)
-				}
+				ds.HandleDiffBlock(ev.Block)
 			} else {
 				logger.Error("dbsyncer block event is nil")
 			}
 		case ev := <-ds.chainHeadCh:
 			if ev.Block != nil {
-				if err := ds.HandleBlock(ev.Block); err != nil {
-					logger.Error("dbsyncer block head-event", "block", ev.Block.Number(), "err", err)
-				}
+				ds.HandleDiffBlock(ev.Block)
 			} else {
 				logger.Error("dbsyncer block event is nil")
 			}
@@ -222,6 +222,19 @@ func (ds *DBSyncer) loop() {
 				logger.Error("dbsyncer block subscription ", "err", err)
 			}
 			return
+		}
+	}
+}
+
+func (ds *DBSyncer) HandleDiffBlock(block *types.Block) {
+
+	diff := ds.blockchain.CurrentBlock().NumberU64() - block.NumberU64()
+
+	if ds.maxBlockDiff > 0 && diff > ds.maxBlockDiff {
+		logger.Info("there are many block number difference (skip block)", "diff", diff, "skip-block", block.NumberU64())
+	} else {
+		if err := ds.HandleBlock(block); err != nil {
+			logger.Error("dbsyncer block event", "block", block.Number(), "err", err)
 		}
 	}
 }

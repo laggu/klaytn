@@ -140,6 +140,7 @@ var KENFlags = []cli.Flag{
 	utils.InsertThreadFlag,
 	utils.BulkInsertSizeFlag,
 	utils.EventModeFlag,
+	utils.MaxBlockDiffFlag,
 }
 
 var KSCNFlags = []cli.Flag{

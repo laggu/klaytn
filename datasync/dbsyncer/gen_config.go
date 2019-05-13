@@ -25,6 +25,7 @@ func (d DBConfig) MarshalTOML() (interface{}, error) {
 		BulkInsertSize   int           `toml:",omitempty"`
 		Mode             string        `toml:",omitempty"`
 		EventMode        string        `toml:",omitempty"`
+		MaxBlockDiff     uint64        `toml:",omitempty"`
 	}
 	var enc DBConfig
 	enc.EnabledDBSyncer = d.EnabledDBSyncer
@@ -43,6 +44,7 @@ func (d DBConfig) MarshalTOML() (interface{}, error) {
 	enc.BulkInsertSize = d.BulkInsertSize
 	enc.Mode = d.Mode
 	enc.EventMode = d.EventMode
+	enc.MaxBlockDiff = d.MaxBlockDiff
 	return &enc, nil
 }
 
@@ -65,6 +67,7 @@ func (d *DBConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		BulkInsertSize   *int           `toml:",omitempty"`
 		Mode             *string        `toml:",omitempty"`
 		EventMode        *string        `toml:",omitempty"`
+		MaxBlockDiff     *uint64        `toml:",omitempty"`
 	}
 	var dec DBConfig
 	if err := unmarshal(&dec); err != nil {
@@ -117,6 +120,9 @@ func (d *DBConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.EventMode != nil {
 		d.EventMode = *dec.EventMode
+	}
+	if dec.MaxBlockDiff != nil {
+		d.MaxBlockDiff = *dec.MaxBlockDiff
 	}
 	return nil
 }

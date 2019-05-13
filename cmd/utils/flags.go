@@ -631,6 +631,11 @@ var (
 		Usage: "The way how to sync all block or last block (block, head)",
 		Value: "head",
 	}
+	MaxBlockDiffFlag = cli.Uint64Flag{
+		Name:  "dbsyncer.max.block.diff",
+		Usage: "The maximum difference between current block and event block. 0 means off",
+		Value: 0,
+	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
