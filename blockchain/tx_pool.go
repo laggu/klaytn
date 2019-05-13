@@ -1222,11 +1222,11 @@ func (pool *TxPool) demoteUnexecutables() {
 		// demoteUnexecutables does full-validation for a limited number of txs. Otherwise, it only validate nonce.
 		// The logic below loosely checks the tx count for the efficiency and the simplicity.
 		if cnt < demoteUnexecutablesFullValidationTxLimit {
+			cnt += list.Len()
 			drops, invalids = list.Filter(pool.getBalance(addr), pool)
 		} else {
 			drops, invalids = list.FilterUnexecutable()
 		}
-		cnt += list.Len()
 
 		// Drop all transactions that are unexecutable, and queue any invalids back for later
 		for _, tx := range drops {
