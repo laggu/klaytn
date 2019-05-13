@@ -147,8 +147,7 @@ func (lb *LocalBackend) PendingNonceAt(ctx context.Context, account common.Addre
 }
 
 func (lb *LocalBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	// TODO-Klaytn consider whether SuggestGasPrice is necessary or not
-	return big.NewInt(1), nil
+	return new(big.Int).SetUint64(lb.config.UnitPrice), nil
 }
 
 func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (gas uint64, err error) {

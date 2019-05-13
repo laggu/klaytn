@@ -50,7 +50,7 @@ func NewBridgeAccountManager(mcKey, scKey *ecdsa.PrivateKey) (*BridgeAccountMana
 		address:  crypto.PubkeyToAddress(mcKey.PublicKey),
 		nonce:    0,
 		chainID:  nil,
-		gasPrice: big.NewInt(0),
+		gasPrice: nil,
 	}
 
 	scAcc := &accountInfo{
@@ -58,7 +58,7 @@ func NewBridgeAccountManager(mcKey, scKey *ecdsa.PrivateKey) (*BridgeAccountMana
 		address:  crypto.PubkeyToAddress(scKey.PublicKey),
 		nonce:    0,
 		chainID:  nil,
-		gasPrice: big.NewInt(0),
+		gasPrice: nil,
 	}
 
 	return &BridgeAccountManager{
