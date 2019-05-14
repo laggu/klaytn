@@ -1,4 +1,5 @@
 [![CircleCI](https://circleci.com/gh/ground-x/klaytn/tree/master.svg?style=svg&circle-token=28de86a436dbe6af811bff7079606433baa43344)](https://circleci.com/gh/ground-x/klaytn/tree/master)
+[![codecov](https://codecov.io/gh/ground-x/klaytn/branch/master/graph/badge.svg?token=Tb7cRhQUsU)](https://codecov.io/gh/ground-x/klaytn)
 
 # Table of Contents
 <!-- vim-markdown-toc GFM -->

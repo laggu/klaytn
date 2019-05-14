@@ -79,6 +79,7 @@ jobs:
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
+            bash <(curl -s https://codecov.io/bash)
       - store_artifacts:
           path: /tmp/coverage_reports
 
