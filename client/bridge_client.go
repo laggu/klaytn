@@ -71,6 +71,14 @@ func (ec *Client) BridgeConvertServiceChainBlockHashToMainChainTxHash(ctx contex
 	return txHash, err
 }
 
+// BridgeConvertRequestTxHashToHandleTxHash can convert a request value transfer tx hash to
+// the corresponded handle value transfer tx hash.
+func (ec *Client) BridgeConvertRequestTxHashToHandleTxHash(ctx context.Context, requestTxHash common.Hash) (common.Hash, error) {
+	var handleTxHash common.Hash
+	err := ec.c.CallContext(ctx, &handleTxHash, "bridge_convertRequestTxHashToHandleTxHash", requestTxHash)
+	return handleTxHash, err
+}
+
 // BridgeGetReceiptFromParentChain can get the receipt of child chain tx from parent node.
 func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
 	var result types.Receipt

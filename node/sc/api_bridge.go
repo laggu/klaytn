@@ -146,6 +146,10 @@ func (sbapi *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Add
 	return nil
 }
 
+func (sbapi *SubBridgeAPI) ConvertRequestTxHashToHandleTxHash(hash common.Hash) common.Hash {
+	return sbapi.sc.chainDB.ReadHandleTxHashFromRequestTxHash(hash)
+}
+
 func (sbapi *SubBridgeAPI) TxPendingCount() int {
 	return len(sbapi.sc.GetBridgeTxPool().Pending())
 }

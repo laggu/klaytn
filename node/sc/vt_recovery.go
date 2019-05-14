@@ -302,11 +302,14 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 		logger.Trace("recover event", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
+			ContractAddr: ev.Raw.Address,
+			TokenAddr:    ev.ContractAddress,
 			From:         ev.From,
 			To:           ev.To,
 			Amount:       ev.Amount,
 			RequestNonce: ev.RequestNonce,
 			BlockNumber:  ev.Raw.BlockNumber,
+			txHash:       ev.Raw.TxHash,
 		})
 	}
 	vtr.mcBridgeInfo.AddRequestValueTransferEvents(evs)
@@ -317,11 +320,14 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 		logger.Trace("recover events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &TokenReceivedEvent{
 			TokenType:    ev.Kind,
+			ContractAddr: ev.Raw.Address,
+			TokenAddr:    ev.ContractAddress,
 			From:         ev.From,
 			To:           ev.To,
 			Amount:       ev.Amount,
 			RequestNonce: ev.RequestNonce,
 			BlockNumber:  ev.Raw.BlockNumber,
+			txHash:       ev.Raw.TxHash,
 		})
 	}
 	vtr.scBridgeInfo.AddRequestValueTransferEvents(evs)

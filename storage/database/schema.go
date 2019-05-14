@@ -74,6 +74,8 @@ var (
 	lastIndexedBlockKey             = []byte("LastIndexedBlockKey")
 	receiptFromParentChainKeyPrefix = []byte("receiptFromParentChain")
 
+	valueTransferTxHashPrefix = []byte("vt-tx-hash-key-") // Prefix + hash -> hash
+
 	// bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
 	bloomBitsPrefix = []byte("B")
 
@@ -161,6 +163,10 @@ func childChainTxHashKey(ccBlockHash common.Hash) []byte {
 
 func receiptFromParentChainKey(blockHash common.Hash) []byte {
 	return append(receiptFromParentChainKeyPrefix, blockHash.Bytes()...)
+}
+
+func valueTransferTxHashKey(rTxHash common.Hash) []byte {
+	return append(valueTransferTxHashPrefix, rTxHash.Bytes()...)
 }
 
 // bloomBitsKey = bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash

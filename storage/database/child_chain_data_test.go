@@ -139,3 +139,33 @@ func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
 	rctFromDB = dbm.ReadReceiptFromParentChain(newBlockHash)
 	assert.Nil(t, rctFromDB)
 }
+
+func TestChildChainData_ReadAndWrite_ValueTransferTxHash(t *testing.T) {
+	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32, ChildChainIndexing: true}
+	dbm := NewDBManager(dbc)
+	defer dbm.Close()
+
+	rTxHash := common.HexToHash("0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e")
+	hTxHash := common.HexToHash("0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f")
+
+	// Before writing the data into DB, nil should be returned.
+	hTxHashFromDB := dbm.ReadHandleTxHashFromRequestTxHash(rTxHash)
+	assert.Equal(t, common.Hash{}, hTxHashFromDB)
+
+	// After writing the data into DB, data should be returned.
+	dbm.WriteHandleTxHashFromRequestTxHash(rTxHash, hTxHash)
+	hTxHashFromDB = dbm.ReadHandleTxHashFromRequestTxHash(rTxHash)
+	assert.NotNil(t, hTxHashFromDB)
+	assert.Equal(t, hTxHash, hTxHashFromDB)
+
+	ccBlockHashFake := common.HexToHash("0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a")
+	// Invalid information should not return the data.
+	hTxHashFromDB = dbm.ReadHandleTxHashFromRequestTxHash(ccBlockHashFake)
+	assert.Equal(t, common.Hash{}, hTxHashFromDB)
+}

@@ -156,6 +156,9 @@ type DBManager interface {
 	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
 	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
 
+	WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash)
+	ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash
+
 	// cacheManager related functions.
 	ClearHeaderChainCache()
 	ClearBlockChainCache()
@@ -1406,6 +1409,28 @@ func (dbm *databaseManager) ReadAnchoredBlockNumber() uint64 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(data)
+}
+
+// WriteHandleTxHashFromRequestTxHash writes handle value transfer tx hash
+// with corresponding request value transfer tx hash.
+func (dbm *databaseManager) WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash) {
+	db := dbm.getDatabase(bridgeServiceDB)
+	key := valueTransferTxHashKey(rTx)
+	if err := db.Put(key, hTx.Bytes()); err != nil {
+		logger.Crit("Failed to store handle value transfer tx hash", "request tx hash", rTx.String(), "handle tx hash", hTx.String(), "err", err)
+	}
+}
+
+// ReadHandleTxHashFromRequestTxHash returns handle value transfer tx hash
+// with corresponding the given request value transfer tx hash.
+func (dbm *databaseManager) ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash {
+	key := valueTransferTxHashKey(rTx)
+	db := dbm.getDatabase(bridgeServiceDB)
+	data, _ := db.Get(key)
+	if len(data) == 0 {
+		return common.Hash{}
+	}
+	return common.BytesToHash(data)
 }
 
 // WriteReceiptFromParentChain writes a receipt received from parent chain to child chain

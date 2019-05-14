@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"github.com/ground-x/klaytn/accounts/abi/bind"
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	bridgecontract "github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/event"
@@ -59,6 +60,7 @@ type TokenReceivedEvent struct {
 	Amount       *big.Int // Amount is UID in NFT
 	RequestNonce uint64
 	BlockNumber  uint64
+	txHash       common.Hash
 }
 
 // TokenWithdraw Event from SmartContract
@@ -210,32 +212,37 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *TokenReceivedEvent) er
 
 	auth := bridgeAcc.GetTransactOpts()
 
+	var handleTx *types.Transaction
+	var err error
+
 	switch tokenType {
 	case KLAY:
-		tx, err := bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber)
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 
 	case TOKEN:
-		tx, err := bi.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleTokenTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+		logger.Trace("Bridge succeeded to HandleTokenTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	case NFT:
-		tx, err := bi.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleNFTTransfer", "nonce", ev.RequestNonce, "tx", tx.Hash().Hex())
+		logger.Trace("Bridge succeeded to HandleNFTTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	default:
 		logger.Warn("Got Unknown Token Type ReceivedEvent", "bridge", ev.ContractAddr, "nonce", ev.RequestNonce, "from", ev.From)
 		return nil
 	}
 
 	bridgeAcc.IncNonce()
+
+	bi.subBridge.ChainDB().WriteHandleTxHashFromRequestTxHash(ev.txHash, handleTx.Hash())
 	return nil
 }
 
@@ -662,6 +669,7 @@ func (bm *BridgeManager) loop(
 				Amount:       ev.Amount,
 				RequestNonce: ev.RequestNonce,
 				BlockNumber:  ev.Raw.BlockNumber,
+				txHash:       ev.Raw.TxHash,
 			}
 			bm.tokenReceived.Send(receiveEvent)
 		case ev := <-withdrawCh:

@@ -876,6 +876,11 @@ web3._extend({
 			call: 'bridge_deregisterToken',
 			params: 4
 		}),
+		new web3._extend.Method({
+			name: 'convertRequestTxHashToHandleTxHash',
+			call: 'bridge_convertRequestTxHashToHandleTxHash',
+			params: 1
+		}),
 	],
     properties: [
 		new web3._extend.Property({
