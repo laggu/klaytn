@@ -178,14 +178,14 @@ func (c *core) commit() {
 
 		if err := c.backend.Commit(proposal, committedSeals); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
-			c.sendNextRoundChange()
+			c.sendNextRoundChange("commit failure")
 			return
 		}
 	} else {
 		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
 		c.current.UnlockHash() //Unlock block when insertion fails
-		c.sendNextRoundChange()
+		c.sendNextRoundChange("commit failure. proposal is nil")
 		return
 	}
 }
@@ -283,8 +283,8 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	// Need to keep block locked for round catching up
 	c.updateRoundState(view, c.valSet, true)
 	c.roundChangeSet.Clear(view.Round)
-	c.newRoundChangeTimer()
 
+	c.newRoundChangeTimer()
 	logger.Trace("Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet)
 }
 
@@ -339,9 +339,43 @@ func (c *core) newRoundChangeTimer() {
 		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
 	}
 	c.roundChangeTimer = time.AfterFunc(timeout, func() {
+		var loc, proposer string
+
+		if c.current.round.Cmp(common.Big0) == 0 {
+			loc = "startNewRound"
+		} else {
+			loc = "catchUpRound"
+		}
+		if c.valSet.GetProposer() == nil {
+			proposer = ""
+		} else {
+			proposer = c.valSet.GetProposer().String()
+		}
+
+		// Write log messages for validator activities analysis
+		logger.Warn("[RC] timeoutEvent Sent!", "set by", loc, "sequence", c.current.sequence, "round", c.current.round, "proposer", proposer, "preprepare is nil?", c.current.Preprepare == nil, "len(prepares)", len(c.current.Prepares.messages), "len(commits)", len(c.current.Commits.messages))
+		if len(c.current.Prepares.messages) > 0 {
+			printMessageSet(0, c.current.Prepares.messages)
+		}
+		if len(c.current.Commits.messages) > 0 {
+			printMessageSet(1, c.current.Commits.messages)
+		}
+
 		c.sendEvent(timeoutEvent{})
 	})
 	logger.Debug("New RoundChangeTimer Set", "seq", c.current.Sequence(), "round", round, "timeout", timeout)
+}
+
+func printMessageSet(t int, set map[common.Address]*message) {
+	locMap := map[int]string{
+		0: "[RC] Prepares:\n", 1: "[RC] Commits:\n",
+	}
+
+	output := locMap[t]
+	for k := range set {
+		output = output + "\t" + k.String() + "\n"
+	}
+	logger.Warn(output)
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {

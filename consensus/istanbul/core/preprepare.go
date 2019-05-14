@@ -98,7 +98,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				})
 			})
 		} else {
-			c.sendNextRoundChange()
+			c.sendNextRoundChange("handlePreprepare. Proposal verification failure. Not ErrFutureBlock")
 		}
 		return err
 	}
@@ -114,7 +114,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				c.sendCommit()
 			} else {
 				// Send round change
-				c.sendNextRoundChange()
+				c.sendNextRoundChange("handlePrepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
 			// Either

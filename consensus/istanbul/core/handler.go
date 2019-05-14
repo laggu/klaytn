@@ -201,6 +201,7 @@ func (c *core) handleTimeoutMsg() {
 	if !c.waitingForRoundChange {
 		maxRound := c.roundChangeSet.MaxRound(c.valSet.F() + 1)
 		if maxRound != nil && maxRound.Cmp(c.current.Round()) > 0 {
+			logger.Warn("[RC] Send round change because of timeout event")
 			c.sendRoundChange(maxRound)
 			return
 		}
@@ -211,6 +212,6 @@ func (c *core) handleTimeoutMsg() {
 		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
 		c.startNewRound(common.Big0)
 	} else {
-		c.sendNextRoundChange()
+		c.sendNextRoundChange("handleTimeoutMsg. lastProposal is nil or lastProposal's number is smaller than current sequence")
 	}
 }
