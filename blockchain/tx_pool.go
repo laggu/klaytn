@@ -110,7 +110,8 @@ type TxPoolConfig struct {
 	NonExecSlotsAccount uint64 // Maximum number of non-executable transaction slots permitted per account
 	NonExecSlotsAll     uint64 // Maximum number of non-executable transaction slots for all accounts
 
-	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
+	KeepLocals bool          // Disables removing timed-out local transactions
+	Lifetime   time.Duration // Maximum amount of time non-executable transaction are queued
 
 	NoAccountCreation bool // Whether account creation transactions should be disabled
 }
@@ -129,7 +130,8 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	NonExecSlotsAccount: 64,
 	NonExecSlotsAll:     1024,
 
-	Lifetime: 5 * time.Minute,
+	KeepLocals: false,
+	Lifetime:   5 * time.Minute,
 }
 
 // sanitize checks the provided user configurations and changes anything that's
@@ -298,7 +300,7 @@ func (pool *TxPool) loop() {
 			pool.mu.Lock()
 			for addr := range pool.queue {
 				// Skip local transactions from the eviction mechanism
-				if pool.locals.contains(addr) {
+				if pool.config.KeepLocals && pool.locals.contains(addr) {
 					continue
 				}
 				// Any non-locals old enough should be removed

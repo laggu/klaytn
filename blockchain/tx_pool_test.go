@@ -850,10 +850,20 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 //
 // This logic should not hold for local transactions, unless the local tracking
 // mechanism is disabled.
-func TestTransactionQueueTimeLimiting(t *testing.T)         { testTransactionQueueTimeLimiting(t, false) }
-func TestTransactionQueueTimeLimitingNoLocals(t *testing.T) { testTransactionQueueTimeLimiting(t, true) }
+func TestTransactionQueueTimeLimitingKeepLocals(t *testing.T) {
+	testTransactionQueueTimeLimiting(t, false, true)
+}
+func TestTransactionQueueTimeLimitingNotKeepLocals(t *testing.T) {
+	testTransactionQueueTimeLimiting(t, false, false)
+}
+func TestTransactionQueueTimeLimitingNoLocalsKeepLocals(t *testing.T) {
+	testTransactionQueueTimeLimiting(t, true, true)
+}
+func TestTransactionQueueTimeLimitingNoLocalsNoKeepLocals(t *testing.T) {
+	testTransactionQueueTimeLimiting(t, true, false)
+}
 
-func testTransactionQueueTimeLimiting(t *testing.T, nolocals bool) {
+func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	// Reduce the eviction interval to a testable amount
 	defer func(old time.Duration) { evictionInterval = old }(evictionInterval)
 	evictionInterval = time.Second
@@ -865,6 +875,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals bool) {
 	config := testTxPoolConfig
 	config.Lifetime = time.Second
 	config.NoLocals = nolocals
+	config.KeepLocals = keepLocals
 
 	pool := NewTxPool(config, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -905,8 +916,14 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals bool) {
 			t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)
 		}
 	} else {
-		if queued != 1 {
-			t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 1)
+		if keepLocals {
+			if queued != 1 {
+				t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 1)
+			}
+		} else {
+			if queued != 0 {
+				t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)
+			}
 		}
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
