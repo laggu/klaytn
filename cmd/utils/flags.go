@@ -1216,9 +1216,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	*/
 	// Set the Tx resending related configuration variables
-	cfg.TxResendInterval = ctx.GlobalUint64(TxResendIntervalFlag.Name)
-	cfg.TxResendSize = ctx.GlobalUint64(TxResendCountFlag.Name)
-	cfg.TxResendUseLegacy = ctx.GlobalBool(TxResendUseLegacyFlag.Name)
+	setTxResendConfig(ctx, cfg)
 }
 
 // RegisterCNService adds a CN client to the stack.
@@ -1321,4 +1319,19 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 		}
 		return action(ctx)
 	}
+}
+
+func setTxResendConfig(ctx *cli.Context, cfg *cn.Config) {
+	// Set the Tx resending related configuration variables
+	cfg.TxResendInterval = ctx.GlobalUint64(TxResendIntervalFlag.Name)
+	if cfg.TxResendInterval == 0 {
+		cfg.TxResendInterval = cn.DefaultTxResendInterval
+	}
+
+	cfg.TxResendCount = ctx.GlobalUint64(TxResendCountFlag.Name)
+	if cfg.TxResendCount < cn.DefaultMaxResendTxCount {
+		cfg.TxResendCount = cn.DefaultMaxResendTxCount
+	}
+	cfg.TxResendUseLegacy = ctx.GlobalBool(TxResendUseLegacyFlag.Name)
+	logger.Debug("TxResend config", "Interval", cfg.TxResendInterval, "TxResendCount", cfg.TxResendCount, "UseLegacy", cfg.TxResendUseLegacy)
 }

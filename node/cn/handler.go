@@ -250,7 +250,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
 
 	if manager.useTxResend() {
-		go manager.txResendLoop(cnconfig.TxResendInterval, int64(cnconfig.TxResendSize))
+		go manager.txResendLoop(cnconfig.TxResendInterval, int64(cnconfig.TxResendCount))
 	}
 	return manager, nil
 }
@@ -1246,14 +1246,7 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 }
 
 func (pm *ProtocolManager) txResendLoop(period uint64, maxTxCount int64) {
-	if period == 0 {
-		period = DefaultTxResendInterval
-	}
 	tick := time.Duration(period) * time.Second
-	sz := maxTxCount
-	if sz < DefaultMaxResendTxCount {
-		sz = DefaultMaxResendTxCount
-	}
 	resend := time.NewTicker(tick)
 	defer resend.Stop()
 
@@ -1262,7 +1255,7 @@ func (pm *ProtocolManager) txResendLoop(period uint64, maxTxCount int64) {
 	for {
 		select {
 		case <-resend.C:
-			pending, err := pm.txpool.PendingByCount(sz)
+			pending, err := pm.txpool.PendingByCount(maxTxCount)
 			if err != nil {
 				logger.Error("Failed to fetch pending transactions", "err", err)
 				continue
