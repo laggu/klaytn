@@ -314,7 +314,9 @@ func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, validato
 			if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
 				(governanceMode == params.GovernanceMode_Ballot && currentVotes <= valset.TotalVotingPower()/2) {
 				if v, ok := gov.changeSet[vote.Key]; ok && v == vote.Value {
+					gov.mu.Lock()
 					delete(gov.changeSet, vote.Key)
+					gov.mu.Unlock()
 				}
 			}
 			break
@@ -394,7 +396,7 @@ func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interf
 }
 
 func (gov *Governance) GetLatestGovernanceItem(key string) interface{} {
-	gov.mu.RLock()
-	defer gov.mu.RUnlock()
+	gov.currentSetMu.RLock()
+	defer gov.currentSetMu.RUnlock()
 	return gov.currentSet[key]
 }

@@ -145,9 +145,11 @@ type Governance struct {
 	actualGovernanceBlock  uint64
 	currentGovernanceBlock uint64
 
-	currentSet GovernanceSet
-	changeSet  GovernanceSet
-	mu         sync.RWMutex
+	currentSet   GovernanceSet
+	currentSetMu sync.RWMutex
+
+	changeSet GovernanceSet
+	mu        sync.RWMutex
 
 	TxPool *blockchain.TxPool
 }
@@ -240,7 +242,9 @@ func (g *Governance) ClearVotes(num uint64) {
 
 	g.GovernanceVotes = nil
 	g.GovernanceTally = nil
+	g.mu.Lock()
 	g.changeSet = GovernanceSet{}
+	g.mu.Unlock()
 	g.voteMap = make(map[string]voteStatus)
 	logger.Info("Governance votes are cleared", "num", num)
 }
@@ -400,7 +404,9 @@ func (g *Governance) initializeCache() {
 
 	// the last one is the one to be used now
 	ret, _ := g.itemCache.Get(getGovernanceCacheKey(g.actualGovernanceBlock))
+	g.currentSetMu.Lock()
 	g.currentSet = ret.(GovernanceSet)
+	g.currentSetMu.Unlock()
 }
 
 // getGovernanceCache returns cached governance config as a byte slice
@@ -500,8 +506,8 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 	var epoch uint64
 	var ok bool
 
-	if epoch, ok = gov.currentSet["istanbul.epoch"].(uint64); !ok {
-		if epoch, ok = gov.currentSet["clique.epoch"].(uint64); !ok {
+	if epoch, ok = gov.GetGovernanceValue("istanbul.epoch").(uint64); !ok {
+		if epoch, ok = gov.GetGovernanceValue("clique.epoch").(uint64); !ok {
 			logger.Error("Couldn't find epoch from governance items")
 			return
 		}
@@ -524,9 +530,11 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 			tempSet = adjustDecodedSet(tempSet)
 
 			// Store new currentSet to governance database
+			gov.currentSetMu.RLock()
 			if err := gov.WriteGovernance(number, gov.currentSet, tempSet); err != nil {
 				logger.Error("Failed to store new governance data", "err", err)
 			}
+			gov.currentSetMu.RUnlock()
 		}
 		gov.ClearVotes(number)
 	}
@@ -542,9 +550,11 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 	// Do the change only when the governance actually changed
 	if newGovernanceSet != nil && newNumber != gov.actualGovernanceBlock {
 		gov.actualGovernanceBlock = newNumber
+		gov.currentSetMu.Lock()
 		gov.currentSet = newGovernanceSet
+		gov.currentSetMu.Unlock()
 		gov.triggerChange(newGovernanceSet)
-		gov.currentGovernanceBlock = CalcGovernanceInfoBlock(num, gov.currentSet["istanbul.epoch"].(uint64))
+		gov.currentGovernanceBlock = CalcGovernanceInfoBlock(num, gov.GetGovernanceValue("istanbul.epoch").(uint64))
 	}
 }
 
@@ -565,6 +575,9 @@ func adjustDecodedSet(set GovernanceSet) GovernanceSet {
 }
 
 func (gov *Governance) GetGovernanceValue(key string) interface{} {
+	gov.currentSetMu.RLock()
+	defer gov.currentSetMu.RUnlock()
+
 	if v, ok := gov.currentSet[key]; !ok {
 		return nil
 	} else {
@@ -584,6 +597,8 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 	}
 	rChangeSet = adjustDecodedSet(rChangeSet)
 
+	gov.mu.RLock()
+	defer gov.mu.RUnlock()
 	if len(rChangeSet) == len(gov.changeSet) {
 		for k, v := range rChangeSet {
 			if GovernanceKeyMap[k] == params.GoverningNode {
