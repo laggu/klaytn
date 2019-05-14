@@ -25,7 +25,7 @@ RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
 set -f
-OPTIONS="--nodiscover"
+OPTIONS=""
 
 if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
     OPTIONS="$OPTIONS --metrics"

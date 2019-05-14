@@ -49,6 +49,10 @@ start() {
         mkdir -p $LOG_DIR
     fi
 
+    if [ ! -d $DATA_DIR ]; then
+        mkdir -p $DATA_DIR
+    fi
+
     set -f
     OPTIONS="--nodekey ${KEY_PATH}"
 
@@ -59,6 +63,11 @@ start() {
     if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
         OPTIONS="$OPTIONS --prometheus"
     fi
+
+    if [ ! -z $DATA_DIR ]; then
+        OPTIONS="$OPTIONS --datadir $DATA_DIR"
+    fi
+
     $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!

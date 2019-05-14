@@ -56,7 +56,7 @@ start() {
     fi
 
     set -f
-    OPTIONS="--nodiscover"
+    OPTIONS=""
 
     if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
         OPTIONS="$OPTIONS --metrics"
