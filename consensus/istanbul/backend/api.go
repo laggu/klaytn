@@ -143,10 +143,12 @@ var (
 	errStartLargerThanEnd      = errors.New("start should be smaller than end")
 	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
 	errRangeNil                = errors.New("range values should not be nil")
+	errExtractIstanbulExtra    = errors.New("extract Istanbul Extra from block header of the given block number")
+	errNoBlockExist            = errors.New("block with the given block number is not existed")
 )
 
 // GetValidators retrieves the list of authorized validators at the specified block.
-func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
+func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
@@ -160,7 +162,7 @@ func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 	// Ensure we have an actually valid block and return the validators from its snapshot
 	if header == nil {
 		logger.Error("Failed to find the requested block", "number", number)
-		return nil, nil // return nil if block is not found.
+		return nil, errNoBlockExist // return nil if block is not found.
 	}
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
@@ -168,6 +170,48 @@ func (api *APIExtension) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 		return nil, errInternalError
 	}
 	return snap.validators(), nil
+}
+
+func (api *APIExtension) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
+	council, err := api.GetCouncil(number)
+	if err == nil {
+		return len(council), nil
+	} else {
+		return -1, err
+	}
+}
+
+func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address, error) {
+	// Retrieve the requested block number (or current if none requested)
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else if *number == rpc.PendingBlockNumber {
+		logger.Error("Cannot get validators of the pending block.", "number", number)
+		return nil, errPendingNotAllowed
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+
+	if header == nil {
+		return nil, errNoBlockExist
+	}
+
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err == nil {
+		return istanbulExtra.Validators, nil
+	} else {
+		return nil, errExtractIstanbulExtra
+	}
+}
+
+func (api *APIExtension) GetCommitteeSize(number *rpc.BlockNumber) (int, error) {
+	committee, err := api.GetCommittee(number)
+	if err == nil {
+		return len(committee), nil
+	} else {
+		return -1, err
+	}
 }
 
 func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Address, []common.Address, error) {
