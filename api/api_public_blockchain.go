@@ -41,6 +41,7 @@ import (
 
 const defaultGasPrice = 25 * params.Ston
 const localTxExecutionTime = 5 * time.Second
+const maxEstimateGasExecution = 20 // log_2(params.UpperGasLimit) is about 39.
 
 var logger = log.NewModuleLogger(log.API)
 
@@ -329,6 +330,9 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
+	// Limit the execution number since EstimateGas can cause an out-of-memory error with iterated execution.
+	executionCnt := uint(0)
+
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
 		lo  uint64 = params.TxGas - 1
@@ -355,6 +359,11 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	}
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
+		if executionCnt > maxEstimateGasExecution {
+			break
+		}
+		executionCnt += 1
+
 		mid := (hi + lo) / 2
 		if !executable(mid) {
 			lo = mid
@@ -362,10 +371,16 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 			hi = mid
 		}
 	}
+
+	// Send try again message if the estimate requires more than maxEstimateGasExecution execution.
+	if lo+1 < hi {
+		return 0, fmt.Errorf("The specified gas limit is too large, try again with a gas amount between %d and %d", lo, hi)
+	}
+
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		if !executable(hi) {
-			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
+			return 0, fmt.Errorf("Gas required exceeds allowance or always failing transaction")
 		}
 	}
 	return hexutil.Uint64(hi), nil
