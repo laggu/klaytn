@@ -147,19 +147,19 @@ var (
 	errNoBlockExist            = errors.New("block with the given block number is not existed")
 )
 
-// GetValidators retrieves the list of authorized validators at the specified block.
+// GetCouncil retrieves the list of authorized validators at the specified block.
 func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else if *number == rpc.PendingBlockNumber {
-		logger.Error("Cannot get validators of the pending block.", "number", number)
+		logger.Error("Cannot get council of the pending block.", "number", number)
 		return nil, errPendingNotAllowed
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
-	// Ensure we have an actually valid block and return the validators from its snapshot
+	// Ensure we have an actually valid block and return the council from its snapshot
 	if header == nil {
 		logger.Error("Failed to find the requested block", "number", number)
 		return nil, errNoBlockExist // return nil if block is not found.
