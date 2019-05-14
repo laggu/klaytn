@@ -630,7 +630,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		// when block number of snap is proposer update interval, refresh ValSet to make a new weighted random proposer list
 		pHeader := chain.GetHeaderByNumber(snap.Number)
 		if pHeader != nil {
-			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64()); err != nil {
+			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.governance.ChainConfig); err != nil {
 				// There are three error cases and they just don't refresh proposers
 				// (1) no validator at all
 				// (2) invalid formatted hash

@@ -544,7 +544,7 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 // It return no error when weightedCouncil
 //   (1) already has up-do-date proposers
 //   (2) successfully calculated up-do-date proposers
-func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error {
+func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -567,8 +567,14 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 		return err
 	}
 
-	// Fetch staking information required by next blocks from blockNum which is proposer interval
-	newStakingInfo := reward.GetStakingInfoFromStakingCache(blockNum)
+	// TODO-Klaytn-Issue3149 Remove this branch when Baobab can use the mainnet code
+	var newStakingInfo *reward.StakingInfo
+	if config.ChainID.Int64() == params.ChainIDBaobab {
+		newStakingInfo = reward.GetStakingInfoFromStakingCache(blockNum)
+	} else {
+		newStakingInfo = reward.GetStakingInfoFromStakingCache(blockNum + 1)
+	}
+
 	valSet.stakingInfo = newStakingInfo
 	if valSet.stakingInfo == nil {
 		// Just return without updating proposer

@@ -106,6 +106,10 @@ const (
 	UpperGasLimit = uint64(999999999999)
 )
 
+const (
+	ChainIDBaobab = 1001
+)
+
 // ChainConfig is the blockchain config which determines the blockchain settings.
 //
 // ChainConfig is stored in the database on a per block basis. This means

@@ -20,6 +20,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
@@ -343,7 +344,9 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	valSet.Refresh(testPrevHash, 1)
+	config := &params.ChainConfig{}
+	config.ChainID = big.NewInt(1)
+	valSet.Refresh(testPrevHash, 1, config)
 
 	for _, val := range validators {
 
@@ -378,7 +381,9 @@ func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	valSet.Refresh(testPrevHash, 1)
+	config := &params.ChainConfig{}
+	config.ChainID = big.NewInt(1)
+	valSet.Refresh(testPrevHash, 1, config)
 
 	for _, val := range validators {
 
@@ -398,7 +403,7 @@ func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 			}
 		}
 
-		valSet.Refresh(testPrevHash, 1)
+		valSet.Refresh(testPrevHash, 1, config)
 
 		// check whether removedVal is excluded as expected when refreshing proposers
 		for _, p := range valSet.proposers {
