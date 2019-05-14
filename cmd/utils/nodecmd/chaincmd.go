@@ -119,11 +119,13 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	data := getGovernanceItemsFromGenesis(genesis)
-	gbytes, _ := json.Marshal(data)
+	gbytes, err := json.Marshal(data)
+	if err != nil {
+		logger.Crit("Failed to json marshaling governance data", "err", err)
+	}
 	if genesis.Governance, err = rlp.EncodeToBytes(gbytes); err != nil {
 		logger.Crit("Failed to encode initial settings. Check your genesis.json", "err", err)
 	}
-
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
 
@@ -142,7 +144,7 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			log.Fatalf("Failed to write genesis block: %v", err)
 		}
-		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash)
+		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
 
 		gov := governance.NewGovernance(genesis.Config, chaindb)
 		if err := gov.WriteGovernance(0, data, nil); err != nil {

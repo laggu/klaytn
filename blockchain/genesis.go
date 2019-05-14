@@ -157,6 +157,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		if genesis == nil {
 			logger.Info("Writing default main-net genesis block")
 			genesis = DefaultGenesisBlock()
+			if genesis.Config.Governance != nil {
+				genesis.Governance = setGenesisGovernance(genesis)
+			}
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
@@ -302,23 +305,23 @@ func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance 
 }
 
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
+// TODO-Klaytn-issue3160 When mainnet launches, mainnetGenesisBlock() has to be the default.
 func DefaultGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.MainnetChainConfig,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		BlockScore: big.NewInt(17179869184),
-		Alloc:      decodePrealloc(mainnetAllocData),
-	}
+	return baobabGenesisBlock()
 }
 
-// DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
-func DefaultTestnetGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.TestnetChainConfig,
-		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		BlockScore: big.NewInt(1048576),
-		Alloc:      decodePrealloc(testnetAllocData),
+func baobabGenesisBlock() *Genesis {
+	ret := &Genesis{}
+	if err := json.Unmarshal(baobabGenesisJson, &ret); err != nil {
+		logger.Error("Error in Unmarshaling", "err", err)
+		return nil
 	}
+	return ret
+}
+
+// DefaultTestnetGenesisBlock returns the Baobab network genesis block.
+func DefaultTestnetGenesisBlock() *Genesis {
+	return baobabGenesisBlock()
 }
 
 // TODO-Klaytn-TestNet: define baobab network's genesis block.
@@ -359,4 +362,34 @@ func decodePrealloc(data string) GenesisAlloc {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
 	}
 	return ga
+}
+
+type GovernanceSet map[string]interface{}
+
+func setGenesisGovernance(genesis *Genesis) []byte {
+	g := make(GovernanceSet)
+	governance := genesis.Config.Governance
+	g["governance.governancemode"] = governance.GovernanceMode
+	g["governance.governingnode"] = governance.GoverningNode
+	g["governance.unitprice"] = genesis.Config.UnitPrice
+	g["reward.mintingamount"] = governance.Reward.MintingAmount.String()
+	g["reward.minimumstake"] = governance.Reward.MinimumStake.String()
+	g["reward.ratio"] = governance.Reward.Ratio
+	g["reward.useginicoeff"] = governance.Reward.UseGiniCoeff
+	g["reward.deferredtxfee"] = governance.Reward.DeferredTxFee
+	g["reward.stakingupdateinterval"] = governance.Reward.StakingUpdateInterval
+	g["reward.proposerupdateinterval"] = governance.Reward.ProposerUpdateInterval
+	g["istanbul.epoch"] = genesis.Config.Istanbul.Epoch
+	g["istanbul.policy"] = genesis.Config.Istanbul.ProposerPolicy
+	g["istanbul.committeesize"] = genesis.Config.Istanbul.SubGroupSize
+
+	data, err := json.Marshal(g)
+	if err != nil {
+		logger.Crit("Error in marshaling governance data", "err", err)
+	}
+	ret, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		logger.Crit("Error in RLP Encoding governance data", "err", err)
+	}
+	return ret
 }
