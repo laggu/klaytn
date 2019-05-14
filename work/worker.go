@@ -614,9 +614,9 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 	}()
 
 	vmConfig := &vm.Config{
-		JumpTable:         vm.ConstantinopleInstructionSet,
-		RunningEVM:        chEVM,
-		UseOpcodeCntLimit: true,
+		JumpTable:                vm.ConstantinopleInstructionSet,
+		RunningEVM:               chEVM,
+		UseOpcodeComputationCost: true,
 	}
 
 CommitTransactionLoop:

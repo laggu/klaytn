@@ -355,6 +355,14 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) ValidateMutableValue(
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+	///////////////////////////////////////////////////////
+	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+	//start := time.Now()
+	//defer func() {
+	//	elapsed := time.Since(start)
+	//	logger.Debug("[TxInternalDataFeeDelegatedSmartContractExecution] EVM execution done", "elapsed", elapsed)
+	//}()
+	///////////////////////////////////////////////////////
 	stateDB.IncNonce(sender.Address())
 	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
 }

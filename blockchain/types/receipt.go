@@ -57,7 +57,7 @@ const (
 	ReceiptStatusErrOutOfGas                             = uint(0x07)
 	ReceiptStatusErrWriteProtection                      = uint(0x08)
 	ReceiptStatusErrExecutionReverted                    = uint(0x09)
-	ReceiptStatusErrOpcodeCntLimitReached                = uint(0x0a)
+	ReceiptStatusErrOpcodeComputationCostLimitReached    = uint(0x0a)
 	ReceiptStatusErrAddressAlreadyExists                 = uint(0x0b)
 	ReceiptStatusErrNotAProgramAccount                   = uint(0x0c)
 	ReceiptStatusErrNotHumanReadableAddress              = uint(0x0d)

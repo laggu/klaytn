@@ -451,6 +451,14 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) FillContractAdd
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+	///////////////////////////////////////////////////////
+	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+	//start := time.Now()
+	//defer func() {
+	//	elapsed := time.Since(start)
+	//	logger.Debug("[TxInternalDataFeeDelegatedSmartContractDeployWithRatio] EVM execution done", "elapsed", elapsed)
+	//}()
+	///////////////////////////////////////////////////////
 	// Sender's nonce will be increased in '`vm.Create()` or `vm.CreateWithAddress()`
 	if t.Recipient == nil {
 		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, t.CodeFormat)

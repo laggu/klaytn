@@ -49,8 +49,8 @@ type Config struct {
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
 
-	// UseOpcodeCntLimit is to enable applying the opcode count limit.
-	UseOpcodeCntLimit bool
+	// UseOpcodeComputationCost is to enable applying the opcode computation cost limit.
+	UseOpcodeComputationCost bool
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -95,6 +95,19 @@ func NewInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	}
 }
 
+///////////////////////////////////////////////////////
+// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+//var (
+//	prevOp OpCode
+//	globalTimer = time.Now()
+//	opCnt = make([]uint64, 256)
+//	opTime = make([]uint64, 256)
+//	precompiledCnt = make([]uint64, 16)
+//	precompiledTime = make([]uint64, 16)
+//	opDebug = true
+//)
+///////////////////////////////////////////////////////
+
 // Run loops and evaluates the contract's code with the given input data and returns
 // the return byte-slice and an error if one occurred.
 //
@@ -109,6 +122,31 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			in.intPool = nil
 		}()
 	}
+
+	///////////////////////////////////////////////////////
+	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+	//if opDebug {
+	//	if in.evm.depth == 0 {
+	//		for i := 0; i< 256; i++ {
+	//			opCnt[i] = 0
+	//			opTime[i] = 0
+	//		}
+	//		prevOp = 0
+	//		defer func() {
+	//			for i := 0; i < 256; i++ {
+	//				if opCnt[i] > 0 {
+	//					fmt.Println("op", OpCode(i).String(), "computationCost", in.cfg.JumpTable[i].computationCost, "cnt", opCnt[i], "avg", opTime[i]/opCnt[i])
+	//				}
+	//			}
+	//			for i := 0; i < 16; i++ {
+	//				if precompiledCnt[i] > 0 {
+	//					fmt.Println("precompiled contract addr", i, "cnt", precompiledCnt[i], "avg", precompiledTime[i]/precompiledCnt[i])
+	//				}
+	//			}
+	//		}()
+	//	}
+	//}
+	///////////////////////////////////////////////////////
 
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
@@ -166,14 +204,12 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			logged, pcCopy, gasCopy = false, pc, contract.Gas
 		}
 
-		// NOTE-Klaytn We currently limit tx's execution time using the number of executed opcodes.
-		if in.evm.vmConfig.UseOpcodeCntLimit {
-			in.evm.opcodeCnt++
-			if in.evm.opcodeCnt > params.OpcodeCntLimit {
-				return nil, ErrOpcodeCntLimitReached
-			}
-		}
-
+		///////////////////////////////////////////////////////
+		// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+		//if opDebug {
+		//	prevOp = op
+		//}
+		///////////////////////////////////////////////////////
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
@@ -204,6 +240,23 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			return nil, kerrors.ErrOutOfGas
 		}
 
+		// We limit tx's execution time using the sum of computation cost of opcodes.
+		if in.evm.vmConfig.UseOpcodeComputationCost {
+			///////////////////////////////////////////////////////
+			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+			//if opDebug && prevOp > 0 {
+			//	elapsed := uint64(time.Since(globalTimer).Nanoseconds())
+			//	fmt.Println("[", in.evm.depth, "]", "prevop", prevOp.String(), "-", op.String(),  "computationCost", in.cfg.JumpTable[prevOp].computationCost, "total", in.evm.opcodeComputationCostSum, "elapsed", elapsed)
+			//	opTime[prevOp] += elapsed
+			//	opCnt[prevOp] += 1
+			//}
+			//globalTimer = time.Now()
+			///////////////////////////////////////////////////////
+			in.evm.opcodeComputationCostSum += operation.computationCost
+			if in.evm.opcodeComputationCostSum > params.OpcodeComputationCostLimit {
+				return nil, ErrOpcodeComputationCostLimitReached
+			}
+		}
 		var memorySize uint64
 		var extraSize uint64
 		// calculate the new memory size and expand the memory to fit

@@ -554,6 +554,12 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'estimateComputationCost',
+			call: 'klay_estimateComputationCost',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getAccountKey',
 			call: 'klay_getAccountKey',
 			params: 2,

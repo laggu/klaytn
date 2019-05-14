@@ -50,8 +50,12 @@ var (
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
 type PrecompiledContract interface {
-	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
-	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
+	// GetRequiredGasAndComputationCost returns the gas and computation cost
+	// required to execute the precompiled contract.
+	GetRequiredGasAndComputationCost(input []byte) (uint64, uint64)
+
+	// Run runs the precompiled contract
+	Run(input []byte) ([]byte, error)
 }
 
 // vmLogAddress is the address of precompiled contract vmLog.
@@ -80,19 +84,20 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
-func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {
-	gas := p.RequiredGas(input)
+func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, computationCost uint64, err error) {
+	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
 	if contract.UseGas(gas) {
-		return p.Run(input)
+		ret, err := p.Run(input)
+		return ret, computationCost, err
 	}
-	return nil, kerrors.ErrOutOfGas
+	return nil, computationCost, kerrors.ErrOutOfGas
 }
 
 // ECRECOVER implemented as a native contract.
 type ecrecover struct{}
 
-func (c *ecrecover) RequiredGas(input []byte) uint64 {
-	return params.EcrecoverGas
+func (c *ecrecover) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.EcrecoverGas, params.EcrecoverComputationCost
 }
 
 func (c *ecrecover) Run(input []byte) ([]byte, error) {
@@ -124,12 +129,16 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 // SHA256 implemented as a native contract.
 type sha256hash struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *sha256hash) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.Sha256PerWordGas + params.Sha256BaseGas
+func (c *sha256hash) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	n32Bytes := uint64(len(input)+31) / 32
+
+	return n32Bytes*params.Sha256PerWordGas + params.Sha256BaseGas,
+		n32Bytes*params.Sha256PerWordComputationCost + params.Sha256BaseComputationCost
 }
 func (c *sha256hash) Run(input []byte) ([]byte, error) {
 	h := sha256.Sum256(input)
@@ -139,12 +148,16 @@ func (c *sha256hash) Run(input []byte) ([]byte, error) {
 // RIPEMD160 implemented as a native contract.
 type ripemd160hash struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *ripemd160hash) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.Ripemd160PerWordGas + params.Ripemd160BaseGas
+func (c *ripemd160hash) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	n32Bytes := uint64(len(input)+31) / 32
+
+	return n32Bytes*params.Ripemd160PerWordGas + params.Ripemd160BaseGas,
+		n32Bytes*params.Ripemd160PerWordComputationCost + params.Ripemd160BaseComputationCost
 }
 func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 	ripemd := ripemd160.New()
@@ -155,12 +168,15 @@ func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 // data copy implemented as a native contract.
 type dataCopy struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *dataCopy) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.IdentityPerWordGas + params.IdentityBaseGas
+func (c *dataCopy) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	n32Bytes := uint64(len(input)+31) / 32
+	return n32Bytes*params.IdentityPerWordGas + params.IdentityBaseGas,
+		n32Bytes*params.IdentityPerWordComputationCost + params.IdentityBaseComputationCost
 }
 func (c *dataCopy) Run(in []byte) ([]byte, error) {
 	return in, nil
@@ -183,8 +199,9 @@ var (
 	big199680 = big.NewInt(199680)
 )
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bigModExp) RequiredGas(input []byte) uint64 {
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+func (c *bigModExp) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
 	var (
 		baseLen = new(big.Int).SetBytes(getData(input, 0, 32))
 		expLen  = new(big.Int).SetBytes(getData(input, 32, 32))
@@ -238,9 +255,9 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 	gas.Div(gas, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
 
 	if gas.BitLen() > 64 {
-		return math.MaxUint64
+		return math.MaxUint64, math.MaxUint64
 	}
-	return gas.Uint64()
+	return gas.Uint64(), (gas.Uint64() / 100) + params.BigModExpBaseComputationCost
 }
 
 func (c *bigModExp) Run(input []byte) ([]byte, error) {
@@ -294,9 +311,10 @@ func newTwistPoint(blob []byte) (*bn256.G2, error) {
 // bn256Add implements a native elliptic curve point addition.
 type bn256Add struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bn256Add) RequiredGas(input []byte) uint64 {
-	return params.Bn256AddGas
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+func (c *bn256Add) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256AddGas, params.Bn256AddComputationCost
 }
 
 func (c *bn256Add) Run(input []byte) ([]byte, error) {
@@ -316,9 +334,10 @@ func (c *bn256Add) Run(input []byte) ([]byte, error) {
 // bn256ScalarMul implements a native elliptic curve scalar multiplication.
 type bn256ScalarMul struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
-	return params.Bn256ScalarMulGas
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+func (c *bn256ScalarMul) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256ScalarMulGas, params.Bn256ScalarMulComputationCost
 }
 
 func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
@@ -345,9 +364,12 @@ var (
 // bn256Pairing implements a pairing pre-compile for the bn256 curve
 type bn256Pairing struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bn256Pairing) RequiredGas(input []byte) uint64 {
-	return params.Bn256PairingBaseGas + uint64(len(input)/192)*params.Bn256PairingPerPointGas
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+func (c *bn256Pairing) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	numParings := uint64(len(input) / 192)
+	return params.Bn256PairingBaseGas + numParings*params.Bn256PairingPerPointGas,
+		params.Bn256ParingBaseComputationCost + numParings*params.Bn256ParingPerPointComputationCost
 }
 
 func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
@@ -382,9 +404,12 @@ func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
 // vmLog implemented as a native contract.
 type vmLog struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *vmLog) RequiredGas(input []byte) uint64 {
-	return uint64(len(input))*params.VMLogPerByteGas + params.VMLogBaseGas
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+func (c *vmLog) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	l := uint64(len(input))
+	return l*params.VMLogPerByteGas + params.VMLogBaseGas,
+		l*params.VMLogPerByteComputationCost + params.VMLogBaseComputationCost
 }
 
 // Run calls logger.Debug with input.
@@ -396,8 +421,8 @@ func (c *vmLog) Run(input []byte) ([]byte, error) {
 }
 
 // RunVMLogContract runs the vmlog contract.
-func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	gas := p.RequiredGas(input)
+func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) ([]byte, uint64, error) {
+	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
 	if contract.UseGas(gas) {
 		if (params.VMLogTarget & params.VMLogToFile) != 0 {
 			prefix := "tx=" + evm.StateDB.GetTxHash().String() + " caller=" + contract.CallerAddress.String() + " msg="
@@ -407,15 +432,15 @@ func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, e
 			logger.Debug("vmlog", "tx", evm.StateDB.GetTxHash().String(),
 				"caller", contract.CallerAddress.String(), "msg", strconv.QuoteToASCII(string(input)))
 		}
-		return nil, nil
+		return nil, computationCost, nil
 	}
-	return nil, kerrors.ErrOutOfGas
+	return nil, computationCost, kerrors.ErrOutOfGas
 }
 
 type feePayer struct{}
 
-func (c *feePayer) RequiredGas(input []byte) uint64 {
-	return params.FeePayerGas
+func (c *feePayer) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.FeePayerGas, params.FeePayerComputationCost
 }
 
 func (c *feePayer) Run(input []byte) ([]byte, error) {
@@ -424,18 +449,20 @@ func (c *feePayer) Run(input []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func RunFeePayerContract(p PrecompiledContract, input []byte, contract *Contract) ([]byte, error) {
-	gas := p.RequiredGas(input)
+func RunFeePayerContract(p PrecompiledContract, input []byte, contract *Contract) ([]byte, uint64, error) {
+	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
 	if contract.UseGas(gas) {
-		return contract.FeePayerAddress.Bytes(), nil
+		return contract.FeePayerAddress.Bytes(), computationCost, nil
 	}
-	return nil, kerrors.ErrOutOfGas
+	return nil, computationCost, kerrors.ErrOutOfGas
 }
 
 type precompiledValidateSender struct{}
 
-func (c *precompiledValidateSender) RequiredGas(input []byte) uint64 {
-	return params.ValidateSenderGas
+func (c *precompiledValidateSender) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	numSigs := uint64(len(input) / common.SignatureLength)
+	return numSigs * params.ValidateSenderGas,
+		numSigs*params.ValidateSenderPerSigComputationCost + params.ValidateSenderBaseComputationCost
 }
 
 func (c *precompiledValidateSender) Run(input []byte) ([]byte, error) {
@@ -444,20 +471,20 @@ func (c *precompiledValidateSender) Run(input []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func RunValidateSenderContract(p PrecompiledContract, input []byte, contract *Contract, picker types.AccountKeyPicker) ([]byte, error) {
+func RunValidateSenderContract(p PrecompiledContract, input []byte, contract *Contract, picker types.AccountKeyPicker) ([]byte, uint64, error) {
 	// input must be (addr, message, signature1, signature2, and more signatures)
-	gas := p.RequiredGas(input)
+	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
 	if contract.UseGas(gas) == false {
-		return []byte{0}, kerrors.ErrOutOfGas
+		return []byte{0}, computationCost, kerrors.ErrOutOfGas
 	}
 	if err := validateSender(input, picker); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.
 		logger.Trace("validateSender failed", "err", err)
-		return []byte{0}, nil
+		return []byte{0}, computationCost, nil
 	}
 
-	return []byte{1}, nil
+	return []byte{1}, computationCost, nil
 }
 
 func validateSender(input []byte, picker types.AccountKeyPicker) error {

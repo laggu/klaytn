@@ -62,8 +62,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		allLogs  []*types.Log
 	)
 
-	// Enable the opcode count limit
-	cfg.UseOpcodeCntLimit = true
+	// Enable the opcode computation cost limit
+	cfg.UseOpcodeComputationCost = true
 
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation

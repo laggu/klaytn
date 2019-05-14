@@ -64,15 +64,40 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
 		precompiles := PrecompiledContractsByzantium
 		if p := precompiles[*contract.CodeAddr]; p != nil {
-			if *contract.CodeAddr == vmLogAddress {
-				return RunVMLogContract(p, input, contract, evm)
-			} else if *contract.CodeAddr == feePayerAddress {
-				return RunFeePayerContract(p, input, contract)
-			} else if *contract.CodeAddr == validateSenderAddress {
-				return RunValidateSenderContract(p, input, contract, evm.StateDB)
-			} else {
-				return RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
+			var (
+				ret             []byte
+				computationCost uint64
+				err             error
+			)
+			///////////////////////////////////////////////////////
+			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+			//var startTime time.Time
+			//if opDebug {
+			//	startTime = time.Now()
+			//}
+			///////////////////////////////////////////////////////
+			switch *contract.CodeAddr {
+			case vmLogAddress:
+				ret, computationCost, err = RunVMLogContract(p, input, contract, evm)
+			case feePayerAddress:
+				ret, computationCost, err = RunFeePayerContract(p, input, contract)
+			case validateSenderAddress:
+				ret, computationCost, err = RunValidateSenderContract(p, input, contract, evm.StateDB)
+			default:
+				ret, computationCost, err = RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
 			}
+			///////////////////////////////////////////////////////
+			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+			//if opDebug {
+			//	//fmt.Println("running precompiled contract...", "addr", contract.CodeAddr.String(), "computationCost", computationCost)
+			//	elapsedTime := uint64(time.Since(startTime).Nanoseconds())
+			//	addr := int(contract.CodeAddr.Bytes()[19])
+			//	precompiledCnt[addr] += 1
+			//	precompiledTime[addr] += elapsedTime
+			//}
+			///////////////////////////////////////////////////////
+			evm.opcodeComputationCostSum += computationCost
+			return ret, err
 		}
 	}
 	return evm.interpreter.Run(contract, input)
@@ -136,8 +161,8 @@ type EVM struct {
 	// applied in opCall*.
 	callGasTemp uint64
 
-	// opcodeCnt is the number of executed opcodes.
-	opcodeCnt uint64
+	// opcodeComputationCostSum is the sum of computation cost of opcodes.
+	opcodeComputationCostSum uint64
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -519,3 +544,5 @@ func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
 func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
+
+func (evm *EVM) GetOpCodeComputationCost() uint64 { return evm.opcodeComputationCostSum }

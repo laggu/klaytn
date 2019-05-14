@@ -243,12 +243,12 @@ type CallArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 }
 
-func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
+func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, uint64, bool, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
-		return nil, 0, false, err
+		return nil, 0, 0, false, err
 	}
 	// Set sender address or use a default if none specified
 	addr := args.From
@@ -270,7 +270,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, true)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, 0, false, err
 	}
 
 	// Create new call message
@@ -291,7 +291,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Get a new instance of the EVM.
 	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, 0, false, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -303,7 +303,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
-		return nil, 0, false, err
+		return nil, 0, 0, false, err
 	}
 
 	// Propagate error of Receipt as JSON RPC error
@@ -311,14 +311,19 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
 	}
 
-	return res, gas, kerr.Status != types.ReceiptStatusSuccessful, err
+	return res, gas, evm.GetOpCodeComputationCost(), kerr.Status != types.ReceiptStatusSuccessful, err
 }
 
 // Call executes the given transaction on the state for the given block number.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	result, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{UseOpcodeCntLimit: true}, localTxExecutionTime)
+	result, _, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime)
 	return (hexutil.Bytes)(result), err
+}
+
+func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNr, number rpc.BlockNumber) (hexutil.Uint64, error) {
+	_, _, computationCost, _, err := s.doCall(ctx, args, blockNr, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime)
+	return (hexutil.Uint64)(computationCost), err
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
@@ -342,7 +347,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	executable := func(gas uint64) bool {
 		args.Gas = hexutil.Uint64(gas)
 
-		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{UseOpcodeCntLimit: true}, localTxExecutionTime)
+		_, _, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime)
 		if err != nil || failed {
 			return false
 		}

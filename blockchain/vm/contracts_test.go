@@ -409,10 +409,11 @@ var validateSenderTest = []precompiledTest{
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
+	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 	contract := NewContract(AccountRef(common.HexToAddress("1337")),
-		nil, new(big.Int), p.RequiredGas(in))
+		nil, new(big.Int), reqGas)
 	t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
-		if res, err := RunPrecompiledContract(p, in, contract); err != nil {
+		if res, _, err := RunPrecompiledContract(p, in, contract); err != nil {
 			t.Error(err)
 		} else if common.Bytes2Hex(res) != test.expected {
 			t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))
@@ -426,7 +427,7 @@ func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 	}
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
-	reqGas := p.RequiredGas(in)
+	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 	contract := NewContract(AccountRef(common.HexToAddress("1337")),
 		nil, new(big.Int), reqGas)
 
@@ -441,7 +442,7 @@ func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 		for i := 0; i < bench.N; i++ {
 			contract.Gas = reqGas
 			copy(data, in)
-			res, err = RunPrecompiledContract(p, data, contract)
+			res, _, err = RunPrecompiledContract(p, data, contract)
 		}
 		bench.StopTimer()
 		//Check if it is correct
@@ -561,7 +562,7 @@ func BenchmarkPrecompiledVmLog(b *testing.B) {
 
 	for _, test := range vmlogTests {
 		in := common.Hex2Bytes(test.input)
-		reqGas := p.RequiredGas(in)
+		reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 		contract := NewContract(AccountRef(common.HexToAddress("1337")),
 			nil, new(big.Int), reqGas)
 
@@ -576,7 +577,7 @@ func BenchmarkPrecompiledVmLog(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				contract.Gas = reqGas
 				copy(data, in)
-				res, err = RunVMLogContract(p, data, contract, evm)
+				res, _, err = RunVMLogContract(p, data, contract, evm)
 			}
 			b.StopTimer()
 			if err != nil {
@@ -599,7 +600,7 @@ func BenchmarkPrecompiledFeePayer(b *testing.B) {
 
 	for _, test := range feePayerTests {
 		in := common.Hex2Bytes(test.input)
-		reqGas := p.RequiredGas(in)
+		reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
 			nil, new(big.Int), reqGas)
 
@@ -614,7 +615,7 @@ func BenchmarkPrecompiledFeePayer(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				contract.Gas = reqGas
 				copy(data, in)
-				res, err = RunFeePayerContract(p, data, contract)
+				res, _, err = RunFeePayerContract(p, data, contract)
 			}
 			b.StopTimer()
 			if err != nil {
@@ -640,7 +641,7 @@ func BenchmarkPrecompiledValidateSender(b *testing.B) {
 
 	for _, test := range validateSenderTest {
 		in := common.Hex2Bytes(test.input)
-		reqGas := p.RequiredGas(in)
+		reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
 			nil, new(big.Int), reqGas)
 
@@ -655,7 +656,7 @@ func BenchmarkPrecompiledValidateSender(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				contract.Gas = reqGas
 				copy(data, in)
-				res, err = RunValidateSenderContract(p, data, contract, statedb)
+				res, _, err = RunValidateSenderContract(p, data, contract, statedb)
 			}
 			b.StopTimer()
 			if err != nil {
@@ -690,10 +691,11 @@ func TestRunVMLogContract(t *testing.T) {
 
 	for _, test := range vmlogTests {
 		in := common.Hex2Bytes(test.input)
+		reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 		contract := NewContract(AccountRef(common.HexToAddress("1337")),
-			nil, new(big.Int), p.RequiredGas(in))
+			nil, new(big.Int), reqGas)
 		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
-			if res, err := RunVMLogContract(p, in, contract, evm); err != nil {
+			if res, _, err := RunVMLogContract(p, in, contract, evm); err != nil {
 				t.Error(err)
 			} else if common.Bytes2Hex(res) != test.expected {
 				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))
@@ -710,10 +712,11 @@ func TestRunFeePayerContract(t *testing.T) {
 
 	for _, test := range feePayerTests {
 		in := common.Hex2Bytes(test.input)
+		reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
-			nil, new(big.Int), p.RequiredGas(in))
+			nil, new(big.Int), reqGas)
 		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
-			if res, err := RunFeePayerContract(p, in, contract); err != nil {
+			if res, _, err := RunFeePayerContract(p, in, contract); err != nil {
 				t.Error(err)
 			} else if common.Bytes2Hex(res) != test.expected {
 				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))
@@ -733,10 +736,11 @@ func TestRunValidateSenderContract(t *testing.T) {
 
 	for _, test := range validateSenderTest {
 		in := common.Hex2Bytes(test.input)
+		reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 		contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
-			nil, new(big.Int), p.RequiredGas(in))
+			nil, new(big.Int), reqGas)
 		t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
-			if res, err := RunValidateSenderContract(p, in, contract, statedb); err != nil {
+			if res, _, err := RunValidateSenderContract(p, in, contract, statedb); err != nil {
 				t.Error(err)
 			} else if common.Bytes2Hex(res) != test.expected {
 				t.Errorf("Expected %v, got %v", test.expected, common.Bytes2Hex(res))

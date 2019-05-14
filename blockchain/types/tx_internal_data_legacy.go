@@ -376,6 +376,14 @@ func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Recei
 }
 
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+	///////////////////////////////////////////////////////
+	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+	//start := time.Now()
+	//defer func() {
+	//	elapsed := time.Since(start)
+	//	logger.Debug("[TxInternalDataLegacy] EVM execution done", "elapsed", elapsed)
+	//}()
+	///////////////////////////////////////////////////////
 	if t.Recipient == nil {
 		// Sender's nonce will be increased in '`vm.Create()`
 		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, params.CodeFormatEVM)

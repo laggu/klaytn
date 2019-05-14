@@ -24,8 +24,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math/big"
-
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/vm"
@@ -35,6 +33,7 @@ import (
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
+	"math/big"
 )
 
 // VMTest checks EVM execution without block or transaction context.
@@ -120,6 +119,14 @@ func (t *VMTest) Run(vmconfig vm.Config) error {
 }
 
 func (t *VMTest) exec(statedb *state.StateDB, vmconfig vm.Config) ([]byte, uint64, error) {
+	///////////////////////////////////////////////////////
+	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
+	//start := time.Now()
+	//defer func() {
+	//	elapsed := time.Since(start)
+	//	fmt.Println("[VMTest.exec] EVM execution done", "elapsed", elapsed)
+	//}()
+	///////////////////////////////////////////////////////
 	evm := t.newEVM(statedb, vmconfig)
 	e := t.json.Exec
 	return evm.Call(vm.AccountRef(e.Caller), e.Address, e.Data, e.GasLimit, e.Value)
