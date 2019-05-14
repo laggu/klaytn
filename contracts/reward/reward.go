@@ -50,7 +50,7 @@ type Reward struct {
 type StakingInfo struct {
 	BlockNum uint64 // Block number where staking information of Council is fetched
 
-	// Information retrieved from InitContract smart contract
+	// Information retrieved from AddressBook smart contract
 	CouncilNodeIds       []common.Address // NodeIds of Council
 	CouncilStakingdAddrs []common.Address // Address of Staking account which holds staking balance
 	CouncilRewardAddrs   []common.Address // Address of Council account which will get block reward
@@ -628,7 +628,7 @@ func MakeGetAllAddressFromInitContractMsg() (*types.Transaction, error) {
 	return msg, nil
 }
 
-// addressType defined in InitContract
+// addressType defined in AddressBook
 const (
 	addressTypeNodeID = iota
 	addressTypeStakingAddr
@@ -638,14 +638,14 @@ const (
 )
 
 var (
-	errInitContractEmptyResult = errors.New("got empty result, nothing to parse")
-	errInitContractIncomplete  = errors.New("incomplete node information from InitContract")
+	errAddressBookEmptyResult = errors.New("got empty result, nothing to parse")
+	errAddressBookIncomplete  = errors.New("incomplete node information from AddressBook")
 )
 
 func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 
 	if result == nil {
-		return nil, nil, nil, common.Address{}, common.Address{}, errInitContractIncomplete
+		return nil, nil, nil, common.Address{}, common.Address{}, errAddressBookIncomplete
 	}
 
 	abiStr := contract.AddressBookABI
@@ -665,7 +665,7 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 
 	err = abii.Unpack(out, "getAllAddress", result)
 	if err != nil {
-		logger.Trace("abii.Unpack failed for getAllAddress in InitContract")
+		logger.Trace("abii.Unpack failed for getAllAddress in AddressBook")
 		return nil, nil, nil, common.Address{}, common.Address{}, err
 	}
 
@@ -692,7 +692,7 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		case addressTypeKIRAddr:
 			kirAddr = (*allAddressList)[i]
 		default:
-			return nil, nil, nil, common.Address{}, common.Address{}, errors.New(fmt.Sprintf("invalid type from InitContract: %d", addrType))
+			return nil, nil, nil, common.Address{}, common.Address{}, errors.New(fmt.Sprintf("invalid type from AddressBook: %d", addrType))
 		}
 	}
 
@@ -702,20 +702,20 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 		isEmptyAddress(pocAddr) ||
 		isEmptyAddress(kirAddr) {
 		// This is expected behavior when bootstrapping
-		//logger.Trace("Incomplete node information from InitContract.",
+		//logger.Trace("Incomplete node information from AddressBook.",
 		//	"# of nodeIds", len(nodeIds),
 		//	"# of stakingAddrs", len(stakingAddrs),
 		//	"# of rewardAddrs", len(rewardAddrs),
 		//	"PoC address", pocAddr.String(),
 		//	"KIR address", kirAddr.String())
 
-		return nil, nil, nil, common.Address{}, common.Address{}, errInitContractIncomplete
+		return nil, nil, nil, common.Address{}, common.Address{}, errAddressBookIncomplete
 	}
 
 	return nodeIds, stakingAddrs, rewardAddrs, pocAddr, kirAddr, nil
 }
 
-// getInitContractInfo returns staking info when calling InitContract
+// getInitContractInfo returns staking info when calling AddressBook
 // succeeded. It returns an error otherwise.
 func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
 
@@ -733,7 +733,7 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	// Prepare a message
 	msg, err := MakeGetAllAddressFromInitContractMsg()
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("failed to make message for InitContract. root err: %s", err))
+		return nil, errors.New(fmt.Sprintf("failed to make message for AddressBook. root err: %s", err))
 	}
 
 	// Prepare
@@ -755,19 +755,19 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	evm := vm.NewEVM(context, statedb, chainConfig, &vm.Config{})
 
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
-	logger.Trace("Call InitContract contract", "used gas", gas, "kerr", kerr)
+	logger.Trace("Call AddressBook contract", "used gas", gas, "kerr", kerr)
 	err = kerr.ErrTxInvalid
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("failed to call InitContract contract. root err: %s", err))
+		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
 
 	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = ParseGetAllAddressFromInitContract(res)
 	if err != nil {
-		if err == errInitContractIncomplete {
+		if err == errAddressBookIncomplete {
 			// This is expected behavior when smart contract is not setup yet.
-			logger.Info("Use empty staking info instead of info from InitContract", "reason", err)
+			logger.Info("Use empty staking info instead of info from AddressBook", "reason", err)
 		} else {
-			logger.Error("Failed to parse result from InitContract contract. Use empty staking info", "err", err)
+			logger.Error("Failed to parse result from AddressBook contract. Use empty staking info", "err", err)
 		}
 		return newEmptyStakingInfo(bc, blockNum)
 	}
