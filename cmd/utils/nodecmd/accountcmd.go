@@ -30,49 +30,9 @@ import (
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/log"
 	"gopkg.in/urfave/cli.v1"
-	"io/ioutil"
 )
 
 var (
-	WalletCommand = cli.Command{
-		Name:      "wallet",
-		Usage:     "Manage Klaytn presale wallets",
-		ArgsUsage: "",
-		Category:  "ACCOUNT COMMANDS",
-		Description: `
-    klay wallet import /path/to/my/presale.wallet
-
-will prompt for your password and imports your KLAY presale account.
-It can be used non-interactively with the --password option taking a
-passwordfile as argument containing the wallet password in plaintext.`,
-		Subcommands: []cli.Command{
-			{
-
-				Name:      "import",
-				Usage:     "Import Klaytn presale wallet",
-				ArgsUsage: "<keyFile>",
-				Action:    utils.MigrateFlags(importWallet),
-				Category:  "ACCOUNT COMMANDS",
-				Flags: []cli.Flag{
-					utils.DbTypeFlag,
-					utils.NoPartitionedDBFlag,
-					utils.NumStateTriePartitionsFlag,
-					utils.LevelDBCompressionTypeFlag,
-					utils.DataDirFlag,
-					utils.KeyStoreDirFlag,
-					utils.PasswordFileFlag,
-					utils.LightKDFFlag,
-				},
-				Description: `
-	klay wallet [options] /path/to/my/presale.wallet
-
-will prompt for your password and imports your KLAY presale account.
-It can be used non-interactively with the --password option taking a
-passwordfile as argument containing the wallet password in plaintext.`,
-			},
-		},
-	}
-
 	AccountCommand = cli.Command{
 		Name:     "account",
 		Usage:    "Manage accounts",
@@ -365,31 +325,6 @@ func accountUpdate(ctx *cli.Context) error {
 			log.Fatalf("Could not update the account: %v", err)
 		}
 	}
-	return nil
-}
-
-func importWallet(ctx *cli.Context) error {
-	if glogger, err := debug.GetGlogger(); err == nil {
-		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
-	}
-	keyfile := ctx.Args().First()
-	if len(keyfile) == 0 {
-		log.Fatalf("keyfile must be given as argument")
-	}
-	keyJSON, err := ioutil.ReadFile(keyfile)
-	if err != nil {
-		log.Fatalf("Could not read wallet file: %v", err)
-	}
-
-	stack, _ := makeConfigNode(ctx)
-	passphrase := getPassPhrase("", false, 0, utils.MakePasswordList(ctx))
-
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	acct, err := ks.ImportPreSaleKey(keyJSON, passphrase)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	fmt.Printf("Address: {%x}\n", acct.Address)
 	return nil
 }
 

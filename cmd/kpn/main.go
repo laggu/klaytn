@@ -204,7 +204,6 @@ func init() {
 
 		// See utils/nodecmd/accountcmd.go
 		nodecmd.AccountCommand,
-		nodecmd.WalletCommand,
 
 		// See utils/nodecmd/consolecmd.go:
 		nodecmd.GetConsoleCommand(nodeFlags, rpcFlags),

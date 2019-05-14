@@ -21,7 +21,6 @@
 package nodecmd
 
 import (
-	"io/ioutil"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -107,31 +106,6 @@ Passphrase: {{.InputLine "foobar"}}
 Please give a new password. Do not forget this password.
 Passphrase: {{.InputLine "foobar2"}}
 Repeat passphrase: {{.InputLine "foobar2"}}
-`)
-}
-
-func TestWalletImport(t *testing.T) {
-	klay := runKlay(t, "wallet", "import", "--lightkdf", "testdata/guswallet.json")
-	defer klay.ExpectExit()
-	klay.Expect(`
-!! Unsupported terminal, password will be echoed.
-Passphrase: {{.InputLine "foo"}}
-Address: {d4584b5f6229b7be90727b0fc8c6b91bb427821f}
-`)
-
-	files, err := ioutil.ReadDir(filepath.Join(klay.Datadir, "keystore"))
-	if len(files) != 1 {
-		t.Errorf("expected one key file in keystore directory, found %d files (error: %v)", len(files), err)
-	}
-}
-
-func TestWalletImportBadPassword(t *testing.T) {
-	klay := runKlay(t, "wallet", "import", "--lightkdf", "testdata/guswallet.json")
-	defer klay.ExpectExit()
-	klay.Expect(`
-!! Unsupported terminal, password will be echoed.
-Passphrase: {{.InputLine "wrong"}}
-Fatal: could not decrypt key with given passphrase
 `)
 }
 

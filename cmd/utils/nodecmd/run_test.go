@@ -78,7 +78,6 @@ func init() {
 
 		// See accountcmd.go
 		AccountCommand,
-		WalletCommand,
 
 		// See consolecmd.go:
 		GetConsoleCommand(nodeFlags, rpcFlags),
