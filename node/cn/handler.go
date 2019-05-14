@@ -962,7 +962,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		p.AddToKnownTxs(tx.Hash())
 		validTxs = append(validTxs, tx)
 	}
-	pm.txpool.AddRemotes(validTxs)
+	pm.txpool.HandleTxMsg(validTxs)
 	return err
 }
 

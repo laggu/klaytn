@@ -43,6 +43,8 @@ const (
 	chainHeadChanSize = 10
 	// demoteUnexecutablesFullValidationTxLimit is the number of txs will be fully validated in demoteUnexecutables.
 	demoteUnexecutablesFullValidationTxLimit = 1000
+	// txMsgCh is the number of list of transactions can be queued.
+	txMsgChSize = 100
 )
 
 var (
@@ -192,6 +194,8 @@ type TxPool struct {
 
 	nonceCache   common.Cache
 	balanceCache common.Cache
+
+	txMsgCh chan types.Transactions
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -217,6 +221,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
 		nonceCache:   chain.GetNonceCache(),
 		balanceCache: chain.GetBalanceCache(),
+		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -237,8 +242,9 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
 
 	// Start the event loop and return
-	pool.wg.Add(1)
+	pool.wg.Add(2)
 	go pool.loop()
+	go pool.handleTxMsg()
 
 	return pool
 }
@@ -855,6 +861,27 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	pool.setPendingNonce(addr, tx.Nonce()+1)
 
 	return true
+}
+
+// HandleTxMsg transfers transactions to a channel where handleTxMsg calls AddRemotes
+// to handle them. This is made not to wait from the results from TxPool.AddRemotes.
+func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
+	senderCacher.recover(pool.signer, txs)
+	pool.txMsgCh <- txs
+}
+
+// handleTxMsg calls TxPool.AddRemotes by retrieving transactions from TxPool.txMsgCh.
+func (pool *TxPool) handleTxMsg() {
+	defer pool.wg.Done()
+
+	for {
+		select {
+		case txs := <-pool.txMsgCh:
+			pool.AddRemotes(txs)
+		case <-pool.chainHeadSub.Err():
+			return
+		}
+	}
 }
 
 // AddLocal enqueues a single transaction into the pool if it is valid, marking

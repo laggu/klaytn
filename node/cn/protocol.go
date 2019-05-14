@@ -110,8 +110,8 @@ var errorToString = map[int]string{
 }
 
 type txPool interface {
-	// AddRemotes should add the given transactions to the pool.
-	AddRemotes([]*types.Transaction) []error
+	// HandleTxMsg should add the given transactions to the pool.
+	HandleTxMsg(types.Transactions)
 
 	// Pending should return pending transactions.
 	// The slice should be modifiable by the caller.
