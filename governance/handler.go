@@ -266,16 +266,17 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 		}
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
+			governanceMode := GovernanceModeMap[gov.currentSet["governance.governancemode"].(string)]
+			governingNode := common.HexToAddress(gov.currentSet["governance.governingnode"].(string))
+
 			// Remove old vote with same validator and key
-			gov.removePreviousVote(valset, proposer, gVote)
+			gov.removePreviousVote(valset, proposer, gVote, governanceMode, governingNode)
 
 			// Add new Vote to snapshot.GovernanceVotes
 			gov.GovernanceVotes = append(gov.GovernanceVotes, gVote)
 
 			// Tally up the new vote. This will be cleared when Epoch ends.
 			// Add to GovernanceTally if it doesn't exist
-			governanceMode := GovernanceModeMap[gov.currentSet["governance.governancemode"].(string)]
-			governingNode := common.HexToAddress(gov.currentSet["governance.governingnode"].(string))
 			valset = gov.addNewVote(valset, gVote, governanceMode, governingNode)
 
 			// If this vote was casted by this node, remove it
@@ -294,7 +295,11 @@ func (gov *Governance) checkVote(address common.Address, authorize bool, valset 
 	return (validator != nil && !authorize) || (validator == nil && authorize)
 }
 
-func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, validator common.Address, gVote *GovernanceVote) {
+func (gov *Governance) isGovernanceModeSingleOrNone(governanceMode int, governingNode common.Address, voter common.Address) bool {
+	return governanceMode == params.GovernanceMode_None || (governanceMode == params.GovernanceMode_Single && voter == governingNode)
+}
+
+func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address) {
 	// Removing duplicated previous GovernanceVotes
 	for idx, vote := range gov.GovernanceVotes {
 		// Check if previous vote from same validator exists
@@ -302,10 +307,16 @@ func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, validato
 			// Reduce Tally
 			_, v := valset.GetByAddress(vote.Validator)
 			vp := v.VotingPower()
-			gov.changeGovernanceTally(vote.Key, vote.Value, vp, false)
+			currentVotes := gov.changeGovernanceTally(vote.Key, vote.Value, vp, false)
 
 			// Remove the old vote from GovernanceVotes
 			gov.GovernanceVotes = append(gov.GovernanceVotes[:idx], gov.GovernanceVotes[idx+1:]...)
+			if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
+				(governanceMode == params.GovernanceMode_Ballot && currentVotes <= valset.TotalVotingPower()/2) {
+				if v, ok := gov.changeSet[vote.Key]; ok && v == vote.Value {
+					delete(gov.changeSet, vote.Key)
+				}
+			}
 			break
 		}
 	}
@@ -324,6 +335,10 @@ func (gov *Governance) changeGovernanceTally(key string, value interface{}, vote
 				gov.GovernanceTally[idx].Votes -= vote
 			}
 			currentVote = gov.GovernanceTally[idx].Votes
+
+			if currentVote == 0 {
+				gov.GovernanceTally = append(gov.GovernanceTally[:idx], gov.GovernanceTally[idx+1:]...)
+			}
 			found = true
 			break
 		}
@@ -342,7 +357,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, gVote *Governanc
 	if v != nil {
 		vp := v.VotingPower()
 		currentVotes := gov.changeGovernanceTally(gVote.Key, gVote.Value, vp, true)
-		if governanceMode == params.GovernanceMode_None || (governanceMode == params.GovernanceMode_Single && gVote.Validator == governingNode) ||
+		if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
 			(governanceMode == params.GovernanceMode_Ballot && currentVotes > valset.TotalVotingPower()/2) {
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
