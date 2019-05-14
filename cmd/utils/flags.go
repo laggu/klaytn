@@ -708,7 +708,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
 	case ctx.GlobalIsSet(BaobabFlag.Name):
 		// set pre-configured bootnodes when 'baobab' option was enabled
-		urls = getBaobabBootnodesByConnectionType(int(cfg.ConnectionType))
+		urls = params.BaobabBootnodes[cfg.ConnectionType].Addrs
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	}
@@ -959,15 +959,14 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	cfg.NoDiscovery = ctx.GlobalIsSet(NoDiscoverFlag.Name)
 
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
-	if ctx.GlobalIsSet(BaobabFlag.Name) {
-		setupSBNURL(ctx, cfg)
-	} else if ctx.GlobalIsSet(EnableSBNFlag.Name) {
+	if ctx.GlobalIsSet(EnableSBNFlag.Name) {
 		if !ctx.GlobalIsSet(SBNAddrFlag.Name) {
 			log.Fatalf("Simple-bootnode's address is not defined. Use --sbnaddr. ex) --sbnaddr sbn.my-simple-bootnode.com")
 		}
+		logger.Warn("SimpleBootNode is deprecated. Instead use a bootnode")
 		setupSBNURL(ctx, cfg)
 	} else {
-		logger.Info("SBN is disabled.")
+		logger.Info("SimpleBootNode is disabled.")
 	}
 
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
@@ -1322,12 +1321,4 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 		}
 		return action(ctx)
 	}
-}
-
-func getBaobabBootnodesByConnectionType(cType int) []string {
-	if cType >= int(node.CONSENSUSNODE) && cType <= int(node.PROXYNODE) {
-		return params.BaobabBootnodes[cType].Addrs
-	}
-	logger.Crit("Does not have any bootnode of given node type", "node_type", convertNodeTypeToString(cType))
-	return []string{}
 }

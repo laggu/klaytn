@@ -20,6 +20,8 @@
 
 package params
 
+import "github.com/ground-x/klaytn/networks/p2p"
+
 type bootnodesByTypes struct {
 	Addrs []string
 }
@@ -32,36 +34,21 @@ var MainnetBootnodes = []string{
 	//"kni://3f1d12044546b76342d59d4a05532c14b85aa669704bfe1f864fe079415aa2c02d743e03218e57a33fb94523adb54032871a6c51b2cc5514cb7c7e35b3ed0a99@13.93.211.84:30303",  // US-WEST
 }
 
-// TODO-Klaytn-Bootnode: below consts are derived from `node` package due to importing `node` package occurs cyclic import issue
-const (
-	CONSENSUSNODE = iota
-	ENDPOINTNODE
-	PROXYNODE
-)
-
-// BaobabBootnodes are the kni URLs of the PN's P2P bootstrap nodes running on the
-// Baobab test network.
-var BaobabBootnodes = map[int]bootnodesByTypes{
-	// TODO-Klaytn-Bootnode: realize bootnode URLs and domains
-	CONSENSUSNODE: {
-		// CN bootnodes
+// BaobabBootnodes are the kni URLs of the PN's P2P bootstrap nodes running on the Baobab test network.
+var BaobabBootnodes = map[p2p.ConnType]bootnodesByTypes{
+	p2p.CONSENSUSNODE: {
 		[]string{
-			"kni://5549df14326d6af1272c4a4375c8b7aec3f6eed3a359e390aeed882bddb215837bb73490230f35973c39e5298b1c130c2a557f4b88e3462a89bab39ca8de3adf@permissoned.baobab.kr.klaytn.net:32323?discport=32323", // Imaginary (KR) bootnode for CN
-			"kni://572eac675ad859034958570313f48e2de532a9d83717fbc257bdecd1e01250369fab5adbd9d14bc513b1844e5048df163efac161d878eb61cb033b830b017054@permissoned.baobab.jp.klaytn.net:32323?discport=32323", // Imaginary (JP) bootnode for CN
+			"kni://0b34bc04018ff4b4079d7734d2788cc6d73fc1e699321d09f7ad6f49825f054251fd35b0cbb4003b7fbf4825c6318e82cb1d1514d7b1d294de9f6f5f70e8eae9@bn1.baobab.klaytn.net:32323?discport=32323&ntype=bn",
 		},
 	},
-	ENDPOINTNODE: {
-		// EN bootnodes
+	p2p.ENDPOINTNODE: {
 		[]string{
-			"kni://559df4b2fa31c1650d7b0343156c726026613f79966e6af5c9c3c0fd65fc652827f6bf03a690de99a2d82b1acce64fbcc7b1471ee3d994d987a538c1907dec96@13.209.140.55:32323?discport=32323",
-			"kni://5bcd28169dc7444e22c6aa7cf428086e77689aea5fc820e3c973167d4131d6a9efc6a38a93e75a887ac99734c440d3c3c90215ce1b349bd64ed11ee18e4dc265@52.78.141.146:32323?discport=32323",
+			"kni://f22ebd1fc610686b5749a4e4ec4da9ba4647fd0bdd8b7058e1c58221e06d71686b519da522fdb930bcde1bf0339f73bdade429123b787b37199c6605f2efa025@bn2.baobab.klaytn.net:32323?discport=32323&ntype=bn",
 		},
 	},
-	PROXYNODE: {
-		// PN (formerly known as BN) bootnodes
+	p2p.PROXYNODE: {
 		[]string{
-			"kni://11eb3d77843914f4b78c8b814b343e0825fe1adc0ec2df001bec9cce6ff0fd8ae5c36dec31ce71f00b00de0c7230d22c54507520fd449986f6ad062510d5c9d9@bridge.baobab.kr.klaytn.net:32323?discport=32323", // Imaginary (KR) bootnode for PN
-			"kni://b171d2ccc5ee35451d766401ba38392ed12d71f87459b371955a94caadc1c2228859169c44d817b52d03b12f3d91b9ebb204592ce8b290ee5f0824eafabf292b@bridge.baobab.jp.klaytn.net:32323?discport=32323", // Imaginary (JP) bootnode for PN
+			"kni://f22ebd1fc610686b5749a4e4ec4da9ba4647fd0bdd8b7058e1c58221e06d71686b519da522fdb930bcde1bf0339f73bdade429123b787b37199c6605f2efa025@bn2.baobab.klaytn.net:32323?discport=32323&ntype=bn",
 		},
 	},
 }

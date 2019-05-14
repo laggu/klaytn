@@ -141,6 +141,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
 			utils.NetworkIdFlag,
+			utils.BaobabFlag,
 		},
 	},
 	{
