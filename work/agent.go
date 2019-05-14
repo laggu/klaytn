@@ -108,6 +108,7 @@ out:
 func (self *CpuAgent) mine(work *Task, stop <-chan struct{}) {
 	// TODO-Klaytn drop or missing tx and remove mining on PN and EN
 	if self.nodetype != node.CONSENSUSNODE {
+		ResultChGauge.Update(ResultChGauge.Value() + 1)
 		self.returnCh <- &Result{work, nil}
 		return
 	}
@@ -115,11 +116,13 @@ func (self *CpuAgent) mine(work *Task, stop <-chan struct{}) {
 	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
 		logger.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash())
 
+		ResultChGauge.Update(ResultChGauge.Value() + 1)
 		self.returnCh <- &Result{work, result}
 	} else {
 		if err != nil {
 			logger.Warn("Block sealing failed", "err", err)
 		}
+		ResultChGauge.Update(ResultChGauge.Value() + 1)
 		self.returnCh <- nil
 	}
 }

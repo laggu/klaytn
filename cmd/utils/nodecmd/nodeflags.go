@@ -111,7 +111,11 @@ var KCNFlags = []cli.Flag{
 	utils.RewardbaseFlag,
 }
 
-var KPNFlags = []cli.Flag{}
+var KPNFlags = []cli.Flag{
+	utils.TxResendIntervalFlag,
+	utils.TxResendCountFlag,
+	utils.TxResendUseLegacyFlag,
+}
 
 var KENFlags = []cli.Flag{
 	utils.ServiceChainSignerFlag,
@@ -141,6 +145,9 @@ var KENFlags = []cli.Flag{
 	utils.BulkInsertSizeFlag,
 	utils.EventModeFlag,
 	utils.MaxBlockDiffFlag,
+	utils.TxResendIntervalFlag,
+	utils.TxResendCountFlag,
+	utils.TxResendUseLegacyFlag,
 }
 
 var KSCNFlags = []cli.Flag{

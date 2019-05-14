@@ -60,6 +60,12 @@ const (
 
 	blockReceivingPNLimit  = 5 // maximum number of PNs that a CN broadcasts block.
 	minNumPeersToSendBlock = 3 // minimum number of peers that a node broadcasts block.
+
+	// DefaultMaxResendTxCount is the number of resending transactions to peer in order to prevent the txs from missing.
+	DefaultMaxResendTxCount = 1000
+
+	// DefaultTxResendInterval is the second of resending transactions period.
+	DefaultTxResendInterval = 3
 )
 
 // errIncompatibleConfig is returned if the requested protocols and configs are
@@ -98,6 +104,7 @@ type ProtocolManager struct {
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
 
+	quitResendCh chan struct{}
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
@@ -109,26 +116,29 @@ type ProtocolManager struct {
 
 	wsendpoint string
 
-	nodetype p2p.ConnType
+	nodetype          p2p.ConnType
+	txResendUseLegacy bool
 }
 
 // NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
 // with the Klaytn network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *blockchain.BlockChain, chainDB database.DBManager, nodetype p2p.ConnType, cnconfig *Config) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
-		networkId:   networkId,
-		eventMux:    mux,
-		txpool:      txpool,
-		blockchain:  blockchain,
-		chainconfig: config,
-		peers:       newPeerSet(),
-		newPeerCh:   make(chan Peer),
-		noMorePeers: make(chan struct{}),
-		txsyncCh:    make(chan *txsync),
-		quitSync:    make(chan struct{}),
-		engine:      engine,
-		nodetype:    nodetype,
+		networkId:         networkId,
+		eventMux:          mux,
+		txpool:            txpool,
+		blockchain:        blockchain,
+		chainconfig:       config,
+		peers:             newPeerSet(),
+		newPeerCh:         make(chan Peer),
+		noMorePeers:       make(chan struct{}),
+		txsyncCh:          make(chan *txsync),
+		quitSync:          make(chan struct{}),
+		quitResendCh:      make(chan struct{}),
+		engine:            engine,
+		nodetype:          nodetype,
+		txResendUseLegacy: cnconfig.TxResendUseLegacy,
 	}
 
 	// istanbul BFT
@@ -239,6 +249,9 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
 
+	if manager.useTxResend() {
+		go manager.txResendLoop(cnconfig.TxResendInterval, int64(cnconfig.TxResendSize))
+	}
 	return manager, nil
 }
 
@@ -309,6 +322,11 @@ func (pm *ProtocolManager) Stop() {
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
 	pm.noMorePeers <- struct{}{}
+
+	if pm.useTxResend() {
+		// Quit resend loop
+		pm.quitResendCh <- struct{}{}
+	}
 
 	// Quit fetcher, txsyncLoop.
 	close(pm.quitSync)
@@ -961,6 +979,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		}
 		p.AddToKnownTxs(tx.Hash())
 		validTxs = append(validTxs, tx)
+		txReceiveCounter.Inc(1)
 	}
 	pm.txpool.HandleTxMsg(validTxs)
 	return err
@@ -1132,6 +1151,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			for _, peer := range peers {
 				txset[peer] = append(txset[peer], tx)
 			}
+			txResendCounter.Inc(1)
 		} else {
 			peers := pm.peers.CNWithoutTx(tx.Hash())
 			if len(peers) > 0 {
@@ -1154,6 +1174,7 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 				txset[peer] = append(txset[peer], tx)
 			}
 			logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
+			txSendCounter.Inc(1)
 		}
 	}
 
@@ -1222,6 +1243,65 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 			return
 		}
 	}
+}
+
+func (pm *ProtocolManager) txResendLoop(period uint64, maxTxCount int64) {
+	if period == 0 {
+		period = DefaultTxResendInterval
+	}
+	tick := time.Duration(period) * time.Second
+	sz := maxTxCount
+	if sz < DefaultMaxResendTxCount {
+		sz = DefaultMaxResendTxCount
+	}
+	resend := time.NewTicker(tick)
+	defer resend.Stop()
+
+	logger.Debug("txResendloop started", "period", tick.Seconds())
+
+	for {
+		select {
+		case <-resend.C:
+			pending, err := pm.txpool.PendingByCount(sz)
+			if err != nil {
+				logger.Error("Failed to fetch pending transactions", "err", err)
+				continue
+			}
+			if len(pending) > 0 {
+				pm.txResend(pending)
+			}
+		case <-pm.quitResendCh:
+			logger.Debug("txResendloop stopped")
+			return
+		}
+	}
+}
+
+func (pm *ProtocolManager) txResend(pending map[common.Address]types.Transactions) {
+	txResendRoutineGauge.Update(txResendRoutineGauge.Value() + 1)
+	defer txResendRoutineGauge.Update(txResendRoutineGauge.Value() - 1)
+
+	logger.Debug("TX Resend start", "Account", len(pending))
+
+	// TODO-Klaytn drop or missing tx
+	var resendTxs []*types.Transaction
+	for _, sortedTxs := range pending {
+		resendTxs = append(resendTxs, sortedTxs...)
+	}
+	if len(resendTxs) > 0 {
+		logger.Debug("Tx Resend", "count", len(resendTxs))
+		txResendGauge.Update(int64(len(resendTxs)))
+		pm.ReBroadcastTxs(resendTxs)
+	} else {
+		txResendGauge.Update(0)
+	}
+}
+
+func (pm *ProtocolManager) useTxResend() bool {
+	if pm.nodetype != node.CONSENSUSNODE && !pm.txResendUseLegacy {
+		return true
+	}
+	return false
 }
 
 // NodeInfo represents a short summary of the Klaytn sub-protocol metadata

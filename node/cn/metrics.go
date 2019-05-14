@@ -59,6 +59,11 @@ var (
 	miscInTrafficMeter        = metrics.NewRegisteredMeter("klay/misc/in/traffic", nil)
 	miscOutPacketsMeter       = metrics.NewRegisteredMeter("klay/misc/out/packets", nil)
 	miscOutTrafficMeter       = metrics.NewRegisteredMeter("klay/misc/out/traffic", nil)
+	txReceiveCounter          = metrics.NewRegisteredCounter("klay/tx/recv/counter", nil)
+	txResendCounter           = metrics.NewRegisteredCounter("klay/tx/resend/counter", nil)
+	txResendGauge             = metrics.NewRegisteredGauge("klay/tx/resend/gauge", nil)
+	txSendCounter             = metrics.NewRegisteredCounter("klay/tx/send/counter", nil)
+	txResendRoutineGauge      = metrics.NewRegisteredGauge("klay/tx/resend/routine/gauge", nil)
 )
 
 // meteredMsgReadWriter is a wrapper around a p2p.MsgReadWriter, capable of

@@ -283,6 +283,22 @@ var (
 		Name:  "extradata",
 		Usage: "Block extra data set by the work (default = client version)",
 	}
+
+	TxResendIntervalFlag = cli.Uint64Flag{
+		Name:  "txresend.interval",
+		Usage: "Set the transaction resend interval in seconds",
+		Value: uint64(cn.DefaultTxResendInterval),
+	}
+	TxResendCountFlag = cli.Uint64Flag{
+		Name:  "txresend.max-count",
+		Usage: "Set the max count of resending transactions",
+		Value: uint64(cn.DefaultMaxResendTxCount),
+	}
+	//TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
+	TxResendUseLegacyFlag = cli.BoolFlag{
+		Name:  "txresend.use-legacy",
+		Usage: "Enable the legacy transaction resend logic (For testing only)",
+	}
 	// Account settings
 	UnlockedAccountFlag = cli.StringFlag{
 		Name:  "unlock",
@@ -1214,6 +1230,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
 		}
 	*/
+	// Set the Tx resending related configuration variables
+	cfg.TxResendInterval = ctx.GlobalUint64(TxResendIntervalFlag.Name)
+	cfg.TxResendSize = ctx.GlobalUint64(TxResendCountFlag.Name)
+	cfg.TxResendUseLegacy = ctx.GlobalBool(TxResendUseLegacyFlag.Name)
 }
 
 // RegisterCNService adds a CN client to the stack.

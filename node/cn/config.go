@@ -128,6 +128,11 @@ type Config struct {
 	DocRoot string `toml:"-"`
 
 	WsEndpoint string `toml:",omitempty"`
+
+	// Tx Resending options
+	TxResendInterval  uint64
+	TxResendSize      uint64
+	TxResendUseLegacy bool
 }
 
 type configMarshaling struct {

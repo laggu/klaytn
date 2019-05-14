@@ -156,14 +156,14 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config, scconfig *sc.SCCo
 	}
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 
-	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType()); err != nil {
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}
 
 	cn.protocolManager.wsendpoint = config.WsEndpoint
 
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
-	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), config.ServiceChainSigner)
+	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), config.ServiceChainSigner, config.TxResendUseLegacy)
 
 	cn.APIBackend = &ServiceChainAPIBackend{cn, nil}
 

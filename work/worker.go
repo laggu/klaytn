@@ -58,6 +58,8 @@ var (
 	// Metrics for miner
 	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
 	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
+	ResultChGauge           = metrics.NewRegisteredGauge("miner/resultch", nil)
+	resentTxGauge           = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
 )
 
 // Agent can register themself with the worker
@@ -135,7 +137,7 @@ type worker struct {
 	nodetype p2p.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype p2p.ConnType) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype p2p.ConnType, TxResendUseLegacy bool) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -162,7 +164,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 	worker.chainSideSub = backend.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	go worker.update()
 
-	go worker.wait()
+	go worker.wait(TxResendUseLegacy)
 	worker.commitNewWork()
 	//	}
 
@@ -332,18 +334,21 @@ func (self *worker) update() {
 	}
 }
 
-func (self *worker) wait() {
+func (self *worker) wait(TxResendUseLegacy bool) {
 	for {
 		mustCommitNewWork := true
 		for result := range self.recv {
 			atomic.AddInt32(&self.atWork, -1)
-
+			ResultChGauge.Update(ResultChGauge.Value() - 1)
 			if result == nil {
 				continue
 			}
 
 			// TODO-Klaytn drop or missing tx
 			if self.nodetype != node.CONSENSUSNODE {
+				if !TxResendUseLegacy {
+					continue
+				}
 				pending, err := self.backend.TxPool().Pending()
 				if err != nil {
 					logger.Error("Failed to fetch pending transactions", "err", err)
@@ -364,7 +369,8 @@ func (self *worker) wait() {
 							resendTxs = append(resendTxs, sortedTxs...)
 						}
 					}
-					if resendTxs != nil {
+					if len(resendTxs) > 0 {
+						resentTxGauge.Update(int64(len(resendTxs)))
 						self.backend.ReBroadcastTxs(resendTxs)
 					}
 				}

@@ -203,6 +203,10 @@ func (m *txSortedMap) Len() int {
 // sorted internal representation. The result of the sorting is cached in case
 // it's requested again before any modifications are made to the contents.
 func (m *txSortedMap) Flatten() types.Transactions {
+	return m.FlattenByCount(0)
+}
+
+func (m *txSortedMap) FlattenByCount(count int64) types.Transactions {
 	// If the sorting was not cached yet, create and cache it
 	if m.cache == nil {
 		m.cache = make(types.Transactions, 0, len(m.items))
@@ -211,8 +215,12 @@ func (m *txSortedMap) Flatten() types.Transactions {
 		}
 		sort.Sort(types.TxByNonce(m.cache))
 	}
+	txLen := int64(len(m.cache))
+	if count != 0 && txLen > count {
+		txLen = count
+	}
 	// Copy the cache to prevent accidental modifications
-	txs := make(types.Transactions, len(m.cache))
+	txs := make(types.Transactions, txLen)
 	copy(txs, m.cache)
 	return txs
 }
@@ -394,6 +402,10 @@ func (l *txList) Empty() bool {
 // it's requested again before any modifications are made to the contents.
 func (l *txList) Flatten() types.Transactions {
 	return l.txs.Flatten()
+}
+
+func (l *txList) FlattenByCount(count int64) types.Transactions {
+	return l.txs.FlattenByCount(count)
 }
 
 // priceHeap is a heap.Interface implementation over transactions for retrieving
