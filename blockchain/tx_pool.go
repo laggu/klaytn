@@ -566,7 +566,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
-		logger.Info("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
+		logger.Trace("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
 		return ErrInvalidUnitPrice
 	}
 
@@ -614,29 +614,29 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
 
 			if senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 {
-				logger.Error("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", senderBalance, "feeBySender", feeBySender)
+				logger.Trace("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", senderBalance, "feeBySender", feeBySender)
 				return ErrInsufficientFundsFeePayer
 			}
 
 			if feePayerBalance.Cmp(feeByFeePayer) < 0 {
-				logger.Error("[tx_pool] insufficient funds for feeByFeePayer", "feePayer", feePayer, "balance", feePayerBalance, "feeByFeePayer", feeByFeePayer)
+				logger.Trace("[tx_pool] insufficient funds for feeByFeePayer", "feePayer", feePayer, "balance", feePayerBalance, "feeByFeePayer", feeByFeePayer)
 				return ErrInsufficientFundsFeePayer
 			}
 		} else {
 			if senderBalance.Cmp(tx.Value()) < 0 {
-				logger.Error("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
+				logger.Trace("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
 				return ErrInsufficientFundsFrom
 			}
 
 			if feePayerBalance.Cmp(tx.Fee()) < 0 {
-				logger.Error("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
+				logger.Trace("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
 				return ErrInsufficientFundsFeePayer
 			}
 		}
 	} else {
 		// balance check for non-fee-delegated tx
 		if senderBalance.Cmp(tx.Cost()) < 0 {
-			logger.Error("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
+			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFunds
 		}
 	}
