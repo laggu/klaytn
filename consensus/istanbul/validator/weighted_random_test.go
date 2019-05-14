@@ -21,6 +21,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/stretchr/testify/assert"
+	"math/big"
 	"math/rand"
 	"reflect"
 	"sort"
@@ -443,12 +444,16 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
 
 	valSet.SetBlockNum(1)
+	view := &istanbul.View{
+		Sequence: new(big.Int).SetInt64(1),
+		Round:    new(big.Int).SetInt64(0),
+	}
 
 	for i := 2; i < len(validators); i++ {
 		testSubSetLen := uint64(i)
 		valSet.SetSubGroupSize(testSubSetLen)
 
-		testSubList := valSet.SubListWithProposer(crypto.Keccak256Hash([]byte("This is a test")), valSet.GetProposer().Address())
+		testSubList := valSet.SubListWithProposer(crypto.Keccak256Hash([]byte("This is a test")), valSet.GetProposer().Address(), view)
 		resultSubListLen := len(testSubList)
 
 		if int(testSubSetLen) != resultSubListLen {

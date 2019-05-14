@@ -279,11 +279,11 @@ func (valSet *weightedCouncil) List() []istanbul.Validator {
 	return valSet.validators
 }
 
-func (valSet *weightedCouncil) SubList(prevHash common.Hash) []istanbul.Validator {
-	return valSet.SubListWithProposer(prevHash, valSet.GetProposer().Address())
+func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
+	return valSet.SubListWithProposer(prevHash, valSet.GetProposer().Address(), view)
 }
 
-func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, proposer common.Address) []istanbul.Validator {
+func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, proposer common.Address, view *istanbul.View) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
@@ -312,10 +312,20 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		return valSet.validators
 	}
 	committee[0] = proposerValidator
-
+	if valSet.subSize == 1 {
+		logger.Debug("Sub size is 1, current", "prevHash", prevHash, "proposer", proposer, "committee", committee, "len of committee", len(committee), "subSize", valSet.subSize)
+		return committee
+	}
 	// next proposer
-	// TODO how to sync next proposer (how to get exact next proposer ?)
-	committee[1] = valSet.selector(valSet, committee[0].Address(), uint64(0))
+	nextProposerIdx := uint64(1)
+	for committee[1] == nil {
+		nextProposer := valSet.selector(valSet, proposer, view.Round.Uint64()+nextProposerIdx)
+		if committee[0].Address() != nextProposer.Address() {
+			committee[1] = nextProposer
+			break
+		}
+		nextProposerIdx += 1
+	}
 
 	proposerIdx, _ := valSet.getByAddress(committee[0].Address())
 	nextproposerIdx, _ := valSet.getByAddress(committee[1].Address())
@@ -360,7 +370,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		logger.Error("### subList", "prevHash", prevHash.Hex())
 	}
 
-	logger.Error("New committee", "prevHash", prevHash, "proposer", proposer, "committee", valSet.validators)
+	logger.Debug("New committee", "prevHash", prevHash, "proposer", proposer, "committee", committee, "len of committee", len(committee), "subSize", valSet.subSize)
 	return committee
 }
 

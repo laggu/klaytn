@@ -29,7 +29,9 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/consensus"
+	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/networks/rpc"
+	"math/big"
 	"reflect"
 )
 
@@ -174,6 +176,11 @@ func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Ad
 		return common.Address{}, []common.Address{}, nil
 	}
 
+	view := &istanbul.View{
+		Sequence: new(big.Int).Set(block.Number()),
+		Round:    new(big.Int).SetInt64(0),
+	}
+
 	// get the proposer of this block.
 	proposer, err := ecrecover(block.Header())
 	if err != nil {
@@ -188,7 +195,7 @@ func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Ad
 	}
 
 	// get the committee list of this block.
-	committee := snap.ValSet.SubListWithProposer(parentHash, proposer)
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
 	commiteeAddrs := make([]common.Address, len(committee))
 	for i, v := range committee {
 		commiteeAddrs[i] = v.Address()

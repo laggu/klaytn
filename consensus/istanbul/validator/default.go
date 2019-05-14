@@ -140,7 +140,7 @@ func (valSet *defaultSet) List() []istanbul.Validator {
 	return valSet.validators
 }
 
-func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
+func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
@@ -162,8 +162,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = valSet.GetProposer()
 	// next proposer
-	// TODO how to sync next proposer (how to get exact next proposer ?)
-	subset[1] = valSet.selector(valSet, subset[0].Address(), uint64(0))
+	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64()+1)
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
@@ -200,7 +199,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash) []istanbul.Validator {
 	return subset
 }
 
-func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer common.Address) []istanbul.Validator {
+func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer common.Address, view *istanbul.View) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
@@ -222,8 +221,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = New(proposer)
 	// next proposer
-	// TODO how to sync next proposer (how to get exact next proposer ?)
-	subset[1] = valSet.selector(valSet, subset[0].Address(), uint64(0))
+	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64()+1)
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())

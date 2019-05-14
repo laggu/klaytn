@@ -110,7 +110,8 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	rewardbase common.Address
+	rewardbase  common.Address
+	currentView *istanbul.View
 
 	// Reference to the governance.Governance
 	governance      *governance.Governance
@@ -137,6 +138,10 @@ func (sb *backend) GetRewardBase() common.Address {
 
 func (sb *backend) GetSubGroupSize() uint64 {
 	return sb.governance.ChainConfig.Istanbul.SubGroupSize
+}
+
+func (sb *backend) SetCurrentView(view *istanbul.View) {
+	sb.currentView = view
 }
 
 // Address implements istanbul.Backend.Address
@@ -204,7 +209,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	sb.knownMessages.Add(hash, true)
 
 	targets := make(map[common.Address]bool)
-	for _, val := range valSet.SubList(prevHash) {
+	for _, val := range valSet.SubList(prevHash, sb.currentView) {
 		if val.Address() != sb.Address() {
 			targets[val.Address()] = true
 		}

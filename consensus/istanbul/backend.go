@@ -81,5 +81,7 @@ type Backend interface {
 
 	GetSubGroupSize() uint64
 
+	SetCurrentView(view *View)
+
 	NodeType() p2p.ConnType
 }

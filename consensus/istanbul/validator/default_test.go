@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -226,8 +227,13 @@ func TestSubSetList(t *testing.T) {
 
 	fmt.Printf("%v\n", valSet.GetProposer())
 
+	view := &istanbul.View{
+		Sequence: new(big.Int).SetInt64(1),
+		Round:    new(big.Int).SetInt64(0),
+	}
+
 	hash := istanbul.RLPHash("sfsfdsfd")
-	vallist := valSet.SubList(hash)
+	vallist := valSet.SubList(hash, view)
 
 	for idx, val := range vallist {
 		fmt.Printf("validator %d, %v\n", idx, val)

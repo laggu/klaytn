@@ -244,6 +244,7 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 		c.valSet = c.backend.Validators(lastProposal)
 	}
+	c.backend.SetCurrentView(newView)
 
 	// Update logger
 	logger = logger.NewWith("old_proposer", c.valSet.GetProposer())
