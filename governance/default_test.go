@@ -21,6 +21,7 @@ import (
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"reflect"
 	"testing"
@@ -243,6 +244,7 @@ func TestGovernance_ClearVotes(t *testing.T) {
 }
 
 func TestGovernance_GetEncodedVote(t *testing.T) {
+	var err error
 	gov := getGovernance()
 
 	for _, val := range goodVotes {
@@ -254,7 +256,10 @@ func TestGovernance_GetEncodedVote(t *testing.T) {
 		voteData := gov.GetEncodedVote(common.HexToAddress("0x1234567890123456789012345678901234567890"), 1000)
 		v := new(GovernanceVote)
 		rlp.DecodeBytes(voteData, &v)
-		v = gov.ParseVoteValue(v)
+
+		if v, err = gov.ParseVoteValue(v); err != nil {
+			assert.Equal(t, nil, err)
+		}
 
 		if v.Value != gov.voteMap[v.Key].value {
 			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap[v.Key].value, v.Value)
@@ -264,6 +269,7 @@ func TestGovernance_GetEncodedVote(t *testing.T) {
 }
 
 func TestGovernance_ParseVoteValue(t *testing.T) {
+	var err error
 	gov := getGovernance()
 
 	addr := common.HexToAddress("0x1234567890123456789012345678901234567890")
@@ -278,7 +284,10 @@ func TestGovernance_ParseVoteValue(t *testing.T) {
 
 		d := new(GovernanceVote)
 		rlp.DecodeBytes(b, d)
-		d = gov.ParseVoteValue(d)
+
+		if d, err = gov.ParseVoteValue(d); err != nil {
+			assert.Equal(t, nil, err)
+		}
 
 		if !reflect.DeepEqual(v, d) {
 			t.Errorf("Parse was not successful! %v %v \n", v, d)
@@ -458,5 +467,63 @@ func TestCalcGovernanceInfoBlock(t *testing.T) {
 		if res != v.e {
 			t.Errorf("Governance Block Number Mismatch: want %v, have %v", v.e, res)
 		}
+	}
+}
+
+func TestVoteValueNilInterface(t *testing.T) {
+	gov := getGovernance()
+	gVote := new(GovernanceVote)
+	var test []byte
+
+	// gVote.Value is an interface list
+	{
+		gVote.Value = []interface{}{[]byte{1, 2}}
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.Equal(t, ErrValueTypeMismatch, err)
+	}
+
+	// gVote.Value is an empty interface list
+	{
+		gVote.Value = []interface{}{[]byte{}}
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.Equal(t, ErrValueTypeMismatch, err)
+	}
+
+	// gVote.Value is nil
+	{
+		gVote.Value = nil
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.Equal(t, ErrValueTypeMismatch, err)
+	}
+
+	// gVote.Value is uint8 list
+	{
+		gVote.Value = []uint8{0x11}
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.Equal(t, nil, err)
 	}
 }

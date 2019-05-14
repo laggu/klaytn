@@ -35,6 +35,13 @@ import (
 )
 
 var (
+	ErrValueTypeMismatch  = errors.New("Value's type mismatch")
+	ErrDecodeGovChange    = errors.New("Failed to decode received governance changes")
+	ErrUnmarshalGovChange = errors.New("Failed to unmarshal received governance changes")
+	ErrVoteValueMismatch  = errors.New("Received change mismatches with the value this node has!!")
+)
+
+var (
 	GovernanceKeyMap = map[string]int{
 		"governance.governancemode":     params.GovernanceMode,
 		"governance.governingnode":      params.GoverningNode,
@@ -149,7 +156,7 @@ func (gs GovernanceSet) SetValue(itemType int, value interface{}) error {
 	key := GovernanceKeyMapReverse[itemType]
 
 	if GovernanceItems[itemType].t != reflect.TypeOf(value) {
-		return errors.New("Value's type mismatch")
+		return ErrValueTypeMismatch
 	}
 	gs[key] = value
 	return nil
@@ -239,9 +246,14 @@ func (g *Governance) ClearVotes(num uint64) {
 }
 
 // parseVoteValue parse vote.Value from []uint8 to appropriate type
-func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
+func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, error) {
 	var val interface{}
 	k := GovernanceKeyMap[gVote.Key]
+
+	// filter out if vote value is an interface list
+	if reflect.TypeOf(gVote.Value) == reflect.TypeOf([]interface{}{}) {
+		return nil, ErrValueTypeMismatch
+	}
 
 	switch k {
 	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio, params.Policy:
@@ -262,7 +274,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) *GovernanceVote {
 		logger.Warn("Unknown key was given", "key", k)
 	}
 	gVote.Value = val
-	return gVote
+	return gVote, nil
 }
 
 func (gov *Governance) ReflectVotes(vote GovernanceVote) {
@@ -563,12 +575,12 @@ func (gov *Governance) GetGovernanceValue(key string) interface{} {
 func (gov *Governance) VerifyGovernance(received []byte) error {
 	change := []byte{}
 	if rlp.DecodeBytes(received, &change) != nil {
-		return errors.New("Failed to decode received governance changes")
+		return ErrDecodeGovChange
 	}
 
 	rChangeSet := make(GovernanceSet)
 	if json.Unmarshal(change, &rChangeSet) != nil {
-		return errors.New("Failed to unmarshal received governance changes")
+		return ErrUnmarshalGovChange
 	}
 	rChangeSet = adjustDecodedSet(rChangeSet)
 
@@ -581,7 +593,7 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 			}
 			if gov.changeSet[k] != v {
 				logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", gov.changeSet[k], "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(gov.changeSet[k]))
-				return errors.New("Received change mismatches with the value this node has!!")
+				return ErrVoteValueMismatch
 			}
 		}
 	}

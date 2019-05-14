@@ -236,11 +236,16 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 	gVote := new(GovernanceVote)
 
 	if len(header.Vote) > 0 {
+		var err error
+
 		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
 			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
 			return valset
 		}
-		gVote = gov.ParseVoteValue(gVote)
+		if gVote, err = gov.ParseVoteValue(gVote); err != nil {
+			logger.Error("Failed to parse a vote value. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			return valset
+		}
 
 		key := GovernanceKeyMap[gVote.Key]
 		switch key {
