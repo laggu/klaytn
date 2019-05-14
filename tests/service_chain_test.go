@@ -92,7 +92,7 @@ func TestAnchoringServiceChainDataWithAPIs(t *testing.T) {
 	}
 
 	//Check if mainChainAccountAddr is ok.
-	mainChainAccountAddr, err := cClient.GetMainChainAccountAddr(ctx)
+	mainChainAccountAddr, err := cClient.BridgeGetMainChainAccountAddr(ctx)
 	if err != nil {
 		t.Fatalf("parent GetMainChainAccountAddr Err %v", err)
 	}
