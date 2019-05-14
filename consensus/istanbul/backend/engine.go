@@ -435,6 +435,9 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	for {
 		select {
 		case result := <-sb.commitCh:
+			if result == nil {
+				return nil, nil
+			}
 			// if the block hash and the hash from channel are the same,
 			// return the result. Otherwise, keep waiting the next hash.
 			if block.Hash() == result.Hash() {
