@@ -535,15 +535,6 @@ var (
 		Name:  "writeaddress",
 		Usage: `write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"`,
 	}
-	DiscoveryPolicyPresetFlag = cli.StringFlag{
-		Name:  "discovery-policy",
-		Usage: "Set the discovery policy as predefined preset (cbn|pbn|ebn)",
-	}
-	DiscoveryMaxNodes = cli.UintFlag{
-		Name:  "discovery-max-node",
-		Usage: "Set the max number of node contains in NEIGHBORS body",
-		Value: 16,
-	}
 	// ServiceChain's settings
 	EnabledBridgeFlag = cli.BoolFlag{
 		Name:  "bridge",
@@ -728,6 +719,10 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		if err != nil {
 			logger.Error("Bootstrap URL invalid", "kni", url, "err", err)
 			continue
+		}
+		if node.NType == discover.NodeTypeUnknown {
+			logger.Debug("setBootstrapNode: set nodetype as bn from unknown", "nodeid", node.ID)
+			node.NType = discover.NodeTypeBN
 		}
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
 	}
@@ -962,15 +957,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	cfg.NoDiscovery = ctx.GlobalIsSet(NoDiscoverFlag.Name)
-
-	var err error
-	// set the default discovery preset by nodetype
-	cfg.DiscoveryPolicyPreset, err = getDefaultDiscoveryPolicyByNodeType(cfg.ConnectionType)
-	if err != nil {
-		logger.Crit("Failed with set discovery policy", "err", err)
-	}
-	cfg.DiscoveryMaxNeighbors = ctx.GlobalUint(DiscoveryMaxNodes.Name)
-	logger.Info("Setting Discovery policy", "DiscoveryPolicy", cfg.DiscoveryPolicyPreset)
 
 	//TODO-Klaytn-Node remove after the real bootnode is implemented
 	if ctx.GlobalIsSet(BaobabFlag.Name) {
@@ -1344,17 +1330,4 @@ func getBaobabBootnodesByConnectionType(cType int) []string {
 	}
 	logger.Crit("Does not have any bootnode of given node type", "node_type", convertNodeTypeToString(cType))
 	return []string{}
-}
-
-func getDefaultDiscoveryPolicyByNodeType(nodetype p2p.ConnType) (string, error) {
-	switch nodetype {
-	case node.CONSENSUSNODE:
-		return discover.DiscoveryPolicyPresetCN, nil
-	case node.PROXYNODE:
-		return discover.DiscoveryPolicyPresetPN, nil
-	case node.ENDPOINTNODE:
-		return discover.DiscoveryPolicyPresetEN, nil
-	default:
-		return "", fmt.Errorf("Not supported type")
-	}
 }

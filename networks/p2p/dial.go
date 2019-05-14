@@ -93,7 +93,7 @@ func (t TCPDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
 // of the main loop in Server.run.
 type dialstate struct {
 	maxDynDials int
-	ntab        discoverTable
+	ntab        discover.Discovery
 	netrestrict *netutil.Netlist
 
 	lookupRunning      bool
@@ -108,14 +108,6 @@ type dialstate struct {
 	bootnodes []*discover.Node // default dials when there are no peers
 
 	tsMap map[dialType]typedStatic // tsMap holds typedStaticDial per dialType(discovery name)
-}
-
-type discoverTable interface {
-	Self() *discover.Node
-	Close()
-	Resolve(target discover.NodeID) *discover.Node
-	Lookup(target discover.NodeID) []*discover.Node
-	ReadRandomNodes([]*discover.Node) int
 }
 
 // the dial history remembers recent dials.
@@ -172,12 +164,10 @@ func (t *discoverTypedStaticTask) Do(srv Server) {
 	// event loop spins too fast.
 	next := srv.AddLastLookup()
 	if now := time.Now(); now.Before(next) {
-		logger.Trace("discoverTypedStaticTask sleep", "period", next.Sub(now))
 		time.Sleep(next.Sub(now))
 	}
-	logger.Trace("discoverTypedStaticTask wakeup")
 	srv.SetLastLookupToNow()
-	t.results = srv.LookupDiscovery(t.name, t.max)
+	t.results = srv.Lookup(discover.NodeID{}, convertDialT2NodeT(t.name)) // TODO-Klaytn-Node t.max? if t.max is not needed, remove it
 }
 
 func (t *discoverTypedStaticTask) String() string {
@@ -188,11 +178,28 @@ func (t *discoverTypedStaticTask) String() string {
 	return s
 }
 
-const DT_UNLIMITED = dialType("DIAL_TYPE_UNLIMITED")
+const (
+	DT_UNLIMITED = dialType("DIAL_TYPE_UNLIMITED")
+	DT_CN        = dialType("CN")
+	DT_PN        = dialType("PN")
+	DT_EN        = dialType("EN")
+)
 
 type dialType string
 
-func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab discoverTable, maxdyn int,
+func convertDialT2NodeT(dt dialType) discover.NodeType {
+	switch dt {
+	case DT_CN:
+		return discover.NodeTypeCN
+	case DT_PN:
+		return discover.NodeTypePN
+	default:
+		logger.Crit("Support only CN, PN for typed static dial", "DialType", dt)
+	}
+	return discover.NodeTypeUnknown
+}
+
+func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab discover.Discovery, maxdyn int,
 	netrestrict *netutil.Netlist, privateKey *ecdsa.PrivateKey, tsMap map[dialType]typedStatic) *dialstate {
 
 	if tsMap == nil {
@@ -240,7 +247,7 @@ func (s *dialstate) addStatic(n *discover.Node) {
 func (s *dialstate) addTypedStatic(n *discover.Node, dType dialType) {
 	// This overwrites the task instead of updating an existing
 	// entry, giving users the opportunity to force a resolve operation.
-	logger.Debug("[Dialer] Add TypedStatic", "node", n)
+	logger.Debug("[Dialer] Add TypedStatic", "node", n, "dialType", dType)
 	s.static[n.ID] = &dialTask{flags: staticDialedConn, dest: n, dialType: dType}
 }
 
@@ -288,13 +295,17 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	}
 
 	addStaticDialTasks := func() {
-
 		cnt := make(map[dialType]int)
 		for _, t := range s.static {
 			cnt[t.dialType]++
 		}
 
 		checkStaticDial := func(dt *dialTask, peers map[discover.NodeID]*Peer) error {
+			err := s.checkDial(dt.dest, peers)
+			if err != nil {
+				return err
+			}
+
 			sd := s.static[dt.dest.ID]
 			if sd.flags != staticDialedConn {
 				err := fmt.Errorf("dialer: can't check conntype except staticconn [connType : %d]", sd.flags)
@@ -313,11 +324,6 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 				return errExpired
 			}
 
-			err := s.checkDial(dt.dest, peers)
-			if err != nil {
-				return err
-			}
-
 			if cnt[dt.dialType] > s.tsMap[dt.dialType].maxNodeCount {
 				return errExceedMaxTypedDial
 			}
@@ -333,13 +339,16 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 				delete(s.static, t.dest.ID)
 				cnt[t.dialType]--
 			case errExpired:
-				logger.Debug("[Dial] Removing expired dial candidate from static nodes", "id",
-					t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "err", err)
+				logger.Info("[Dial] Removing expired dial candidate from static nodes", "id",
+					t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "dialType", t.dialType,
+					"dialCount", cnt[t.dialType], "err", err)
 				delete(s.static, t.dest.ID)
 				cnt[t.dialType]--
 			case errExceedMaxTypedDial:
-				logger.Debug("[Dial] Removing exceeded dial candidate from static nodes", "id",
-					t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "err", err)
+				logger.Info("[Dial] Removing exceeded dial candidate from static nodes", "id",
+					t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "dialType", t.dialType,
+					"dialCount", cnt[t.dialType], "err", err,
+				)
 				delete(s.static, t.dest.ID)
 				cnt[t.dialType]--
 			case nil:
@@ -347,22 +356,25 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 				newtasks = append(newtasks, t)
 				if len(t.dest.TCPs) > 0 { // Check if the server use multi-port.
 					logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
-						"ip", t.dest.IP, "port", t.dest.TCPs)
+						"NodeType", t.dest.NType, "ip", t.dest.IP, "port", t.dest.TCPs)
 				} else {
 					logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
-						"ip", t.dest.IP, "port", t.dest.TCP)
+						"NodeType", t.dest.NType, "ip", t.dest.IP, "port", t.dest.TCP)
 				}
+			default:
+				logger.Debug("[Dial] Failed addStaticDial", "err", err, "to", t.dest)
 			}
 		}
 		// 2. add typedStaticDiscoverTask
-		for k, c := range cnt {
-			if k != DT_UNLIMITED && !s.typedLookupRunning[k] && c < s.tsMap[k].maxNodeCount {
-				s.typedLookupRunning[k] = true
-				maxDiscover := s.tsMap[k].maxNodeCount - c
-				newtasks = append(newtasks, &discoverTypedStaticTask{name: k, max: maxDiscover})
+		if s.ntab != nil { // Run DiscoveryTasks when only Discovery Mode
+			for k, ts := range s.tsMap {
+				if k != DT_UNLIMITED && !s.typedLookupRunning[k] && cnt[k] < ts.maxNodeCount {
+					s.typedLookupRunning[k] = true
+					maxDiscover := ts.maxNodeCount - cnt[k]
+					newtasks = append(newtasks, &discoverTypedStaticTask{name: k, max: maxDiscover})
+				}
 			}
 		}
-
 	}
 
 	// Compute number of dynamic dials necessary at this point.
@@ -374,23 +386,11 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	// Create dials for static nodes if they are not connected.
 	addStaticDialTasks()
 
-	// If we don't have any peers whatsoever, try to dial a random bootnode. This
-	// scenario is useful for the testnet (and private networks) where the discovery
-	// table might be full of mostly bad peers, making it hard to find good ones.
-	if len(peers) == 0 && len(s.bootnodes) > 0 && needDynDials > 0 && now.Sub(s.start) > fallbackInterval {
-		bootnode := s.bootnodes[0]
-		s.bootnodes = append(s.bootnodes[:0], s.bootnodes[1:]...)
-		s.bootnodes = append(s.bootnodes, bootnode)
-
-		if addDialTask(dynDialedConn, bootnode) {
-			needDynDials--
-		}
-	}
 	// Use random nodes from the table for half of the necessary
 	// dynamic dials.
 	randomCandidates := needDynDials / 2
 	if randomCandidates > 0 {
-		n := s.ntab.ReadRandomNodes(s.randomNodes)
+		n := s.ntab.ReadRandomNodes(s.randomNodes, discover.NodeTypeEN)
 		for i := 0; i < randomCandidates && i < n; i++ {
 			if addDialTask(dynDialedConn, s.randomNodes[i]) {
 				needDynDials--
@@ -468,7 +468,7 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 
 func (t *dialTask) Do(srv Server) {
 	if t.dest.Incomplete() {
-		if !t.resolve(srv) {
+		if !t.resolve(srv, t.dest.NType) {
 			return
 		}
 	}
@@ -480,10 +480,10 @@ func (t *dialTask) Do(srv Server) {
 	}
 
 	if err != nil {
-		logger.Trace("Dial error", "task", t, "err", err)
+		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
 		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
-			if t.resolve(srv) {
+			if t.resolve(srv, t.dest.NType) {
 				if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
 					err = t.dialMulti(srv, t.dest)
 				} else {
@@ -492,6 +492,8 @@ func (t *dialTask) Do(srv Server) {
 				if err != nil {
 					t.failedTry++
 				}
+			} else {
+				t.failedTry++
 			}
 		} else {
 			t.failedTry++
@@ -505,9 +507,10 @@ func (t *dialTask) Do(srv Server) {
 // Resolve operations are throttled with backoff to avoid flooding the
 // discovery network with useless queries for nodes that don't exist.
 // The backoff delay resets when the node is found.
-func (t *dialTask) resolve(srv Server) bool {
+func (t *dialTask) resolve(srv Server, nType discover.NodeType) bool {
 	if srv.CheckNilNetworkTable() {
-		logger.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
+		logger.Debug("Can't resolve node", "id", t.dest.ID, "NodeType", nType,
+			"err", "discovery is disabled")
 		return false
 	}
 	if t.resolveDelay == 0 {
@@ -516,7 +519,7 @@ func (t *dialTask) resolve(srv Server) bool {
 	if time.Since(t.lastResolved) < t.resolveDelay {
 		return false
 	}
-	resolved := srv.Resolve(t.dest.ID)
+	resolved := srv.Resolve(t.dest.ID, nType)
 	t.lastResolved = time.Now()
 	if resolved == nil {
 		t.resolveDelay *= 2
@@ -540,7 +543,7 @@ type dialError struct {
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv Server, dest *discover.Node) error {
 	dialTryCounter.Inc(1)
-	logger.Trace("[Dial] Dialing node", "id", dest.ID, "addr", &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)})
+	logger.Debug("[Dial] Dialing node", "id", dest.ID, "addr", &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)})
 
 	fd, err := srv.Dial(dest)
 	if err != nil {
@@ -558,7 +561,7 @@ func (t *dialTask) dialMulti(srv Server, dest *discover.Node) error {
 	for _, tcp := range dest.TCPs {
 		addresses = append(addresses, &net.TCPAddr{IP: dest.IP, Port: int(tcp)})
 	}
-	logger.Trace("[Dial] Dialing node", "id", dest.ID, "addresses", addresses)
+	logger.Debug("[Dial] Dialing node", "id", dest.ID, "addresses", addresses)
 
 	fds, err := srv.DialMulti(dest)
 	if err != nil {
@@ -600,7 +603,7 @@ func (t *discoverTask) Do(srv Server) {
 	srv.SetLastLookupToNow()
 	var target discover.NodeID
 	rand.Read(target[:])
-	t.results = srv.Lookup(target)
+	t.results = srv.Lookup(target, discover.NodeTypeEN) // TODO-Klaytn Supposed dynamicDial discover only en, but type have to get from argument.
 }
 
 func (t *discoverTask) String() string {

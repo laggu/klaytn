@@ -23,6 +23,7 @@ package p2p
 import (
 	"encoding/binary"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/p2p/netutil"
@@ -94,11 +95,26 @@ func runDialTest(t *testing.T, test dialtest) {
 
 type fakeTable []*discover.Node
 
-func (t fakeTable) Self() *discover.Node                     { return new(discover.Node) }
-func (t fakeTable) Close()                                   {}
-func (t fakeTable) Lookup(discover.NodeID) []*discover.Node  { return nil }
-func (t fakeTable) Resolve(discover.NodeID) *discover.Node   { return nil }
-func (t fakeTable) ReadRandomNodes(buf []*discover.Node) int { return copy(buf, t) }
+func (t fakeTable) Name() string                                               { return "fakeTable" }
+func (t fakeTable) Self() *discover.Node                                       { return new(discover.Node) }
+func (t fakeTable) Close()                                                     {}
+func (t fakeTable) Lookup(discover.NodeID, discover.NodeType) []*discover.Node { return nil }
+func (t fakeTable) Resolve(discover.NodeID, discover.NodeType) *discover.Node  { return nil }
+func (t fakeTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int {
+	return copy(buf, t)
+}
+func (t fakeTable) RetrieveNodes(target common.Hash, nType discover.NodeType, nresults int) []*discover.Node {
+	return nil
+}
+func (t fakeTable) CreateUpdateNode(n *discover.Node) error            { return nil }
+func (t fakeTable) GetNode(id discover.NodeID) (*discover.Node, error) { return nil, nil }
+func (t fakeTable) DeleteNode(id discover.NodeID) error                { return nil }
+func (t fakeTable) GetBucketEntries() []*discover.Node                 { return nil }
+func (t fakeTable) GetReplacements() []*discover.Node                  { return nil }
+func (t fakeTable) HasBond(id discover.NodeID) bool                    { return true }
+func (t fakeTable) Bond(pinged bool, id discover.NodeID, addr *net.UDPAddr, tcpPort uint16, nType discover.NodeType) (*discover.Node, error) {
+	return nil, nil
+}
 
 // This test checks that dynamic dials are launched from discovery results.
 func TestDialStateDynDial(t *testing.T) {
@@ -229,94 +245,6 @@ func TestDialStateDynDial(t *testing.T) {
 				},
 				new: []task{
 					&discoverTask{},
-				},
-			},
-		},
-	})
-}
-
-// Tests that bootnodes are dialed if no peers are connected, but not otherwise.
-func TestDialStateDynDialBootnode(t *testing.T) {
-	bootnodes := []*discover.Node{
-		{ID: uintID(1)},
-		{ID: uintID(2)},
-		{ID: uintID(3)},
-	}
-	table := fakeTable{
-		{ID: uintID(4)},
-		{ID: uintID(5)},
-		{ID: uintID(6)},
-		{ID: uintID(7)},
-		{ID: uintID(8)},
-	}
-	runDialTest(t, dialtest{
-		init: newDialState(nil, bootnodes, table, 5, nil, nil, nil),
-		rounds: []round{
-			// 2 dynamic dials attempted, bootnodes pending fallback interval
-			{
-				new: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(4)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(5)}},
-					&discoverTask{},
-				},
-			},
-			// No dials succeed, bootnodes still pending fallback interval
-			{
-				done: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(4)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(5)}},
-				},
-			},
-			// No dials succeed, bootnodes still pending fallback interval
-			{},
-			// No dials succeed, 2 dynamic dials attempted and 1 bootnode too as fallback interval was reached
-			{
-				new: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(1)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(4)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(5)}},
-				},
-			},
-			// No dials succeed, 2nd bootnode is attempted
-			{
-				done: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(1)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(4)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(5)}},
-				},
-				new: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(2)}},
-				},
-			},
-			// No dials succeed, 3rd bootnode is attempted
-			{
-				done: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(2)}},
-				},
-				new: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(3)}},
-				},
-			},
-			// No dials succeed, 1st bootnode is attempted again, expired random nodes retried
-			{
-				done: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(3)}},
-				},
-				new: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(1)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(4)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(5)}},
-				},
-			},
-			// Random dial succeeds, no more bootnodes are attempted
-			{
-				peers: []*Peer{
-					{rws: []*conn{{flags: dynDialedConn, id: uintID(4)}}},
-				},
-				done: []task{
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(1)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(4)}},
-					&dialTask{flags: dynDialedConn, dest: &discover.Node{ID: uintID(5)}},
 				},
 			},
 		},
@@ -889,12 +817,12 @@ func TestDialStateCache(t *testing.T) {
 }
 
 func TestDialResolve(t *testing.T) {
-	resolved := discover.NewNode(uintID(1), net.IP{127, 0, 55, 234}, 3333, 4444)
+	resolved := discover.NewNode(uintID(1), net.IP{127, 0, 55, 234}, 3333, 4444, discover.NodeTypeUnknown)
 	table := &resolveMock{answer: resolved}
 	state := newDialState(nil, nil, table, 0, nil, nil, nil)
 
 	// Check that the task is generated with an incomplete ID.
-	dest := discover.NewNode(uintID(1), nil, 0, 0)
+	dest := discover.NewNode(uintID(1), nil, 0, 0, discover.NodeTypeUnknown)
 	state.addStatic(dest)
 	tasks := state.newTasks(0, nil, time.Time{})
 	if !reflect.DeepEqual(tasks, []task{&dialTask{flags: staticDialedConn, dest: dest, dialType: DT_UNLIMITED}}) {
@@ -945,13 +873,55 @@ type resolveMock struct {
 	answer       *discover.Node
 }
 
-func (t *resolveMock) Resolve(id discover.NodeID) *discover.Node {
-	t.resolveCalls = append(t.resolveCalls, id)
+func (t *resolveMock) LookupByType(target discover.NodeID, dt discover.DiscoveryType, nType discover.NodeType) []*discover.Node {
+	panic("implement me")
+}
+
+func (t *resolveMock) Name() string {
+	panic("implement me")
+}
+
+func (t *resolveMock) RetrieveNodes(target common.Hash, nType discover.NodeType, nresults int) []*discover.Node {
+	panic("implement me")
+}
+
+func (t *resolveMock) HasBond(id discover.NodeID) bool {
+	panic("implement me")
+}
+
+func (t *resolveMock) Bond(pinged bool, id discover.NodeID, addr *net.UDPAddr, tcpPort uint16, nType discover.NodeType) (*discover.Node, error) {
+	panic("implement me")
+}
+
+func (t *resolveMock) CreateUpdateNode(n *discover.Node) error {
+	panic("implement me")
+}
+
+func (t *resolveMock) GetNode(id discover.NodeID) (*discover.Node, error) {
+	panic("implement me")
+}
+
+func (t *resolveMock) DeleteNode(id discover.NodeID) error {
+	panic("implement me")
+}
+
+func (t *resolveMock) GetBucketEntries() []*discover.Node {
+	panic("implement me")
+}
+
+func (t *resolveMock) GetReplacements() []*discover.Node {
+	panic("implement me")
+}
+
+func (t *resolveMock) Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node {
+	t.resolveCalls = append(t.resolveCalls, target)
 	return t.answer
 }
 
-func (t *resolveMock) Self() *discover.Node                     { return new(discover.Node) }
-func (t *resolveMock) Close()                                   {}
-func (t *resolveMock) Bootstrap([]*discover.Node)               {}
-func (t *resolveMock) Lookup(discover.NodeID) []*discover.Node  { return nil }
-func (t *resolveMock) ReadRandomNodes(buf []*discover.Node) int { return 0 }
+func (t *resolveMock) Self() *discover.Node       { return new(discover.Node) }
+func (t *resolveMock) Close()                     {}
+func (t *resolveMock) Bootstrap([]*discover.Node) {}
+func (t *resolveMock) Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node {
+	return nil
+}
+func (t *resolveMock) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int { return 0 }

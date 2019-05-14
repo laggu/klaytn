@@ -34,20 +34,21 @@ func (b *BN) Name() string {
 	return b.ntab.Name()
 }
 
-func (b *BN) Resolve(target discover.NodeID) *discover.Node {
-	return b.ntab.Resolve(target)
+func (b *BN) Resolve(target discover.NodeID, targetType discover.NodeType) *discover.Node {
+	return b.ntab.Resolve(target, targetType)
 }
 
-func (b *BN) Lookup(target discover.NodeID) []*discover.Node {
-	return b.ntab.Lookup(target)
+func (b *BN) Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node {
+	return b.ntab.Lookup(target, targetType)
 }
 
-func (b *BN) ReadRandomNodes(buf []*discover.Node) int {
-	return b.ntab.ReadRandomNodes(buf)
+func (b *BN) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int {
+	return b.ntab.ReadRandomNodes(buf, nType)
 }
 
-func (b *BN) CreateUpdateNode(id discover.NodeID, ip net.IP, udpPort, tcpPort uint16) error {
-	node := discover.NewNode(id, ip, udpPort, tcpPort)
+func (b *BN) CreateUpdateNode(id discover.NodeID, ip net.IP, udpPort, tcpPort uint16, nType discover.NodeType) error {
+	// TODO-Klaytn Add method argument 'NodeType'
+	node := discover.NewNode(id, ip, udpPort, tcpPort, nType)
 	return b.ntab.CreateUpdateNode(node)
 }
 

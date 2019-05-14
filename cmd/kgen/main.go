@@ -126,7 +126,8 @@ func makeNodeInfo(nodeAddr common.Address, nodeKey string, privKey *ecdsa.Privat
 			discover.PubkeyID(&privKey.PublicKey),
 			net.ParseIP(ip),
 			0,
-			port).String(),
+			port,
+			discover.NodeTypeUnknown).String(),
 	}
 }
 

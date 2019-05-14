@@ -188,7 +188,8 @@ func (db *nodeDB) node(id NodeID) *Node {
 	}
 	node := new(Node)
 	if err := rlp.DecodeBytes(blob, node); err != nil {
-		logger.Error("Failed to decode node RLP", "err", err)
+		logger.Error("Failed to decode node RLP, It removed in the node database", "id", id, "err", err)
+		db.deleteNode(id)
 		return nil
 	}
 	node.sha = crypto.Keccak256Hash(node.ID[:])
@@ -329,7 +330,7 @@ seek:
 		id[0] = ctr + id[0]%16
 		it.Seek(makeKey(id, nodeDBDiscoverRoot))
 
-		n := nextNode(it)
+		n := nextNode(db, it)
 		if n == nil {
 			id[0] = 0
 			continue seek // iterator exhausted
@@ -352,7 +353,7 @@ seek:
 
 // reads the next node record from the iterator, skipping over other
 // database entries.
-func nextNode(it iterator.Iterator) *Node {
+func nextNode(db *nodeDB, it iterator.Iterator) *Node {
 	for end := false; !end; end = !it.Next() {
 		id, field := splitKey(it.Key())
 		if field != nodeDBDiscoverRoot {
@@ -360,7 +361,8 @@ func nextNode(it iterator.Iterator) *Node {
 		}
 		var n Node
 		if err := rlp.DecodeBytes(it.Value(), &n); err != nil {
-			logger.Error("Failed to decode node RLP", "id", id, "err", err)
+			logger.Error("Failed to decode node RLP, It removed in node the database.", "id", id, "err", err)
+			db.deleteNode(id)
 			continue
 		}
 		return &n

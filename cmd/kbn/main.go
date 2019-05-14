@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
 	"github.com/ground-x/klaytn/metrics/prometheus"
+	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/p2p/nat"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,7 +39,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -78,11 +78,7 @@ func bootnode(ctx *cli.Context) error {
 			WSModules:        []string{"net"},
 			GRPCPort:         DefaultGRPCPort,
 
-			DiscoveryPolicyPreset: strings.TrimSpace(ctx.GlobalString(utils.DiscoveryPolicyPresetFlag.Name)),
-
 			Logger: log.NewModuleLogger(log.CMDKBN),
-
-			MaxNeighborsNode: ctx.GlobalUint(utils.DiscoveryMaxNodes.Name),
 		}
 	)
 
@@ -139,14 +135,13 @@ func bootnode(ctx *cli.Context) error {
 	}
 
 	cfg := discover.Config{
-		PrivateKey:            bcfg.nodeKey,
-		AnnounceAddr:          realaddr,
-		NetRestrict:           bcfg.restrictList,
-		Conn:                  conn,
-		Addr:                  realaddr,
-		Id:                    discover.PubkeyID(&bcfg.nodeKey.PublicKey),
-		DiscoveryPolicyPreset: bcfg.DiscoveryPolicyPreset,
-		MaxNeighborsNode:      bcfg.MaxNeighborsNode,
+		PrivateKey:   bcfg.nodeKey,
+		AnnounceAddr: realaddr,
+		NetRestrict:  bcfg.restrictList,
+		Conn:         conn,
+		Addr:         realaddr,
+		Id:           discover.PubkeyID(&bcfg.nodeKey.PublicKey),
+		NodeType:     p2p.ConvertNodeType(p2p.BOOTNODE),
 	}
 
 	tab, err := discover.ListenUDP(&cfg)
@@ -192,7 +187,6 @@ func main() {
 		cliFlags = []cli.Flag{
 			utils.SrvTypeFlag,
 			utils.DataDirFlag,
-			utils.DiscoveryPolicyPresetFlag,
 			utils.GenKeyFlag,
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
@@ -203,7 +197,6 @@ func main() {
 			utils.MetricsEnabledFlag,
 			utils.PrometheusExporterFlag,
 			utils.PrometheusExporterPortFlag,
-			utils.DiscoveryMaxNodes,
 		}
 	)
 	// TODO-Klaytn: remove `help` command

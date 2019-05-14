@@ -62,20 +62,22 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 	}
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
+	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
 	defer tab.Close()
 
 	// Wait for init so bond is accepted.
 	<-tab.initDone
 
 	// fill up the sender's bucket.
-	pingSender := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"), net.IP{}, 99, 99)
+	pingSender := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"),
+		net.IP{}, 99, 99, NodeTypeUnknown)
 	last := fillBucket(tab, pingSender)
 
 	// this call to bond should replace the last node
 	// in its bucket if the node is not responding.
 	transport.dead[last.ID] = !lastInBucketIsResponding
 	transport.dead[pingSender.ID] = !newNodeIsResponding
-	tab.bond(true, pingSender.ID, &net.UDPAddr{}, 0)
+	tab.Bond(true, pingSender.ID, &net.UDPAddr{}, 0, NodeTypeUnknown)
 	tab.doRevalidate(make(chan struct{}, 1))
 
 	// first ping goes to sender (bonding pingback)
@@ -88,20 +90,18 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 		t.Error("table did not ping last node in bucket")
 	}
 
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
 	wantSize := bucketSize
 	if !lastInBucketIsResponding && !newNodeIsResponding {
 		wantSize--
 	}
-	if l := len(tab.bucket(pingSender.sha).entries); l != wantSize {
+	if l := len(tab.bucket(pingSender.sha, NodeTypeUnknown).entries); l != wantSize {
 		t.Errorf("wrong bucket size after bond: got %d, want %d", l, wantSize)
 	}
-	if found := contains(tab.bucket(pingSender.sha).entries, last.ID); found != lastInBucketIsResponding {
+	if found := contains(tab.bucket(pingSender.sha, NodeTypeUnknown).entries, last.ID); found != lastInBucketIsResponding {
 		t.Errorf("last entry found: %t, want: %t", found, lastInBucketIsResponding)
 	}
 	wantNewEntry := newNodeIsResponding && !lastInBucketIsResponding
-	if found := contains(tab.bucket(pingSender.sha).entries, pingSender.ID); found != wantNewEntry {
+	if found := contains(tab.bucket(pingSender.sha, NodeTypeUnknown).entries, pingSender.ID); found != wantNewEntry {
 		t.Errorf("new entry found: %t, want: %t", found, wantNewEntry)
 	}
 }
@@ -116,7 +116,7 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 			n := rand.Intn(bucketSize-1) + 1
 			nodes := make([]*Node, n)
 			for i := range nodes {
-				nodes[i] = nodeAtDistance(common.Hash{}, 200)
+				nodes[i] = nodeAtDistance(common.Hash{}, 200, NodeTypeUnknown)
 			}
 			args[0] = reflect.ValueOf(nodes)
 			// generate random bump positions.
@@ -160,10 +160,11 @@ func TestTable_IPLimit(t *testing.T) {
 	}
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
+	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
 	defer tab.Close()
 
 	for i := 0; i < tableIPLimit+1; i++ {
-		n := nodeAtDistance(tab.self.sha, i)
+		n := nodeAtDistance(tab.self.sha, i, NodeTypeUnknown)
 		n.IP = net.IP{172, 0, 1, byte(i)}
 		tab.add(n)
 	}
@@ -184,11 +185,13 @@ func TestTable_BucketIPLimit(t *testing.T) {
 	}
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
+	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
 	defer tab.Close()
 
 	d := 3
 	for i := 0; i < bucketIPLimit+1; i++ {
-		n := nodeAtDistance(tab.self.sha, d)
+		n := nodeAtDistance(tab.self.sha, d, NodeTypeUnknown)
+		n.NType = NodeTypeUnknown
 		n.IP = net.IP{172, 0, 1, byte(i)}
 		tab.add(n)
 	}
@@ -202,19 +205,20 @@ func TestTable_BucketIPLimit(t *testing.T) {
 // hashes.
 func fillBucket(tab *Table, n *Node) (last *Node) {
 	ld := logdist(tab.self.sha, n.sha)
-	b := tab.bucket(n.sha)
+	b := tab.bucket(n.sha, n.NType)
 	for len(b.entries) < bucketSize {
-		b.entries = append(b.entries, nodeAtDistance(tab.self.sha, ld))
+		b.entries = append(b.entries, nodeAtDistance(tab.self.sha, ld, n.NType))
 	}
 	return b.entries[bucketSize-1]
 }
 
 // nodeAtDistance creates a node for which logdist(base, n.sha) == ld.
 // The node's ID does not correspond to n.sha.
-func nodeAtDistance(base common.Hash, ld int) (n *Node) {
+func nodeAtDistance(base common.Hash, ld int, nType NodeType) (n *Node) {
 	n = new(Node)
 	n.sha = hashAtDistance(base, ld)
 	n.IP = net.IP{byte(ld), 0, 2, byte(ld)}
+	n.NType = nType
 	copy(n.ID[:], n.sha[:]) // ensure the node still has a unique ID
 	return n
 }
@@ -231,7 +235,7 @@ func newPingRecorder() *pingRecorder {
 	}
 }
 
-func (t *pingRecorder) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node, error) {
+func (t *pingRecorder) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, nType NodeType) ([]*Node, error) {
 	return nil, nil
 }
 func (t *pingRecorder) close() {}
@@ -265,11 +269,12 @@ func TestTable_closest(t *testing.T) {
 		}
 		discv, _ := newTable(&conf)
 		tab := discv.(*Table)
+		tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
 		defer tab.Close()
-		tab.stuff(test.All)
+		tab.stuff(test.All, NodeTypeUnknown)
 
 		// check that doClosest(Target, N) returns nodes
-		result := tab.closest(test.Target, test.N).entries
+		result := tab.closest(test.Target, NodeTypeUnknown, test.N).entries
 		if hasDuplicates(result) {
 			t.Errorf("result contains duplicates")
 			return false
@@ -292,19 +297,17 @@ func TestTable_closest(t *testing.T) {
 		}
 
 		// check that the result nodes have minimum distance to target.
-		for _, b := range tab.buckets {
-			for _, n := range b.entries {
-				if contains(result, n.ID) {
-					continue // don't run the check below for nodes in result
-				}
-				farthestResult := result[len(result)-1].sha
-				if distcmp(test.Target, n.sha, farthestResult) < 0 {
-					t.Errorf("table contains node that is closer to target but it's not in result")
-					t.Logf("  Target:          %v", test.Target)
-					t.Logf("  Farthest Result: %v", farthestResult)
-					t.Logf("  ID:              %v", n.ID)
-					return false
-				}
+		for _, n := range tab.nodes() {
+			if contains(result, n.ID) {
+				continue // don't run the check below for nodes in result
+			}
+			farthestResult := result[len(result)-1].sha
+			if distcmp(test.Target, n.sha, farthestResult) < 0 {
+				t.Errorf("table contains node that is closer to target but it's not in result")
+				t.Logf("  Target:          %v", test.Target)
+				t.Logf("  Farthest Result: %v", farthestResult)
+				t.Logf("  ID:              %v", n.ID)
+				return false
 			}
 		}
 		return true
@@ -333,14 +336,15 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 		}
 		discv, _ := newTable(&conf)
 		tab := discv.(*Table)
+		tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
 		defer tab.Close()
 		<-tab.initDone
 
 		for i := 0; i < len(buf); i++ {
-			ld := cfg.Rand.Intn(len(tab.buckets))
-			tab.stuff([]*Node{nodeAtDistance(tab.self.sha, ld)})
+			ld := cfg.Rand.Intn(len(tab.storages[NodeTypeUnknown].(*KademliaStorage).buckets))
+			tab.stuff([]*Node{nodeAtDistance(tab.self.sha, ld, NodeTypeUnknown)}, NodeTypeUnknown)
 		}
-		gotN := tab.ReadRandomNodes(buf)
+		gotN := tab.ReadRandomNodes(buf, NodeTypeUnknown)
 		if gotN != tab.len() {
 			t.Errorf("wrong number of nodes, got %d, want %d", gotN, tab.len())
 			return false
@@ -376,7 +380,7 @@ func (*closeTest) Generate(rand *rand.Rand, size int) reflect.Value {
 }
 
 func TestTable_Lookup(t *testing.T) {
-	self := nodeAtDistance(common.Hash{}, 0)
+	self := nodeAtDistance(common.Hash{}, 0, NodeTypeUnknown)
 	conf := Config{
 		udp:        lookupTestnet,
 		Id:         self.ID,
@@ -386,17 +390,18 @@ func TestTable_Lookup(t *testing.T) {
 	}
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
+	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
 	defer tab.Close()
 
 	// lookup on empty table returns no nodes
-	if results := tab.Lookup(lookupTestnet.target); len(results) > 0 {
+	if results := tab.Lookup(lookupTestnet.target, NodeTypeUnknown); len(results) > 0 {
 		t.Fatalf("lookup on empty table returned %d results: %#v", len(results), results)
 	}
 	// seed table with initial node (otherwise lookup will terminate immediately)
-	seed := NewNode(lookupTestnet.dists[256][0], net.IP{}, 256, 0)
-	tab.stuff([]*Node{seed})
+	seed := NewNode(lookupTestnet.dists[256][0], net.IP{}, 256, 0, NodeTypeUnknown)
+	tab.stuff([]*Node{seed}, NodeTypeUnknown)
 
-	results := tab.Lookup(lookupTestnet.target)
+	results := tab.Lookup(lookupTestnet.target, NodeTypeUnknown)
 	t.Logf("results:")
 	for _, e := range results {
 		t.Logf("  ld=%d, %x", logdist(lookupTestnet.targetSha, e.sha), e.sha[:])
@@ -614,7 +619,7 @@ type preminedTestnet struct {
 	dists     [hashBits + 1][]NodeID
 }
 
-func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node, error) {
+func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, nType NodeType) ([]*Node, error) {
 	// current log distance is encoded in port number
 	// fmt.Println("findnode query at dist", toaddr.Port)
 	if toaddr.Port == 0 {
@@ -623,7 +628,7 @@ func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target Nod
 	next := uint16(toaddr.Port) - 1
 	var result []*Node
 	for i, id := range tn.dists[toaddr.Port] {
-		result = append(result, NewNode(id, net.ParseIP("127.0.0.1"), next, uint16(i)))
+		result = append(result, NewNode(id, net.ParseIP("127.0.0.1"), next, uint16(i), NodeTypeUnknown))
 	}
 	return result, nil
 }

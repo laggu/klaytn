@@ -442,21 +442,21 @@ func TestServerSetupConn(t *testing.T) {
 		},
 		{
 			tt:           &setupTransport{id: id},
-			dialDest:     &discover.Node{ID: randomID()},
+			dialDest:     &discover.Node{ID: randomID(), NType: ENDPOINTNODE},
 			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, phs: &protoHandshake{ID: randomID()}},
-			dialDest:     &discover.Node{ID: id},
+			dialDest:     &discover.Node{ID: id, NType: ENDPOINTNODE},
 			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, protoHandshakeErr: errors.New("foo")},
-			dialDest:     &discover.Node{ID: id},
+			dialDest:     &discover.Node{ID: id, NType: ENDPOINTNODE},
 			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: errors.New("foo"),
@@ -483,7 +483,7 @@ func TestServerSetupConn(t *testing.T) {
 					MaxPhysicalConnections: 10,
 					NoDial:                 true,
 					Protocols:              []Protocol{discard},
-					ConnectionType:         1,
+					ConnectionType:         1, // ENDPOINTNODE
 				},
 				newTransport: func(fd net.Conn) transport { return test.tt },
 				logger:       logger.NewWith(),

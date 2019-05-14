@@ -542,7 +542,8 @@ func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address
 				discover.PubkeyID(&keys[i].PublicKey),
 				net.ParseIP("0.0.0.0"),
 				0,
-				validatorPort).String(),
+				validatorPort,
+				discover.NodeTypeCN).String(),
 		}
 		validators = append(validators, v)
 	}
@@ -577,7 +578,8 @@ func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.A
 				discover.PubkeyID(&keys[i].PublicKey),
 				net.ParseIP(fmt.Sprintf("%s.%d", networkIds[idx], 100+(i/nn)+1)),
 				0,
-				validatorPort).String(),
+				validatorPort,
+				discover.NodeTypeCN).String(),
 		}
 		validators = append(validators, v)
 	}
@@ -605,7 +607,8 @@ func makeProxys(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 				discover.PubkeyID(&privKeys[i].PublicKey),
 				net.ParseIP("0.0.0.0"),
 				0,
-				p2pPort).String(),
+				p2pPort,
+				discover.NodeTypePN).String(),
 		}
 		proxies = append(proxies, v)
 		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)

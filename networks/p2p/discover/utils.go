@@ -17,21 +17,36 @@
 package discover
 
 func NewDiscovery(cfg *Config) (Discovery, error) {
-	switch cfg.DiscoveryPolicyPreset {
-	case DiscoveryPolicyPresetCN:
-		return newSimple(cfg)
-	case DiscoveryPolicyPresetPN:
-		return newSimple(cfg)
-	case DiscoveryPolicyPresetEN:
-		// TODO-Klaytn-Node add composite table after implementation
-	case DiscoveryPolicyPresetCBN:
-		return newSimple(cfg)
-	case DiscoveryPolicyPresetPBN:
-		// TODO-Klaytn-Node add composite table after implementation
-	case DiscoveryPolicyPresetEBN:
-		return newTable(cfg)
+	return newTable(cfg)
+}
+
+func ParseNodeType(nt string) NodeType {
+	switch nt {
+	case "cn":
+		return NodeTypeCN
+	case "pn":
+		return NodeTypePN
+	case "en":
+		return NodeTypeEN
+	case "bn":
+		return NodeTypeBN
 	default:
-		return newTable(cfg)
+		return NodeTypeUnknown
 	}
-	return newTable(cfg) // this is default interface creation for test codes
+}
+
+// StringNodeType converts NodeType to string
+func StringNodeType(nType NodeType) string { // TODO-Klaytn-Node Consolidate p2p.NodeType and p2p.ConnType
+	switch nType {
+	case NodeTypeCN:
+		return "cn"
+	case NodeTypePN:
+		return "pn"
+	case NodeTypeEN:
+		return "en"
+	case NodeTypeBN:
+		return "bn"
+	default:
+		return "unknown"
+	}
 }

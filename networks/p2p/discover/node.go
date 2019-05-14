@@ -49,6 +49,7 @@ type Node struct {
 	UDP, TCP uint16   // port numbers
 	TCPs     []uint16 // port numbers
 	ID       NodeID   // the node's public key
+	NType    NodeType // the node's type (cn, pn, en, bn)
 
 	// This is a cached copy of sha3(ID) which is used for node
 	// distance calculations. This is part of Node in order to make it
@@ -65,17 +66,18 @@ type Node struct {
 
 // NewNode creates a new node. It is mostly meant to be used for
 // testing purposes.
-func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16) *Node {
+func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16, nType NodeType) *Node {
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}
 	return &Node{
-		IP:   ip,
-		UDP:  udpPort,
-		TCP:  tcpPort,
-		TCPs: []uint16{},
-		ID:   id,
-		sha:  crypto.Keccak256Hash(id[:]),
+		IP:    ip,
+		UDP:   udpPort,
+		TCP:   tcpPort,
+		TCPs:  []uint16{},
+		ID:    id,
+		NType: nType,
+		sha:   crypto.Keccak256Hash(id[:]),
 	}
 }
 
@@ -120,6 +122,12 @@ func (n *Node) String() string {
 			u.RawQuery = "discport=" + strconv.Itoa(int(n.UDP))
 		}
 	}
+	if n.NType != NodeTypeUnknown {
+		if u.RawQuery != "" {
+			u.RawQuery = u.RawQuery + "&"
+		}
+		u.RawQuery = u.RawQuery + "ntype=" + StringNodeType(n.NType)
+	}
 	return u.String()
 }
 
@@ -148,15 +156,15 @@ var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)
 // a node with IP address 10.3.58.6, TCP listening port 30303
 // and UDP discovery port 30301.
 //
-//    kni://<hex node id>@10.3.58.6:30303?discport=30301
-//    enode://<hex node id>@10.3.58.6:30303?discport=30301
+//    kni://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
+//    enode://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
 func ParseNode(rawurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
 		id, err := HexID(m[1])
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewNode(id, nil, 0, 0), nil
+		return NewNode(id, nil, 0, 0, NodeTypeUnknown), nil
 	}
 	return parseComplete(rawurl)
 }
@@ -226,7 +234,12 @@ func parseComplete(rawurl string) (*Node, error) {
 			return nil, errors.New("invalid discport in query")
 		}
 	}
-	return NewNode(id, ip, uint16(udpPort), uint16(tcpPort)), nil
+
+	nType := NodeTypeUnknown
+	if qv.Get("ntype") != "" {
+		nType = ParseNodeType(qv.Get("ntype"))
+	}
+	return NewNode(id, ip, uint16(udpPort), uint16(tcpPort), nType), nil
 }
 
 // MustParseNode parses a node URL. It panics if the URL is not valid.

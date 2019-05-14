@@ -56,6 +56,7 @@ const (
 	CONSENSUSNODE = iota
 	ENDPOINTNODE
 	PROXYNODE
+	BOOTNODE
 	UNKNOWNNODE // For error case
 )
 

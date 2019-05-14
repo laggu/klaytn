@@ -56,6 +56,15 @@ const (
 	frameWriteTimeout = 20 * time.Second
 )
 
+// TODO-Klaytn-Node Below constants are duplicated with node packages. Use it temporarily until fix cycle import problem.
+const (
+	CONSENSUSNODE = iota
+	ENDPOINTNODE
+	PROXYNODE
+	BOOTNODE
+	UNKNOWNNODE // For error case
+)
+
 var errServerStopped = errors.New("server stopped")
 
 // Config holds Server options.
@@ -86,10 +95,6 @@ type Config struct {
 	// NoDiscovery can be used to disable the peer discovery mechanism.
 	// Disabling is useful for protocol debugging (manual topology).
 	NoDiscovery bool
-
-	// DiscoveryV5 specifies whether the new topic-discovery based V5 discovery
-	// protocol should be started or not.
-	DiscoveryV5 bool `toml:",omitempty"`
 
 	// Name sets the node name of this server.
 	// Use common.MakeName to create a name that follows existing conventions.
@@ -170,12 +175,6 @@ type Config struct {
 
 	// SBNPort is the port number of the simple bootnode.
 	SBNPort int //TODO-Klaytn-Node remove after the real bootnode is implemented
-
-	// DiscoveryPolicyPreset is the predefined discovery policy preset of each nodetype.
-	DiscoveryPolicyPreset string `toml:",omitempty"`
-
-	// MaxNeighborsNode is the maximum number of neighbor nodes in a neighbor packet of simple discovery.
-	DiscoveryMaxNeighbors uint
 }
 
 // NewServer returns a new Server interface.
@@ -230,13 +229,11 @@ type Server interface {
 	// nodes that are closer to it on each iteration.
 	// The given target does not need to be an actual node
 	// identifier.
-	Lookup(target discover.NodeID) []*discover.Node
+	Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node
 
-	LookupDiscovery(dName dialType, max int) []*discover.Node
-
-	// Resolve searches for a specific node with the given ID.
+	// Resolve searches for a specific node with the given ID and NodeType.
 	// It returns nil if the node could not be found.
-	Resolve(target discover.NodeID) *discover.Node
+	Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node
 
 	// Start starts running the server.
 	// Servers can not be re-used after stopping.
@@ -364,16 +361,16 @@ func (srv *MultiChannelServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:       srv.PrivateKey,
-			AnnounceAddr:     realaddr,
-			NodeDBPath:       srv.NodeDatabase,
-			NetRestrict:      srv.NetRestrict,
-			Bootnodes:        srv.BootstrapNodes,
-			Unhandled:        unhandled,
-			Conn:             conn,
-			Addr:             realaddr,
-			Id:               discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			MaxNeighborsNode: srv.DiscoveryMaxNeighbors,
+			PrivateKey:   srv.PrivateKey,
+			AnnounceAddr: realaddr,
+			NodeDBPath:   srv.NodeDatabase,
+			NetRestrict:  srv.NetRestrict,
+			Bootnodes:    srv.BootstrapNodes,
+			Unhandled:    unhandled,
+			Conn:         conn,
+			Addr:         realaddr,
+			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			NodeType:     ConvertNodeType(srv.ConnectionType),
 		}
 
 		ntab, err := discover.ListenUDP(&cfg)
@@ -383,8 +380,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 		srv.ntab = ntab
 	}
 
-	dynPeers := srv.maxDialedConns()
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey, nil)
+	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: true}
@@ -608,6 +604,7 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 
 // run is the main loop that the server runs.
 func (srv *MultiChannelServer) run(dialstate dialer) {
+	logger.Debug("[p2p.Server] start MultiChannel p2p server")
 	defer srv.loopWG.Done()
 	var (
 		peers         = make(map[discover.NodeID]*Peer)
@@ -863,11 +860,15 @@ type SingleChannelServer struct {
 
 // AddLastLookup adds lastLookup to duration.
 func (srv *BaseServer) AddLastLookup() time.Time {
+	srv.lastLookupMu.Lock()
+	defer srv.lastLookupMu.Unlock()
 	return srv.lastLookup.Add(lookupInterval)
 }
 
 // SetLastLookupToNow sets LastLookup to the current time.
 func (srv *BaseServer) SetLastLookupToNow() {
+	srv.lastLookupMu.Lock()
+	defer srv.lastLookupMu.Unlock()
 	srv.lastLookup = time.Now()
 }
 
@@ -894,10 +895,11 @@ type BaseServer struct {
 	lock    sync.Mutex // protects running
 	running bool
 
-	ntab         discoverTable
+	ntab         discover.Discovery
 	listener     net.Listener
 	ourHandshake *protoHandshake
 	lastLookup   time.Time
+	lastLookupMu sync.Mutex
 	//DiscV5       *discv5.Network
 
 	// These are for Peers, PeerCount (and nothing else).
@@ -1123,10 +1125,10 @@ func (srv *BaseServer) Self() *discover.Node {
 	return srv.makeSelf(srv.listener, srv.ntab)
 }
 
-func (srv *BaseServer) makeSelf(listener net.Listener, ntab discoverTable) *discover.Node {
+func (srv *BaseServer) makeSelf(listener net.Listener, discovery discover.Discovery) *discover.Node {
 	// If the server's not running, return an empty node.
 	// If the node is running but discovery is off, manually assemble the node infos.
-	if ntab == nil {
+	if discovery == nil {
 		// Inbound connections disabled, use zero address.
 		if listener == nil {
 			return &discover.Node{IP: net.ParseIP("0.0.0.0"), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
@@ -1140,7 +1142,7 @@ func (srv *BaseServer) makeSelf(listener net.Listener, ntab discoverTable) *disc
 		}
 	}
 	// Otherwise return the discovery node.
-	return ntab.Self()
+	return discovery.Self()
 }
 
 // Stop terminates the server and all active peer connections.
@@ -1232,8 +1234,7 @@ func (srv *BaseServer) Start() (err error) {
 	srv.discpeer = make(chan discover.NodeID)
 
 	var (
-		conn *net.UDPConn
-		//sconn     *sharedUDPConn
+		conn      *net.UDPConn
 		realaddr  *net.UDPAddr
 		unhandled chan discover.ReadPacket
 	)
@@ -1262,17 +1263,19 @@ func (srv *BaseServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:       srv.PrivateKey,
-			AnnounceAddr:     realaddr,
-			NodeDBPath:       srv.NodeDatabase,
-			NetRestrict:      srv.NetRestrict,
-			Bootnodes:        srv.BootstrapNodes,
-			Unhandled:        unhandled,
-			Conn:             conn,
-			Addr:             realaddr,
-			Id:               discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			MaxNeighborsNode: srv.DiscoveryMaxNeighbors,
+			PrivateKey:   srv.PrivateKey,
+			AnnounceAddr: realaddr,
+			NodeDBPath:   srv.NodeDatabase,
+			NetRestrict:  srv.NetRestrict,
+			Bootnodes:    srv.BootstrapNodes,
+			Unhandled:    unhandled,
+			Conn:         conn,
+			Addr:         realaddr,
+			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			NodeType:     ConvertNodeType(srv.ConnectionType),
 		}
+
+		logger.Info("Create udp", "config", cfg)
 
 		ntab, err := discover.ListenUDP(&cfg)
 		if err != nil {
@@ -1281,8 +1284,7 @@ func (srv *BaseServer) Start() (err error) {
 		srv.ntab = ntab
 	}
 
-	dynPeers := srv.maxDialedConns()
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict, srv.PrivateKey, nil)
+	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: false}
@@ -1544,14 +1546,48 @@ func (srv *BaseServer) maxInboundConns() int {
 }
 
 func (srv *BaseServer) maxDialedConns() int {
-	if srv.NoDiscovery || srv.NoDial {
+	switch srv.ConnectionType {
+	case CONSENSUSNODE:
+		return 0
+	case PROXYNODE:
+		return 0
+	case ENDPOINTNODE:
+		if srv.NoDiscovery || srv.NoDial {
+			return 0
+		}
+		r := srv.DialRatio
+		if r == 0 {
+			r = defaultDialRatio
+		}
+		return srv.Config.MaxPhysicalConnections / r
+	case BOOTNODE:
+		return 0 // TODO check the bn for en
+	default:
+		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
 		return 0
 	}
-	r := srv.DialRatio
-	if r == 0 {
-		r = defaultDialRatio
+}
+
+func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
+	switch srv.ConnectionType {
+	case CONSENSUSNODE:
+		tsMap := make(map[dialType]typedStatic)
+		tsMap[DT_CN] = typedStatic{100, 3} // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
+		return tsMap
+	case PROXYNODE:
+		tsMap := make(map[dialType]typedStatic)
+		tsMap[DT_PN] = typedStatic{1, 3} // // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
+		return tsMap
+	case ENDPOINTNODE:
+		tsMap := make(map[dialType]typedStatic)
+		tsMap[DT_PN] = typedStatic{2, 3} // // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
+		return tsMap
+	case BOOTNODE:
+		return nil
+	default:
+		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
+		return nil
 	}
-	return srv.Config.MaxPhysicalConnections / r
 }
 
 type tempError interface {
@@ -1823,18 +1859,14 @@ func (srv *BaseServer) CheckNilNetworkTable() bool {
 // nodes that are closer to it on each iteration.
 // The given target does not need to be an actual node
 // identifier.
-func (srv *BaseServer) Lookup(target discover.NodeID) []*discover.Node {
-	return srv.ntab.Lookup(target)
+func (srv *BaseServer) Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node {
+	return srv.ntab.Lookup(target, nType)
 }
 
-func (srv *BaseServer) LookupDiscovery(dName dialType, max int) []*discover.Node {
-	return nil
-}
-
-// Resolve searches for a specific node with the given ID.
+// Resolve searches for a specific node with the given ID and NodeType.
 // It returns nil if the node could not be found.
-func (srv *BaseServer) Resolve(target discover.NodeID) *discover.Node {
-	return srv.ntab.Resolve(target)
+func (srv *BaseServer) Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node {
+	return srv.ntab.Resolve(target, nType)
 }
 
 // Name returns name of server.
@@ -1845,4 +1877,34 @@ func (srv *BaseServer) Name() string {
 // MaxPhysicalConnections returns maximum count of peers.
 func (srv *BaseServer) MaxPeers() int {
 	return srv.Config.MaxPhysicalConnections
+}
+
+func ConvertNodeType(ct ConnType) discover.NodeType {
+	switch ct {
+	case CONSENSUSNODE:
+		return discover.NodeTypeCN
+	case PROXYNODE:
+		return discover.NodeTypePN
+	case ENDPOINTNODE:
+		return discover.NodeTypeEN
+	case BOOTNODE:
+		return discover.NodeTypeBN
+	default:
+		return discover.NodeTypeUnknown // TODO-Klaytn-Node Maybe, call panic() func or Crit()
+	}
+}
+
+func ConvertConnType(nt discover.NodeType) ConnType {
+	switch nt {
+	case discover.NodeTypeCN:
+		return CONSENSUSNODE
+	case discover.NodeTypePN:
+		return PROXYNODE
+	case discover.NodeTypeEN:
+		return ENDPOINTNODE
+	case discover.NodeTypeBN:
+		return BOOTNODE
+	default:
+		return UNKNOWNNODE
+	}
 }
