@@ -266,8 +266,8 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 		}
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
-			governanceMode := GovernanceModeMap[gov.currentSet["governance.governancemode"].(string)]
-			governingNode := common.HexToAddress(gov.currentSet["governance.governingnode"].(string))
+			governanceMode := GovernanceModeMap[gov.ChainConfig.Governance.GovernanceMode]
+			governingNode := gov.ChainConfig.Governance.GoverningNode
 
 			// Remove old vote with same validator and key
 			gov.removePreviousVote(valset, proposer, gVote, governanceMode, governingNode)
