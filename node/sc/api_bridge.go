@@ -103,17 +103,17 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 	return []common.Address{cBridgeAddr, pBridgeAddr}, nil
 }
 
-// SubscribeEventBridge enables the given service/main chain bridges to subscribe the events.
-func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+// SubscribeBridge enables the given service/main chain bridges to subscribe the events.
+func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	err := sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
 	if err != nil {
-		logger.Error("Failed to SubscribeEventBridge Child Bridge", "addr", cBridgeAddr, "err", err)
+		logger.Error("Failed to SubscribeEvent child bridge", "addr", cBridgeAddr, "err", err)
 		return err
 	}
 
 	err = sbapi.sc.bridgeManager.SubscribeEvent(pBridgeAddr)
 	if err != nil {
-		logger.Error("Failed to SubscribeEventBridge Parent Bridge", "addr", pBridgeAddr, "err", err)
+		logger.Error("Failed to SubscribeEvent parent bridge", "addr", pBridgeAddr, "err", err)
 		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 		return err
@@ -133,8 +133,8 @@ func (sbapi *SubBridgeAPI) SubscribeEventBridge(cBridgeAddr, pBridgeAddr common.
 	return nil
 }
 
-// UnsubscribeEventBridge disables the event subscription of the given service/main chain bridges.
-func (sbapi *SubBridgeAPI) UnsubscribeEventBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+// UnsubscribeBridge disables the event subscription of the given service/main chain bridges.
+func (sbapi *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 	sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
 
@@ -150,7 +150,7 @@ func (sbapi *SubBridgeAPI) TxPendingCount() int {
 	return len(sbapi.sc.GetBridgeTxPool().Pending())
 }
 
-func (sbapi *SubBridgeAPI) ListDeployedBridge() []*BridgeJournal {
+func (sbapi *SubBridgeAPI) ListBridge() []*BridgeJournal {
 	return sbapi.sc.bridgeManager.GetAllBridge()
 }
 

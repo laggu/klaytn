@@ -843,12 +843,12 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'subscribeBridge',
-			call: 'bridge_subscribeEventBridge',
+			call: 'bridge_subscribeBridge',
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'unsubscribeBridge',
-			call: 'bridge_unsubscribeEventBridge',
+			call: 'bridge_unsubscribeBridge',
 			params: 2
 		}),
 		new web3._extend.Method({
@@ -912,7 +912,7 @@ web3._extend({
 		}),
 		new web3._extend.Property({
 			name: 'listBridge',
-			getter: 'bridge_listDeployedBridge'
+			getter: 'bridge_listBridge'
 		}),
 		new web3._extend.Property({
 			name: 'txPendingCount',

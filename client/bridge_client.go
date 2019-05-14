@@ -156,13 +156,13 @@ func (ec *Client) BridgeDeregisterBridge(ctx context.Context, scBridge common.Ad
 // BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given service/main chain bridges.
 // If the subscribing is failed, it returns an error.
 func (ec *Client) BridgeSubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_subscribeEventBridge", scBridge, mcBridge)
+	return ec.c.CallContext(ctx, nil, "bridge_subscribeBridge", scBridge, mcBridge)
 }
 
 // BridgeUnsubscribeBridge disables the event subscription of the given service/main chain bridges.
 // If the unsubscribing is failed, it returns an error.
 func (ec *Client) BridgeUnsubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_unsubscribeEventBridge", scBridge, mcBridge)
+	return ec.c.CallContext(ctx, nil, "bridge_unsubscribeBridge", scBridge, mcBridge)
 }
 
 // BridgeRegisterTokenContract can register the given pair of deployed service/main chain token contracts.
