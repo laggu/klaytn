@@ -36,6 +36,7 @@ import (
 	"github.com/ground-x/klaytn/params"
 	"golang.org/x/crypto/ripemd160"
 	"math/big"
+	"strconv"
 )
 
 var logger = log.NewModuleLogger(log.VM)
@@ -390,7 +391,7 @@ func (c *vmLog) RequiredGas(input []byte) uint64 {
 // Note that this function is only for testing and not used for typical vmlog calls.
 // Invoke RunVMLogContract for the actual logging.
 func (c *vmLog) Run(input []byte) ([]byte, error) {
-	logger.Debug("vmlog", "msg", string(input))
+	logger.Debug("vmlog", "msg", strconv.QuoteToASCII(string(input)))
 	return nil, nil
 }
 
@@ -404,7 +405,7 @@ func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, e
 		}
 		if (params.VMLogTarget & params.VMLogToStdout) != 0 {
 			logger.Debug("vmlog", "tx", evm.StateDB.GetTxHash().String(),
-				"caller", contract.CallerAddress.String(), "msg", string(input))
+				"caller", contract.CallerAddress.String(), "msg", strconv.QuoteToASCII(string(input)))
 		}
 		return nil, nil
 	}
