@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// +build RPCOutput
-
 // Basically, this test is disabled for the CI test. To run this,
 // $ go test -run TestRPCOutput -tags RPCOutput
 package tests
@@ -28,6 +26,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/consensus/istanbul/backend"
 	"github.com/ground-x/klaytn/crypto"
@@ -66,7 +65,7 @@ import (
 // - TxTypeFeeDelegatedCancel
 // - TxTypeFeeDelegatedCancelWithRatio
 // - TxTypeChainDataAnchoring
-func TestRPCOutput(t *testing.T) {
+func BenchmarkRPCOutput(t *testing.B) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -133,13 +132,21 @@ func TestRPCOutput(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	if testing.Verbose() {
+		fmt.Println("ChainID", (*hexutil.Big)(bcdata.bc.Config().ChainID))
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("reservoirPrvKey = ", (*hexutil.Big)(reservoir.Keys[0].D))
 		fmt.Println("reservoir2Addr = ", reservoir2.Addr.String())
+		fmt.Println("reservoir2PrvKey= ", (*hexutil.Big)(reservoir2.Keys[0].D))
 		fmt.Println("anonAddr = ", anon.Addr.String())
+		fmt.Println("anonPrvKey= ", (*hexutil.Big)(anon.Keys[0].D))
 		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
+		fmt.Println("decoupledPrvKey = ", (*hexutil.Big)(decoupled.Keys[0].D))
 		fmt.Println("colinAddr = ", colin.Addr.String())
+		fmt.Println("colinPrvKey = ", (*hexutil.Big)(colin.Keys[0].D))
 		fmt.Println("colin2Addr = ", colin2.Addr.String())
+		fmt.Println("colin2PrvKey = ", (*hexutil.Big)(colin2.Keys[0].D))
 		fmt.Println("colin3Addr = ", colin3.Addr.String())
+		fmt.Println("colin3PrvKey = ", (*hexutil.Big)(colin3.Keys[0].D))
 		fmt.Println("contractAddr = ", contract.Addr.String())
 		fmt.Println("contract2Addr = ", contract2.Addr.String())
 		fmt.Println("contract3Addr = ", contract3.Addr.String())
@@ -166,7 +173,7 @@ func TestRPCOutput(t *testing.T) {
 
 	// TxTypeValueTransfer
 	{
-		amount := new(big.Int).SetUint64(params.KLAY)
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -188,7 +195,7 @@ func TestRPCOutput(t *testing.T) {
 
 	// TxTypeFeeDelegatedValueTransfer
 	{
-		amount := new(big.Int).SetUint64(10000000)
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -319,7 +326,7 @@ func TestRPCOutput(t *testing.T) {
 
 	// TxTypeAccountCreation
 	{
-		amount := new(big.Int).SetUint64(params.KLAY)
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -342,7 +349,7 @@ func TestRPCOutput(t *testing.T) {
 	}
 
 	{
-		amount := new(big.Int).SetUint64(params.KLAY)
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -365,7 +372,7 @@ func TestRPCOutput(t *testing.T) {
 	}
 
 	{
-		amount := new(big.Int).SetUint64(params.KLAY)
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
@@ -740,12 +747,12 @@ func TestRPCOutput(t *testing.T) {
 	// TxTypeChainDataAnchoring
 	{
 		blockTxData := &types.ChainHashes{
-			common.HexToHash("0"),
-			common.HexToHash("1"),
-			common.HexToHash("2"),
-			common.HexToHash("3"),
-			common.HexToHash("4"),
-			big.NewInt(5)}
+			BlockHash:     common.HexToHash("0"),
+			TxHash:        common.HexToHash("1"),
+			ParentHash:    common.HexToHash("2"),
+			ReceiptHash:   common.HexToHash("3"),
+			StateRootHash: common.HexToHash("4"),
+			BlockNumber:   big.NewInt(5)}
 
 		anchoredData, err := rlp.EncodeToBytes(blockTxData)
 		if err != nil {
