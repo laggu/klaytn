@@ -261,7 +261,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 		if tx.Type().IsCancelTransaction() {
 			logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
 		} else {
-			logger.Error("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
+			logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 			return false, nil
 		}
 	}
