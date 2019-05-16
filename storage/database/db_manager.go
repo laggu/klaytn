@@ -176,6 +176,8 @@ type DBManager interface {
 	ReadGovernance(num uint64) (map[string]interface{}, error)
 	ReadRecentGovernanceIdx(count int) ([]uint64, error)
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
+	WriteGovernanceState(b []byte) error
+	ReadGovernanceState() ([]byte, error)
 }
 
 type DBEntryType uint8
@@ -1587,4 +1589,14 @@ func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64, epoch uint64) (ui
 		}
 	}
 	return 0, nil, errors.New("No governance data found")
+}
+
+func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
+	db := dbm.getDatabase(MiscDB)
+	return db.Put(governanceStateKey, b)
+}
+
+func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
+	db := dbm.getDatabase(MiscDB)
+	return db.Get(governanceStateKey)
 }

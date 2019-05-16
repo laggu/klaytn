@@ -217,11 +217,11 @@ func TestGovernance_RemoveVote(t *testing.T) {
 	}
 }
 
-func countUncastedVote(data map[string]voteStatus) int {
+func countUncastedVote(data map[string]VoteStatus) int {
 	size := 0
 
 	for _, v := range data {
-		if v.casted == false {
+		if v.Casted == false {
 			size++
 		}
 	}
@@ -261,8 +261,8 @@ func TestGovernance_GetEncodedVote(t *testing.T) {
 			assert.Equal(t, nil, err)
 		}
 
-		if v.Value != gov.voteMap[v.Key].value {
-			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap[v.Key].value, v.Value)
+		if v.Value != gov.voteMap[v.Key].Value {
+			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap[v.Key].Value, v.Value)
 		}
 		gov.RemoveVote(v.Key, v.Value, 1000)
 	}

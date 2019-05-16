@@ -153,9 +153,9 @@ func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
 	for k, v := range api.governance.voteMap {
 		item := &VoteList{
 			Key:      k,
-			Value:    v.value,
-			Casted:   v.casted,
-			BlockNum: v.num,
+			Value:    v.Value,
+			Casted:   v.Casted,
+			BlockNum: v.Num,
 		}
 		ret = append(ret, item)
 	}

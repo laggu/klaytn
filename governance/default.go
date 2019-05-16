@@ -118,17 +118,17 @@ type GovernanceTally struct {
 	Votes uint64      `json:"votes"`
 }
 
-type voteStatus struct {
-	value  interface{}
-	casted bool
-	num    uint64
+type VoteStatus struct {
+	Value  interface{} `json:"value"`
+	Casted bool        `json:"casted"`
+	Num    uint64      `json:"num"`
 }
 
 type Governance struct {
 	ChainConfig *params.ChainConfig
 
 	// Map used to keep multiple types of votes
-	voteMap     map[string]voteStatus
+	voteMap     map[string]VoteStatus
 	voteMapLock sync.RWMutex
 
 	nodeAddress      common.Address
@@ -167,7 +167,7 @@ func (gs GovernanceSet) SetValue(itemType int, value interface{}) error {
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	ret := Governance{
 		ChainConfig: chainConfig,
-		voteMap:     make(map[string]voteStatus),
+		voteMap:     make(map[string]VoteStatus),
 		db:          dbm,
 		itemCache:   newGovernanceCache(),
 		currentSet:  GovernanceSet{},
@@ -176,6 +176,7 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 	// nil is for testing or simple function usage
 	if dbm != nil {
 		ret.initializeCache()
+		ret.ReadGovernanceState()
 	}
 	return &ret
 }
@@ -199,11 +200,11 @@ func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
 
 	if len(g.voteMap) > 0 {
 		for key, val := range g.voteMap {
-			if val.casted == false {
+			if val.Casted == false {
 				vote := new(GovernanceVote)
 				vote.Validator = addr
 				vote.Key = key
-				vote.Value = val.value
+				vote.Value = val.Value
 				encoded, err := rlp.EncodeToBytes(vote)
 				if err != nil {
 					logger.Error("Failed to RLP Encode a vote", "vote", vote)
@@ -227,13 +228,14 @@ func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 	defer g.voteMapLock.Unlock()
 
 	key = g.getKey(key)
-	if g.voteMap[key].value == value {
-		g.voteMap[key] = voteStatus{
-			value:  value,
-			casted: true,
-			num:    number,
+	if g.voteMap[key].Value == value {
+		g.voteMap[key] = VoteStatus{
+			Value:  value,
+			Casted: true,
+			Num:    number,
 		}
 	}
+	g.WriteGovernanceState(number)
 }
 
 func (g *Governance) ClearVotes(num uint64) {
@@ -245,7 +247,7 @@ func (g *Governance) ClearVotes(num uint64) {
 	g.mu.Lock()
 	g.changeSet = GovernanceSet{}
 	g.mu.Unlock()
-	g.voteMap = make(map[string]voteStatus)
+	g.voteMap = make(map[string]VoteStatus)
 	logger.Info("Governance votes are cleared", "num", num)
 }
 
@@ -556,6 +558,12 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 		gov.triggerChange(newGovernanceSet)
 		gov.currentGovernanceBlock = CalcGovernanceInfoBlock(num, gov.GetGovernanceValue("istanbul.epoch").(uint64))
 	}
+
+	if b, err := gov.toJSON(num); err != nil {
+		logger.Error("Check marshaling error", "err", err)
+	} else {
+		gov.UnmarshalJSON(b)
+	}
 }
 
 func (gov *Governance) triggerChange(set GovernanceSet) {
@@ -613,4 +621,71 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 		}
 	}
 	return nil
+}
+
+type governanceJSON struct {
+	BlockNumber     uint64                `json:"blockNumber"`
+	ChainConfig     *params.ChainConfig   `json:"chainConfig"`
+	VoteMap         map[string]VoteStatus `json:"voteMap"`
+	NodeAddress     common.Address        `json:"nodeAddress"`
+	GovernanceVotes []*GovernanceVote     `json:"governanceVotes"`
+	GovernanceTally []*GovernanceTally    `json:"governanceTally"`
+	CurrentSet      GovernanceSet         `json:"currentSet"`
+	ChangeSet       GovernanceSet         `json:"changeSet"`
+}
+
+func (gov *Governance) toJSON(num uint64) ([]byte, error) {
+	ret := &governanceJSON{
+		BlockNumber:     num,
+		ChainConfig:     gov.ChainConfig,
+		VoteMap:         gov.voteMap,
+		NodeAddress:     gov.nodeAddress,
+		GovernanceVotes: gov.GovernanceVotes,
+		GovernanceTally: gov.GovernanceTally,
+		CurrentSet:      gov.currentSet,
+		ChangeSet:       gov.changeSet,
+	}
+	j, _ := json.Marshal(ret)
+	return j, nil
+}
+
+func (gov *Governance) UnmarshalJSON(b []byte) error {
+	var j governanceJSON
+	if err := json.Unmarshal(b, &j); err != nil {
+		return err
+	}
+	gov.ChainConfig = j.ChainConfig
+	gov.voteMap = j.VoteMap
+	gov.nodeAddress = j.NodeAddress
+	gov.GovernanceVotes = j.GovernanceVotes
+	gov.GovernanceTally = j.GovernanceTally
+	gov.currentSet = adjustDecodedSet(j.CurrentSet)
+	gov.changeSet = adjustDecodedSet(j.ChangeSet)
+
+	return nil
+}
+
+func (gov *Governance) WriteGovernanceState(num uint64) error {
+	if b, err := gov.toJSON(num); err != nil {
+		logger.Error("Error in marshaling governance state", "err", err)
+		return err
+	} else {
+		if err = gov.db.WriteGovernanceState(b); err != nil {
+			logger.Error("Error in writing governance state", "err", err)
+			return err
+		} else {
+			logger.Info("Successfully stored governance state", "num", num)
+			return nil
+		}
+	}
+}
+
+func (gov *Governance) ReadGovernanceState() {
+	b, err := gov.db.ReadGovernanceState()
+	if err != nil {
+		logger.Info("No governance state found in a database")
+		return
+	}
+	logger.Info("Successfully loaded governance state from database")
+	gov.UnmarshalJSON(b)
 }

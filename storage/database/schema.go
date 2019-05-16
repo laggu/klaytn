@@ -83,6 +83,7 @@ var (
 
 	governancePrefix     = []byte("governance")
 	governanceHistoryKey = []byte("governanceIdxHistory")
+	governanceStateKey   = []byte("governanceState")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of

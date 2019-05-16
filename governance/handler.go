@@ -114,10 +114,10 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 	vote := &GovernanceVote{Key: key, Value: val}
 	var ok bool
 	if vote, ok = g.ValidateVote(vote); ok {
-		g.voteMap[key] = voteStatus{
-			value:  vote.Value,
-			casted: false,
-			num:    0,
+		g.voteMap[key] = VoteStatus{
+			Value:  vote.Value,
+			Casted: false,
+			Num:    0,
 		}
 		return true
 	}

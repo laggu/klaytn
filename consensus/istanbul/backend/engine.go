@@ -647,6 +647,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+		sb.governance.WriteGovernanceState(snap.Number)
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}
