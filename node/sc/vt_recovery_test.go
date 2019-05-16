@@ -394,6 +394,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
+	vtr.Stop()
 	assert.Equal(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
 }
 
