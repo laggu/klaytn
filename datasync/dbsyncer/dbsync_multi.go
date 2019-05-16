@@ -100,7 +100,7 @@ func (ds *DBSyncer) parallelSyncBlockHeader(block *types.Block) ([]*BulkInsertQu
 	parentHash := block.Header().ParentHash.Hex()
 	proposer := strings.ToLower(proposerAddr)
 	reward := block.Header().Rewardbase.Hex()
-	size := block.Header().Size()
+	size := block.Size()
 	timestamp := block.Header().Time.String()
 	timestampFos := block.Header().TimeFoS
 

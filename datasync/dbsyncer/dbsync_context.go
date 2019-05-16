@@ -87,7 +87,7 @@ func (ds *DBSyncer) syncBlockHeaderContext(ctx context.Context, tx *sql.Tx, bloc
 	parentHash := block.Header().ParentHash.Hex()
 	proposer := strings.ToLower(proposerAddr)
 	reward := strings.ToLower(block.Header().Rewardbase.Hex())
-	size := block.Header().Size()
+	size := block.Size()
 	timestamp := block.Header().Time.String()
 	timestampFos := block.Header().TimeFoS
 
