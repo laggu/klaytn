@@ -39,6 +39,7 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -72,6 +73,7 @@ func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.P
 		GovernanceCache:  newGovernanceCache(),
 		nodetype:         nodetype,
 	}
+	backend.currentView.Store(new(istanbul.View))
 	backend.core = istanbulCore.New(backend, backend.config)
 	return backend
 }
@@ -111,7 +113,7 @@ type backend struct {
 	knownMessages  *lru.ARCCache // the cache of self messages
 
 	rewardbase  common.Address
-	currentView *istanbul.View
+	currentView atomic.Value //*istanbul.View
 
 	// Reference to the governance.Governance
 	governance      *governance.Governance
@@ -141,7 +143,7 @@ func (sb *backend) GetSubGroupSize() uint64 {
 }
 
 func (sb *backend) SetCurrentView(view *istanbul.View) {
-	sb.currentView = view
+	sb.currentView.Store(view)
 }
 
 // Address implements istanbul.Backend.Address
@@ -209,7 +211,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	sb.knownMessages.Add(hash, true)
 
 	targets := make(map[common.Address]bool)
-	for _, val := range valSet.SubList(prevHash, sb.currentView) {
+	for _, val := range valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)) {
 		if val.Address() != sb.Address() {
 			targets[val.Address()] = true
 		}
