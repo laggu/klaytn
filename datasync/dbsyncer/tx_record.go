@@ -174,7 +174,7 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 			}
 
 			cols = "(?,?,?,?,?)"
-			vals = append(vals, sa.to, accountType, creator, createdTx, hra)
+			vals = append(vals, sa.contractAddress, accountType, creator, createdTx, hra)
 
 			count = 1
 		}
