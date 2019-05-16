@@ -776,7 +776,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		inserted, old := list.Add(tx, pool.config.PriceBump)
 		if !inserted {
 			pendingDiscardCounter.Inc(1)
-			return false, ErrReplaceUnderpriced
+			return false, ErrAlreadyNonceExistInPool
 		}
 		// New transaction is better, replace old one
 		if old != nil {
@@ -823,7 +823,7 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	if !inserted {
 		// An older transaction was better, discard this
 		queuedDiscardCounter.Inc(1)
-		return false, ErrReplaceUnderpriced
+		return false, ErrAlreadyNonceExistInPool
 	}
 	// Discard any previous transaction and mark this
 	if old != nil {

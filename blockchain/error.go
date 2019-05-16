@@ -57,6 +57,9 @@ var (
 	// with a different one without the required price bump.
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
 
+	// ErrAlreadyNonceExistInPool is returned if there is another tx with the same nonce in the tx pool.
+	ErrAlreadyNonceExistInPool = errors.New("there is another tx which has the same nonce in the tx pool")
+
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
