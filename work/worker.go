@@ -455,6 +455,9 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, header)
+	if self.nodetype != node.CONSENSUSNODE {
+		work.Block = parent
+	}
 
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
@@ -515,10 +518,6 @@ func (self *worker) commitNewWork() {
 		logger.Error("Failed to create mining context", "err", err)
 		return
 	}
-	if self.nodetype != node.CONSENSUSNODE {
-		self.push(NewTask(nil, nil, nil, nil))
-		return
-	}
 
 	// Obtain current work's state lock after we receive new work assignment.
 	self.current.stateMu.Lock()
@@ -526,17 +525,19 @@ func (self *worker) commitNewWork() {
 
 	// Create the current work task
 	work := self.current
-	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
+	if self.nodetype == node.CONSENSUSNODE {
+		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 
-	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
-		logger.Error("Failed to finalize block for sealing", "err", err)
-		return
-	}
-	// We only care about logging if we're actually mining.
-	if atomic.LoadInt32(&self.mining) == 1 {
-		logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))
+		// Create the new block to seal with the consensus engine
+		if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
+			logger.Error("Failed to finalize block for sealing", "err", err)
+			return
+		}
+		// We only care about logging if we're actually mining.
+		if atomic.LoadInt32(&self.mining) == 1 {
+			logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))
+		}
 	}
 
 	self.push(work)
