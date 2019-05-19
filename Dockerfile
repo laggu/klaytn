@@ -4,6 +4,9 @@ MAINTAINER Jesse Lee jesse.lee@groundx.xyz
 ENV PKG_DIR /klaytn-docker-pkg
 ENV SRC_DIR /go/src/github.com/ground-x/klaytn
 
+ARG KLAYTN_RACE_DETECT=0
+ENV KLAYTN_RACE_DETECT=$KLAYTN_RACE_DETECT
+
 RUN mkdir -p $PKG_DIR/bin
 RUN mkdir -p $PKG_DIR/conf
 

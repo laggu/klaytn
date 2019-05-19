@@ -200,6 +200,9 @@ func buildFlags(env build.Environment) (flags []string) {
 		ld = append(ld, "-s")
 	}
 
+	if env.IsKlaytnRaceDetectionOn {
+		flags = append(flags, "-race")
+	}
 	if len(ld) > 0 {
 		flags = append(flags, "-ldflags", strings.Join(ld, " "))
 	}

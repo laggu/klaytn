@@ -35,12 +35,13 @@ var (
 
 // Environment contains metadata provided by the build environment.
 type Environment struct {
-	Name                string // name of the environment
-	Repo                string // name of GitHub repo
-	Commit, Branch, Tag string // Git info
-	Buildnum            string
-	IsPullRequest       bool
-	IsCronJob           bool
+	Name                    string // name of the environment
+	Repo                    string // name of GitHub repo
+	Commit, Branch, Tag     string // Git info
+	Buildnum                string
+	IsPullRequest           bool
+	IsCronJob               bool
+	IsKlaytnRaceDetectionOn bool
 }
 
 func (env Environment) String() string {
@@ -82,6 +83,10 @@ func Env() Environment {
 // LocalEnv returns build environment metadata gathered from git.
 func LocalEnv() Environment {
 	env := applyEnvFlags(Environment{Name: "local", Repo: "ground-x/klaytn"})
+
+	if os.Getenv("KLAYTN_RACE_DETECT") == "1" {
+		env.IsKlaytnRaceDetectionOn = true
+	}
 
 	head := readGitFile("HEAD")
 	if splits := strings.Split(head, " "); len(splits) == 2 {
