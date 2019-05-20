@@ -78,26 +78,24 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 }
 
 // generateDefaultTx returns a Tx with default values of txTypes.
-// If txType is a kind of account update, it will return a updatedKey value.
+// If txType is a kind of account update, it will return an account to update.
 // Otherwise, it will return (tx, nil, nil).
 // For contract execution Txs, TxValueKeyTo value is set to "contract" as a default.
 // The address "contact" should exist before calling this function.
-func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType) (*types.Transaction, *ecdsa.PrivateKey, error) {
+func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType) (*types.Transaction, *TestAccountType, error) {
 	gasPrice := new(big.Int).SetUint64(25)
 	gasLimit := uint64(100000000000)
 	amount := new(big.Int).SetUint64(1000000000)
 
-	// generate a random private key for account creation/update Txs or contract deploy Txs
-	newKey, err := crypto.GenerateKey()
+	// generate a new account for account creation/update Txs or contract deploy Txs
+	senderAccType := accountkey.AccountKeyTypeLegacy
+	if sender.AccKey != nil {
+		senderAccType = sender.AccKey.Type()
+	}
+	newAcc, err := createDefaultAccount(senderAccType)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	newAccKey := accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey)
-	newAddr := crypto.PubkeyToAddress(newKey.PublicKey)
-
-	// a new private key will be returned
-	var retNewKey *ecdsa.PrivateKey = nil
 
 	// a default recipient address of smart contract execution to "contract"
 	var contractAddr common.Address
@@ -197,37 +195,37 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeAccountCreation:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = newAddr
+		values[types.TxValueKeyTo] = newAcc.Addr
 		values[types.TxValueKeyAmount] = amount
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
 		values[types.TxValueKeyHumanReadable] = false
-		values[types.TxValueKeyAccountKey] = newAccKey
+		values[types.TxValueKeyAccountKey] = newAcc.AccKey
 	case types.TxTypeAccountUpdate:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
-		values[types.TxValueKeyAccountKey] = newAccKey
+		values[types.TxValueKeyAccountKey] = newAcc.AccKey
 	case types.TxTypeFeeDelegatedAccountUpdate:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
-		values[types.TxValueKeyAccountKey] = newAccKey
+		values[types.TxValueKeyAccountKey] = newAcc.AccKey
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 	case types.TxTypeFeeDelegatedAccountUpdateWithRatio:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
-		values[types.TxValueKeyAccountKey] = newAccKey
+		values[types.TxValueKeyAccountKey] = newAcc.AccKey
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
 	case types.TxTypeSmartContractDeploy:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = &newAddr
+		values[types.TxValueKeyTo] = &newAcc.Addr
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -237,7 +235,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeFeeDelegatedSmartContractDeploy:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = &newAddr
+		values[types.TxValueKeyTo] = &newAcc.Addr
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -248,7 +246,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeFeeDelegatedSmartContractDeployWithRatio:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = &newAddr
+		values[types.TxValueKeyTo] = &newAcc.Addr
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -315,35 +313,31 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		return nil, nil, err
 	}
 
-	// the function returns a private key for account update Txs
+	// the function returns an updated sender account for account update Txs
 	if txType.IsAccountUpdate() {
-		retNewKey = newKey
+		// For the account having a legacy key, its private key will not be updated since it is coupled with its address.
+		if newAcc.AccKey.Type().IsLegacyAccountKey() {
+			newAcc.Keys = sender.Keys
+		}
+		newAcc.Addr = sender.Addr
+		newAcc.Nonce = sender.Nonce
+		return tx, newAcc, err
 	}
 
-	return tx, retNewKey, err
+	return tx, nil, err
 }
 
 // expectedTestResultForDefaultTx returns expected validity of tx which generated from (accountKeyType, txType) pair.
-func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, txType types.TxType) bool {
-	// TODO-Klaytn-Core. legacy tx will be prohibited to all account types execpt legacy account type
+func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, txType types.TxType) error {
 	switch accountKeyType {
 	//case accountkey.AccountKeyTypeNil:                     // not supported type
-	case accountkey.AccountKeyTypeLegacy:
-		return true
-	case accountkey.AccountKeyTypePublic:
-		return true
 	case accountkey.AccountKeyTypeFail:
-		if txType.IsLegacyTransaction() {
-			return true
+		if txType.IsAccountUpdate() {
+			return kerrors.ErrAccountKeyFailNotUpdatable
 		}
-		return false
-	case accountkey.AccountKeyTypeWeightedMultiSig:
-		return true
-	case accountkey.AccountKeyTypeRoleBased:
-		return true
+		return types.ErrInvalidSigSender
 	}
-
-	return false
+	return nil
 }
 
 // TestDefaultTxsWithDefaultAccountKey tests most of transactions types with most of account key types.
@@ -515,10 +509,10 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 			for _, txType := range txTypes {
 				var txs types.Transactions
 				var tx *types.Transaction
-				var newKey *ecdsa.PrivateKey = nil
+				var updatedAcc *TestAccountType = nil
 
 				// generate a default transaction
-				tx, newKey, err = generateDefaultTx(sender, reservoir, txType)
+				tx, updatedAcc, err = generateDefaultTx(sender, reservoir, txType)
 				assert.Equal(t, nil, err)
 
 				// skip if tx type is legacy transaction and sender is not legacy.
@@ -529,13 +523,13 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 				// sign a tx
 				if accountKeyType == accountkey.AccountKeyTypeWeightedMultiSig {
-					if txType == types.TxTypeLegacyTransaction {
+					if txType.IsLegacyTransaction() {
 						err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[0]})
 					} else {
 						err = tx.SignWithKeys(signer, sender.Keys)
 					}
 				} else if accountKeyType == accountkey.AccountKeyTypeRoleBased {
-					if txType == types.TxTypeAccountUpdate {
+					if txType.IsAccountUpdate() {
 						err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleAccountUpdate]})
 					} else {
 						err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleTransaction]})
@@ -553,25 +547,24 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 				txs = append(txs, tx)
 
-				isSuccess := expectedTestResultForDefaultTx(accountKeyType, txType)
+				expectedError := expectedTestResultForDefaultTx(accountKeyType, txType)
 
 				if testing.Verbose() {
-					fmt.Println("Testing... accountKeyType: ", accountKeyType, ", txType: ", txType, "isSuccess: ", isSuccess)
+					fmt.Println("Testing... accountKeyType: ", accountKeyType, ", txType: ", txType, "Expected error: ", expectedError)
 				}
 
-				if isSuccess {
+				if expectedError == nil {
 					err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
 					assert.Equal(t, nil, err)
 
 					// update sender's key
-					if newKey != nil {
-						sender.AccKey = accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey)
-						sender.Keys = []*ecdsa.PrivateKey{newKey}
+					if updatedAcc != nil {
+						sender = updatedAcc
 					}
 					sender.Nonce += 1
 				} else {
 					receipt, _, err := applyTransaction(t, bcdata, tx)
-					assert.Equal(t, types.ErrInvalidSigSender, err)
+					assert.Equal(t, expectedError, err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
 			}
