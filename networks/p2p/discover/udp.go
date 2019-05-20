@@ -290,6 +290,7 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	go udp.Discovery.(*Table).loop() // TODO-Klaytn-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
 	go udp.loop()
 	go udp.readLoop(cfg.Unhandled)
 	return udp.Discovery, udp, nil

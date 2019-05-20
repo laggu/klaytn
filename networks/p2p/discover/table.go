@@ -169,7 +169,6 @@ func newTable(cfg *Config) (Discovery, error) {
 	// seed nodes also considers older nodes that would otherwise be removed by the
 	// expiration.
 	tab.db.ensureExpirer()
-	go tab.loop()
 	logger.Debug("new "+tab.Name()+" created", "err", nil)
 	return tab, nil
 }

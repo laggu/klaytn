@@ -63,6 +63,7 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
 	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
+	go tab.loop()
 	defer tab.Close()
 
 	// Wait for init so bond is accepted.
@@ -161,6 +162,7 @@ func TestTable_IPLimit(t *testing.T) {
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
 	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
+	go tab.loop()
 	defer tab.Close()
 
 	for i := 0; i < tableIPLimit+1; i++ {
@@ -186,6 +188,7 @@ func TestTable_BucketIPLimit(t *testing.T) {
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
 	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
+	go tab.loop()
 	defer tab.Close()
 
 	d := 3
@@ -270,6 +273,7 @@ func TestTable_closest(t *testing.T) {
 		discv, _ := newTable(&conf)
 		tab := discv.(*Table)
 		tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
+		go tab.loop()
 		defer tab.Close()
 		tab.stuff(test.All, NodeTypeUnknown)
 
@@ -337,6 +341,7 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 		discv, _ := newTable(&conf)
 		tab := discv.(*Table)
 		tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
+		go tab.loop()
 		defer tab.Close()
 		<-tab.initDone
 
@@ -391,6 +396,7 @@ func TestTable_Lookup(t *testing.T) {
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
 	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
+	go tab.loop()
 	defer tab.Close()
 
 	// lookup on empty table returns no nodes
