@@ -235,7 +235,7 @@ func TestUDP_findnodeTimeout(t *testing.T) {
 	toaddr := &net.UDPAddr{IP: net.ParseIP("1.2.3.4"), Port: 2222}
 	toid := NodeID{1, 2, 3, 4}
 	target := NodeID{4, 5, 6, 7}
-	result, err := test.udp.findnode(toid, toaddr, target, NodeTypeUnknown)
+	result, err := test.udp.findnode(toid, toaddr, target, NodeTypeUnknown, 100)
 	if err != errTimeout {
 		t.Error("expected timeout error, got", err)
 	}
@@ -290,7 +290,7 @@ func TestUDP_findnodeMultiReply(t *testing.T) {
 	resultc, errc := make(chan []*Node), make(chan error)
 	go func() {
 		rid := PubkeyID(&test.remotekey.PublicKey)
-		ns, err := test.udp.findnode(rid, test.remoteaddr, testTarget, NodeTypeUnknown)
+		ns, err := test.udp.findnode(rid, test.remoteaddr, testTarget, NodeTypeUnknown, 100)
 		if err != nil && len(ns) == 0 {
 			errc <- err
 		} else {

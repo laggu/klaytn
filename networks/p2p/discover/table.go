@@ -60,6 +60,7 @@ type Discovery interface {
 	Close()
 	Resolve(target NodeID, targetType NodeType) *Node
 	Lookup(target NodeID, targetType NodeType) []*Node
+	GetNodes(targetType NodeType, max int) []*Node
 	ReadRandomNodes([]*Node, NodeType) int
 	RetrieveNodes(target common.Hash, nType NodeType, nresults int) []*Node // replace of closest():Table
 
@@ -112,7 +113,7 @@ type bondproc struct {
 type transport interface {
 	ping(toid NodeID, toaddr *net.UDPAddr) error
 	waitping(NodeID) error
-	findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT NodeType) ([]*Node, error)
+	findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT NodeType, max int) ([]*Node, error)
 	close()
 }
 
@@ -139,21 +140,21 @@ func newTable(cfg *Config) (Discovery, error) {
 
 	switch cfg.NodeType {
 	case NodeTypeCN:
-		tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN})
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true})
+		tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: 100})
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
 	case NodeTypePN:
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN})
-		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true})
+		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 1})
+		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
 	case NodeTypeEN:
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN})
+		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 2})
 		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true})
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
 	case NodeTypeBN:
-		tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true})
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true})
-		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN})
+		tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: 100})
+		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 100})
+		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, max: 3})
 	}
 
 	if err := tab.setFallbackNodes(cfg.Bootnodes); err != nil {
@@ -193,7 +194,7 @@ func (tab *Table) setFallbackNodes(nodes []*Node) error {
 	return nil
 }
 
-func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT NodeType, recursiveFind bool) []*Node {
+func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT NodeType, recursiveFind bool, max int) []*Node {
 	var (
 		asked          = make(map[NodeID]bool)
 		seen           = make(map[NodeID]bool)
@@ -217,7 +218,7 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 				pendingQueries++
 				go func() {
 					// Find potential neighbors to bond with
-					r, err := tab.net.findnode(n.ID, n.addr(), targetID, targetNT)
+					r, err := tab.net.findnode(n.ID, n.addr(), targetID, targetNT, max)
 					if err != nil {
 						// Bump the failure counter to detect and evacuate non-bonded entries
 						fails := tab.db.findFails(n.ID) + 1
@@ -366,6 +367,17 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool, targetNT NodeType
 	return tab.storages[targetNT].lookup(targetID, refreshIfEmpty, targetNT)
 }
 
+func (tab *Table) GetNodes(targetNT NodeType, max int) []*Node {
+	tab.storagesMu.RLock()
+	defer tab.storagesMu.RUnlock()
+
+	if tab.storages[targetNT] == nil {
+		logger.Warn("Table.getNodes: Not Supported NodeType", "NodeType", targetNT)
+		return []*Node{}
+	}
+	return tab.storages[targetNT].getNodes(max)
+}
+
 func removeBn(nodes []*Node) []*Node {
 	tmp := nodes[:0]
 	for _, n := range nodes {
@@ -452,7 +464,7 @@ loop:
 // full. seed nodes are inserted if the table is empty (initial
 // bootstrap or discarded faulty peers).
 func (tab *Table) doRefresh(done chan struct{}) {
-	logger.Info("Table.doRefresh()")
+	logger.Trace("Table.doRefresh()")
 	defer close(done)
 
 	// Load nodes from the database and insert
@@ -624,6 +636,7 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 		}
 		// Retrieve the bonding results
 		result = w.err
+		logger.Debug("[Table] Bond", "result", result)
 		if result == nil {
 			node = w.n
 		}

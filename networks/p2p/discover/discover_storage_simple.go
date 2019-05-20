@@ -30,6 +30,7 @@ type simpleStorage struct {
 	nodes      []*Node
 	noDiscover bool // if noDiscover is true, don't lookup new node.
 	nodesMutex sync.Mutex
+	max        int
 }
 
 func (s *simpleStorage) init() {
@@ -54,7 +55,34 @@ func (s *simpleStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType 
 			s.add(n)
 		}
 	}
-	return s.tab.findNewNode(&nodesByDistance{entries: seeds}, targetID, targetType, false)
+	logger.Debug("Simple-lookup", "name", s.name(), "targetId", targetID, "targetType", targetType)
+	return s.tab.findNewNode(&nodesByDistance{entries: seeds}, targetID, targetType, false, s.max)
+}
+
+func (s *simpleStorage) getNodes(max int) []*Node {
+	s.nodesMutex.Lock()
+	nodes := shuffle(s.nodes)
+
+	var ret []*Node
+	for _, nd := range nodes {
+		if nd.NType == s.targetType {
+			ret = append(ret, nd)
+		}
+		if len(ret) >= max {
+			break
+		}
+	}
+	s.nodesMutex.Unlock()
+
+	if len(ret) < max {
+		ret = s.lookup(NodeID{}, true, s.targetType)
+	}
+
+	if len(ret) < max {
+		return ret
+	} else {
+		return ret[:max]
+	}
 }
 
 func (s *simpleStorage) doRevalidate() {
@@ -157,8 +185,11 @@ func (s *simpleStorage) closest(target common.Hash, nresults int) *nodesByDistan
 	// TODO-Klaytn-Node nodesByDistance is not suitable for SimpleStorage. Because there is no concept for distance
 	// in the SimpleStorage. Change it
 	cNodes := &nodesByDistance{target: target}
-	for _, n := range s.nodes {
-		cNodes.push(n, nresults)
+	nodes := shuffle(s.nodes)
+	if len(nodes) > s.max {
+		cNodes.entries = nodes[:s.max]
+	} else {
+		cNodes.entries = nodes
 	}
 	return cNodes
 }

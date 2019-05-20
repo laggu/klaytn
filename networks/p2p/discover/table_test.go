@@ -238,7 +238,7 @@ func newPingRecorder() *pingRecorder {
 	}
 }
 
-func (t *pingRecorder) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, nType NodeType) ([]*Node, error) {
+func (t *pingRecorder) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, nType NodeType, max int) ([]*Node, error) {
 	return nil, nil
 }
 func (t *pingRecorder) close() {}
@@ -625,7 +625,7 @@ type preminedTestnet struct {
 	dists     [hashBits + 1][]NodeID
 }
 
-func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, nType NodeType) ([]*Node, error) {
+func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, nType NodeType, max int) ([]*Node, error) {
 	// current log distance is encoded in port number
 	// fmt.Println("findnode query at dist", toaddr.Port)
 	if toaddr.Port == 0 {

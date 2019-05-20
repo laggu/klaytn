@@ -95,11 +95,12 @@ func runDialTest(t *testing.T, test dialtest) {
 
 type fakeTable []*discover.Node
 
-func (t fakeTable) Name() string                                               { return "fakeTable" }
-func (t fakeTable) Self() *discover.Node                                       { return new(discover.Node) }
-func (t fakeTable) Close()                                                     {}
-func (t fakeTable) Lookup(discover.NodeID, discover.NodeType) []*discover.Node { return nil }
-func (t fakeTable) Resolve(discover.NodeID, discover.NodeType) *discover.Node  { return nil }
+func (t fakeTable) Name() string                                                    { return "fakeTable" }
+func (t fakeTable) Self() *discover.Node                                            { return new(discover.Node) }
+func (t fakeTable) Close()                                                          {}
+func (t fakeTable) Lookup(discover.NodeID, discover.NodeType) []*discover.Node      { return nil }
+func (t fakeTable) Resolve(discover.NodeID, discover.NodeType) *discover.Node       { return nil }
+func (t fakeTable) GetNodes(targetType discover.NodeType, max int) []*discover.Node { return nil }
 func (t fakeTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int {
 	return copy(buf, t)
 }
@@ -871,6 +872,10 @@ func uintID(i uint32) discover.NodeID {
 type resolveMock struct {
 	resolveCalls []discover.NodeID
 	answer       *discover.Node
+}
+
+func (t *resolveMock) GetNodes(targetType discover.NodeType, max int) []*discover.Node {
+	panic("implement me")
 }
 
 func (t *resolveMock) LookupByType(target discover.NodeID, dt discover.DiscoveryType, nType discover.NodeType) []*discover.Node {

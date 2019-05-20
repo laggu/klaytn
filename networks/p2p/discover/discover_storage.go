@@ -36,6 +36,7 @@ type discoverStorage interface {
 	copyBondedNodes()
 
 	lookup(targetID NodeID, refreshIfEmpty bool, targetType NodeType) []*Node
+	getNodes(max int) []*Node
 	doRevalidate()
 	doRefresh()
 

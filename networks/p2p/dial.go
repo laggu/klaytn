@@ -167,7 +167,8 @@ func (t *discoverTypedStaticTask) Do(srv Server) {
 		time.Sleep(next.Sub(now))
 	}
 	srv.SetLastLookupToNow()
-	t.results = srv.Lookup(discover.NodeID{}, convertDialT2NodeT(t.name)) // TODO-Klaytn-Node t.max? if t.max is not needed, remove it
+	t.results = srv.GetNodes(convertDialT2NodeT(t.name), t.max)
+	logger.Trace("discoverTypedStaticTask", "result", len(t.results))
 }
 
 func (t *discoverTypedStaticTask) String() string {
@@ -247,8 +248,10 @@ func (s *dialstate) addStatic(n *discover.Node) {
 func (s *dialstate) addTypedStatic(n *discover.Node, dType dialType) {
 	// This overwrites the task instead of updating an existing
 	// entry, giving users the opportunity to force a resolve operation.
-	logger.Debug("[Dialer] Add TypedStatic", "node", n, "dialType", dType)
-	s.static[n.ID] = &dialTask{flags: staticDialedConn, dest: n, dialType: dType}
+	if s.static[n.ID] == nil {
+		logger.Trace("[Dial] Add TypedStatic", "node", n, "dialType", dType)
+		s.static[n.ID] = &dialTask{flags: staticDialedConn, dest: n, dialType: dType}
+	}
 }
 
 func (s *dialstate) removeStatic(n *discover.Node) {
@@ -369,6 +372,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		if s.ntab != nil { // Run DiscoveryTasks when only Discovery Mode
 			for k, ts := range s.tsMap {
 				if k != DT_UNLIMITED && !s.typedLookupRunning[k] && cnt[k] < ts.maxNodeCount {
+					logger.Debug("[Dial] Add new discoverTypedStaticTask", "name", k)
 					s.typedLookupRunning[k] = true
 					maxDiscover := ts.maxNodeCount - cnt[k]
 					newtasks = append(newtasks, &discoverTypedStaticTask{name: k, max: maxDiscover})
@@ -459,6 +463,8 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 		s.lookupRunning = false
 		s.lookupBuf = append(s.lookupBuf, t.results...)
 	case *discoverTypedStaticTask:
+		logger.Trace("[Dial] discoverTypedStaticTask - done", "t.name", t.name,
+			"result count", len(t.results))
 		s.typedLookupRunning[t.name] = false
 		for _, r := range t.results {
 			s.addTypedStatic(r, t.name)

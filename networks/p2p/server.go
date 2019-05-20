@@ -224,6 +224,9 @@ type Server interface {
 	// CheckNilNetworkTable returns whether network table is nil.
 	CheckNilNetworkTable() bool
 
+	// GetNodes returns up to max alive nodes which a NodeType is nType
+	GetNodes(nType discover.NodeType, max int) []*discover.Node
+
 	// Lookup performs a network search for nodes close
 	// to the given target. It approaches the target by querying
 	// nodes that are closer to it on each iteration.
@@ -1867,6 +1870,10 @@ func (srv *BaseServer) Lookup(target discover.NodeID, nType discover.NodeType) [
 // It returns nil if the node could not be found.
 func (srv *BaseServer) Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node {
 	return srv.ntab.Resolve(target, nType)
+}
+
+func (srv *BaseServer) GetNodes(nType discover.NodeType, max int) []*discover.Node {
+	return srv.ntab.GetNodes(nType, max)
 }
 
 // Name returns name of server.

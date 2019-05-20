@@ -63,7 +63,7 @@ func (s *KademliaStorage) init() {
 }
 
 func (s *KademliaStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType NodeType) []*Node {
-	logger.Debug("Table.lookup start", "name", s.name(), "targetID", targetID,
+	logger.Debug("Kademlia-lookup start", "name", s.name(), "targetID", targetID,
 		"targetNodeType", targetType, "refreshIfEmpty", refreshIfEmpty)
 	var (
 		target = crypto.Keccak256Hash(targetID[:])
@@ -83,8 +83,16 @@ func (s *KademliaStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetTyp
 		<-s.tab.refresh()
 		refreshIfEmpty = false
 	}
+	return s.tab.findNewNode(result, targetID, targetType, true, bucketSize)
+}
 
-	return s.tab.findNewNode(result, targetID, targetType, true)
+func (s *KademliaStorage) getNodes(max int) []*Node {
+	nbd := s.closest(crypto.Keccak256Hash(s.tab.self.ID[:]), max)
+	var ret []*Node
+	for _, nd := range nbd.entries {
+		ret = append(ret, nd)
+	}
+	return ret
 }
 
 func (s *KademliaStorage) doRevalidate() {

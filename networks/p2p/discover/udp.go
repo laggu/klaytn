@@ -219,6 +219,23 @@ type pending struct {
 	errc chan<- error
 }
 
+func (p *pending) String() string {
+	var typeStr string
+	switch p.ptype {
+	case pingPacket:
+		typeStr = "PING"
+	case pongPacket:
+		typeStr = "PONG"
+	case findnodePacket:
+		typeStr = "FINDNODE"
+	case neighborsPacket:
+		typeStr = "NEIGHBORS"
+	default:
+		typeStr = "UNKNOWN"
+	}
+	return fmt.Sprintf("pending [from:%s, type:%s, targetType:%d, deadline:%s]", p.from, typeStr, p.targetType, p.deadline)
+}
+
 type reply struct {
 	from  NodeID
 	ptype byte
@@ -310,7 +327,6 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 		To:         makeEndpoint(toaddr, 0, NodeTypeUnknown), // TODO: maybe use known TCP port from DB
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	}
-	logger.Debug("[udp] PING send packet", "req", req)
 	packet, hash, err := encodePacket(t.priv, pingPacket, req)
 	if err != nil {
 		return err
@@ -333,7 +349,9 @@ func (t *udp) waitping(from NodeID) error {
 
 // findnode sends a findnode request to the given node and waits until
 // the node has sent up to k neighbors.
-func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT NodeType) ([]*Node, error) {
+func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT NodeType, max int) ([]*Node, error) {
+	logger.Trace("[udp] findnode", "toid", toid, "toaddr", toaddr, "target", target,
+		"targetNodeType", targetNT)
 	nodes := make([]*Node, 0, bucketSize)
 	nreceived := 0
 	errc := t.pending(toid, neighborsPacket, targetNT, func(r interface{}) bool {
@@ -347,7 +365,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 			}
 			nodes = append(nodes, n)
 		}
-		return nreceived >= bucketSize
+		return nreceived >= max
 	})
 	t.send(toaddr, findnodePacket, &findnode{
 		Target:     target,
@@ -359,6 +377,8 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 	if err != nil {
 		neighborsMeter.Mark(1)
 	}
+	logger.Trace("[udp] findnode", "len(nodes)", len(nodes), "toid", toid, "toaddr", toaddr, "target",
+		target, "targetNodeType", targetNT)
 	return nodes, err
 }
 
