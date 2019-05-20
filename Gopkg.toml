@@ -38,6 +38,10 @@
   revision = "c3a204f8e96543bb0cc090385c001078f184fc46"
 
 [[constraint]]
+  name = "github.com/allegro/bigcache"
+  revision = "e24eb225f15679bbe54f91bfa7da3b00e59b9768"
+
+[[constraint]]
   branch = "v3"
   name = "gopkg.in/olebedev/go-duktape.v3"
 
