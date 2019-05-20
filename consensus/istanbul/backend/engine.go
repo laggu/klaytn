@@ -588,14 +588,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		// If an in-memory snapshot was found, use that
 		if s, ok := sb.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
-
-			if parents != nil || headers != nil {
-				// if parents or headers have anything to append, break the routine
-				break
-			} else {
-				// if not, there is nothing to do, just return the snap
-				return snap, nil
-			}
+			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
@@ -629,9 +622,11 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	if err != nil {
 		return nil, err
 	}
-	if sb.governance.ChainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) && params.IsProposerUpdateInterval(snap.Number) {
-		// when block number of snap is proposer update interval, refresh ValSet to make a new weighted random proposer list
-		pHeader := chain.GetHeaderByNumber(snap.Number)
+	if sb.governance.ChainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
+		// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
+		// And proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
+		// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
+		pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(snap.Number + 1))
 		if pHeader != nil {
 			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.governance.ChainConfig); err != nil {
 				// There are three error cases and they just don't refresh proposers
