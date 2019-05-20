@@ -200,6 +200,9 @@ func (s *PublicBlockChainAPI) GetAccountKey(ctx context.Context, address common.
 	if err != nil {
 		return &accountkey.AccountKeySerializer{}, err
 	}
+	if state.Exist(address) == false {
+		return nil, nil
+	}
 	accountKey := state.GetKey(address)
 	serAccKey := accountkey.NewAccountKeySerializerWithAccountKey(accountKey)
 	return serAccKey, state.Error()
