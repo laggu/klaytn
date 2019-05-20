@@ -153,10 +153,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		// Remove any votes on checkpoint blocks
 		number := header.Number.Uint64()
 
-		if number%s.Epoch == 0 {
-			gov.ClearVotes(number)
-		}
-
 		// Resolve the authorization key and check against validators
 		validator, err := ecrecover(header)
 		if err != nil {
@@ -173,6 +169,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 				go gov.UpdateGovernance(number, header.Governance)
 			}
 			gov.UpdateCurrentGovernance(number)
+			gov.ClearVotes(number)
 		}
 	}
 	snap.Number += uint64(len(headers))
@@ -183,9 +180,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		snap.ValSet.SetBlockNum(snap.Number)
 	}
 
-	// Save GovernanceTally for APIs
-	gov.GovernanceTallyLock.Lock()
-	gov.GovernanceTallyLock.Unlock()
 	gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())
 	gov.SetMyVotingPower(snap.getMyVotingPower(addr))
 
