@@ -138,6 +138,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	amountZero := new(big.Int).SetUint64(0)
 	ratio := types.FeeRatio(30)
 	dataMemo := []byte("hello")
+	dataAnchor := []byte{0x11, 0x22}
 	dataCode := common.FromHex(code)
 	values := map[types.TxValueKeyType]interface{}{}
 
@@ -301,6 +302,12 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyGasPrice] = gasPrice
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeChainDataAnchoring:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyAnchoredData] = dataAnchor
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)
@@ -342,7 +349,6 @@ func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, tx
 // TestDefaultTxsWithDefaultAccountKey tests most of transactions types with most of account key types.
 // The test creates a default account for each account key type, and generates default Tx for each Tx type.
 // AccountKeyTypeNil is excluded because it cannot be used for account creation.
-// TxTypeChainDataAnchoring is excluded because it is not fully developed.
 func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(25)
 	gasLimit := uint64(100000000000)
@@ -388,7 +394,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
 		types.TxTypeFeeDelegatedCancelWithRatio,
 
-		// types.TxTypeChainDataAnchoring,             // not supported type
+		types.TxTypeChainDataAnchoring,
 	}
 
 	// tests for all accountKeyTypes
