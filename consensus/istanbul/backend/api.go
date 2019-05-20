@@ -27,7 +27,6 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/networks/rpc"
@@ -277,6 +276,16 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 	head := b.Header() // copies the header once
 	hash := head.Hash()
 
+	td := big.NewInt(0)
+	if bc, ok := api.chain.(*blockchain.BlockChain); ok {
+		td = bc.GetTd(hash, b.NumberU64())
+	}
+	r, err := klaytnApi.RpcOutputBlock(b, td, false, false)
+	if err != nil {
+		logger.Error("failed to RpcOutputBlock", "err", err)
+		return nil
+	}
+
 	// make transactions
 	numTxs := len(transactions)
 	rpcTransactions := make([]map[string]interface{}, numTxs)
@@ -284,21 +293,11 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
 	}
 
-	return map[string]interface{}{
-		"number":           (*hexutil.Big)(head.Number),
-		"hash":             b.Hash(),
-		"parentHash":       head.ParentHash,
-		"stateRoot":        head.Root,
-		"size":             hexutil.Uint64(b.Size()),
-		"gasUsed":          hexutil.Uint64(head.GasUsed),
-		"timestamp":        (*hexutil.Big)(head.Time),
-		"timestampFoS":     hexutil.Uint(head.TimeFoS),
-		"transactionsRoot": head.TxHash,
-		"receiptsRoot":     head.ReceiptHash,
-		"committee":        committee,
-		"proposer":         proposer,
-		"transactions":     rpcTransactions,
-	}
+	r["committee"] = committee
+	r["proposer"] = proposer
+	r["transactions"] = rpcTransactions
+
+	return r
 }
 
 // TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"
