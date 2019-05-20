@@ -137,7 +137,6 @@ func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
 func (t *TxInternalDataChainDataAnchoring) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
-	dataAnchoredRLP, _ := rlp.EncodeToBytes(t.Payload)
 	tx := Transaction{data: t}
 
 	return fmt.Sprintf(`
@@ -159,7 +158,7 @@ func (t *TxInternalDataChainDataAnchoring) String() string {
 		t.GasLimit,
 		t.TxSignatures.string(),
 		enc,
-		common.Bytes2Hex(dataAnchoredRLP))
+		common.Bytes2Hex(t.Payload))
 }
 
 func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
