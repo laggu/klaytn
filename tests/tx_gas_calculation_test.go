@@ -83,7 +83,6 @@ func TestGasCalculation(t *testing.T) {
 		Type    string
 		account TestAccount
 	}{
-		{"Legacy", genLegacyAccount(t)},
 		{"KlaytnLegacy", genKlaytnLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
 		{"MultiSig", genMultiSigAccount(t)},
@@ -123,27 +122,8 @@ func TestGasCalculation(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// Preparing step. Send KLAY to LegacyAccount.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-		tx := types.NewTransaction(reservoir.GetNonce(),
-			accountTypes[0].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
-
-		err := tx.SignWithKeys(signer, reservoir.GetTxKeys())
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.AddNonce()
-	}
-
 	// Preparing step. Send KLAY to KlaytnAcounts.
-	for i := 1; i < len(accountTypes); i++ {
+	for i := 0; i < len(accountTypes); i++ {
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
@@ -213,16 +193,12 @@ func TestGasCalculation(t *testing.T) {
 			toAccount := reservoir
 			senderRole := accountkey.RoleTransaction
 
-			// LegacyTransaction can be used only with LegacyAccount and KlaytnAccount with AccountKeyLegacy.
-			if !strings.Contains(sender.Type, "Legacy") && strings.Contains(f.Name, "Legacy") {
+			// LegacyTransaction can be used only by the KlaytnAccount with AccountKeyLegacy.
+			if sender.Type != "KlaytnLegacy" && strings.Contains(f.Name, "Legacy") {
 				continue
 			}
 
 			if strings.Contains(f.Name, "AccountUpdate") {
-				// Sender can't be a LegacyAccount with AccountUpdate
-				if sender.Type == "Legacy" {
-					continue
-				}
 				senderRole = accountkey.RoleAccountUpdate
 			}
 
@@ -729,15 +705,6 @@ func genMapForCancel(from TestAccount, gasPrice *big.Int, txType types.TxType) (
 		types.TxValueKeyGasPrice: gasPrice,
 	}
 	return values, intrinsic
-}
-
-// Generate TestAccount functions
-func genLegacyAccount(t *testing.T) TestAccount {
-	// For LegacyAccount
-	legacyAccount, err := createAnonymousAccount(getRandomPrivateKeyString(t))
-	assert.Equal(t, nil, err)
-
-	return legacyAccount
 }
 
 func genKlaytnLegacyAccount(t *testing.T) TestAccount {

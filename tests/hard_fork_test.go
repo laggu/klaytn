@@ -146,7 +146,6 @@ func genBlocks(t *testing.T) {
 		Type    string
 		account TestAccount
 	}{
-		{"Legacy", genLegacyAccount(t)},
 		{"KlaytnLegacy", genKlaytnLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
 		{"MultiSig", genMultiSigAccount(t)},
