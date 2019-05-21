@@ -883,7 +883,7 @@ func handleBlockHeaderFetchResponseMsg(pm *ProtocolManager, p Peer, msg p2p.Msg)
 
 	headers := pm.fetcher.FilterHeaders(p.GetID(), []*types.Header{header}, time.Now())
 	if len(headers) != 0 {
-		logger.Warn("Failed to filter header", "peer", p.GetID(),
+		logger.Debug("Failed to filter header", "peer", p.GetID(),
 			"num", header.Number.Uint64(), "hash", header.Hash(), "len(headers)", len(headers))
 	}
 
