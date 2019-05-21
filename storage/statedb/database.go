@@ -55,6 +55,8 @@ var (
 	memcacheCleanWriteMeter = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
 
 	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
+
+	memcacheUncacheTimeGauge = metrics.NewRegisteredGauge("trie/memcache/uncache/time", nil)
 )
 
 // secureKeyPrefix is the database key prefix used to store trie node preimages.
@@ -717,7 +719,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	// by only uncaching existing data when the database write finalizes.
 	db.lock.RLock()
 
-	start := time.Now()
+	commitStart := time.Now()
 	if err := db.writeBatchPreimages(); err != nil {
 		db.lock.RUnlock()
 		return err
@@ -739,9 +741,12 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	db.preimages = make(map[common.Hash][]byte)
 	db.preimagesSize = 0
 
+	uncacheStart := time.Now()
 	db.uncache(node)
+	commitEnd := time.Now()
 
-	memcacheCommitTimeGauge.Update(int64(time.Since(start)))
+	memcacheUncacheTimeGauge.Update(int64(commitEnd.Sub(uncacheStart)))
+	memcacheCommitTimeGauge.Update(int64(commitEnd.Sub(commitStart)))
 	memcacheCommitSizeMeter.Mark(int64(nodesSize - db.nodesSize))
 	memcacheCommitNodesMeter.Mark(int64(numNodes - len(db.nodes)))
 
@@ -749,7 +754,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	if !report {
 		localLogger = logger.Debug
 	}
-	localLogger("Persisted trie from memory database", "updated nodes", numNodes-len(db.nodes), "updated nodes size", nodesSize-db.nodesSize, "time", time.Since(start),
+	localLogger("Persisted trie from memory database", "updated nodes", numNodes-len(db.nodes), "updated nodes size", nodesSize-db.nodesSize, "time", commitEnd.Sub(commitStart),
 		"gcnodes", db.gcnodes, "gcsize", db.gcsize, "gctime", db.gctime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
 
 	// Reset the garbage collection statistics
