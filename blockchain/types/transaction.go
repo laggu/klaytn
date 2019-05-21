@@ -121,6 +121,8 @@ func (tx *Transaction) ChainId() *big.Int {
 	return tx.data.ChainId()
 }
 
+// SenderTxHash returns (SenderTxHash, true) if the tx is a fee-delegated transaction.
+// Otherwise, it returns (nil hash, false).
 func (tx *Transaction) SenderTxHash() (common.Hash, bool) {
 	if tx.Type().IsFeeDelegatedTransaction() == false {
 		// Do not compute SenderTxHash for non-fee-delegated txs
@@ -132,6 +134,17 @@ func (tx *Transaction) SenderTxHash() (common.Hash, bool) {
 	v := tx.data.SenderTxHash()
 	tx.senderTxHash.Store(v)
 	return v, tx.Type().IsFeeDelegatedTransaction()
+}
+
+// SenderTxHashAll returns SenderTxHash for all tx types.
+// If it is not a fee-delegated tx, SenderTxHash and TxHash are the same.
+func (tx *Transaction) SenderTxHashAll() common.Hash {
+	if senderTxHash := tx.senderTxHash.Load(); senderTxHash != nil {
+		return senderTxHash.(common.Hash)
+	}
+	v := tx.data.SenderTxHash()
+	tx.senderTxHash.Store(v)
+	return v
 }
 
 func validateSignature(v, r, s *big.Int) bool {
