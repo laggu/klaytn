@@ -1281,7 +1281,7 @@ func (bc *BlockChain) finalizeWriteBlockWithState(block *types.Block, status Wri
 	if status == CanonStatTy {
 		bc.insert(block)
 		headBlockNumberGauge.Update(block.Number().Int64())
-		blockTxCountsMeter.Mark(int64(block.Transactions().Len()))
+		blockTxCountsGauge.Update(int64(block.Transactions().Len()))
 		blockTxCountsCounter.Inc(int64(block.Transactions().Len()))
 	}
 	bc.futureBlocks.Remove(block.Hash())

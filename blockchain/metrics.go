@@ -35,7 +35,7 @@ var (
 	cacheGetStateDBHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/statedb/hit", nil)
 
 	headBlockNumberGauge = metrics.NewRegisteredGauge("blockchain/head/blocknumber", nil)
-	blockTxCountsMeter   = metrics.NewRegisteredMeter("blockchain/block/tx/rate", nil)
+	blockTxCountsGauge   = metrics.NewRegisteredGauge("blockchain/block/tx/gauge", nil)
 	blockTxCountsCounter = metrics.NewRegisteredCounter("blockchain/block/tx/counter", nil)
 
 	txPoolPendingGauge = metrics.NewRegisteredGauge("tx/pool/pending/gauge", nil)
