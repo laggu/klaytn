@@ -45,6 +45,8 @@ const (
 	demoteUnexecutablesFullValidationTxLimit = 1000
 	// txMsgCh is the number of list of transactions can be queued.
 	txMsgChSize = 100
+	// MaxTxDataSize is a heuristic limit of tx data size, and txPool rejects transactions over 32KB to prevent DOS attacks.
+	MaxTxDataSize = 32 * 1024
 )
 
 var (
@@ -597,7 +599,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
-	if tx.Size() > 32*1024 {
+	if tx.Size() > MaxTxDataSize {
 		return ErrOversizedData
 	}
 

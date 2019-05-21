@@ -17,6 +17,7 @@
 package tests
 
 import (
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common/math"
@@ -73,8 +74,7 @@ func testGasOverflowLegacyTransaction(t *testing.T) {
 	intrinsic := getIntrinsicGas(types.TxTypeLegacyTransaction)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	maxDataGas := mulUint64(t, maxDataSize, params.TxDataNonZeroGas)
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataNonZeroGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, maxDataGas)
@@ -109,8 +109,7 @@ func testGasOverflowValueTransferWithMemo(t *testing.T) {
 	intrinsic := getIntrinsicGas(types.TxTypeValueTransferMemo)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	maxDataGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, maxDataGas)
@@ -121,8 +120,7 @@ func testGasOverflowFeeDelegatedValueTransferWithMemo(t *testing.T) {
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	maxDataGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, payerValidationGas)
@@ -134,8 +132,7 @@ func testGasOverflowFeeDelegatedWithRatioValueTransferWithMemo(t *testing.T) {
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	maxDataGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, payerValidationGas)
@@ -191,8 +188,7 @@ func testGasOverflowSmartContractDeploy(t *testing.T) {
 	intrinsic := getIntrinsicGas(types.TxTypeSmartContractDeploy)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	payloadGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	humanReadableGas := params.TxGasHumanReadable
 
@@ -206,8 +202,7 @@ func testGasOverflowFeeDelegatedSmartContractDeploy(t *testing.T) {
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	payloadGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	humanReadableGas := params.TxGasHumanReadable
 
@@ -222,8 +217,7 @@ func testGasOverflowFeeDelegatedWithRatioSmartContractDeploy(t *testing.T) {
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	payloadGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	humanReadableGas := params.TxGasHumanReadable
 
@@ -237,8 +231,7 @@ func testGasOverflowSmartContractExecution(t *testing.T) {
 	intrinsic := getIntrinsicGas(types.TxTypeSmartContractExecution)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	payloadGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, payloadGas)
@@ -249,8 +242,7 @@ func testGasOverflowFeeDelegatedSmartContractExecution(t *testing.T) {
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	payloadGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, payerValidationGas)
@@ -262,8 +254,7 @@ func testGasOverflowFeeDelegatedWithRatioSmartContractExecution(t *testing.T) {
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	payloadGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, payerValidationGas)
@@ -299,8 +290,7 @@ func testGasOverflowChainDataAnchoring(t *testing.T) {
 	intrinsic := getIntrinsicGas(types.TxTypeCancel)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataSize := uint64(32 * 1024)
-	maxDataGas := mulUint64(t, maxDataSize, params.TxDataGas)
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, maxDataGas)
