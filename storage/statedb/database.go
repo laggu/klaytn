@@ -387,15 +387,36 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 	db.preimagesSize += common.StorageSize(common.HashLength + len(preimage))
 }
 
-// node retrieves a cached trie node from memory, or returns nil if none can be
-// found in the memory cache.
-func (db *Database) node(hash common.Hash) node {
-	// Retrieve the node from the clean cache if available
+// getCachedNode finds an encoded node in the trie node cache if enabled.
+func (db *Database) getCachedNode(hash common.Hash) []byte {
 	if db.trieNodeCache != nil {
 		if enc, err := db.trieNodeCache.Get(string(hash[:])); err == nil && enc != nil {
 			memcacheCleanHitMeter.Mark(1)
 			memcacheCleanReadMeter.Mark(int64(len(enc)))
-			return mustDecodeNode(hash[:], enc)
+			return enc
+		}
+	}
+	return nil
+}
+
+// setCachedNode stores an encoded node to the trie node cache if enabled.
+func (db *Database) setCachedNode(hash, enc []byte) {
+	if db.trieNodeCache != nil {
+		db.trieNodeCache.Set(string(hash), enc)
+		memcacheCleanMissMeter.Mark(1)
+		memcacheCleanWriteMeter.Mark(int64(len(enc)))
+	}
+}
+
+// node retrieves a cached trie node from memory, or returns nil if none can be
+// found in the memory cache.
+func (db *Database) node(hash common.Hash) node {
+	// Retrieve the node from the trie node cache if available
+	if enc := db.getCachedNode(hash); enc != nil {
+		if dec, err := decodeNode(hash[:], enc); err == nil {
+			return dec
+		} else {
+			logger.Error("node from cached trie node fails to be decoded!", "err", err)
 		}
 	}
 	db.lock.RLock()
@@ -410,11 +431,7 @@ func (db *Database) node(hash common.Hash) node {
 	if err != nil || enc == nil {
 		return nil
 	}
-	if db.trieNodeCache != nil {
-		db.trieNodeCache.Set(string(hash[:]), enc)
-		memcacheCleanMissMeter.Mark(1)
-		memcacheCleanWriteMeter.Mark(int64(len(enc)))
-	}
+	db.setCachedNode(hash[:], enc)
 	return mustDecodeNode(hash[:], enc)
 }
 
@@ -424,13 +441,9 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 	if (hash == common.Hash{}) {
 		return nil, ErrZeroHashNode
 	}
-	// Retrieve the node from the clean cache if available
-	if db.trieNodeCache != nil {
-		if enc, err := db.trieNodeCache.Get(string(hash[:])); err == nil && enc != nil {
-			memcacheCleanHitMeter.Mark(1)
-			memcacheCleanReadMeter.Mark(int64(len(enc)))
-			return enc, nil
-		}
+	// Retrieve the node from the trie node cache if available
+	if enc := db.getCachedNode(hash); enc != nil {
+		return enc, nil
 	}
 
 	// Retrieve the node from cache if available
@@ -444,11 +457,7 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 	// Content unavailable in memory, attempt to retrieve from disk
 	enc, err := db.diskDB.ReadCachedTrieNode(hash)
 	if err == nil && enc != nil {
-		if db.trieNodeCache != nil {
-			db.trieNodeCache.Set(string(hash[:]), enc)
-			memcacheCleanMissMeter.Mark(1)
-			memcacheCleanWriteMeter.Mark(int64(len(enc)))
-		}
+		db.setCachedNode(hash[:], enc)
 	}
 	return enc, err
 }
