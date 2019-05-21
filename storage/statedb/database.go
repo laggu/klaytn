@@ -65,6 +65,9 @@ var secureKeyPrefix = []byte("secure-key-")
 // secureKeyLength is the length of the above prefix + 32byte hash.
 const secureKeyLength = 11 + 32
 
+// commitResultChSizeLimit limits the size of channel used for commitResult.
+const commitResultChSizeLimit = 100 * 10000
+
 type DatabaseReader interface {
 	// Get retrieves the value associated with key from the database.
 	Get(key []byte) (value []byte, err error)
@@ -699,22 +702,71 @@ func (db *Database) writeBatchPreimages() error {
 	return nil
 }
 
-func (db *Database) writeBatchNodes(node common.Hash) error {
-	// TODO-Klaytn What kind of batch should be used below?
-	nodesBatch := db.diskDB.NewBatch(database.StateTrieDB)
+// commitResult contains the result from concurrent commit calls.
+// key and val are nil if the commitResult indicates the end of
+// concurrentCommit goroutine.
+type commitResult struct {
+	key []byte
+	val []byte
+}
 
-	if err := db.commit(node, nodesBatch); err != nil {
-		logger.Error("Failed to commit trie from trie database", "err", err)
-		return err
+func (db *Database) writeBatchNodes(node common.Hash) error {
+	rootNode, ok := db.nodes[node]
+	if !ok {
+		return nil
 	}
 
-	// Write batch ready, unlock for readers during persistence
-	if _, err := database.WriteBatches(nodesBatch); err != nil {
+	// To limit the size of commitResult channel, we use commitResultChSizeLimit here.
+	var resultCh chan commitResult
+	if len(db.nodes) > commitResultChSizeLimit {
+		resultCh = make(chan commitResult, commitResultChSizeLimit)
+	} else {
+		resultCh = make(chan commitResult, len(db.nodes))
+	}
+	numGoRoutines := len(rootNode.childs())
+	for i, child := range rootNode.childs() {
+		go db.concurrentCommit(child, resultCh, i)
+	}
+
+	batch := db.diskDB.NewBatch(database.StateTrieDB)
+	for numGoRoutines > 0 {
+		result := <-resultCh
+		if result.key == nil && result.val == nil {
+			numGoRoutines--
+			continue
+		}
+
+		if err := batch.Put(result.key, result.val); err != nil {
+			return err
+		}
+		if batch.ValueSize() > database.IdealBatchSize {
+			if err := batch.Write(); err != nil {
+				return err
+			}
+			batch.Reset()
+		}
+	}
+
+	enc := rootNode.rlp()
+	if err := batch.Put(node[:], enc); err != nil {
+		return err
+	}
+	if err := batch.Write(); err != nil {
 		logger.Error("Failed to write trie to disk", "err", err)
 		return err
 	}
+	if db.trieNodeCache != nil {
+		db.trieNodeCache.Set(string(node[:]), enc)
+	}
 
 	return nil
+}
+
+func (db *Database) concurrentCommit(hash common.Hash, resultCh chan<- commitResult, childIndex int) {
+	logger.Trace("concurrentCommit start", "childIndex", childIndex)
+	defer logger.Trace("concurrentCommit end", "childIndex", childIndex)
+	db.commit(hash, resultCh)
+	resultCh <- commitResult{nil, nil}
 }
 
 // Commit iterates over all the children of a particular node, writes them out
@@ -773,33 +825,21 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	return nil
 }
 
-// commit is the private locked version of Commit.
-func (db *Database) commit(hash common.Hash, batch database.Batch) error {
-
+// commit iteratively encodes nodes from parents to child nodes.
+func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 	node, ok := db.nodes[hash]
 	if !ok {
-		return nil
+		return
 	}
 	for _, child := range node.childs() {
-		if err := db.commit(child, batch); err != nil {
-			return err
-		}
+		db.commit(child, resultCh)
 	}
 	enc := node.rlp()
-	if err := batch.Put(hash[:], enc); err != nil {
-		return err
-	}
+	resultCh <- commitResult{hash[:], enc}
+
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.Set(string(hash[:]), enc)
 	}
-	// If we've reached an optimal match size, commit and start over
-	if batch.ValueSize() > database.IdealBatchSize {
-		if err := batch.Write(); err != nil {
-			return err
-		}
-		batch.Reset()
-	}
-	return nil
 }
 
 // uncache is the post-processing step of a commit operation where the already
