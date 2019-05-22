@@ -12,8 +12,7 @@ contract ServiceChainToken is ERC20 {
 
     address bridge;
 
-    // TODO-Klaytn-Servicechain define proper bytes4 value.
-    bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
+    bytes4 constant _ERC20_RECEIVED = 0xbc04f0af;
 
     using Address for address;
 
@@ -22,33 +21,18 @@ contract ServiceChainToken is ERC20 {
 
     constructor (address _bridge) public {
         _mint(msg.sender, INITIAL_SUPPLY);
+
+        if (!_bridge.isContract()) {
+            revert("bridge is not a contract");
+        }
+
         bridge = _bridge;
     }
 
-    // Additional functions for gateway interaction, influenced from Zeppelin ERC721 Impl.
     function requestValueTransfer(uint256 _amount, address _to) external {
-        safeTransferAndCall(bridge, _amount, _to);
-    }
+        transfer(bridge, _amount);
 
-    function safeTransferAndCall(address _bridge, uint256 _amount, address _to) public {
-        transfer(_bridge, _amount);
-        require(
-            checkAndCallSafeTransfer(msg.sender, _bridge, _amount, _to),
-            "Sent to a contract which is not an TOKEN receiver"
-        );
-    }
-
-    function checkAndCallSafeTransfer(address _from,
-        address _bridge,
-        uint256 _amount,
-        address _to)
-    internal
-    returns (bool) {
-        if (!_bridge.isContract()) {
-            return true;
-        }
-
-        bytes4 retval = ITokenReceiver(_bridge).onTokenReceived(_from, _amount, _to);
-        return(retval == TOKEN_RECEIVED);
+        bytes4 retval = ITokenReceiver(bridge).onTokenReceived(msg.sender, _amount, _to);
+        require(retval == _ERC20_RECEIVED, "Sent to a bridge which is not an ERC20 receiver");
     }
 }

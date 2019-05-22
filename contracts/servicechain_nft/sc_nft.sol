@@ -8,7 +8,13 @@ import "./INFTReceiver.sol";
 contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), Ownable {
     address public bridge;
 
-    constructor (address _bridge) public { bridge = _bridge; }
+    constructor (address _bridge) public {
+        if (!_bridge.isContract()) {
+            revert("bridge is not a contract");
+        }
+
+        bridge = _bridge;
+    }
 
     // Owner mints the NFT to the user.
     function register(address _user, uint256 _tokenId) onlyOwner external {
@@ -23,34 +29,13 @@ contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), Ownable {
         }
     }
 
-    // TODO-Klaytn needs to consider how to prevent mint duplicated id in another NFT contract.
-    // Bridge mints the NFT to itself to support value transfer.
-    function mintToBridge(uint256 _uid) public {
-        require(msg.sender == bridge);
-        _mint(bridge, _uid);
-    }
+    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
 
     // user request value transfer to main / service chain.
     function requestValueTransfer(uint256 _uid, address _to) external {
-        safeTransferAndCall(_uid, _to);
-    }
-
-    function safeTransferAndCall(uint256 _uid, address _to) public {
         transferFrom(msg.sender, bridge, _uid);
-        require(
-            checkAndCallSafeTransfer(msg.sender, _uid, _to),
-            "Sent to a contract which is not an TOKEN receiver"
-        );
-    }
 
-    // TODO-Klaytn-Servicechain define proper bytes4 value.
-    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
-
-    function checkAndCallSafeTransfer(address _from, uint256 _uid, address _to) internal returns (bool) {
-        if (!bridge.isContract()) {
-            return true;
-        }
-        bytes4 retval = INFTReceiver(bridge).onNFTReceived(_from, _uid, _to);
-        return (retval == _ERC721_RECEIVED);
+        bytes4 retval = INFTReceiver(bridge).onNFTReceived(msg.sender, _uid, _to);
+        require(retval == _ERC721_RECEIVED, "Sent to a bridge which is not an ERC721 receiver" );
     }
 }
