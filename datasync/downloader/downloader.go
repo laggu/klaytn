@@ -795,7 +795,9 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 // the origin is dropped.
 func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) error {
 	p.logger.Debug("Directing header downloads", "origin", from)
-	defer p.logger.Debug("Header download terminated")
+	defer func(start time.Time) {
+		p.logger.Debug("Header download terminated", "elapsed", time.Since(start))
+	}(time.Now())
 
 	// Create a timeout timer, and the associated header fetcher
 	skeleton := true            // Skeleton assembly phase or finishing up
@@ -953,6 +955,7 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header) (
 func (d *Downloader) fetchBodies(from uint64) error {
 	logger.Debug("Downloading block bodies", "origin", from)
 
+	start := time.Now()
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*bodyPack)
@@ -967,7 +970,7 @@ func (d *Downloader) fetchBodies(from uint64) error {
 		d.queue.PendingBlocks, d.queue.InFlightBlocks, d.queue.ShouldThrottleBlocks, d.queue.ReserveBodies,
 		d.bodyFetchHook, fetch, d.queue.CancelBodies, capacity, d.peers.BodyIdlePeers, setIdle, "bodies")
 
-	logger.Debug("Block body download terminated", "err", err)
+	logger.Debug("Block body download terminated", "err", err, "elapsed", time.Since(start))
 	return err
 }
 
@@ -977,6 +980,7 @@ func (d *Downloader) fetchBodies(from uint64) error {
 func (d *Downloader) fetchReceipts(from uint64) error {
 	logger.Debug("Downloading transaction receipts", "origin", from)
 
+	start := time.Now()
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*receiptPack)
@@ -991,7 +995,7 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 		d.queue.PendingReceipts, d.queue.InFlightReceipts, d.queue.ShouldThrottleReceipts, d.queue.ReserveReceipts,
 		d.receiptFetchHook, fetch, d.queue.CancelReceipts, capacity, d.peers.ReceiptIdlePeers, setIdle, "receipts")
 
-	logger.Debug("Transaction receipt download terminated", "err", err)
+	logger.Debug("Transaction receipt download terminated", "err", err, "elapsed", time.Since(start))
 	return err
 }
 
@@ -1180,6 +1184,10 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 // keeps processing and scheduling them into the header chain and downloader's
 // queue until the stream ends or a failure occurs.
 func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) error {
+	logger.Debug("Processing headers", "origin", origin, "pivot", pivot, "td", td)
+	defer func(start time.Time) {
+		logger.Debug("Processing headers terminated", "origin", origin, "pivot", pivot, "td", td, "elapsed", time.Since(start))
+	}(time.Now())
 	// Keep a count of uncertain headers to roll back
 	rollback := []*types.Header{}
 	defer func() {
@@ -1346,6 +1354,10 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 
 // processFullSyncContent takes fetch results from the queue and imports them into the chain.
 func (d *Downloader) processFullSyncContent() error {
+	logger.Debug("Processing full sync content")
+	defer func(start time.Time) {
+		logger.Debug("Processing full sync content terminated", "elapsed", time.Since(start))
+	}(time.Now())
 	for {
 		results := d.queue.Results(true)
 		if len(results) == 0 {
@@ -1390,6 +1402,10 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 // processFastSyncContent takes fetch results from the queue and writes them to the
 // database. It also controls the synchronisation of state nodes of the pivot block.
 func (d *Downloader) processFastSyncContent(latest *types.Header) error {
+	logger.Debug("Processing fast sync content")
+	defer func(start time.Time) {
+		logger.Debug("Processing fast sync content terminated", "elapsed", time.Since(start))
+	}(time.Now())
 	// Start syncing state of the reported head block. This should get us most of
 	// the state of the pivot block.
 	stateSync := d.syncState(latest.Root)
