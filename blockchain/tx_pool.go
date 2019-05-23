@@ -596,6 +596,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	if pool.config.NoAccountCreation && tx.Type().IsAccountCreation() {
 		return ErrAccountCreationPrevented
 	}
+	// Check chain Id first.
+	if tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
+		return ErrInvalidChainId
+	}
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
@@ -617,7 +621,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Make sure the transaction is signed properly
 	gasFrom, err := tx.ValidateSender(pool.signer, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
-		return ErrInvalidSender
+		return err
 	}
 	from := tx.ValidatedSender()
 

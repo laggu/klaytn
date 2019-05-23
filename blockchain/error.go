@@ -92,6 +92,9 @@ var (
 	// ErrInvlidUnitPrice is returned if gas price of transaction is not equal to UnitPrice
 	ErrInvalidUnitPrice = errors.New("invalid unit price")
 
+	// ErrInvalidChainId is returned if the chain id of transaction is not equal to the chain id of the chain config.
+	ErrInvalidChainId = errors.New("invalid chain id")
+
 	// ErrNotYetImplementedAPI is returned if API is not yet implemented
 	ErrNotYetImplementedAPI = errors.New("not yet implemented API")
 

@@ -19,7 +19,6 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
@@ -642,7 +641,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 
 		txpool := makeTxPool(bcdata, 10)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, blockchain.ErrInvalidSender, err)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
 	}
 
 	// 4. Execute TxTypeAccountUpdate
@@ -687,7 +686,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 
 		txpool := makeTxPool(bcdata, 10)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, blockchain.ErrInvalidSender, err)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
 	}
 
 	// 6. Inserting a tx signed by new key into the pool. It should pass.
