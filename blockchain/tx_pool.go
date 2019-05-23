@@ -277,12 +277,17 @@ func (pool *TxPool) loop() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
-
 			if ev.Block != nil {
 				pool.mu.Lock()
+				currBlock := pool.chain.CurrentBlock()
+				if ev.Block.Root() != currBlock.Root() {
+					logger.Warn("block from ChainHeadEvent is different from the CurrentBlock",
+						"receivedNum", ev.Block.NumberU64(), "receivedHash", ev.Block.Hash().String(),
+						"currNum", currBlock.NumberU64(), "currHash", currBlock.Hash().String())
+					continue
+				}
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
-
 				pool.mu.Unlock()
 			}
 			// Be unsubscribed due to system stopped
