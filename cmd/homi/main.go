@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/cmd/homi/extra"
 	"github.com/ground-x/klaytn/cmd/homi/setup"
+	"github.com/ground-x/klaytn/cmd/utils/nodecmd"
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"path/filepath"
@@ -39,6 +40,8 @@ func main() {
 		setup.SetupCommand,
 		extra.ExtraCommand,
 	}
+
+	app.CommandNotFound = nodecmd.CommandNotExist
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

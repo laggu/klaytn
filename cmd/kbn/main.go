@@ -213,6 +213,9 @@ func main() {
 	}
 
 	app.Action = bootnode
+
+	app.CommandNotFound = nodecmd.CommandNotExist
+
 	app.Before = func(c *cli.Context) error {
 		if err := debug.Setup(c); err != nil {
 			return err

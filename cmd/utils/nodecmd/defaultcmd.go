@@ -21,6 +21,7 @@
 package nodecmd
 
 import (
+	"fmt"
 	"github.com/ground-x/klaytn/accounts"
 	"github.com/ground-x/klaytn/accounts/keystore"
 	"github.com/ground-x/klaytn/api/debug"
@@ -30,6 +31,7 @@ import (
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
 	"gopkg.in/urfave/cli.v1"
+	"os"
 	"strings"
 )
 
@@ -139,4 +141,10 @@ func startServiceChainService(ctx *cli.Context, stack *node.Node) {
 	if err := scn.StartMining(false); err != nil {
 		log.Fatalf("Failed to start mining: %v", err)
 	}
+}
+
+func CommandNotExist(context *cli.Context, s string) {
+	cli.ShowAppHelp(context)
+	fmt.Printf("Error: Unknown command \"%s\"\n", s)
+	os.Exit(1)
 }
