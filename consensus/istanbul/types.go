@@ -44,6 +44,10 @@ type Proposal interface {
 	String() string
 
 	ParentHash() common.Hash
+
+	Header() *types.Header
+
+	WithSeal(header *types.Header) *types.Block
 }
 
 type Request struct {

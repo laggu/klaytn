@@ -149,6 +149,11 @@ type Block struct {
 	ReceivedFrom interface{}
 }
 
+type Result struct {
+	Block *Block
+	Round int64
+}
+
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
 // code solely to facilitate upgrading the database from the old format to the
 // new, after which it should be deleted. Do not use!

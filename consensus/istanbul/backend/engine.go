@@ -442,8 +442,9 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 			}
 			// if the block hash and the hash from channel are the same,
 			// return the result. Otherwise, keep waiting the next hash.
-			if block.Hash() == result.Hash() {
-				return result, nil
+			block = types.SetRoundToBlock(block, result.Round)
+			if block.Hash() == result.Block.Hash() {
+				return result.Block, nil
 			}
 		case <-stop:
 			return nil, nil
@@ -502,7 +503,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	if sb.commitCh != nil {
 		close(sb.commitCh)
 	}
-	sb.commitCh = make(chan *types.Block, 1)
+	sb.commitCh = make(chan *types.Result, 1)
 
 	sb.chain = chain
 	sb.currentBlock = currentBlock

@@ -21,6 +21,7 @@
 package core
 
 import (
+	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/consensus"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"time"
@@ -28,6 +29,9 @@ import (
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
 	logger := c.logger.NewWith("state", c.state)
+
+	header := types.SetRoundToHeader(request.Proposal.Header(), c.currentView().Round.Int64())
+	request.Proposal = request.Proposal.WithSeal(header)
 
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
@@ -107,6 +111,9 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 	if c.state == StateAcceptRequest {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.current.IsHashLocked() {
+			header := types.SetRoundToHeader(c.current.Preprepare.Proposal.Header(), c.currentView().Round.Int64())
+			c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
+
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Prepared state directly
 				c.acceptPreprepare(preprepare)

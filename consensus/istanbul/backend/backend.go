@@ -62,7 +62,7 @@ func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.P
 		address:          crypto.PubkeyToAddress(privateKey.PublicKey),
 		logger:           logger.NewWith(),
 		db:               db,
-		commitCh:         make(chan *types.Block, 1),
+		commitCh:         make(chan *types.Result, 1),
 		recents:          recents,
 		candidates:       make(map[common.Address]bool),
 		coreStarted:      false,
@@ -93,7 +93,7 @@ type backend struct {
 	hasBadBlock      func(hash common.Hash) bool
 
 	// the channels for istanbul engine notifications
-	commitCh          chan *types.Block
+	commitCh          chan *types.Result
 	proposedBlockHash common.Hash
 	sealMu            sync.Mutex
 	coreStarted       bool
@@ -255,6 +255,8 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 		return errInvalidProposal
 	}
 	h := block.Header()
+	round := sb.currentView.Load().(*istanbul.View).Round.Int64()
+	h = types.SetRoundToHeader(h, round)
 	// Append seals into extra-data
 	err := writeCommittedSeals(h, seals)
 	if err != nil {
@@ -272,7 +274,7 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	// -- otherwise, a error will be returned and a round change event will be fired.
 	if sb.proposedBlockHash == block.Hash() {
 		// feed block hash to Seal() and wait the Seal() result
-		sb.commitCh <- block
+		sb.commitCh <- &types.Result{Block: block, Round: round}
 		return nil
 	}
 

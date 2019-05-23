@@ -99,8 +99,18 @@ func IstanbulFilteredHeader(h *Header, keepSeal bool) *Header {
 	if err != nil {
 		return nil
 	}
-
+	newHeader = SetRoundToHeader(newHeader, 0)
 	newHeader.Extra = append(newHeader.Extra[:IstanbulExtraVanity], payload...)
 
 	return newHeader
+}
+
+func SetRoundToHeader(h *Header, r int64) *Header {
+	h.Extra[IstanbulExtraVanity-1] = byte(r)
+	return h
+}
+
+func SetRoundToBlock(block *Block, r int64) *Block {
+	header := SetRoundToHeader(block.Header(), r)
+	return block.WithSeal(header)
 }
