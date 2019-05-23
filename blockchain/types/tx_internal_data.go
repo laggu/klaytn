@@ -206,6 +206,10 @@ func (t TxType) IsFeeDelegatedTransaction() bool {
 	return (t & (TxTypeFeeDelegatedTransactions | TxTypeFeeDelegatedWithRatioTransactions)) != 0x0
 }
 
+func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
+	return (t & TxTypeFeeDelegatedWithRatioTransactions) != 0x0
+}
+
 // IsRPCExcluded returns true if the submission of such tx type is excluded via RPC.
 func (t TxType) IsRPCExcluded() bool {
 	return t == TxTypeChainDataAnchoring

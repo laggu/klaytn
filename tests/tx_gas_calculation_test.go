@@ -418,7 +418,10 @@ func genFeeDelegatedWithRatioAccountUpdate(t *testing.T, signer types.Signer, fr
 }
 
 func genSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, to, gasPrice, types.TxTypeSmartContractDeploy)
+	values, intrinsicGas := genMapForDeploy(from, to, gasPrice, types.TxTypeSmartContractDeploy)
+	if values == nil {
+		t.Fatalf("failed to genMapForDeploy")
+	}
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 	assert.Equal(t, nil, err)
@@ -430,7 +433,11 @@ func genSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount,
 }
 
 func genFeeDelegatedSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractDeploy)
+	values, intrinsicGas := genMapForDeploy(from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractDeploy)
+	if values == nil {
+		t.Fatalf("failed to genMapForDeploy")
+	}
+
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, values)
@@ -446,7 +453,11 @@ func genFeeDelegatedSmartContractDeploy(t *testing.T, signer types.Signer, from 
 }
 
 func genFeeDelegatedWithRatioSmartContractDeploy(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForDeploy(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractDeployWithRatio)
+	values, intrinsicGas := genMapForDeploy(from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractDeployWithRatio)
+	if values == nil {
+		t.Fatalf("failed to genMapForDeploy")
+	}
+
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -463,7 +474,10 @@ func genFeeDelegatedWithRatioSmartContractDeploy(t *testing.T, signer types.Sign
 }
 
 func genSmartContractExecution(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice, types.TxTypeSmartContractExecution)
+	values, intrinsicGas := genMapForExecution(from, to, gasPrice, types.TxTypeSmartContractExecution)
+	if values == nil {
+		t.Fatalf("failed to genMapForExecution")
+	}
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 
@@ -476,7 +490,11 @@ func genSmartContractExecution(t *testing.T, signer types.Signer, from TestAccou
 }
 
 func genFeeDelegatedSmartContractExecution(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractExecution)
+	values, intrinsicGas := genMapForExecution(from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractExecution)
+	if values == nil {
+		t.Fatalf("failed to genMapForExecution")
+	}
+
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, values)
@@ -493,7 +511,11 @@ func genFeeDelegatedSmartContractExecution(t *testing.T, signer types.Signer, fr
 }
 
 func genFeeDelegatedWithRatioSmartContractExecution(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsicGas := genMapForExecution(t, from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractExecutionWithRatio)
+	values, intrinsicGas := genMapForExecution(from, to, gasPrice, types.TxTypeFeeDelegatedSmartContractExecutionWithRatio)
+	if values == nil {
+		t.Fatalf("failed to genMapForExecution")
+	}
+
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
 	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 
@@ -577,6 +599,22 @@ func genChainDataAnchoring(t *testing.T, signer types.Signer, from TestAccount, 
 }
 
 // Generate map functions
+func genMapForLegacyTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+	amount := big.NewInt(100000)
+	data := []byte{0x11, 0x22}
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    from.GetNonce(),
+		types.TxValueKeyTo:       to.GetAddr(),
+		types.TxValueKeyAmount:   amount,
+		types.TxValueKeyData:     data,
+		types.TxValueKeyGasLimit: gasLimit,
+		types.TxValueKeyGasPrice: gasPrice,
+	}
+	return values, intrinsic
+}
+
 func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	intrinsic := getIntrinsicGas(txType)
 	amount := big.NewInt(100000)
@@ -617,6 +655,23 @@ func genMapForValueTransferWithMemo(from TestAccount, to TestAccount, gasPrice *
 	return values, intrinsic + gasPayload
 }
 
+func genMapForCreate(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+	amount := big.NewInt(0)
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:         from.GetNonce(),
+		types.TxValueKeyFrom:          from.GetAddr(),
+		types.TxValueKeyTo:            to.GetAddr(),
+		types.TxValueKeyAmount:        amount,
+		types.TxValueKeyGasLimit:      gasLimit,
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyHumanReadable: false,
+		types.TxValueKeyAccountKey:    to.GetAccKey(),
+	}
+	return values, intrinsic + uint64(len(to.GetTxKeys()))*params.TxAccountCreationGasPerKey
+}
+
 func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKeys accountkey.AccountKey, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	intrinsic := getIntrinsicGas(txType)
 
@@ -630,7 +685,7 @@ func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKey
 	return values, intrinsic
 }
 
-func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	amount := new(big.Int).SetUint64(0)
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.GetNonce(),
@@ -647,7 +702,9 @@ func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *b
 		values[types.TxValueKeyTo] = (*common.Address)(nil)
 	} else {
 		addr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
-		assert.Equal(t, nil, err)
+		if err != nil {
+			return nil, 0
+		}
 
 		values[types.TxValueKeyTo] = &addr
 		values[types.TxValueKeyHumanReadable] = true
@@ -661,18 +718,24 @@ func genMapForDeploy(t *testing.T, from TestAccount, to TestAccount, gasPrice *b
 	}
 
 	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code))
-	assert.Equal(t, nil, err)
+	if err != nil {
+		return nil, 0
+	}
 
 	return values, gasPayloadWithGas
 }
 
-func genMapForExecution(t *testing.T, from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	abiStr := `[{"constant":true,"inputs":[],"name":"totalAmount","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"receiver","type":"address"}],"name":"reward","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"safeWithdrawal","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"}]`
 	abii, err := abi.JSON(strings.NewReader(string(abiStr)))
-	assert.Equal(t, nil, err)
+	if err != nil {
+		return nil, 0
+	}
 
 	data, err := abii.Pack("reward", to.GetAddr())
-	assert.Equal(t, nil, err)
+	if err != nil {
+		return nil, 0
+	}
 
 	amount := new(big.Int).SetUint64(10)
 
@@ -690,7 +753,9 @@ func genMapForExecution(t *testing.T, from TestAccount, to TestAccount, gasPrice
 	intrinsicGas += uint64(0x9ec4)
 
 	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, data)
-	assert.Equal(t, nil, err)
+	if err != nil {
+		return nil, 0
+	}
 
 	return values, gasPayloadWithGas
 }
@@ -705,6 +770,21 @@ func genMapForCancel(from TestAccount, gasPrice *big.Int, txType types.TxType) (
 		types.TxValueKeyGasPrice: gasPrice,
 	}
 	return values, intrinsic
+}
+
+func genMapForChainDataAnchoring(from TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+	data := []byte{0x11, 0x22}
+	gasPayload := uint64(len(data)) * params.TxDataGas
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:        from.GetNonce(),
+		types.TxValueKeyFrom:         from.GetAddr(),
+		types.TxValueKeyGasLimit:     gasLimit,
+		types.TxValueKeyGasPrice:     gasPrice,
+		types.TxValueKeyAnchoredData: data,
+	}
+	return values, intrinsic + gasPayload
 }
 
 func genKlaytnLegacyAccount(t *testing.T) TestAccount {
