@@ -256,35 +256,24 @@ func (pool *BridgeTxPool) PendingTxsByAddress(from *common.Address, limit int) t
 }
 
 // PendingTxHashsByAddress retrieves pending transaction hashes, grouped by origin
-// account without sorting. The returned hash set is a copy and can be
+// account and sorted by nonce. The returned hash set is a copy and can be
 // freely modified by calling code.
 func (pool *BridgeTxPool) PendingTxHashsByAddress(from *common.Address, limit int) []common.Hash {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
 	if list, exist := pool.queue[*from]; exist {
-		if len(list.items) > 0 {
-			if limit < 0 || len(list.items) <= limit {
-				pendingTxHashes := make([]common.Hash, len(list.items))
-				var idx = 0
-				for _, tx := range list.items {
-					pendingTxHashes[idx] = tx.Hash()
-					idx++
-				}
-				return pendingTxHashes
-			} else {
-				pendingTxHashes := make([]common.Hash, limit)
-				var idx = 0
-				for _, tx := range list.items {
-					pendingTxHashes[idx] = tx.Hash()
-					idx++
-					if idx >= limit {
-						break
-					}
-				}
-				return pendingTxHashes
-			}
+		pendingTxs := list.Flatten()
+
+		thisLimit := len(pendingTxs)
+		if limit > 0 && limit < thisLimit {
+			thisLimit = limit
 		}
+		pendingTxHashs := make([]common.Hash, thisLimit)
+		for i := 0; i < thisLimit; i++ {
+			pendingTxHashs[i] = pendingTxs[i].Hash()
+		}
+		return pendingTxHashs
 	}
 	return nil
 }

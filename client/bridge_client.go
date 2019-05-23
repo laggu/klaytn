@@ -81,9 +81,9 @@ func (ec *Client) BridgeConvertRequestTxHashToHandleTxHash(ctx context.Context, 
 
 // BridgeGetReceiptFromParentChain can get the receipt of child chain tx from parent node.
 func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
-	var result types.Receipt
+	var result *types.Receipt
 	err := ec.c.CallContext(ctx, &result, "bridge_getReceiptFromParentChain", hash)
-	return &result, err
+	return result, err
 }
 
 // BridgeGetMainChainAccountAddr can get a main chain account address to sign the chain transaction in a main chain.

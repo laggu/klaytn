@@ -948,6 +948,10 @@ web3._extend({
 			getter: 'bridge_txPendingCount'
 		}),
 		new web3._extend.Property({
+			name: 'txPending',
+			getter: 'bridge_txPending'
+		}),
+		new web3._extend.Property({
 			name: 'latestAnchoredBlockNumber',
 			getter: 'bridge_getLatestAnchoredBlockNumber'
 		}),

@@ -56,6 +56,9 @@ type SubBridgeHandler struct {
 	nonceSynced           bool
 	chainTxPeriod         uint64
 
+	// This is the block number of the latest anchoring tx which is added into bridge txPool.
+	latestAnchoredBlockNumber uint64
+
 	nodeKey                 *ecdsa.PrivateKey
 	ServiceChainAccountAddr *common.Address
 
@@ -87,16 +90,17 @@ func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, err
 		scc.ServiceChainAccountAddr = serviceChainAccountAddr
 	}
 	return &SubBridgeHandler{
-		subbridge:                main,
-		MainChainAccountAddr:     mainChainAccountAddr,
-		chainKey:                 scc.chainkey,
-		remoteGasPrice:           uint64(0),
-		mainChainAccountNonce:    uint64(0),
-		nonceSynced:              false,
-		chainTxPeriod:            scc.AnchoringPeriod,
-		sentServiceChainTxsLimit: scc.SentChainTxsLimit,
-		ServiceChainAccountAddr:  serviceChainAccountAddr,
-		nodeKey:                  scc.nodekey,
+		subbridge:                 main,
+		MainChainAccountAddr:      mainChainAccountAddr,
+		chainKey:                  scc.chainkey,
+		remoteGasPrice:            uint64(0),
+		mainChainAccountNonce:     uint64(0),
+		nonceSynced:               false,
+		chainTxPeriod:             scc.AnchoringPeriod,
+		latestAnchoredBlockNumber: uint64(0),
+		sentServiceChainTxsLimit:  scc.SentChainTxsLimit,
+		ServiceChainAccountAddr:   serviceChainAccountAddr,
+		nodeKey:                   scc.nodekey,
 	}, nil
 }
 
@@ -293,9 +297,10 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 		// TODO-Klaytn if other feature use below chainTx, this condition should be refactored to use it for other feature.
 		if sbh.subbridge.GetAnchoringTx() {
 			sbh.blockAnchoringManager(block)
-			sbh.broadcastServiceChainTx()
-			sbh.broadcastServiceChainReceiptRequest()
 		}
+		sbh.broadcastServiceChainTx()
+		sbh.broadcastServiceChainReceiptRequest()
+
 		sbh.skipSyncBlockCount = 0
 	} else {
 		if sbh.skipSyncBlockCount%SyncRequestInterval == 0 {
@@ -348,12 +353,15 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 				return
 			}
 			sbh.WriteReceiptFromParentChain(chainHashes.BlockHash, (*types.Receipt)(receipt))
+			sbh.WriteAnchoredBlockNumber(chainHashes.BlockNumber.Uint64())
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
+
+			logger.Debug("received anchoring tx receipt", "blockNum", chainHashes.BlockNumber.String(), "blcokHash", chainHashes.BlockHash.String(), "txHash", txHash.String())
 		} else {
 			logger.Error("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
 
-		logger.Info("received service chain transaction receipt", "txHash", txHash.String())
+		logger.Trace("received service chain transaction receipt", "txHash", txHash.String())
 	}
 }
 
@@ -389,7 +397,7 @@ func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
 
 	for cnt, blkNum = 0, startBlkNum; cnt <= sbh.sentServiceChainTxsLimit && blkNum <= latestBlkNum; cnt, blkNum = cnt+1, blkNum+1 {
 		if err := sbh.generateAndAddAnchoringTxIntoTxPool(sbh.subbridge.blockchain.GetBlockByNumber(blkNum)); err == nil {
-			sbh.WriteAnchoredBlockNumber(blkNum)
+
 			successCnt++
 		} else {
 			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FaildBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
@@ -445,7 +453,9 @@ func (sbh *SubBridgeHandler) GetLatestAnchoredBlockNumber() uint64 {
 
 // GetNextAnchoringBlockNumber returns the next block number which is needed to be anchored.
 func (sbh *SubBridgeHandler) GetNextAnchoringBlockNumber() uint64 {
-	latestAnchoredBlockNumber := sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
+	if sbh.latestAnchoredBlockNumber == 0 {
+		sbh.latestAnchoredBlockNumber = sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
+	}
 
 	// If latestAnchoredBlockNumber == 0, there are two cases below.
 	// 1) The last block number anchored is 0 block(genesis block).
@@ -453,16 +463,26 @@ func (sbh *SubBridgeHandler) GetNextAnchoringBlockNumber() uint64 {
 	// To cover all cases without complex DB routine, the condition below is added.
 	// Even if genesis block can be anchored more than 2 times,
 	// this routine can guarantee anchoring genesis block.
-	if latestAnchoredBlockNumber != 0 {
-		latestAnchoredBlockNumber++
+	if sbh.latestAnchoredBlockNumber != 0 {
+		sbh.latestAnchoredBlockNumber++
 	}
 
-	return latestAnchoredBlockNumber
+	return sbh.latestAnchoredBlockNumber
+}
+
+// UpdateLastestAnchoredBlockNumber set the latestAnchoredBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
+func (sbh *SubBridgeHandler) UpdateLastestAnchoredBlockNumber(newLastestAnchoredBN uint64) {
+	if sbh.latestAnchoredBlockNumber < newLastestAnchoredBN {
+		sbh.latestAnchoredBlockNumber = newLastestAnchoredBN
+	}
 }
 
 // WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
 func (sbh *SubBridgeHandler) WriteAnchoredBlockNumber(blockNum uint64) {
-	sbh.subbridge.chainDB.WriteAnchoredBlockNumber(blockNum)
+	sbh.UpdateLastestAnchoredBlockNumber(blockNum)
+	if sbh.GetLatestAnchoredBlockNumber() < blockNum {
+		sbh.subbridge.chainDB.WriteAnchoredBlockNumber(blockNum)
+	}
 }
 
 // WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
