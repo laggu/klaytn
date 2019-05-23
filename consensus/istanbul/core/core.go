@@ -32,6 +32,7 @@ import (
 	"math"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -84,9 +85,8 @@ type core struct {
 	current   *roundState
 	handlerWg *sync.WaitGroup
 
-	roundChangeSet   *roundChangeSet
-	roundChangeTimer *time.Timer
-
+	roundChangeSet    *roundChangeSet
+	roundChangeTimer  atomic.Value //*time.Timer
 	pendingRequests   *prque.Prque
 	pendingRequestsMu *sync.Mutex
 
@@ -325,8 +325,9 @@ func (c *core) stopFuturePreprepareTimer() {
 
 func (c *core) stopTimer() {
 	c.stopFuturePreprepareTimer()
-	if c.roundChangeTimer != nil {
-		c.roundChangeTimer.Stop()
+
+	if c.roundChangeTimer.Load() != nil {
+		c.roundChangeTimer.Load().(*time.Timer).Stop()
 	}
 }
 
@@ -339,7 +340,8 @@ func (c *core) newRoundChangeTimer() {
 	if round > 0 {
 		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
 	}
-	c.roundChangeTimer = time.AfterFunc(timeout, func() {
+
+	c.roundChangeTimer.Store(time.AfterFunc(timeout, func() {
 		var loc, proposer string
 
 		if c.current.round.Cmp(common.Big0) == 0 {
@@ -363,7 +365,8 @@ func (c *core) newRoundChangeTimer() {
 		}
 
 		c.sendEvent(timeoutEvent{})
-	})
+	}))
+
 	logger.Debug("New RoundChangeTimer Set", "seq", c.current.Sequence(), "round", round, "timeout", timeout)
 }
 
