@@ -8,7 +8,7 @@ import "../servicechain_nft/INFTReceiver.sol";
 import "../servicechain_token/ITokenReceiver.sol";
 
 contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
-    uint public constant  version = 1;
+    uint64 public constant VERSION = 1;
     address public counterpartBridge;
     bool public isRunning;
 
@@ -54,108 +54,108 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
      * @param value For KLAY/TOKEN this is the amount.
      * @param handleNonce is the order number of the handle value transfer.
      */
-    event HandleValueTransfer(address owner,
+    event HandleValueTransfer(
+        address owner,
         TokenKind kind,
         address contractAddress,
         uint256 value,
         uint64 handleNonce);
 
     // start allows the value transfer request.
-    function start()
-    onlyOwner
-    external
-    {
+    function start() external onlyOwner {
         isRunning = true;
     }
 
     // stop prevent the value transfer request.
-    function stop()
-    onlyOwner
-    external
-    {
+    function stop() external onlyOwner {
         isRunning = false;
     }
 
     // stop prevent the value transfer request.
-    function setCounterPartBridge(address _bridge)
-    onlyOwner
-    external
-    {
+    function setCounterPartBridge(address _bridge) external onlyOwner {
         counterpartBridge = _bridge;
     }
 
     // registerToken can update the allowed token with the counterpart token.
-    function registerToken(address _token, address _cToken)
-    onlyOwner
-    external
-    {
+    function registerToken(address _token, address _cToken) external onlyOwner {
         allowedTokens[_token] = _cToken;
     }
 
     // deregisterToken can remove the token in allowedToken list.
-    function deregisterToken(address _token)
-    onlyOwner
-    external
-    {
+    function deregisterToken(address _token) external onlyOwner {
         delete allowedTokens[_token];
     }
 
     // handleTokenTransfer sends the token by the request.
-    function handleTokenTransfer(uint256 _amount, address _to, address _contractAddress, uint64 _requestNonce, uint64 _requestBlockNumber)
-    onlyOwner
-    external
+    function handleTokenTransfer(
+        uint256 _amount,
+        address _to,
+        address _contractAddress,
+        uint64 _requestNonce,
+        uint64 _requestBlockNumber
+    )
+        external
+        onlyOwner
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        IERC20(_contractAddress).transfer(_to, _amount);
         emit HandleValueTransfer(_to, TokenKind.TOKEN, _contractAddress, _amount, handleNonce);
-
         lastHandledRequestBlockNumber = _requestBlockNumber;
-
         handleNonce++;
+        IERC20(_contractAddress).transfer(_to, _amount);
     }
 
     // handleKLAYTransfer sends the KLAY by the request.
-    function handleKLAYTransfer(uint256 _amount, address _to, uint64 _requestNonce, uint64 _requestBlockNumber)
-    onlyOwner
-    external
+    function handleKLAYTransfer(
+        uint256 _amount,
+        address _to,
+        uint64 _requestNonce,
+        uint64 _requestBlockNumber
+    )
+        external
+        onlyOwner
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        _to.transfer(_amount); // ensure it's not reentrant
         emit HandleValueTransfer(_to, TokenKind.KLAY, address(0), _amount, handleNonce);
-
         lastHandledRequestBlockNumber = _requestBlockNumber;
-
         handleNonce++;
+        _to.transfer(_amount);
     }
 
     // handleNFTTransfer sends the NFT by the request.
-    function handleNFTTransfer(uint256 _uid, address _to, address _contractAddress, uint64 _requestNonce, uint64 _requestBlockNumber)
-    onlyOwner
-    external
+    function handleNFTTransfer(
+        uint256 _uid,
+        address _to,
+        address _contractAddress,
+        uint64 _requestNonce,
+        uint64 _requestBlockNumber
+    )
+        external
+        onlyOwner
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
         emit HandleValueTransfer(_to, TokenKind.NFT, _contractAddress, _uid, handleNonce);
-
         lastHandledRequestBlockNumber = _requestBlockNumber;
-
         handleNonce++;
+        IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
     }
 
-    //////////////////////////////////////////////////////////////////////////////
-    // Receiver functions of Token for 1-step deposits to the Bridge
     bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
 
-    function onTokenReceived(address _from, uint256 _amount, address _to)
-    public
-    returns (bytes4)
+    function onTokenReceived(
+        address _from,
+        uint256 _amount,
+        address _to
+    )
+        public
+        returns (bytes4)
     {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
         require(_amount > 0, "zero amount");
+
         emit RequestValueTransfer(TokenKind.TOKEN, _from, _amount, msg.sender, _to, requestNonce);
         requestNonce++;
         return TOKEN_RECEIVED;
@@ -169,8 +169,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         uint256 tokenId,
         address to
     )
-    public
-    returns(bytes4)
+        public
+        returns(bytes4)
     {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
@@ -185,7 +185,14 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
 
-        emit RequestValueTransfer(TokenKind.KLAY, msg.sender, msg.value, address(0), msg.sender, requestNonce);
+        emit RequestValueTransfer(
+            TokenKind.KLAY,
+            msg.sender,
+            msg.value,
+            address(0),
+            msg.sender,
+            requestNonce
+        );
         requestNonce++;
     }
 
@@ -194,12 +201,18 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
 
-        emit RequestValueTransfer(TokenKind.KLAY, msg.sender, msg.value, address(0), _to, requestNonce);
+        emit RequestValueTransfer(
+            TokenKind.KLAY,
+            msg.sender,
+            msg.value,
+            address(0),
+            _to,
+            requestNonce
+        );
         requestNonce++;
     }
 
-    // chargeWithoutEvent sends KLAY to this contract without event for increasing the withdrawal limit.
-    function chargeWithoutEvent() external payable {
-    }
-    //////////////////////////////////////////////////////////////////////////////
+    // chargeWithoutEvent sends KLAY to this contract without event for increasing
+    // the withdrawal limit.
+    function chargeWithoutEvent() external payable {}
 }
