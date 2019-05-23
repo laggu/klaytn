@@ -26,15 +26,28 @@ type bootnodesByTypes struct {
 	Addrs []string
 }
 
-// MainnetBootnodes are the kni URLs of the P2P bootstrap nodes running on
-// the Klaytn main network.
-var MainnetBootnodes = []string{
-	// TODO-Klaytn-Bootnode : Klaytn BootNode should be set. Now for only test.
-	//"kni://a979fb575495b8d6db44f750317d0f4622bf4c2aa3365d6af7c284339968eef29b69ad0dce72a4d8db5ebb4968de0e3bec910127f134779fbcb0cb6d3331163c@52.16.188.185:30303", // IE
-	//"kni://3f1d12044546b76342d59d4a05532c14b85aa669704bfe1f864fe079415aa2c02d743e03218e57a33fb94523adb54032871a6c51b2cc5514cb7c7e35b3ed0a99@13.93.211.84:30303",  // US-WEST
+// MainnetBootnodes are the URLs of bootnodes running on the Klaytn main network.
+var MainnetBootnodes = map[p2p.ConnType]bootnodesByTypes{
+	p2p.CONSENSUSNODE: {
+		[]string{},
+	},
+	p2p.PROXYNODE: {
+		[]string{
+			"kni://18b36118cce093673499fc6e9aa196f047fe17a0de35b6f2a76a4557802f6abf9f89aa5e7330e93c9014b714b9df6378393611efe39aec9d3d831d6aa9d617ae@ston65.cypress.klaytn.net:32323?ntype=bn",
+			"kni://63f1c96874da85140ecca3ce24875cb5ef28fa228bc3572e16f690db4a48fc8067502d2f6e8f0c66fb558276a5ada1e4906852c7ae42b0003e9f9f25d1e123b1@ston873.cypress.klaytn.net:32323?ntype=bn",
+			"kni://94cc15e2014b86584908707de55800c0a2ea8a24dc5550dcb507043e4cf18ff04f21dc86ed17757dc63b1fa85bb418b901e5e24e4197ad4bbb0d96cd9389ed98@ston106.cypress.klaytn.net:32323?ntype=bn",
+		},
+	},
+	p2p.ENDPOINTNODE: {
+		[]string{
+			"kni://18b36118cce093673499fc6e9aa196f047fe17a0de35b6f2a76a4557802f6abf9f89aa5e7330e93c9014b714b9df6378393611efe39aec9d3d831d6aa9d617ae@ston65.cypress.klaytn.net:32323?ntype=bn",
+			"kni://63f1c96874da85140ecca3ce24875cb5ef28fa228bc3572e16f690db4a48fc8067502d2f6e8f0c66fb558276a5ada1e4906852c7ae42b0003e9f9f25d1e123b1@ston873.cypress.klaytn.net:32323?ntype=bn",
+			"kni://94cc15e2014b86584908707de55800c0a2ea8a24dc5550dcb507043e4cf18ff04f21dc86ed17757dc63b1fa85bb418b901e5e24e4197ad4bbb0d96cd9389ed98@ston106.cypress.klaytn.net:32323?ntype=bn",
+		},
+	},
 }
 
-// BaobabBootnodes are the kni URLs of the PN's P2P bootstrap nodes running on the Baobab test network.
+// BaobabBootnodes are the URLs of bootnodes running on the Baobab test network.
 var BaobabBootnodes = map[p2p.ConnType]bootnodesByTypes{
 	p2p.CONSENSUSNODE: {
 		[]string{
