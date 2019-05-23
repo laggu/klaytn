@@ -77,6 +77,7 @@ Args :
 			baobabFlag,
 			cliqueFlag,
 			numOfCNsFlag,
+			numOfValidatorsFlag,
 			numOfPNsFlag,
 			numOfENsFlag,
 			numOfTestKeyFlag,
@@ -340,25 +341,36 @@ func gen(ctx *cli.Context) error {
 
 	cliqueFlag := ctx.Bool(cliqueFlag.Name)
 	num := ctx.Int(numOfCNsFlag.Name)
+	numValidators := ctx.Int(numOfValidatorsFlag.Name)
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
 	enNum := ctx.Int(numOfENsFlag.Name)
 	numTestAccs := ctx.Int(numOfTestKeyFlag.Name)
 	baobab := ctx.Bool(baobabFlag.Name)
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
 
+	if numValidators == 0 {
+		numValidators = num
+	}
+	if numValidators > num {
+		return fmt.Errorf("num-validators(%d) cannot be greater than num(%d)", numValidators, num)
+	}
+
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 	_, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
 	var genesisJsonBytes []byte
 
+	validatorNodeAddrs := make([]common.Address, numValidators)
+	copy(validatorNodeAddrs, nodeAddrs[:numValidators])
+
 	if baobabTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(nodeAddrs, testAddrs), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
 	} else if baobab {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(nodeAddrs, testAddrs), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(validatorNodeAddrs, testAddrs), "", "    ")
 	} else if cliqueFlag {
-		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, nodeAddrs, testAddrs, privKeys), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, privKeys), "", "    ")
 	} else {
-		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, nodeAddrs, testAddrs), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs), "", "    ")
 	}
 
 	switch genType {

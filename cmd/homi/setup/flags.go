@@ -48,6 +48,12 @@ var (
 		Value: 4,
 	}
 
+	numOfValidatorsFlag = cli.IntFlag{
+		Name:  "num-validators",
+		Usage: "Number of validators. If not set, it will be set the number of option num",
+		Value: 0,
+	}
+
 	numOfPNsFlag = cli.IntFlag{
 		Name:  "pn-num",
 		Usage: "Number of proxy node",
