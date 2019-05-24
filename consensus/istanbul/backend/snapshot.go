@@ -238,7 +238,7 @@ type snapshotJSON struct {
 	// for weighted validator
 	RewardAddrs       []common.Address `json:"rewardAddrs"`
 	VotingPowers      []uint64         `json:"votingPower"`
-	Weights           []int            `json:"weight"`
+	Weights           []int64          `json:"weight"`
 	Proposers         []common.Address `json:"proposers"`
 	ProposersBlockNum uint64           `json:"proposersBlockNum"`
 }
@@ -246,7 +246,7 @@ type snapshotJSON struct {
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	var rewardAddrs []common.Address
 	var votingPowers []uint64
-	var weights []int
+	var weights []int64
 	var proposers []common.Address
 	var proposersBlockNum uint64
 

@@ -43,7 +43,7 @@ type weightedValidator struct {
 
 	rewardAddress common.Address
 	votingPower   uint64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
-	weight        int
+	weight        int64
 }
 
 func (val *weightedValidator) Address() common.Address {
@@ -70,11 +70,11 @@ func (val *weightedValidator) VotingPower() uint64 {
 	return val.votingPower
 }
 
-func (val *weightedValidator) Weight() int {
-	return val.weight
+func (val *weightedValidator) Weight() int64 {
+	return atomic.LoadInt64(&val.weight)
 }
 
-func newWeightedValidator(addr common.Address, reward common.Address, votingpower uint64, weight int) istanbul.Validator {
+func newWeightedValidator(addr common.Address, reward common.Address, votingpower uint64, weight int64) istanbul.Validator {
 	return &weightedValidator{
 		address:       addr,
 		rewardAddress: reward,
@@ -122,7 +122,7 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 	weightedCouncil.proposers = proposers
 }
 
-func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []int, policy istanbul.ProposerPolicy, committeeSize uint64, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
+func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []int64, policy istanbul.ProposerPolicy, committeeSize uint64, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
 
 	if policy != istanbul.WeightedRandom {
 		logger.Error("unsupported proposer policy for weighted council", "policy", policy)
@@ -144,7 +144,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	// prepare weights if necessary
 	if weights == nil {
 		// initialize with 0 weight.
-		weights = make([]int, len(addrs))
+		weights = make([]int64, len(addrs))
 	}
 
 	// prepare votingPowers if necessary
@@ -203,7 +203,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	return valSet
 }
 
-func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.Address, votingPowers []uint64, weights []int, proposers []common.Address, proposersBlockNum uint64) {
+func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.Address, votingPowers []uint64, weights []int64, proposers []common.Address, proposersBlockNum uint64) {
 
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
@@ -215,12 +215,12 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.
 		numVals := len(weightedCouncil.validators)
 		rewardAddrs = make([]common.Address, numVals)
 		votingPowers = make([]uint64, numVals)
-		weights = make([]int, numVals)
+		weights = make([]int64, numVals)
 		for i, val := range weightedCouncil.List() {
 			weightedVal := val.(*weightedValidator)
 			rewardAddrs[i] = weightedVal.rewardAddress
 			votingPowers[i] = weightedVal.votingPower
-			weights[i] = weightedVal.weight
+			weights[i] = atomic.LoadInt64(&weightedVal.weight)
 		}
 
 		proposers = make([]common.Address, len(weightedCouncil.proposers))
@@ -593,16 +593,16 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 				return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
 			}
 			if i != -1 {
-				weight := int(math.Round(stakingAmounts[i] * 100 / totalStaking))
+				weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
 				if weight <= 0 {
 					// A validator, who holds small stake, has minimum weight, 1.
 					weight = 1
 				}
 				weightedVal.rewardAddress = valSet.stakingInfo.CouncilRewardAddrs[i]
-				weightedVal.weight = weight
+				atomic.StoreInt64(&weightedVal.weight, weight)
 			} else {
 				// Let's give a minimum opportunity to be selected as a proposer even for validator without staking value (Issue #2060)
-				weightedVal.weight = 1
+				atomic.StoreInt64(&weightedVal.weight, 1)
 				weightedVal.rewardAddress = common.Address{}
 			}
 		}
@@ -612,7 +612,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 			if !ok {
 				return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
 			}
-			weightedVal.weight = 0
+			atomic.StoreInt64(&weightedVal.weight, 0)
 		}
 	}
 
@@ -629,7 +629,7 @@ func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
 
 	for index, val := range valSet.validators {
 		weight := val.Weight()
-		for i := 0; i < weight; i++ {
+		for i := int64(0); i < weight; i++ {
 			candidateValsIdx = append(candidateValsIdx, index)
 		}
 	}

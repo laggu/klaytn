@@ -83,7 +83,7 @@ var (
 		1, 1, 1, 1, 1,
 		1, 1, 1,
 	}
-	testZeroWeights = []int{
+	testZeroWeights = []int64{
 		0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0,
 		0, 0, 0,
@@ -106,14 +106,14 @@ var (
 		common.HexToAddress("0x9a049EefC01aAE911F2B6F19d724dF9d3ca5cAe6"),
 	}
 
-	testNonZeroWeights = []int{
+	testNonZeroWeights = []int64{
 		1, 1, 2, 1, 1,
 		1, 0, 3, 2, 1,
 		0, 1, 5,
 	}
 )
 
-func makeTestValidators(weights []int) (validators istanbul.Validators) {
+func makeTestValidators(weights []int64) (validators istanbul.Validators) {
 	validators = make([]istanbul.Validator, len(testAddrs))
 	for i := range testAddrs {
 		validators[i] = newWeightedValidator(testAddrs[i], testRewardAddrs[i], testVotingPowers[i], weights[i])
@@ -123,7 +123,7 @@ func makeTestValidators(weights []int) (validators istanbul.Validators) {
 	return
 }
 
-func makeTestWeightedCouncil(weights []int) (valSet *weightedCouncil) {
+func makeTestWeightedCouncil(weights []int64) (valSet *weightedCouncil) {
 	// prepare weighted council
 	valSet = NewWeightedCouncil(testAddrs, testRewardAddrs, testVotingPowers, weights, istanbul.WeightedRandom, 21, 0, 0, nil)
 	return
@@ -322,16 +322,16 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 	// Run tests
 
 	// 1. number of proposers
-	totalWeights := int(0)
+	totalWeights := int64(0)
 	for _, v := range validators {
 		totalWeights += v.Weight()
 	}
-	assert.Equal(t, totalWeights, len(valSet.proposers))
+	assert.Equal(t, totalWeights, int64(len(valSet.proposers)))
 
 	// 2. weight and appearance frequency
 	for _, v := range validators {
 		weight := v.Weight()
-		appearance := 0
+		appearance := int64(0)
 		for _, p := range valSet.proposers {
 			if v.Address() == p.Address() {
 				appearance++
