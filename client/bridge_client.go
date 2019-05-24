@@ -23,6 +23,7 @@ package client
 import (
 	"context"
 	"errors"
+	"github.com/ground-x/klaytn"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/networks/p2p"
@@ -83,6 +84,11 @@ func (ec *Client) BridgeConvertRequestTxHashToHandleTxHash(ctx context.Context, 
 func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
 	var result *types.Receipt
 	err := ec.c.CallContext(ctx, &result, "bridge_getReceiptFromParentChain", hash)
+	if err == nil {
+		if result == nil {
+			return nil, klaytn.NotFound
+		}
+	}
 	return result, err
 }
 
