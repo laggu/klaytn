@@ -307,7 +307,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 		gov.changeSet[vote.Key] = uint64(ProposerPolicyMap[vote.Value.(string)])
 		return true
 	case params.MintingAmount, params.MinimumStake:
-		gov.changeSet[vote.Key], _ = new(big.Int).SetString(vote.Value.(string), 10)
+		gov.changeSet[vote.Key], _ = vote.Value.(string)
 		return true
 	case params.UseGiniCoeff, params.DeferredTxFee:
 		gov.changeSet[vote.Key] = vote.Value.(bool)
