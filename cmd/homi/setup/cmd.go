@@ -372,6 +372,7 @@ func gen(ctx *cli.Context) error {
 	} else {
 		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs), "", "    ")
 	}
+	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
 
 	switch genType {
 	case TypeDocker:
