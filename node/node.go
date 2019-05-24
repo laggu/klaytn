@@ -21,7 +21,6 @@
 package node
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts"
@@ -30,13 +29,10 @@ import (
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/grpc"
 	"github.com/ground-x/klaytn/networks/p2p"
-	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/prometheus/prometheus/util/flock"
-	"io/ioutil"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -45,12 +41,6 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.Node)
-
-//TODO-Klaytn-Node remove after the real bootnode is implemented
-const (
-	SBN_ADDR = "http://sbn.baobab.klaytn.net"
-	SBN_PORT = 32423
-)
 
 const (
 	CONSENSUSNODE = iota
@@ -179,38 +169,6 @@ func (n *Node) RegisterSubService(constructor ServiceConstructor) error {
 	return nil
 }
 
-// discoverPNsFromSBN returns two randomly picked PNs from the simple bootnode server.
-func discoverPNsFromSBN(url string) ([]*discover.Node, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		var nodelist []string
-		var nodes []*discover.Node
-		err = json.Unmarshal(body, &nodelist)
-		if err != nil {
-			return nil, err
-		}
-		for _, url := range nodelist {
-			node, err := discover.ParseNode(url)
-			if err != nil {
-				logger.Error(fmt.Sprintf("Node URL %s: %v\n", url, err))
-				continue
-			}
-			nodes = append(nodes, node)
-		}
-		return nodes, nil
-	}
-
-	return nil, errors.New("get request is failed")
-}
-
 func (n *Node) Start() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -228,16 +186,6 @@ func (n *Node) Start() error {
 	n.serverConfig.Logger = n.logger
 	if n.serverConfig.StaticNodes == nil {
 		n.serverConfig.StaticNodes = n.config.StaticNodes()
-	}
-	//TODO-Klaytn-Node remove after the real bootnode is implemented
-	if n.serverConfig.ConnectionType == ENDPOINTNODE && n.serverConfig.EnableSBN {
-		url := fmt.Sprintf("http://%s:%d/get/pns", n.serverConfig.SBNHost, n.serverConfig.SBNPort)
-		if pns, err := discoverPNsFromSBN(url); err == nil {
-			n.serverConfig.StaticNodes = append(n.serverConfig.StaticNodes, pns...)
-			logger.Info("Success get pns:", "pns", pns)
-		} else {
-			logger.Warn("Get pns failed:", "err", err)
-		}
 	}
 	if n.serverConfig.TrustedNodes == nil {
 		n.serverConfig.TrustedNodes = n.config.TrustedNodes()

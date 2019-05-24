@@ -44,7 +44,6 @@ import (
 	"github.com/ground-x/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
-	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -503,23 +502,6 @@ var (
 		Name:  "baobab",
 		Usage: "Pre-configured Klaytn baobab network",
 	}
-	//TODO-Klaytn-Node remove after the real bootnode is implemented
-	EnableSBNFlag = cli.BoolFlag{
-		Name:  "sbn",
-		Usage: "Enable the peer discovery mechanism using the simple-bootnode",
-	}
-	//TODO-Klaytn-Node remove after the real bootnode is implemented
-	SBNAddrFlag = cli.StringFlag{
-		Name:  "sbnaddr",
-		Usage: "simple-bootnode server listening interface",
-		Value: node.SBN_ADDR,
-	}
-	//TODO-Klaytn-Node remove after the real bootnode is implemented
-	SBNPortFlag = cli.IntFlag{
-		Name:  "sbnport",
-		Usage: "simple-bootnode server listening port",
-		Value: node.SBN_PORT,
-	}
 	// Bootnode's settings
 	//TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = cli.StringFlag{
@@ -898,34 +880,6 @@ func MakePasswordList(ctx *cli.Context) []string {
 	return lines
 }
 
-func trimHttpScheme(url string) string {
-	if len(url) > 7 && url[:7] == "http://" {
-		return url[7:]
-	} else if len(url) > 8 && url[:8] == "https://" {
-		return url[8:]
-	}
-	return url
-}
-
-func setupSBNURL(ctx *cli.Context, cfg *p2p.Config) {
-	cfg.EnableSBN = true
-	rawaddr := ctx.GlobalString(SBNAddrFlag.Name)
-	addr := trimHttpScheme(rawaddr)
-	if ip := net.ParseIP(addr); ip != nil {
-		logger.Debug("SBN addr is an IP address", "ip", addr)
-		cfg.SBNHost = addr
-	} else {
-		logger.Debug("SBN addr is a domain", "domain", addr)
-		cfg.SBNHost = addr
-	}
-	port := ctx.GlobalInt(SBNPortFlag.Name)
-	if port > 65535 {
-		log.Fatalf("SBN port number is not valid")
-	}
-	cfg.SBNPort = port
-	logger.Info("SBN is enabled. The address: http://%s:%d", cfg.SBNHost, cfg.SBNPort)
-}
-
 func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
@@ -957,17 +911,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	cfg.NoDiscovery = ctx.GlobalIsSet(NoDiscoverFlag.Name)
-
-	//TODO-Klaytn-Node remove after the real bootnode is implemented
-	if ctx.GlobalIsSet(EnableSBNFlag.Name) {
-		if !ctx.GlobalIsSet(SBNAddrFlag.Name) {
-			log.Fatalf("Simple-bootnode's address is not defined. Use --sbnaddr. ex) --sbnaddr sbn.my-simple-bootnode.com")
-		}
-		logger.Warn("SimpleBootNode is deprecated. Instead use a bootnode")
-		setupSBNURL(ctx, cfg)
-	} else {
-		logger.Info("SimpleBootNode is disabled.")
-	}
 
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
 		list, err := netutil.ParseNetlist(netrestrict)

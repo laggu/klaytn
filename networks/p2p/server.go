@@ -166,15 +166,6 @@ type Config struct {
 
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
-
-	// EnableSBN is for using the SimpleBootNode(SBN) to retrieve two randomly picked PNs' URIs for EN nodes.
-	EnableSBN bool //TODO-Klaytn-Node remove after the real bootnode is implemented
-
-	// SBNHost is the ip address of the simple bootnode.
-	SBNHost string //TODO-Klaytn-Node remove after the real bootnode is implemented
-
-	// SBNPort is the port number of the simple bootnode.
-	SBNPort int //TODO-Klaytn-Node remove after the real bootnode is implemented
 }
 
 // NewServer returns a new Server interface.

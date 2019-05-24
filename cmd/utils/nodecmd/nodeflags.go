@@ -121,9 +121,6 @@ var KPNFlags = []cli.Flag{
 var KENFlags = []cli.Flag{
 	utils.ServiceChainSignerFlag,
 	utils.BaobabFlag,
-	utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
-	utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
-	utils.SBNPortFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
 	utils.ChildChainIndexingFlag,
 	utils.EnabledBridgeFlag,
 	utils.IsMainBridgeFlag,

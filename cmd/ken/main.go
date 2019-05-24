@@ -157,9 +157,6 @@ var enHelpFlagGroups = []utils.FlagGroup{
 			utils.NodeKeyHexFlag,
 			utils.NetworkIdFlag,
 			utils.BaobabFlag,
-			utils.EnableSBNFlag, //TODO-Klaytn-Node remove after the real bootnode is implemented
-			utils.SBNAddrFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
-			utils.SBNPortFlag,   //TODO-Klaytn-Node remove after the real bootnode is implemented
 		},
 	},
 	{
