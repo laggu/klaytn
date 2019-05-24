@@ -66,6 +66,8 @@ func (rb *RemoteBackend) checkConnection() bool {
 		connected := rb.tryReconnect()
 		if !connected {
 			atomic.StoreInt64(&rb.subBrige.checkConnection, 1)
+		} else {
+			rb.subBrige.bridgeManager.ResetAllSubscribedEvents()
 		}
 		return connected
 	}

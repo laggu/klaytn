@@ -591,6 +591,33 @@ func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
 	return nil
 }
 
+// resetAllSubscribedEvents resets watch logs and recreates a goroutine loop to handle event messages.
+func (bm *BridgeManager) ResetAllSubscribedEvents() error {
+	logger.Info("ResetAllSubscribedEvents is called.")
+
+	for _, journal := range bm.journal.cache {
+		if journal.Subscribed {
+			bm.UnsubscribeEvent(journal.LocalAddress)
+			bm.UnsubscribeEvent(journal.RemoteAddress)
+
+			bridgeInfo, ok := bm.GetBridgeInfo(journal.LocalAddress)
+			if !ok {
+				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "localBridge", journal.LocalAddress.String())
+				continue
+			}
+			bm.subscribeEvent(journal.LocalAddress, bridgeInfo.bridge)
+			bridgeInfo, ok = bm.GetBridgeInfo(journal.RemoteAddress)
+			if !ok {
+				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "remoteBridge", journal.RemoteAddress.String())
+				bm.UnsubscribeEvent(journal.LocalAddress)
+				continue
+			}
+			bm.subscribeEvent(journal.RemoteAddress, bridgeInfo.bridge)
+		}
+	}
+	return nil
+}
+
 // SubscribeEvent sets watch logs and creates a goroutine loop to handle event messages.
 func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontract.Bridge) error {
 	tokenReceivedCh := make(chan *bridgecontract.BridgeRequestValueTransfer, TokenEventChanSize)

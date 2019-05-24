@@ -119,7 +119,7 @@ func (journal *bridgeAddrJournal) insert(localAddress common.Address, remoteAddr
 	item := BridgeJournal{
 		localAddress,
 		remoteAddress,
-		true,
+		false,
 	}
 	if err := rlp.Encode(journal.writer, &item); err != nil {
 		return err

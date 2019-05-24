@@ -105,6 +105,10 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 
 // SubscribeBridge enables the given service/main chain bridges to subscribe the events.
 func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+		return errors.New("invalid bridge pair")
+	}
+
 	err := sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
 	if err != nil {
 		logger.Error("Failed to SubscribeEvent child bridge", "addr", cBridgeAddr, "err", err)
@@ -118,6 +122,8 @@ func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Addre
 		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 		return err
 	}
+
+	sbapi.sc.bridgeManager.journal.cache[cBridgeAddr].Subscribed = true
 
 	// Update the journal's subscribed flag.
 	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
@@ -135,12 +141,14 @@ func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Addre
 
 // UnsubscribeBridge disables the event subscription of the given service/main chain bridges.
 func (sbapi *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+		return errors.New("invalid bridge pair")
+	}
+
 	sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 	sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
 
-	if _, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr); err != nil {
-		return err
-	}
+	sbapi.sc.bridgeManager.journal.cache[cBridgeAddr].Subscribed = false
 
 	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
 	return nil
