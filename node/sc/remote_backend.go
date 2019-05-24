@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/pkg/errors"
 	"math/big"
+	"sync/atomic"
 )
 
 var (
@@ -39,13 +40,13 @@ type RemoteBackend struct {
 }
 
 func NewRemoteBackend(main *SubBridge, rawUrl string) (*RemoteBackend, error) {
-
 	client, err := client.Dial(rawUrl)
 	if err != nil {
 		logger.Error("fail to connect RemoteChain", "url", rawUrl, "err", err)
 		client = nil
+	} else {
+		logger.Info("success to connect RemoteChain", "url", rawUrl)
 	}
-	logger.Info("success to connect RemoteChain", "url", rawUrl)
 
 	return &RemoteBackend{
 		subBrige:   main,
@@ -56,19 +57,28 @@ func NewRemoteBackend(main *SubBridge, rawUrl string) (*RemoteBackend, error) {
 
 func (rb *RemoteBackend) checkConnection() bool {
 	if rb.klayClient == nil {
-		logger.Error("klayclient is nil so try connect")
-		return rb.tryConnect()
+		logger.Error("klayclient is nil so try to reconnect")
+		return rb.tryReconnect()
+	}
+	if atomic.CompareAndSwapInt64(&rb.subBrige.checkConnection, 1, 0) {
+		rb.klayClient.Close()
+		logger.Error("klayclient is disconnected so try to reconnect")
+		connected := rb.tryReconnect()
+		if !connected {
+			atomic.StoreInt64(&rb.subBrige.checkConnection, 1)
+		}
+		return connected
 	}
 	return true
 }
 
-func (rb *RemoteBackend) tryConnect() bool {
+func (rb *RemoteBackend) tryReconnect() bool {
 	client, err := client.Dial(rb.targetUrl)
 	if err != nil {
-		logger.Error("fail to connect RemoteChain", "url", rb.targetUrl, "err", err)
+		logger.Error("fail to reconnect RemoteChain", "url", rb.targetUrl, "err", err)
 		return false
 	}
-	logger.Info("success to tryConnect RemoteChain", "url", rb.targetUrl)
+	logger.Info("success to reconnect RemoteChain", "url", rb.targetUrl)
 
 	rb.klayClient = client
 	return true

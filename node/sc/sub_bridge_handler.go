@@ -323,9 +323,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	}
 	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(sbh.MainChainAccountAddr, (int)(sbh.GetSentChainTxsLimit()))
 	peers := sbh.subbridge.BridgePeerSet().peers
-	if len(peers) == 0 {
-		sbh.setMainChainAccountNonceSynced(false)
-	}
+
 	for _, peer := range peers {
 		if peer.GetChainID().Cmp(parentChainID) != 0 {
 			logger.Error("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)

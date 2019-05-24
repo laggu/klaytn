@@ -41,6 +41,7 @@ import (
 	"math/big"
 	"path"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -51,7 +52,7 @@ const (
 	tokenTransferChanSize = 10000
 )
 
-// Backend wraps all methods for local/remote backend
+// Backend wraps all methods for local and remote backend
 type Backend interface {
 	bind.ContractBackend
 }
@@ -133,6 +134,8 @@ type SubBridge struct {
 
 	// service on/off
 	onAnchoringTx bool
+
+	checkConnection int64
 }
 
 // New creates a new CN object (including the
@@ -573,6 +576,11 @@ func (pm *SubBridge) handleMsg(p BridgePeer) error {
 	msg, err := p.GetRW().ReadMsg()
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("ProtocolManager failed to read msg", "err", err)
+
+		if len(pm.peers.peers) == 1 {
+			pm.handler.setMainChainAccountNonceSynced(false)
+			atomic.StoreInt64(&pm.checkConnection, 1)
+		}
 		return err
 	}
 	if msg.Size > ProtocolMaxMsgSize {
