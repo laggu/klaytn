@@ -1496,6 +1496,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		status, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
 			if err == ErrKnownBlock {
+				logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
 				continue
 			}
 			return i, events, coalescedLogs, err

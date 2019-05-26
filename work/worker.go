@@ -395,7 +395,11 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
 			if err != nil {
-				logger.Error("Failed writing block to chain", "err", err)
+				if err == blockchain.ErrKnownBlock {
+					logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
+				} else {
+					logger.Error("Failed writing block to chain", "err", err)
+				}
 				continue
 			}
 
