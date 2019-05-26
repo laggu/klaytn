@@ -152,6 +152,8 @@ type Governance struct {
 	mu        sync.RWMutex
 
 	TxPool *blockchain.TxPool
+
+	blockChain *blockchain.BlockChain
 }
 
 func (gs GovernanceSet) SetValue(itemType int, value interface{}) error {
@@ -262,11 +264,11 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 	}
 
 	switch k {
-	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio, params.Policy:
+	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio:
 		val = string(gVote.Value.([]uint8))
 	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
 		val = common.BytesToAddress(gVote.Value.([]uint8))
-	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable:
+	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
 	case params.UseGiniCoeff, params.DeferredTxFee:
@@ -304,7 +306,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 		gov.changeSet[vote.Key] = vote.Value.(uint64)
 		return true
 	case params.Policy:
-		gov.changeSet[vote.Key] = uint64(ProposerPolicyMap[vote.Value.(string)])
+		gov.changeSet[vote.Key] = vote.Value.(uint64)
 		return true
 	case params.MintingAmount, params.MinimumStake:
 		gov.changeSet[vote.Key], _ = vote.Value.(string)
@@ -690,4 +692,16 @@ func (gov *Governance) ReadGovernanceState() {
 	gov.UnmarshalJSON(b)
 	params.SetStakingUpdateInterval(gov.ChainConfig.Governance.Reward.StakingUpdateInterval)
 	params.SetProposerUpdateInterval(gov.ChainConfig.Governance.Reward.ProposerUpdateInterval)
+
+	if gov.currentSet["param.txgashumanreadable"] != nil {
+		params.TxGasHumanReadable = gov.currentSet["param.txgashumanreadable"].(uint64)
+	}
+}
+
+func (gov *Governance) SetBlockchain(bc *blockchain.BlockChain) {
+	gov.blockChain = bc
+}
+
+func (gov *Governance) SetTxPool(txpool *blockchain.TxPool) {
+	gov.TxPool = txpool
 }

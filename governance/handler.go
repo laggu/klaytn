@@ -101,6 +101,7 @@ func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {
 		g.ChainConfig.Istanbul.Epoch = v.(uint64)
 	case params.Policy:
 		g.ChainConfig.Istanbul.ProposerPolicy = uint64(v.(uint64))
+		g.blockChain.Config().Istanbul.ProposerPolicy = g.ChainConfig.Istanbul.ProposerPolicy
 	case params.CommitteeSize:
 		g.ChainConfig.Istanbul.SubGroupSize = v.(uint64)
 	}

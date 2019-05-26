@@ -376,7 +376,7 @@ func Subscribe(bc *blockchain.BlockChain) {
 	blockchainForReward = bc
 	chainHeadSub = bc.SubscribeChainHeadEvent(chainHeadCh)
 
-	go waitHeadChain()
+	go waitHeadChain(bc)
 }
 
 func initStakingCache() {
@@ -385,7 +385,7 @@ func initStakingCache() {
 	chainHeadCh = make(chan blockchain.ChainHeadEvent, chainHeadChanSize)
 }
 
-func waitHeadChain() {
+func waitHeadChain(bc *blockchain.BlockChain) {
 	defer chainHeadSub.Unsubscribe()
 
 	logger.Info("Start listening chain head event to update staking cache.")
@@ -395,10 +395,10 @@ func waitHeadChain() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-chainHeadCh:
-			if params.IsStakingUpdatePossible(ev.Block.NumberU64()) {
+			if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && params.IsStakingUpdatePossible(ev.Block.NumberU64()) {
 				blockNum := ev.Block.NumberU64()
 				logger.Debug("ChainHeadEvent arrived and try to update staking cache.", "Block number", blockNum)
-				if _, err := updateStakingCache(blockchainForReward, blockNum); err != nil {
+				if _, err := updateStakingCache(bc, blockNum); err != nil {
 					logger.Error("Failed to update staking cache", "err", err)
 				}
 			}

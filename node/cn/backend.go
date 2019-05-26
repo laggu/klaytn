@@ -211,10 +211,17 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit, SenderTxHashIndexing: config.SenderTxHashIndexing}
 	)
 	var err error
+
 	cn.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
+	governance.SetBlockchain(cn.blockchain)
+	// Synchronize proposerpolicy
+	if cn.blockchain.Config().Istanbul != nil {
+		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.ChainConfig.Istanbul.ProposerPolicy
+	}
+
 	if config.SenderTxHashIndexing {
 		ch := make(chan blockchain.ChainEvent, 255)
 		chainEventSubscription := cn.blockchain.SubscribeChainEvent(ch)
@@ -233,7 +240,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
-	governance.TxPool = cn.txPool
+	governance.SetTxPool(cn.txPool)
+	// Synchronize unitprice
+	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.ChainConfig.UnitPrice))
+
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}
