@@ -87,6 +87,7 @@ func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {
 		g.ChainConfig.Governance.Reward.Ratio = v.(string)
 	case params.UseGiniCoeff:
 		g.ChainConfig.Governance.Reward.UseGiniCoeff = v.(bool)
+		g.blockChain.Config().Governance.Reward.UseGiniCoeff = g.ChainConfig.Governance.Reward.UseGiniCoeff
 	case params.DeferredTxFee:
 		g.ChainConfig.Governance.Reward.DeferredTxFee = v.(bool)
 	case params.MinimumStake:
