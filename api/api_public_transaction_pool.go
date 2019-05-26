@@ -389,15 +389,6 @@ type SignTransactionResult struct {
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
-	if args.Gas == nil {
-		return nil, fmt.Errorf("gas not specified")
-	}
-	if args.GasPrice == nil {
-		return nil, fmt.Errorf("gasPrice not specified")
-	}
-	if args.Nonce == nil {
-		return nil, fmt.Errorf("nonce not specified")
-	}
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
