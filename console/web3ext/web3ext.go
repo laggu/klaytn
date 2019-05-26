@@ -521,7 +521,14 @@ web3._extend({
 			name: 'gasPriceAt',
 			call: 'klay_gasPriceAt',
 			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getTxGasHumanReadable',
+			call: 'klay_getTxGasHumanReadable',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({

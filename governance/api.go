@@ -52,7 +52,12 @@ func NewGovernanceKlayAPI(gov *Governance, chain *blockchain.BlockChain) *Govern
 }
 
 var (
-	errUnknownBlock = errors.New("Unknown block")
+	errUnknownBlock           = errors.New("Unknown block")
+	errNotAvailableInThisMode = errors.New("In current governance mode, voting power is not available")
+	errSetDefaultFailure      = errors.New("Failed to set a default value")
+	errPermissionDenied       = errors.New("You don't have the right to vote")
+	errRemoveSelf             = errors.New("You can't vote on removing yourself")
+	errInvalidKeyValue        = errors.New("Your vote couldn't be placed. Please check your vote's key and value")
 )
 
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error) {
@@ -80,22 +85,22 @@ func (api *GovernanceKlayAPI) GasPrice() *big.Int {
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
-func (api *PublicGovernanceAPI) Vote(key string, val interface{}) interface{} {
+func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
 	gMode := api.governance.ChainConfig.Governance.GovernanceMode
 	gNode := api.governance.ChainConfig.Governance.GoverningNode
 
 	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress {
-		return "You don't have the right to vote"
+		return "", errPermissionDenied
 	}
 	if strings.ToLower(key) == "removevalidator" {
 		if !api.isRemovingSelf(val) {
-			return "You can't vote on removing yourself"
+			return "", errRemoveSelf
 		}
 	}
 	if api.governance.AddVote(key, val) {
-		return "Your vote was successfully placed."
+		return "Your vote was successfully placed.", nil
 	}
-	return "Your vote couldn't be placed. Please check your vote's key and value"
+	return "", errInvalidKeyValue
 }
 
 func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
@@ -113,7 +118,7 @@ func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
 	}
 }
 
-func (api *PublicGovernanceAPI) ShowTally() interface{} {
+func (api *PublicGovernanceAPI) ShowTally() []*returnTally {
 	ret := []*returnTally{}
 
 	api.governance.GovernanceTallyLock.RLock()
@@ -130,11 +135,11 @@ func (api *PublicGovernanceAPI) ShowTally() interface{} {
 	return ret
 }
 
-func (api *PublicGovernanceAPI) TotalVotingPower() interface{} {
+func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
-		return "In current governance mode, voting power is not available"
+		return 0, errNotAvailableInThisMode
 	}
-	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0
+	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0, nil
 }
 
 type VoteList struct {
@@ -163,18 +168,18 @@ func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
 	return ret
 }
 
-func (api *PublicGovernanceAPI) MyVotingPower() interface{} {
+func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
-		return "In current governance mode, voting power is not available"
+		return 0, errNotAvailableInThisMode
 	}
-	return float64(atomic.LoadUint64(&api.governance.votingPower)) / 1000.0
+	return float64(atomic.LoadUint64(&api.governance.votingPower)) / 1000.0, nil
 }
 
-func (api *PublicGovernanceAPI) ChainConfig() interface{} {
+func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
 	return api.governance.ChainConfig
 }
 
-func (api *PublicGovernanceAPI) NodeAddress() interface{} {
+func (api *PublicGovernanceAPI) NodeAddress() common.Address {
 	return api.governance.nodeAddress
 }
 
@@ -191,4 +196,36 @@ func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
 		return 0, err
 	}
 	return val.(uint64), nil
+}
+
+func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		// If the value hasn't been set in governance, set it with default value
+		if ret := api.governance.GetLatestGovernanceItem("param.txgashumanreadable"); ret == nil {
+			return api.setDefaultTxGasHumanReadable()
+		} else {
+			return ret.(uint64), nil
+		}
+	} else {
+		blockNum := num.Int64()
+
+		if blockNum > api.chain.CurrentHeader().Number.Int64() {
+			return 0, errUnknownBlock
+		}
+
+		if ret, err := api.governance.GetGovernanceItemAtNumber(uint64(blockNum), "param.txgashumanreadable"); err == nil && ret != nil {
+			return ret.(uint64), nil
+		} else {
+			return api.setDefaultTxGasHumanReadable()
+		}
+	}
+}
+
+func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
+	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
+	if err != nil {
+		return 0, errSetDefaultFailure
+	} else {
+		return params.TxGasHumanReadable, nil
+	}
 }
