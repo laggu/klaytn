@@ -269,7 +269,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
-	case params.UseGiniCoeff:
+	case params.UseGiniCoeff, params.DeferredTxFee:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		if binary.BigEndian.Uint64(gVote.Value.([]uint8)) != uint64(0) {
 			val = true
