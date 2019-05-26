@@ -688,4 +688,6 @@ func (gov *Governance) ReadGovernanceState() {
 	}
 	logger.Info("Successfully loaded governance state from database")
 	gov.UnmarshalJSON(b)
+	params.SetStakingUpdateInterval(gov.ChainConfig.Governance.Reward.StakingUpdateInterval)
+	params.SetProposerUpdateInterval(gov.ChainConfig.Governance.Reward.ProposerUpdateInterval)
 }
