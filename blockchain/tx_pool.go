@@ -282,7 +282,7 @@ func (pool *TxPool) loop() {
 				currBlock := pool.chain.CurrentBlock()
 				if ev.Block.Root() != currBlock.Root() {
 					pool.mu.Unlock()
-					logger.Warn("block from ChainHeadEvent is different from the CurrentBlock",
+					logger.Debug("block from ChainHeadEvent is different from the CurrentBlock",
 						"receivedNum", ev.Block.NumberU64(), "receivedHash", ev.Block.Hash().String(),
 						"currNum", currBlock.NumberU64(), "currHash", currBlock.Hash().String())
 					continue
