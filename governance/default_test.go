@@ -412,10 +412,6 @@ func TestSaveGovernance(t *testing.T) {
 		}
 	}
 
-	// check number of idxCache
-	if len(gov.idxCache) != params.GovernanceCacheLimit {
-		t.Errorf("Cache size incorrect. Expected: %v, idxCache: %v", params.GovernanceCacheLimit, len(gov.idxCache))
-	}
 	// retrieve governance information. some will come from cache, others will be searched
 	for i := 0; i < MAXITEMS; i++ {
 		blockNum := tstGovernanceData[i].n

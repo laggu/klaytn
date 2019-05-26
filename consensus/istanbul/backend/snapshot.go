@@ -166,7 +166,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 
 		if number%s.Epoch == 0 {
 			if len(header.Governance) > 0 {
-				go gov.UpdateGovernance(number, header.Governance)
+				gov.UpdateGovernance(number, header.Governance)
 			}
 			gov.UpdateCurrentGovernance(number)
 			gov.ClearVotes(number)

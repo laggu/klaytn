@@ -424,6 +424,10 @@ func (g *Governance) getGovernanceCache(num uint64) (GovernanceSet, bool) {
 }
 
 func (g *Governance) addGovernanceCache(num uint64, data GovernanceSet) {
+	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
+	if len(g.idxCache) > 0 && num <= g.idxCache[len(g.idxCache)-1] {
+		return
+	}
 	cKey := getGovernanceCacheKey(num)
 	g.itemCache.Add(cKey, data)
 	g.addIdxCache(num)
@@ -437,8 +441,8 @@ func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
 
 func (g *Governance) addIdxCache(num uint64) {
 	g.idxCache = append(g.idxCache, num)
-	if len(g.idxCache) > params.GovernanceCacheLimit {
-		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceCacheLimit:]
+	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
+		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
 	}
 }
 
@@ -540,7 +544,6 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 			}
 			gov.currentSetMu.RUnlock()
 		}
-		gov.ClearVotes(number)
 	}
 }
 
