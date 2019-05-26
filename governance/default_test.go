@@ -47,11 +47,11 @@ var tstData = []voteValue{
 	{k: "istanbul.policy", v: "sticky", e: false},
 	{k: "istanbul.policy", v: "weightedrandom", e: false},
 	{k: "istanbul.policy", v: "WeightedRandom", e: false},
-	{k: "istanbul.policy", v: uint64(0), e: true},
-	{k: "istanbul.policy", v: uint64(1), e: true},
-	{k: "istanbul.policy", v: uint64(2), e: true},
+	{k: "istanbul.policy", v: uint64(0), e: false},
+	{k: "istanbul.policy", v: uint64(1), e: false},
+	{k: "istanbul.policy", v: uint64(2), e: false},
 	{k: "istanbul.policy", v: float64(1.2), e: false},
-	{k: "istanbul.policy", v: float64(1.0), e: true},
+	{k: "istanbul.policy", v: float64(1.0), e: false},
 	{k: "governance.governancemode", v: "none", e: true},
 	{k: "governance.governancemode", v: "single", e: true},
 	{k: "governance.governancemode", v: "ballot", e: true},
@@ -92,8 +92,8 @@ var tstData = []voteValue{
 	{k: "reward.deferredtxfee", v: "true", e: false},
 	{k: "reward.minimumstake", v: "2000000000000000000000000", e: true},
 	{k: "reward.minimumstake", v: 200000000000000, e: false},
-	{k: "reward.stakingupdateinterval", v: uint64(20), e: true},
-	{k: "reward.proposerupdateinterval", v: uint64(20), e: true},
+	{k: "reward.stakingupdateinterval", v: uint64(20), e: false},
+	{k: "reward.proposerupdateinterval", v: uint64(20), e: false},
 }
 
 var goodVotes = []voteValue{
@@ -167,7 +167,9 @@ func TestGovernance_ValidateVote(t *testing.T) {
 		}
 		_, ret := gov.ValidateVote(vote)
 		if ret != val.e {
-			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
+			if _, ok := GovernanceForbiddenKeyMap[val.k]; !ok && !ret {
+				t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
+			}
 		}
 	}
 }
@@ -420,17 +422,6 @@ func TestSaveGovernance(t *testing.T) {
 			if data["governance.unitprice"] != tstGovernanceData[i].e {
 				t.Errorf("Data mismatch want %v, have %v", tstGovernanceData[i].e, data["governance.unitprice"])
 			}
-		}
-	}
-}
-
-func TestValidateVote(t *testing.T) {
-	gov := getGovernance()
-
-	for _, val := range tstData {
-		ret := gov.AddVote(val.k, val.v)
-		if ret != val.e {
-			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
 		}
 	}
 }

@@ -114,6 +114,12 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 	defer g.voteMapLock.Unlock()
 
 	key = g.getKey(key)
+
+	// If the key is forbidden, stop processing it
+	if _, ok := GovernanceForbiddenKeyMap[key]; ok {
+		return false
+	}
+
 	vote := &GovernanceVote{Key: key, Value: val}
 	var ok bool
 	if vote, ok = g.ValidateVote(vote); ok {
@@ -247,6 +253,12 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 		}
 		if gVote, err = gov.ParseVoteValue(gVote); err != nil {
 			logger.Error("Failed to parse a vote value. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			return valset
+		}
+
+		// If the given key is forbidden, stop processing
+		if _, ok := GovernanceForbiddenKeyMap[gVote.Key]; ok {
+			logger.Warn("Forbidden vote key was received", "key", gVote.Key, "value", gVote.Value, "from", gVote.Validator)
 			return valset
 		}
 

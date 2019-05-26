@@ -61,6 +61,12 @@ var (
 		"param.txgashumanreadable":      params.ConstTxGasHumanReadable,
 	}
 
+	GovernanceForbiddenKeyMap = map[string]int{
+		"istanbul.policy":               params.Policy,
+		"reward.stakingupdateinterval":  params.StakeUpdateInterval,
+		"reward.proposerupdateinterval": params.ProposerRefreshInterval,
+	}
+
 	GovernanceKeyMapReverse = map[int]string{
 		params.GovernanceMode:          "governance.governancemode",
 		params.GoverningNode:           "governance.governingnode",
