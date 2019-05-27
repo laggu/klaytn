@@ -395,7 +395,7 @@ func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
 
 	for cnt, blkNum = 0, startBlkNum; cnt <= sbh.sentServiceChainTxsLimit && blkNum <= latestBlkNum; cnt, blkNum = cnt+1, blkNum+1 {
 		if err := sbh.generateAndAddAnchoringTxIntoTxPool(sbh.subbridge.blockchain.GetBlockByNumber(blkNum)); err == nil {
-
+			sbh.UpdateLastestAnchoredBlockNumber(blkNum)
 			successCnt++
 		} else {
 			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FaildBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
