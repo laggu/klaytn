@@ -171,7 +171,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	bridgetxConfig := BridgeTxPoolConfig{
 		Journal:     path.Join(config.DataDir, "bridge_transactions.rlp"),
 		Rejournal:   time.Hour,
-		GlobalQueue: 8912,
+		GlobalQueue: 8192,
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
