@@ -201,6 +201,9 @@ func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
 		if ctx.GlobalIsSet(utils.MaxBlockDiffFlag.Name) {
 			cfg.MaxBlockDiff = ctx.GlobalUint64(utils.MaxBlockDiffFlag.Name)
 		}
+		if ctx.GlobalIsSet(utils.BlockSyncChannelSizeFlag.Name) {
+			cfg.BlockChannelSize = ctx.GlobalInt(utils.BlockSyncChannelSizeFlag.Name)
+		}
 	}
 
 	return *cfg

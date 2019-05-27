@@ -23,7 +23,7 @@ const (
 	HEAD_MODE  = "head"
 )
 
-//go:generate gencodec -type Config -formats toml -out gen_config.go
+//go:generate gencodec -type DBConfig -formats toml -out gen_config.go
 type DBConfig struct {
 	EnabledDBSyncer bool
 	EnabledLogMode  bool
