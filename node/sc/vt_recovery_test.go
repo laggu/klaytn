@@ -604,9 +604,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) 
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
-	info.localInfo.nextHandleNonce = math.MaxUint64 // set a large value to get all events
-	events := info.localInfo.GetReadyRequestValueTransferEvents()
-	for _, ev := range events {
+	for _, ev := range bi.pendingRequestEvent.Ready(math.MaxUint64) {
 		handleKLAYTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
@@ -648,9 +646,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent)
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestTokenTransfer(info *testInfo, bi *BridgeInfo) {
-	info.localInfo.nextHandleNonce = math.MaxUint64 // set a large value to get all events
-	events := info.localInfo.GetReadyRequestValueTransferEvents()
-	for _, ev := range events {
+	for _, ev := range bi.pendingRequestEvent.Ready(math.MaxUint64) {
 		handleTokenTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
@@ -701,9 +697,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) {
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestNFTTransfer(info *testInfo, bi *BridgeInfo) {
-	info.localInfo.nextHandleNonce = math.MaxUint64 // set a large value to get all events
-	events := info.localInfo.GetReadyRequestValueTransferEvents()
-	for _, ev := range events {
+	for _, ev := range bi.pendingRequestEvent.Ready(math.MaxUint64) {
 		handleNFTTransfer(info, bi, ev)
 	}
 	info.sim.Commit()

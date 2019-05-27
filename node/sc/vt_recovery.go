@@ -157,12 +157,12 @@ func (vtr *valueTransferRecovery) updateRecoveryHint() error {
 	}
 
 	var err error
-	vtr.service2mainHint, err = updateRecoveryHintFromTo(vtr.scBridgeInfo.bridge, vtr.mcBridgeInfo.bridge)
+	vtr.service2mainHint, err = updateRecoveryHintFromTo(vtr.service2mainHint, vtr.scBridgeInfo.bridge, vtr.mcBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
 
-	vtr.main2serviceHint, err = updateRecoveryHintFromTo(vtr.mcBridgeInfo.bridge, vtr.scBridgeInfo.bridge)
+	vtr.main2serviceHint, err = updateRecoveryHintFromTo(vtr.main2serviceHint, vtr.mcBridgeInfo.bridge, vtr.scBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (vtr *valueTransferRecovery) updateRecoveryHint() error {
 }
 
 // updateRecoveryHint updates a hint for the one-way value transfers.
-func updateRecoveryHintFromTo(from, to *bridge.Bridge) (*valueTransferHint, error) {
+func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *bridge.Bridge) (*valueTransferHint, error) {
 	var err error
 	var hint valueTransferHint
 
@@ -188,20 +188,24 @@ func updateRecoveryHintFromTo(from, to *bridge.Bridge) (*valueTransferHint, erro
 		return nil, err
 	}
 
-	hint.requestNonce, err = from.RequestNonce(nil)
+	requestNonce, err := from.RequestNonce(nil)
 	if err != nil {
 		return nil, err
 	}
-	if hint.requestNonce > 0 {
-		hint.requestNonce-- // -1 to get a nonce in the logs.
+	if requestNonce > 0 {
+		hint.requestNonce = requestNonce - 1 // -1 to get a nonce in the logs.
 	}
 
-	hint.handleNonce, err = to.HandleNonce(nil)
+	handleNonce, err := to.HandleNonce(nil)
 	if err != nil {
 		return nil, err
 	}
-	if hint.handleNonce > 0 {
-		hint.handleNonce-- // -1 to get a nonce in the logs.
+	if handleNonce > 0 {
+		if prevHint != nil {
+			hint.prevHandleNonce = prevHint.handleNonce
+			hint.candidate = prevHint.candidate
+		}
+		hint.handleNonce = handleNonce - 1 // -1 to get a nonce in the logs.
 	}
 
 	return &hint, nil
@@ -295,7 +299,6 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	}()
 
 	var evs []*TokenReceivedEvent
-
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	logger.Warn("try to recover service chain's value transfer events", "len(events)", len(vtr.serviceChainEvents))
 	for _, ev := range vtr.serviceChainEvents {
@@ -314,6 +317,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	}
 	vtr.mcBridgeInfo.AddRequestValueTransferEvents(evs)
 
+	evs = []*TokenReceivedEvent{}
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	logger.Warn("try to recover main chain's value transfer events", "len(events)", len(vtr.mainChainEvents))
 	for _, ev := range vtr.mainChainEvents {
