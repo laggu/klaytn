@@ -603,6 +603,7 @@ func genMapForLegacyTransaction(from TestAccount, to TestAccount, gasPrice *big.
 	intrinsic := getIntrinsicGas(txType)
 	amount := big.NewInt(100000)
 	data := []byte{0x11, 0x22}
+	gasPayload := uint64(len(data)) * params.TxDataGas
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.GetNonce(),
@@ -612,7 +613,7 @@ func genMapForLegacyTransaction(from TestAccount, to TestAccount, gasPrice *big.
 		types.TxValueKeyGasLimit: gasLimit,
 		types.TxValueKeyGasPrice: gasPrice,
 	}
-	return values, intrinsic
+	return values, intrinsic + gasPayload
 }
 
 func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {

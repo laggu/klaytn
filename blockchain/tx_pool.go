@@ -653,7 +653,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 			if senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 {
 				logger.Trace("[tx_pool] insufficient funds for feeBySender", "from", from, "balance", senderBalance, "feeBySender", feeBySender)
-				return ErrInsufficientFundsFeePayer
+				return ErrInsufficientFundsFrom
 			}
 
 			if feePayerBalance.Cmp(feeByFeePayer) < 0 {
@@ -675,7 +675,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		// balance check for non-fee-delegated tx
 		if senderBalance.Cmp(tx.Cost()) < 0 {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
-			return ErrInsufficientFunds
+			return ErrInsufficientFundsFrom
 		}
 	}
 
