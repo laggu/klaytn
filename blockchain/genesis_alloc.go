@@ -95,7 +95,7 @@ var (
             "reward": {
                 "mintingAmount" : 9600000000000000000,
                 "ratio" : "34/54/12",
-                "useGiniCoeff" : false,
+                "useGiniCoeff" : true,
                 "deferredTxFee": true,
                 "stakingUpdateInterval": 86400,
                 "proposerUpdateInterval": 3600,
