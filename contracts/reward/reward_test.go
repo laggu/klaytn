@@ -511,22 +511,33 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 	}
 	for i := 0; i < len(testCase); i++ {
 		stakingInfo, _ := newEmptyStakingInfo(nil, uint64(1))
-		stakingInfo.CouncilStakingAmounts = testCase[i].ccoToken
-		stakingInfo.Gini = calcGiniCoefficient(testCase[i].ccoToken)
 
-		stakingAmounts, totalAmount := stakingInfo.GetStakingAmountsAndTotalStaking()
+		weights := make([]float64, len(testCase[i].ccoToken))
+		tokenListToCalcGini := make([]uint64, len(testCase[i].ccoToken))
+		totalAmount := 0.0
 		for j := 0; j < len(testCase[i].ccoToken); j++ {
-			stakingAmounts[j] = math.Round(stakingAmounts[j] * 100 / totalAmount)
-			if stakingAmounts[j] < 1 {
-				stakingAmounts[j] = 1
+			totalAmount += float64(testCase[i].ccoToken[j])
+			tokenListToCalcGini[j] = testCase[i].ccoToken[j]
+		}
+
+		for j := 0; j < len(testCase[i].ccoToken); j++ {
+			weights[j] = math.Round(float64(testCase[i].ccoToken[j]) * 100 / totalAmount)
+			if weights[j] < 1 {
+				weights[j] = 1
 			}
-			if stakingAmounts[j] != testCase[i].beforeReflected[j] {
-				t.Errorf("normal weight is incorrect. result : %v expected : %v", stakingAmounts[j], testCase[i].beforeReflected[j])
+			if weights[j] != testCase[i].beforeReflected[j] {
+				t.Errorf("normal weight is incorrect. result : %v expected : %v", weights[j], testCase[i].beforeReflected[j])
 			}
 		}
 
-		stakingInfo.useGini = true
-		stakingAmountsGiniReflected, totalAmountGiniReflected := stakingInfo.GetStakingAmountsAndTotalStaking()
+		stakingAmountsGiniReflected := make([]float64, len(testCase[i].ccoToken))
+		totalAmountGiniReflected := 0.0
+		stakingInfo.Gini = calcGiniCoefficient(tokenListToCalcGini)
+
+		for j := 0; j < len(stakingAmountsGiniReflected); j++ {
+			stakingAmountsGiniReflected[j] = math.Round(math.Pow(float64(testCase[i].ccoToken[j]), 1.0/(1+stakingInfo.Gini)))
+			totalAmountGiniReflected += stakingAmountsGiniReflected[j]
+		}
 
 		for j := 0; j < len(testCase[i].ccoToken); j++ {
 			if stakingAmountsGiniReflected[j] != testCase[i].adjustment[j] {

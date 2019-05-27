@@ -28,12 +28,14 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,6 +48,10 @@ type Reward struct {
 	contractBackend bind.ContractBackend
 }
 
+const (
+	AddrNotFoundInCouncilNodes = -1
+)
+
 // StakingInfo contains staking information.
 type StakingInfo struct {
 	BlockNum uint64 // Block number where staking information of Council is fetched
@@ -57,7 +63,7 @@ type StakingInfo struct {
 	KIRAddr              common.Address   // Address of KIR contract
 	PoCAddr              common.Address   // Address of PoC contract
 
-	useGini bool
+	UseGini bool
 	Gini    float64 // gini coefficient
 
 	// Derived from CouncilStakingAddrs
@@ -113,7 +119,7 @@ func (s *StakingInfo) String() string {
 	gini := fmt.Sprintf(", Gini:%v", s.Gini)
 	str = append(str, gini)
 
-	useGini := fmt.Sprintf(", useGini:%v }", s.useGini)
+	useGini := fmt.Sprintf(", UseGini:%v }", s.UseGini)
 	str = append(str, useGini)
 
 	return strings.Join(str, " ")
@@ -125,31 +131,26 @@ func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) int {
 			return i
 		}
 	}
-	return -1
+	return AddrNotFoundInCouncilNodes
 }
 
 func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) uint64 {
 	i := s.GetIndexByNodeId(nodeId)
-	if i != -1 {
+	if i != AddrNotFoundInCouncilNodes {
 		return s.CouncilStakingAmounts[i]
 	}
 	return 0
 }
 
-func (s *StakingInfo) GetStakingAmountsAndTotalStaking() ([]float64, float64) {
-	var stakingAmounts []float64
-	totalStaking := 0.0
-	stakingAmountLen := len(s.CouncilStakingAmounts)
-	stakingAmounts = make([]float64, stakingAmountLen)
-	for i := 0; i < stakingAmountLen; i++ {
-		tempStakingAmount := float64(s.CouncilStakingAmounts[i])
-		if s.useGini {
-			tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+s.Gini)))
+func (s *StakingInfo) CalcGiniCoefficientOfValidators(validators []istanbul.Validator) {
+	var stakingAmounts []uint64
+	for _, val := range validators {
+		i := s.GetIndexByNodeId(val.Address())
+		if i != AddrNotFoundInCouncilNodes {
+			stakingAmounts = append(stakingAmounts, s.CouncilStakingAmounts[i])
 		}
-		stakingAmounts[i] = tempStakingAmount
-		totalStaking += tempStakingAmount
 	}
-	return stakingAmounts, totalStaking
+	s.Gini = calcGiniCoefficient(stakingAmounts)
 }
 
 func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, contractBackend bind.ContractBackend) (*Reward, error) {
@@ -448,7 +449,8 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 }
 
 const (
-	maxStakingLimit = uint64(100000000000)
+	maxStakingLimit        = uint64(100000000000)
+	DefaultGiniCoefficient = -1.0
 )
 
 var (
@@ -464,8 +466,8 @@ func newEmptyStakingInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 		KIRAddr:               common.Address{},
 		PoCAddr:               common.Address{},
 		CouncilStakingAmounts: make([]uint64, 0, 0),
-		Gini:                  0.0,
-		useGini:               false,
+		Gini:                  DefaultGiniCoefficient,
+		UseGini:               false,
 	}
 	return stakingInfo, nil
 }
@@ -494,10 +496,7 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 	}
 
 	useGini := bc.Config().Governance.Reward.UseGiniCoeff
-	gini := float64(0)
-	if useGini {
-		gini = calcGiniCoefficient(stakingAmounts)
-	}
+	gini := DefaultGiniCoefficient
 
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
@@ -508,41 +507,32 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 		PoCAddr:               PoCAddr,
 		CouncilStakingAmounts: stakingAmounts,
 		Gini:                  gini,
-		useGini:               useGini,
+		UseGini:               useGini,
 	}
 	return stakingInfo, nil
 }
 
-func calcGiniCoefficient(stakingAmount []uint64) float64 {
-	var sortedStakingAmount []uint64
-	sortedStakingAmount = make([]uint64, len(stakingAmount))
+type uint64Slice []uint64
 
-	// insertion sort
-	for i := 0; i < len(stakingAmount); i++ {
-		j := i
-		for j > 0 {
-			if sortedStakingAmount[j-1] > stakingAmount[i] {
-				sortedStakingAmount[j] = sortedStakingAmount[j-1]
-				j--
-			} else {
-				break
-			}
-		}
-		sortedStakingAmount[j] = stakingAmount[i]
-	}
+func (p uint64Slice) Len() int           { return len(p) }
+func (p uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func calcGiniCoefficient(stakingAmount uint64Slice) float64 {
+	sort.Sort(stakingAmount)
 
 	// calculate gini coefficient
 	sumOfAbsoluteDifferences := uint64(0)
 	subSum := uint64(0)
 
-	for i, x := range sortedStakingAmount {
+	for i, x := range stakingAmount {
 		temp := x*uint64(i) - subSum
 
 		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences + temp
 		subSum = subSum + x
 	}
 
-	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(sortedStakingAmount))
+	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(stakingAmount))
 	result = math.Round(result*100) / 100
 
 	return result

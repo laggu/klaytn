@@ -554,7 +554,8 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	}
 
 	// Check errors
-	if len(valSet.validators) == 0 {
+	numValidators := len(valSet.validators)
+	if numValidators == 0 {
 		return errors.New("No validator")
 	}
 
@@ -581,37 +582,52 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
 
-	stakingAmounts, totalStaking := valSet.stakingInfo.GetStakingAmountsAndTotalStaking()
+	// Calculate the Gini coefficient when the following conditions meet.
+	//   1. Need to use the Gini coefficient
+	//   2. Gini coefficient has not yet been calculated
+	//   3. stakingInfo has node info from address book (address book has been activated)
+	if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeIds) != 0 {
+		newStakingInfo.CalcGiniCoefficientOfValidators(valSet.validators)
+	}
 
-	// one of exception cases (issue #1400)
+	// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
+	// Also calculate the total staking amount by summing up the staking amount of each validator.
+	weightedValidators := make([]*weightedValidator, numValidators)
+	stakingAmounts := make([]float64, numValidators)
+	totalStaking := float64(0)
+	for vIdx, val := range valSet.validators {
+		weightedVal, ok := val.(*weightedValidator)
+		if !ok {
+			return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
+		}
+		weightedValidators[vIdx] = weightedVal
+
+		i := newStakingInfo.GetIndexByNodeId(weightedVal.address)
+		if i != reward.AddrNotFoundInCouncilNodes {
+			weightedVal.rewardAddress = newStakingInfo.CouncilRewardAddrs[i]
+			tempStakingAmount := float64(newStakingInfo.CouncilStakingAmounts[i])
+			if newStakingInfo.UseGini {
+				tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+newStakingInfo.Gini)))
+			}
+			stakingAmounts[vIdx] = tempStakingAmount
+			totalStaking += tempStakingAmount
+		} else {
+			weightedVal.rewardAddress = common.Address{}
+		}
+	}
+
+	// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
 	if totalStaking > 0 {
-		// update weight
-		for _, val := range valSet.validators {
-			i := valSet.stakingInfo.GetIndexByNodeId(val.Address())
-			weightedVal, ok := val.(*weightedValidator)
-			if !ok {
-				return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
+		for i, weightedVal := range weightedValidators {
+			weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
+			if weight <= 0 {
+				// A validator, who holds zero or small stake, has minimum weight, 1.
+				weight = 1
 			}
-			if i != -1 {
-				weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
-				if weight <= 0 {
-					// A validator, who holds small stake, has minimum weight, 1.
-					weight = 1
-				}
-				weightedVal.rewardAddress = valSet.stakingInfo.CouncilRewardAddrs[i]
-				atomic.StoreInt64(&weightedVal.weight, weight)
-			} else {
-				// Let's give a minimum opportunity to be selected as a proposer even for validator without staking value (Issue #2060)
-				atomic.StoreInt64(&weightedVal.weight, 1)
-				weightedVal.rewardAddress = common.Address{}
-			}
+			atomic.StoreInt64(&weightedVal.weight, weight)
 		}
 	} else {
-		for _, val := range valSet.validators {
-			weightedVal, ok := val.(*weightedValidator)
-			if !ok {
-				return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
-			}
+		for _, weightedVal := range weightedValidators {
 			atomic.StoreInt64(&weightedVal.weight, 0)
 		}
 	}

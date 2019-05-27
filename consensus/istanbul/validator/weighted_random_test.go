@@ -20,6 +20,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -344,8 +345,9 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	config := &params.ChainConfig{}
+	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
 	config.ChainID = big.NewInt(1)
+	config.Governance.Reward.UseGiniCoeff = false
 	valSet.Refresh(testPrevHash, 1, config)
 
 	for _, val := range validators {
@@ -381,7 +383,8 @@ func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	config := &params.ChainConfig{}
+	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
+	config.Governance.Reward.UseGiniCoeff = false
 	config.ChainID = big.NewInt(1)
 	valSet.Refresh(testPrevHash, 1, config)
 
