@@ -26,7 +26,6 @@ import (
 	"github.com/ground-x/klaytn/networks/p2p"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"math/big"
-	"sync"
 )
 
 const (
@@ -66,8 +65,6 @@ type SubBridgeHandler struct {
 	sentServiceChainTxsLimit uint64
 
 	skipSyncBlockCount int32
-
-	mainChainAccountLock sync.RWMutex
 }
 
 func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, error) {
@@ -114,11 +111,11 @@ func (sbh *SubBridgeHandler) getParentChainID() *big.Int {
 }
 
 func (sbh *SubBridgeHandler) LockMainChainAccount() {
-	sbh.mainChainAccountLock.Lock()
+	sbh.subbridge.bridgeAccountManager.mcAccount.Lock()
 }
 
 func (sbh *SubBridgeHandler) UnLockMainChainAccount() {
-	sbh.mainChainAccountLock.Unlock()
+	sbh.subbridge.bridgeAccountManager.mcAccount.UnLock()
 }
 
 // getMainChainAccountNonce returns the main chain account nonce of main chain account address.
@@ -431,7 +428,7 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		return err
 	}
 
-	logger.Info("blockAnchoringManager: Success to generate anchoring tx", "blockNum", block.NumberU64(), "blockhash", block.Hash().String(), "txHash", signedTx.Hash().String())
+	logger.Trace("blockAnchoringManager: Success to generate anchoring tx", "blockNum", block.NumberU64(), "blockhash", block.Hash().String(), "txHash", signedTx.Hash().String())
 
 	return nil
 }
