@@ -4,17 +4,18 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/accounts/abi"
+	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/stretchr/testify/assert"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -576,10 +577,17 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	}
 }
 
-// TestAccountCreationMaxMultiSigKey tests multiSig account creation with maximum private keys.
-// A multiSig account supports maximum 10 different private keys.
-// Create a multiSig account with 11 different private keys (more than 10 -> failed)
-func TestAccountCreationMaxMultiSigKey(t *testing.T) {
+// TestAccountCreationHumanReadableFail tests account creation with an invalid address.
+// For a human-readable account, only alphanumeric characters are allowed in the address.
+// In addition, the first character should be an alphabet and the address should contain ".klaytn" suffix.
+// The valid length are 12 ~ 20 including the suffix.
+// 1. Non-alphanumeric characters in the address.
+// 2. The first character of the address is a number.
+// 3. The too short address.
+// 4. The too long address.
+// 5. Invalid suffix.
+// 6. A valid address, "humanReadable.klaytn"
+func TestAccountCreationHumanReadableFail(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -600,6 +608,339 @@ func TestAccountCreationMaxMultiSigKey(t *testing.T) {
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	key, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// 1. Non-alphanumeric characters in the address.
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("68756d616e5265616461626c655f2e6b6c6179746e"), // humanReadable_.klaytn
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+	}
+
+	// 2. The first character of the address is a number.
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("30756d616e5265616461626c652e6b6c6179746e"), // 0umanReadable.klaytn
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+	}
+
+	// 3. The too short address.
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("413233342e6b6c6179746e"), // A234.klaytn
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+	}
+
+	// 4. The too long address.
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("41323334353637383930313233342e6b6c6179746e"), // A234567890123.klaytn
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+	}
+
+	// 5. Invalid suffix.
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("68756d616e5265616461626c652e616263646566"), // humanReadable.abcdef
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
+		}
+	}
+
+	// 6. A valid address, "humanReadable.klaytn"
+	{
+		readable := &TestAccountType{
+			Addr:   common.HexToAddress("68756d616e5265616461626c652e6b6c6179746e"), // humanReadable.klaytn
+			Keys:   []*ecdsa.PrivateKey{key},
+			Nonce:  uint64(0),
+			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		}
+
+		if testing.Verbose() {
+			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+			fmt.Println("anonAddr = ", readable.Addr.String())
+		}
+
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            readable.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyAccountKey:    readable.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountCreationMultiSigKeyMaxKey tests multiSig account creation with maximum private keys.
+// A multiSig account supports maximum 10 different private keys.
+// Create a multiSig account with 11 different private keys (more than 10 -> failed)
+func TestAccountCreationMultiSigKeyMaxKey(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// reservoir account
@@ -657,9 +998,18 @@ func TestAccountCreationMaxMultiSigKey(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, kerrors.ErrMaxKeysExceed, err)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrMaxKeysExceed, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, kerrors.ErrMaxKeysExceed, err)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+		}
 
 		reservoir.Nonce += 1
 	}
@@ -694,6 +1044,17 @@ func TestAccountCreationMultiSigKeyBigThreshold(t *testing.T) {
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// reservoir account
@@ -743,9 +1104,229 @@ func TestAccountCreationMultiSigKeyBigThreshold(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrUnsatisfiableThreshold, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrUnsatisfiableThreshold, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrUnsatisfiableThreshold, err)
+		}
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountCreationMultiSigKeyDupPrvKeys tests multiSig account creation with duplicated private keys.
+// A multisig account has all different private keys, therefore account creation with duplicated private keys should be failed.
+// The case when two same private keys are used in creation processes.
+func TestAccountCreationMultiSigKeyDupPrvKeys(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// the case when two same private keys are used in creation processes.
+	threshold := uint(2)
+	weights := []uint{1, 1, 2}
+	multisigAddr := common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea")
+	prvKeys := []string{
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380000",
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380001",
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380001",
+	}
+
+	// multi-sig account
+	multisig, err := createMultisigAccount(threshold, weights, prvKeys, multisigAddr)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("multisigAddr = ", multisig.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// the case when two same private keys are used in creation processes.
+	{
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            multisig.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    multisig.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrDuplicatedKey, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrDuplicatedKey, err)
+		}
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountCreationMultiSigKeyWeightOverflow tests multiSig account creation with weight overflow.
+// If the sum of weights is overflowed, the test should fail.
+func TestAccountCreationMultiSigKeyWeightOverflow(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// Simply check & set the maximum value of uint
+	MAX := uint(math.MaxUint32)
+	if strconv.IntSize == 64 {
+		MAX = math.MaxUint64
+	}
+
+	// multisig setting
+	threshold := uint(MAX)
+	weights := []uint{MAX / 2, MAX / 2, MAX / 2}
+	multisigAddr := common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea")
+	prvKeys := []string{
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380000",
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380001",
+		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380002",
+	}
+
+	// multi-sig account
+	multisig, err := createMultisigAccount(threshold, weights, prvKeys, multisigAddr)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("multisigAddr = ", multisig.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// creates a multisig account with a threshold, uint(MAX), and the total weight, uint(MAX/2)*3. (failed case)
+	{
+		amount := new(big.Int).SetUint64(1000000000000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            multisig.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    multisig.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrWeightedSumOverflow, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrWeightedSumOverflow, err)
+		}
 	}
 
 	if testing.Verbose() {
@@ -780,6 +1361,17 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// reservoir account
@@ -838,9 +1430,18 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		}
 	}
 
 	// 2. A key for the second role, RoleAccountUpdate, is nested.
@@ -877,9 +1478,18 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		}
 	}
 
 	// 3. A key for the third role, RoleFeePayer, is nested.
@@ -916,119 +1526,18 @@ func TestAccountCreationRoleBasedKeyNested(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
-// TestAccountUpdateRoleBasedKeyNested tests account update with a nested RoleBasedKey.
-// Nested RoleBasedKey is not allowed in Klaytn.
-// 1. Create an account with a RoleBasedKey.
-// 2. Update an accountKey with a nested RoleBasedKey
-func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	// roleBasedKeys and a nested roleBasedKey
-	roleKey, err := createDefaultAccount(accountkey.AccountKeyTypeRoleBased)
-	assert.Equal(t, nil, err)
-
-	roleKey2, err := createDefaultAccount(accountkey.AccountKeyTypeRoleBased)
-	assert.Equal(t, nil, err)
-
-	nestedAccKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
-		roleKey2.AccKey,
-	})
-
-	if testing.Verbose() {
-		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-		fmt.Println("roleAddr = ", roleKey.Addr.String())
-	}
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// 1. Create an account with a RoleBasedKey.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).Mul(big.NewInt(2500), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            roleKey.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    roleKey.AccKey,
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 		}
 
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 		}
-
-		reservoir.Nonce += 1
-	}
-
-	// 2. Update an accountKey with a nested RoleBasedKey.
-	{
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      roleKey.Nonce,
-			types.TxValueKeyFrom:       roleKey.Addr,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: nestedAccKey,
-		}
-
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{roleKey.Keys[accountkey.RoleAccountUpdate]})
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 	}
 
 	if testing.Verbose() {
@@ -1061,6 +1570,17 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// reservoir account
@@ -1109,9 +1629,18 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrLengthTooLong, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrLengthTooLong, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrLengthTooLong, err)
+		}
 	}
 
 	// 2. try to create an account with a RoleBased key which contains 0 sub-key.
@@ -1136,338 +1665,18 @@ func TestAccountCreationRoleBasedKeyInvalidNumKey(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrZeroLength, err)
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
-// TestAccountCreationMultiSigKeyDupPrvKeys tests multiSig account creation with duplicated private keys.
-// A multisig account has all different private keys, therefore account creation with duplicated private keys should be failed.
-// The case when two same private keys are used in creation processes.
-func TestAccountCreationMultiSigKeyDupPrvKeys(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	// the case when two same private keys are used in creation processes.
-	threshold := uint(2)
-	weights := []uint{1, 1, 2}
-	multisigAddr := common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea")
-	prvKeys := []string{
-		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380000",
-		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380001",
-		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380001",
-	}
-
-	// multi-sig account
-	multisig, err := createMultisigAccount(threshold, weights, prvKeys, multisigAddr)
-
-	if testing.Verbose() {
-		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-		fmt.Println("multisigAddr = ", multisig.Addr.String())
-	}
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// the case when two same private keys are used in creation processes.
-	{
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            multisig.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    multisig.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrDuplicatedKey, err)
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
-// TestAccountCreationMultiSigKeyWeightOverflow tests multiSig account creation with weight overflow.
-// If the sum of weights is overflowed, the test should fail.
-func TestAccountCreationMultiSigKeyWeightOverflow(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	// Simply check & set the maximum value of uint
-	MAX := uint(math.MaxUint32)
-	if strconv.IntSize == 64 {
-		MAX = math.MaxUint64
-	}
-
-	// multisig setting
-	threshold := uint(MAX)
-	weights := []uint{MAX / 2, MAX / 2, MAX / 2}
-	multisigAddr := common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea")
-	prvKeys := []string{
-		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380000",
-		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380001",
-		"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594380002",
-	}
-
-	// multi-sig account
-	multisig, err := createMultisigAccount(threshold, weights, prvKeys, multisigAddr)
-
-	if testing.Verbose() {
-		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-		fmt.Println("multisigAddr = ", multisig.Addr.String())
-	}
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// creates a multisig account with a threshold, uint(MAX), and the total weight, uint(MAX/2)*3. (failed case)
-	{
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            multisig.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    multisig.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrWeightedSumOverflow, err)
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
-// TestAccountCreationHumanReadableFail tests account creation with an invalid address.
-// For a human-readable account, only alphanumeric characters are allowed in the address.
-// In addition, the first character should be an alphabet.
-// 1. Non-alphanumeric characters in the address.
-// 2. The first character of the address is a number.
-// 3. A valid address, "humanReadable"
-func TestAccountCreationHumanReadableFail(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	key, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
-	assert.Equal(t, nil, err)
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// 1. Non-alphanumeric characters in the address.
-	{
-		readable := &TestAccountType{
-			Addr:   common.HexToAddress("68756d616e5265616461626c655f2e6b6c6179746e"), // humanReadable_ + .klaytn
-			Keys:   []*ecdsa.PrivateKey{key},
-			Nonce:  uint64(0),
-			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrZeroLength, err)
 		}
 
-		if testing.Verbose() {
-			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-			fmt.Println("anonAddr = ", readable.Addr.String())
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrZeroLength, err)
 		}
-
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            readable.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyAccountKey:    readable.AccKey,
-		}
-
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-	}
-
-	// 2. The first character of the address is a number.
-	{
-		readable := &TestAccountType{
-			Addr:   common.HexToAddress("30756d616e5265616461626c652e6b6c6179746e"), // 0umanReadable + .klaytn
-			Keys:   []*ecdsa.PrivateKey{key},
-			Nonce:  uint64(0),
-			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
-		}
-
-		if testing.Verbose() {
-			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-			fmt.Println("anonAddr = ", readable.Addr.String())
-		}
-
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            readable.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyAccountKey:    readable.AccKey,
-		}
-
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-	}
-
-	// 3. A valid address, "humanReadable"
-	{
-		readable := &TestAccountType{
-			Addr:   common.HexToAddress("68756d616e5265616461626c652e6b6c6179746e"), // humanReadable + .klaytn
-			Keys:   []*ecdsa.PrivateKey{key},
-			Nonce:  uint64(0),
-			AccKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
-		}
-
-		if testing.Verbose() {
-			fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-			fmt.Println("anonAddr = ", readable.Addr.String())
-		}
-
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            readable.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyAccountKey:    readable.AccKey,
-		}
-
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 	}
 
 	if testing.Verbose() {
@@ -1504,6 +1713,17 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// reservoir account
@@ -1551,9 +1771,18 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		}
 	}
 
 	// 2. a RoleBased key contains an AccountKeyNil type sub-key as a second sub-key. (fail)
@@ -1582,9 +1811,18 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		}
 	}
 
 	// 3. a RoleBased key contains an AccountKeyNil type sub-key as a third sub-key. (fail)
@@ -1613,9 +1851,18 @@ func TestAccountCreationRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+		}
 	}
 
 	// 4. a RoleBased key contains an AccountKeyFail type sub-key as a first sub-key. (success)
@@ -1939,9 +2186,9 @@ func TestAccountCreationUpdateRoleBasedKey(t *testing.T) {
 // Other sub-keys are not used for the account update.
 // 0. create an account with a roleBased key.
 // 1. try to update the account with a RoleTransaction key. (fail)
-// 2. try to update the account with a RoleAccountUpdate key. (success)
-// 3. try to update the account with a RoleFeePayer key. (fail)
-func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
+// 2. try to update the account with a RoleFeePayer key. (fail)
+// 3. try to update the account with a RoleAccountUpdate key. (success)
+func TestAccountUpdateRoleBasedKey(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -1962,6 +2209,17 @@ func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
 	if err := accountMap.Initialize(bcdata); err != nil {
 		t.Fatal(err)
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// reservoir account
@@ -2021,7 +2279,6 @@ func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
 
 	// 1. try to update the account with a RoleTransaction key. (fail)
 	{
-		var txs types.Transactions
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:      anon.Nonce,
 			types.TxValueKeyFrom:       anon.Addr,
@@ -2032,16 +2289,54 @@ func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
-		txs = append(txs, tx)
 
 		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleTransaction]})
 		assert.Equal(t, nil, err)
 
-		err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, types.ErrInvalidSigSender, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, types.ErrInvalidSigSender, err)
+		}
 	}
 
-	// 2. try to update the account with a RoleAccountUpdate key. (success)
+	// 2. try to update the account with a RoleFeePayer key. (fail)
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: roleKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleFeePayer]})
+		assert.Equal(t, nil, err)
+
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, types.ErrInvalidSigSender, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, types.ErrInvalidSigSender, err)
+		}
+	}
+
+	// 3. try to update the account with a RoleAccountUpdate key. (success)
 	{
 		var txs types.Transactions
 		values := map[types.TxValueKeyType]interface{}{
@@ -2066,27 +2361,134 @@ func TestAccountUpdateWithRoleBasedKey(t *testing.T) {
 		anon.Nonce += 1
 	}
 
-	// 3. try to update the account with a RoleFeePayer key. (fail)
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestAccountUpdateRoleBasedKeyNested tests account update with a nested RoleBasedKey.
+// Nested RoleBasedKey is not allowed in Klaytn.
+// 1. Create an account with a RoleBasedKey.
+// 2. Update an accountKey with a nested RoleBasedKey
+func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// roleBasedKeys and a nested roleBasedKey
+	roleKey, err := createDefaultAccount(accountkey.AccountKeyTypeRoleBased)
+	assert.Equal(t, nil, err)
+
+	roleKey2, err := createDefaultAccount(accountkey.AccountKeyTypeRoleBased)
+	assert.Equal(t, nil, err)
+
+	nestedAccKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		roleKey2.AccKey,
+	})
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("roleAddr = ", roleKey.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// 1. Create an account with a RoleBasedKey.
 	{
 		var txs types.Transactions
+
+		amount := new(big.Int).Mul(big.NewInt(2500), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      anon.Nonce,
-			types.TxValueKeyFrom:       anon.Addr,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: roleKey,
+			types.TxValueKeyNonce:         reservoir.Nonce,
+			types.TxValueKeyFrom:          reservoir.Addr,
+			types.TxValueKeyTo:            roleKey.Addr,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    roleKey.AccKey,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
 		txs = append(txs, tx)
 
-		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{keys[accountkey.RoleFeePayer]})
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		reservoir.Nonce += 1
+	}
+
+	// 2. Update an accountKey with a nested RoleBasedKey.
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      roleKey.Nonce,
+			types.TxValueKeyFrom:       roleKey.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: nestedAccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{roleKey.Keys[accountkey.RoleAccountUpdate]})
+		assert.Equal(t, nil, err)
 
-		anon.Nonce += 1
+		// For tx pool validation test
+		{
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		}
+
+		// For block tx validation test
+		{
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
+		}
 	}
 
 	if testing.Verbose() {
