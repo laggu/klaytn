@@ -16,11 +16,6 @@
 
 package discover
 
-import (
-	"math/rand"
-	"time"
-)
-
 func NewDiscovery(cfg *Config) (Discovery, error) {
 	return newTable(cfg)
 }
@@ -54,17 +49,4 @@ func StringNodeType(nType NodeType) string { // TODO-Klaytn-Node Consolidate p2p
 	default:
 		return "unknown"
 	}
-}
-
-func shuffle(vals []*Node) []*Node {
-	if len(vals) == 0 {
-		return vals
-	}
-	r := rand.New(rand.NewSource(time.Now().Unix()))
-	ret := make([]*Node, len(vals))
-	perm := r.Perm(len(vals))
-	for i, randIndex := range perm {
-		ret[i] = vals[randIndex]
-	}
-	return ret
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
 	"github.com/ground-x/klaytn/networks/p2p/netutil"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -31,10 +32,13 @@ type simpleStorage struct {
 	noDiscover bool // if noDiscover is true, don't lookup new node.
 	nodesMutex sync.Mutex
 	max        int
+	rand       *rand.Rand
 }
 
 func (s *simpleStorage) init() {
 	// TODO
+	now := time.Now().UnixNano()
+	s.rand = rand.New(rand.NewSource(now))
 }
 
 func (s *simpleStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType NodeType) []*Node {
@@ -59,9 +63,21 @@ func (s *simpleStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType 
 	return s.tab.findNewNode(&nodesByDistance{entries: seeds}, targetID, targetType, false, s.max)
 }
 
+func (s *simpleStorage) shuffle(vals []*Node) []*Node {
+	if len(vals) == 0 {
+		return vals
+	}
+	ret := make([]*Node, len(vals))
+	perm := s.rand.Perm(len(vals))
+	for i, randIndex := range perm {
+		ret[i] = vals[randIndex]
+	}
+	return ret
+}
+
 func (s *simpleStorage) getNodes(max int) []*Node {
 	s.nodesMutex.Lock()
-	nodes := shuffle(s.nodes)
+	nodes := s.shuffle(s.nodes)
 
 	var ret []*Node
 	for _, nd := range nodes {
@@ -185,7 +201,7 @@ func (s *simpleStorage) closest(target common.Hash, nresults int) *nodesByDistan
 	// TODO-Klaytn-Node nodesByDistance is not suitable for SimpleStorage. Because there is no concept for distance
 	// in the SimpleStorage. Change it
 	cNodes := &nodesByDistance{target: target}
-	nodes := shuffle(s.nodes)
+	nodes := s.shuffle(s.nodes)
 	if len(nodes) > s.max {
 		cNodes.entries = nodes[:s.max]
 	} else {
