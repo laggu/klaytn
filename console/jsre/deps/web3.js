@@ -2697,7 +2697,7 @@ var properties = function () {
     return [
         new Property({
             name: 'version.node',
-            getter: 'web3_clientVersion'
+            getter: 'klay_clientVersion'
         }),
         new Property({
             name: 'version.network',

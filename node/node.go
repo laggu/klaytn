@@ -774,9 +774,15 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewPublicDebugAPI(n),
 			Public:    true,
 		}, {
+			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "klay" namespace.
 			Namespace: "web3",
 			Version:   "1.0",
-			Service:   NewPublicWeb3API(n),
+			Service:   NewPublicKlayAPI(n),
+			Public:    true,
+		}, {
+			Namespace: "klay",
+			Version:   "1.0",
+			Service:   NewPublicKlayAPI(n),
 			Public:    true,
 		},
 	}

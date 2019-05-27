@@ -464,6 +464,10 @@ web3._extend({
 	property: 'klay',
 	methods: [
 		new web3._extend.Method({
+			name: 'clientVersion',
+			call: 'klay_clientVersion',
+		}),
+		new web3._extend.Method({
 			name: 'getBlockReceipts',
 			call: 'klay_getBlockReceipts',
 			params: 1,
