@@ -428,7 +428,7 @@ var (
 	MaxConnectionsFlag = cli.IntFlag{
 		Name:  "maxconnections",
 		Usage: "Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0)",
-		Value: 25,
+		Value: 10,
 	}
 	MaxPendingPeersFlag = cli.IntFlag{
 		Name:  "maxpendpeers",
