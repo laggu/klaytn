@@ -97,7 +97,7 @@ func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {
 		params.SetStakingUpdateInterval(g.ChainConfig.Governance.Reward.StakingUpdateInterval)
 	case params.ProposerRefreshInterval:
 		g.ChainConfig.Governance.Reward.ProposerUpdateInterval = v.(uint64)
-		params.SetProposerUpdateInterval(g.ChainConfig.Governance.Reward.StakingUpdateInterval)
+		params.SetProposerUpdateInterval(g.ChainConfig.Governance.Reward.ProposerUpdateInterval)
 	case params.Epoch:
 		g.ChainConfig.Istanbul.Epoch = v.(uint64)
 	case params.Policy:
