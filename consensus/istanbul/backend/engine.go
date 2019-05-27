@@ -359,31 +359,35 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 		// Determine and update Rewardbase when mining. When mining, state root is not yet determined and will be determined at the end of this Finalize below.
 		if common.EmptyHash(header.Root) {
+			var logMsg string
+			var beneficiaryAddress common.Address
+
 			// TODO-Klaytn-Issue3149 Remove this branch when Baobab can use the mainnet code
 			if chain.Config().ChainID.Int64() == params.ChainIDBaobab {
+				beneficiaryAddress = proposer.Address()
 				proposerRewardAddress := proposer.RewardAddress()
-				if common.EmptyHash(header.Root) {
-					if (proposerRewardAddress == common.Address{}) {
-						logger.Trace("No reward address for proposer. Use rewardbase of node", "header.Number", header.Number.Uint64(), "Rewardbase", header.Rewardbase)
-					} else {
-						logger.Trace("Use reward address for proposer.", "header.Number", header.Number.Uint64(), "proposer", proposer.Address(), "Reward address of proposer", proposerRewardAddress)
-						header.Rewardbase = proposerRewardAddress
-					}
+				if (proposerRewardAddress == common.Address{}) {
+					logMsg = "No reward address for proposer. Use node's rewardbase."
+				} else {
+					header.Rewardbase = proposerRewardAddress
+					logMsg = "Use reward address for proposer."
 				}
 			} else {
+				beneficiaryAddress = sb.address
 				_, nodeValidator := valSet.GetByAddress(sb.address)
-				nodeRewardAddresses := nodeValidator.RewardAddress()
-				if (nodeRewardAddresses == common.Address{}) {
-					logger.Trace("No reward address of node. Use rewardbase of node", "header.Number", header.Number.Uint64(), "Rewardbase", header.Rewardbase)
+				if nodeValidator == nil || (nodeValidator.RewardAddress() == common.Address{}) {
+					logMsg = "No reward address for nodeValidator. Use node's rewardbase."
 				} else {
-					logger.Trace("Use reward address of node.", "header.Number", header.Number.Uint64(), "node", nodeValidator.Address(), "Reward address of node", nodeRewardAddresses)
 					// use reward address of current node.
 					// only a block made by proposer will be accepted. However, due to round change any node can be the proposer of a block.
 					// so need to write reward address of current node to receive reward when it becomes proposer.
 					// if current node does not become proposer, the block will be abandoned
-					header.Rewardbase = nodeRewardAddresses
+					header.Rewardbase = nodeValidator.RewardAddress()
+					logMsg = "Use reward address for nodeValidator."
 				}
 			}
+
+			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "beneficiary", beneficiaryAddress, "rewardbase", header.Rewardbase)
 		}
 
 		if proposer.Weight() != 0 {
