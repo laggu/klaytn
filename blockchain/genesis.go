@@ -304,10 +304,17 @@ func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance 
 	return g.MustCommit(db)
 }
 
-// DefaultGenesisBlock returns the Ethereum main net genesis block.
-// TODO-Klaytn-issue3160 When mainnet launches, mainnetGenesisBlock() has to be the default.
+// DefaultGenesisBlock returns the Klaytn main net genesis block.
 func DefaultGenesisBlock() *Genesis {
-	return baobabGenesisBlock()
+	return cypressGenesisBlock()
+}
+
+func cypressGenesisBlock() *Genesis {
+	ret := &Genesis{}
+	if err := json.Unmarshal(cypressGenesisJson, &ret); err != nil {
+		logger.Error("Error in Unmarshaling Cypress Genesis Json", "err", err)
+	}
+	return ret
 }
 
 func baobabGenesisBlock() *Genesis {
