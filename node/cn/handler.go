@@ -65,7 +65,7 @@ const (
 	DefaultMaxResendTxCount = 1000
 
 	// DefaultTxResendInterval is the second of resending transactions period.
-	DefaultTxResendInterval = 3
+	DefaultTxResendInterval = 4
 )
 
 // errIncompatibleConfig is returned if the requested protocols and configs are
