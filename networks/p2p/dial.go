@@ -250,7 +250,12 @@ func (s *dialstate) addTypedStatic(n *discover.Node, dType dialType) {
 	// entry, giving users the opportunity to force a resolve operation.
 	if s.static[n.ID] == nil {
 		logger.Trace("[Dial] Add TypedStatic", "node", n, "dialType", dType)
-		s.static[n.ID] = &dialTask{flags: staticDialedConn, dest: n, dialType: dType}
+		if dType != DT_UNLIMITED {
+			s.static[n.ID] = &dialTask{flags: staticDialedConn | trustedConn, dest: n, dialType: dType}
+		} else {
+			s.static[n.ID] = &dialTask{flags: staticDialedConn, dest: n, dialType: dType}
+		}
+
 	}
 }
 
@@ -270,6 +275,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 
 	var newtasks []task
 	addDialTask := func(flag connFlag, n *discover.Node) bool {
+		logger.Trace("[Dial] Try to add dialTask", "connFlag", flag, "node", n)
 		if err := s.checkDial(n, peers); err != nil {
 			logger.Trace("[Dial] Skipping dial candidate from discovery nodes", "id", n.ID,
 				"addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)}, "err", err)
@@ -310,16 +316,16 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 			}
 
 			sd := s.static[dt.dest.ID]
-			if sd.flags != staticDialedConn {
+			if sd.flags&staticDialedConn == 0 {
 				err := fmt.Errorf("dialer: can't check conntype except staticconn [connType : %d]", sd.flags)
-				logger.Error("[Dial] ", err)
+				logger.Error("[Dial] ", "err", err)
 				return err
 			}
 
 			typeSpec, ok := s.tsMap[dt.dialType]
 			if !ok {
 				err := fmt.Errorf("dialer: no data for typespec [%s]", dt.dialType)
-				logger.Error("[Dial] ", err)
+				logger.Error("[Dial] ", "err", err)
 				return err
 			}
 
@@ -383,6 +389,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 
 	// Compute number of dynamic dials necessary at this point.
 	calcNeedDynDials()
+	logger.Trace("[Dial] Dynamic Dials Remained Capacity", "needDynDials", needDynDials, "maxDynDials", s.maxDynDials)
 
 	// Expire the dial history on every invocation.
 	s.hist.expire(now)

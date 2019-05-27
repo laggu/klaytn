@@ -473,8 +473,8 @@ func TestDialStateTypeStaticDialExpired(t *testing.T) {
 		rounds: []round{
 			{
 				new: []task{
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt, failedTry: 2},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt, failedTry: 3},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt, failedTry: 2},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt, failedTry: 3},
 					&discoverTypedStaticTask{name: tdt, max: math.MaxInt64 - 2},
 				},
 			},
@@ -509,9 +509,9 @@ func TestDialStateTypeStaticDialExpired2(t *testing.T) {
 					{rws: []*conn{{flags: staticDialedConn, id: uintID(1)}}},
 				},
 				new: []task{
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(6)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(6)}, dialType: tdt},
 					&discoverTypedStaticTask{name: tdt, max: 6 - 3},
 				},
 			},
@@ -521,9 +521,9 @@ func TestDialStateTypeStaticDialExpired2(t *testing.T) {
 					{rws: []*conn{{flags: dynDialedConn, id: uintID(1)}}},
 				},
 				done: []task{
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(6)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(6)}, dialType: tdt},
 				},
 				expired: []failedInfo{
 					{discover.Node{ID: uintID(4)}.ID, 4},
@@ -533,15 +533,15 @@ func TestDialStateTypeStaticDialExpired2(t *testing.T) {
 			{
 				// Wait expired task is returned to normal
 				peers: []*Peer{
-					{rws: []*conn{{flags: staticDialedConn, id: uintID(1)}}},
+					{rws: []*conn{{flags: staticDialedConn | trustedConn, id: uintID(1)}}},
 				},
 			},
 			{
 				peers: []*Peer{
-					{rws: []*conn{{flags: staticDialedConn, id: uintID(1)}}},
+					{rws: []*conn{{flags: staticDialedConn | trustedConn, id: uintID(1)}}},
 				},
 				new: []task{
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
 				},
 			},
 		},
@@ -568,9 +568,9 @@ func TestDialStateDiscoverTypedStatic(t *testing.T) {
 					{rws: []*conn{{flags: staticDialedConn, id: uintID(1)}}},
 				},
 				new: []task{
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(6)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(4)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(5)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(6)}, dialType: tdt},
 					&discoverTypedStaticTask{name: tdt, max: 6 - 3},
 				},
 			},
@@ -605,9 +605,9 @@ func TestDialStateTypedStaticMaxConn(t *testing.T) {
 		rounds: []round{
 			{
 				new: []task{
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(1)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(2)}, dialType: tdt},
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(3)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(1)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(2)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(3)}, dialType: tdt},
 				},
 			},
 		},
@@ -630,11 +630,11 @@ func TestDialStateTypedStaticMaxConn2(t *testing.T) {
 		rounds: []round{
 			{
 				peers: []*Peer{
-					{rws: []*conn{{flags: staticDialedConn, id: uintID(1)}}},
-					{rws: []*conn{{flags: staticDialedConn, id: uintID(2)}}},
+					{rws: []*conn{{flags: staticDialedConn | trustedConn, id: uintID(1)}}},
+					{rws: []*conn{{flags: staticDialedConn | trustedConn, id: uintID(2)}}},
 				},
 				new: []task{
-					&dialTask{flags: staticDialedConn, dest: &discover.Node{ID: uintID(3)}, dialType: tdt},
+					&dialTask{flags: staticDialedConn | trustedConn, dest: &discover.Node{ID: uintID(3)}, dialType: tdt},
 				},
 			},
 		},
