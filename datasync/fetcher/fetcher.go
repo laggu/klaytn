@@ -389,7 +389,8 @@ func (f *Fetcher) loop() {
 			}
 			// Send out all block header requests
 			for peer, hashes := range request {
-				logger.Trace("Fetching scheduled headers", "peer", peer, "list", hashes)
+				logger.Trace("Fetching scheduled headers", "peer", peer, "len", len(hashes),
+					"firstHash", hashes[0].String(), "lastHash", hashes[len(hashes)-1].String())
 
 				// Create a closure of the fetch and schedule in on a new thread
 				fetchHeader, hashes := f.fetching[hashes[0]].fetchHeader, hashes
@@ -423,7 +424,8 @@ func (f *Fetcher) loop() {
 			}
 			// Send out all block body requests
 			for peer, hashes := range request {
-				logger.Trace("Fetching scheduled bodies", "peer", peer, "list", hashes)
+				logger.Trace("Fetching scheduled bodies", "peer", peer, "len", len(hashes),
+					"firstHash", hashes[0].String(), "lastHash", hashes[len(hashes)-1].String())
 
 				// Create a closure of the fetch and schedule in on a new thread
 				if f.completingHook != nil {
