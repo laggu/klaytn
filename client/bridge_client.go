@@ -92,17 +92,31 @@ func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash comm
 	return result, err
 }
 
-// BridgeGetMainChainAccountAddr can get a main chain account address to sign the chain transaction in a main chain.
+// BridgeGetMainChainAccountAddr can get a main chain bridge account address.
 func (ec *Client) BridgeGetMainChainAccountAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
 	err := ec.c.CallContext(ctx, &result, "bridge_getMainChainAccountAddr")
 	return result, err
 }
 
-// BridgeGetServiceChainAccountAddr can get a service chain account address to sign the chain transaction in a service chain.
+// BridgeGetServiceChainAccountAddr can get a service chain bridge account address.
 func (ec *Client) BridgeGetServiceChainAccountAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
 	err := ec.c.CallContext(ctx, &result, "bridge_getServiceChainAccountAddr")
+	return result, err
+}
+
+// BridgeGetMainChainAccountNonce can get a main chain bridge account nonce.
+func (ec *Client) BridgeGetMainChainAccountNonce(ctx context.Context) (uint64, error) {
+	var result uint64
+	err := ec.c.CallContext(ctx, &result, "bridge_getMainChainAccountNonce")
+	return result, err
+}
+
+// BridgeGetServiceChainAccountAddr can get a service chain bridge account nonce.
+func (ec *Client) BridgeGetServiceChainAccountNonce(ctx context.Context) (uint64, error) {
+	var result uint64
+	err := ec.c.CallContext(ctx, &result, "bridge_getServiceChainAccountNonce")
 	return result, err
 }
 
@@ -174,6 +188,20 @@ func (ec *Client) BridgeDeregisterBridge(ctx context.Context, scBridge common.Ad
 	return result, err
 }
 
+// TODO-Klaytn if client pkg is removed in sc pkg, this will be replaced origin struct.
+type BridgeJournal struct {
+	LocalAddress  common.Address `json:"localAddress"`
+	RemoteAddress common.Address `json:"remoteAddress"`
+	Subscribed    bool           `json:"subscribed"`
+}
+
+// BridgeListBridge can return the list of the bridge.
+func (ec *Client) BridgeListBridge(ctx context.Context) ([]*BridgeJournal, error) {
+	var result []*BridgeJournal
+	err := ec.c.CallContext(ctx, &result, "bridge_listBridge")
+	return result, err
+}
+
 // BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given service/main chain bridges.
 // If the subscribing is failed, it returns an error.
 func (ec *Client) BridgeSubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
@@ -196,4 +224,18 @@ func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, scBridge, mcB
 // If the registering is failed, it returns an error.
 func (ec *Client) BridgeDeregisterTokenContract(ctx context.Context, scBridge, mcBridge, scToken, mcToken common.Address) error {
 	return ec.c.CallContext(ctx, nil, "bridge_deregisterToken", scBridge, mcBridge, scToken, mcToken)
+}
+
+// BridgeTxPendingCount can return the count of the pend tx in bridge txpool.
+func (ec *Client) BridgeTxPendingCount(ctx context.Context) (int, error) {
+	var result int
+	err := ec.c.CallContext(ctx, &result, "bridge_txPendingCount")
+	return result, err
+}
+
+// BridgeGetTxPending can return the pend tx list mapped by address.
+func (ec *Client) BridgeGetTxPending(ctx context.Context) (map[common.Address]types.Transactions, error) {
+	var result map[common.Address]types.Transactions
+	err := ec.c.CallContext(ctx, &result, "bridge_txPending")
+	return result, err
 }
