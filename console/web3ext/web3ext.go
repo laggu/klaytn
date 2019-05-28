@@ -899,7 +899,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'deregisterBridge',
 			call: 'bridge_deregisterBridge',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'registerToken',

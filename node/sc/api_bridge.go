@@ -183,6 +183,11 @@ func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 }
 
 func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+	err := sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
+	if err != nil {
+		return err
+	}
+
 	cBridge, err := bridge.NewBridge(cBridgeAddr, sbapi.sc.localBackend)
 	if err != nil {
 		return err
@@ -203,11 +208,6 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 		return err
 	}
 
-	err = sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
-	if err != nil {
-		return err
-	}
-
 	err = bm.SetJournal(cBridgeAddr, pBridgeAddr)
 	if err != nil {
 		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
@@ -222,12 +222,35 @@ func (sbapi *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeA
 		return ErrInvalidBridgePair
 	}
 
+	bm := sbapi.sc.bridgeManager
+	journal := bm.journal.cache[cBridgeAddr]
+
+	if journal.Subscribed {
+		bm.UnsubscribeEvent(journal.LocalAddress)
+		bm.UnsubscribeEvent(journal.RemoteAddress)
+
+		bm.DeleteRecovery(cBridgeAddr, pBridgeAddr)
+	}
+
+	delete(bm.journal.cache, cBridgeAddr)
+
+	if err := bm.journal.rotate(bm.GetAllBridge()); err != nil {
+		logger.Warn("failed to rotate bridge journal", "err", err, "scBridge", cBridgeAddr.String(), "mcBridge", pBridgeAddr.String())
+	}
+
+	if err := bm.DeleteBridgeInfo(cBridgeAddr); err != nil {
+		logger.Warn("failed to Delete service chain bridge info", "err", err, "bridge", cBridgeAddr.String())
+	}
+
+	if err := bm.DeleteBridgeInfo(pBridgeAddr); err != nil {
+		logger.Warn("failed to Delete main chain bridge info", "err", err, "bridge", pBridgeAddr.String())
+	}
+
 	_, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 	if err != nil {
 		return err
 	}
 
-	// TODO-Klaytn Add removing journal and pair information
 	return nil
 }
 

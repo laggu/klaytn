@@ -399,9 +399,13 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 
 // DeleteBridgeInfo deletes the bridge info of the specified address.
 func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
-	if bm.bridges[addr] == nil {
+	bi := bm.bridges[addr]
+	if bi == nil {
 		return errNoBridgeInfo
 	}
+
+	close(bi.closed)
+
 	delete(bm.bridges, addr)
 	return nil
 }
@@ -504,8 +508,6 @@ func (bm *BridgeManager) DeleteRecovery(localAddress, remoteAddress common.Addre
 	recovery.Stop()
 	delete(bm.recoveries, localAddress)
 
-	// Delete the journal.
-	bm.journal.rotate(bm.GetAllBridge())
 	return nil
 }
 
