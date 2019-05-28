@@ -7,6 +7,7 @@ set PORT=32323
 set SERVER_TYPE="fasthttp"
 set SYNCMODE="full"
 set VERBOSITY=3
+set MAXCONNECTIONS=10
 
 REM txpool options setting
 set TXPOOL_EXEC_SLOTS_ALL=8192

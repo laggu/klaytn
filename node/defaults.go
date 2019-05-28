@@ -32,14 +32,15 @@ import (
 )
 
 const (
-	DefaultHTTPHost   = "localhost" // Default host interface for the HTTP RPC server
-	DefaultHTTPPort   = 8551        // Default TCP port for the HTTP RPC server
-	DefaultWSHost     = "localhost" // Default host interface for the websocket RPC server
-	DefaultWSPort     = 8552        // Default TCP port for the websocket RPC server
-	DefaultGRPCHost   = "localhost" // Default host interface for the gRPC server
-	DefaultGRPCPort   = 8553        // Default TCP port for the gRPC server
-	DefaultP2PPort    = 32323
-	DefaultP2PSubPort = 32324
+	DefaultHTTPHost               = "localhost" // Default host interface for the HTTP RPC server
+	DefaultHTTPPort               = 8551        // Default TCP port for the HTTP RPC server
+	DefaultWSHost                 = "localhost" // Default host interface for the websocket RPC server
+	DefaultWSPort                 = 8552        // Default TCP port for the websocket RPC server
+	DefaultGRPCHost               = "localhost" // Default host interface for the gRPC server
+	DefaultGRPCPort               = 8553        // Default TCP port for the gRPC server
+	DefaultP2PPort                = 32323
+	DefaultP2PSubPort             = 32324
+	DefaultMaxPhysicalConnections = 10 // Default the max number of node's physical connections
 )
 
 // DefaultConfig contains reasonable default settings.
@@ -54,7 +55,7 @@ var DefaultConfig = Config{
 	GRPCPort:         DefaultGRPCPort,
 	P2P: p2p.Config{
 		ListenAddr:             fmt.Sprintf(":%d", DefaultP2PPort),
-		MaxPhysicalConnections: 25,
+		MaxPhysicalConnections: DefaultMaxPhysicalConnections,
 		NAT:                    nat.Any(),
 	},
 }
