@@ -73,9 +73,6 @@ type TokenTransferEvent struct {
 	HandleNonce  uint64
 }
 
-// BridgeJournal has two types. When a single address is inserted, the Subscribed is disabled.
-// In this case, only one of the LocalAddress or RemoteAddress is filled with the address.
-// If two address in a pair is inserted, the Pared is enabled.
 type BridgeJournal struct {
 	LocalAddress  common.Address `json:"localAddress"`
 	RemoteAddress common.Address `json:"remoteAddress"`
@@ -362,13 +359,15 @@ func (bm *BridgeManager) LogBridgeStatus() {
 	for bAddr, b := range bm.bridges {
 		diffNonce := b.requestedNonce - b.handledNonce
 
-		var headStr string
-		if b.onServiceChain {
-			headStr = "Bridge(Main -> Service Chain)"
-		} else {
-			headStr = "Bridge(Service -> Main Chain)"
+		if b.subscribed {
+			var headStr string
+			if b.onServiceChain {
+				headStr = "Bridge(Main -> Service Chain)"
+			} else {
+				headStr = "Bridge(Service -> Main Chain)"
+			}
+			logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
 		}
-		logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
 	}
 }
 

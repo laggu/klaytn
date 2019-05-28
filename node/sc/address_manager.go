@@ -21,6 +21,10 @@ import (
 	"github.com/ground-x/klaytn/common"
 )
 
+var (
+	ErrAlreadyExistentBridgePair = errors.New("bridge already exists")
+)
+
 // AddressManager manages mapping addresses for bridge,contract,user
 // to exchange value between parent and child chain
 type AddressManager struct {
@@ -40,7 +44,7 @@ func (am *AddressManager) AddBridge(bridge1 common.Address, bridge2 common.Addre
 	_, ok2 := am.bridgeContracts[bridge2]
 
 	if ok1 || ok2 {
-		return errors.New("bridge already exists")
+		return ErrAlreadyExistentBridgePair
 	}
 
 	am.bridgeContracts[bridge1] = bridge2

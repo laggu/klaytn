@@ -27,6 +27,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	ErrInvalidBridgePair = errors.New("invalid bridge pair")
+)
+
 // MainBridgeAPI Implementation for main-bridge node
 type MainBridgeAPI struct {
 	sc *MainBridge
@@ -106,7 +110,7 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 // SubscribeBridge enables the given service/main chain bridges to subscribe the events.
 func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
-		return errors.New("invalid bridge pair")
+		return ErrInvalidBridgePair
 	}
 
 	err := sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
@@ -142,7 +146,7 @@ func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Addre
 // UnsubscribeBridge disables the event subscription of the given service/main chain bridges.
 func (sbapi *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
-		return errors.New("invalid bridge pair")
+		return ErrInvalidBridgePair
 	}
 
 	sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
@@ -215,7 +219,7 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 
 func (sbapi *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
 	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
-		return errors.New("invalid bridge pair")
+		return ErrInvalidBridgePair
 	}
 
 	_, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
@@ -236,7 +240,7 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 	}
 
 	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
-		return errors.New("invalid bridge pair")
+		return ErrInvalidBridgePair
 	}
 
 	cBi.account.Lock()
