@@ -225,6 +225,28 @@ func (m *txSortedMap) FlattenByCount(count int64) types.Transactions {
 	return txs
 }
 
+// CachedTxsFlattenByCount returns a nonce-sorted slice including at most
+// a requested number of cached in case it's requested again before any
+// modifications are made to the contents.
+func (m *txSortedMap) CachedTxsFlattenByCount(count int) types.Transactions {
+	if count <= 0 {
+		return nil
+	}
+	// If the sorting was not cached yet, create and cache it
+	if m.cache == nil {
+		m.cache = make(types.Transactions, 0, len(m.items))
+		for _, tx := range m.items {
+			m.cache = append(m.cache, tx)
+		}
+		sort.Sort(types.TxByNonce(m.cache))
+	}
+	txLen := len(m.cache)
+	if count != 0 && txLen > count {
+		txLen = count
+	}
+	return m.cache[:txLen]
+}
+
 // txList is a "list" of transactions belonging to an account, sorted by account
 // nonce. The same type can be used both for storing contiguous transactions for
 // the executable/pending queue; and for storing gapped transactions for the non-
@@ -406,6 +428,10 @@ func (l *txList) Flatten() types.Transactions {
 
 func (l *txList) FlattenByCount(count int64) types.Transactions {
 	return l.txs.FlattenByCount(count)
+}
+
+func (l *txList) CachedTxsFlattenByCount(count int) types.Transactions {
+	return l.txs.CachedTxsFlattenByCount(count)
 }
 
 // priceHeap is a heap.Interface implementation over transactions for retrieving

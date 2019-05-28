@@ -572,6 +572,46 @@ func (pool *TxPool) PendingByCount(count int64) (map[common.Address]types.Transa
 	return pending, nil
 }
 
+// CachedPendingTxByCount retrieves about number of currently processable transactions
+// by requested count, grouped by origin account and sorted by nonce.
+func (pool *TxPool) CachedPendingTxsByCount(count int) types.Transactions {
+	if count <= 0 {
+		return nil
+	}
+
+	// It retrieves the half of the requested transaction recursively for returned
+	// transactions much as possible.
+	txPerAddr := count / 2
+	if txPerAddr == 0 {
+		txPerAddr = 1
+	}
+
+	pending := make(types.Transactions, 0, count)
+
+	pool.txMu.Lock()
+	defer pool.txMu.Unlock()
+
+	if len(pool.pending) == 0 {
+		return nil
+	}
+
+	for _, list := range pool.pending {
+		pendingPerAccount := list.CachedTxsFlattenByCount(txPerAddr)
+
+		pending = append(pending, pendingPerAccount...)
+		if len(pending) >= count {
+			break
+		}
+
+		if len(pendingPerAccount) >= txPerAddr {
+			if txPerAddr > 1 {
+				txPerAddr = txPerAddr / 2
+			}
+		}
+	}
+	return pending
+}
+
 // local retrieves all currently known local transactions, groupped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
