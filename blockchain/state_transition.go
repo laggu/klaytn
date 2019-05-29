@@ -183,7 +183,7 @@ func (st *StateTransition) buyGas() error {
 	} else {
 		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
 		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
-			return errInsufficientBalanceForGas
+			return errInsufficientBalanceForGasFeePayer
 		}
 
 		st.state.SubBalance(validatedFeePayer, mgval)
