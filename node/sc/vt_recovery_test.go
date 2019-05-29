@@ -120,8 +120,8 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 		t.Fatal("fail to update value transfer hint")
 	}
 	t.Log("value transfer hint", vtr.service2mainHint)
-	assert.Equal(t, uint64(testTxCount-1), vtr.service2mainHint.requestNonce) // nonce begins at zero.
-	assert.Equal(t, uint64(testTxCount-1-testPendingCount), vtr.service2mainHint.handleNonce)
+	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
 
 	// 3. Request events by using the hint.
 	err = vtr.retrievePendingEvents()

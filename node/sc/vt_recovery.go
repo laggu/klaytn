@@ -183,6 +183,11 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *bridge.Brid
 	var err error
 	var hint valueTransferHint
 
+	logger.Trace("updateRecoveryHintFromTo start")
+	if prevHint != nil {
+		logger.Trace("recovery prevHint", "rnonce", prevHint.requestNonce, "hnonce", prevHint.handleNonce, "phnonce", prevHint.prevHandleNonce, "cand", prevHint.candidate)
+	}
+
 	hint.blockNumber, err = to.LastHandledRequestBlockNumber(nil)
 	if err != nil {
 		return nil, err
@@ -192,21 +197,19 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *bridge.Brid
 	if err != nil {
 		return nil, err
 	}
-	if requestNonce > 0 {
-		hint.requestNonce = requestNonce - 1 // -1 to get a nonce in the logs.
-	}
+	hint.requestNonce = requestNonce
 
 	handleNonce, err := to.HandleNonce(nil)
 	if err != nil {
 		return nil, err
 	}
-	if handleNonce > 0 {
-		if prevHint != nil {
-			hint.prevHandleNonce = prevHint.handleNonce
-			hint.candidate = prevHint.candidate
-		}
-		hint.handleNonce = handleNonce - 1 // -1 to get a nonce in the logs.
+	if prevHint != nil {
+		hint.prevHandleNonce = prevHint.handleNonce
+		hint.candidate = prevHint.candidate
 	}
+	hint.handleNonce = handleNonce
+
+	logger.Trace("updateRecoveryHintFromTo finish", "rnonce", hint.requestNonce, "hnonce", hint.handleNonce, "phnonce", hint.prevHandleNonce, "cand", hint.candidate)
 
 	return &hint, nil
 }
@@ -251,7 +254,7 @@ func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*b
 	}
 	for it.Next() {
 		logger.Trace("pending nonce in the event", "requestNonce", it.Event.RequestNonce)
-		if it.Event.RequestNonce > hint.handleNonce {
+		if it.Event.RequestNonce >= hint.handleNonce {
 			logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
 			pendingEvents = append(pendingEvents, it.Event)
 		}
