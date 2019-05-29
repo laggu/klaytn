@@ -1094,3 +1094,142 @@ func (t *TestRoleBasedAccountType) GetValidationGas(r accountkey.RoleType) uint6
 func (t *TestRoleBasedAccountType) AddNonce() {
 	t.Nonce += 1
 }
+
+// TestGasCalculationOfFeeDelegationTxFromNonExistingSender tests gas calculation of fee delegation txs having non-existing sender.
+// In the case, the fee payer should pay additional fee for creating an account.
+func TestGasCalculationOfFeeDelegationTxFromNonExistingSender(t *testing.T) {
+	var feeTxTypes = []types.TxType{
+		types.TxTypeFeeDelegatedValueTransfer,
+		types.TxTypeFeeDelegatedValueTransferMemo,
+		types.TxTypeFeeDelegatedAccountUpdate,
+		types.TxTypeFeeDelegatedSmartContractDeploy,
+		types.TxTypeFeeDelegatedSmartContractExecution,
+		types.TxTypeFeeDelegatedCancel,
+	}
+
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	assert.Equal(t, nil, err)
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// For smart contract
+	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	assert.Equal(t, nil, err)
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).SetUint64(0)
+		to := contract.GetAddr()
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &to,
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	for _, feeTxType := range feeTxTypes {
+		sender := genKlaytnLegacyAccount(t)
+
+		valueMap, intrinsicGas := genMapForTxTypes(sender, reservoir, feeTxType)
+		valueMap[types.TxValueKeyFeePayer] = reservoir.GetAddr()
+		if valueMap[types.TxValueKeyAmount] != nil {
+			valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(0)
+			// Adjust intrinsicGas because the contract execution fee is depend on the amount of tx
+			if feeTxType == types.TxTypeFeeDelegatedSmartContractExecution {
+				intrinsicGas -= 30000
+			}
+		}
+		if valueMap[types.TxValueKeyAccountKey] != nil {
+			newAccount, gasKey, readable := genNewAccountWithGas(t, sender, types.TxTypeAccountCreation)
+			valueMap[types.TxValueKeyAccountKey] = newAccount.GetAccKey()
+			intrinsicGas += gasKey
+			if readable {
+				intrinsicGas += params.TxGasHumanReadable
+			}
+		}
+
+		tx, err := types.NewTransactionWithMap(feeTxType, valueMap)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, sender.GetTxKeys())
+		assert.Equal(t, nil, err)
+
+		tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// Fee delegation tx having non-existing sender will be charged additional creation fee
+		intrinsicGas += params.TxGasAccountCreation
+
+		// Gas calculation check
+		{
+			receipt, gas, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, nil, err)
+			assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
+			assert.Equal(t, intrinsicGas, gas)
+		}
+
+		// Sender object creation check
+		{
+			state, err := bcdata.bc.State()
+			assert.Equal(t, nil, err)
+
+			assert.Equal(t, false, state.Exist(sender.GetAddr()))
+
+			if err := bcdata.GenABlockWithTransactions(accountMap, types.Transactions{tx}, prof); err != nil {
+				t.Fatal(err)
+			}
+			sender.AddNonce()
+
+			state, err = bcdata.bc.State()
+			assert.Equal(t, nil, err)
+
+			assert.Equal(t, true, state.Exist(sender.GetAddr()))
+			assert.Equal(t, sender.GetNonce(), state.GetNonce(sender.GetAddr()))
+		}
+	}
+}

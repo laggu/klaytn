@@ -65,10 +65,8 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	numAddrs := len(toAddrs)
 
 	txs := make(types.Transactions, 0, numTransactions)
-	nonce, err := accountMap.GetNonce(from)
-	if err != nil {
-		return nil, err
-	}
+	nonce := accountMap.GetNonce(from)
+
 	for i := 0; i < numTransactions; i++ {
 		a := toAddrs[i%numAddrs]
 		txamount := amount
@@ -99,13 +97,9 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 	fromAddrs := bcdata.addrs[:numAddrs]
 	toAddrs := bcdata.addrs[numAddrs:]
 
-	var err error
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i], err = accountMap.GetNonce(*addr)
-		if err != nil {
-			return nil, err
-		}
+		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)
@@ -143,13 +137,9 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
-	var err error
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i], err = accountMap.GetNonce(*addr)
-		if err != nil {
-			return nil, err
-		}
+		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)
@@ -193,14 +183,10 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 	amount *big.Int, data []byte) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
-
-	var err error
 	fromNonces := make([]uint64, numAddrs)
+
 	for i, addr := range fromAddrs {
-		fromNonces[i], err = accountMap.GetNonce(*addr)
-		if err != nil {
-			return nil, err
-		}
+		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)
@@ -257,13 +243,9 @@ func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer ty
 		return nil, fmt.Errorf("numTranasctions should be divided by numAddrs! numTransactions: %v, numAddrs: %v", numTransactions, numAddrs)
 	}
 
-	var err error
 	fromNonces := make([]uint64, numAddrs)
 	for i, addr := range fromAddrs {
-		fromNonces[i], err = accountMap.GetNonce(*addr)
-		if err != nil {
-			return nil, err
-		}
+		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
 
 	txs := make(types.Transactions, 0, numTransactions)

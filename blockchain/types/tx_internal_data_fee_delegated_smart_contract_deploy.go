@@ -402,10 +402,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	if common.IsPrecompiledContractAddress(to) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
-	}
 	// Fail if the codeFormat is invalid.
 	if !t.CodeFormat.Validate() {
 		return kerrors.ErrInvalidCodeFormat

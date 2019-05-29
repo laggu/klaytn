@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
+	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"math/big"
@@ -395,12 +396,17 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	tx.checkNonce = true
 
 	if tx.IsFeeDelegatedTransaction() {
+		gasFeePayerForAccCreation := uint64(0)
+		if !picker.Exist(tx.validatedSender) {
+			gasFeePayerForAccCreation = params.TxGasAccountCreation
+		}
+
 		gasFeePayer, err := tx.ValidateFeePayer(s, picker, currentBlockNumber)
 		if err != nil {
 			return nil, err
 		}
 
-		tx.validatedIntrinsicGas += gasFeePayer
+		tx.validatedIntrinsicGas += gasFeePayer + gasFeePayerForAccCreation
 	}
 
 	return tx, err

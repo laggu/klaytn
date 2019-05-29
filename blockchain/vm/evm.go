@@ -438,9 +438,9 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
-	// Ensure there's no existing contract already at the designated address
-	nonce := evm.StateDB.GetNonce(caller.Address())
-	evm.StateDB.SetNonce(caller.Address(), nonce+1)
+
+	// Increasing nonce since a failed tx with one of following error will be loaded on a block.
+	evm.StateDB.IncNonce(caller.Address())
 
 	if evm.StateDB.Exist(address) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
@@ -448,6 +448,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if common.IsPrecompiledContractAddress(address) {
 		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
 	}
+
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
 	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer

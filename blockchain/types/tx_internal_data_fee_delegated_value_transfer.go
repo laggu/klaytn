@@ -316,10 +316,6 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, curr
 	if common.IsPrecompiledContractAddress(t.Recipient) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
-	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 

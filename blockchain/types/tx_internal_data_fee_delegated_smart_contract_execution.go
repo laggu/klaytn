@@ -339,10 +339,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// Fail if the sender does not exist.
-	if !stateDB.Exist(t.From) {
-		return errValueKeySenderUnknown
-	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 

@@ -70,6 +70,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // AccountKeyPicker has a function GetKey() to retrieve an account key from statedb.
 type AccountKeyPicker interface {
 	GetKey(address common.Address) accountkey.AccountKey
+	Exist(addr common.Address) bool
 }
 
 // Sender returns the address of the transaction.

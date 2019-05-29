@@ -2,7 +2,6 @@ package tests
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
@@ -26,42 +25,43 @@ func toBasicType(txType types.TxType) types.TxType {
 	return txType &^ ((1 << types.SubTxTypeBits) - 1)
 }
 
-func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) txValueMap {
+func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (txValueMap, uint64) {
 	var valueMap txValueMap
+	gas := uint64(0)
 	gasPrice := big.NewInt(25 * params.Ston)
 	newAccount, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 	if err != nil {
-		return nil
+		return nil, 0
 	}
 	contractAccount, err := createDefaultAccount(accountkey.AccountKeyTypeFail)
 	if err != nil {
-		return nil
+		return nil, 0
 	}
 	contractAccount.Addr, err = common.FromHumanReadableAddress("contract.klaytn")
 	if err != nil {
-		return nil
+		return nil, 0
 	}
 
 	// switch to basic tx type representation and generate a map
 	switch toBasicType(txType) {
 	case types.TxTypeLegacyTransaction:
-		valueMap, _ = genMapForLegacyTransaction(from, to, gasPrice, txType)
+		valueMap, gas = genMapForLegacyTransaction(from, to, gasPrice, txType)
 	case types.TxTypeValueTransfer:
-		valueMap, _ = genMapForValueTransfer(from, to, gasPrice, txType)
+		valueMap, gas = genMapForValueTransfer(from, to, gasPrice, txType)
 	case types.TxTypeValueTransferMemo:
-		valueMap, _ = genMapForValueTransferWithMemo(from, to, gasPrice, txType)
+		valueMap, gas = genMapForValueTransferWithMemo(from, to, gasPrice, txType)
 	case types.TxTypeAccountCreation:
-		valueMap, _ = genMapForCreate(from, newAccount, gasPrice, txType)
+		valueMap, gas = genMapForCreate(from, newAccount, gasPrice, txType)
 	case types.TxTypeAccountUpdate:
-		valueMap, _ = genMapForUpdate(from, to, gasPrice, newAccount.AccKey, txType)
+		valueMap, gas = genMapForUpdate(from, to, gasPrice, newAccount.AccKey, txType)
 	case types.TxTypeSmartContractDeploy:
-		valueMap, _ = genMapForDeploy(from, nil, gasPrice, txType)
+		valueMap, gas = genMapForDeploy(from, nil, gasPrice, txType)
 	case types.TxTypeSmartContractExecution:
-		valueMap, _ = genMapForExecution(from, contractAccount, gasPrice, txType)
+		valueMap, gas = genMapForExecution(from, contractAccount, gasPrice, txType)
 	case types.TxTypeCancel:
-		valueMap, _ = genMapForCancel(from, gasPrice, txType)
+		valueMap, gas = genMapForCancel(from, gasPrice, txType)
 	case types.TxTypeChainDataAnchoring:
-		valueMap, _ = genMapForChainDataAnchoring(from, gasPrice, txType)
+		valueMap, gas = genMapForChainDataAnchoring(from, gasPrice, txType)
 	}
 
 	if txType.IsFeeDelegatedTransaction() {
@@ -72,7 +72,7 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) txV
 		valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 	}
 
-	return valueMap
+	return valueMap, gas
 }
 
 // TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
@@ -188,7 +188,7 @@ func TestValidationPoolInsert(t *testing.T) {
 		// generate invalid txs and check the return error
 		for _, invalidCase := range invalidCases {
 			// generate a new tx and mutate it
-			valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 			invalidMap, expectedErr := invalidCase.fn(txType, valueMap)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
@@ -454,7 +454,6 @@ func TestValidationPoolInsert2(t *testing.T) {
 	}{
 		{"invalidSender", testInvalidSenderSig},
 		{"invalidFeePayer", testInvalidFeePayerSig},
-		{"invalidUnknownSender", testFeeDelegatedTxFromNonExistingAcc},
 	}
 
 	prof := profile.NewProfiler()
@@ -545,7 +544,7 @@ func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAcco
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
 
-		valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 		tx, err := types.NewTransactionWithMap(txType, valueMap)
 		assert.Equal(t, nil, err)
 
@@ -567,7 +566,7 @@ func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAc
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
 
-		valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 		tx, err := types.NewTransactionWithMap(txType, valueMap)
 		assert.Equal(t, nil, err)
 
@@ -578,35 +577,6 @@ func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAc
 		assert.Equal(t, nil, err)
 
 		return tx, blockchain.ErrInvalidFeePayer
-	}
-	return nil, nil
-}
-
-// testFeeDelegatedTxFromNonExistingAcc generates fee-delegation txs from a non-existing account.
-func testFeeDelegatedTxFromNonExistingAcc(t *testing.T, txType types.TxType, reservoir *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
-	nonExistingAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
-	assert.Equal(t, nil, err)
-
-	// Only fee-delegation txs without ratio will be tested since other tx types will be invalidated by the balance check
-	if txType.IsFeeDelegatedTransaction() && !txType.IsFeeDelegatedWithRatioTransaction() {
-		// re-declare the error since types.errValueKeySenderUnknown is a private variable.
-		errValueKeySenderUnknown := errors.New("The sender account should be exist in Klaytn to send this transaction")
-
-		valueMap := genMapForTxTypes(nonExistingAcc, reservoir, txType)
-		valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
-		if valueMap[types.TxValueKeyAmount] != nil {
-			valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(0)
-		}
-		tx, err := types.NewTransactionWithMap(txType, valueMap)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, nonExistingAcc.Keys)
-		assert.Equal(t, nil, err)
-
-		tx.SignFeePayerWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		return tx, errValueKeySenderUnknown
 	}
 	return nil, nil
 }
@@ -650,7 +620,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	var txs types.Transactions
 	acc1, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 
-	valueMap := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
+	valueMap, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
 	valueMap[types.TxValueKeyTo] = acc1.Addr
 	valueMap[types.TxValueKeyAccountKey] = acc1.AccKey
 
@@ -667,7 +637,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	}
 	reservoir.AddNonce()
 
-	valueMap = genMapForTxTypes(acc1, reservoir, types.TxTypeLegacyTransaction)
+	valueMap, _ = genMapForTxTypes(acc1, reservoir, types.TxTypeLegacyTransaction)
 	tx, err = types.NewTransactionWithMap(types.TxTypeLegacyTransaction, valueMap)
 	assert.Equal(t, nil, err)
 
@@ -785,7 +755,7 @@ func TestInvalidBalance(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		valueMapForCreation := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
+		valueMapForCreation, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
 		valueMapForCreation[types.TxValueKeyTo] = testAcc.Addr
 		valueMapForCreation[types.TxValueKeyAccountKey] = testAcc.AccKey
 		valueMapForCreation[types.TxValueKeyAmount] = cost
@@ -811,7 +781,7 @@ func TestInvalidBalance(t *testing.T) {
 		if !txType.IsFeeDelegatedTransaction() {
 			// tx with a specific amount or a gasLimit requiring more KLAY than the sender has.
 			{
-				valueMap := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit + 1 // requires 1 more gas
@@ -831,7 +801,7 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific amount or a gasLimit requiring the exact KLAY the sender has.
 			{
-				valueMap := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit
@@ -856,7 +826,7 @@ func TestInvalidBalance(t *testing.T) {
 		if txType.IsFeeDelegatedTransaction() && !txType.IsFeeDelegatedWithRatioTransaction() {
 			// tx with a specific amount requiring more KLAY than the sender has.
 			{
-				valueMap := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 					valueMap[types.TxValueKeyAmount] = new(big.Int).Add(cost, new(big.Int).SetUint64(1)) // requires 1 more amount
@@ -877,7 +847,7 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific gasLimit (or amount) requiring more KLAY than the feePayer has.
 			{
-				valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64()) + 1 // requires 1 more gas
 
@@ -896,7 +866,7 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific amount requiring the exact KLAY the sender has.
 			{
-				valueMap := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 					valueMap[types.TxValueKeyAmount] = cost
@@ -920,7 +890,7 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific gasLimit (or amount) requiring the exact KLAY the feePayer has.
 			{
-				valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64())
 
@@ -944,7 +914,7 @@ func TestInvalidBalance(t *testing.T) {
 		if txType.IsFeeDelegatedWithRatioTransaction() {
 			// tx with a specific amount and a gasLimit requiring more KLAY than the sender has.
 			{
-				valueMap := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
 				if valueMap[types.TxValueKeyAmount] != nil {
@@ -973,7 +943,7 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific amount and a gasLimit requiring more KLAY than the feePayer has.
 			{
-				valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
 				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio
@@ -995,7 +965,7 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific amount and a gasLimit requiring the exact KLAY the sender has.
 			{
-				valueMap := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
 				if valueMap[types.TxValueKeyAmount] != nil {
@@ -1027,7 +997,7 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific amount and a gasLimit requiring the exact KLAY the feePayer has.
 			{
-				valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
 				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio

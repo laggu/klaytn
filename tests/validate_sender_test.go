@@ -157,8 +157,7 @@ func TestValidateSenderContract(t *testing.T) {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	assert.Equal(t, nil, err)
 
-	n, err := accountMap.GetNonce(*bcdata.addrs[0])
-	assert.Equal(t, nil, err)
+	n := accountMap.GetNonce(*bcdata.addrs[0])
 
 	// 4. Check if the validation is successful with valid parameters of multisig.
 	{

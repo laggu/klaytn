@@ -64,12 +64,12 @@ func (a *AccountMap) SubBalance(addr common.Address, v *big.Int) error {
 	return nil
 }
 
-func (a *AccountMap) GetNonce(addr common.Address) (uint64, error) {
+func (a *AccountMap) GetNonce(addr common.Address) uint64 {
 	if acc, ok := a.m[addr]; ok {
-		return acc.nonce, nil
+		return acc.nonce
 	}
-
-	return 0, fmt.Errorf("trying to get nonce from an uninitialized address (%s)", addr.Hex())
+	// 'StateDB.GetNonce' returns 0 when the address doesn't exist
+	return 0
 }
 
 func (a *AccountMap) IncNonce(addr common.Address) {
@@ -125,10 +125,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 			feePayer = tx.ValidatedFeePayer()
 		}
 		if to == nil {
-			nonce, err := a.GetNonce(from)
-			if err != nil {
-				return err
-			}
+			nonce := a.GetNonce(from)
 			codeHash := crypto.Keccak256Hash(tx.Data())
 			addr := crypto.CreateAddress(from, nonce, codeHash)
 			to = &addr

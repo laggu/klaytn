@@ -169,6 +169,10 @@ func (a *AccountKeyPickerForTest) SetKey(addr common.Address, key accountkey.Acc
 	a.AddrKeyMap[addr] = key
 }
 
+func (a *AccountKeyPickerForTest) Exist(addr common.Address) bool {
+	return a.AddrKeyMap[addr] != nil
+}
+
 type testTx func(t *testing.T)
 
 // TestValidateTransaction tests validation process of transactions.

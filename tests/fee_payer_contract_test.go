@@ -114,8 +114,7 @@ func testFeePayerContract(t *testing.T, fn string) {
 			t.Fatal(err)
 		}
 
-		n, err := accountMap.GetNonce(*bcdata.addrs[0])
-		assert.Equal(t, nil, err)
+		n := accountMap.GetNonce(*bcdata.addrs[0])
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    n,
@@ -200,8 +199,7 @@ func testFeePayerContractIndirect(t *testing.T, fn string) {
 			t.Fatal(err)
 		}
 
-		n, err := accountMap.GetNonce(*bcdata.addrs[0])
-		assert.Equal(t, nil, err)
+		n := accountMap.GetNonce(*bcdata.addrs[0])
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractExecution, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    n,

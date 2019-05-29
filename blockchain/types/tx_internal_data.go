@@ -94,7 +94,6 @@ var (
 	errValueKeyFeePayerMustAddress       = errors.New("FeePayer must be a type of common.Address")
 	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
-	errValueKeySenderUnknown             = errors.New("The sender account should be exist in Klaytn to send this transaction")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 )
 

@@ -632,6 +632,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
+	gasFeePayerForAccCreation := uint64(0)
 
 	// TODO-Klaytn-ServiceChain: do not prevent new account creation after proper account sync.
 	if pool.config.NoAccountCreation && tx.Type().IsAccountCreation() {
@@ -701,6 +702,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 				return ErrInsufficientFundsFeePayer
 			}
 		} else {
+			if !pool.currentState.Exist(from) {
+				gasFeePayerForAccCreation = params.TxGasAccountCreation
+			}
 			if senderBalance.Cmp(tx.Value()) < 0 {
 				logger.Trace("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
 				return ErrInsufficientFundsFrom
@@ -720,7 +724,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
-	intrGas += gasFrom + gasFeePayer
+	intrGas += gasFrom + gasFeePayer + gasFeePayerForAccCreation
 	if err != nil {
 		return err
 	}
