@@ -30,6 +30,7 @@ var (
 	propTxnInTrafficMeter     = metrics.NewRegisteredMeter("klay/prop/txns/in/traffic", nil)
 	propTxnOutPacketsMeter    = metrics.NewRegisteredMeter("klay/prop/txns/out/packets", nil)
 	propTxnOutTrafficMeter    = metrics.NewRegisteredMeter("klay/prop/txns/out/traffic", nil)
+	propTxPeersGauge          = metrics.NewRegisteredGauge("klay/prop/tx/peers/gauge", nil)
 	propHashInPacketsMeter    = metrics.NewRegisteredMeter("klay/prop/hashes/in/packets", nil)
 	propHashInTrafficMeter    = metrics.NewRegisteredMeter("klay/prop/hashes/in/traffic", nil)
 	propHashOutPacketsMeter   = metrics.NewRegisteredMeter("klay/prop/hashes/out/packets", nil)

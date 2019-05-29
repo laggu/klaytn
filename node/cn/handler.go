@@ -1139,6 +1139,7 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 
+	propTxPeersGauge.Update(int64(len(txset)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs := range txset {
 		//peer.SendTransactions(txs)
@@ -1189,6 +1190,8 @@ func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) 
 			txSendCounter.Inc(1)
 		}
 	}
+
+	propTxPeersGauge.Update(int64(len(txset) + len(cntxset)))
 
 	if resend {
 		for peer, txs := range txset {
