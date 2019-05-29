@@ -249,17 +249,20 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	var weights []int64
 	var proposers []common.Address
 	var proposersBlockNum uint64
+	var validators []common.Address
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if s.ValSet.Policy() == istanbul.WeightedRandom {
-		rewardAddrs, votingPowers, weights, proposers, proposersBlockNum = validator.GetWeightedCouncilData(s.ValSet)
+		validators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum = validator.GetWeightedCouncilData(s.ValSet)
+	} else {
+		validators = s.validators()
 	}
 
 	return &snapshotJSON{
 		Epoch:             s.Epoch,
 		Number:            s.Number,
 		Hash:              s.Hash,
-		Validators:        s.validators(),
+		Validators:        validators,
 		Policy:            istanbul.ProposerPolicy(s.Policy),
 		SubGroupSize:      s.CommitteeSize,
 		RewardAddrs:       rewardAddrs,

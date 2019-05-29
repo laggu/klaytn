@@ -203,7 +203,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	return valSet
 }
 
-func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.Address, votingPowers []uint64, weights []int64, proposers []common.Address, proposersBlockNum uint64) {
+func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.Address, rewardAddrs []common.Address, votingPowers []uint64, weights []int64, proposers []common.Address, proposersBlockNum uint64) {
 
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
@@ -213,11 +213,13 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (rewardAddrs []common.
 
 	if weightedCouncil.Policy() == istanbul.WeightedRandom {
 		numVals := len(weightedCouncil.validators)
+		validators = make([]common.Address, numVals)
 		rewardAddrs = make([]common.Address, numVals)
 		votingPowers = make([]uint64, numVals)
 		weights = make([]int64, numVals)
 		for i, val := range weightedCouncil.List() {
 			weightedVal := val.(*weightedValidator)
+			validators[i] = weightedVal.address
 			rewardAddrs[i] = weightedVal.rewardAddress
 			votingPowers[i] = weightedVal.votingPower
 			weights[i] = atomic.LoadInt64(&weightedVal.weight)
