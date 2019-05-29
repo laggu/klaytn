@@ -131,7 +131,7 @@ type Config struct {
 
 	// Tx Resending options
 	TxResendInterval  uint64
-	TxResendCount     uint64
+	TxResendCount     int
 	TxResendUseLegacy bool
 }
 

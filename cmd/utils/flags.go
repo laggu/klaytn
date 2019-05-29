@@ -288,10 +288,10 @@ var (
 		Usage: "Set the transaction resend interval in seconds",
 		Value: uint64(cn.DefaultTxResendInterval),
 	}
-	TxResendCountFlag = cli.Uint64Flag{
+	TxResendCountFlag = cli.IntFlag{
 		Name:  "txresend.max-count",
 		Usage: "Set the max count of resending transactions",
-		Value: uint64(cn.DefaultMaxResendTxCount),
+		Value: cn.DefaultMaxResendTxCount,
 	}
 	//TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
 	TxResendUseLegacyFlag = cli.BoolFlag{
@@ -1271,7 +1271,7 @@ func setTxResendConfig(ctx *cli.Context, cfg *cn.Config) {
 		cfg.TxResendInterval = cn.DefaultTxResendInterval
 	}
 
-	cfg.TxResendCount = ctx.GlobalUint64(TxResendCountFlag.Name)
+	cfg.TxResendCount = ctx.GlobalInt(TxResendCountFlag.Name)
 	if cfg.TxResendCount < cn.DefaultMaxResendTxCount {
 		cfg.TxResendCount = cn.DefaultMaxResendTxCount
 	}
