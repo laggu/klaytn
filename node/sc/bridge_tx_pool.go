@@ -221,9 +221,8 @@ func (pool *BridgeTxPool) GetTx(txHash common.Hash) (*types.Transaction, error) 
 	}
 }
 
-// Pending retrieves all currently known local transactions, grouped by origin
-// account and sorted by nonce. The returned transaction set is a copy and can be
-// freely modified by calling code.
+// Pending retrieves all pending transactions, grouped by origin
+// account and sorted by nonce.
 func (pool *BridgeTxPool) Pending() map[common.Address]types.Transactions {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
@@ -235,9 +234,7 @@ func (pool *BridgeTxPool) Pending() map[common.Address]types.Transactions {
 	return pending
 }
 
-// PendingTxsByAddress retrieves pending transactions, grouped by origin
-// account and sorted by nonce. The returned transaction set is a copy and can be
-// freely modified by calling code.
+// PendingTxsByAddress retrieves pending transactions of from. They are sorted by nonce.
 func (pool *BridgeTxPool) PendingTxsByAddress(from *common.Address, limit int) types.Transactions {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
@@ -245,35 +242,24 @@ func (pool *BridgeTxPool) PendingTxsByAddress(from *common.Address, limit int) t
 	var pendingTxs types.Transactions
 
 	if list, exist := pool.queue[*from]; exist {
-		pendingTxs = list.Flatten()
-
-		if len(pendingTxs) > limit {
-			return pendingTxs[0:limit]
-		}
+		pendingTxs = list.FlattenByCount(limit)
 		return pendingTxs
 	}
 	return nil
 }
 
-// PendingTxHashsByAddress retrieves pending transaction hashes, grouped by origin
-// account and sorted by nonce. The returned hash set is a copy and can be
-// freely modified by calling code.
-func (pool *BridgeTxPool) PendingTxHashsByAddress(from *common.Address, limit int) []common.Hash {
+// PendingTxHashesByAddress retrieves pending transaction hashes of from. They are sorted by nonce.
+func (pool *BridgeTxPool) PendingTxHashesByAddress(from *common.Address, limit int) []common.Hash {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
 	if list, exist := pool.queue[*from]; exist {
-		pendingTxs := list.Flatten()
-
-		thisLimit := len(pendingTxs)
-		if limit > 0 && limit < thisLimit {
-			thisLimit = limit
+		pendingTxs := list.FlattenByCount(limit)
+		pendingTxHashes := make([]common.Hash, len(pendingTxs))
+		for i := 0; i < len(pendingTxs); i++ {
+			pendingTxHashes[i] = pendingTxs[i].Hash()
 		}
-		pendingTxHashs := make([]common.Hash, thisLimit)
-		for i := 0; i < thisLimit; i++ {
-			pendingTxHashs[i] = pendingTxs[i].Hash()
-		}
-		return pendingTxHashs
+		return pendingTxHashes
 	}
 	return nil
 }

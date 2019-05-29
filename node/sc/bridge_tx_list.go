@@ -128,10 +128,16 @@ func (m *bridgeTxSortedMap) Len() int {
 	return len(m.items)
 }
 
-// Flatten creates a nonce-sorted slice of transactions based on the loosely
+// Flatten returns a nonce-sorted slice of transactions based on the loosely
 // sorted internal representation. The result of the sorting is cached in case
 // it's requested again before any modifications are made to the contents.
 func (m *bridgeTxSortedMap) Flatten() types.Transactions {
+	return m.FlattenByCount(0)
+}
+
+// FlattenByCount returns requested number of nonce-sorted slice of cached
+// transactions. The result of the sorting is cached like as Flatten method.
+func (m *bridgeTxSortedMap) FlattenByCount(count int) types.Transactions {
 	// If the sorting was not cached yet, create and cache it
 	if m.cache == nil {
 		m.cache = make(types.Transactions, 0, len(m.items))
@@ -140,8 +146,9 @@ func (m *bridgeTxSortedMap) Flatten() types.Transactions {
 		}
 		sort.Sort(types.TxByNonce(m.cache))
 	}
-	// Copy the cache to prevent accidental modifications
-	txs := make(types.Transactions, len(m.cache))
-	copy(txs, m.cache)
-	return txs
+	txLen := len(m.cache)
+	if count != 0 && txLen > count {
+		txLen = count
+	}
+	return m.cache[:txLen]
 }

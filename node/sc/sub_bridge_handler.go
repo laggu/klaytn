@@ -318,7 +318,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	if parentChainID == nil {
 		logger.Error("unexpected nil parentChainID while broadcastServiceChainTx")
 	}
-	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(sbh.MainChainAccountAddr, (int)(sbh.GetSentChainTxsLimit()))
+	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(sbh.MainChainAccountAddr, int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
 	peers := sbh.subbridge.BridgePeerSet().peers
 
 	for _, peer := range peers {
@@ -377,7 +377,7 @@ func (sbh *SubBridgeHandler) RegisterNewPeer(p BridgePeer) error {
 
 // broadcastServiceChainReceiptRequest broadcasts receipt requests for service chain transactions.
 func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
-	hashes := sbh.subbridge.GetBridgeTxPool().PendingTxHashsByAddress(sbh.GetMainChainAccountAddr(), (int)(sbh.GetSentChainTxsLimit()))
+	hashes := sbh.subbridge.GetBridgeTxPool().PendingTxHashesByAddress(sbh.GetMainChainAccountAddr(), int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
 	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
 		peer.SendServiceChainReceiptRequest(hashes)
 		logger.Debug("sent ServiceChainReceiptRequest", "peerID", peer.GetID(), "numReceiptsRequested", len(hashes))
