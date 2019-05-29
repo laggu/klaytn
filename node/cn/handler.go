@@ -840,7 +840,11 @@ func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 
 // handleNewBlockHashesMsg handles new block hashes message.
 func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
-	var announces newBlockHashesData
+	var (
+		announces     newBlockHashesData
+		maxTD         uint64
+		candidateHash *common.Hash
+	)
 	if err := msg.Decode(&announces); err != nil {
 		return errResp(ErrDecode, "%v: %v", msg, err)
 	}
@@ -849,9 +853,17 @@ func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	for _, block := range announces {
 		p.AddToKnownBlocks(block.Hash)
 
+		if maxTD < block.Number {
+			maxTD = block.Number
+			candidateHash = &block.Hash
+		}
 		if !pm.blockchain.HasBlock(block.Hash, block.Number) {
 			pm.fetcher.Notify(p.GetID(), block.Hash, block.Number, time.Now(), p.FetchBlockHeader, p.FetchBlockBodies)
 		}
+	}
+	blockTD := big.NewInt(int64(maxTD))
+	if _, td := p.Head(); blockTD.Cmp(td) > 0 && candidateHash != nil {
+		p.SetHead(*candidateHash, blockTD)
 	}
 	return nil
 }
