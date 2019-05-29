@@ -50,8 +50,8 @@ var (
 	errAlreadySubscribed    = errors.New("already subscribed")
 )
 
-// RequestValueTransfer Event from SmartContract
-type TokenReceivedEvent struct {
+// RequestValueTransferEvent from Bridge contract
+type RequestValueTransferEvent struct {
 	TokenType    uint8
 	ContractAddr common.Address
 	TokenAddr    common.Address
@@ -63,8 +63,8 @@ type TokenReceivedEvent struct {
 	txHash       common.Hash
 }
 
-// TokenWithdraw Event from SmartContract
-type TokenTransferEvent struct {
+// HandleValueTransferEvent from Bridge contract
+type HandleValueTransferEvent struct {
 	TokenType    uint8
 	ContractAddr common.Address
 	TokenAddr    common.Address
@@ -186,7 +186,7 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 }
 
 // handleRequestValueTransferEvent handles the given request value transfer event.
-func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *TokenReceivedEvent) error {
+func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEvent) error {
 	tokenType := ev.TokenType
 	tokenAddr := bi.subBridge.AddressManager().GetCounterPartToken(ev.TokenAddr)
 	if tokenType != KLAY && tokenAddr == (common.Address{}) {
@@ -246,6 +246,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *TokenReceivedEvent) er
 // UpdateRequestedNonce updates the requested nonce with new nonce.
 func (bi *BridgeInfo) UpdateRequestedNonce(nonce uint64) {
 	if bi.requestedNonce < nonce {
+		vtRequestNonceCount.Inc(int64(nonce - bi.requestedNonce))
 		bi.requestedNonce = nonce
 	}
 }
@@ -253,12 +254,13 @@ func (bi *BridgeInfo) UpdateRequestedNonce(nonce uint64) {
 // UpdateHandledNonce updates the handled nonce with new nonce.
 func (bi *BridgeInfo) UpdateHandledNonce(nonce uint64) {
 	if bi.handledNonce < nonce {
+		vtHandleNonceCount.Inc(int64(nonce - bi.handledNonce))
 		bi.handledNonce = nonce
 	}
 }
 
 // AddRequestValueTransferEvents adds events into the pendingRequestEvent.
-func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*TokenReceivedEvent) {
+func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferEvent) {
 	bi.mu.Lock()
 	defer bi.mu.Unlock()
 	// TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
@@ -268,6 +270,8 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*TokenReceivedEvent) {
 		bi.pendingRequestEvent.Put(ev)
 	}
 
+	vtPendingRequestEventMeter.Inc(int64(len(evs)))
+
 	select {
 	case bi.newEvent <- struct{}{}:
 	default:
@@ -275,10 +279,12 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*TokenReceivedEvent) {
 }
 
 // GetReadyRequestValueTransferEvents returns the processable events with the increasing nonce.
-func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*TokenReceivedEvent {
+func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*RequestValueTransferEvent {
 	bi.mu.Lock()
 	defer bi.mu.Unlock()
-	return bi.pendingRequestEvent.Ready(bi.nextHandleNonce)
+	ready := bi.pendingRequestEvent.Ready(bi.nextHandleNonce)
+	vtPendingRequestEventMeter.Dec(int64(len(ready)))
+	return ready
 }
 
 // DecodeRLP decodes the Klaytn
@@ -372,12 +378,12 @@ func (bm *BridgeManager) LogBridgeStatus() {
 }
 
 // SubscribeTokenReceived registers a subscription of TokenReceivedEvent.
-func (bm *BridgeManager) SubscribeTokenReceived(ch chan<- TokenReceivedEvent) event.Subscription {
+func (bm *BridgeManager) SubscribeTokenReceived(ch chan<- RequestValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.tokenReceived.Subscribe(ch))
 }
 
 // SubscribeTokenWithDraw registers a subscription of TokenTransferEvent.
-func (bm *BridgeManager) SubscribeTokenWithDraw(ch chan<- TokenTransferEvent) event.Subscription {
+func (bm *BridgeManager) SubscribeTokenWithDraw(ch chan<- HandleValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.tokenWithdraw.Subscribe(ch))
 }
 
@@ -688,7 +694,7 @@ func (bm *BridgeManager) loop(
 	for {
 		select {
 		case ev := <-receivedCh:
-			receiveEvent := TokenReceivedEvent{
+			receiveEvent := RequestValueTransferEvent{
 				TokenType:    ev.Kind,
 				ContractAddr: addr,
 				TokenAddr:    ev.ContractAddress,
@@ -701,7 +707,7 @@ func (bm *BridgeManager) loop(
 			}
 			bm.tokenReceived.Send(receiveEvent)
 		case ev := <-withdrawCh:
-			withdrawEvent := TokenTransferEvent{
+			withdrawEvent := HandleValueTransferEvent{
 				TokenType:    ev.Kind,
 				ContractAddr: addr,
 				TokenAddr:    ev.ContractAddress,

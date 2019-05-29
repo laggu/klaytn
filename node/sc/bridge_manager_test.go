@@ -179,8 +179,8 @@ func TestBridgeManager(t *testing.T) {
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
 
-	tokenCh := make(chan TokenReceivedEvent)
-	tokenSendCh := make(chan TokenTransferEvent)
+	tokenCh := make(chan RequestValueTransferEvent)
+	tokenSendCh := make(chan HandleValueTransferEvent)
 	bridgeManager.SubscribeTokenReceived(tokenCh)
 	bridgeManager.SubscribeTokenWithDraw(tokenSendCh)
 

@@ -298,12 +298,13 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 		vtr.mainChainEvents = []*bridge.BridgeRequestValueTransfer{}
 	}()
 
-	var evs []*TokenReceivedEvent
+	var evs []*RequestValueTransferEvent
+
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	logger.Warn("try to recover service chain's value transfer events", "len(events)", len(vtr.serviceChainEvents))
 	for _, ev := range vtr.serviceChainEvents {
 		logger.Trace("recover event", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
-		evs = append(evs, &TokenReceivedEvent{
+		evs = append(evs, &RequestValueTransferEvent{
 			TokenType:    ev.Kind,
 			ContractAddr: ev.Raw.Address,
 			TokenAddr:    ev.ContractAddress,
@@ -315,14 +316,17 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 			txHash:       ev.Raw.TxHash,
 		})
 	}
+	vtRequestEventMeter.Mark(int64(len(evs)))
+	vtRecoveredRequestEventMeter.Mark(int64(len(evs)))
+
 	vtr.mcBridgeInfo.AddRequestValueTransferEvents(evs)
 
-	evs = []*TokenReceivedEvent{}
+	evs = []*RequestValueTransferEvent{}
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	logger.Warn("try to recover main chain's value transfer events", "len(events)", len(vtr.mainChainEvents))
 	for _, ev := range vtr.mainChainEvents {
 		logger.Trace("recover events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
-		evs = append(evs, &TokenReceivedEvent{
+		evs = append(evs, &RequestValueTransferEvent{
 			TokenType:    ev.Kind,
 			ContractAddr: ev.Raw.Address,
 			TokenAddr:    ev.ContractAddress,
@@ -334,6 +338,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 			txHash:       ev.Raw.TxHash,
 		})
 	}
+	vtHandleEventMeter.Mark(int64(len(evs)))
 	vtr.scBridgeInfo.AddRequestValueTransferEvents(evs)
 
 	return nil

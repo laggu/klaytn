@@ -83,7 +83,7 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
-func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(ev TokenReceivedEvent) error {
+func (cce *ChildChainEventHandler) ProcessRequestEvent(ev RequestValueTransferEvent) error {
 	handleBridgeAddr := cce.subbridge.AddressManager().GetCounterPartBridge(ev.ContractAddr)
 	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(handleBridgeAddr)
 	if !ok {
@@ -91,11 +91,11 @@ func (cce *ChildChainEventHandler) HandleRequestValueTransferEvent(ev TokenRecei
 	}
 
 	// TODO-Klaytn need to manage the size limitation of pending event list.
-	handleBridgeInfo.AddRequestValueTransferEvents([]*TokenReceivedEvent{&ev})
+	handleBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{&ev})
 	return nil
 }
 
-func (cce *ChildChainEventHandler) HandleHandleValueTransferEvent(ev TokenTransferEvent) error {
+func (cce *ChildChainEventHandler) ProcessHandleEvent(ev HandleValueTransferEvent) error {
 	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ev.ContractAddr)
 	if !ok {
 		return errors.New("there is no bridge")

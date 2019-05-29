@@ -25,26 +25,26 @@ import "container/heap"
 // eventSortedMap is a nonce->event map with a heap based index to allow
 // iterating over the contents in a nonce-incrementing way.
 type eventSortedMap struct {
-	items map[uint64]*TokenReceivedEvent // Hash map storing the event data
-	index *nonceHeap                     // Heap of nonces of all the stored events (non-strict mode)
+	items map[uint64]*RequestValueTransferEvent // Hash map storing the event data
+	index *nonceHeap                            // Heap of nonces of all the stored events (non-strict mode)
 }
 
 // newEventSortedMap creates a new nonce-sorted event map.
 func newEventSortedMap() *eventSortedMap {
 	return &eventSortedMap{
-		items: make(map[uint64]*TokenReceivedEvent),
+		items: make(map[uint64]*RequestValueTransferEvent),
 		index: new(nonceHeap),
 	}
 }
 
 // Get retrieves the current events associated with the given nonce.
-func (m *eventSortedMap) Get(nonce uint64) *TokenReceivedEvent {
+func (m *eventSortedMap) Get(nonce uint64) *RequestValueTransferEvent {
 	return m.items[nonce]
 }
 
 // Put inserts a new event into the map, also updating the map's nonce
 // index. If a event already exists with the same nonce, it's overwritten.
-func (m *eventSortedMap) Put(event *TokenReceivedEvent) {
+func (m *eventSortedMap) Put(event *RequestValueTransferEvent) {
 	nonce := event.RequestNonce
 	if m.items[nonce] == nil {
 		heap.Push(m.index, nonce)
@@ -59,13 +59,13 @@ func (m *eventSortedMap) Put(event *TokenReceivedEvent) {
 // Note, all events with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (m *eventSortedMap) Ready(start uint64) []*TokenReceivedEvent {
+func (m *eventSortedMap) Ready(start uint64) []*RequestValueTransferEvent {
 	// Short circuit if no events are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
 		return nil
 	}
 	// Otherwise start accumulating incremental events
-	var ready []*TokenReceivedEvent
+	var ready []*RequestValueTransferEvent
 	for next := (*m.index)[0]; m.index.Len() > 0 && (*m.index)[0] == next; next++ {
 		ready = append(ready, m.items[next])
 		delete(m.items, next)

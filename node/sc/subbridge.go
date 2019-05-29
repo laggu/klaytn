@@ -122,10 +122,10 @@ type SubBridge struct {
 	remoteBackend Backend
 	bridgeManager *BridgeManager
 
-	tokenReceivedCh  chan TokenReceivedEvent
-	tokenReceivedSub event.Subscription
-	tokenTransferCh  chan TokenTransferEvent
-	tokenTransferSub event.Subscription
+	requestEventCh  chan RequestValueTransferEvent
+	requestEventSub event.Subscription
+	handleEventCh   chan HandleValueTransferEvent
+	handleEventSub  event.Subscription
 
 	bridgeAccountManager *BridgeAccountManager
 	addressManager       *AddressManager
@@ -160,12 +160,12 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		//txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
-		quitSync:        make(chan struct{}),
-		maxPeers:        config.MaxPeer,
-		tokenReceivedCh: make(chan TokenReceivedEvent, tokenReceivedChanSize),
-		tokenTransferCh: make(chan TokenTransferEvent, tokenTransferChanSize),
-		onAnchoringTx:   false,
-		bootFail:        false,
+		quitSync:       make(chan struct{}),
+		maxPeers:       config.MaxPeer,
+		requestEventCh: make(chan RequestValueTransferEvent, tokenReceivedChanSize),
+		handleEventCh:  make(chan HandleValueTransferEvent, tokenTransferChanSize),
+		onAnchoringTx:  false,
+		bootFail:       false,
 	}
 	// TODO-Klaytn change static config to user define config
 	bridgetxConfig := BridgeTxPoolConfig{
@@ -297,8 +297,8 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 		sc.bootFail = true
 		return
 	}
-	sc.tokenReceivedSub = sc.bridgeManager.SubscribeTokenReceived(sc.tokenReceivedCh)
-	sc.tokenTransferSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.tokenTransferCh)
+	sc.requestEventSub = sc.bridgeManager.SubscribeTokenReceived(sc.requestEventCh)
+	sc.handleEventSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.handleEventCh)
 
 	if err := sc.bridgeManager.RestoreBridges(); err != nil {
 		logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
@@ -426,7 +426,7 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 }
 
 func (pm *SubBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
-	return newBridgePeer(pv, p, rw)
+	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
 }
 
 func (pm *SubBridge) handle(p BridgePeer) error {
@@ -512,13 +512,15 @@ func (sc *SubBridge) loop() {
 				logger.Error("subbridge log event", "err", err)
 			}
 		// Handle Bridge Event
-		case ev := <-sc.tokenReceivedCh:
-			if err := sc.eventhandler.HandleRequestValueTransferEvent(ev); err != nil {
-				logger.Error("fail to handle for request value transfer event ", "err", err)
+		case ev := <-sc.requestEventCh:
+			vtRequestEventMeter.Mark(1)
+			if err := sc.eventhandler.ProcessRequestEvent(ev); err != nil {
+				logger.Error("fail to process request value transfer event ", "err", err)
 			}
-		case ev := <-sc.tokenTransferCh:
-			if err := sc.eventhandler.HandleHandleValueTransferEvent(ev); err != nil {
-				logger.Error("fail to handle for handle value transfer event ", "err", err)
+		case ev := <-sc.handleEventCh:
+			vtHandleEventMeter.Mark(1)
+			if err := sc.eventhandler.ProcessHandleEvent(ev); err != nil {
+				logger.Error("fail to process handle value transfer event ", "err", err)
 			}
 		case <-report.C:
 			// report status
@@ -537,12 +539,12 @@ func (sc *SubBridge) loop() {
 				logger.Error("subbridge log subscription ", "err", err)
 			}
 			return
-		case err := <-sc.tokenReceivedSub.Err():
+		case err := <-sc.requestEventSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-received subscription ", "err", err)
 			}
 			return
-		case err := <-sc.tokenTransferSub.Err():
+		case err := <-sc.handleEventSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-transfer subscription ", "err", err)
 			}
@@ -631,8 +633,8 @@ func (s *SubBridge) Stop() error {
 	s.chainHeadSub.Unsubscribe()
 	//s.txSub.Unsubscribe()
 	s.logsSub.Unsubscribe()
-	s.tokenReceivedSub.Unsubscribe()
-	s.tokenTransferSub.Unsubscribe()
+	s.requestEventSub.Unsubscribe()
+	s.handleEventSub.Unsubscribe()
 	s.eventMux.Stop()
 	s.chainDB.Close()
 

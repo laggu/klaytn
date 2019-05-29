@@ -477,6 +477,7 @@ func (sbh *SubBridgeHandler) WriteAnchoredBlockNumber(blockNum uint64) {
 	sbh.UpdateLastestAnchoredBlockNumber(blockNum)
 	if sbh.GetLatestAnchoredBlockNumber() < blockNum {
 		sbh.subbridge.chainDB.WriteAnchoredBlockNumber(blockNum)
+		lastAnchoredBlockNumGauge.Update(int64(blockNum))
 	}
 }
 

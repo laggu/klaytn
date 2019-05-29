@@ -74,7 +74,7 @@ const (
 
 type operations struct {
 	request     func(*testInfo, *BridgeInfo)
-	handle      func(*testInfo, *BridgeInfo, *TokenReceivedEvent)
+	handle      func(*testInfo, *BridgeInfo, *RequestValueTransferEvent)
 	dummyHandle func(*testInfo, *BridgeInfo)
 }
 
@@ -515,8 +515,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	}
 
 	// Prepare channel for event handling.
-	requestVTCh := make(chan TokenReceivedEvent)
-	handleVTCh := make(chan TokenTransferEvent)
+	requestVTCh := make(chan RequestValueTransferEvent)
+	handleVTCh := make(chan HandleValueTransferEvent)
 	recoveryCh := make(chan bool)
 	bm.SubscribeTokenReceived(requestVTCh)
 	bm.SubscribeTokenWithDraw(handleVTCh)
@@ -589,7 +589,7 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	info.sim.Commit()
 }
 
-func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) {
+func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferEvent) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
@@ -630,7 +630,7 @@ func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	info.sim.Commit()
 }
 
-func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) {
+func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferEvent) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
@@ -674,7 +674,7 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	info.sim.Commit()
 }
 
-func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *TokenReceivedEvent) {
+func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferEvent) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 

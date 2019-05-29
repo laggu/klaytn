@@ -318,7 +318,7 @@ func (s *MainBridge) Start(srvr p2p.Server) error {
 }
 
 func (pm *MainBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
-	return newBridgePeer(pv, p, rw)
+	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
 }
 
 func (pm *MainBridge) handle(p BridgePeer) error {
