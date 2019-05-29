@@ -398,7 +398,7 @@ func (g *Governance) initializeCache() {
 	// get last n governance change block number
 	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceCacheLimit)
 	if err != nil {
-		logger.Warn("Failed to retrieve recent governance indices", "err", err)
+		logger.Info("No governance cache index found in a database", "err", err)
 		return
 	}
 	g.idxCache = indices
