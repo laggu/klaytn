@@ -84,10 +84,8 @@ func (ec *Client) BridgeConvertRequestTxHashToHandleTxHash(ctx context.Context, 
 func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
 	var result *types.Receipt
 	err := ec.c.CallContext(ctx, &result, "bridge_getReceiptFromParentChain", hash)
-	if err == nil {
-		if result == nil {
-			return nil, klaytn.NotFound
-		}
+	if err == nil && result == nil {
+		return nil, klaytn.NotFound
 	}
 	return result, err
 }
