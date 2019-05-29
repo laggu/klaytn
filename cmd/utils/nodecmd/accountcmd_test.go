@@ -46,13 +46,13 @@ func tmpDatadirWithKeystore(t *testing.T) string {
 }
 
 func TestAccountListEmpty(t *testing.T) {
-	klay := runKlay(t, "account", "list")
+	klay := runKlay(t, "klay-test", "account", "list")
 	klay.ExpectExit()
 }
 
 func TestAccountList(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "account", "list", "--datadir", datadir)
+	klay := runKlay(t, "klay-test", "account", "list", "--datadir", datadir)
 	defer klay.ExpectExit()
 	if runtime.GOOS == "windows" {
 		klay.Expect(`
@@ -70,7 +70,7 @@ Account #2: {289d485d9771714cce91d3393d764e1311907acc} keystore://{{.Datadir}}/k
 }
 
 func TestAccountNew(t *testing.T) {
-	klay := runKlay(t, "account", "new", "--lightkdf")
+	klay := runKlay(t, "klay-test", "account", "new", "--lightkdf")
 	defer klay.ExpectExit()
 	klay.Expect(`
 Your new account is locked with a password. Please give a password. Do not forget this password.
@@ -82,7 +82,7 @@ Repeat passphrase: {{.InputLine "foobar"}}
 }
 
 func TestAccountNewBadRepeat(t *testing.T) {
-	klay := runKlay(t, "account", "new", "--lightkdf")
+	klay := runKlay(t, "klay-test", "account", "new", "--lightkdf")
 	defer klay.ExpectExit()
 	klay.Expect(`
 Your new account is locked with a password. Please give a password. Do not forget this password.
@@ -95,7 +95,7 @@ Fatal: Passphrases do not match
 
 func TestAccountUpdate(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "account", "update",
+	klay := runKlay(t, "klay-test", "account", "update",
 		"--datadir", datadir, "--lightkdf",
 		"f466859ead1932d743d622cb74fc058882e8648a")
 	defer klay.ExpectExit()
@@ -111,7 +111,7 @@ Repeat passphrase: {{.InputLine "foobar2"}}
 
 func TestUnlockFlag(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t,
+	klay := runKlay(t, "klay-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
 		"js", "testdata/empty.js")
@@ -135,7 +135,7 @@ Passphrase: {{.InputLine "foobar"}}
 
 func TestUnlockFlagWrongPassword(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t,
+	klay := runKlay(t, "klay-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a")
 	defer klay.ExpectExit()
@@ -154,7 +154,7 @@ Fatal: Failed to unlock account f466859ead1932d743d622cb74fc058882e8648a (could 
 // https://github.com/ethereum/go-ethereum/issues/1785
 func TestUnlockFlagMultiIndex(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t,
+	klay := runKlay(t, "klay-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "0,2",
 		"js", "testdata/empty.js")
@@ -181,7 +181,7 @@ Passphrase: {{.InputLine "foobar"}}
 
 func TestUnlockFlagPasswordFile(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t,
+	klay := runKlay(t, "klay-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--password", "testdata/passwords.txt", "--unlock", "0,2",
 		"js", "testdata/empty.js")
@@ -201,7 +201,7 @@ func TestUnlockFlagPasswordFile(t *testing.T) {
 
 func TestUnlockFlagPasswordFileWrongPassword(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t,
+	klay := runKlay(t, "klay-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--password", "testdata/wrong-passwords.txt", "--unlock", "0,2")
 	defer klay.ExpectExit()
@@ -212,7 +212,7 @@ Fatal: Failed to unlock account 0 (could not decrypt key with given passphrase)
 
 func TestUnlockFlagAmbiguous(t *testing.T) {
 	store := filepath.Join("..", "..", "..", "accounts", "keystore", "testdata", "dupes")
-	klay := runKlay(t,
+	klay := runKlay(t, "klay-test",
 		"--keystore", store, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
 		"js", "testdata/empty.js")
@@ -250,7 +250,7 @@ In order to avoid this warning, you need to remove the following duplicate key f
 
 func TestUnlockFlagAmbiguousWrongPassword(t *testing.T) {
 	store := filepath.Join("..", "..", "..", "accounts", "keystore", "testdata", "dupes")
-	klay := runKlay(t,
+	klay := runKlay(t, "klay-test",
 		"--keystore", store, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a")
 	defer klay.ExpectExit()

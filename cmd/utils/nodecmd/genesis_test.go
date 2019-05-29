@@ -97,7 +97,7 @@ func TestCustomGenesis(t *testing.T) {
 		if err := ioutil.WriteFile(json, []byte(tt.genesis), 0600); err != nil {
 			t.Fatalf("test %d: failed to write genesis file: %v", i, err)
 		}
-		runKlay(t, "--datadir", datadir, "init", json).WaitExit()
+		runKlay(t, "klay-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
 
 		// Query the custom genesis block
 		if len(tt.query) != len(tt.result) {
@@ -105,7 +105,7 @@ func TestCustomGenesis(t *testing.T) {
 		}
 		for idx, query := range tt.query {
 			klay := runKlay(t,
-				"--datadir", datadir, "--maxconnections", "0", "--port", "0",
+				"klay-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
 				"--nodiscover", "--nat", "none", "--ipcdisable",
 				"--exec", query, "--verbosity", "0", "console")
 			klay.ExpectRegexp(tt.result[idx])

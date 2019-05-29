@@ -67,6 +67,24 @@ var (
 	rpcFlags = CommonRPCFlags
 )
 
+func contains(list []cli.Flag, item cli.Flag) bool {
+	for _, flag := range list {
+		if flag.GetName() == item.GetName() {
+			return true
+		}
+	}
+	return false
+}
+
+func union(list1, list2 []cli.Flag) []cli.Flag {
+	for _, item := range list2 {
+		if !contains(list1, item) {
+			list1 = append(list1, item)
+		}
+	}
+	return list1
+}
+
 func init() {
 	// Initialize the CLI app and start Klay
 	app.Action = RunKlaytnNode
@@ -95,6 +113,10 @@ func init() {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, ConsoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = union(app.Flags, KCNFlags)
+	app.Flags = union(app.Flags, KPNFlags)
+	app.Flags = union(app.Flags, KENFlags)
+	app.Flags = union(app.Flags, KSCNFlags)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
@@ -145,6 +167,14 @@ func init() {
 		}
 		os.Exit(0)
 	})
+	reexec.Register("klay-test-flag", func() {
+		app.Action = RunTestKlaytnNode
+		if err := app.Run(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	})
 }
 
 func TestMain(m *testing.M) {
@@ -157,7 +187,7 @@ func TestMain(m *testing.M) {
 
 // spawns klay with the given command line args. If the args don't set --datadir, the
 // child g gets a temporary data directory.
-func runKlay(t *testing.T, args ...string) *testklay {
+func runKlay(t *testing.T, name string, args ...string) *testklay {
 	tt := &testklay{}
 	tt.TestCmd = utils.NewTestCmd(t, tt)
 	for i, arg := range args {
@@ -186,7 +216,13 @@ func runKlay(t *testing.T, args ...string) *testklay {
 
 	// Boot "klay". This actually runs the test binary but the TestMain
 	// function will prevent any tests from running.
-	tt.Run("klay-test", args...)
+	tt.Run(name, args...)
 
 	return tt
+}
+
+func RunTestKlaytnNode(ctx *cli.Context) error {
+	fullNode := MakeFullNode(ctx)
+	fullNode.Wait()
+	return nil
 }
