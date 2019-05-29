@@ -367,13 +367,18 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 		}
 		return nreceived >= max
 	})
-	t.send(toaddr, findnodePacket, &findnode{
+	_, err := t.send(toaddr, findnodePacket, &findnode{
 		Target:     target,
 		TargetType: targetNT,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
+
+	if err != nil {
+		logger.Debug("[udp] findnode: failed to send FINDNODE", "err", err)
+	}
+
 	findNodesMeter.Mark(1)
-	err := <-errc
+	err = <-errc
 	if err != nil {
 		neighborsMeter.Mark(1)
 	}
@@ -658,9 +663,13 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 }
 
 func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+	logger.Trace("udp: ping: received", "from", fromID)
 	if expired(req.Expiration) {
+		logger.Trace("udp: ping: expired", "from", fromID)
 		return errExpired
 	}
+
+	logger.Trace("udp: ping: send pong", "to", fromID)
 	t.send(from, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP, req.From.NType),
 		ReplyTok:   mac,

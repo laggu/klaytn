@@ -244,7 +244,7 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 			for _, n := range <-reply {
 				if n != nil && !seen[n.ID] {
 					seen[n.ID] = true
-					seeds.push(n, bucketSize) // TODO-Klaytn-Node CN's entry result'size could be more than bucket size
+					seeds.push(n, max)
 				}
 			}
 			pendingQueries--
@@ -253,7 +253,7 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 				for _, n := range <-reply {
 					if n != nil && !seen[n.ID] {
 						seen[n.ID] = true
-						seeds.push(n, bucketSize) // TODO-Klaytn-Node CN's entry result'size could be more than bucket size
+						seeds.push(n, max)
 					}
 				}
 			}
@@ -670,17 +670,19 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		// Give the remote node a chance to ping us before we start
 		// sending findnode requests. If they still remember us,
 		// waitping will simply time out.
+		logger.Trace("[Table] pingpong-waitping", "to", id)
 		tab.net.waitping(id)
 	}
 	// Bonding succeeded, update the node database.
 	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nType)
+	logger.Trace("[Table] pingpong-success, make new node", "node", w.n)
 	close(w.done)
 }
 
 // ping a remote endpoint and wait for a reply, also updating the node
 // database accordingly.
 func (tab *Table) ping(id NodeID, addr *net.UDPAddr) error {
-	logger.Debug("Send Ping", "toId", id)
+	logger.Trace("[Table] ping", "to", id)
 	tab.db.updateLastPing(id, time.Now())
 	if err := tab.net.ping(id, addr); err != nil {
 		return err
