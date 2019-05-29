@@ -2577,7 +2577,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	// deploy a contract to test smart contract execution.
 	{
 		var txs types.Transactions
-		valueMap := genMapForTxTypes(reservoir, reservoir, types.TxTypeSmartContractDeploy)
+		valueMap, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeSmartContractDeploy)
 		valueMap[types.TxValueKeyTo] = &contract.Addr
 		valueMap[types.TxValueKeyHumanReadable] = true
 
@@ -2630,7 +2630,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	// only RoleFeePayer type can generate valid signature as a fee payer.
 	for keyType, key := range prvKeys {
 		for _, txType := range txTypes {
-			valueMap := genMapForTxTypes(roleBased, reservoir, txType)
+			valueMap, _ := genMapForTxTypes(roleBased, reservoir, txType)
 			valueMap[types.TxValueKeyGasLimit] = uint64(1000000)
 
 			if txType.IsFeeDelegatedTransaction() {
@@ -2774,7 +2774,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 	// deploy a contract to test smart contract execution.
 	{
 		var txs types.Transactions
-		valueMap := genMapForTxTypes(reservoir, reservoir, types.TxTypeSmartContractDeploy)
+		valueMap, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeSmartContractDeploy)
 		valueMap[types.TxValueKeyTo] = &contract.Addr
 		valueMap[types.TxValueKeyHumanReadable] = true
 
@@ -2827,7 +2827,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 	// only RoleFeePayer type can generate valid signature as a fee payer.
 	for keyType, key := range prvKeys {
 		for _, txType := range feeTxTypes {
-			valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 			valueMap[types.TxValueKeyFeePayer] = roleBased.GetAddr()
 			valueMap[types.TxValueKeyGasLimit] = uint64(1000000)
 

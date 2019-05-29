@@ -2,9 +2,11 @@ package tests
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
+	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/kerrors"
@@ -648,7 +650,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	assert.Equal(t, kerrors.ErrLegacyTransactionMustBeWithLegacyKey, err)
 }
 
-// TestInvalidBalance tests generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
+// TestInvalidBalance generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
 func TestInvalidBalance(t *testing.T) {
 	var testTxTypes = []testTxType{
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
@@ -1018,6 +1020,395 @@ func TestInvalidBalance(t *testing.T) {
 				err = txpool.AddRemote(tx)
 				assert.Equal(t, nil, err)
 				reservoir.AddNonce()
+			}
+		}
+	}
+}
+
+// TestInvalidBalanceBlockTx generates invalid txs which don't have enough KLAY, and will be invalidated during block insert process.
+func TestInvalidBalanceBlockTx(t *testing.T) {
+	var testTxTypes = []testTxType{
+		{"LegacyTransaction", types.TxTypeLegacyTransaction},
+		{"ValueTransfer", types.TxTypeValueTransfer},
+		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
+		{"AccountCreation", types.TxTypeAccountCreation},
+		{"AccountUpdate", types.TxTypeAccountUpdate},
+		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
+		{"SmartContractExecution", types.TxTypeSmartContractExecution},
+		{"Cancel", types.TxTypeCancel},
+		{"ChainDataAnchoring", types.TxTypeChainDataAnchoring},
+		{"FeeDelegatedValueTransfer", types.TxTypeFeeDelegatedValueTransfer},
+		{"FeeDelegatedValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemo},
+		{"FeeDelegatedAccountUpdate", types.TxTypeFeeDelegatedAccountUpdate},
+		{"FeeDelegatedSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeploy},
+		{"FeeDelegatedSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecution},
+		{"FeeDelegatedCancel", types.TxTypeFeeDelegatedCancel},
+		{"FeeDelegatedWithRatioValueTransfer", types.TxTypeFeeDelegatedValueTransferWithRatio},
+		{"FeeDelegatedWithRatioValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemoWithRatio},
+		{"FeeDelegatedWithRatioAccountUpdate", types.TxTypeFeeDelegatedAccountUpdateWithRatio},
+		{"FeeDelegatedWithRatioSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeployWithRatio},
+		{"FeeDelegatedWithRatioSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecutionWithRatio},
+		{"FeeDelegatedWithRatioCancel", types.TxTypeFeeDelegatedCancelWithRatio},
+	}
+	// re-declare errors since those errors are private variables in 'blockchain' package.
+	errInsufficientBalanceForGas := errors.New("insufficient balance of the sender to pay for gas")
+	errInsufficientBalanceForGasFeePayer := errors.New("insufficient balance of the fee payer to pay for gas")
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+
+	// test account will be lack of KLAY
+	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
+	assert.Equal(t, nil, err)
+
+	gasLimit := uint64(100000000000)
+	gasPrice := big.NewInt(25 * params.Ston)
+	amount := uint64(25 * params.Ston)
+	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
+	cost.Add(cost, new(big.Int).SetUint64(amount))
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	// generate a test account with a specific amount of KLAY
+	{
+		var txs types.Transactions
+
+		valueMapForCreation, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
+		valueMapForCreation[types.TxValueKeyTo] = testAcc.Addr
+		valueMapForCreation[types.TxValueKeyAccountKey] = testAcc.AccKey
+		valueMapForCreation[types.TxValueKeyAmount] = cost
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, valueMapForCreation)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	// test for all tx types
+	for _, testTxType := range testTxTypes {
+		txType := testTxType.txType
+
+		if !txType.IsFeeDelegatedTransaction() {
+			// tx with a specific amount or a gasLimit requiring more KLAY than the sender has.
+			{
+				var expectedErr error
+
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if valueMap[types.TxValueKeyAmount] != nil {
+					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
+					valueMap[types.TxValueKeyGasLimit] = gasLimit + 1 // requires 1 more gas
+					// The tx will be failed in vm since it can buy gas but cannot send enough value
+					expectedErr = vm.ErrInsufficientBalance
+				} else {
+					valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64()) + 1 // requires 1 more gas
+					// The tx will be failed in buyGas() since it cannot buy enough gas
+					expectedErr = errInsufficientBalanceForGasFeePayer
+				}
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, expectedErr, err)
+				assert.Equal(t, (*types.Receipt)(nil), receipt)
+			}
+
+			// tx with a specific amount or a gasLimit requiring the exact KLAY the sender has.
+			{
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if valueMap[types.TxValueKeyAmount] != nil {
+					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
+					valueMap[types.TxValueKeyGasLimit] = gasLimit
+				} else {
+					valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64())
+				}
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, nil, err)
+				// contract deploy tx with non-zero value will be failed in vm because test functions do not support it.
+				if txType.IsContractDeploy() {
+					assert.Equal(t, types.ReceiptStatusErrExecutionReverted, receipt.Status)
+				} else {
+					assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+				}
+			}
+		}
+
+		if txType.IsFeeDelegatedTransaction() && !txType.IsFeeDelegatedWithRatioTransaction() {
+			// tx with a specific amount requiring more KLAY than the sender has.
+			{
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if valueMap[types.TxValueKeyAmount] != nil {
+					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
+					valueMap[types.TxValueKeyAmount] = new(big.Int).Add(cost, new(big.Int).SetUint64(1)) // requires 1 more amount
+
+					tx, err := types.NewTransactionWithMap(txType, valueMap)
+					assert.Equal(t, nil, err)
+
+					err = tx.SignWithKeys(signer, testAcc.Keys)
+					assert.Equal(t, nil, err)
+
+					tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+					assert.Equal(t, nil, err)
+
+					receipt, _, err := applyTransaction(t, bcdata, tx)
+					assert.Equal(t, vm.ErrInsufficientBalance, err)
+					assert.Equal(t, (*types.Receipt)(nil), receipt)
+				}
+			}
+
+			// tx with a specific gasLimit (or amount) requiring more KLAY than the feePayer has.
+			{
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
+				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64()) + 1 // requires 1 more gas
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+
+				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, errInsufficientBalanceForGasFeePayer, err)
+				assert.Equal(t, (*types.Receipt)(nil), receipt)
+			}
+
+			// tx with a specific amount requiring the exact KLAY the sender has.
+			{
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if valueMap[types.TxValueKeyAmount] != nil {
+					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
+					valueMap[types.TxValueKeyAmount] = cost
+
+					tx, err := types.NewTransactionWithMap(txType, valueMap)
+					assert.Equal(t, nil, err)
+
+					err = tx.SignWithKeys(signer, testAcc.Keys)
+					assert.Equal(t, nil, err)
+
+					tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+					assert.Equal(t, nil, err)
+
+					receipt, _, err := applyTransaction(t, bcdata, tx)
+					assert.Equal(t, nil, err)
+					// contract deploy tx with non-zero value will be failed in vm because test functions do not support it.
+					if txType.IsContractDeploy() {
+						assert.Equal(t, types.ReceiptStatusErrExecutionReverted, receipt.Status)
+					} else {
+						assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+					}
+				}
+			}
+
+			// tx with a specific gasLimit (or amount) requiring the exact KLAY the feePayer has.
+			{
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
+				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64())
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+
+				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, nil, err)
+				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+			}
+		}
+
+		if txType.IsFeeDelegatedWithRatioTransaction() {
+			// tx with a specific amount and a gasLimit requiring more KLAY than the sender has.
+			{
+				var expectedErr error
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
+				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
+				if valueMap[types.TxValueKeyAmount] != nil {
+					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
+					// Gas testAcc will charge = tx gasLimit * sender's feeRatio
+					// = (gasLimit + 1) * 10 * (100 - 90) * 0.01 = gasLimit + 1
+					valueMap[types.TxValueKeyGasLimit] = (gasLimit + 1) * 10 // requires 1 more gas
+					// The tx will be failed in vm since it can buy gas but cannot send enough value
+					expectedErr = vm.ErrInsufficientBalance
+				} else {
+					// Gas testAcc will charge = tx gasLimit * sender's feeRatio
+					// = (gasLimit + (amount / gasPrice.Uint64()) + 1) * 10 * (100 - 90) * 0.01 = gasLimit + (amount / gasPrice.Uint64()) + 1
+					valueMap[types.TxValueKeyGasLimit] = (gasLimit + (amount / gasPrice.Uint64()) + 1) * 10 // requires 1 more gas
+					// The tx will be failed in buyGas() since it cannot buy enough gas
+					expectedErr = errInsufficientBalanceForGas
+				}
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, expectedErr, err)
+				assert.Equal(t, (*types.Receipt)(nil), receipt)
+			}
+
+			// tx with a specific amount and a gasLimit requiring more KLAY than the feePayer has.
+			{
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
+				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
+				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio
+				// = (gasLimit + (amount / gasPrice.Uint64()) + 1) * 10 * 10 * 0.01 = gasLimit + (amount / gasPrice.Uint64()) + 1
+				valueMap[types.TxValueKeyGasLimit] = (gasLimit + (amount / gasPrice.Uint64()) + 1) * 10 // requires 1 more gas
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+
+				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, errInsufficientBalanceForGasFeePayer, err)
+				assert.Equal(t, (*types.Receipt)(nil), receipt)
+			}
+
+			// tx with a specific amount and a gasLimit requiring the exact KLAY the sender has.
+			{
+				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
+				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
+				if valueMap[types.TxValueKeyAmount] != nil {
+					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
+					// Gas testAcc will charge = tx gasLimit * sender's feeRatio
+					// = gasLimit * 10 * (100 - 90) * 0.01 = gasLimit
+					valueMap[types.TxValueKeyGasLimit] = gasLimit * 10
+				} else {
+					// Gas testAcc will charge = tx gasLimit * sender's feeRatio
+					// = (gasLimit + (amount / gasPrice.Uint64())) * 10 * (100 - 90) * 0.01 = gasLimit + (amount / gasPrice.Uint64())
+					valueMap[types.TxValueKeyGasLimit] = (gasLimit + (amount / gasPrice.Uint64())) * 10
+				}
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, nil, err)
+				// contract deploy tx with non-zero value will be failed in vm because test functions do not support it.
+				if txType.IsContractDeploy() {
+					assert.Equal(t, types.ReceiptStatusErrExecutionReverted, receipt.Status)
+				} else {
+					assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+				}
+			}
+
+			// tx with a specific amount and a gasLimit requiring the exact KLAY the feePayer has.
+			{
+				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
+				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
+				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio
+				// = (gasLimit + (amount / gasPrice.Uint64())) * 10 * 10 * 0.01 = gasLimit + (amount / gasPrice.Uint64())
+				valueMap[types.TxValueKeyGasLimit] = (gasLimit + (amount / gasPrice.Uint64())) * 10
+
+				tx, err := types.NewTransactionWithMap(txType, valueMap)
+				assert.Equal(t, nil, err)
+
+				err = tx.SignWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+
+				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
+				assert.Equal(t, nil, err)
+
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, nil, err)
+				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 			}
 		}
 	}
