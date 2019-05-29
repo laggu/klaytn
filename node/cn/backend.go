@@ -265,13 +265,15 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.protocolManager.wsendpoint = config.WsEndpoint
 
-	wallet, err := cn.RewardbaseWallet()
-	if err != nil {
-		logger.Error("find err", "err", err)
-	} else {
-		cn.protocolManager.SetRewardbaseWallet(wallet)
+	if cn.protocolManager.nodetype == node.CONSENSUSNODE {
+		wallet, err := cn.RewardbaseWallet()
+		if err != nil {
+			logger.Error("find err", "err", err)
+		} else {
+			cn.protocolManager.SetRewardbaseWallet(wallet)
+		}
+		cn.protocolManager.SetRewardbase(cn.rewardbase)
 	}
-	cn.protocolManager.SetRewardbase(cn.rewardbase)
 
 	if chainConfig.Istanbul != nil && cn.chainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
 		reward.Subscribe(cn.blockchain)
