@@ -424,8 +424,8 @@ func invalidCodeFormat(txType types.TxType, values txValueMap) (txValueMap, erro
 	return values, nil
 }
 
-// TestValidationPoolInsert2 generates invalid txs which will be invalidated during txPool insert process.
-func TestValidationPoolInsert2(t *testing.T) {
+// TestValidationInvalidSig generates txs signed by an invalid sender or a fee payer.
+func TestValidationInvalidSig(t *testing.T) {
 	var testTxTypes = []testTxType{
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
@@ -533,8 +533,17 @@ func TestValidationPoolInsert2(t *testing.T) {
 			tx, expectedErr := invalidCase.fn(t, txType, reservoir, signer)
 
 			if tx != nil {
+				// For tx pool validation test
 				err = txpool.AddRemote(tx)
 				assert.Equal(t, expectedErr, err)
+
+				// For block tx validation test
+				if expectedErr == blockchain.ErrInvalidFeePayer {
+					expectedErr = types.ErrInvalidSigFeePayer
+				}
+				receipt, _, err := applyTransaction(t, bcdata, tx)
+				assert.Equal(t, expectedErr, err)
+				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
 		}
 	}
