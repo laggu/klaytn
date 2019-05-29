@@ -211,6 +211,130 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 }
 
+// TestValidationBlockTx generates invalid txs which will be invalidated during block insert process.
+func TestValidationBlockTx(t *testing.T) {
+	var testTxTypes = []testTxType{
+		{"LegacyTransaction", types.TxTypeLegacyTransaction},
+		{"ValueTransfer", types.TxTypeValueTransfer},
+		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
+		{"AccountCreation", types.TxTypeAccountCreation},
+		{"AccountUpdate", types.TxTypeAccountUpdate},
+		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
+		{"SmartContractExecution", types.TxTypeSmartContractExecution},
+		{"Cancel", types.TxTypeCancel},
+		{"ChainDataAnchoring", types.TxTypeChainDataAnchoring},
+		{"FeeDelegatedValueTransfer", types.TxTypeFeeDelegatedValueTransfer},
+		{"FeeDelegatedValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemo},
+		{"FeeDelegatedAccountUpdate", types.TxTypeFeeDelegatedAccountUpdate},
+		{"FeeDelegatedSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeploy},
+		{"FeeDelegatedSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecution},
+		{"FeeDelegatedCancel", types.TxTypeFeeDelegatedCancel},
+		{"FeeDelegatedWithRatioValueTransfer", types.TxTypeFeeDelegatedValueTransferWithRatio},
+		{"FeeDelegatedWithRatioValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemoWithRatio},
+		{"FeeDelegatedWithRatioAccountUpdate", types.TxTypeFeeDelegatedAccountUpdateWithRatio},
+		{"FeeDelegatedWithRatioSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeployWithRatio},
+		{"FeeDelegatedWithRatioSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecutionWithRatio},
+		{"FeeDelegatedWithRatioCancel", types.TxTypeFeeDelegatedCancelWithRatio},
+	}
+
+	var invalidCases = []struct {
+		Name string
+		fn   func(types.TxType, txValueMap) (txValueMap, error)
+	}{
+		{"invalidNonce", decreaseNonce},
+		{"invalidRecipientProgram", valueTransferToContract},
+		{"invalidRecipientNotProgram", executeToEOA},
+		{"invalidRecipientExisting", creationToExistingAddr},
+		{"invalidCodeFormat", invalidCodeFormat},
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	// test for all tx types
+	for _, testTxType := range testTxTypes {
+		txType := testTxType.txType
+
+		// generate invalid txs and check the return error
+		for _, invalidCase := range invalidCases {
+			// generate a new tx and mutate it
+			valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+			invalidMap, expectedErr := invalidCase.fn(txType, valueMap)
+
+			tx, err := types.NewTransactionWithMap(txType, invalidMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			receipt, _, err := applyTransaction(t, bcdata, tx)
+			assert.Equal(t, expectedErr, err)
+			if expectedErr == nil {
+				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+			}
+		}
+	}
+}
+
 // decreaseNonce changes nonce to zero.
 func decreaseNonce(txType types.TxType, values txValueMap) (txValueMap, error) {
 	values[types.TxValueKeyNonce] = uint64(0)

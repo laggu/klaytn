@@ -794,32 +794,67 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 		account.Addr = common.BytesToAddress(hexutil.MustDecode("0x00000000000000000000000000000000000003FF"))
 
 		tx := genLegacyValueTransfer(signer, reservoir, account)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, _ = genValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, _ = genFeeDelegatedValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, _ = genFeeDelegatedWithRatioValueTransfer(t, signer, reservoir, account, reservoir, gasPrice)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, _ = genValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, _ = genFeeDelegatedValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, _ = genFeeDelegatedWithRatioValueTransferWithMemo(t, signer, reservoir, account, reservoir, gasPrice)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
@@ -834,8 +869,13 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 		assert.Equal(t, nil, err)
 		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
 		assert.Equal(t, nil, err)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
@@ -851,8 +891,13 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 		assert.Equal(t, nil, err)
 		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
 		assert.Equal(t, nil, err)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeploy, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
@@ -871,8 +916,13 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 		assert.Equal(t, nil, err)
 		err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
 		assert.Equal(t, nil, err)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		tx, err = types.NewTransactionWithMap(types.TxTypeFeeDelegatedSmartContractDeployWithRatio, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.GetNonce(),
@@ -892,22 +942,42 @@ func TestValidatingTxToPrecompiledContractAddress(t *testing.T) {
 		assert.Equal(t, nil, err)
 		err = tx.SignFeePayerWithKeys(signer, reservoir.GetFeeKeys())
 		assert.Equal(t, nil, err)
+		// txpool insert check
 		err = txpool.AddRemote(tx)
 		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		// block tx check
+		receipt, _, err = applyTransaction(t, bcdata, tx)
+		assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
 
 		// Contract Execution Txs is filtered out before the validation of the recipient address.
 		// It should be tested after the installation of a smart contract on the target address.
 		//tx, _ = genSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
+		//// txpool insert check
 		//err = txpool.AddRemote(tx)
 		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		//// block tx check
+		//receipt, _, err = applyTransaction(t, bcdata, tx)
+		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		//assert.Equal(t, (*types.Receipt)(nil), receipt)
 		//
 		//tx, _ = genFeeDelegatedSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
+		//// txpool insert check
 		//err = txpool.AddRemote(tx)
 		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		//// block tx check
+		//receipt, _, err = applyTransaction(t, bcdata, tx)
+		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		//assert.Equal(t, (*types.Receipt)(nil), receipt)
 		//
 		//tx, _ = genFeeDelegatedWithRatioSmartContractExecution(t, signer, reservoir, account, reservoir, gasPrice)
+		//// txpool insert check
 		//err = txpool.AddRemote(tx)
 		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		//// block tx check
+		//receipt, _, err = applyTransaction(t, bcdata, tx)
+		//assert.Equal(t, kerrors.ErrPrecompiledContractAddress, err)
+		//assert.Equal(t, (*types.Receipt)(nil), receipt)
 	}
 
 	// 2. tx (reservoir -> 0x0400)
