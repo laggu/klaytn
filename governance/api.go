@@ -142,6 +142,15 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0, nil
 }
 
+func (api *PublicGovernanceAPI) GovernanceItemsAtNumber(num *rpc.BlockNumber) (GovernanceSet, error) {
+	_, data, error := api.governance.ReadGovernance(uint64(num.Int64()))
+	if error == nil {
+		return data, error
+	} else {
+		return nil, error
+	}
+}
+
 type VoteList struct {
 	Key      string
 	Value    interface{}

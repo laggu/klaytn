@@ -96,6 +96,11 @@ web3._extend({
 			call: 'governance_vote',
 			params: 2
 		}),
+		new web3._extend.Method({
+			name: 'governanceItemsAtNumber',
+			call: 'governance_governanceItemsAtNumber',
+			params: 1
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -121,7 +126,7 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'nodeAddress',
 			getter: 'governance_nodeAddress',
-		}),	
+		}),
 	]
 });
 `
