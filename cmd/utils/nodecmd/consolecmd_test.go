@@ -23,7 +23,10 @@ package nodecmd
 import (
 	"crypto/rand"
 	"math/big"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -32,28 +35,23 @@ import (
 )
 
 const (
-	ipcAPIs  = "admin:1.0 debug:1.0 eth:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 shh:1.0 txpool:1.0 web3:1.0"
-	httpAPIs = "eth:1.0 net:1.0 rpc:1.0 web3:1.0"
+	ipcAPIs  = "admin:1.0 debug:1.0 governance:1.0 istanbul:1.0 klay:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 txpool:1.0 web3:1.0"
+	httpAPIs = "klay:1.0 net:1.0 rpc:1.0 web3:1.0"
 )
 
-// TODO-Klaytn-FailedTest Need to update test for Klaytn
-/*
 // Tests that a node embedded within a console can be started up properly and
 // then terminated by closing the input stream.
 func TestConsoleWelcome(t *testing.T) {
-	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
-
 	// Start a klay console, make sure it's cleaned up and terminate the console
 	klay := runKlay(t,
-		"--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
-		"--etherbase", coinbase, "--shh",
+		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
 		"console")
 
 	// Gather all the infos the welcome message needs to contain
 	klay.SetTemplateFunc("goos", func() string { return runtime.GOOS })
 	klay.SetTemplateFunc("goarch", func() string { return runtime.GOARCH })
 	klay.SetTemplateFunc("gover", runtime.Version)
-	klay.SetTemplateFunc("klayver", func() string { return params.Version })
+	klay.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit(gitCommit) })
 	klay.SetTemplateFunc("niltime", func() string { return time.Unix(0, 0).Format(time.RFC1123) })
 	klay.SetTemplateFunc("apis", func() string { return ipcAPIs })
 
@@ -61,9 +59,7 @@ func TestConsoleWelcome(t *testing.T) {
 	klay.Expect(`
 Welcome to the Klaytn JavaScript console!
 
-instance: Klaytn/v{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
-coinbase: {{.Etherbase}}
-at block: 0 ({{niltime}})
+instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
  datadir: {{.Datadir}}
  modules: {{apis}}
 
@@ -75,7 +71,6 @@ at block: 0 ({{niltime}})
 // Tests that a console can be attached to a running node via various means.
 func TestIPCAttachWelcome(t *testing.T) {
 	// Configure the instance for IPC attachement
-	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
 	var ipc string
 	if runtime.GOOS == "windows" {
 		ipc = `\\.\pipe\klay` + strconv.Itoa(trulyRandInt(100000, 999999))
@@ -87,8 +82,7 @@ func TestIPCAttachWelcome(t *testing.T) {
 	// Note: we need --shh because testAttachWelcome checks for default
 	// list of ipc modules and shh is included there.
 	klay := runKlay(t,
-		"--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
-		"--etherbase", coinbase, "--shh", "--ipcpath", ipc)
+		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ipcpath", ipc)
 
 	time.Sleep(2 * time.Second) // Simple way to wait for the RPC endpoint to open
 	testAttachWelcome(t, klay, "ipc:"+ipc, ipcAPIs)
@@ -98,11 +92,9 @@ func TestIPCAttachWelcome(t *testing.T) {
 }
 
 func TestHTTPAttachWelcome(t *testing.T) {
-	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
 	klay := runKlay(t,
-		"--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
-		"--etherbase", coinbase, "--rpc", "--rpcport", port)
+		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
 
 	time.Sleep(2 * time.Second) // Simple way to wait for the RPC endpoint to open
 	testAttachWelcome(t, klay, "http://localhost:"+port, httpAPIs)
@@ -112,12 +104,10 @@ func TestHTTPAttachWelcome(t *testing.T) {
 }
 
 func TestWSAttachWelcome(t *testing.T) {
-	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
 
 	klay := runKlay(t,
-		"--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
-		"--etherbase", coinbase, "--ws", "--wsport", port)
+		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ws", "--wsport", port)
 
 	time.Sleep(2 * time.Second) // Simple way to wait for the RPC endpoint to open
 	testAttachWelcome(t, klay, "ws://localhost:"+port, httpAPIs)
@@ -125,7 +115,6 @@ func TestWSAttachWelcome(t *testing.T) {
 	klay.Interrupt()
 	klay.ExpectExit()
 }
-*/
 
 func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 	// Attach to a running Klaytn node and terminate immediately
@@ -137,7 +126,7 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 	attach.SetTemplateFunc("goos", func() string { return runtime.GOOS })
 	attach.SetTemplateFunc("goarch", func() string { return runtime.GOARCH })
 	attach.SetTemplateFunc("gover", runtime.Version)
-	attach.SetTemplateFunc("klayver", func() string { return params.Version })
+	attach.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit(gitCommit) })
 	attach.SetTemplateFunc("etherbase", func() string { return klay.Etherbase })
 	attach.SetTemplateFunc("niltime", func() string { return time.Unix(0, 0).Format(time.RFC1123) })
 	attach.SetTemplateFunc("ipc", func() bool { return strings.HasPrefix(endpoint, "ipc") })
@@ -148,9 +137,7 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 	attach.Expect(`
 Welcome to the Klaytn JavaScript console!
 
-instance: Klaytn/v{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
-coinbase: {{etherbase}}
-at block: 0 ({{niltime}}){{if ipc}}
+instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
  datadir: {{datadir}}{{end}}
  modules: {{apis}}
 
