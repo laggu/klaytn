@@ -312,7 +312,7 @@ func TestValidationBlockTx(t *testing.T) {
 		// generate invalid txs and check the return error
 		for _, invalidCase := range invalidCases {
 			// generate a new tx and mutate it
-			valueMap := genMapForTxTypes(reservoir, reservoir, txType)
+			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 			invalidMap, expectedErr := invalidCase.fn(txType, valueMap)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
