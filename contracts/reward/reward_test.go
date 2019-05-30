@@ -59,6 +59,10 @@ func newTestAccounts() *testAccounts {
 	}
 }
 
+func blockRewardCacheReset() {
+	blockRewardCache = new(blockRewardParameters)
+}
+
 var (
 	addr1 = common.HexToAddress("0xac5e047d39692be8c81d0724543d5de721d0dd54")
 )
@@ -121,11 +125,6 @@ func TestGetRewardGovernanceParameter(t *testing.T) {
 
 		governanceParameter := getRewardGovernanceParameters(config, header)
 
-		expectedBlockNumber := uint64(testCases[i].blockNumber) - (uint64(testCases[i].blockNumber) % testCases[i].epoch)
-		if governanceParameter.blockNum != expectedBlockNumber {
-			t.Errorf("The block number of governanceParameter is diffrent. Result : %v, Expected : %v", governanceParameter.blockNum, expectedBlockNumber)
-		}
-
 		cn, poc, kir, _ := parseRewardRatio(testCases[i].ratio)
 		cnRatio := big.NewInt(int64(cn))
 		pocRatio := big.NewInt(int64(poc))
@@ -151,9 +150,9 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 	// the governanceParameter shouldn't be updated.
 	// it is tested by following step
 	// 1. update governanceParameter with block number 1 and check if it is updated well
-	// 2. update governance parameter with block number before epoch(29 in this test), it should not be updated
-	// 3. update governance parameter with block number after epoch(30 in this test), it should be updated
-
+	// 2. update governance parameter with block number before epoch(30 in this test), it should not be updated
+	// 3. update governance parameter with block number after epoch(31 in this test), it should be updated
+	blockRewardCacheReset()
 	blockNumber := int64(1)
 	epoch := uint64(30)
 	cnRatio := new(big.Int).SetUint64(34)
@@ -171,24 +170,24 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 
 	governanceParameter := getRewardGovernanceParameters(config, header)
 
-	if governanceParameter.blockNum != 0 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
+	if governanceParameter.blockNum != 1 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
 		t.Errorf("GovernanceParameter is diffrent")
 	}
 
-	// 2. update governance parameter with block number before epoch(29 in this test), it should not be updated
-	header = &types.Header{Number: big.NewInt(29)}
+	// 2. update governance parameter with block number before epoch(30 in this test), it should not be updated
+	header = &types.Header{Number: big.NewInt(30)}
 	config.Governance.Reward.Ratio = "1/2/3"
 
 	governanceParameter = getRewardGovernanceParameters(config, header)
 
-	if governanceParameter.blockNum != 0 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
+	if governanceParameter.blockNum != 1 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
-		t.Errorf("GovernanceParameter is diffrent")
+		t.Errorf("GovernanceParameter is diffrent %v", governanceParameter.cnRewardRatio)
 	}
 
-	// 3. update governance parameter with block number after epoch(30 in this test), it should be updated
-	blockNumber = int64(30)
+	// 3. update governance parameter with block number after epoch(31 in this test), it should be updated
+	blockNumber = int64(31)
 	cnRatio = new(big.Int).SetUint64(40)
 	pocRatio = new(big.Int).SetUint64(30)
 	kirRatio = new(big.Int).SetUint64(30)
@@ -200,7 +199,7 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 
 	governanceParameter = getRewardGovernanceParameters(config, header)
 
-	if governanceParameter.blockNum != 30 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
+	if governanceParameter.blockNum != 31 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
 		t.Errorf("GovernanceParameter is diffrent")
 	}

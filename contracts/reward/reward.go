@@ -544,12 +544,16 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 	defer blockRewardCache.lock.Unlock()
 
 	blockNum := header.Number.Uint64()
-	lastGovernanceRefreshedBlock := blockNum - (blockNum % config.Istanbul.Epoch)
 
 	// Cache hit condition
 	// (1) blockNum is a key of cache.
 	// (2) mintingAmount indicates whether cache entry is initialized or not
-	if blockRewardCache.blockNum != lastGovernanceRefreshedBlock || blockRewardCache.mintingAmount == nil {
+	// refresh at block (number -1) % epoch == 0 .
+	// voting is calculated at epoch number in snapshot (which is 1 less than block header number)
+	// cache refresh should be done after snapshot calculating vote.
+	// so cache refresh for block header number should be 1 + epoch number
+	// blockNumber cannot be 0 because this function is called by finalize() and finalize for genesis block isn't called
+	if (blockNum-1)%config.Istanbul.Epoch == 0 || blockRewardCache.blockNum+config.Istanbul.Epoch < blockNum || blockRewardCache.mintingAmount == nil {
 		// Cache missed or not initialized yet. Let's parse governance parameters and update cache
 		cn, poc, kir, err := parseRewardRatio(config.Governance.Reward.Ratio)
 		if err != nil {
@@ -575,7 +579,7 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 			newBlockRewardCache.mintingAmount = config.Governance.Reward.MintingAmount
 		}
 
-		newBlockRewardCache.blockNum = lastGovernanceRefreshedBlock
+		newBlockRewardCache.blockNum = blockNum
 		newBlockRewardCache.cnRewardRatio.SetInt64(int64(cn))
 		newBlockRewardCache.pocRatio.SetInt64(int64(poc))
 		newBlockRewardCache.kirRatio.SetInt64(int64(kir))
