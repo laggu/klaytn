@@ -39,6 +39,9 @@ const (
 	maxQueueDist = 32 * 20  // Maximum allowed distance from the chain head to queue
 	hashLimit    = 256 * 20 // Maximum number of unique blocks a peer may have announced
 	blockLimit   = 64 * 20  // Maximum number of unique blocks a peer may have delivered
+
+	numInsertWorkers = 2   // No need to be large since it is naturally blocked by insertChain which holds a lock
+	numInsertTasks   = 100 // Should not block fetcher
 )
 
 var (
@@ -149,6 +152,8 @@ type Fetcher struct {
 	fetchingHook       func([]common.Hash)     // Method to call upon starting a block (klay/61) or header (klay/62) fetch
 	completingHook     func([]common.Hash)     // Method to call upon starting a block body fetch (klay/62)
 	importedHook       func(*types.Block)      // Method to call upon successful block import (both klay/61 and klay/62)
+
+	insertTasks chan insertTask
 }
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
@@ -176,6 +181,7 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 		chainHeight:        chainHeight,
 		insertChain:        insertChain,
 		dropPeer:           dropPeer,
+		insertTasks:        make(chan insertTask, numInsertTasks),
 	}
 }
 
@@ -183,6 +189,10 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 // hash notifications and block fetches until termination requested.
 func (f *Fetcher) Start() {
 	go f.loop()
+
+	for i := 0; i < numInsertWorkers; i++ {
+		go f.insertWorker()
+	}
 }
 
 // Stop terminates the announcement based synchroniser, canceling all pending
@@ -640,6 +650,63 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 	}
 }
 
+type insertTask struct {
+	peer  string
+	block *types.Block
+}
+
+func (f *Fetcher) insertWork(peer string, block *types.Block) {
+	hash := block.Hash()
+	defer func() { f.done <- hash }()
+
+	// If the parent's unknown, abort insertion
+	parent := f.getBlock(block.ParentHash())
+	if parent == nil {
+		logger.Debug("Unknown parent of propagated block", "peer", peer, "number", block.Number(), "hash", hash, "parent", block.ParentHash())
+		return
+	}
+	// Quickly validate the header and propagate the block if it passes
+	switch err := f.verifyHeader(block.Header()); err {
+	case nil:
+		// All ok, quickly propagate to our peers
+		propBroadcastOutTimer.UpdateSince(block.ReceivedAt)
+		go f.broadcastBlock(block)
+
+	case consensus.ErrFutureBlock:
+		// Weird future block, don't fail, but neither propagate
+
+	default:
+		// Something went very wrong, drop the peer
+		logger.Debug("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
+		f.dropPeer(peer)
+		return
+	}
+	// Run the actual import and log any issues
+	if _, err := f.insertChain(types.Blocks{block}); err != nil {
+		logger.Debug("Propagated block import failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
+		return
+	}
+	// If import succeeded, broadcast the block
+	propAnnounceOutTimer.UpdateSince(block.ReceivedAt)
+	go f.broadcastBlockHash(block)
+
+	// Invoke the testing hook if needed
+	if f.importedHook != nil {
+		f.importedHook(block)
+	}
+}
+
+func (f *Fetcher) insertWorker() {
+	for {
+		select {
+		case task := <-f.insertTasks:
+			f.insertWork(task.peer, task.block)
+		case <-f.quit:
+			return
+		}
+	}
+}
+
 // insert spawns a new goroutine to run a block insertion into the chain. If the
 // block's number is at the same height as the current import phase, it updates
 // the phase states accordingly.
@@ -648,45 +715,7 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 
 	// Run the import on a new thread
 	logger.Debug("Importing propagated block", "peer", peer, "number", block.Number(), "hash", hash)
-	go func() {
-		defer func() { f.done <- hash }()
-
-		// If the parent's unknown, abort insertion
-		parent := f.getBlock(block.ParentHash())
-		if parent == nil {
-			logger.Debug("Unknown parent of propagated block", "peer", peer, "number", block.Number(), "hash", hash, "parent", block.ParentHash())
-			return
-		}
-		// Quickly validate the header and propagate the block if it passes
-		switch err := f.verifyHeader(block.Header()); err {
-		case nil:
-			// All ok, quickly propagate to our peers
-			propBroadcastOutTimer.UpdateSince(block.ReceivedAt)
-			go f.broadcastBlock(block)
-
-		case consensus.ErrFutureBlock:
-			// Weird future block, don't fail, but neither propagate
-
-		default:
-			// Something went very wrong, drop the peer
-			logger.Debug("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
-			f.dropPeer(peer)
-			return
-		}
-		// Run the actual import and log any issues
-		if _, err := f.insertChain(types.Blocks{block}); err != nil {
-			logger.Debug("Propagated block import failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
-			return
-		}
-		// If import succeeded, broadcast the block
-		propAnnounceOutTimer.UpdateSince(block.ReceivedAt)
-		go f.broadcastBlockHash(block)
-
-		// Invoke the testing hook if needed
-		if f.importedHook != nil {
-			f.importedHook(block)
-		}
-	}()
+	f.insertTasks <- insertTask{peer, block}
 }
 
 // forgetHash removes all traces of a block announcement from the fetcher's
