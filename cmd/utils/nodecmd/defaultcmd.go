@@ -28,11 +28,18 @@ import (
 	"github.com/ground-x/klaytn/client"
 	"github.com/ground-x/klaytn/cmd/utils"
 	"github.com/ground-x/klaytn/log"
+	"github.com/ground-x/klaytn/metrics"
+	"github.com/ground-x/klaytn/metrics/prometheus"
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/urfave/cli.v1"
+	"net/http"
 	"os"
+	"runtime"
 	"strings"
+	"time"
 )
 
 const (
@@ -143,8 +150,98 @@ func startServiceChainService(ctx *cli.Context, stack *node.Node) {
 	}
 }
 
-func CommandNotExist(context *cli.Context, s string) {
-	cli.ShowAppHelp(context)
-	fmt.Printf("Error: Unknown command \"%s\"\n", s)
+func CommandNotExist(ctx *cli.Context, s string) {
+	cli.ShowAppHelp(ctx)
+	fmt.Printf("Error: Unknown command \"%v\"\n", s)
 	os.Exit(1)
+}
+
+func OnUsageError(context *cli.Context, err error, isSubcommand bool) error {
+	cli.ShowAppHelp(context)
+	return err
+}
+
+func CheckCommands(ctx *cli.Context) error {
+	valid := false
+	for _, cmd := range ctx.App.Commands {
+		if cmd.Name == ctx.Args().First() {
+			valid = true
+		}
+	}
+
+	if !valid && ctx.Args().Present() {
+		cli.ShowAppHelp(ctx)
+		return fmt.Errorf("Unknown command \"%v\"\n", ctx.Args().First())
+	}
+
+	return nil
+}
+
+func BeforeRunKlaytn(ctx *cli.Context) error {
+	if err := CheckCommands(ctx); err != nil {
+		return err
+	}
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	logDir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
+	debug.CreateLogDir(logDir)
+	if err := debug.Setup(ctx); err != nil {
+		return err
+	}
+
+	// Start prometheus exporter
+	if metrics.Enabled {
+		logger.Info("Enabling metrics collection")
+		if metrics.EnabledPrometheusExport {
+			logger.Info("Enabling Prometheus Exporter")
+			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
+				"", prometheus.DefaultRegisterer, 3*time.Second)
+			go pClient.UpdatePrometheusMetrics()
+			http.Handle("/metrics", promhttp.Handler())
+			port := ctx.GlobalInt(metrics.PrometheusExporterPortFlag)
+
+			go func() {
+				err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+				if err != nil {
+					logger.Error("PrometheusExporter starting failed:", "port", port, "err", err)
+				}
+			}()
+		}
+	}
+
+	// Start system runtime metrics collection
+	go metrics.CollectProcessMetrics(3 * time.Second)
+
+	utils.SetupNetwork(ctx)
+	return nil
+}
+
+func BeforeRunBootnode(ctx *cli.Context) error {
+	if err := debug.Setup(ctx); err != nil {
+		return err
+	}
+
+	// Start prometheus exporter
+	if metrics.Enabled {
+		logger.Info("Enabling metrics collection")
+		if metrics.EnabledPrometheusExport {
+			logger.Info("Enabling Prometheus Exporter")
+			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
+				"", prometheus.DefaultRegisterer, 3*time.Second)
+			go pClient.UpdatePrometheusMetrics()
+			http.Handle("/metrics", promhttp.Handler())
+			port := ctx.GlobalInt(metrics.PrometheusExporterPortFlag)
+
+			go func() {
+				err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+				if err != nil {
+					logger.Error("PrometheusExporter starting failed:", "port", port, "err", err)
+				}
+			}()
+		}
+	}
+
+	// Start system runtime metrics collection
+	go metrics.CollectProcessMetrics(3 * time.Second)
+
+	return nil
 }

@@ -42,6 +42,7 @@ func main() {
 	}
 
 	app.CommandNotFound = nodecmd.CommandNotExist
+	app.OnUsageError = nodecmd.OnUsageError
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
