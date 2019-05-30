@@ -115,7 +115,7 @@ var (
 	defaultSyncMode = cn.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("fast" or "full")`,
+		Usage: `Blockchain sync mode (only "full" is supported)`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
@@ -1060,6 +1060,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
+		if cfg.SyncMode != downloader.FullSync {
+			log.Fatalf("only syncmode=full can be used for syncmode!")
+		}
 	}
 
 	if ctx.GlobalIsSet(BaobabFlag.Name) {

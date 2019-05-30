@@ -109,7 +109,7 @@ var flagsWithValues = []struct {
 	{
 		flag:        "--syncmode",
 		flagType:    FlagTypeArgument,
-		values:      []string{"fast", "full"},
+		values:      []string{"full"}, //[]string{"fast", "full"},
 		wrongValues: commonThreeErrors,
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue, ErrorInvalidValue},
 	},
