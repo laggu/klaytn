@@ -10,12 +10,14 @@ contract FeePayer {
         }
     }
 
-    function feePayer() internal returns (address) {
+    function feePayer() internal returns (address addr) {
         assembly {
-            if iszero(call(gas, 0x0a, 0, 0, 0, 12, 20)) {
+            let freemem := mload(0x40)
+            let start_addr := add(freemem, 12)
+            if iszero(call(gas, 0x0a, 0, 0, 0, start_addr, 20)) {
               invalid()
             }
-            return(0, 32)
+            addr := mload(freemem)
         }
     }
 
