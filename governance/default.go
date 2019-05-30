@@ -145,11 +145,15 @@ type Governance struct {
 	GovernanceTally     []*GovernanceTally
 	GovernanceTallyLock sync.RWMutex
 
-	db                     database.DBManager
-	itemCache              common.Cache
-	idxCache               []uint64
-	actualGovernanceBlock  uint64
-	currentGovernanceBlock uint64
+	db        database.DBManager
+	itemCache common.Cache
+	idxCache  []uint64
+
+	// The block number when current governance information was changed
+	actualGovernanceBlock uint64
+
+	// The last block number at governance state was stored (used not to replay old votes)
+	lastGovernanceStateBlock uint64
 
 	currentSet   GovernanceSet
 	currentSetMu sync.RWMutex
@@ -174,12 +178,13 @@ func (gs GovernanceSet) SetValue(itemType int, value interface{}) error {
 
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	ret := Governance{
-		ChainConfig: chainConfig,
-		voteMap:     make(map[string]VoteStatus),
-		db:          dbm,
-		itemCache:   newGovernanceCache(),
-		currentSet:  GovernanceSet{},
-		changeSet:   GovernanceSet{},
+		ChainConfig:              chainConfig,
+		voteMap:                  make(map[string]VoteStatus),
+		db:                       dbm,
+		itemCache:                newGovernanceCache(),
+		currentSet:               GovernanceSet{},
+		changeSet:                GovernanceSet{},
+		lastGovernanceStateBlock: 0,
 	}
 	// nil is for testing or simple function usage
 	if dbm != nil {
@@ -243,7 +248,9 @@ func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 			Num:    number,
 		}
 	}
-	g.WriteGovernanceState(number)
+	if g.CanWriteGovernanceState(number) {
+		g.WriteGovernanceState(number)
+	}
 }
 
 func (g *Governance) ClearVotes(num uint64) {
@@ -567,7 +574,6 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 		gov.currentSet = newGovernanceSet
 		gov.currentSetMu.Unlock()
 		gov.triggerChange(newGovernanceSet)
-		gov.currentGovernanceBlock = CalcGovernanceInfoBlock(num, gov.GetGovernanceValue("istanbul.epoch").(uint64))
 	}
 
 	if b, err := gov.toJSON(num); err != nil {
@@ -672,8 +678,16 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	gov.GovernanceTally = j.GovernanceTally
 	gov.currentSet = adjustDecodedSet(j.CurrentSet)
 	gov.changeSet = adjustDecodedSet(j.ChangeSet)
+	gov.lastGovernanceStateBlock = j.BlockNumber
 
 	return nil
+}
+
+func (gov *Governance) CanWriteGovernanceState(num uint64) bool {
+	if num <= atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+		return false
+	}
+	return true
 }
 
 func (gov *Governance) WriteGovernanceState(num uint64) error {
@@ -685,6 +699,7 @@ func (gov *Governance) WriteGovernanceState(num uint64) error {
 			logger.Error("Error in writing governance state", "err", err)
 			return err
 		} else {
+			atomic.StoreUint64(&gov.lastGovernanceStateBlock, num)
 			logger.Info("Successfully stored governance state", "num", num)
 			return nil
 		}
@@ -697,7 +712,6 @@ func (gov *Governance) ReadGovernanceState() {
 		logger.Info("No governance state found in a database")
 		return
 	}
-	logger.Info("Successfully loaded governance state from database")
 	gov.UnmarshalJSON(b)
 	params.SetStakingUpdateInterval(gov.ChainConfig.Governance.Reward.StakingUpdateInterval)
 	params.SetProposerUpdateInterval(gov.ChainConfig.Governance.Reward.ProposerUpdateInterval)
@@ -705,6 +719,7 @@ func (gov *Governance) ReadGovernanceState() {
 	if gov.currentSet["param.txgashumanreadable"] != nil {
 		params.TxGasHumanReadable = gov.currentSet["param.txgashumanreadable"].(uint64)
 	}
+	logger.Info("Successfully loaded governance state from database", "blockNumber", atomic.LoadUint64(&gov.lastGovernanceStateBlock))
 }
 
 func (gov *Governance) SetBlockchain(bc *blockchain.BlockChain) {
