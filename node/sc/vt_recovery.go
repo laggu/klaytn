@@ -49,6 +49,11 @@ type valueTransferRecovery struct {
 	mcBridgeInfo *BridgeInfo
 }
 
+var (
+	ErrVtrDisabled       = errors.New("VTR is disabled")
+	ErrVtrAlreadyStarted = errors.New("VTR is already started")
+)
+
 // NewValueTransferRecovery creates a new value transfer recovery structure.
 func NewValueTransferRecovery(config *SCConfig, scBridgeInfo, mcBridgeInfo *BridgeInfo) *valueTransferRecovery {
 	return &valueTransferRecovery{
@@ -68,21 +73,14 @@ func NewValueTransferRecovery(config *SCConfig, scBridgeInfo, mcBridgeInfo *Brid
 // Start implements starting all internal goroutines used by the value transfer recovery.
 func (vtr *valueTransferRecovery) Start() error {
 	if !vtr.config.VTRecovery {
-		logger.Info("value transfer recovery is disabled")
-		return nil
+		return ErrVtrDisabled
 	}
+
+	// TODO-Klaytn-Servicechain If there is no user API to start recovery, remove isRunning in Start/Stop.
 	if vtr.isRunning {
-		logger.Info("value transfer recovery is already started")
-		return nil
+		return ErrVtrAlreadyStarted
 	}
 
-	err := vtr.Recover()
-	if err != nil {
-		logger.Info("value transfer recovery is failed")
-		return err
-	}
-
-	vtr.isRunning = true
 	vtr.wg.Add(1)
 
 	go func() {
@@ -91,6 +89,12 @@ func (vtr *valueTransferRecovery) Start() error {
 			ticker.Stop()
 			vtr.wg.Done()
 		}()
+
+		if err := vtr.Recover(); err != nil {
+			logger.Info("value transfer recovery is failed")
+		}
+
+		vtr.isRunning = true
 
 		for {
 			select {
@@ -345,4 +349,15 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtr.scBridgeInfo.AddRequestValueTransferEvents(evs)
 
 	return nil
+}
+
+func (vtr *valueTransferRecovery) WaitRunningStatus(expected bool, timeout time.Duration) error {
+	for i := 0; i < int(timeout/time.Second); i++ {
+		if vtr.isRunning == expected {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return errors.New("timeout to wait expect value")
 }

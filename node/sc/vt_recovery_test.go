@@ -295,7 +295,7 @@ func TestMethodStop(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to start the value transfer")
 	}
-	assert.Equal(t, true, vtr.isRunning)
+	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
 	err = vtr.Stop()
 	if err != nil {
 		t.Fatal("fail to stop the value transfer")
@@ -319,12 +319,37 @@ func TestFlagVTRecovery(t *testing.T) {
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
 	vtr.Start()
-	assert.Equal(t, true, vtr.isRunning)
+	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
 	vtr.Stop()
 
 	vtr = NewValueTransferRecovery(&SCConfig{VTRecovery: false}, info.localInfo, info.remoteInfo)
-	vtr.Start()
-	assert.Equal(t, false, vtr.isRunning)
+	err := vtr.Start()
+	assert.Equal(t, ErrVtrDisabled, err)
+	vtr.Stop()
+}
+
+// TestAlreadyStartedVTRecovery tests the already started VTR error cases.
+func TestAlreadyStartedVTRecovery(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete the journal file %v", err)
+		}
+	}()
+
+	info := prepare(t, func(info *testInfo) {
+		for i := 0; i < testTxCount; i++ {
+			ops[KLAY].request(info, info.localInfo)
+		}
+	})
+
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
+	err := vtr.Start()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
+
+	err = vtr.Start()
+	assert.Equal(t, ErrVtrAlreadyStarted, err)
+
 	vtr.Stop()
 }
 
@@ -388,6 +413,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to start the value transfer")
 	}
+	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
 	ops[KLAY].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()

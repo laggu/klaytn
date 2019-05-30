@@ -625,11 +625,11 @@ func TestMethodRestoreBridges(t *testing.T) {
 	recovery1 := bm.recoveries[bridgeAddrs[0]]
 	assert.NotEqual(t, nil, recovery1)
 	recovery1.Start()
-	assert.Equal(t, true, recovery1.isRunning)
+	assert.Equal(t, nil, recovery1.WaitRunningStatus(true, 5*time.Second))
 	recovery2 := bm.recoveries[bridgeAddrs[2]]
 	assert.NotEqual(t, nil, recovery2)
 	recovery2.Start()
-	assert.Equal(t, true, recovery2.isRunning)
+	assert.Equal(t, nil, recovery2.WaitRunningStatus(true, 5*time.Second))
 
 	bm.stopAllRecoveries()
 	bm.Stop()
