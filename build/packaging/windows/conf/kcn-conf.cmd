@@ -1,6 +1,6 @@
 REM Configuration file for the kcn
 
-set NETWORK_ID=1001
+set NETWORK_ID=8217
 
 set PORT=32323
 
