@@ -37,8 +37,8 @@ const (
 // the weighted sum of signed public keys should be larger than the threshold.
 // Refer to AccountKeyWeightedMultiSig.Validate().
 type AccountKeyWeightedMultiSig struct {
-	Threshold uint
-	Keys      WeightedPublicKeys
+	Threshold uint               `json:"threshold"`
+	Keys      WeightedPublicKeys `json:"keys"`
 }
 
 func NewAccountKeyWeightedMultiSig() *AccountKeyWeightedMultiSig {
@@ -203,8 +203,8 @@ func (a *AccountKeyWeightedMultiSig) Update(newKey AccountKey, currentBlockNumbe
 // The weight is used to check whether the weighted sum of public keys are larger than
 // the threshold of the AccountKeyWeightedMultiSig object.
 type WeightedPublicKey struct {
-	Weight uint
-	Key    *PublicKeySerializable
+	Weight uint                   `json:"weight"`
+	Key    *PublicKeySerializable `json:"key"`
 }
 
 func (w *WeightedPublicKey) Equal(b *WeightedPublicKey) bool {

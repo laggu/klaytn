@@ -30,8 +30,8 @@ type AccountSerializer struct {
 
 // accountJSON is an internal data structure for JSON serialization.
 type accountJSON struct {
-	AccType AccountType
-	Account json.RawMessage
+	AccType AccountType     `json:"accType"`
+	Account json.RawMessage `json:"account"`
 }
 
 // NewAccountSerializer creates a new AccountSerializer object with default values.

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
 	"math/big"
@@ -41,6 +42,13 @@ type accountCommonSerializable struct {
 	Balance       *big.Int
 	HumanReadable bool
 	Key           *accountkey.AccountKeySerializer
+}
+
+type accountCommonSerializableJSON struct {
+	Nonce         uint64                           `json:"nonce"`
+	Balance       *hexutil.Big                     `json:"balance"`
+	HumanReadable bool                             `json:"humanReadable"`
+	Key           *accountkey.AccountKeySerializer `json:"key"`
 }
 
 // newAccountCommon creates an AccountCommon object with default values.
@@ -116,17 +124,25 @@ func (e *AccountCommon) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (e *AccountCommon) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e.toSerializable())
+	return json.Marshal(&accountCommonSerializableJSON{
+		Nonce:         e.nonce,
+		Balance:       (*hexutil.Big)(e.balance),
+		HumanReadable: e.humanReadable,
+		Key:           accountkey.NewAccountKeySerializerWithAccountKey(e.key),
+	})
 }
 
 func (e *AccountCommon) UnmarshalJSON(b []byte) error {
-	serialized := newAccountCommonSerializable()
+	serialized := &accountCommonSerializableJSON{}
 
 	if err := json.Unmarshal(b, serialized); err != nil {
 		return err
 	}
 
-	e.fromSerializable(serialized)
+	e.nonce = serialized.Nonce
+	e.balance = (*big.Int)(serialized.Balance)
+	e.humanReadable = serialized.HumanReadable
+	e.key = serialized.Key.GetKey()
 
 	return nil
 }

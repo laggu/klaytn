@@ -28,8 +28,8 @@ type AccountKeySerializer struct {
 }
 
 type accountKeyJSON struct {
-	KeyType AccountKeyType
-	Key     json.RawMessage
+	KeyType AccountKeyType  `json:"keyType"`
+	Key     json.RawMessage `json:"key"`
 }
 
 func NewAccountKeySerializerWithAccountKey(k AccountKey) *AccountKeySerializer {

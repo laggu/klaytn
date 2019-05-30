@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"io"
+	"math/big"
 )
 
 // SmartContractAccount represents a smart contract account containing
@@ -43,6 +45,16 @@ type smartContractAccountSerializable struct {
 	StorageRoot        common.Hash
 	CodeHash           []byte
 	CodeFormat         params.CodeFormat
+}
+
+type smartContractAccountSerializableJSON struct {
+	Nonce         uint64                           `json:"nonce"`
+	Balance       *hexutil.Big                     `json:"balance"`
+	HumanReadable bool                             `json:"humanReadable"`
+	Key           *accountkey.AccountKeySerializer `json:"key"`
+	StorageRoot   common.Hash                      `json:"storageRoot"`
+	CodeHash      []byte                           `json:"codeHash"`
+	CodeFormat    params.CodeFormat                `json:"codeFormat"`
 }
 
 func newSmartContractAccount() *SmartContractAccount {
@@ -121,17 +133,31 @@ func (sca *SmartContractAccount) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (sca *SmartContractAccount) MarshalJSON() ([]byte, error) {
-	return json.Marshal(sca.toSerializable())
+	return json.Marshal(&smartContractAccountSerializableJSON{
+		Nonce:         sca.nonce,
+		Balance:       (*hexutil.Big)(sca.balance),
+		HumanReadable: sca.humanReadable,
+		Key:           accountkey.NewAccountKeySerializerWithAccountKey(sca.key),
+		StorageRoot:   sca.storageRoot,
+		CodeHash:      sca.codeHash,
+		CodeFormat:    sca.codeFormat,
+	})
 }
 
 func (sca *SmartContractAccount) UnmarshalJSON(b []byte) error {
-	serialized := newSmartContractAccountSerializable()
+	serialized := &smartContractAccountSerializableJSON{}
 
 	if err := json.Unmarshal(b, serialized); err != nil {
 		return err
 	}
 
-	sca.fromSerializable(serialized)
+	sca.nonce = serialized.Nonce
+	sca.balance = (*big.Int)(serialized.Balance)
+	sca.humanReadable = serialized.HumanReadable
+	sca.key = serialized.Key.GetKey()
+	sca.storageRoot = serialized.StorageRoot
+	sca.codeHash = serialized.CodeHash
+	sca.codeFormat = serialized.CodeFormat
 
 	return nil
 }

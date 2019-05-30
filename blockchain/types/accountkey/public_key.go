@@ -38,7 +38,8 @@ var (
 type PublicKeySerializable ecdsa.PublicKey
 
 type publicKeySerializableInternalJSON struct {
-	X, Y *hexutil.Big
+	X *hexutil.Big `json:"x"`
+	Y *hexutil.Big `json:"y"`
 }
 
 // newPublicKeySerializable creates a PublicKeySerializable object.
