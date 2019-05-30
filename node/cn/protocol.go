@@ -117,7 +117,7 @@ type txPool interface {
 	// The slice should be modifiable by the caller.
 	Pending() (map[common.Address]types.Transactions, error)
 
-	PendingByCount(count int64) (map[common.Address]types.Transactions, error)
+	CachedPendingTxsByCount(count int) types.Transactions
 
 	// SubscribeNewTxsEvent should return an event subscription of
 	// NewTxsEvent and send events to the given channel.

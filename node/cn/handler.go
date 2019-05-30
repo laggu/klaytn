@@ -1270,14 +1270,8 @@ func (pm *ProtocolManager) txResendLoop(period uint64, maxTxCount int) {
 	for {
 		select {
 		case <-resend.C:
-			pending, err := pm.txpool.PendingByCount(int64(maxTxCount))
-			if err != nil {
-				logger.Error("Failed to fetch pending transactions", "err", err)
-				continue
-			}
-			if len(pending) > 0 {
-				pm.txResend(pending)
-			}
+			pending := pm.txpool.CachedPendingTxsByCount(maxTxCount)
+			pm.txResend(pending)
 		case <-pm.quitResendCh:
 			logger.Debug("txResendloop stopped")
 			return
@@ -1285,23 +1279,13 @@ func (pm *ProtocolManager) txResendLoop(period uint64, maxTxCount int) {
 	}
 }
 
-func (pm *ProtocolManager) txResend(pending map[common.Address]types.Transactions) {
+func (pm *ProtocolManager) txResend(pending types.Transactions) {
 	txResendRoutineGauge.Update(txResendRoutineGauge.Value() + 1)
 	defer txResendRoutineGauge.Update(txResendRoutineGauge.Value() - 1)
-
-	logger.Debug("TX Resend start", "Account", len(pending))
-
 	// TODO-Klaytn drop or missing tx
-	var resendTxs []*types.Transaction
-	for _, sortedTxs := range pending {
-		resendTxs = append(resendTxs, sortedTxs...)
-	}
-	if len(resendTxs) > 0 {
-		logger.Debug("Tx Resend", "count", len(resendTxs))
-		txResendGauge.Update(int64(len(resendTxs)))
-		pm.ReBroadcastTxs(resendTxs)
-	} else {
-		txResendGauge.Update(0)
+	if len(pending) > 0 {
+		logger.Debug("Tx Resend", "count", len(pending))
+		pm.ReBroadcastTxs(pending)
 	}
 }
 
