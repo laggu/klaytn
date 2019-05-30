@@ -97,9 +97,10 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'governanceItemsAtNumber',
-			call: 'governance_governanceItemsAtNumber',
-			params: 1
+			name: 'itemsAt',
+			call: 'governance_itemsAt',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 	],
 	properties: [

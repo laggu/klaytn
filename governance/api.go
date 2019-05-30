@@ -142,8 +142,14 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0, nil
 }
 
-func (api *PublicGovernanceAPI) GovernanceItemsAtNumber(num *rpc.BlockNumber) (GovernanceSet, error) {
-	_, data, error := api.governance.ReadGovernance(uint64(num.Int64()))
+func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (GovernanceSet, error) {
+	blockNumber := uint64(0)
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blockNumber = api.governance.lastGovernanceStateBlock
+	} else {
+		blockNumber = uint64(num.Int64())
+	}
+	_, data, error := api.governance.ReadGovernance(blockNumber)
 	if error == nil {
 		return data, error
 	} else {
