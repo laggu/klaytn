@@ -43,7 +43,7 @@ var DefaultConfig = Config{
 	SyncMode:          downloader.FullSync,
 	NetworkId:         1,
 	LevelDBCacheSize:  768,
-	TrieCacheSize:     256,
+	TrieCacheSize:     512,
 	TrieTimeout:       5 * time.Minute,
 	TrieBlockInterval: blockchain.DefaultBlockInterval,
 	GasPrice:          big.NewInt(18 * params.Ston),

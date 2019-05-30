@@ -217,7 +217,7 @@ var (
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
-		Value: 256,
+		Value: 512,
 	}
 	TrieBlockIntervalFlag = cli.UintFlag{
 		Name:  "state.block-interval",
