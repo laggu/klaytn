@@ -540,7 +540,7 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 	var err error
 	// Run the connection type handshake
 	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
-		srv.logger.Error("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
+		srv.logger.Warn("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
 			"conntype", c.conntype, "err", err)
 		return err
 	}
@@ -1677,7 +1677,7 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 	var err error
 	// Run the connection type handshake
 	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
-		srv.logger.Error("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
+		srv.logger.Warn("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
 			"conntype", c.conntype, "err", err)
 		return err
 	}
