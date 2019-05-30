@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync/atomic"
 )
 
 type check struct {
@@ -241,7 +242,7 @@ func checkAddress(k string, v interface{}) bool {
 	return true
 }
 
-func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header *types.Header, proposer common.Address, self common.Address) istanbul.ValidatorSet {
+func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTally, header *types.Header, proposer common.Address, self common.Address) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTally) {
 	gVote := new(GovernanceVote)
 
 	if len(header.Vote) > 0 {
@@ -249,17 +250,17 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 
 		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
 			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
-			return valset
+			return valset, votes, tally
 		}
 		if gVote, err = gov.ParseVoteValue(gVote); err != nil {
 			logger.Error("Failed to parse a vote value. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
-			return valset
+			return valset, votes, tally
 		}
 
 		// If the given key is forbidden, stop processing
 		if _, ok := GovernanceForbiddenKeyMap[gVote.Key]; ok {
 			logger.Warn("Forbidden vote key was received", "key", gVote.Key, "value", gVote.Value, "from", gVote.Validator)
-			return valset
+			return valset, votes, tally
 		}
 
 		key := GovernanceKeyMap[gVote.Key]
@@ -268,31 +269,33 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 			_, addr := valset.GetByAddress(gVote.Value.(common.Address))
 			if addr == nil {
 				logger.Warn("Invalid governing node address", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
-				return valset
+				return valset, votes, tally
 			}
 		case params.AddValidator:
 			if !gov.checkVote(gVote.Value.(common.Address), true, valset) {
-				return valset
+				return valset, votes, tally
 			}
 		case params.RemoveValidator:
 			if !gov.checkVote(gVote.Value.(common.Address), false, valset) {
-				return valset
+				return valset, votes, tally
 			}
 		}
+
+		number := header.Number.Uint64()
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
 			governanceMode := GovernanceModeMap[gov.ChainConfig.Governance.GovernanceMode]
 			governingNode := gov.ChainConfig.Governance.GoverningNode
 
 			// Remove old vote with same validator and key
-			gov.removePreviousVote(valset, proposer, gVote, governanceMode, governingNode)
+			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode)
 
 			// Add new Vote to snapshot.GovernanceVotes
-			gov.GovernanceVotes = append(gov.GovernanceVotes, gVote)
+			votes = append(votes, *gVote)
 
 			// Tally up the new vote. This will be cleared when Epoch ends.
 			// Add to GovernanceTally if it doesn't exist
-			valset = gov.addNewVote(valset, gVote, governanceMode, governingNode)
+			valset, votes, tally = gov.addNewVote(valset, votes, tally, gVote, governanceMode, governingNode, number)
 
 			// If this vote was casted by this node, remove it
 			if self == proposer {
@@ -301,8 +304,14 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, header
 		} else {
 			logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 		}
+		if number > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+			gov.GovernanceVotes = make([]GovernanceVote, len(votes))
+			gov.GovernanceTally = make([]GovernanceTally, len(tally))
+			copy(gov.GovernanceVotes, votes)
+			copy(gov.GovernanceTally, tally)
+		}
 	}
-	return valset
+	return valset, votes, tally
 }
 
 func (gov *Governance) checkVote(address common.Address, authorize bool, valset istanbul.ValidatorSet) bool {
@@ -314,18 +323,21 @@ func (gov *Governance) isGovernanceModeSingleOrNone(governanceMode int, governin
 	return governanceMode == params.GovernanceMode_None || (governanceMode == params.GovernanceMode_Single && voter == governingNode)
 }
 
-func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address) {
+func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTally, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address) ([]GovernanceVote, []GovernanceTally) {
+	ret := []GovernanceVote{}
+
 	// Removing duplicated previous GovernanceVotes
-	for idx, vote := range gov.GovernanceVotes {
+	for idx, vote := range votes {
 		// Check if previous vote from same validator exists
 		if vote.Validator == validator && vote.Key == gVote.Key {
 			// Reduce Tally
 			_, v := valset.GetByAddress(vote.Validator)
 			vp := v.VotingPower()
-			currentVotes := gov.changeGovernanceTally(vote.Key, vote.Value, vp, false)
+			var currentVotes uint64
+			currentVotes, tally = gov.changeGovernanceTally(tally, vote.Key, vote.Value, vp, false)
 
 			// Remove the old vote from GovernanceVotes
-			gov.GovernanceVotes = append(gov.GovernanceVotes[:idx], gov.GovernanceVotes[idx+1:]...)
+			ret = append(votes[:idx], votes[idx+1:]...)
 			if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
 				(governanceMode == params.GovernanceMode_Ballot && currentVotes <= valset.TotalVotingPower()/2) {
 				if v, ok := gov.changeSet[vote.Key]; ok && v == vote.Value {
@@ -337,24 +349,27 @@ func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, validato
 			break
 		}
 	}
+	return ret, tally
 }
 
 // changeGovernanceTally updates snapshot's tally for governance votes.
-func (gov *Governance) changeGovernanceTally(key string, value interface{}, vote uint64, isAdd bool) uint64 {
+func (gov *Governance) changeGovernanceTally(tally []GovernanceTally, key string, value interface{}, vp uint64, isAdd bool) (uint64, []GovernanceTally) {
 	found := false
 	var currentVote uint64
+	ret := []GovernanceTally{}
 
-	for idx, v := range gov.GovernanceTally {
+	for idx, v := range tally {
 		if v.Key == key && v.Value == value {
 			if isAdd {
-				gov.GovernanceTally[idx].Votes += vote
+				tally[idx].Votes += vp
 			} else {
-				gov.GovernanceTally[idx].Votes -= vote
+				tally[idx].Votes -= vp
 			}
-			currentVote = gov.GovernanceTally[idx].Votes
+
+			currentVote = tally[idx].Votes
 
 			if currentVote == 0 {
-				gov.GovernanceTally = append(gov.GovernanceTally[:idx], gov.GovernanceTally[idx+1:]...)
+				ret = append(tally[:idx], tally[idx+1:]...)
 			}
 			found = true
 			break
@@ -362,18 +377,19 @@ func (gov *Governance) changeGovernanceTally(key string, value interface{}, vote
 	}
 
 	if !found {
-		gov.GovernanceTally = append(gov.GovernanceTally, &GovernanceTally{Key: key, Value: value, Votes: vote})
-		return vote
+		tally = append(tally, GovernanceTally{Key: key, Value: value, Votes: vp})
+		return vp, tally
 	} else {
-		return currentVote
+		return currentVote, ret
 	}
 }
 
-func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, gVote *GovernanceVote, governanceMode int, governingNode common.Address) istanbul.ValidatorSet {
+func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTally, gVote *GovernanceVote, governanceMode int, governingNode common.Address, blockNum uint64) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTally) {
 	_, v := valset.GetByAddress(gVote.Validator)
 	if v != nil {
 		vp := v.VotingPower()
-		currentVotes := gov.changeGovernanceTally(gVote.Key, gVote.Value, vp, true)
+		var currentVotes uint64
+		currentVotes, tally = gov.changeGovernanceTally(tally, gVote.Key, gVote.Value, vp, true)
 		if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
 			(governanceMode == params.GovernanceMode_Ballot && currentVotes > valset.TotalVotingPower()/2) {
 			switch GovernanceKeyMap[gVote.Key] {
@@ -382,23 +398,29 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, gVote *Governanc
 			case params.RemoveValidator:
 				target := gVote.Value.(common.Address)
 				valset.RemoveValidator(target)
-				gov.removeVotesFromRemovedNode(target)
+				votes = gov.removeVotesFromRemovedNode(votes, target)
 			default:
-				gov.ReflectVotes(*gVote)
+				if blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+					gov.ReflectVotes(*gVote)
+				}
 			}
 		}
 	}
-	return valset
+	return valset, votes, tally
 }
 
-func (gov *Governance) removeVotesFromRemovedNode(addr common.Address) {
-	for i := 0; i < len(gov.GovernanceVotes); i++ {
-		if gov.GovernanceVotes[i].Validator == addr {
+func (gov *Governance) removeVotesFromRemovedNode(votes []GovernanceVote, addr common.Address) []GovernanceVote {
+	ret := make([]GovernanceVote, len(votes))
+	copy(ret, votes)
+
+	for i := 0; i < len(votes); i++ {
+		if votes[i].Validator == addr {
 			// Uncast the vote from the chronological list
-			gov.GovernanceVotes = append(gov.GovernanceVotes[:i], gov.GovernanceVotes[i+1:]...)
+			ret = append(votes[:i], votes[i+1:]...)
 			i--
 		}
 	}
+	return ret
 }
 
 func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error) {

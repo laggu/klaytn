@@ -141,8 +141,8 @@ type Governance struct {
 	totalVotingPower uint64
 	votingPower      uint64
 
-	GovernanceVotes     []*GovernanceVote
-	GovernanceTally     []*GovernanceTally
+	GovernanceVotes     []GovernanceVote
+	GovernanceTally     []GovernanceTally
 	GovernanceTallyLock sync.RWMutex
 
 	db        database.DBManager
@@ -249,7 +249,7 @@ func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 		}
 	}
 	if g.CanWriteGovernanceState(number) {
-		g.WriteGovernanceState(number)
+		g.WriteGovernanceState(number, false)
 	}
 }
 
@@ -645,8 +645,8 @@ type governanceJSON struct {
 	ChainConfig     *params.ChainConfig   `json:"chainConfig"`
 	VoteMap         map[string]VoteStatus `json:"voteMap"`
 	NodeAddress     common.Address        `json:"nodeAddress"`
-	GovernanceVotes []*GovernanceVote     `json:"governanceVotes"`
-	GovernanceTally []*GovernanceTally    `json:"governanceTally"`
+	GovernanceVotes []GovernanceVote      `json:"governanceVotes"`
+	GovernanceTally []GovernanceTally     `json:"governanceTally"`
 	CurrentSet      GovernanceSet         `json:"currentSet"`
 	ChangeSet       GovernanceSet         `json:"changeSet"`
 }
@@ -690,7 +690,7 @@ func (gov *Governance) CanWriteGovernanceState(num uint64) bool {
 	return true
 }
 
-func (gov *Governance) WriteGovernanceState(num uint64) error {
+func (gov *Governance) WriteGovernanceState(num uint64, isCheckpoint bool) error {
 	if b, err := gov.toJSON(num); err != nil {
 		logger.Error("Error in marshaling governance state", "err", err)
 		return err
@@ -699,7 +699,9 @@ func (gov *Governance) WriteGovernanceState(num uint64) error {
 			logger.Error("Error in writing governance state", "err", err)
 			return err
 		} else {
-			atomic.StoreUint64(&gov.lastGovernanceStateBlock, num)
+			if isCheckpoint {
+				atomic.StoreUint64(&gov.lastGovernanceStateBlock, num)
+			}
 			logger.Info("Successfully stored governance state", "num", num)
 			return nil
 		}

@@ -44,6 +44,8 @@ type Snapshot struct {
 	ValSet        istanbul.ValidatorSet // Set of authorized validators at this moment
 	Policy        uint64
 	CommitteeSize uint64
+	Votes         []governance.GovernanceVote  // List of votes cast in chronological order
+	Tally         []governance.GovernanceTally // Current vote tally to avoid recalculating
 }
 
 func getGovernanceValue(gov *governance.Governance, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
@@ -83,6 +85,8 @@ func newSnapshot(gov *governance.Governance, number uint64, hash common.Hash, va
 		ValSet:        valSet,
 		Policy:        policy,
 		CommitteeSize: committeeSize,
+		Votes:         make([]governance.GovernanceVote, 0),
+		Tally:         make([]governance.GovernanceTally, 0),
 	}
 	return snap
 }
@@ -119,7 +123,13 @@ func (s *Snapshot) copy() *Snapshot {
 		ValSet:        s.ValSet.Copy(),
 		Policy:        s.Policy,
 		CommitteeSize: s.CommitteeSize,
+		Votes:         make([]governance.GovernanceVote, len(s.Votes)),
+		Tally:         make([]governance.GovernanceTally, len(s.Tally)),
 	}
+
+	copy(cpy.Votes, s.Votes)
+	copy(cpy.Tally, s.Tally)
+
 	return cpy
 }
 
@@ -165,7 +175,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			return nil, errUnauthorized
 		}
 
-		snap.ValSet = gov.HandleGovernanceVote(snap.ValSet, header, validator, addr)
+		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr)
 
 		if number%snap.Epoch == 0 {
 			if len(header.Governance) > 0 {
@@ -176,6 +186,8 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 
 			// Reload governance values because epoch changed
 			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
+			snap.Votes = make([]governance.GovernanceVote, 0)
+			snap.Tally = make([]governance.GovernanceTally, 0)
 		}
 	}
 	snap.Number += uint64(len(headers))
@@ -233,9 +245,11 @@ func sortValidatorArray(validators []common.Address) []common.Address {
 }
 
 type snapshotJSON struct {
-	Epoch  uint64      `json:"epoch"`
-	Number uint64      `json:"number"`
-	Hash   common.Hash `json:"hash"`
+	Epoch  uint64                       `json:"epoch"`
+	Number uint64                       `json:"number"`
+	Hash   common.Hash                  `json:"hash"`
+	Votes  []governance.GovernanceVote  `json:"votes"`
+	Tally  []governance.GovernanceTally `json:"tally"`
 
 	// for validator set
 	Validators   []common.Address        `json:"validators"`
@@ -269,6 +283,8 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 		Epoch:             s.Epoch,
 		Number:            s.Number,
 		Hash:              s.Hash,
+		Votes:             s.Votes,
+		Tally:             s.Tally,
 		Validators:        validators,
 		Policy:            istanbul.ProposerPolicy(s.Policy),
 		SubGroupSize:      s.CommitteeSize,
@@ -290,6 +306,8 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Epoch = j.Epoch
 	s.Number = j.Number
 	s.Hash = j.Hash
+	s.Votes = j.Votes
+	s.Tally = j.Tally
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if j.Policy == istanbul.WeightedRandom {
