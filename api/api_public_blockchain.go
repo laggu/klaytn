@@ -320,7 +320,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 // Call executes the given transaction on the state for the given block number.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	result, _, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime)
+	result, _, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{}, localTxExecutionTime)
 	return (hexutil.Bytes)(result), err
 }
 
