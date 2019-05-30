@@ -1147,20 +1147,36 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 	}
 }
 
+func (pm *ProtocolManager) sampleResendPeersByType(nodetype p2p.ConnType) []Peer {
+	// TODO-Klaytn Need to tune pickSize. Currently use 2 for availability and efficiency.
+	var peers []Peer
+	switch nodetype {
+	case node.ENDPOINTNODE:
+		peers = pm.peers.TypePeers(node.PROXYNODE)
+		if len(peers) == 0 {
+			peers = pm.peers.TypePeers(node.ENDPOINTNODE)
+		}
+		peers = samplingPeers(peers, 2)
+	case node.PROXYNODE:
+		peers = pm.peers.TypePeers(node.CONSENSUSNODE)
+		if len(peers) == 0 {
+			peers = pm.peers.TypePeers(node.PROXYNODE)
+		}
+		peers = samplingPeers(peers, 2)
+	default:
+		logger.Warn("Not supported nodetype", "nodetype", nodetype)
+		return nil
+	}
+	return peers
+}
+
 func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) {
 	var cntxset = make(map[Peer]types.Transactions)
 	var txset = make(map[Peer]types.Transactions)
 	for _, tx := range txs {
 		// TODO-Klaytn drop or missing tx
 		if resend {
-			var peers []Peer
-			if pm.nodetype == node.ENDPOINTNODE {
-				peers = pm.peers.TypePeers(node.PROXYNODE)
-			} else {
-				peers = pm.peers.TypePeers(node.CONSENSUSNODE)
-			}
-			// TODO-Klaytn need to tuning pickSize. currently 3 is for availability and efficiency
-			peers = samplingPeers(peers, 3)
+			peers := pm.sampleResendPeersByType(pm.nodetype)
 			for _, peer := range peers {
 				txset[peer] = append(txset[peer], tx)
 			}
