@@ -185,6 +185,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		// TODO-Klaytn-Issue1166 We have to update block number of ValSet too.
 		snap.ValSet.SetBlockNum(snap.Number)
 	}
+	snap.ValSet.SetSubGroupSize(snap.CommitteeSize)
 
 	gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())
 	gov.SetMyVotingPower(snap.getMyVotingPower(addr))

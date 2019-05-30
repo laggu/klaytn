@@ -288,9 +288,8 @@ func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View
 func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, proposer common.Address, view *istanbul.View) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-
 	if uint64(len(valSet.validators)) <= valSet.subSize {
-		// logger.Trace("Choose all validators", "prevHash", prevHash, "proposer", proposer, "committee", valSet.validators)
+		logger.Trace("Council is less than subsize Choose all validators", "valSet.Number", valSet.blockNum, "prevHash", prevHash.Hex(), "proposer", proposer, "committee", valSet.validators, "committee size", len(valSet.validators), "subsize", valSet.subSize)
 		return valSet.validators
 	}
 
@@ -315,7 +314,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	}
 	committee[0] = proposerValidator
 	if valSet.subSize == 1 {
-		logger.Debug("Sub size is 1, current", "prevHash", prevHash, "proposer", proposer, "committee", committee, "len of committee", len(committee), "subSize", valSet.subSize)
+		logger.Debug("Sub size is 1, current", "prevHash", prevHash.Hex(), "proposer", proposer, "committee", committee, "committee size", len(committee), "subSize", valSet.subSize)
 		return committee
 	}
 	// next proposer
@@ -372,7 +371,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		logger.Error("### subList", "prevHash", prevHash.Hex())
 	}
 
-	logger.Debug("New committee", "prevHash", prevHash, "proposer", proposer, "committee", committee, "len of committee", len(committee), "subSize", valSet.subSize)
+	logger.Debug("New committee", "valSet.Number", valSet.blockNum, "prevHash", prevHash.Hex(), "proposer", proposer, "committee", committee, "committee size", len(committee), "subSize", valSet.subSize)
 	return committee
 }
 
