@@ -1584,3 +1584,328 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		}
 	}
 }
+
+// TestValidationPoolResetAfterSenderKeyChange puts txs in the pending pool and generates a block only with the first tx.
+// Since the tx changes the sender's account key, all rest txs should drop from the pending pool.
+func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
+	txTypes := []types.TxType{
+		types.TxTypeLegacyTransaction,
+
+		types.TxTypeValueTransfer,
+		types.TxTypeValueTransferMemo,
+		types.TxTypeSmartContractDeploy,
+		types.TxTypeSmartContractExecution,
+		types.TxTypeAccountCreation,
+		types.TxTypeAccountUpdate,
+		types.TxTypeCancel,
+
+		types.TxTypeFeeDelegatedValueTransfer,
+		types.TxTypeFeeDelegatedValueTransferMemo,
+		types.TxTypeFeeDelegatedSmartContractDeploy,
+		types.TxTypeFeeDelegatedSmartContractExecution,
+		types.TxTypeFeeDelegatedAccountUpdate,
+		types.TxTypeFeeDelegatedCancel,
+
+		types.TxTypeFeeDelegatedValueTransferWithRatio,
+		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
+		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
+		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
+		types.TxTypeFeeDelegatedCancelWithRatio,
+
+		types.TxTypeChainDataAnchoring,
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	assert.Equal(t, nil, err)
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	// state changing tx which will invalidate other txs when it is contained in a block.
+	var txs types.Transactions
+	{
+		valueMap, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountUpdate)
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, valueMap)
+
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.AddNonce()
+	}
+
+	// generate valid txs with all tx types.
+	for _, txType := range txTypes {
+		txType := txType
+
+		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+		tx, err := types.NewTransactionWithMap(txType, valueMap)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		if txType.IsFeeDelegatedTransaction() {
+			tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+		}
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.AddNonce()
+	}
+
+	// check pending whether it contains all txs
+	pendingLen, _ := txpool.Stats()
+	assert.Equal(t, len(txTypes)+1, pendingLen)
+
+	// generate a block with a state changing tx
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// check pending whether it contains zero tx
+	pendingLen, _ = txpool.Stats()
+	assert.Equal(t, 0, pendingLen)
+}
+
+// TestValidationPoolResetAfterFeePayerKeyChange puts txs in the pending pool and generates a block only with the first tx.
+// Since the tx changes the fee payer's account key, all rest txs should drop from the pending pool.
+func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
+	txTypes := []types.TxType{
+		types.TxTypeFeeDelegatedValueTransfer,
+		types.TxTypeFeeDelegatedValueTransferMemo,
+		types.TxTypeFeeDelegatedSmartContractDeploy,
+		types.TxTypeFeeDelegatedSmartContractExecution,
+		types.TxTypeFeeDelegatedAccountUpdate,
+		types.TxTypeFeeDelegatedCancel,
+
+		types.TxTypeFeeDelegatedValueTransferWithRatio,
+		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
+		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
+		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
+		types.TxTypeFeeDelegatedCancelWithRatio,
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	assert.Equal(t, nil, err)
+
+	// fee payer account
+	feePayer, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
+	assert.Equal(t, nil, err)
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            feePayer.Addr,
+			types.TxValueKeyAmount:        new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(100000)),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyAccountKey:    feePayer.AccKey,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	// state changing tx which will invalidate other txs when it is contained in a block.
+	var txs types.Transactions
+	{
+		valueMap, _ := genMapForTxTypes(feePayer, feePayer, types.TxTypeAccountUpdate)
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, valueMap)
+
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, feePayer.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		feePayer.AddNonce()
+	}
+
+	// generate valid txs with all tx fee delegation types.
+	for _, txType := range txTypes {
+		txType := txType
+
+		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+		valueMap[types.TxValueKeyFeePayer] = feePayer.Addr
+
+		tx, err := types.NewTransactionWithMap(txType, valueMap)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		tx.SignFeePayerWithKeys(signer, feePayer.Keys)
+		assert.Equal(t, nil, err)
+
+		err = txpool.AddRemote(tx)
+		assert.Equal(t, nil, err)
+		reservoir.AddNonce()
+	}
+
+	// check pending whether it contains all txs
+	pendingLen, _ := txpool.Stats()
+	assert.Equal(t, len(txTypes)+1, pendingLen)
+
+	// generate a block with a state changing tx
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// check pending whether it contains zero tx
+	pendingLen, _ = txpool.Stats()
+	assert.Equal(t, 0, pendingLen)
+}
