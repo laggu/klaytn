@@ -193,7 +193,7 @@ var (
 	NumStateTriePartitionsFlag = cli.UintFlag{
 		Name:  "db.num-statetrie-partitions",
 		Usage: "Number of internal partitions of state trie partition. Should be power of 2",
-		Value: 1,
+		Value: 4,
 	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
 		Name:  "db.leveldb.cache-size",
