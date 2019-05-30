@@ -169,7 +169,6 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
-	_, size, _ := s.Kind()
 	serializer := newTxInternalDataSerializer()
 	if err := s.Decode(serializer); err != nil {
 		return err
@@ -180,7 +179,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	}
 
 	tx.data = serializer.tx
-	tx.size.Store(common.StorageSize(rlp.ListSize(size)))
+	tx.Size()
 
 	return nil
 }

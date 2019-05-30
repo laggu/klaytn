@@ -11,6 +11,7 @@ import (
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
+	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -1419,6 +1420,167 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				assert.Equal(t, nil, err)
 				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 			}
+		}
+	}
+}
+
+// TestValidationTxSizeAfterRLP tests tx size validation during txPool insert process.
+// Since the size is RLP encoded tx size, the test also includes RLP encoding/decoding process which may raise an issue.
+func TestValidationTxSizeAfterRLP(t *testing.T) {
+	var testTxTypes = []types.TxType{
+		types.TxTypeLegacyTransaction,
+		types.TxTypeValueTransferMemo,
+		types.TxTypeSmartContractDeploy,
+		types.TxTypeSmartContractExecution,
+		types.TxTypeChainDataAnchoring,
+		types.TxTypeFeeDelegatedValueTransferMemo,
+		types.TxTypeFeeDelegatedSmartContractDeploy,
+		types.TxTypeFeeDelegatedSmartContractExecution,
+		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
+		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
+	// test for all tx types
+	for _, txType := range testTxTypes {
+		// test for invalid tx size
+		{
+			// generate invalid txs which size is around (32 * 1024) ~ (33 * 1024)
+			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+			valueMap, _ = exceedSizeLimit(txType, valueMap)
+
+			tx, err := types.NewTransactionWithMap(txType, valueMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			// check the rlp encoded tx size
+			encodedTx, err := rlp.EncodeToBytes(tx)
+			if len(encodedTx) < blockchain.MaxTxDataSize {
+				t.Fatalf("test data size is smaller than MaxTxDataSize")
+			}
+
+			// RLP decode and re-generate the tx
+			newTx := &types.Transaction{}
+			err = rlp.DecodeBytes(encodedTx, newTx)
+
+			// test for tx pool insert validation
+			err = txpool.AddRemote(newTx)
+			assert.Equal(t, blockchain.ErrOversizedData, err)
+		}
+
+		// test for valid tx size
+		{
+			// generate valid txs which size is around (31 * 1024) ~ (32 * 1024)
+			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+			validData := make([]byte, blockchain.MaxTxDataSize-1024)
+
+			if valueMap[types.TxValueKeyData] != nil {
+				valueMap[types.TxValueKeyData] = validData
+			}
+
+			if valueMap[types.TxValueKeyAnchoredData] != nil {
+				valueMap[types.TxValueKeyAnchoredData] = validData
+			}
+
+			tx, err := types.NewTransactionWithMap(txType, valueMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			// check the rlp encoded tx size
+			encodedTx, err := rlp.EncodeToBytes(tx)
+			if len(encodedTx) > blockchain.MaxTxDataSize {
+				t.Fatalf("test data size is bigger than MaxTxDataSize")
+			}
+
+			// RLP decode and re-generate the tx
+			newTx := &types.Transaction{}
+			err = rlp.DecodeBytes(encodedTx, newTx)
+
+			// test for tx pool insert validation
+			err = txpool.AddRemote(newTx)
+			assert.Equal(t, nil, err)
+			reservoir.AddNonce()
 		}
 	}
 }
