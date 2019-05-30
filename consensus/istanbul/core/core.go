@@ -28,6 +28,7 @@ import (
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/metrics"
+	"github.com/ground-x/klaytn/node"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math"
 	"math/big"
@@ -355,13 +356,16 @@ func (c *core) newRoundChangeTimer() {
 			proposer = c.valSet.GetProposer().String()
 		}
 
-		// Write log messages for validator activities analysis
-		logger.Warn("[RC] timeoutEvent Sent!", "set by", loc, "sequence", c.current.sequence, "round", c.current.round, "proposer", proposer, "preprepare is nil?", c.current.Preprepare == nil, "len(prepares)", len(c.current.Prepares.messages), "len(commits)", len(c.current.Commits.messages))
-		if len(c.current.Prepares.messages) > 0 {
-			printMessageSet(0, c.current.Prepares.messages)
-		}
-		if len(c.current.Commits.messages) > 0 {
-			printMessageSet(1, c.current.Commits.messages)
+		if c.backend.NodeType() == node.CONSENSUSNODE {
+			// Write log messages for validator activities analysis
+			logger.Warn("[RC] timeoutEvent Sent!", "set by", loc, "sequence", c.current.sequence, "round", c.current.round, "proposer", proposer, "preprepare is nil?", c.current.Preprepare == nil, "len(prepares)", len(c.current.Prepares.messages), "len(commits)", len(c.current.Commits.messages))
+
+			if len(c.current.Prepares.messages) > 0 {
+				printMessageSet(0, c.current.Prepares.messages)
+			}
+			if len(c.current.Commits.messages) > 0 {
+				printMessageSet(1, c.current.Commits.messages)
+			}
 		}
 
 		c.sendEvent(timeoutEvent{})
