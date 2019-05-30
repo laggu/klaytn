@@ -629,6 +629,10 @@ web3._extend({
 			call: 'klay_getTransactionReceiptBySenderTxHash',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getCypressCredit',
+			call: 'klay_getCypressCredit',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
