@@ -34,7 +34,6 @@ import (
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"math/big"
-	"sync"
 	"time"
 )
 
@@ -49,20 +48,14 @@ type LocalBackend struct {
 
 	events *filters.EventSystem // Event system for filtering log events live
 	config *params.ChainConfig
-
-	mu         sync.Mutex
-	logfilters []*LogFilter
 }
 
 func NewLocalBackend(main *SubBridge) (*LocalBackend, error) {
-	lb := &LocalBackend{
+	return &LocalBackend{
 		subbrige: main,
 		config:   main.blockchain.Config(),
 		events:   filters.NewEventSystem(main.EventMux(), &filterLocalBackend{main}, false),
-	}
-	// add localbackend to evenhandler to handle log as LogEventListener
-	main.eventhandler.AddListener(lb)
-	return lb, nil
+	}, nil
 }
 
 func (lb *LocalBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
@@ -236,93 +229,35 @@ func (lb *LocalBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery
 }
 
 func (lb *LocalBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
-	lb.mu.Lock()
-	// TODO-Klaytn improve logfilter management
-	lb.logfilters = append(lb.logfilters, &LogFilter{query, ch})
-	idx := len(lb.logfilters) - 1
-	lb.mu.Unlock()
-	return &FilterLogSubscription{idx: idx, localBackend: lb, err: make(chan error, 1)}, nil
-}
+	// Subscribe to contract events
+	sink := make(chan []*types.Log)
 
-func (lb *LocalBackend) Handle(logs []*types.Log) error {
-
-	for _, filter := range lb.logfilters {
-		addresses := filter.query.Addresses
-		topics := filter.query.Topics
-	Logs:
-		for _, log := range logs {
-			if len(addresses) > 0 && !includes(addresses, log.Address) {
-				continue
-			}
-			// If the to filtered topics is greater than the amount of topics in logs, skip.
-			if len(topics) > len(log.Topics) {
-				continue Logs
-			}
-			for i, topics := range topics {
-				match := len(topics) == 0 // empty rule set == wildcard
-				for _, topic := range topics {
-					if log.Topics[i] == topic {
-						match = true
-						break
+	sub, err := lb.events.SubscribeLogs(query, sink)
+	if err != nil {
+		return nil, err
+	}
+	// Since we're getting logs in batches, we need to flatten them into a plain stream
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case logs := <-sink:
+				for _, log := range logs {
+					select {
+					case ch <- *log:
+					case err := <-sub.Err():
+						return err
+					case <-quit:
+						return nil
 					}
 				}
-				if !match {
-					continue Logs
-				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
 			}
-			filter.logCh <- *log
 		}
-	}
-	return nil
-}
-
-func includes(addresses []common.Address, a common.Address) bool {
-	for _, addr := range addresses {
-		if addr == a {
-			return true
-		}
-	}
-	return false
-}
-
-func (lb *LocalBackend) RemoveFilter(idx int) {
-	lb.mu.Lock()
-	if len(lb.logfilters) > idx+1 {
-		lb.logfilters = append(lb.logfilters[:idx], lb.logfilters[idx+1:]...)
-	} else {
-		lb.logfilters = lb.logfilters[:idx]
-	}
-	lb.mu.Unlock()
-}
-
-// LogFilter has query,logCh to filter log
-type LogFilter struct {
-	query klaytn.FilterQuery
-	logCh chan<- types.Log
-}
-
-// FilterLogSubscription is Subscription in SubscribeFilterLogs
-type FilterLogSubscription struct {
-	idx          int
-	localBackend *LocalBackend
-	mu           sync.Mutex
-	err          chan error
-	unsubscribed bool
-}
-
-func (fls *FilterLogSubscription) Unsubscribe() {
-	fls.mu.Lock()
-	if !fls.unsubscribed {
-		fls.localBackend.RemoveFilter(fls.idx)
-		fls.err <- nil
-		close(fls.err)
-	}
-	fls.unsubscribed = true
-	fls.mu.Unlock()
-}
-
-func (fls *FilterLogSubscription) Err() <-chan error {
-	return fls.err
+	}), nil
 }
 
 type filterLocalBackend struct {
