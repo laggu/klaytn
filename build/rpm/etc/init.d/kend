@@ -27,10 +27,6 @@ STOP_TIMEOUT=${STOP_TIMEOUT-10}
 set -f
 OPTIONS=""
 
-if [[ ! -z $NO_DISCOVER ]] && [[ $NO_DISCOVER -eq 1 ]]; then
-    OPTIONS="$OPTIONS --nodiscover"
-fi
-
 if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
     OPTIONS="$OPTIONS --metrics"
 fi
@@ -143,6 +139,14 @@ if [[ ! -z $SC_BRIDGE ]] && [[ $SC_BRIDGE -eq 1 ]]; then
     if [[ ! -z $SC_INDEXING ]] && [[ $SC_INDEXING -eq 1 ]]; then
         OPTIONS="$OPTIONS --childchainindexing"
     fi
+fi
+
+if [[ ! -z $NO_DISCOVER ]] && [[ $NO_DISCOVER -eq 1 ]]; then
+    OPTIONS="$OPTIONS --nodiscover"
+fi
+
+if [[ ! -z $BOOTNODES ]] && [[ $BOOTNODES != "" ]]; then
+    OPTIONS="$OPTIONS --bootnodes $BOOTNODES"
 fi
 
 if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
