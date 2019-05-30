@@ -227,18 +227,18 @@ func (sbh *SubBridgeHandler) handleServiceChainParentChainInfoResponseMsg(p Brid
 		poolNonce += 1
 		// just check
 		if sbh.getMainChainAccountNonce() > poolNonce {
-			logger.Error("main chain account nonce is bigger than the chain pool nonce.", "chainPoolNonce", poolNonce, "mainChainAccountNonce", sbh.getMainChainAccountNonce())
+			logger.Error("main chain account nonce is bigger than the chain pool nonce.", "BridgeTxPoolNonce", poolNonce, "mainChainAccountNonce", sbh.getMainChainAccountNonce())
 		}
 		if poolNonce < pcInfo.Nonce {
 			// bridgeTxPool journal miss txs which already sent to parent-chain
-			logger.Error("chain pool nonce is less than the parent chain nonce.", "chainPoolNonce", poolNonce, "parentChainNonce", pcInfo.Nonce)
+			logger.Error("chain pool nonce is less than the parent chain nonce.", "chainPoolNonce", poolNonce, "receivedNonce", pcInfo.Nonce)
 			sbh.setMainChainAccountNonce(pcInfo.Nonce)
 		} else {
 			// bridgeTxPool journal has txs which don't receive receipt from parent-chain
 			sbh.setMainChainAccountNonce(poolNonce)
 		}
 	} else if sbh.getMainChainAccountNonce() > pcInfo.Nonce {
-		logger.Error("main chain account nonce is bigger than the parent chain nonce.", "mainChainAccountNonce", sbh.getMainChainAccountNonce(), "parentChainNonce", pcInfo.Nonce)
+		logger.Error("main chain account nonce is bigger than the received nonce.", "mainChainAccountNonce", sbh.getMainChainAccountNonce(), "receivedNonce", pcInfo.Nonce)
 		sbh.setMainChainAccountNonce(pcInfo.Nonce)
 	} else {
 		// there is no tx in bridgetTxPool, so parent-chain's nonce is used
@@ -246,7 +246,7 @@ func (sbh *SubBridgeHandler) handleServiceChainParentChainInfoResponseMsg(p Brid
 	}
 	sbh.setMainChainAccountNonceSynced(true)
 	sbh.setRemoteGasPrice(pcInfo.GasPrice)
-	logger.Info("ServiceChainNonceResponse", "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice, "mainChainAccountNonce", sbh.getMainChainAccountNonce())
+	logger.Info("ServiceChainNonceResponse", "receivedNonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice, "mainChainAccountNonce", sbh.getMainChainAccountNonce())
 	return nil
 }
 

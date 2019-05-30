@@ -174,6 +174,29 @@ func (sbapi *SubBridgeAPI) ListBridge() []*BridgeJournal {
 	return sbapi.sc.bridgeManager.GetAllBridge()
 }
 
+func (sbapi *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[string]interface{}, error) {
+	if ctBridge := sbapi.sc.AddressManager().GetCounterPartBridge(bridgeAddr); ctBridge == (common.Address{}) {
+		return nil, ErrInvalidBridgePair
+	}
+
+	bi, ok := sbapi.sc.bridgeManager.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		return nil, errNoBridgeInfo
+	}
+
+	bi.UpdateInfo()
+
+	return map[string]interface{}{
+		"isRunning":        bi.isRunning,
+		"requestNonce":     bi.requestNonceFromCounterPart,
+		"handleNonce":      bi.handleNonce,
+		"counterPart":      bi.counterpartAddress,
+		"onServiceChain":   bi.onServiceChain,
+		"isSubscribed":     bi.subscribed,
+		"pendingEventSize": len(bi.pendingRequestEvent.items),
+	}, nil
+}
+
 func (sbapi *SubBridgeAPI) Anchoring(flag bool) bool {
 	return sbapi.sc.SetAnchoringTx(flag)
 }

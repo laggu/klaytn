@@ -474,6 +474,11 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 	for {
 		if err := pm.handleMsg(p); err != nil {
 			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
+
+			if pm.peers.Len() == 1 {
+				pm.handler.setMainChainAccountNonceSynced(false)
+				atomic.StoreInt64(&pm.checkConnection, 1)
+			}
 			return err
 		}
 	}
@@ -578,11 +583,6 @@ func (pm *SubBridge) handleMsg(p BridgePeer) error {
 	msg, err := p.GetRW().ReadMsg()
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("ProtocolManager failed to read msg", "err", err)
-
-		if len(pm.peers.peers) == 1 {
-			pm.handler.setMainChainAccountNonceSynced(false)
-			atomic.StoreInt64(&pm.checkConnection, 1)
-		}
 		return err
 	}
 	if msg.Size > ProtocolMaxMsgSize {

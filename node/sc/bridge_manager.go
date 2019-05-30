@@ -28,7 +28,6 @@ import (
 	"io"
 	"math/big"
 	"path"
-	"sync"
 	"time"
 )
 
@@ -85,18 +84,20 @@ type BridgeInfo struct {
 	// Token pair information will be included by BridgeInfo instead of subBridge
 	subBridge *SubBridge
 
-	address        common.Address
-	account        *accountInfo
-	bridge         *bridgecontract.Bridge
-	onServiceChain bool
-	subscribed     bool
+	address            common.Address
+	counterpartAddress common.Address // TODO-Klaytn need to set counterpart
+	account            *accountInfo
+	bridge             *bridgecontract.Bridge
+	onServiceChain     bool
+	subscribed         bool
 
-	mu                  *sync.Mutex     // mutex for pendingRequestEvent
 	pendingRequestEvent *eventSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
 	nextHandleNonce     uint64          // This nonce will be used for getting pending request value transfer events.
 
-	handledNonce   uint64 // the nonce from the handle value transfer event from the bridge.
-	requestedNonce uint64 // the nonce from the request value transfer event from the counter part bridge.
+	isRunning                   bool
+	handleNonce                 uint64 // the nonce from the handle value transfer event from the bridge.
+	requestNonceFromCounterPart uint64 // the nonce from the request value transfer event from the counter part bridge.
+	requestNonce                uint64 // the nonce from the request value transfer event from the counter part bridge.
 
 	newEvent chan struct{}
 	closed   chan struct{}
@@ -106,32 +107,26 @@ func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecont
 	bi := &BridgeInfo{
 		subBridge,
 		addr,
+		common.Address{},
 		account,
 		bridge,
 		local,
 		subscribed,
-		&sync.Mutex{},
 		newEventSortedMap(),
 		0,
+		true,
+		0,
 		0,
 		0,
 		make(chan struct{}),
 		make(chan struct{}),
 	}
 
-	handleNonce, err := bi.bridge.HandleNonce(nil)
-	if err != nil {
-		logger.Error("Failed to get handleNonce from the bridge", "err", err, "bridgeAddr", addr.Hex())
-		return bi // return bridgeInfo with zero nonce.
-		// TODO-Klaytn consider the failed case. The nonce(nextHandleNonce) should be updated later.
+	if err := bi.UpdateInfo(); err != nil {
+		logger.Error("NewBridgeInfo can't be updated.", "err", err)
 	}
 
-	logger.Debug("Updated the handle nonce", "nonce", handleNonce, "bridgeAddr", addr.Hex())
-
-	bi.nextHandleNonce = handleNonce
-	bi.requestedNonce = handleNonce // This requestedNonce will be updated by counter part bridge contract's new request event.
-	bi.handledNonce = handleNonce
-
+	bi.nextHandleNonce = bi.handleNonce
 	go bi.loop()
 
 	return bi
@@ -167,9 +162,9 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 
 	logger.Debug("Get Pending request value transfer event", "len(pendingEvent)", len(pendingEvent))
 
-	diff := bi.requestedNonce - bi.handledNonce
+	diff := bi.requestNonceFromCounterPart - bi.handleNonce
 	if diff > errorDiffRequestHandleNonce {
-		logger.Error("Value transfer requested/handled nonce gap is too much.", "toSC", bi.onServiceChain, "diff", diff, "requestedNonce", bi.requestedNonce, "handledNonce", bi.handledNonce)
+		logger.Error("Value transfer requested/handled nonce gap is too much.", "toSC", bi.onServiceChain, "diff", diff, "requestedNonce", bi.requestNonceFromCounterPart, "handledNonce", bi.handleNonce)
 		// TODO-Klaytn need to consider starting value transfer recovery.
 	}
 
@@ -181,6 +176,39 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 		}
 		bi.nextHandleNonce++
 	}
+
+	return nil
+}
+
+func (bi *BridgeInfo) UpdateInfo() error {
+	if bi == nil {
+		return errNoBridgeInfo
+	}
+
+	rn, err := bi.bridge.RequestNonce(nil)
+	if err != nil {
+		return err
+	}
+	bi.UpdateRequestNonce(rn)
+
+	hn, err := bi.bridge.HandleNonce(nil)
+	if err != nil {
+		return err
+	}
+	bi.UpdateHandledNonce(hn)
+	bi.UpdateRequestNonceFromCounterpart(hn)
+
+	isRunning, err := bi.bridge.IsRunning(nil)
+	if err != nil {
+		return err
+	}
+	bi.isRunning = isRunning
+
+	counterPart, err := bi.bridge.CounterpartBridge(nil)
+	if err != nil {
+		return err
+	}
+	bi.counterpartAddress = counterPart
 
 	return nil
 }
@@ -243,30 +271,35 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 	return nil
 }
 
-// UpdateRequestedNonce updates the requested nonce with new nonce.
-func (bi *BridgeInfo) UpdateRequestedNonce(nonce uint64) {
-	if bi.requestedNonce < nonce {
-		vtRequestNonceCount.Inc(int64(nonce - bi.requestedNonce))
-		bi.requestedNonce = nonce
+// UpdateRequestNonceFromCounterpart updates the request nonce from counterpart bridge.
+func (bi *BridgeInfo) UpdateRequestNonceFromCounterpart(nonce uint64) {
+	if bi.requestNonceFromCounterPart < nonce {
+		vtRequestNonceCount.Inc(int64(nonce - bi.requestNonceFromCounterPart))
+		bi.requestNonceFromCounterPart = nonce
+	}
+}
+
+// UpdateRequestNonce updates the request nonce of the bridge.
+func (bi *BridgeInfo) UpdateRequestNonce(nonce uint64) {
+	if bi.requestNonce < nonce {
+		bi.requestNonce = nonce
 	}
 }
 
 // UpdateHandledNonce updates the handled nonce with new nonce.
 func (bi *BridgeInfo) UpdateHandledNonce(nonce uint64) {
-	if bi.handledNonce < nonce {
-		vtHandleNonceCount.Inc(int64(nonce - bi.handledNonce))
-		bi.handledNonce = nonce
+	if bi.handleNonce < nonce {
+		vtHandleNonceCount.Inc(int64(nonce - bi.handleNonce))
+		bi.handleNonce = nonce
 	}
 }
 
 // AddRequestValueTransferEvents adds events into the pendingRequestEvent.
 func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferEvent) {
-	bi.mu.Lock()
-	defer bi.mu.Unlock()
 	// TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
 	// - If the size is full and received event has the omitted nonce, it can be allowed.
 	for _, ev := range evs {
-		bi.UpdateRequestedNonce(ev.RequestNonce)
+		bi.UpdateRequestNonceFromCounterpart(ev.RequestNonce + 1)
 		bi.pendingRequestEvent.Put(ev)
 	}
 
@@ -280,8 +313,6 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferE
 
 // GetReadyRequestValueTransferEvents returns the processable events with the increasing nonce.
 func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*RequestValueTransferEvent {
-	bi.mu.Lock()
-	defer bi.mu.Unlock()
 	ready := bi.pendingRequestEvent.Ready(bi.nextHandleNonce)
 	vtPendingRequestEventMeter.Dec(int64(len(ready)))
 	return ready
@@ -363,7 +394,7 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 // LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
 func (bm *BridgeManager) LogBridgeStatus() {
 	for bAddr, b := range bm.bridges {
-		diffNonce := b.requestedNonce - b.handledNonce
+		diffNonce := b.requestNonceFromCounterPart - b.handleNonce
 
 		if b.subscribed {
 			var headStr string
@@ -372,7 +403,7 @@ func (bm *BridgeManager) LogBridgeStatus() {
 			} else {
 				headStr = "Bridge(Service -> Main Chain)"
 			}
-			logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestedNonce, "handleNonce", b.handledNonce, "diffNonce", diffNonce)
+			logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "handleNonce", b.handleNonce, "diffNonce", diffNonce)
 		}
 	}
 }

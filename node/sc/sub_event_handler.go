@@ -101,7 +101,7 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev HandleValueTransferEven
 		return errors.New("there is no bridge")
 	}
 
-	handleBridgeInfo.UpdateHandledNonce(ev.HandleNonce)
+	handleBridgeInfo.UpdateHandledNonce(ev.HandleNonce + 1)
 
 	tokenType := ev.TokenType
 	tokenAddr := ev.TokenAddr
