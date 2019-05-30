@@ -46,22 +46,25 @@ type Snapshot struct {
 	CommitteeSize uint64
 }
 
-func getGovernanceValue(gov *governance.Governance) (epoch uint64, policy uint64, committeeSize uint64) {
-	if r := gov.GetGovernanceValue("istanbul.epoch"); r != nil {
+func getGovernanceValue(gov *governance.Governance, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
+	if r, err := gov.GetGovernanceItemAtNumber(number, governance.GovernanceKeyMapReverse[params.Epoch]); err == nil && r != nil {
 		epoch = r.(uint64)
 	} else {
+		logger.Error("Couldn't get governance value istanbul.epoch", "err", err, "received", r)
 		epoch = params.DefaultEpoch
 	}
 
-	if r := gov.GetGovernanceValue("istanbul.policy"); r != nil {
+	if r, err := gov.GetGovernanceItemAtNumber(number, governance.GovernanceKeyMapReverse[params.Policy]); err == nil && r != nil {
 		policy = r.(uint64)
 	} else {
+		logger.Error("Couldn't get governance value istanbul.policy", "err", err, "received", r)
 		policy = params.DefaultProposerPolicy
 	}
 
-	if r := gov.GetGovernanceValue("istanbul.committeesize"); r != nil {
+	if r, err := gov.GetGovernanceItemAtNumber(number, governance.GovernanceKeyMapReverse[params.CommitteeSize]); err == nil && r != nil {
 		committeeSize = r.(uint64)
 	} else {
+		logger.Error("Couldn't get governance value istanbul.committeesize", "err", err, "received", r)
 		committeeSize = params.DefaultSubGroupSize
 	}
 	return
@@ -71,7 +74,7 @@ func getGovernanceValue(gov *governance.Governance) (epoch uint64, policy uint64
 // method does not initialize the set of recent validators, so only ever use if for
 // the genesis block.
 func newSnapshot(gov *governance.Governance, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
-	epoch, policy, committeeSize := getGovernanceValue(gov)
+	epoch, policy, committeeSize := getGovernanceValue(gov, number)
 
 	snap := &Snapshot{
 		Epoch:         epoch,
@@ -143,11 +146,11 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		return nil, errInvalidVotingChain
 	}
 
-	// Copy values which might be changed by governance vote
-	s.Epoch, s.Policy, s.CommitteeSize = getGovernanceValue(gov)
-
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
+
+	// Copy values which might be changed by governance vote
+	snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, snap.Number)
 
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
@@ -164,12 +167,15 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 
 		snap.ValSet = gov.HandleGovernanceVote(snap.ValSet, header, validator, addr)
 
-		if number%s.Epoch == 0 {
+		if number%snap.Epoch == 0 {
 			if len(header.Governance) > 0 {
 				gov.UpdateGovernance(number, header.Governance)
 			}
 			gov.UpdateCurrentGovernance(number)
 			gov.ClearVotes(number)
+
+			// Reload governance values because epoch changed
+			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
 		}
 	}
 	snap.Number += uint64(len(headers))

@@ -200,8 +200,9 @@ func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 }
 
 func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
-	val, err := api.governance.GetGovernanceItemAtNumber(uint64(num), "governance.unitprice")
+	val, err := api.governance.GetGovernanceItemAtNumber(uint64(num), GovernanceKeyMapReverse[params.UnitPrice])
 	if err != nil {
+		logger.Error("Failed to retrieve unit price", "err", err)
 		return 0, err
 	}
 	return val.(uint64), nil
@@ -222,9 +223,10 @@ func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint6
 			return 0, errUnknownBlock
 		}
 
-		if ret, err := api.governance.GetGovernanceItemAtNumber(uint64(blockNum), "param.txgashumanreadable"); err == nil && ret != nil {
+		if ret, err := api.governance.GetGovernanceItemAtNumber(uint64(blockNum), GovernanceKeyMapReverse[params.ConstTxGasHumanReadable]); err == nil && ret != nil {
 			return ret.(uint64), nil
 		} else {
+			logger.Error("Failed to retrieve TxGasHumanReadable, sending default value", "err", err)
 			return api.setDefaultTxGasHumanReadable()
 		}
 	}
