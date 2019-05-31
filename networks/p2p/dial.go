@@ -371,7 +371,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 						"NodeType", t.dest.NType, "ip", t.dest.IP, "port", t.dest.TCP)
 				}
 			default:
-				logger.Debug("[Dial] Failed addStaticDial", "err", err, "to", t.dest)
+				logger.Trace("[Dial] Skipped addStaticDial", "reason", err, "to", t.dest)
 			}
 		}
 		// 2. add typedStaticDiscoverTask
