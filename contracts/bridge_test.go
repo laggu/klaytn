@@ -25,6 +25,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/bridge"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/node/sc"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -304,4 +305,69 @@ loop:
 	}
 
 	t.Fatal("fail to check monotone increasing nonce", "lastNonce", sentNonce)
+}
+
+// TestBridgePublicVariables checks the results of the public variables.
+func TestBridgePublicVariables(t *testing.T) {
+	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
+
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	backend := backends.NewSimulatedBackend(alloc)
+
+	chargeAmount := big.NewInt(10000000)
+	bridgeAccount.Value = chargeAmount
+	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend)
+	if err != nil {
+		t.Fatalf("fail to DeployBridge %v", err)
+	}
+	backend.Commit()
+	WaitMined(tx, backend, t)
+
+	balanceContract, err := backend.BalanceAt(nil, bridgeAddress, nil)
+	if err != nil {
+		t.Fatalf("fail to GetKLAY %v", err)
+	}
+	assert.Equal(t, chargeAmount, balanceContract)
+
+	ctx := context.Background()
+	nonce, err := backend.NonceAt(ctx, bridgeAccount.From, nil)
+	chainID, err := backend.ChainID(ctx)
+	gasPrice, err := backend.SuggestGasPrice(ctx)
+	opts := sc.MakeTransactOpts(bridgeAccountKey, big.NewInt(int64(nonce)), chainID, gasPrice)
+
+	tx, err = b.SetCounterPartBridge(opts, common.Address{2})
+	backend.Commit()
+	WaitMined(tx, backend, t)
+	assert.Equal(t, nil, err)
+
+	version, err := b.VERSION(nil)
+	assert.Equal(t, uint64(0x1), version)
+
+	allowedTokens, err := b.AllowedTokens(nil, common.Address{1})
+	assert.Equal(t, common.Address{0}, allowedTokens)
+
+	counterpartBridge, err := b.CounterpartBridge(nil)
+	assert.Equal(t, common.Address{2}, counterpartBridge)
+
+	hnonce, err := b.HandleNonce(nil)
+	assert.Equal(t, uint64(0), hnonce)
+
+	owner, err := b.IsOwner(&bind.CallOpts{From: bridgeAccount.From})
+	assert.Equal(t, true, owner)
+
+	notOwner, err := b.IsOwner(&bind.CallOpts{From: common.Address{1}})
+	assert.Equal(t, false, notOwner)
+
+	isRunning, err := b.IsRunning(nil)
+	assert.Equal(t, true, isRunning)
+
+	lastBN, err := b.LastHandledRequestBlockNumber(nil)
+	assert.Equal(t, uint64(0x0), lastBN)
+
+	bridgeOwner, err := b.Owner(nil)
+	assert.Equal(t, bridgeAccount.From, bridgeOwner)
+
+	rnonce, err := b.RequestNonce(nil)
+	assert.Equal(t, uint64(0), rnonce)
 }
