@@ -614,6 +614,7 @@ type NetworkInfo struct {
 	Inbound       bool   `json:"inbound"`
 	Trusted       bool   `json:"trusted"`
 	Static        bool   `json:"static"`
+	NodeType      string `json:"nodeType"`
 }
 
 // PeerInfo represents a short summary of the information known about a connected
@@ -649,6 +650,18 @@ func (p *Peer) Info() *PeerInfo {
 		network.Inbound = rw.is(inboundConn)
 		network.Trusted = rw.is(trustedConn)
 		network.Static = rw.is(staticDialedConn)
+		switch rw.conntype {
+		case CONSENSUSNODE:
+			network.NodeType = "cn"
+		case ENDPOINTNODE:
+			network.NodeType = "en"
+		case PROXYNODE:
+			network.NodeType = "pn"
+		case BOOTNODE:
+			network.NodeType = "bn"
+		default:
+			network.NodeType = "unknown"
+		}
 		info.Networks = append(info.Networks, network)
 	}
 
