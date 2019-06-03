@@ -91,7 +91,7 @@ func (vtr *valueTransferRecovery) Start() error {
 		}()
 
 		if err := vtr.Recover(); err != nil {
-			logger.Info("value transfer recovery is failed")
+			logger.Warn("value transfer recovery is failed", "err", err)
 		}
 
 		vtr.isRunning = true
@@ -104,7 +104,7 @@ func (vtr *valueTransferRecovery) Start() error {
 			case <-ticker.C:
 				if vtr.isRunning {
 					if err := vtr.Recover(); err != nil {
-						logger.Info("value transfer recovery is failed")
+						logger.Warn("value transfer recovery is failed", "err", err)
 					}
 				}
 			}
@@ -308,7 +308,9 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	var evs []*RequestValueTransferEvent
 
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
-	logger.Warn("try to recover service chain's value transfer events", "len(events)", len(vtr.serviceChainEvents))
+	if len(vtr.serviceChainEvents) > 0 {
+		logger.Warn("try to recover service chain's request events", "scBridge", vtr.scBridgeInfo.address.String(), "events", len(vtr.serviceChainEvents))
+	}
 	for _, ev := range vtr.serviceChainEvents {
 		logger.Trace("recover event", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &RequestValueTransferEvent{
@@ -330,7 +332,9 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 
 	evs = []*RequestValueTransferEvent{}
 	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
-	logger.Warn("try to recover main chain's value transfer events", "len(events)", len(vtr.mainChainEvents))
+	if len(vtr.mainChainEvents) > 0 {
+		logger.Warn("try to recover main chain's request events", "mcBridge", vtr.mcBridgeInfo.address.String(), "events", len(vtr.mainChainEvents))
+	}
 	for _, ev := range vtr.mainChainEvents {
 		logger.Trace("recover events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
 		evs = append(evs, &RequestValueTransferEvent{
