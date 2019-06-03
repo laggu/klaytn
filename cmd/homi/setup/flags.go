@@ -27,6 +27,16 @@ var dockerImageId string
 var outputPath string
 
 var (
+	cypressTestFlag = cli.BoolFlag{
+		Name:  "cypress-test",
+		Usage: "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
+	}
+
+	cypressFlag = cli.BoolFlag{
+		Name:  "cypress",
+		Usage: "Generate genesis.json similar to the one used for Cypress",
+	}
+
 	baobabTestFlag = cli.BoolFlag{
 		Name:  "baobab-test",
 		Usage: "Generate genesis.json similar to the one used for Baobab with shorter intervals for testing",

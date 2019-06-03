@@ -73,6 +73,8 @@ Args :
 `,
 		Action: gen,
 		Flags: []cli.Flag{
+			cypressTestFlag,
+			cypressFlag,
 			baobabTestFlag,
 			baobabFlag,
 			cliqueFlag,
@@ -268,6 +270,60 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, p
 	return genesisJson
 }
 
+func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
+	genesisJson := &blockchain.Genesis{
+		Timestamp:  uint64(time.Now().Unix()),
+		BlockScore: big.NewInt(genesis.InitBlockScore),
+		Alloc:      make(blockchain.GenesisAlloc),
+		Config: &params.ChainConfig{
+			ChainID:       big.NewInt(10000),
+			DeriveShaImpl: 2,
+			Governance: &params.GovernanceConfig{
+				GoverningNode:  nodeAddrs[0],
+				GovernanceMode: "single",
+				Reward: &params.RewardConfig{
+					MintingAmount: mintingAmount,
+					Ratio:         "34/54/12",
+					UseGiniCoeff:  true,
+					DeferredTxFee: true,
+				},
+			},
+			Istanbul: &params.IstanbulConfig{
+				ProposerPolicy: 2,
+				SubGroupSize:   22,
+			},
+			UnitPrice: 25000000000,
+		},
+	}
+	assignExtraData := genesis.Validators(nodeAddrs...)
+	assignExtraData(genesisJson)
+
+	return genesisJson
+}
+
+func genCypressGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genCypressCommonGenesis(nodeAddrs, testAddrs)
+	genesisJson.Config.Istanbul.Epoch = 604800
+	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
+	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
+	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
+	allocationFunction := genesis.AllocWithCypressContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction(genesisJson)
+	return genesisJson
+}
+
+func genCypressTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	testGenesis := genCypressCommonGenesis(nodeAddrs, testAddrs)
+	testGenesis.Config.Istanbul.Epoch = 30
+	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
+	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
+	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
+	allocationFunction := genesis.AllocWithPrecypressContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction(testGenesis)
+	return testGenesis
+}
+
 func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
@@ -347,6 +403,8 @@ func gen(ctx *cli.Context) error {
 	numTestAccs := ctx.Int(numOfTestKeyFlag.Name)
 	baobab := ctx.Bool(baobabFlag.Name)
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
+	cypress := ctx.Bool(cypressFlag.Name)
+	cypressTest := ctx.Bool(cypressTestFlag.Name)
 
 	if numValidators == 0 {
 		numValidators = num
@@ -363,7 +421,11 @@ func gen(ctx *cli.Context) error {
 	validatorNodeAddrs := make([]common.Address, numValidators)
 	copy(validatorNodeAddrs, nodeAddrs[:numValidators])
 
-	if baobabTest {
+	if cypressTest {
+		genesisJsonBytes, _ = json.MarshalIndent(genCypressTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+	} else if cypress {
+		genesisJsonBytes, _ = json.MarshalIndent(genCypressGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+	} else if baobabTest {
 		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
 	} else if baobab {
 		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(validatorNodeAddrs, testAddrs), "", "    ")
