@@ -710,7 +710,13 @@ web3._extend({
 const Net_JS = `
 web3._extend({
 	property: 'net',
-	methods: [],
+	methods: [
+		new web3._extend.Method({
+			name: 'peerCountByType',
+			call: 'net_peerCountByType',
+			params: 0,
+		}),
+	],
 	properties: [
 		new web3._extend.Property({
 			name: 'version',

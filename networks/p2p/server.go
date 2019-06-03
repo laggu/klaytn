@@ -260,6 +260,9 @@ type Server interface {
 	// PeerCount returns the number of connected peers.
 	PeerCount() int
 
+	// PeerCountByType returns the number of connected specific tyeps of peers.
+	PeerCountByType() map[string]uint
+
 	// MaxPhysicalConnections returns maximum count of peers.
 	MaxPeers() int
 
@@ -1061,6 +1064,22 @@ func (srv *BaseServer) PeerCount() int {
 	case <-srv.quit:
 	}
 	return count
+}
+
+func (srv *BaseServer) PeerCountByType() map[string]uint {
+	pc := make(map[string]uint)
+	select {
+	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) {
+		for _, peer := range ps {
+			key := ConvertConnTypeToString(peer.ConnType())
+			pc[key]++
+			pc["total"]++
+		}
+	}:
+		<-srv.peerOpDone
+	case <-srv.quit:
+	}
+	return pc
 }
 
 // checkIfNodeIsOnParentChain returns the node is on parent chain.
@@ -1901,6 +1920,37 @@ func ConvertConnType(nt discover.NodeType) ConnType {
 	case discover.NodeTypeEN:
 		return ENDPOINTNODE
 	case discover.NodeTypeBN:
+		return BOOTNODE
+	default:
+		return UNKNOWNNODE
+	}
+}
+
+func ConvertConnTypeToString(ct ConnType) string {
+	switch ct {
+	case CONSENSUSNODE:
+		return "cn"
+	case PROXYNODE:
+		return "pn"
+	case ENDPOINTNODE:
+		return "en"
+	case BOOTNODE:
+		return "bn"
+	default:
+		return "unknown"
+	}
+}
+
+func ConvertStringToConnType(s string) ConnType {
+	st := strings.ToLower(s)
+	switch st {
+	case "cn":
+		return CONSENSUSNODE
+	case "pn":
+		return PROXYNODE
+	case "en":
+		return ENDPOINTNODE
+	case "bn":
 		return BOOTNODE
 	default:
 		return UNKNOWNNODE

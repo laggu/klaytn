@@ -42,9 +42,14 @@ func (s *PublicNetAPI) Listening() bool {
 	return true // always listening
 }
 
-// PeerCount returns the number of connected peers
+// PeerCount returns the number of connected peers.
 func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 	return hexutil.Uint(s.net.PeerCount())
+}
+
+// PeerCountByType returns the number of connected specific types of nodes.
+func (s *PublicNetAPI) PeerCountByType() map[string]uint {
+	return s.net.PeerCountByType()
 }
 
 // Version returns the current klaytn protocol version.
