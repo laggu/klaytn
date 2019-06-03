@@ -444,7 +444,7 @@ func (p *basePeer) AsyncSendTransactions(txs []*types.Transaction) {
 			p.AddToKnownTxs(tx.Hash())
 		}
 	default:
-		p.Log().Debug("Dropping transaction propagation", "count", len(txs))
+		p.Log().Trace("Dropping transaction propagation", "count", len(txs))
 	}
 }
 
