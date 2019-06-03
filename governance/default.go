@@ -39,6 +39,7 @@ var (
 	ErrDecodeGovChange    = errors.New("Failed to decode received governance changes")
 	ErrUnmarshalGovChange = errors.New("Failed to unmarshal received governance changes")
 	ErrVoteValueMismatch  = errors.New("Received change mismatches with the value this node has!!")
+	ErrNotInitialized     = errors.New("Cache not initialized")
 )
 
 var (
@@ -71,6 +72,7 @@ var (
 		params.GovernanceMode:          "governance.governancemode",
 		params.GoverningNode:           "governance.governingnode",
 		params.Epoch:                   "istanbul.epoch",
+		params.CliqueEpoch:             "clique.epoch",
 		params.Policy:                  "istanbul.policy",
 		params.CommitteeSize:           "istanbul.committeesize",
 		params.UnitPrice:               "governance.unitprice",
@@ -188,7 +190,17 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 	}
 	// nil is for testing or simple function usage
 	if dbm != nil {
-		ret.initializeCache()
+		if err := ret.initializeCache(); err != nil {
+			// If this is the first time to run, store governance information for genesis block on database
+			cfg := getGovernanceItemsFromChainConfig(chainConfig)
+			if err := ret.WriteGovernance(0, cfg, nil); err != nil {
+				logger.Crit("Error in writing governance information", "err", err)
+			}
+			// If failed again after writing governance, stop booting up
+			if err = ret.initializeCache(); err != nil {
+				logger.Crit("No governance cache index found in a database", "err", err)
+			}
+		}
 		ret.ReadGovernanceState()
 	}
 	return &ret
@@ -401,12 +413,11 @@ func newGovernanceCache() common.Cache {
 	return cache
 }
 
-func (g *Governance) initializeCache() {
+func (g *Governance) initializeCache() error {
 	// get last n governance change block number
 	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceCacheLimit)
 	if err != nil {
-		logger.Info("No governance cache index found in a database", "err", err)
-		return
+		return ErrNotInitialized
 	}
 	g.idxCache = indices
 	// Put governance items into the itemCache
@@ -415,7 +426,7 @@ func (g *Governance) initializeCache() {
 			g.itemCache.Add(getGovernanceCacheKey(num), data)
 			g.actualGovernanceBlock = num
 		} else {
-			logger.Crit("Couldn't read governance cache from database. Check database consistency")
+			logger.Crit("Couldn't read governance cache from database. Check database consistency", "index", v, "err", err)
 		}
 	}
 
@@ -424,6 +435,7 @@ func (g *Governance) initializeCache() {
 	g.currentSetMu.Lock()
 	g.currentSet = ret.(GovernanceSet)
 	g.currentSetMu.Unlock()
+	return nil
 }
 
 // getGovernanceCache returns cached governance config as a byte slice
@@ -527,8 +539,8 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 	var epoch uint64
 	var ok bool
 
-	if epoch, ok = gov.GetGovernanceValue("istanbul.epoch").(uint64); !ok {
-		if epoch, ok = gov.GetGovernanceValue("clique.epoch").(uint64); !ok {
+	if epoch, ok = gov.GetGovernanceValue(GovernanceKeyMapReverse[params.Epoch]).(uint64); !ok {
+		if epoch, ok = gov.GetGovernanceValue(GovernanceKeyMapReverse[params.CliqueEpoch]).(uint64); !ok {
 			logger.Error("Couldn't find epoch from governance items")
 			return
 		}
@@ -540,11 +552,11 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 			tempData := []byte("")
 			tempSet := GovernanceSet{}
 			if err := rlp.DecodeBytes(governance, &tempData); err != nil {
-				logger.Error("Failed to decode governance data", "err", err, "data", governance)
+				logger.Error("Failed to decode governance data", "number", number, "err", err, "data", governance)
 				return
 			}
 			if err := json.Unmarshal(tempData, &tempSet); err != nil {
-				logger.Error("Failed to unmarshal governance data", "err", err, "data", tempData)
+				logger.Error("Failed to unmarshal governance data", "number", number, "err", err, "data", tempData)
 				return
 
 			}
@@ -553,7 +565,7 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 			// Store new currentSet to governance database
 			gov.currentSetMu.RLock()
 			if err := gov.WriteGovernance(number, gov.currentSet, tempSet); err != nil {
-				logger.Error("Failed to store new governance data", "err", err)
+				logger.Crit("Failed to store new governance data", "number", number, "err", err)
 			}
 			gov.currentSetMu.RUnlock()
 		}
@@ -730,4 +742,51 @@ func (gov *Governance) SetBlockchain(bc *blockchain.BlockChain) {
 
 func (gov *Governance) SetTxPool(txpool *blockchain.TxPool) {
 	gov.TxPool = txpool
+}
+
+func getGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
+	g := make(GovernanceSet)
+
+	if config.Governance != nil {
+		governance := config.Governance
+		governanceMap := map[int]interface{}{
+			params.GovernanceMode:          governance.GovernanceMode,
+			params.GoverningNode:           governance.GoverningNode,
+			params.UnitPrice:               config.UnitPrice,
+			params.MintingAmount:           governance.Reward.MintingAmount.String(),
+			params.Ratio:                   governance.Reward.Ratio,
+			params.UseGiniCoeff:            governance.Reward.UseGiniCoeff,
+			params.DeferredTxFee:           governance.Reward.DeferredTxFee,
+			params.MinimumStake:            governance.Reward.MinimumStake.String(),
+			params.StakeUpdateInterval:     governance.Reward.StakingUpdateInterval,
+			params.ProposerRefreshInterval: governance.Reward.ProposerUpdateInterval,
+		}
+
+		for k, v := range governanceMap {
+			if err := g.SetValue(k, v); err != nil {
+				writeFailLog(k, err)
+			}
+		}
+	}
+
+	if config.Istanbul != nil {
+		istanbul := config.Istanbul
+		istanbulMap := map[int]interface{}{
+			params.Epoch:         istanbul.Epoch,
+			params.Policy:        istanbul.ProposerPolicy,
+			params.CommitteeSize: istanbul.SubGroupSize,
+		}
+
+		for k, v := range istanbulMap {
+			if err := g.SetValue(k, v); err != nil {
+				writeFailLog(k, err)
+			}
+		}
+	}
+	return g
+}
+
+func writeFailLog(key int, err error) {
+	msg := "Failed to set " + GovernanceKeyMapReverse[key]
+	logger.Crit(msg, "err", err)
 }

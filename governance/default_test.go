@@ -322,15 +322,16 @@ func TestGovernancePersistence(t *testing.T) {
 
 	// Write Test
 	// WriteGovernance() and WriteGovernanceIdx()
-	for i := 0; i < MAXITEMS; i++ {
+	for i := 1; i < MAXITEMS; i++ {
 		blockNum := params.DefaultEpoch * uint64(i)
 		tstMap := copyMap(testGovernanceMap)
 
 		// Make every stored governance map has a difference
 		tstMap["governance.unitprice"] = tstMap["governance.unitprice"].(uint64) + blockNum
-
-		if err := gov.db.WriteGovernance(tstMap, blockNum); err != nil {
-			t.Errorf("Write governance failed: %v", err)
+		if gov.CanWriteGovernanceState(blockNum) {
+			if err := gov.db.WriteGovernance(tstMap, blockNum); err != nil {
+				t.Errorf("Write governance failed: %v", err)
+			}
 		}
 	}
 
@@ -338,7 +339,7 @@ func TestGovernancePersistence(t *testing.T) {
 	// ReadRecentGovernanceIdx() ReadGovernance()
 	tstIdx, _ := gov.db.ReadRecentGovernanceIdx(MAXITEMS)
 	length := len(tstIdx)
-	for i := 0; i < length; i++ {
+	for i := 1; i < length; i++ {
 		num := tstIdx[i]
 		compMap, _ := gov.db.ReadGovernance(num)
 		expected := testGovernanceMap["governance.unitprice"].(uint64) + uint64(i)*params.DefaultEpoch
@@ -377,7 +378,7 @@ type governanceData struct {
 }
 
 var tstGovernanceInfo = []governanceData{
-	{n: 0, e: 25000000000},
+	{n: 1, e: 25000000000},
 	{n: 1209600, e: 25001209600},
 	{n: 2419200, e: 25002419200},
 	{n: 3628800, e: 25003628800},
@@ -385,8 +386,8 @@ var tstGovernanceInfo = []governanceData{
 }
 
 var tstGovernanceData = []governanceData{
-	{n: 123, e: 25000000000},
-	{n: 604923, e: 25000000000},
+	{n: 123, e: 1}, // 1 is set at params.TestChainConfig
+	{n: 604923, e: 1},
 	{n: 1209723, e: 25000000000},
 	{n: 1814523, e: 25001209600},
 	{n: 2419323, e: 25001209600},
@@ -420,7 +421,7 @@ func TestSaveGovernance(t *testing.T) {
 		_, data, err := gov.ReadGovernance(blockNum)
 		if err == nil {
 			if data["governance.unitprice"] != tstGovernanceData[i].e {
-				t.Errorf("Data mismatch want %v, have %v", tstGovernanceData[i].e, data["governance.unitprice"])
+				t.Errorf("Data mismatch want %v, have %v for block %d", tstGovernanceData[i].e, data["governance.unitprice"], tstGovernanceData[i].n)
 			}
 		}
 	}

@@ -146,10 +146,6 @@ func initGenesis(ctx *cli.Context) error {
 		}
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
 
-		gov := governance.NewGovernance(genesis.Config, chaindb)
-		if err := gov.WriteGovernance(0, data, nil); err != nil {
-			logger.Error("Error in storing governance information. Resolve issues and try it again : %v", err)
-		}
 		chaindb.Close()
 	}
 	return nil

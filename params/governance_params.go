@@ -86,6 +86,7 @@ const (
 	StakeUpdateInterval
 	ProposerRefreshInterval
 	ConstTxGasHumanReadable
+	CliqueEpoch
 )
 
 const (

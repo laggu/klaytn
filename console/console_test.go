@@ -99,7 +99,7 @@ func newTester(t *testing.T, confOverride func(*cn.Config)) *tester {
 		t.Fatalf("failed to create node: %v", err)
 	}
 	cnConf := &cn.Config{
-		Genesis:            blockchain.DeveloperGenesisBlock(15, common.Address{}),
+		Genesis:            blockchain.DefaultGenesisBlock(),
 		ServiceChainSigner: common.HexToAddress(testAddress),
 	}
 	if confOverride != nil {
