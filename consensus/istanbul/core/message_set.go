@@ -55,6 +55,17 @@ func (ms *messageSet) View() *istanbul.View {
 	return ms.view
 }
 
+func (ms *messageSet) GetMessages() string {
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
+
+	ret := "\n"
+	for k := range ms.messages {
+		ret = ret + "\t" + k.String() + "\n"
+	}
+	return ret
+}
+
 func (ms *messageSet) Add(msg *message) error {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()

@@ -358,13 +358,15 @@ func (c *core) newRoundChangeTimer() {
 
 		if c.backend.NodeType() == node.CONSENSUSNODE {
 			// Write log messages for validator activities analysis
-			logger.Warn("[RC] timeoutEvent Sent!", "set by", loc, "sequence", c.current.sequence, "round", c.current.round, "proposer", proposer, "preprepare is nil?", c.current.Preprepare == nil, "len(prepares)", len(c.current.Prepares.messages), "len(commits)", len(c.current.Commits.messages))
+			preparesSize := c.current.Prepares.Size()
+			commitsSize := c.current.Commits.Size()
+			logger.Warn("[RC] timeoutEvent Sent!", "set by", loc, "sequence", c.current.sequence, "round", c.current.round, "proposer", proposer, "preprepare is nil?", c.current.Preprepare == nil, "len(prepares)", preparesSize, "len(commits)", commitsSize)
 
-			if len(c.current.Prepares.messages) > 0 {
-				printMessageSet(0, c.current.Prepares.messages)
+			if preparesSize > 0 {
+				logger.Warn("[RC] Prepares:", "messages", c.current.Prepares.GetMessages())
 			}
-			if len(c.current.Commits.messages) > 0 {
-				printMessageSet(1, c.current.Commits.messages)
+			if commitsSize > 0 {
+				logger.Warn("[RC] Commits:", "messages", c.current.Commits.GetMessages())
 			}
 		}
 
@@ -372,18 +374,6 @@ func (c *core) newRoundChangeTimer() {
 	}))
 
 	logger.Debug("New RoundChangeTimer Set", "seq", c.current.Sequence(), "round", round, "timeout", timeout)
-}
-
-func printMessageSet(t int, set map[common.Address]*message) {
-	locMap := map[int]string{
-		0: "[RC] Prepares:\n", 1: "[RC] Commits:\n",
-	}
-
-	output := locMap[t]
-	for k := range set {
-		output = output + "\t" + k.String() + "\n"
-	}
-	logger.Warn(output)
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
