@@ -368,10 +368,10 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	}
 
 	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		logger.Error("### subList", "prevHash", prevHash.Hex())
+		logger.Debug("### subList", "prevHash", prevHash.Hex())
 	}
 
-	logger.Debug("New committee", "valSet.Number", valSet.blockNum, "prevHash", prevHash.Hex(), "proposer", proposer, "committee", committee, "committee size", len(committee), "subSize", valSet.subSize)
+	logger.Trace("New committee", "valSet.Number", valSet.blockNum, "prevHash", prevHash.Hex(), "proposer", proposer, "committee", committee, "committee size", len(committee), "subSize", valSet.subSize)
 	return committee
 }
 

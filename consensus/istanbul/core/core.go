@@ -271,7 +271,8 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 	c.newRoundChangeTimer()
 
-	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "isProposer", c.isProposer())
+	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "isProposer", c.isProposer())
+	logger.Trace("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "size", c.valSet.Size(), "valSet", c.valSet.List())
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
