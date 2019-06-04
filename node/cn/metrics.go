@@ -63,6 +63,9 @@ var (
 	txResendCounter           = metrics.NewRegisteredCounter("klay/tx/resend/counter", nil)
 	txSendCounter             = metrics.NewRegisteredCounter("klay/tx/send/counter", nil)
 	txResendRoutineGauge      = metrics.NewRegisteredGauge("klay/tx/resend/routine/gauge", nil)
+	cnPeerCountGauge          = metrics.NewRegisteredGauge("p2p/CNPeerCountGauge", nil)
+	pnPeerCountGauge          = metrics.NewRegisteredGauge("p2p/PNPeerCountGauge", nil)
+	enPeerCountGauge          = metrics.NewRegisteredGauge("p2p/ENPeerCountGauge", nil)
 )
 
 // meteredMsgReadWriter is a wrapper around a p2p.MsgReadWriter, capable of

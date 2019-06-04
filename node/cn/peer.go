@@ -1145,6 +1145,9 @@ func (ps *peerSet) Register(p Peer) error {
 	peersByNodeType[p.GetAddr()] = p // add peer to its node type peer map.
 	ps.peers[p.GetID()] = p          // add peer to entire peer map.
 
+	cnPeerCountGauge.Update(int64(len(ps.cnpeers)))
+	pnPeerCountGauge.Update(int64(len(ps.pnpeers)))
+	enPeerCountGauge.Update(int64(len(ps.enpeers)))
 	go p.Broadcast()
 
 	return nil
@@ -1170,6 +1173,9 @@ func (ps *peerSet) Unregister(id string) error {
 	delete(ps.peers, id)
 	p.Close()
 
+	cnPeerCountGauge.Update(int64(len(ps.cnpeers)))
+	pnPeerCountGauge.Update(int64(len(ps.pnpeers)))
+	enPeerCountGauge.Update(int64(len(ps.enpeers)))
 	return nil
 }
 
