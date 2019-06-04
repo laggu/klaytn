@@ -458,11 +458,11 @@ func (sbh *SubBridgeHandler) GetNextAnchoringBlockNumber() uint64 {
 	// To cover all cases without complex DB routine, the condition below is added.
 	// Even if genesis block can be anchored more than 2 times,
 	// this routine can guarantee anchoring genesis block.
-	if sbh.latestAnchoredBlockNumber != 0 {
-		sbh.latestAnchoredBlockNumber++
+	if sbh.latestAnchoredBlockNumber == 0 {
+		return sbh.latestAnchoredBlockNumber
 	}
 
-	return sbh.latestAnchoredBlockNumber
+	return sbh.latestAnchoredBlockNumber + 1
 }
 
 // UpdateLastestAnchoredBlockNumber set the latestAnchoredBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.

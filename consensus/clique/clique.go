@@ -449,8 +449,8 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	// Resolve the authorization key and check against signers
 	signer, err := ecrecover(header, c.signatures)
-	logger.Error("ecrecover signer", "addr", signer)
 	if err != nil {
+		logger.Error("ecrecover signer", "addr", signer, "err", err)
 		return err
 	}
 	if _, ok := snap.Signers[signer]; !ok {
