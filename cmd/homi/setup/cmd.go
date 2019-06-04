@@ -238,9 +238,8 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address)
 
 	if ok := ctx.Bool(governanceFlag.Name); ok {
 		options = append(options, genesis.Governance(config))
-	} else {
-		options = append(options, genesis.UnitPrice(unitPrice), genesis.Istanbul(genIstanbulConfig(ctx)))
 	}
+	options = append(options, genesis.Istanbul(genIstanbulConfig(ctx)))
 
 	return genesis.New(options...)
 }
