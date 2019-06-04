@@ -242,7 +242,7 @@ func checkAddress(k string, v interface{}) bool {
 	return true
 }
 
-func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTally, header *types.Header, proposer common.Address, self common.Address) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTally) {
+func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, header *types.Header, proposer common.Address, self common.Address) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
 	gVote := new(GovernanceVote)
 
 	if len(header.Vote) > 0 {
@@ -294,7 +294,7 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			votes = append(votes, *gVote)
 
 			// Tally up the new vote. This will be cleared when Epoch ends.
-			// Add to GovernanceTally if it doesn't exist
+			// Add to GovernanceTallies if it doesn't exist
 			valset, votes, tally = gov.addNewVote(valset, votes, tally, gVote, governanceMode, governingNode, number)
 
 			// If this vote was casted by this node, remove it
@@ -305,10 +305,8 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 		}
 		if number > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
-			gov.GovernanceVotes = make([]GovernanceVote, len(votes))
-			gov.GovernanceTally = make([]GovernanceTally, len(tally))
-			copy(gov.GovernanceVotes, votes)
-			copy(gov.GovernanceTally, tally)
+			gov.GovernanceVotes.Import(votes)
+			gov.GovernanceTallies.Import(tally)
 		}
 	}
 	return valset, votes, tally
@@ -323,7 +321,7 @@ func (gov *Governance) isGovernanceModeSingleOrNone(governanceMode int, governin
 	return governanceMode == params.GovernanceMode_None || (governanceMode == params.GovernanceMode_Single && voter == governingNode)
 }
 
-func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTally, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address) ([]GovernanceVote, []GovernanceTally) {
+func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address) ([]GovernanceVote, []GovernanceTallyItem) {
 	ret := []GovernanceVote{}
 
 	// Removing duplicated previous GovernanceVotes
@@ -353,10 +351,10 @@ func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []
 }
 
 // changeGovernanceTally updates snapshot's tally for governance votes.
-func (gov *Governance) changeGovernanceTally(tally []GovernanceTally, key string, value interface{}, vp uint64, isAdd bool) (uint64, []GovernanceTally) {
+func (gov *Governance) changeGovernanceTally(tally []GovernanceTallyItem, key string, value interface{}, vp uint64, isAdd bool) (uint64, []GovernanceTallyItem) {
 	found := false
 	var currentVote uint64
-	ret := []GovernanceTally{}
+	ret := []GovernanceTallyItem{}
 
 	for idx, v := range tally {
 		if v.Key == key && v.Value == value {
@@ -377,14 +375,14 @@ func (gov *Governance) changeGovernanceTally(tally []GovernanceTally, key string
 	}
 
 	if !found {
-		tally = append(tally, GovernanceTally{Key: key, Value: value, Votes: vp})
+		tally = append(tally, GovernanceTallyItem{Key: key, Value: value, Votes: vp})
 		return vp, tally
 	} else {
 		return currentVote, ret
 	}
 }
 
-func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTally, gVote *GovernanceVote, governanceMode int, governingNode common.Address, blockNum uint64) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTally) {
+func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, gVote *GovernanceVote, governanceMode int, governingNode common.Address, blockNum uint64) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
 	_, v := valset.GetByAddress(gVote.Validator)
 	if v != nil {
 		vp := v.VotingPower()
