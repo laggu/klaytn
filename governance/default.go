@@ -192,6 +192,13 @@ func NewGovernanceVotes() GovernanceVotes {
 	}
 }
 
+func (gt *GovernanceTallyList) Clear() {
+	gt.mu.Lock()
+	defer gt.mu.Unlock()
+
+	gt.items = make([]GovernanceTallyItem, 0)
+}
+
 func (gt *GovernanceTallyList) Copy() []GovernanceTallyItem {
 	gt.mu.RLock()
 	defer gt.mu.RUnlock()
@@ -208,6 +215,12 @@ func (gt *GovernanceTallyList) Import(src []GovernanceTallyItem) {
 
 	gt.items = make([]GovernanceTallyItem, len(src))
 	copy(gt.items, src)
+}
+
+func (gv *GovernanceVotes) Clear() {
+	gv.mu.Lock()
+	defer gv.mu.Unlock()
+	gv.items = make([]GovernanceVote, 0)
 }
 
 func (gv *GovernanceVotes) Copy() []GovernanceVote {
@@ -404,8 +417,8 @@ func (g *Governance) ClearVotes(num uint64) {
 	g.voteMapLock.Lock()
 	defer g.voteMapLock.Unlock()
 
-	g.GovernanceVotes = NewGovernanceVotes()
-	g.GovernanceTallies = NewGovernanceTallies()
+	g.GovernanceVotes.Clear()
+	g.GovernanceTallies.Clear()
 	g.changeSet.Clear()
 	g.voteMap = make(map[string]VoteStatus)
 	logger.Info("Governance votes are cleared", "num", num)
