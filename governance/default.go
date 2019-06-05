@@ -814,7 +814,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	gov.GovernanceTallies.Import(j.GovernanceTally)
 	gov.currentSet.Import(adjustDecodedSet(j.CurrentSet))
 	gov.changeSet.Import(adjustDecodedSet(j.ChangeSet))
-	gov.lastGovernanceStateBlock = j.BlockNumber
+	atomic.StoreUint64(&gov.lastGovernanceStateBlock, j.BlockNumber)
 
 	return nil
 }
