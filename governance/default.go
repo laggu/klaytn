@@ -144,12 +144,16 @@ type VoteStatus struct {
 	Num    uint64      `json:"num"`
 }
 
+type VoteSet struct {
+	items map[string]VoteStatus
+	mu    *sync.RWMutex
+}
+
 type Governance struct {
 	ChainConfig *params.ChainConfig
 
 	// Map used to keep multiple types of votes
-	voteMap     map[string]VoteStatus
-	voteMapLock sync.RWMutex
+	voteMap VoteSet
 
 	nodeAddress      atomic.Value //common.Address
 	totalVotingPower uint64
@@ -177,6 +181,13 @@ type Governance struct {
 	blockChain *blockchain.BlockChain
 }
 
+func NewVoteMap() VoteSet {
+	return VoteSet{
+		items: make(map[string]VoteStatus),
+		mu:    new(sync.RWMutex),
+	}
+}
+
 func NewGovernanceTallies() GovernanceTallyList {
 	return GovernanceTallyList{
 		items: []GovernanceTallyItem{},
@@ -196,6 +207,55 @@ func (gt *GovernanceTallyList) Clear() {
 	defer gt.mu.Unlock()
 
 	gt.items = make([]GovernanceTallyItem, 0)
+}
+
+func (vl *VoteSet) Copy() map[string]VoteStatus {
+	vl.mu.RLock()
+	defer vl.mu.RUnlock()
+
+	ret := make(map[string]VoteStatus)
+	for k, v := range vl.items {
+		ret[k] = v
+	}
+
+	return ret
+}
+
+func (vl *VoteSet) GetValue(key string) VoteStatus {
+	vl.mu.RLock()
+	defer vl.mu.RUnlock()
+
+	return vl.items[key]
+}
+
+func (vl *VoteSet) SetValue(key string, val VoteStatus) {
+	vl.mu.Lock()
+	defer vl.mu.Unlock()
+
+	vl.items[key] = val
+}
+
+func (vl *VoteSet) Import(src map[string]VoteStatus) {
+	vl.mu.Lock()
+	defer vl.mu.Unlock()
+
+	for k, v := range src {
+		vl.items[k] = v
+	}
+}
+
+func (vl *VoteSet) Clear() {
+	vl.mu.Lock()
+	defer vl.mu.Unlock()
+
+	vl.items = make(map[string]VoteStatus)
+}
+
+func (vl *VoteSet) Size() int {
+	vl.mu.RLock()
+	defer vl.mu.RUnlock()
+
+	return len(vl.items)
 }
 
 func (gt *GovernanceTallyList) Copy() []GovernanceTallyItem {
@@ -326,7 +386,7 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	ret := Governance{
 		ChainConfig:              chainConfig,
-		voteMap:                  make(map[string]VoteStatus),
+		voteMap:                  NewVoteMap(),
 		db:                       dbm,
 		itemCache:                newGovernanceCache(),
 		currentSet:               NewGovernanceSet(),
@@ -368,24 +428,19 @@ func (g *Governance) SetMyVotingPower(t uint64) {
 
 func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
 	// TODO-Klaytn-Governance Change this part to add all votes to the header at once
-	g.voteMapLock.RLock()
-	defer g.voteMapLock.RUnlock()
-
-	if len(g.voteMap) > 0 {
-		for key, val := range g.voteMap {
-			if val.Casted == false {
-				vote := new(GovernanceVote)
-				vote.Validator = addr
-				vote.Key = key
-				vote.Value = val.Value
-				encoded, err := rlp.EncodeToBytes(vote)
-				if err != nil {
-					logger.Error("Failed to RLP Encode a vote", "vote", vote)
-					g.RemoveVote(key, val, number)
-					continue
-				}
-				return encoded
+	for key, val := range g.voteMap.Copy() {
+		if val.Casted == false {
+			vote := new(GovernanceVote)
+			vote.Validator = addr
+			vote.Key = key
+			vote.Value = val.Value
+			encoded, err := rlp.EncodeToBytes(vote)
+			if err != nil {
+				logger.Error("Failed to RLP Encode a vote", "vote", vote)
+				g.RemoveVote(key, val, number)
+				continue
 			}
+			return encoded
 		}
 	}
 	return nil
@@ -397,16 +452,12 @@ func (g *Governance) getKey(k string) string {
 
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
-	g.voteMapLock.Lock()
-	defer g.voteMapLock.Unlock()
-
-	key = g.getKey(key)
-	if g.voteMap[key].Value == value {
-		g.voteMap[key] = VoteStatus{
+	if g.voteMap.GetValue(key).Value == value {
+		g.voteMap.SetValue(key, VoteStatus{
 			Value:  value,
 			Casted: true,
 			Num:    number,
-		}
+		})
 	}
 	if g.CanWriteGovernanceState(number) {
 		g.WriteGovernanceState(number, false)
@@ -414,13 +465,10 @@ func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 }
 
 func (g *Governance) ClearVotes(num uint64) {
-	g.voteMapLock.Lock()
-	defer g.voteMapLock.Unlock()
-
 	g.GovernanceVotes.Clear()
 	g.GovernanceTallies.Clear()
 	g.changeSet.Clear()
-	g.voteMap = make(map[string]VoteStatus)
+	g.voteMap.Clear()
 	logger.Info("Governance votes are cleared", "num", num)
 }
 
@@ -799,7 +847,7 @@ func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 	ret := &governanceJSON{
 		BlockNumber:     num,
 		ChainConfig:     gov.ChainConfig,
-		VoteMap:         gov.voteMap,
+		VoteMap:         gov.voteMap.Copy(),
 		NodeAddress:     gov.nodeAddress.Load().(common.Address),
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
 		GovernanceTally: gov.GovernanceTallies.Copy(),
@@ -816,7 +864,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	gov.ChainConfig = j.ChainConfig
-	gov.voteMap = j.VoteMap
+	gov.voteMap.Import(j.VoteMap)
 	gov.nodeAddress.Store(j.NodeAddress)
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
 	gov.GovernanceTallies.Import(j.GovernanceTally)
