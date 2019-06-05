@@ -152,7 +152,7 @@ func initGenesis(ctx *cli.Context) error {
 }
 
 func getGovernanceItemsFromGenesis(genesis *blockchain.Genesis) governance.GovernanceSet {
-	g := make(governance.GovernanceSet)
+	g := governance.NewGovernanceSet()
 
 	if genesis.Config.Governance != nil {
 		governance := genesis.Config.Governance
