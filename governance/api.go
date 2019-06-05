@@ -89,7 +89,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	gMode := api.governance.ChainConfig.Governance.GovernanceMode
 	gNode := api.governance.ChainConfig.Governance.GoverningNode
 
-	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress {
+	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress.Load().(common.Address) {
 		return "", errPermissionDenied
 	}
 	if strings.ToLower(key) == "removevalidator" {
@@ -111,7 +111,7 @@ func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
 	if !common.IsHexAddress(target) {
 		return false
 	}
-	if common.HexToAddress(target) == api.governance.nodeAddress {
+	if common.HexToAddress(target) == api.governance.nodeAddress.Load().(common.Address) {
 		return false
 	} else {
 		return true
@@ -193,7 +193,7 @@ func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
-	return api.governance.nodeAddress
+	return api.governance.nodeAddress.Load().(common.Address)
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {

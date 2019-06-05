@@ -151,7 +151,7 @@ type Governance struct {
 	voteMap     map[string]VoteStatus
 	voteMapLock sync.RWMutex
 
-	nodeAddress      common.Address
+	nodeAddress      atomic.Value //common.Address
 	totalVotingPower uint64
 	votingPower      uint64
 
@@ -353,7 +353,7 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 }
 
 func (g *Governance) SetNodeAddress(addr common.Address) {
-	g.nodeAddress = addr
+	g.nodeAddress.Store(addr)
 }
 
 func (g *Governance) SetTotalVotingPower(t uint64) {
@@ -792,7 +792,7 @@ func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 		BlockNumber:     num,
 		ChainConfig:     gov.ChainConfig,
 		VoteMap:         gov.voteMap,
-		NodeAddress:     gov.nodeAddress,
+		NodeAddress:     gov.nodeAddress.Load().(common.Address),
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
 		GovernanceTally: gov.GovernanceTallies.Copy(),
 		CurrentSet:      gov.currentSet.Items(),
@@ -809,7 +809,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	}
 	gov.ChainConfig = j.ChainConfig
 	gov.voteMap = j.VoteMap
-	gov.nodeAddress = j.NodeAddress
+	gov.nodeAddress.Store(j.NodeAddress)
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
 	gov.GovernanceTallies.Import(j.GovernanceTally)
 	gov.currentSet.Import(adjustDecodedSet(j.CurrentSet))
