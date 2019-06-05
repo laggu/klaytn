@@ -159,4 +159,5 @@ var KSCNFlags = []cli.Flag{
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,
+	utils.ServiceChainConsensusFlag,
 }

@@ -549,6 +549,11 @@ var (
 		Name:  "scnewaccount",
 		Usage: "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the main chain.",
 	}
+	ServiceChainConsensusFlag = cli.StringFlag{
+		Name:  "scconsensus",
+		Usage: "Set the service chain consensus (\"istanbul\", \"clique\")",
+		Value: "istanbul",
+	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
 		Name:  "dbsyncer",

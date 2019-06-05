@@ -119,7 +119,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 
-	if utils.NetworkTypeFlag.Value == SCNNetworkType {
+	if utils.ServiceChainConsensusFlag.Value == "clique" {
 		startServiceChainService(ctx, stack)
 	} else {
 		startKlaytnAuxiliaryService(ctx, stack)

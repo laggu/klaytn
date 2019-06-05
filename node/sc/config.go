@@ -89,15 +89,15 @@ type SCConfig struct {
 	// ServiceChain
 	MainChainAccountAddr    *common.Address `toml:",omitempty"`
 	ServiceChainAccountAddr *common.Address `toml:",omitempty"`
+	ServiceChainConsensus   string
 	chainkey                *ecdsa.PrivateKey
 	nodekey                 *ecdsa.PrivateKey
 	AnchoringPeriod         uint64
 	SentChainTxsLimit       uint64
 
-	MainChainURL           string
-	VTRecovery             bool
-	VTRecoveryInterval     uint64
-	ServiceChainNewAccount bool
+	MainChainURL       string
+	VTRecovery         bool
+	VTRecoveryInterval uint64
 }
 
 // NodeName returns the devp2p node identifier.

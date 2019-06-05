@@ -133,6 +133,9 @@ type Config struct {
 	TxResendInterval  uint64
 	TxResendCount     int
 	TxResendUseLegacy bool
+
+	// Service Chain
+	NoAccountCreation bool
 }
 
 type configMarshaling struct {

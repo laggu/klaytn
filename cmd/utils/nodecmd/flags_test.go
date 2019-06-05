@@ -667,6 +667,13 @@ var flagsWithValues = []struct {
 		flagType: FlagTypeBoolean,
 	},
 	{
+		flag:        "--scconsensus",
+		flagType:    FlagTypeArgument,
+		values:      []string{"istanbul"},
+		wrongValues: []string{},
+		errors:      []int{},
+	},
+	{
 		flag:     "--dbsyncer",
 		flagType: FlagTypeBoolean,
 	},

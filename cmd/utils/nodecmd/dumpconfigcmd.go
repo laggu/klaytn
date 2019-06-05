@@ -241,7 +241,8 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 			cfg.MainChainURL = ctx.GlobalString(utils.MainChainURLFlag.Name)
 			cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
 			cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
-			cfg.ServiceChainNewAccount = ctx.GlobalBool(utils.ServiceChainNewAccountFlag.Name)
+			cfg.ServiceChainConsensus = ctx.GlobalString(utils.ServiceChainConsensusFlag.Name)
+			utils.ServiceChainConsensusFlag.Value = cfg.ServiceChainConsensus
 		}
 
 	} else {
@@ -257,8 +258,20 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 	scfg.DataDir = cfg.Node.DataDir
 	scfg.Name = cfg.Node.Name
 
-	if utils.NetworkTypeFlag.Value == "scn" {
-		utils.RegisterServiceChainService(stack, &cfg.CN, &scfg)
+	if utils.NetworkTypeFlag.Value == SCNNetworkType && ctx.GlobalBool(utils.EnabledBridgeFlag.Name) {
+		cfg.CN.NoAccountCreation = !ctx.GlobalBool(utils.ServiceChainNewAccountFlag.Name)
+		if !cfg.CN.NoAccountCreation {
+			logger.Warn("generated accounts can't be synced with the main chain since account creation is enabled")
+		}
+
+		switch scfg.ServiceChainConsensus {
+		case "istanbul":
+			utils.RegisterCNService(stack, &cfg.CN)
+		case "clique":
+			utils.RegisterServiceChainService(stack, &cfg.CN, &scfg)
+		default:
+			logger.Crit("unknown consensus type for the service chain", "consensus", scfg.ServiceChainConsensus)
+		}
 	} else {
 		utils.RegisterCNService(stack, &cfg.CN)
 	}

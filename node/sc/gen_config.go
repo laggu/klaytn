@@ -32,7 +32,6 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		MainChainURL            string
 		VTRecovery              bool
 		VTRecoveryInterval      uint64
-		ServiceChainNewAccount  bool
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -56,7 +55,6 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.MainChainURL = s.MainChainURL
 	enc.VTRecovery = s.VTRecovery
 	enc.VTRecoveryInterval = s.VTRecoveryInterval
-	enc.ServiceChainNewAccount = s.ServiceChainNewAccount
 	return &enc, nil
 }
 
@@ -84,7 +82,6 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		MainChainURL            *string
 		VTRecovery              *bool
 		VTRecoveryInterval      *uint64
-		ServiceChainNewAccount  *bool
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -152,9 +149,6 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.VTRecoveryInterval != nil {
 		s.VTRecoveryInterval = *dec.VTRecoveryInterval
-	}
-	if dec.ServiceChainNewAccount != nil {
-		s.ServiceChainNewAccount = *dec.ServiceChainNewAccount
 	}
 	return nil
 }

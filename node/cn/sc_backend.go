@@ -148,12 +148,7 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config, scconfig *sc.SCCo
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-
-	if scconfig.ServiceChainNewAccount {
-		config.TxPool.NoAccountCreation = false
-	} else {
-		config.TxPool.NoAccountCreation = true
-	}
+	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), config); err != nil {
