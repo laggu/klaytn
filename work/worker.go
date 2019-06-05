@@ -60,6 +60,9 @@ var (
 	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
 	ResultChGauge           = metrics.NewRegisteredGauge("miner/resultch", nil)
 	resentTxGauge           = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
+	usedAllTxsCounter       = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
+	checkedTxsGauge         = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
+	tCountGauge             = metrics.NewRegisteredGauge("miner/tcount", nil)
 )
 
 // Agent can register themself with the worker
@@ -542,6 +545,7 @@ func (self *worker) commitNewWork() {
 		}
 		// We only care about logging if we're actually mining.
 		if atomic.LoadInt32(&self.mining) == 1 {
+			tCountGauge.Update(int64(work.tcount))
 			logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))
 		}
 	}
@@ -632,13 +636,19 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 		UseOpcodeComputationCost: true,
 	}
 
+	var numTxsChecked int64 = 0
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
 		if tx == nil {
+			// To indicate that it does not have enough transactions for params.TotalTimeLimit.
+			if numTxsChecked > 0 {
+				usedAllTxsCounter.Inc(1)
+			}
 			break
 		}
+		numTxsChecked++
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
 		//
@@ -698,6 +708,9 @@ CommitTransactionLoop:
 			txs.Shift()
 		}
 	}
+
+	// Update the number of transactions checked during ApplyTransactions.
+	checkedTxsGauge.Update(numTxsChecked)
 
 	// Stop the goroutine that has been handling the timer.
 	chDone <- true
