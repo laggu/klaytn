@@ -123,25 +123,25 @@ jobs:
             docker push 428948643293.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest
             docker push 428948643293.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:$CIRCLE_SHA1
 
-  packaging:
+  packaging-linux:
     machine: true
     working_directory: ~/go/src/github.com/ground-x/klaytn
     steps:
       - checkout
       - run:
-          name: "Install awscli"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
+        name: "Install awscli"
+        command: |
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python get-pip.py --user
+          ~/.local/bin/pip install awscli --upgrade --user
 
       - run:
-          name: "Build kcn, kpn, ken, kgen, kscn, kbn"
-          command: |
-            export GOPATH=~/go
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            make klay-linux-amd64 klay-darwin-amd64 klay-windows-amd64
+        name: "Build kcn, kpn, ken, kgen, kscn, kbn for linux-amd64"
+        command: |
+          export GOPATH=~/go
+          echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+          echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+          make klay-linux-amd64
 
       - run:
           name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for linux-amd64"
@@ -176,6 +176,26 @@ jobs:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
+  packaging-darwin:
+    machine: true
+    working_directory: ~/go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+        name: "Install awscli"
+        command: |
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python get-pip.py --user
+          ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+        name: "Build kcn, kpn, ken, kgen, kscn, kbn for macOS"
+        command: |
+          export GOPATH=~/go
+          echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+          echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+          make klay-darwin-amd64
+
       - run:
           name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for macOS"
           command: |
@@ -209,6 +229,26 @@ jobs:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
+  packaging-windows:
+    machine: true
+    working_directory: ~/go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+        name: "Install awscli"
+        command: |
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python get-pip.py --user
+          ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+        name: "Build kcn, kpn, ken, kgen, kscn, kbn for windows"
+        command: |
+          export GOPATH=~/go
+          echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+          echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+          make klay-windows-amd64
+
       - run:
           name: "Packaging kcn, kpn, ken, kgen for windows"
           command: |
@@ -229,6 +269,7 @@ jobs:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
+
 
   rpm-untagged:
     docker:
@@ -310,23 +351,28 @@ workflows:
           filters:
             tags:
               only: /.*/
+
       - test-datasync:
           filters:
             tags:
               only: /.*/
+
       - test-networks:
           filters:
             tags:
               only: /.*/
+
       - test-tests:
           filters:
             tags:
               only: /.*/
+
       - test-others:
           filters:
             tags:
               only: /.*/
-      - packaging:
+
+      - packaging-linux:
           requires:
             - test-datasync
             - test-networks
@@ -337,6 +383,31 @@ workflows:
               only: /^v.*/
             branches:
               ignore: /.*/
+
+      - packaging-macos:
+          requires:
+            - test-datasync
+            - test-networks
+            - test-tests
+            - test-others
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-windows:
+          requires:
+            - test-datasync
+            - test-networks
+            - test-tests
+            - test-others
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
       - dockernize:
           requires:
             - test-datasync
@@ -348,6 +419,7 @@ workflows:
               only: /^v.*/
             branches:
               ignore: /.*/
+
       - rpm-tagged:
           requires:
             - test-datasync
@@ -359,6 +431,7 @@ workflows:
               only: /^v.*/
             branches:
               ignore: /.*/
+
   nightly-coverage:
     triggers:
       - schedule:
@@ -369,6 +442,7 @@ workflows:
                 - master
     jobs:
       - coverage
+      -
   nightly-linters:
     triggers:
       - schedule:
