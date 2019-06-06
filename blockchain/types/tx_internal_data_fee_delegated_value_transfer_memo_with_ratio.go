@@ -202,7 +202,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) String() string {
 	FeePayer:      %s
 	FeeRatio:      %d
 	FeePayerSig:   %s
-	Paylod:        %x
+	Data:          %x
 	Hex:           %x
 `,
 		tx.Hash(),

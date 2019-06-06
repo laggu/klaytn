@@ -248,7 +248,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) String() string {
 	GasPrice:      %#x
 	GasLimit:      %#x
 	Value:         %#x
-	Paylod:        %x
+	Data:          %x
 	Signature:     %s
 	FeePayer:      %s
 	FeePayerSig:   %s

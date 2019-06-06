@@ -23,6 +23,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
+	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -80,42 +81,55 @@ func TestTxRLPEncode(t *testing.T) {
 func printRLPEncode(chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, txHashRLP *bytes.Buffer, senderTxHashRLP *bytes.Buffer, rawTx *Transaction) {
 	privateKey := crypto.FromECDSA(key)
 
-	fmt.Printf("chainid %#x\n", chainId)
-	fmt.Printf("prvkey %#x\n", privateKey)
-	fmt.Printf("pubkeyX %#x\n", key.X)
-	fmt.Printf("pubkeyY %#x\n", key.Y)
-	fmt.Printf("sigRLP %#x\n", sigRLP.Bytes())
-	fmt.Printf("sigHash %s\n", signer.Hash(rawTx).String())
+	vrs, _ := rlp.EncodeToBytes(rawTx.data.RawSignatureValues())
+
+	fmt.Printf("ChainID %#x\n", chainId)
+	fmt.Printf("PrivateKey %#x\n", privateKey)
+	fmt.Printf("PublicKey.X %#x\n", key.X)
+	fmt.Printf("PublicKey.Y %#x\n", key.Y)
+	fmt.Printf("SigRLP %#x\n", sigRLP.Bytes())
+	fmt.Printf("SigHash %s\n", signer.Hash(rawTx).String())
+	fmt.Printf("Signature %s\n", common.Bytes2Hex(vrs))
 	fmt.Printf("TxHashRLP %#x\n", txHashRLP.Bytes())
+	fmt.Printf("TxHash %#x\n", rawTx.Hash())
 	fmt.Printf("SenderTxHashRLP %#x\n", senderTxHashRLP.Bytes())
+	fmt.Printf("SenderTxHash %#x\n", rawTx.SenderTxHashAll())
 	fmt.Println(rawTx)
+
 }
 
 func printFeeDelegatedRLPEncode(t *testing.T, chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, feePayerSigRLP *bytes.Buffer, txHashRLP *bytes.Buffer, senderTxHashRLP *bytes.Buffer, rawTx *Transaction) {
 	privateKey := crypto.FromECDSA(key)
+	vrs, _ := rlp.EncodeToBytes(rawTx.data.RawSignatureValues())
 
-	fmt.Printf("chainid %#x\n", chainId)
+	fmt.Printf("ChainID %#x\n", chainId)
 	// Sender
-	fmt.Printf("prvkey %#x\n", privateKey)
-	fmt.Printf("pubkeyX %#x\n", key.X)
-	fmt.Printf("pubkeyY %#x\n", key.Y)
-	fmt.Printf("sigRLP %#x\n", sigRLP.Bytes())
-	fmt.Printf("sigHash %s\n", signer.Hash(rawTx).String())
+	fmt.Printf("PrivateKey %#x\n", privateKey)
+	fmt.Printf("PublicKey.X %#x\n", key.X)
+	fmt.Printf("PublicKey.Y %#x\n", key.Y)
+	fmt.Printf("SigRLP %#x\n", sigRLP.Bytes())
+	fmt.Printf("SigHash %s\n", signer.Hash(rawTx).String())
+	fmt.Printf("Signature %s\n", common.Bytes2Hex(vrs))
 
 	// FeePayer
 	feePayerPrivateKey := crypto.FromECDSA(payerKey)
 
-	feePyaerHash, err := signer.HashFeePayer(rawTx)
+	feePayerHash, err := signer.HashFeePayer(rawTx)
 	assert.Equal(t, nil, err)
 
-	fmt.Printf("FeePayerPrvkey %#x\n", feePayerPrivateKey)
-	fmt.Printf("FeePayerPubkeyX %#x\n", payerKey.X)
-	fmt.Printf("FeePayerPubkeyY %#x\n", payerKey.Y)
-	fmt.Printf("FeePayerRLP %#x\n", feePayerSigRLP.Bytes())
-	fmt.Printf("FeePayerHash %s\n", feePyaerHash.String())
+	feePayerVrs, _ := rlp.EncodeToBytes(rawTx.data.(TxInternalDataFeePayer).GetFeePayerRawSignatureValues())
+
+	fmt.Printf("FeePayerPrivateKey %#x\n", feePayerPrivateKey)
+	fmt.Printf("FeePayerPublicKey.X %#x\n", payerKey.X)
+	fmt.Printf("FeePayerPublicKey.Y %#x\n", payerKey.Y)
+	fmt.Printf("SigRLPFeePayer %#x\n", feePayerSigRLP.Bytes())
+	fmt.Printf("SigHashFeePayer %s\n", feePayerHash.String())
+	fmt.Printf("SignatureFeePayer %s\n", common.Bytes2Hex(feePayerVrs))
 
 	fmt.Printf("TxHashRLP %#x\n", txHashRLP.Bytes())
+	fmt.Printf("TxHash %#x\n", rawTx.Hash())
 	fmt.Printf("SenderTxHashRLP %#x\n", senderTxHashRLP.Bytes())
+	fmt.Printf("SenderTxHash %#x\n", rawTx.SenderTxHashAll())
 	fmt.Println(rawTx)
 }
 

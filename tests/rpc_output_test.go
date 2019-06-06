@@ -793,13 +793,13 @@ func BenchmarkRPCOutput(t *testing.B) {
 	// Print the JSON output of the first block.
 	blkNum := rpc.BlockNumber(1)
 	out, err := apiExtension.GetBlockWithConsensusInfoByNumber(&blkNum)
-	b, _ := json.Marshal(out)
+	b, _ := json.MarshalIndent(out, "", "\t")
 	fmt.Println(string(b))
 
 	// Print the JSON output of the second block.
 	blkNum = rpc.BlockNumber(2)
 	out, err = apiExtension.GetBlockWithConsensusInfoByNumber(&blkNum)
-	b, _ = json.Marshal(out)
+	b, _ = json.MarshalIndent(out, "", "\t")
 	fmt.Println(string(b))
 
 	if testing.Verbose() {

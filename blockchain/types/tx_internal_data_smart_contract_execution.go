@@ -218,7 +218,7 @@ func (t *TxInternalDataSmartContractExecution) String() string {
 	GasLimit:      %#x
 	Value:         %#x
 	Signature:     %s
-	Paylod:        %x
+	Data:          %x
 	Hex:           %x
 `,
 		tx.Hash(),

@@ -187,7 +187,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) String() string {
 	Signature:     %s
 	FeePayer:      %s
 	FeePayerSig:   %s
-	Paylod:        %x
+	Data:          %x
 	Hex:           %x
 `,
 		tx.Hash(),

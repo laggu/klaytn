@@ -144,7 +144,7 @@ func (t TxSignatures) RecoverPubkey(txhash common.Hash, homestead bool, vfunc fu
 }
 
 func (t TxSignatures) string() string {
-	b, _ := json.Marshal(t)
+	b, _ := json.Marshal(t.ToJSON())
 
 	return string(b)
 }

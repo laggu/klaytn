@@ -266,7 +266,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) String() str
 	GasPrice:      %#x
 	GasLimit:      %#x
 	Value:         %#x
-	Paylod:        %x
+	Data:          %x
 	Signature:     %s
 	FeePayer:      %s
 	FeeRatio:      %d
