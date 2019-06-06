@@ -232,7 +232,7 @@ jobs:
 
   rpm-untagged:
     docker:
-      - image: bitaholic/circleci-rpmbuild:latest
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
     working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
@@ -255,7 +255,7 @@ jobs:
 
   rpm-tagged:
     docker:
-      - image: bitaholic/circleci-rpmbuild:latest
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
     working_directory: /go/src/github.com/ground-x/klaytn
     steps:
       - checkout
@@ -274,14 +274,14 @@ jobs:
             for item in kcn kpn ken kscn kbn
             do
               cd /go/src/github.com/ground-x/klaytn
-              go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild_home/SPECS/${item}d-$KLAYTN_VERSION.spec
+              go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               cd /go/src/github.com/ground-x
               cp -R klaytn ${item}d-$KLAYTN_VERSION
               ls -R ${item}d-$KLAYTN_VERSION/build/rpm/etc/init.d
               tar czf ${item}d-$KLAYTN_VERSION.tar.gz ${item}d-$KLAYTN_VERSION
-              mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
-              rpmbuild -ba /rpmbuild_home/SPECS/${item}d-$KLAYTN_VERSION.spec
-              TARGET_RPM="/rpmbuild_home/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
+              rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
+              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
               scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
             done
