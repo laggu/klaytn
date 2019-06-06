@@ -1170,16 +1170,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	}
 
-	// Override any default configs for hard coded network.
-	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
-	/*
-		if ctx.GlobalBool(TestnetFlag.Name) {
-			if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-				cfg.NetworkId = 3
-			}
-			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
-		}
-	*/
+	if ctx.GlobalBool(BaobabFlag.Name) {
+		cfg.NetworkId = params.BaobabNetworkId
+		cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
+	}
 	// Set the Tx resending related configuration variables
 	setTxResendConfig(ctx, cfg)
 }
