@@ -561,8 +561,8 @@ var (
 	}
 	ServiceChainConsensusFlag = cli.StringFlag{
 		Name:  "scconsensus",
-		Usage: "Set the service chain consensus (\"istanbul\", \"clique\")",
-		Value: "istanbul",
+		Usage: "Set the service chain consensus (\"clique\", \"istanbul\")",
+		Value: "clique",
 	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
