@@ -1,4 +1,5 @@
-FROM kjhman21/dev:go1.11.2-solc0.4.24
+ARG  DOCKER_BASE_IMAGE=kjhman21/dev:go1.11.2-solc0.4.24
+FROM ${DOCKER_BASE_IMAGE}
 MAINTAINER Jesse Lee jesse.lee@groundx.xyz
 
 ENV PKG_DIR /klaytn-docker-pkg
