@@ -911,6 +911,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
+			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
 			return nil
 		}
 		acc := serializer.GetAccount()
