@@ -1198,16 +1198,6 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.BlockScore(), ptd)
 
-	reorg := isReorganizationRequired(localTd, externTd, currentBlock, block)
-	if reorg {
-		// Reorganise the chain if the parent is not the head block
-		if block.ParentHash() != currentBlock.Hash() {
-			if err := bc.reorg(currentBlock, block); err != nil {
-				return NonStatTy, err
-			}
-		}
-	}
-
 	parallelDBWriteWG := sync.WaitGroup{}
 	parallelDBWriteErrCh := make(chan error, 2)
 	// Irrelevant of the canonical status, write the block itself to the database
@@ -1236,6 +1226,14 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 		bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
 	}()
 
+	// Wait until all writing goroutines are terminated.
+	parallelDBWriteWG.Wait()
+	select {
+	case err := <-parallelDBWriteErrCh:
+		return NonStatTy, err
+	default:
+	}
+
 	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
@@ -1243,7 +1241,15 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	currentBlock = bc.CurrentBlock()
+	reorg := isReorganizationRequired(localTd, externTd, currentBlock, block)
 	if reorg {
+		// Reorganise the chain if the parent is not the head block
+		if block.ParentHash() != currentBlock.Hash() {
+			if err := bc.reorg(currentBlock, block); err != nil {
+				return NonStatTy, err
+			}
+		}
+
 		parallelDBWriteWG.Add(2)
 
 		go func() {
@@ -1258,18 +1264,19 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 			defer parallelDBWriteWG.Done()
 			bc.db.WritePreimages(block.NumberU64(), state.Preimages())
 		}()
+
+		// Wait until all writing goroutines are terminated.
+		parallelDBWriteWG.Wait()
+
 		status = CanonStatTy
 	} else {
 		status = SideStatTy
 	}
 
-	// Wait until all writing goroutines are terminated.
-	parallelDBWriteWG.Wait()
 	select {
 	case err := <-parallelDBWriteErrCh:
 		return NonStatTy, err
 	default:
-		break
 	}
 
 	return bc.finalizeWriteBlockWithState(block, status, start)
