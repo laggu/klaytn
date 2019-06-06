@@ -163,6 +163,18 @@ jobs:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-baobab-linux-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
+              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-linux-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
 
       - run:
           name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for macOS"
@@ -180,6 +192,18 @@ jobs:
                 cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
               fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-baobab-darwin-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
+              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
@@ -258,6 +282,20 @@ jobs:
               mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
               rpmbuild -ba /rpmbuild_home/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild_home/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
+              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
+            done
+            for item in kcn kpn ken
+            do
+              cd /go/src/github.com/ground-x/klaytn
+              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild_home/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              cd /go/src/github.com/ground-x
+              cp -R klaytn ${item}d-baobab-$KLAYTN_VERSION
+              ls -R ${item}d-baobab-$KLAYTN_VERSION/build/rpm/etc/init.d
+              tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
+              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
+              rpmbuild -ba /rpmbuild_home/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              TARGET_RPM="/rpmbuild_home/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
               scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
             done

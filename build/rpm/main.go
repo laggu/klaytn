@@ -39,6 +39,7 @@ type RpmSpec struct {
 	MakeTarget  string
 	ProgramName string // kcn, kpn, ken, kscn, kbn
 	DaemonName  string // kcnd, kpnd, kend, kscn, kbn
+	PostFix     string // baobab
 }
 
 func (r RpmSpec) String() string {
@@ -74,6 +75,10 @@ func main() {
 				cli.BoolFlag{
 					Name:  "devel",
 					Usage: "generate spec for devel version",
+				},
+				cli.BoolFlag{
+					Name:  "baobab",
+					Usage: "generate spec for baobab version",
 				},
 				cli.IntFlag{
 					Name:  "build_num",
@@ -118,6 +123,7 @@ func genspec(c *cli.Context) error {
 
 	rpmSpec.ProgramName = strings.ToLower(nodeType)
 	rpmSpec.DaemonName = NODE_TYPE[nodeType].daemon
+	rpmSpec.PostFix = ""
 
 	if c.Bool("devel") {
 		buildNum := c.Int("build_num")
@@ -127,6 +133,10 @@ func genspec(c *cli.Context) error {
 		}
 		rpmSpec.BuildNumber = buildNum
 		rpmSpec.Name = NODE_TYPE[nodeType].daemon + "-devel"
+	} else if c.Bool("baobab") {
+		rpmSpec.BuildNumber = params.ReleaseNum
+		rpmSpec.Name = NODE_TYPE[nodeType].daemon + "-baobab"
+		rpmSpec.PostFix = "_baobab"
 	} else {
 		rpmSpec.BuildNumber = params.ReleaseNum
 		rpmSpec.Name = NODE_TYPE[nodeType].daemon
@@ -165,7 +175,7 @@ mkdir -p $RPM_BUILD_ROOT/var/log/{{ .DaemonName }}
 
 cp build/bin/{{ .ProgramName }} $RPM_BUILD_ROOT/usr/bin/{{ .ProgramName }}
 cp build/rpm/etc/init.d/{{ .DaemonName }} $RPM_BUILD_ROOT/etc/init.d/{{ .DaemonName }}
-cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}{{ .PostFix }}.conf $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
 
 %files
 %attr(755, -, -) /usr/bin/{{ .ProgramName }}
