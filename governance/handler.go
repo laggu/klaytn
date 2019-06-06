@@ -111,6 +111,9 @@ func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {
 
 // AddVote adds a vote to the voteMap
 func (g *Governance) AddVote(key string, val interface{}) bool {
+	g.voteMapLock.Lock()
+	defer g.voteMapLock.Unlock()
+
 	key = g.getKey(key)
 
 	// If the key is forbidden, stop processing it
@@ -121,11 +124,11 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 	vote := &GovernanceVote{Key: key, Value: val}
 	var ok bool
 	if vote, ok = g.ValidateVote(vote); ok {
-		g.voteMap.SetValue(key, VoteStatus{
+		g.voteMap[key] = VoteStatus{
 			Value:  vote.Value,
 			Casted: false,
 			Num:    0,
-		})
+		}
 		return true
 	}
 	return false
@@ -335,8 +338,10 @@ func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []
 			ret = append(votes[:idx], votes[idx+1:]...)
 			if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
 				(governanceMode == params.GovernanceMode_Ballot && currentVotes <= valset.TotalVotingPower()/2) {
-				if v, ok := gov.changeSet.GetValue(GovernanceKeyMap[vote.Key]); ok && v == vote.Value {
-					gov.changeSet.RemoveItem(vote.Key)
+				if v, ok := gov.changeSet[vote.Key]; ok && v == vote.Value {
+					gov.mu.Lock()
+					delete(gov.changeSet, vote.Key)
+					gov.mu.Unlock()
 				}
 			}
 			break
@@ -424,7 +429,8 @@ func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interf
 	return data[key], nil
 }
 
-func (gov *Governance) GetLatestGovernanceItem(key int) interface{} {
-	ret, _ := gov.currentSet.GetValue(key)
-	return ret
+func (gov *Governance) GetLatestGovernanceItem(key string) interface{} {
+	gov.currentSetMu.RLock()
+	defer gov.currentSetMu.RUnlock()
+	return gov.currentSet[key]
 }

@@ -110,10 +110,7 @@ var (
 var logger = log.NewModuleLogger(log.Governance)
 
 // Governance item set
-type GovernanceSet struct {
-	items map[string]interface{}
-	mu    *sync.RWMutex
-}
+type GovernanceSet map[string]interface{}
 
 // Governance represents vote information given from istanbul.vote()
 type GovernanceVote struct {
@@ -144,28 +141,23 @@ type VoteStatus struct {
 	Num    uint64      `json:"num"`
 }
 
-type VoteSet struct {
-	items map[string]VoteStatus
-	mu    *sync.RWMutex
-}
-
 type Governance struct {
 	ChainConfig *params.ChainConfig
 
 	// Map used to keep multiple types of votes
-	voteMap VoteSet
+	voteMap     map[string]VoteStatus
+	voteMapLock sync.RWMutex
 
-	nodeAddress      atomic.Value //common.Address
+	nodeAddress      common.Address
 	totalVotingPower uint64
 	votingPower      uint64
 
 	GovernanceVotes   GovernanceVotes
 	GovernanceTallies GovernanceTallyList
 
-	db           database.DBManager
-	itemCache    common.Cache
-	idxCache     []uint64
-	idxCacheLock *sync.RWMutex
+	db        database.DBManager
+	itemCache common.Cache
+	idxCache  []uint64
 
 	// The block number when current governance information was changed
 	actualGovernanceBlock uint64
@@ -173,19 +165,15 @@ type Governance struct {
 	// The last block number at governance state was stored (used not to replay old votes)
 	lastGovernanceStateBlock uint64
 
-	currentSet GovernanceSet
-	changeSet  GovernanceSet
+	currentSet   GovernanceSet
+	currentSetMu sync.RWMutex
+
+	changeSet GovernanceSet
+	mu        sync.RWMutex
 
 	TxPool *blockchain.TxPool
 
 	blockChain *blockchain.BlockChain
-}
-
-func NewVoteMap() VoteSet {
-	return VoteSet{
-		items: make(map[string]VoteStatus),
-		mu:    new(sync.RWMutex),
-	}
 }
 
 func NewGovernanceTallies() GovernanceTallyList {
@@ -200,62 +188,6 @@ func NewGovernanceVotes() GovernanceVotes {
 		items: []GovernanceVote{},
 		mu:    new(sync.RWMutex),
 	}
-}
-
-func (gt *GovernanceTallyList) Clear() {
-	gt.mu.Lock()
-	defer gt.mu.Unlock()
-
-	gt.items = make([]GovernanceTallyItem, 0)
-}
-
-func (vl *VoteSet) Copy() map[string]VoteStatus {
-	vl.mu.RLock()
-	defer vl.mu.RUnlock()
-
-	ret := make(map[string]VoteStatus)
-	for k, v := range vl.items {
-		ret[k] = v
-	}
-
-	return ret
-}
-
-func (vl *VoteSet) GetValue(key string) VoteStatus {
-	vl.mu.RLock()
-	defer vl.mu.RUnlock()
-
-	return vl.items[key]
-}
-
-func (vl *VoteSet) SetValue(key string, val VoteStatus) {
-	vl.mu.Lock()
-	defer vl.mu.Unlock()
-
-	vl.items[key] = val
-}
-
-func (vl *VoteSet) Import(src map[string]VoteStatus) {
-	vl.mu.Lock()
-	defer vl.mu.Unlock()
-
-	for k, v := range src {
-		vl.items[k] = v
-	}
-}
-
-func (vl *VoteSet) Clear() {
-	vl.mu.Lock()
-	defer vl.mu.Unlock()
-
-	vl.items = make(map[string]VoteStatus)
-}
-
-func (vl *VoteSet) Size() int {
-	vl.mu.RLock()
-	defer vl.mu.RUnlock()
-
-	return len(vl.items)
 }
 
 func (gt *GovernanceTallyList) Copy() []GovernanceTallyItem {
@@ -276,12 +208,6 @@ func (gt *GovernanceTallyList) Import(src []GovernanceTallyItem) {
 	copy(gt.items, src)
 }
 
-func (gv *GovernanceVotes) Clear() {
-	gv.mu.Lock()
-	defer gv.mu.Unlock()
-	gv.items = make([]GovernanceVote, 0)
-}
-
 func (gv *GovernanceVotes) Copy() []GovernanceVote {
 	gv.mu.RLock()
 	defer gv.mu.RUnlock()
@@ -300,108 +226,34 @@ func (gv *GovernanceVotes) Import(src []GovernanceVote) {
 	copy(gv.items, src)
 }
 
-func NewGovernanceSet() GovernanceSet {
-	return GovernanceSet{
-		items: map[string]interface{}{},
-		mu:    new(sync.RWMutex),
-	}
-}
-
-func (gs *GovernanceSet) Clear() {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-
-	gs.items = make(map[string]interface{})
-}
-
-func (gs *GovernanceSet) SetValue(itemType int, value interface{}) error {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-
+func (gs GovernanceSet) SetValue(itemType int, value interface{}) error {
 	key := GovernanceKeyMapReverse[itemType]
 
 	if GovernanceItems[itemType].t != reflect.TypeOf(value) {
 		return ErrValueTypeMismatch
 	}
-	gs.items[key] = value
+	gs[key] = value
 	return nil
-}
-
-func (gs *GovernanceSet) GetValue(key int) (interface{}, bool) {
-	sKey, ok := GovernanceKeyMapReverse[key]
-	if !ok {
-		return nil, false
-	}
-
-	gs.mu.RLock()
-	defer gs.mu.RUnlock()
-	ret, ok := gs.items[sKey]
-	return ret, ok
-}
-
-func (gs *GovernanceSet) RemoveItem(key string) {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-
-	delete(gs.items, key)
-}
-
-func (gs *GovernanceSet) Size() int {
-	gs.mu.RLock()
-	defer gs.mu.RUnlock()
-
-	return len(gs.items)
-}
-
-func (gs *GovernanceSet) Import(src map[string]interface{}) {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-
-	gs.items = make(map[string]interface{})
-	for k, v := range src {
-		gs.items[k] = v
-	}
-}
-
-func (gs *GovernanceSet) Items() map[string]interface{} {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-
-	ret := make(map[string]interface{})
-	for k, v := range gs.items {
-		ret[k] = v
-	}
-	return ret
-}
-
-func (gs *GovernanceSet) Merge(change map[string]interface{}) {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-
-	for k, v := range change {
-		gs.items[k] = v
-	}
 }
 
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	ret := Governance{
 		ChainConfig:              chainConfig,
-		voteMap:                  NewVoteMap(),
+		voteMap:                  make(map[string]VoteStatus),
 		db:                       dbm,
 		itemCache:                newGovernanceCache(),
-		currentSet:               NewGovernanceSet(),
-		changeSet:                NewGovernanceSet(),
+		currentSet:               GovernanceSet{},
+		changeSet:                GovernanceSet{},
 		lastGovernanceStateBlock: 0,
 		GovernanceTallies:        NewGovernanceTallies(),
 		GovernanceVotes:          NewGovernanceVotes(),
-		idxCacheLock:             new(sync.RWMutex),
 	}
 	// nil is for testing or simple function usage
 	if dbm != nil {
 		if err := ret.initializeCache(); err != nil {
 			// If this is the first time to run, store governance information for genesis block on database
 			cfg := getGovernanceItemsFromChainConfig(chainConfig)
-			if err := ret.WriteGovernance(0, cfg, NewGovernanceSet()); err != nil {
+			if err := ret.WriteGovernance(0, cfg, nil); err != nil {
 				logger.Crit("Error in writing governance information", "err", err)
 			}
 			// If failed again after writing governance, stop booting up
@@ -415,7 +267,7 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 }
 
 func (g *Governance) SetNodeAddress(addr common.Address) {
-	g.nodeAddress.Store(addr)
+	g.nodeAddress = addr
 }
 
 func (g *Governance) SetTotalVotingPower(t uint64) {
@@ -428,19 +280,24 @@ func (g *Governance) SetMyVotingPower(t uint64) {
 
 func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
 	// TODO-Klaytn-Governance Change this part to add all votes to the header at once
-	for key, val := range g.voteMap.Copy() {
-		if val.Casted == false {
-			vote := new(GovernanceVote)
-			vote.Validator = addr
-			vote.Key = key
-			vote.Value = val.Value
-			encoded, err := rlp.EncodeToBytes(vote)
-			if err != nil {
-				logger.Error("Failed to RLP Encode a vote", "vote", vote)
-				g.RemoveVote(key, val, number)
-				continue
+	g.voteMapLock.RLock()
+	defer g.voteMapLock.RUnlock()
+
+	if len(g.voteMap) > 0 {
+		for key, val := range g.voteMap {
+			if val.Casted == false {
+				vote := new(GovernanceVote)
+				vote.Validator = addr
+				vote.Key = key
+				vote.Value = val.Value
+				encoded, err := rlp.EncodeToBytes(vote)
+				if err != nil {
+					logger.Error("Failed to RLP Encode a vote", "vote", vote)
+					g.RemoveVote(key, val, number)
+					continue
+				}
+				return encoded
 			}
-			return encoded
 		}
 	}
 	return nil
@@ -452,12 +309,16 @@ func (g *Governance) getKey(k string) string {
 
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
-	if g.voteMap.GetValue(key).Value == value {
-		g.voteMap.SetValue(key, VoteStatus{
+	g.voteMapLock.Lock()
+	defer g.voteMapLock.Unlock()
+
+	key = g.getKey(key)
+	if g.voteMap[key].Value == value {
+		g.voteMap[key] = VoteStatus{
 			Value:  value,
 			Casted: true,
 			Num:    number,
-		})
+		}
 	}
 	if g.CanWriteGovernanceState(number) {
 		g.WriteGovernanceState(number, false)
@@ -465,10 +326,15 @@ func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 }
 
 func (g *Governance) ClearVotes(num uint64) {
-	g.GovernanceVotes.Clear()
-	g.GovernanceTallies.Clear()
-	g.changeSet.Clear()
-	g.voteMap.Clear()
+	g.voteMapLock.Lock()
+	defer g.voteMapLock.Unlock()
+
+	g.GovernanceVotes = NewGovernanceVotes()
+	g.GovernanceTallies = NewGovernanceTallies()
+	g.mu.Lock()
+	g.changeSet = GovernanceSet{}
+	g.mu.Unlock()
+	g.voteMap = make(map[string]VoteStatus)
 	logger.Info("Governance votes are cleared", "num", num)
 }
 
@@ -511,24 +377,27 @@ func (gov *Governance) ReflectVotes(vote GovernanceVote) {
 }
 
 func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
+	gov.mu.Lock()
+	defer gov.mu.Unlock()
+
 	switch GovernanceKeyMap[vote.Key] {
 	case params.GoverningNode:
-		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(common.Address))
+		gov.changeSet[vote.Key] = vote.Value.(common.Address)
 		return true
 	case params.GovernanceMode, params.Ratio:
-		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
+		gov.changeSet[vote.Key] = vote.Value.(string)
 		return true
 	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize, params.UnitPrice, params.ConstTxGasHumanReadable:
-		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
+		gov.changeSet[vote.Key] = vote.Value.(uint64)
 		return true
 	case params.Policy:
-		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
+		gov.changeSet[vote.Key] = vote.Value.(uint64)
 		return true
 	case params.MintingAmount, params.MinimumStake:
-		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
+		gov.changeSet[vote.Key], _ = vote.Value.(string)
 		return true
 	case params.UseGiniCoeff, params.DeferredTxFee:
-		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(bool))
+		gov.changeSet[vote.Key] = vote.Value.(bool)
 		return true
 	default:
 		logger.Warn("Unknown key was given", "key", vote.Key)
@@ -610,10 +479,7 @@ func (g *Governance) initializeCache() error {
 	if err != nil {
 		return ErrNotInitialized
 	}
-	g.idxCacheLock.Lock()
 	g.idxCache = indices
-	g.idxCacheLock.Unlock()
-
 	// Put governance items into the itemCache
 	for _, v := range indices {
 		if num, data, err := g.ReadGovernance(v); err == nil {
@@ -626,35 +492,30 @@ func (g *Governance) initializeCache() error {
 
 	// the last one is the one to be used now
 	ret, _ := g.itemCache.Get(getGovernanceCacheKey(g.actualGovernanceBlock))
-	g.currentSet.Import(ret.(map[string]interface{}))
+	g.currentSetMu.Lock()
+	g.currentSet = ret.(GovernanceSet)
+	g.currentSetMu.Unlock()
 	return nil
 }
 
 // getGovernanceCache returns cached governance config as a byte slice
-func (g *Governance) getGovernanceCache(num uint64) (map[string]interface{}, bool) {
+func (g *Governance) getGovernanceCache(num uint64) (GovernanceSet, bool) {
 	cKey := getGovernanceCacheKey(num)
 
 	if ret, ok := g.itemCache.Get(cKey); ok && ret != nil {
-		return ret.(map[string]interface{}), true
+		return ret.(GovernanceSet), true
 	}
 	return nil, false
 }
 
 func (g *Governance) addGovernanceCache(num uint64, data GovernanceSet) {
 	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
-	g.idxCacheLock.Lock()
-	defer g.idxCacheLock.Unlock()
-
 	if len(g.idxCache) > 0 && num <= g.idxCache[len(g.idxCache)-1] {
 		return
 	}
 	cKey := getGovernanceCacheKey(num)
-	g.itemCache.Add(cKey, data.Items())
-
-	g.idxCache = append(g.idxCache, num)
-	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
-		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
-	}
+	g.itemCache.Add(cKey, data)
+	g.addIdxCache(num)
 }
 
 // getGovernanceCacheKey returns cache key of the given block number
@@ -663,24 +524,35 @@ func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
 	return common.GovernanceCacheKey(params.GovernanceCachePrefix + "_" + v)
 }
 
+func (g *Governance) addIdxCache(num uint64) {
+	g.idxCache = append(g.idxCache, num)
+	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
+		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
+	}
+}
+
 // Store new governance data on DB. This updates Governance cache too.
 func (g *Governance) WriteGovernance(num uint64, data GovernanceSet, delta GovernanceSet) error {
 
-	new := NewGovernanceSet()
-	new.Import(data.Items())
+	new := make(GovernanceSet)
+	new = CopyGovernanceSet(new, data)
 
 	// merge delta into data
-	if delta.Size() > 0 {
-		new.Merge(delta.Items())
+	if delta != nil {
+		new = CopyGovernanceSet(new, delta)
 	}
 	g.addGovernanceCache(num, new)
-	return g.db.WriteGovernance(new.Items(), num)
+	return g.db.WriteGovernance(new, num)
+}
+
+func CopyGovernanceSet(dst GovernanceSet, src GovernanceSet) GovernanceSet {
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
 
 func (g *Governance) searchCache(num uint64) (uint64, bool) {
-	g.idxCacheLock.RLock()
-	defer g.idxCacheLock.RUnlock()
-
 	for i := len(g.idxCache) - 1; i >= 0; i-- {
 		if g.idxCache[i] <= num {
 			return g.idxCache[i], true
@@ -689,7 +561,7 @@ func (g *Governance) searchCache(num uint64) (uint64, bool) {
 	return 0, false
 }
 
-func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
+func (g *Governance) ReadGovernance(num uint64) (uint64, GovernanceSet, error) {
 	blockNum := CalcGovernanceInfoBlock(num, g.ChainConfig.Istanbul.Epoch)
 	// Check cache first
 	if gBlockNum, ok := g.searchCache(blockNum); ok {
@@ -713,9 +585,12 @@ func CalcGovernanceInfoBlock(num uint64, epoch uint64) uint64 {
 	return governanceInfoBlock
 }
 
-func (g *Governance) GetGovernanceChange() map[string]interface{} {
-	if g.changeSet.Size() > 0 {
-		return g.changeSet.Items()
+func (g *Governance) GetGovernanceChange() GovernanceSet {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if len(g.changeSet) > 0 {
+		return g.changeSet
 	}
 	return nil
 }
@@ -724,8 +599,8 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 	var epoch uint64
 	var ok bool
 
-	if epoch, ok = gov.GetGovernanceValue(params.Epoch).(uint64); !ok {
-		if epoch, ok = gov.GetGovernanceValue(params.CliqueEpoch).(uint64); !ok {
+	if epoch, ok = gov.GetGovernanceValue(GovernanceKeyMapReverse[params.Epoch]).(uint64); !ok {
+		if epoch, ok = gov.GetGovernanceValue(GovernanceKeyMapReverse[params.CliqueEpoch]).(uint64); !ok {
 			logger.Error("Couldn't find epoch from governance items")
 			return
 		}
@@ -735,24 +610,24 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 	if number%epoch == 0 {
 		if len(governance) > 0 {
 			tempData := []byte("")
-			tempItems := make(map[string]interface{})
-			tempSet := NewGovernanceSet()
+			tempSet := GovernanceSet{}
 			if err := rlp.DecodeBytes(governance, &tempData); err != nil {
 				logger.Error("Failed to decode governance data", "number", number, "err", err, "data", governance)
 				return
 			}
-			if err := json.Unmarshal(tempData, &tempItems); err != nil {
+			if err := json.Unmarshal(tempData, &tempSet); err != nil {
 				logger.Error("Failed to unmarshal governance data", "number", number, "err", err, "data", tempData)
 				return
 
 			}
-			tempItems = adjustDecodedSet(tempItems)
-			tempSet.Import(tempItems)
+			tempSet = adjustDecodedSet(tempSet)
 
 			// Store new currentSet to governance database
+			gov.currentSetMu.RLock()
 			if err := gov.WriteGovernance(number, gov.currentSet, tempSet); err != nil {
 				logger.Crit("Failed to store new governance data", "number", number, "err", err)
 			}
+			gov.currentSetMu.RUnlock()
 		}
 	}
 }
@@ -767,7 +642,9 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 	// Do the change only when the governance actually changed
 	if newGovernanceSet != nil && newNumber != gov.actualGovernanceBlock {
 		gov.actualGovernanceBlock = newNumber
-		gov.currentSet.Import(newGovernanceSet)
+		gov.currentSetMu.Lock()
+		gov.currentSet = newGovernanceSet
+		gov.currentSetMu.Unlock()
 		gov.triggerChange(newGovernanceSet)
 	}
 
@@ -778,24 +655,27 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 	}
 }
 
-func (gov *Governance) triggerChange(src map[string]interface{}) {
-	for k, v := range src {
+func (gov *Governance) triggerChange(set GovernanceSet) {
+	for k, v := range set {
 		GovernanceItems[GovernanceKeyMap[k]].trigger(gov, k, v)
 	}
 }
 
-func adjustDecodedSet(src map[string]interface{}) map[string]interface{} {
-	for k, v := range src {
+func adjustDecodedSet(set GovernanceSet) GovernanceSet {
+	for k, v := range set {
 		x := reflect.ValueOf(v)
 		if x.Kind() == reflect.Float64 {
-			src[k] = uint64(v.(float64))
+			set[k] = uint64(v.(float64))
 		}
 	}
-	return src
+	return set
 }
 
-func (gov *Governance) GetGovernanceValue(key int) interface{} {
-	if v, ok := gov.currentSet.GetValue(key); !ok {
+func (gov *Governance) GetGovernanceValue(key string) interface{} {
+	gov.currentSetMu.RLock()
+	defer gov.currentSetMu.RUnlock()
+
+	if v, ok := gov.currentSet[key]; !ok {
 		return nil
 	} else {
 		return v
@@ -808,23 +688,23 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 		return ErrDecodeGovChange
 	}
 
-	rChangeSet := make(map[string]interface{})
+	rChangeSet := make(GovernanceSet)
 	if json.Unmarshal(change, &rChangeSet) != nil {
 		return ErrUnmarshalGovChange
 	}
 	rChangeSet = adjustDecodedSet(rChangeSet)
 
-	if len(rChangeSet) == gov.changeSet.Size() {
+	gov.mu.RLock()
+	defer gov.mu.RUnlock()
+	if len(rChangeSet) == len(gov.changeSet) {
 		for k, v := range rChangeSet {
 			if GovernanceKeyMap[k] == params.GoverningNode {
 				if reflect.TypeOf(v) == stringT {
 					v = common.HexToAddress(v.(string))
 				}
 			}
-
-			have, _ := gov.changeSet.GetValue(GovernanceKeyMap[k])
-			if have != v {
-				logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", have, "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(have))
+			if gov.changeSet[k] != v {
+				logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", gov.changeSet[k], "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(gov.changeSet[k]))
 				return ErrVoteValueMismatch
 			}
 		}
@@ -833,26 +713,26 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 }
 
 type governanceJSON struct {
-	BlockNumber     uint64                 `json:"blockNumber"`
-	ChainConfig     *params.ChainConfig    `json:"chainConfig"`
-	VoteMap         map[string]VoteStatus  `json:"voteMap"`
-	NodeAddress     common.Address         `json:"nodeAddress"`
-	GovernanceVotes []GovernanceVote       `json:"governanceVotes"`
-	GovernanceTally []GovernanceTallyItem  `json:"governanceTally"`
-	CurrentSet      map[string]interface{} `json:"currentSet"`
-	ChangeSet       map[string]interface{} `json:"changeSet"`
+	BlockNumber     uint64                `json:"blockNumber"`
+	ChainConfig     *params.ChainConfig   `json:"chainConfig"`
+	VoteMap         map[string]VoteStatus `json:"voteMap"`
+	NodeAddress     common.Address        `json:"nodeAddress"`
+	GovernanceVotes []GovernanceVote      `json:"governanceVotes"`
+	GovernanceTally []GovernanceTallyItem `json:"governanceTally"`
+	CurrentSet      GovernanceSet         `json:"currentSet"`
+	ChangeSet       GovernanceSet         `json:"changeSet"`
 }
 
 func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 	ret := &governanceJSON{
 		BlockNumber:     num,
 		ChainConfig:     gov.ChainConfig,
-		VoteMap:         gov.voteMap.Copy(),
-		NodeAddress:     gov.nodeAddress.Load().(common.Address),
+		VoteMap:         gov.voteMap,
+		NodeAddress:     gov.nodeAddress,
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
 		GovernanceTally: gov.GovernanceTallies.Copy(),
-		CurrentSet:      gov.currentSet.Items(),
-		ChangeSet:       gov.changeSet.Items(),
+		CurrentSet:      gov.currentSet,
+		ChangeSet:       gov.changeSet,
 	}
 	j, _ := json.Marshal(ret)
 	return j, nil
@@ -864,13 +744,13 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	gov.ChainConfig = j.ChainConfig
-	gov.voteMap.Import(j.VoteMap)
-	gov.nodeAddress.Store(j.NodeAddress)
+	gov.voteMap = j.VoteMap
+	gov.nodeAddress = j.NodeAddress
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
 	gov.GovernanceTallies.Import(j.GovernanceTally)
-	gov.currentSet.Import(adjustDecodedSet(j.CurrentSet))
-	gov.changeSet.Import(adjustDecodedSet(j.ChangeSet))
-	atomic.StoreUint64(&gov.lastGovernanceStateBlock, j.BlockNumber)
+	gov.currentSet = adjustDecodedSet(j.CurrentSet)
+	gov.changeSet = adjustDecodedSet(j.ChangeSet)
+	gov.lastGovernanceStateBlock = j.BlockNumber
 
 	return nil
 }
@@ -910,8 +790,8 @@ func (gov *Governance) ReadGovernanceState() {
 	params.SetStakingUpdateInterval(gov.ChainConfig.Governance.Reward.StakingUpdateInterval)
 	params.SetProposerUpdateInterval(gov.ChainConfig.Governance.Reward.ProposerUpdateInterval)
 
-	if txGasHumanReadable, ok := gov.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
-		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
+	if gov.currentSet["param.txgashumanreadable"] != nil {
+		params.TxGasHumanReadable = gov.currentSet["param.txgashumanreadable"].(uint64)
 	}
 	logger.Info("Successfully loaded governance state from database", "blockNumber", atomic.LoadUint64(&gov.lastGovernanceStateBlock))
 }
@@ -925,7 +805,7 @@ func (gov *Governance) SetTxPool(txpool *blockchain.TxPool) {
 }
 
 func getGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
-	g := NewGovernanceSet()
+	g := make(GovernanceSet)
 
 	if config.Governance != nil {
 		governance := config.Governance

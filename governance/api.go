@@ -62,7 +62,7 @@ var (
 
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		ret := api.governance.GetLatestGovernanceItem(params.UnitPrice).(uint64)
+		ret := api.governance.GetLatestGovernanceItem("governance.unitprice").(uint64)
 		return big.NewInt(0).SetUint64(ret), nil
 	} else {
 		blockNum := num.Int64()
@@ -80,7 +80,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error)
 }
 
 func (api *GovernanceKlayAPI) GasPrice() *big.Int {
-	ret := api.governance.GetLatestGovernanceItem(params.UnitPrice).(uint64)
+	ret := api.governance.GetLatestGovernanceItem("governance.unitprice").(uint64)
 	return big.NewInt(0).SetUint64(ret)
 }
 
@@ -89,7 +89,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	gMode := api.governance.ChainConfig.Governance.GovernanceMode
 	gNode := api.governance.ChainConfig.Governance.GoverningNode
 
-	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress.Load().(common.Address) {
+	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress {
 		return "", errPermissionDenied
 	}
 	if strings.ToLower(key) == "removevalidator" {
@@ -111,7 +111,7 @@ func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
 	if !common.IsHexAddress(target) {
 		return false
 	}
-	if common.HexToAddress(target) == api.governance.nodeAddress.Load().(common.Address) {
+	if common.HexToAddress(target) == api.governance.nodeAddress {
 		return false
 	} else {
 		return true
@@ -140,10 +140,10 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0, nil
 }
 
-func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (GovernanceSet, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = atomic.LoadUint64(&api.governance.lastGovernanceStateBlock)
+		blockNumber = api.governance.lastGovernanceStateBlock
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -165,8 +165,10 @@ type VoteList struct {
 func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
 
 	ret := []*VoteList{}
+	api.governance.voteMapLock.RLock()
+	defer api.governance.voteMapLock.RUnlock()
 
-	for k, v := range api.governance.voteMap.Copy() {
+	for k, v := range api.governance.voteMap {
 		item := &VoteList{
 			Key:      k,
 			Value:    v.Value,
@@ -191,7 +193,7 @@ func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
-	return api.governance.nodeAddress.Load().(common.Address)
+	return api.governance.nodeAddress
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
@@ -213,7 +215,7 @@ func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
 func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		// If the value hasn't been set in governance, set it with default value
-		if ret := api.governance.GetLatestGovernanceItem(params.ConstTxGasHumanReadable); ret == nil {
+		if ret := api.governance.GetLatestGovernanceItem("param.txgashumanreadable"); ret == nil {
 			return api.setDefaultTxGasHumanReadable()
 		} else {
 			return ret.(uint64), nil

@@ -197,32 +197,32 @@ func TestGovernance_RemoveVote(t *testing.T) {
 
 	// Length check. Because []votes has all valid votes, length of voteMap and votes should be equal
 	if countUncastedVote(gov.voteMap) != len(goodVotes) {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), gov.voteMap.Size())
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
 	}
 
 	// Remove unvoted vote. Length should still be same
 	gov.RemoveVote("istanbul.Epoch", uint64(10000), 0)
 	if countUncastedVote(gov.voteMap) != len(goodVotes) {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), gov.voteMap.Size())
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
 	}
 
 	// Remove vote with wrong key. Length should still be same
 	gov.RemoveVote("istanbul.EpochEpoch", uint64(10000), 0)
 	if countUncastedVote(gov.voteMap) != len(goodVotes) {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), gov.voteMap.Size())
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
 	}
 
 	// Removed a vote. Length should be len(goodVotes) -1
 	gov.RemoveVote("istanbul.epoch", uint64(20000), 0)
 	if countUncastedVote(gov.voteMap) != (len(goodVotes) - 1) {
-		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes)-1, gov.voteMap.Size())
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes)-1, len(gov.voteMap))
 	}
 }
 
-func countUncastedVote(data VoteSet) int {
+func countUncastedVote(data map[string]VoteStatus) int {
 	size := 0
 
-	for _, v := range data.Copy() {
+	for _, v := range data {
 		if v.Casted == false {
 			size++
 		}
@@ -240,8 +240,8 @@ func TestGovernance_ClearVotes(t *testing.T) {
 		}
 	}
 	gov.ClearVotes(0)
-	if gov.voteMap.Size() != 0 {
-		t.Errorf("Want 0, got %v after clearing votes", gov.voteMap.Size())
+	if len(gov.voteMap) != 0 {
+		t.Errorf("Want 0, got %v after clearing votes", len(gov.voteMap))
 	}
 }
 
@@ -253,7 +253,7 @@ func TestGovernance_GetEncodedVote(t *testing.T) {
 		_ = gov.AddVote(val.k, val.v)
 	}
 
-	l := gov.voteMap.Size()
+	l := len(gov.voteMap)
 	for i := 0; i > l; i++ {
 		voteData := gov.GetEncodedVote(common.HexToAddress("0x1234567890123456789012345678901234567890"), 1000)
 		v := new(GovernanceVote)
@@ -263,8 +263,8 @@ func TestGovernance_GetEncodedVote(t *testing.T) {
 			assert.Equal(t, nil, err)
 		}
 
-		if v.Value != gov.voteMap.GetValue(v.Key).Value {
-			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap.GetValue(v.Key).Value, v.Value)
+		if v.Value != gov.voteMap[v.Key].Value {
+			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap[v.Key].Value, v.Value)
 		}
 		gov.RemoveVote(v.Key, v.Value, 1000)
 	}
@@ -297,7 +297,7 @@ func TestGovernance_ParseVoteValue(t *testing.T) {
 	}
 }
 
-var testGovernanceMap = map[string]interface{}{
+var testGovernanceMap = GovernanceSet{
 	"governance.governancemode": "none",
 	"governance.governingnode":  common.HexToAddress("0x1234567890123456789012345678901234567890"),
 	"governance.unitprice":      uint64(25000000000),
@@ -307,8 +307,8 @@ var testGovernanceMap = map[string]interface{}{
 	"reward.minimumstake":       2000000,
 }
 
-func copyMap(src map[string]interface{}) map[string]interface{} {
-	dst := make(map[string]interface{})
+func copyMap(src GovernanceSet) GovernanceSet {
+	dst := make(GovernanceSet)
 	for k, v := range src {
 		dst[k] = v
 	}
@@ -410,10 +410,7 @@ func TestSaveGovernance(t *testing.T) {
 
 		// Make every stored governance map has a difference
 		tstMap["governance.unitprice"] = tstGovernanceInfo[i].e
-		src := NewGovernanceSet()
-		delta := NewGovernanceSet()
-		src.Import(tstMap)
-		if err := gov.WriteGovernance(blockNum, src, delta); err != nil {
+		if err := gov.WriteGovernance(blockNum, tstMap, nil); err != nil {
 			t.Errorf("Error in storing governance: %v", err)
 		}
 	}
