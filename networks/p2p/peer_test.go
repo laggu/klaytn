@@ -56,7 +56,7 @@ func testPeer(protos []Protocol) (func(), *conn, *Peer, <-chan error) {
 		c2.caps = append(c2.caps, p.cap())
 	}
 
-	peer, _ := newPeer([]*conn{c1}, protos)
+	peer, _ := newPeer([]*conn{c1}, protos, defaultRWTimerConfig)
 	errc := make(chan error, 1)
 	go func() {
 		_, err := peer.run()
@@ -242,13 +242,19 @@ func TestMatchProtocols(t *testing.T) {
 			// Some matches, some differences
 			Remote: []Cap{{Name: "local"}, {Name: "match1"}, {Name: "match2"}},
 			Local:  []Protocol{{Name: "match1"}, {Name: "match2"}, {Name: "remote"}},
-			Match:  map[string]protoRW{"match1": {Protocol: Protocol{Name: "match1"}}, "match2": {Protocol: Protocol{Name: "match2"}}},
+			Match: map[string]protoRW{
+				"match1": {Protocol: Protocol{Name: "match1"}, tc: defaultRWTimerConfig},
+				"match2": {Protocol: Protocol{Name: "match2"}, tc: defaultRWTimerConfig}},
 		},
 		{
 			// Various alphabetical ordering
 			Remote: []Cap{{Name: "aa"}, {Name: "ab"}, {Name: "bb"}, {Name: "ba"}},
 			Local:  []Protocol{{Name: "ba"}, {Name: "bb"}, {Name: "ab"}, {Name: "aa"}},
-			Match:  map[string]protoRW{"aa": {Protocol: Protocol{Name: "aa"}}, "ab": {Protocol: Protocol{Name: "ab"}}, "ba": {Protocol: Protocol{Name: "ba"}}, "bb": {Protocol: Protocol{Name: "bb"}}},
+			Match: map[string]protoRW{
+				"aa": {Protocol: Protocol{Name: "aa"}, tc: defaultRWTimerConfig},
+				"ab": {Protocol: Protocol{Name: "ab"}, tc: defaultRWTimerConfig},
+				"ba": {Protocol: Protocol{Name: "ba"}, tc: defaultRWTimerConfig},
+				"bb": {Protocol: Protocol{Name: "bb"}, tc: defaultRWTimerConfig}},
 		},
 		{
 			// No mutual versions
@@ -259,30 +265,32 @@ func TestMatchProtocols(t *testing.T) {
 			// Multiple versions, single common
 			Remote: []Cap{{Version: 1}, {Version: 2}},
 			Local:  []Protocol{{Version: 2}, {Version: 3}},
-			Match:  map[string]protoRW{"": {Protocol: Protocol{Version: 2}}},
+			Match:  map[string]protoRW{"": {Protocol: Protocol{Version: 2}, tc: defaultRWTimerConfig}},
 		},
 		{
 			// Multiple versions, multiple common
 			Remote: []Cap{{Version: 1}, {Version: 2}, {Version: 3}, {Version: 4}},
 			Local:  []Protocol{{Version: 2}, {Version: 3}},
-			Match:  map[string]protoRW{"": {Protocol: Protocol{Version: 3}}},
+			Match:  map[string]protoRW{"": {Protocol: Protocol{Version: 3}, tc: defaultRWTimerConfig}},
 		},
 		{
 			// Various version orderings
 			Remote: []Cap{{Version: 4}, {Version: 1}, {Version: 3}, {Version: 2}},
 			Local:  []Protocol{{Version: 2}, {Version: 3}, {Version: 1}},
-			Match:  map[string]protoRW{"": {Protocol: Protocol{Version: 3}}},
+			Match:  map[string]protoRW{"": {Protocol: Protocol{Version: 3}, tc: defaultRWTimerConfig}},
 		},
 		{
 			// Versions overriding sub-protocol lengths
 			Remote: []Cap{{Version: 1}, {Version: 2}, {Version: 3}, {Name: "a"}},
 			Local:  []Protocol{{Version: 1, Length: 1}, {Version: 2, Length: 2}, {Version: 3, Length: 3}, {Name: "a"}},
-			Match:  map[string]protoRW{"": {Protocol: Protocol{Version: 3}}, "a": {Protocol: Protocol{Name: "a"}, offset: 3}},
+			Match: map[string]protoRW{
+				"":  {Protocol: Protocol{Version: 3}, tc: defaultRWTimerConfig},
+				"a": {Protocol: Protocol{Name: "a"}, offset: 3, tc: defaultRWTimerConfig}},
 		},
 	}
 
 	for i, tt := range tests {
-		result := matchProtocols(tt.Local, tt.Remote, nil)
+		result := matchProtocols(tt.Local, tt.Remote, nil, defaultRWTimerConfig)
 		if len(result) != len(tt.Match) {
 			t.Errorf("test %d: negotiation mismatch: have %v, want %v", i, len(result), len(tt.Match))
 			continue

@@ -137,6 +137,8 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 			utils.TargetGasLimitFlag,
 			utils.NATFlag,
 			utils.NoDiscoverFlag,
+			utils.RWTimerWaitTimeFlag,
+			utils.RWTimerIntervalFlag,
 			utils.NetrestrictFlag,
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,

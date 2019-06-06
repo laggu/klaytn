@@ -166,6 +166,10 @@ type Config struct {
 
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
+
+	// RWTimerConfig is a configuration for interval based timer for rw.
+	// It checks if a rw successfully writes its task in given time.
+	RWTimerConfig RWTimerConfig
 }
 
 // NewServer returns a new Server interface.
@@ -722,12 +726,12 @@ running:
 					}
 
 					if count == 0 {
-						p, e = newPeer(connSet, srv.Protocols)
+						p, e = newPeer(connSet, srv.Protocols, srv.Config.RWTimerConfig)
 						srv.CandidateConns[c.id] = nil
 					}
 				} else {
 					// The handshakes are done and it passed all checks.
-					p, e = newPeer([]*conn{c}, srv.Protocols)
+					p, e = newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
 				}
 
 				if e != nil {
@@ -1455,7 +1459,7 @@ running:
 			err = srv.protoHandshakeChecks(peers, inboundCount, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
-				p, err := newPeer([]*conn{c}, srv.Protocols)
+				p, err := newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
 				if err != nil {
 					srv.logger.Error("Fail make a new peer", "err", err)
 				} else {

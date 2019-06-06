@@ -27,6 +27,7 @@ import (
 	"net"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ground-x/klaytn/common"
@@ -127,7 +128,7 @@ type Peer struct {
 func NewPeer(id discover.NodeID, name string, caps []Cap) *Peer {
 	pipe, _ := net.Pipe()
 	conn := []*conn{{fd: pipe, transport: nil, id: id, caps: caps, name: name}}
-	peer, _ := newPeer(conn, nil)
+	peer, _ := newPeer(conn, nil, defaultRWTimerConfig)
 	close(peer.closed) // ensures Disconnect doesn't block
 	return peer
 }
@@ -202,7 +203,7 @@ func (p *Peer) GetNumberInboundAndOutbound() (int, int) {
 }
 
 // newPeer should be called to create a peer.
-func newPeer(conns []*conn, protocols []Protocol) (*Peer, error) {
+func newPeer(conns []*conn, protocols []Protocol, tc RWTimerConfig) (*Peer, error) {
 	if conns == nil || len(conns) < 1 || conns[ConnDefault] == nil {
 		return nil, errors.New("conn is invalid")
 	}
@@ -210,7 +211,7 @@ func newPeer(conns []*conn, protocols []Protocol) (*Peer, error) {
 	for i, c := range conns {
 		msgReadWriters[i] = c
 	}
-	protomap := matchProtocols(protocols, conns[ConnDefault].caps, msgReadWriters)
+	protomap := matchProtocols(protocols, conns[ConnDefault].caps, msgReadWriters, tc)
 	p := &Peer{
 		rws:      conns,
 		running:  protomap,
@@ -450,7 +451,7 @@ func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 }
 
 // matchProtocols creates structures for matching named subprotocols.
-func matchProtocols(protocols []Protocol, caps []Cap, rws []MsgReadWriter) map[string][]*protoRW {
+func matchProtocols(protocols []Protocol, caps []Cap, rws []MsgReadWriter, tc RWTimerConfig) map[string][]*protoRW {
 	sort.Sort(capsByNameAndVersion(caps))
 	offset := baseProtocolLength
 	result := make(map[string][]*protoRW)
@@ -466,10 +467,10 @@ outer:
 				// Assign the new match
 				protoRWs := make([]*protoRW, 0, len(rws))
 				if rws == nil || len(rws) == 0 {
-					protoRWs = []*protoRW{{Protocol: proto, offset: offset, in: make(chan Msg), w: nil}}
+					protoRWs = []*protoRW{{Protocol: proto, offset: offset, in: make(chan Msg), w: nil, tc: tc}}
 				} else {
 					for _, rw := range rws {
-						protoRWs = append(protoRWs, &protoRW{Protocol: proto, offset: offset, in: make(chan Msg), w: rw})
+						protoRWs = append(protoRWs, &protoRW{Protocol: proto, offset: offset, in: make(chan Msg), w: rw, tc: tc})
 					}
 				}
 				result[cap.Name] = protoRWs
@@ -494,6 +495,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 		proto.closed = p.closed
 		proto.wstart = writeStart
 		proto.werr = writeErr
+		proto.tc = defaultRWTimerConfig
 		var rw MsgReadWriter = proto
 		if p.events != nil {
 			rw = newMsgEventer(rw, p.events, p.ID(), proto.Name)
@@ -568,6 +570,13 @@ func (p *Peer) getProto(connectionOrder int, code uint64) (*protoRW, error) {
 	return nil, newPeerError(errInvalidMsgCode, "%d", code)
 }
 
+type RWTimerConfig struct {
+	Interval uint64
+	WaitTime time.Duration
+}
+
+var defaultRWTimerConfig = RWTimerConfig{1000, 15 * time.Second}
+
 type protoRW struct {
 	Protocol
 	in     chan Msg        // receices read messages
@@ -576,6 +585,8 @@ type protoRW struct {
 	werr   chan<- error    // for write results
 	offset uint64
 	w      MsgWriter
+	count  uint64 // count the number of WriteMsg calls
+	tc     RWTimerConfig
 }
 
 func (rw *protoRW) WriteMsg(msg Msg) (err error) {
@@ -583,17 +594,33 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 		return newPeerError(errInvalidMsgCode, "not handled, (code %x) (size %d)", msg.Code, msg.Size)
 	}
 	msg.Code += rw.offset
-	select {
-	case <-rw.wstart:
-		err = rw.w.WriteMsg(msg)
-		// Report write status back to Peer.run. It will initiate
-		// shutdown if the error is non-nil and unblock the next write
-		// otherwise. The calling protocol code should exit for errors
-		// as well but we don't want to rely on that.
-		rw.werr <- err
-	case <-rw.closed:
-		err = fmt.Errorf("shutting down")
+	rwCount := atomic.AddUint64(&rw.count, 1)
+	if rwCount%rw.tc.Interval == 0 {
+		timer := time.NewTimer(rw.tc.WaitTime)
+		defer timer.Stop()
+		select {
+		case <-rw.wstart:
+			err = rw.w.WriteMsg(msg)
+			// Report write status back to Peer.run. It will initiate
+			// shutdown if the error is non-nil and unblock the next write
+			// otherwise. The calling protocol code should exit for errors
+			// as well but we don't want to rely on that.
+			rw.werr <- err
+		case <-rw.closed:
+			err = fmt.Errorf("shutting down")
+		case <-timer.C:
+			err = fmt.Errorf("failed to write message for %v", rw.tc.WaitTime)
+		}
+	} else {
+		select {
+		case <-rw.wstart:
+			err = rw.w.WriteMsg(msg)
+			rw.werr <- err
+		case <-rw.closed:
+			err = fmt.Errorf("shutting down")
+		}
 	}
+
 	return err
 }
 

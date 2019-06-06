@@ -489,6 +489,16 @@ var (
 		Usage: "Number of service chain transactions stored for resending",
 		Value: 100,
 	}
+	RWTimerIntervalFlag = cli.Uint64Flag{
+		Name:  "rwtimerinterval",
+		Usage: "Interval of using rw timer to check if it works well",
+		Value: 1000,
+	}
+	RWTimerWaitTimeFlag = cli.DurationFlag{
+		Name:  "rwtimerwaittime",
+		Usage: "Wait time the rw timer waits for message writing",
+		Value: 15 * time.Second,
+	}
 
 	// ATM the url is left to the user and deployment to
 	JSpathFlag = cli.StringFlag{
@@ -916,6 +926,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	cfg.NoDiscovery = ctx.GlobalIsSet(NoDiscoverFlag.Name)
+
+	cfg.RWTimerConfig = p2p.RWTimerConfig{}
+	cfg.RWTimerConfig.Interval = ctx.GlobalUint64(RWTimerIntervalFlag.Name)
+	cfg.RWTimerConfig.WaitTime = ctx.GlobalDuration(RWTimerWaitTimeFlag.Name)
 
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
 		list, err := netutil.ParseNetlist(netrestrict)
