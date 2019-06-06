@@ -624,7 +624,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 		return err
 	}
 	logger.Trace("<< "+packet.name(), "addr", from, "err", err)
-	logger.Debug("[udp] handlePacket", "name", packet.name(), "packet", packet)
+	logger.Trace("[udp] handlePacket", "name", packet.name(), "packet", packet)
 	err = packet.handle(t, from, fromID, hash)
 	// TODO-Klaytn Count Error UDP Packets
 	udpPacketCounter.Inc(1)

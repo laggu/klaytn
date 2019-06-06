@@ -227,11 +227,11 @@ func (s *simpleStorage) add(n *Node) {
 // The caller must hold s.nodesMutex.
 func (s *simpleStorage) bumpOrAdd(n *Node) bool {
 	if s.bump(n) {
-		logger.Debug("SimpleStorage-Add(Bumped)", "name", s.name(), "node", n)
+		logger.Trace("SimpleStorage-Add(Bumped)", "name", s.name(), "node", n)
 		return true
 	}
 
-	logger.Debug("SimpleStorage-Add(New)", "name", s.name(), "node", n)
+	logger.Trace("SimpleStorage-Add(New)", "name", s.name(), "node", n)
 	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64) // TODO-Klaytn-Node Change Max value for more reasonable one.
 	n.addedAt = time.Now()
 	if s.tab.nodeAddedHook != nil {

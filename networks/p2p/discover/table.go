@@ -614,7 +614,7 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	var result error
 	// A Bootnode always add node(cn, pn, en) to table.
 	if fails > 0 || age > nodeDBNodeExpiration || (node == nil && tab.self.NType == NodeTypeBN) {
-		logger.Debug("[Table] Bond - Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
+		logger.Trace("[Table] Bond - Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
 
 		tab.bondmu.Lock()
 		w := tab.bonding[id]
@@ -645,7 +645,7 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	// fails. It will be replaced quickly if it continues to be
 	// unresponsive.
 	if node != nil {
-		logger.Debug("[Table] Bond - Add", "id", node.ID, "type", node.NType, "sha", node.sha)
+		logger.Trace("[Table] Bond - Add", "id", node.ID, "type", node.NType, "sha", node.sha)
 		tab.add(node)
 		tab.db.updateFindFails(id, 0)
 		lenEntries := len(tab.GetBucketEntries())
@@ -719,7 +719,7 @@ func (tab *Table) bucket(sha common.Hash, nType NodeType) *bucket {
 //
 // The caller must not hold tab.mutex.
 func (tab *Table) add(new *Node) {
-	logger.Debug("Table.add(node)", "NodeType", new.NType, "node", new, "sha", new.sha)
+	logger.Trace("Table.add(node)", "NodeType", new.NType, "node", new, "sha", new.sha)
 	tab.storagesMu.RLock()
 	defer tab.storagesMu.RUnlock()
 	if new.NType == NodeTypeBN {
