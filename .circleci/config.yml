@@ -384,7 +384,7 @@ workflows:
             branches:
               ignore: /.*/
 
-      - packaging-macos:
+      - packaging-darwin:
           requires:
             - test-datasync
             - test-networks
