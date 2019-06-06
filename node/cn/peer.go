@@ -757,30 +757,30 @@ func (p *multiChannelPeer) Broadcast() {
 		select {
 		case txs := <-p.queuedTxs:
 			if err := p.SendTransactions(txs); err != nil {
-				logger.Error("fail to SendTransactions", "err", err)
+				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
 				//return
 			}
-			p.Log().Trace("Broadcast transactions", "count", len(txs))
+			p.Log().Trace("Broadcast transactions", "peer", p.id, "count", len(txs))
 
 		case prop := <-p.queuedProps:
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
-				logger.Error("fail to SendNewBlock", "err", err)
+				logger.Error("fail to SendNewBlock", "peer", p.id, "err", err)
 				continue
 				//return
 			}
-			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
+			p.Log().Trace("Propagated block", "peer", p.id, "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
 		case block := <-p.queuedAnns:
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
-				logger.Error("fail to SendNewBlockHashes", "err", err)
+				logger.Error("fail to SendNewBlockHashes", "peer", p.id, "err", err)
 				continue
 				//return
 			}
-			p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
+			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
 		case <-p.term:
-			p.Log().Debug("Peer broadcast loop end")
+			p.Log().Debug("Peer broadcast loop end", "peer", p.id)
 			return
 		}
 	}
