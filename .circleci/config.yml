@@ -163,18 +163,6 @@ jobs:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
-            for item in kcn kpn ken
-            do
-              PACK_NAME=${item}-baobab-linux-amd64
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
-              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
-              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-linux-amd64.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
 
   packaging-darwin:
     machine: true
@@ -212,18 +200,6 @@ jobs:
                 cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
               fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
-            for item in kcn kpn ken
-            do
-              PACK_NAME=${item}-baobab-darwin-amd64
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
-              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
-              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
@@ -303,7 +279,6 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
-            - "8f:f3:85:1d:09:1d:1d:14:72:70:61:94:b5:f3:2f:bc"
 
       - run:
           name: "Build & Deploy rpm package"
@@ -324,24 +299,65 @@ jobs:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
-              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
             done
+            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  rpm-tagged-baobab:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    working_directory: /go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+
+      - run:
+          name: "Build & Deploy rpm package"
+          command: |
+            export GOPATH=/go
+            export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+
             for item in kcn kpn ken
             do
               cd /go/src/github.com/ground-x/klaytn
-              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild_home/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
               cd /go/src/github.com/ground-x
               cp -R klaytn ${item}d-baobab-$KLAYTN_VERSION
               ls -R ${item}d-baobab-$KLAYTN_VERSION/build/rpm/etc/init.d
               tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
-              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
-              rpmbuild -ba /rpmbuild_home/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              TARGET_RPM="/rpmbuild_home/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
+              rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
-              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@packages.klaytn.net:/data/packages/rhel/7/prod/
             done
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  deploy-rpm-private:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+      - run:
+          name: "Update RPM repository"
+          command: |
+            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  deploy-rpm-public:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "8f:f3:85:1d:09:1d:1d:14:72:70:61:94:b5:f3:2f:bc"
+      - run:
+          name: "Update RPM repository"
+          command: |
             ssh -o StrictHostKeyChecking=no ec2-user@packages.klaytn.net createrepo --update /data/packages/rhel/7/prod
+
 
 workflows:
   version: 2
@@ -372,48 +388,10 @@ workflows:
             tags:
               only: /.*/
 
-      - packaging-linux:
+      - deploy-rpm-private:
           requires:
-            - test-datasync
-            - test-networks
-            - test-tests
-            - test-others
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
-      - packaging-darwin:
-          requires:
-            - test-datasync
-            - test-networks
-            - test-tests
-            - test-others
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
-      - packaging-windows:
-          requires:
-            - test-datasync
-            - test-networks
-            - test-tests
-            - test-others
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
-      - dockernize:
-          requires:
-            - test-datasync
-            - test-networks
-            - test-tests
-            - test-others
+            - rpm-tagged
+            - rpm-tagged-baobab
           filters:
             tags:
               only: /^v.*/
@@ -421,11 +399,34 @@ workflows:
               ignore: /.*/
 
       - rpm-tagged:
-          requires:
-            - test-datasync
-            - test-networks
-            - test-tests
-            - test-others
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - rpm-tagged-baobab:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-linux:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-darwin:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-windows:
           filters:
             tags:
               only: /^v.*/
