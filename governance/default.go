@@ -119,20 +119,11 @@ type GovernanceVote struct {
 	Value     interface{}    `json:"value"`
 }
 
-// GovernanceTallies represents a tally for each governance item
-type GovernanceTallyItem struct {
+// GovernanceTally represents a tally for each governance item
+type GovernanceTally struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
 	Votes uint64      `json:"votes"`
-}
-
-type GovernanceTallyList struct {
-	items []GovernanceTallyItem
-	mu    *sync.RWMutex
-}
-type GovernanceVotes struct {
-	items []GovernanceVote
-	mu    *sync.RWMutex
 }
 
 type VoteStatus struct {
@@ -152,8 +143,9 @@ type Governance struct {
 	totalVotingPower uint64
 	votingPower      uint64
 
-	GovernanceVotes   GovernanceVotes
-	GovernanceTallies GovernanceTallyList
+	GovernanceVotes     []GovernanceVote
+	GovernanceTally     []GovernanceTally
+	GovernanceTallyLock sync.RWMutex
 
 	db        database.DBManager
 	itemCache common.Cache
@@ -176,56 +168,6 @@ type Governance struct {
 	blockChain *blockchain.BlockChain
 }
 
-func NewGovernanceTallies() GovernanceTallyList {
-	return GovernanceTallyList{
-		items: []GovernanceTallyItem{},
-		mu:    new(sync.RWMutex),
-	}
-}
-
-func NewGovernanceVotes() GovernanceVotes {
-	return GovernanceVotes{
-		items: []GovernanceVote{},
-		mu:    new(sync.RWMutex),
-	}
-}
-
-func (gt *GovernanceTallyList) Copy() []GovernanceTallyItem {
-	gt.mu.RLock()
-	defer gt.mu.RUnlock()
-
-	ret := make([]GovernanceTallyItem, len(gt.items))
-	copy(ret, gt.items)
-
-	return ret
-}
-
-func (gt *GovernanceTallyList) Import(src []GovernanceTallyItem) {
-	gt.mu.Lock()
-	defer gt.mu.Unlock()
-
-	gt.items = make([]GovernanceTallyItem, len(src))
-	copy(gt.items, src)
-}
-
-func (gv *GovernanceVotes) Copy() []GovernanceVote {
-	gv.mu.RLock()
-	defer gv.mu.RUnlock()
-
-	ret := make([]GovernanceVote, len(gv.items))
-	copy(ret, gv.items)
-
-	return ret
-}
-
-func (gv *GovernanceVotes) Import(src []GovernanceVote) {
-	gv.mu.Lock()
-	defer gv.mu.Unlock()
-
-	gv.items = make([]GovernanceVote, len(src))
-	copy(gv.items, src)
-}
-
 func (gs GovernanceSet) SetValue(itemType int, value interface{}) error {
 	key := GovernanceKeyMapReverse[itemType]
 
@@ -245,8 +187,6 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		currentSet:               GovernanceSet{},
 		changeSet:                GovernanceSet{},
 		lastGovernanceStateBlock: 0,
-		GovernanceTallies:        NewGovernanceTallies(),
-		GovernanceVotes:          NewGovernanceVotes(),
 	}
 	// nil is for testing or simple function usage
 	if dbm != nil {
@@ -329,8 +269,8 @@ func (g *Governance) ClearVotes(num uint64) {
 	g.voteMapLock.Lock()
 	defer g.voteMapLock.Unlock()
 
-	g.GovernanceVotes = NewGovernanceVotes()
-	g.GovernanceTallies = NewGovernanceTallies()
+	g.GovernanceVotes = nil
+	g.GovernanceTally = nil
 	g.mu.Lock()
 	g.changeSet = GovernanceSet{}
 	g.mu.Unlock()
@@ -718,7 +658,7 @@ type governanceJSON struct {
 	VoteMap         map[string]VoteStatus `json:"voteMap"`
 	NodeAddress     common.Address        `json:"nodeAddress"`
 	GovernanceVotes []GovernanceVote      `json:"governanceVotes"`
-	GovernanceTally []GovernanceTallyItem `json:"governanceTally"`
+	GovernanceTally []GovernanceTally     `json:"governanceTally"`
 	CurrentSet      GovernanceSet         `json:"currentSet"`
 	ChangeSet       GovernanceSet         `json:"changeSet"`
 }
@@ -729,8 +669,8 @@ func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 		ChainConfig:     gov.ChainConfig,
 		VoteMap:         gov.voteMap,
 		NodeAddress:     gov.nodeAddress,
-		GovernanceVotes: gov.GovernanceVotes.Copy(),
-		GovernanceTally: gov.GovernanceTallies.Copy(),
+		GovernanceVotes: gov.GovernanceVotes,
+		GovernanceTally: gov.GovernanceTally,
 		CurrentSet:      gov.currentSet,
 		ChangeSet:       gov.changeSet,
 	}
@@ -746,8 +686,8 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	gov.ChainConfig = j.ChainConfig
 	gov.voteMap = j.VoteMap
 	gov.nodeAddress = j.NodeAddress
-	gov.GovernanceVotes.Import(j.GovernanceVotes)
-	gov.GovernanceTallies.Import(j.GovernanceTally)
+	gov.GovernanceVotes = j.GovernanceVotes
+	gov.GovernanceTally = j.GovernanceTally
 	gov.currentSet = adjustDecodedSet(j.CurrentSet)
 	gov.changeSet = adjustDecodedSet(j.ChangeSet)
 	gov.lastGovernanceStateBlock = j.BlockNumber

@@ -121,7 +121,9 @@ func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
 func (api *PublicGovernanceAPI) ShowTally() []*returnTally {
 	ret := []*returnTally{}
 
-	for _, val := range api.governance.GovernanceTallies.Copy() {
+	api.governance.GovernanceTallyLock.RLock()
+	defer api.governance.GovernanceTallyLock.RUnlock()
+	for _, val := range api.governance.GovernanceTally {
 		item := &returnTally{
 			Key:                val.Key,
 			Value:              val.Value,
