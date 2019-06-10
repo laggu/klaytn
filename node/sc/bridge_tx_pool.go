@@ -57,7 +57,7 @@ type BridgeTxPoolConfig struct {
 var DefaultBridgeTxPoolConfig = BridgeTxPoolConfig{
 	ParentChainID: big.NewInt(2018),
 	Journal:       "bridge_transactions.rlp",
-	Rejournal:     time.Hour,
+	Rejournal:     10 * time.Minute,
 	GlobalQueue:   8192,
 }
 
@@ -150,7 +150,7 @@ func (pool *BridgeTxPool) loop() {
 		case <-journal.C:
 			if pool.journal != nil {
 				pool.mu.Lock()
-				if err := pool.journal.rotate(pool.Pending()); err != nil {
+				if err := pool.journal.rotate(pool.pending()); err != nil {
 					logger.Error("Failed to rotate local tx journal", "err", err)
 				}
 				pool.mu.Unlock()
@@ -163,7 +163,7 @@ func (pool *BridgeTxPool) loop() {
 			// loaded and especially the latest tx will not be loaded
 			if pool.journal != nil {
 				pool.mu.Lock()
-				if err := pool.journal.rotate(pool.Pending()); err != nil {
+				if err := pool.journal.rotate(pool.pending()); err != nil {
 					logger.Error("Failed to rotate local tx journal", "err", err)
 				}
 				pool.mu.Unlock()
@@ -185,8 +185,8 @@ func (pool *BridgeTxPool) Stop() {
 	logger.Info("Transaction pool stopped")
 }
 
-// stats retrieves the current pool stats, namely the number of pending transactions.
-func (pool *BridgeTxPool) stats() int {
+// Stats retrieves the current pool stats, namely the number of pending transactions.
+func (pool *BridgeTxPool) Stats() int {
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()
 
@@ -224,12 +224,18 @@ func (pool *BridgeTxPool) GetTx(txHash common.Hash) (*types.Transaction, error) 
 	}
 }
 
-// Pending retrieves all pending transactions, grouped by origin
-// account and sorted by nonce.
+// Pending returns all pending transactions by calling internal pending method.
 func (pool *BridgeTxPool) Pending() map[common.Address]types.Transactions {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
+	pending := pool.pending()
+	return pending
+}
+
+// Pending retrieves all pending transactions, grouped by origin
+// account and sorted by nonce.
+func (pool *BridgeTxPool) pending() map[common.Address]types.Transactions {
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.queue {
 		pending[addr] = list.Flatten()
@@ -342,41 +348,32 @@ func (pool *BridgeTxPool) journalTx(from common.Address, tx *types.Transaction) 
 // AddLocal enqueues a single transaction into the pool if it is valid, marking
 // the sender as a local one.
 func (pool *BridgeTxPool) AddLocal(tx *types.Transaction) error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	return pool.addTx(tx)
 }
 
 // AddLocals enqueues a batch of transactions into the pool if they are valid,
 // marking the senders as a local ones.
 func (pool *BridgeTxPool) AddLocals(txs []*types.Transaction) []error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	return pool.addTxs(txs)
 }
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *BridgeTxPool) addTx(tx *types.Transaction) error {
 	//senderCacher.recover(pool.signer, []*types.Transaction{tx})
-
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
 	// Try to inject the transaction and update any state
 	err := pool.add(tx)
-
 	return err
 }
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *BridgeTxPool) addTxs(txs []*types.Transaction) []error {
 	//senderCacher.recover(pool.signer, txs)
-
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
-	return pool.addTxsLocked(txs)
-}
-
-// addTxsLocked attempts to queue a batch of transactions if they are valid,
-// whilst assuming the transaction pool lock is already held.
-func (pool *BridgeTxPool) addTxsLocked(txs []*types.Transaction) []error {
 	// Add the batch of transaction, tracking the accepted ones
 	dirty := make(map[common.Address]struct{})
 	errs := make([]error, len(txs))
@@ -407,9 +404,6 @@ func (pool *BridgeTxPool) Get(hash common.Hash) *types.Transaction {
 
 // removeTx removes a single transaction from the queue.
 func (pool *BridgeTxPool) removeTx(hash common.Hash) error {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
 	// Fetch the transaction we wish to delete
 	tx, ok := pool.all[hash]
 	if !ok {
@@ -437,6 +431,9 @@ func (pool *BridgeTxPool) removeTx(hash common.Hash) error {
 
 // Remove removes transactions from the queue.
 func (pool *BridgeTxPool) Remove(txs types.Transactions) []error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	errs := make([]error, len(txs))
 	for i, tx := range txs {
 		errs[i] = pool.removeTx(tx.Hash())
@@ -446,6 +443,9 @@ func (pool *BridgeTxPool) Remove(txs types.Transactions) []error {
 
 // RemoveTx removes a single transaction from the queue.
 func (pool *BridgeTxPool) RemoveTx(tx *types.Transaction) error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	err := pool.removeTx(tx.Hash())
 	if err != nil {
 		logger.Error("RemoveTx", "err", err)

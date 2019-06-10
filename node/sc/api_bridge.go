@@ -163,7 +163,7 @@ func (sbapi *SubBridgeAPI) ConvertRequestTxHashToHandleTxHash(hash common.Hash) 
 }
 
 func (sbapi *SubBridgeAPI) TxPendingCount() int {
-	return sbapi.sc.GetBridgeTxPool().stats()
+	return sbapi.sc.GetBridgeTxPool().Stats()
 }
 
 func (sbapi *SubBridgeAPI) TxPending() map[common.Address]types.Transactions {
