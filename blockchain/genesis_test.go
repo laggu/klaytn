@@ -38,7 +38,7 @@ func TestDefaultGenesisBlock(t *testing.T) {
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
-	block = DefaultTestnetGenesisBlock().ToBlock(nil)
+	block = DefaultBaobabGenesisBlock().ToBlock(nil)
 	if block.Hash() != params.TestnetGenesisHash {
 		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
 	}
@@ -68,7 +68,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "genesis without ChainConfig",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				return SetupGenesisBlock(db, new(Genesis))
+				return SetupGenesisBlock(db, new(Genesis), params.UnusedNetworkId)
 			},
 			wantErr:    errGenesisNoConfig,
 			wantConfig: params.AllGxhashProtocolChanges,
@@ -104,7 +104,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "custom block in DB, genesis == testnet",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customg.MustCommit(db)
-				return SetupGenesisBlock(db, DefaultTestnetGenesisBlock())
+				return SetupGenesisBlock(db, DefaultBaobabGenesisBlock())
 			},
 			wantErr:    &GenesisMismatchError{Stored: customghash, New: params.TestnetGenesisHash},
 			wantHash:   params.TestnetGenesisHash,

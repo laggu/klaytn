@@ -92,7 +92,7 @@ func TestHardForkBlock(t *testing.T) {
 	}()
 
 	gov := generateGovernaceDataForTest()
-	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId)
 	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, genesisKey, chainDb, gov, node.CONSENSUSNODE)
 	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
 

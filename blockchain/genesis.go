@@ -136,17 +136,17 @@ func (e *GenesisMismatchError) Error() string {
 // SetupGenesisBlock writes or updates the genesis block in db.
 // The block that will be used is:
 //
-//                          genesis == nil       genesis != nil
-//                       +------------------------------------------
-//     db has no genesis |  main-net default  |  genesis
-//     db has genesis    |  from DB           |  genesis (if compatible)
+//                          genesis == nil                            genesis != nil
+//                       +-------------------------------------------------------------------
+//     db has no genesis |  main-net default, baobab if specified  |  genesis
+//     db has genesis    |  from DB                                |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.AllGxhashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
@@ -155,8 +155,13 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	stored := db.ReadCanonicalHash(0)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
-			logger.Info("Writing default main-net genesis block")
-			genesis = DefaultGenesisBlock()
+			if networkId == params.BaobabNetworkId {
+				logger.Info("Writing default baobab genesis block")
+				genesis = DefaultBaobabGenesisBlock()
+			} else {
+				logger.Info("Writing default main-net genesis block")
+				genesis = DefaultGenesisBlock()
+			}
 			if genesis.Config.Governance != nil {
 				genesis.Governance = setGenesisGovernance(genesis)
 			}
@@ -326,8 +331,8 @@ func baobabGenesisBlock() *Genesis {
 	return ret
 }
 
-// DefaultTestnetGenesisBlock returns the Baobab network genesis block.
-func DefaultTestnetGenesisBlock() *Genesis {
+// DefaultBaobabGenesisBlock returns the Baobab network genesis block.
+func DefaultBaobabGenesisBlock() *Genesis {
 	return baobabGenesisBlock()
 }
 

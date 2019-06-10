@@ -41,7 +41,7 @@ var logger = log.NewModuleLogger(log.NodeCN)
 // DefaultConfig contains default settings for use on the Klaytn main net.
 var DefaultConfig = Config{
 	SyncMode:          downloader.FullSync,
-	NetworkId:         1,
+	NetworkId:         params.CypressNetworkId,
 	LevelDBCacheSize:  768,
 	TrieCacheSize:     512,
 	TrieTimeout:       5 * time.Minute,

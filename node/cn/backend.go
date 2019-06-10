@@ -155,7 +155,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	chainDB := CreateDB(ctx, config, "chaindata")
 
-	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis)
+	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis, config.NetworkId)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}

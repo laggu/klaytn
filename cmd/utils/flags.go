@@ -1177,7 +1177,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 				cfg.NetworkId = 3
 			}
-			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
+			cfg.Genesis = blockchain.DefaultBaobabGenesisBlock()
 		}
 	*/
 	// Set the Tx resending related configuration variables

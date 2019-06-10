@@ -114,8 +114,10 @@ const (
 	TxGasCancel                uint64 = 21000
 
 	// Network Id
-	AspenNetworkId  uint64 = 1000
-	BaobabNetworkId uint64 = 1001
+	UnusedNetworkId  uint64 = 0
+	AspenNetworkId   uint64 = 1000
+	BaobabNetworkId  uint64 = 1001
+	CypressNetworkId uint64 = 8217
 
 	TxGasValueTransfer     uint64 = 21000
 	TxGasContractExecution uint64 = 21000
