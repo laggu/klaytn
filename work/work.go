@@ -119,7 +119,9 @@ func (self *Miner) Start() {
 	}
 	atomic.StoreInt32(&self.mining, 1)
 
-	logger.Info("Starting mining operation")
+	if self.worker.nodetype == p2p.CONSENSUSNODE {
+		logger.Info("Starting mining operation")
+	}
 	self.worker.start()
 	self.worker.commitNewWork()
 }
