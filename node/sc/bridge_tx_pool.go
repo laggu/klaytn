@@ -84,7 +84,7 @@ type BridgeTxPool struct {
 	// TODO-Klaytn-Servicechain consider to remove singer. For now, caused of value transfer tx which don't have `from` value, I leave it.
 	signer types.Signer
 	mu     sync.RWMutex
-	txMu   sync.RWMutex
+	//txMu   sync.RWMutex // TODO-Klaytn-Servicechain: implement fine-grained locks
 
 	journal *bridgeTxJournal // Journal of transaction to back up to disk
 
@@ -187,8 +187,8 @@ func (pool *BridgeTxPool) Stop() {
 
 // stats retrieves the current pool stats, namely the number of pending transactions.
 func (pool *BridgeTxPool) stats() int {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
 
 	queued := 0
 	for _, list := range pool.queue {
@@ -212,6 +212,9 @@ func (pool *BridgeTxPool) Content() map[common.Address]types.Transactions {
 
 // GetTx get the tx by tx hash.
 func (pool *BridgeTxPool) GetTx(txHash common.Hash) (*types.Transaction, error) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
 	tx, ok := pool.all[txHash]
 
 	if ok {
@@ -224,8 +227,8 @@ func (pool *BridgeTxPool) GetTx(txHash common.Hash) (*types.Transaction, error) 
 // Pending retrieves all pending transactions, grouped by origin
 // account and sorted by nonce.
 func (pool *BridgeTxPool) Pending() map[common.Address]types.Transactions {
-	pool.txMu.Lock()
-	defer pool.txMu.Unlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.queue {
@@ -236,8 +239,8 @@ func (pool *BridgeTxPool) Pending() map[common.Address]types.Transactions {
 
 // PendingTxsByAddress retrieves pending transactions of from. They are sorted by nonce.
 func (pool *BridgeTxPool) PendingTxsByAddress(from *common.Address, limit int) types.Transactions {
-	pool.txMu.Lock()
-	defer pool.txMu.Unlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 
 	var pendingTxs types.Transactions
 
@@ -250,8 +253,8 @@ func (pool *BridgeTxPool) PendingTxsByAddress(from *common.Address, limit int) t
 
 // PendingTxHashesByAddress retrieves pending transaction hashes of from. They are sorted by nonce.
 func (pool *BridgeTxPool) PendingTxHashesByAddress(from *common.Address, limit int) []common.Hash {
-	pool.txMu.Lock()
-	defer pool.txMu.Unlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 
 	if list, exist := pool.queue[*from]; exist {
 		pendingTxs := list.FlattenByCount(limit)
@@ -266,8 +269,8 @@ func (pool *BridgeTxPool) PendingTxHashesByAddress(from *common.Address, limit i
 
 // GetMaxTxNonce finds max nonce of the address.
 func (pool *BridgeTxPool) GetMaxTxNonce(from *common.Address) uint64 {
-	pool.txMu.Lock()
-	defer pool.txMu.Unlock()
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
 
 	maxNonce := uint64(0)
 	if list, exist := pool.queue[*from]; exist {
