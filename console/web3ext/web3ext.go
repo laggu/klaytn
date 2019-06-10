@@ -634,6 +634,12 @@ web3._extend({
 			name: 'getCypressCredit',
 			call: 'klay_getCypressCredit',
 		}),
+		new web3._extend.Method({
+			name: 'sha3',
+			call: 'klay_sha3',
+			params: 1,
+			inputFormatter: [web3._extend.utils.toHex],
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
