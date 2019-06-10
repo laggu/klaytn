@@ -53,7 +53,7 @@ func (s *simpleStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType 
 	s.nodesMutex.Unlock()
 
 	if len(seeds) == 0 {
-		seeds := append([]*Node{}, s.tab.nursery...)
+		seeds = append([]*Node{}, s.tab.nursery...)
 		seeds = s.tab.bondall(seeds)
 		for _, n := range seeds {
 			s.add(n)
