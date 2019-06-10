@@ -390,12 +390,26 @@ func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
 	var successCnt, cnt, blkNum uint64
 	latestBlkNum := block.Number().Uint64()
 
+	// TODO-Klaytn-Servicechain remove this code or define right confirmation block count.
+	// To consider a non-absolute finality consensus like PoA (Clique), this code anchors past blocks.
+	const confirmCnt = uint64(10)
+	if latestBlkNum > confirmCnt {
+		latestBlkNum = latestBlkNum - confirmCnt
+	} else {
+		return
+	}
+
 	for cnt, blkNum = 0, startBlkNum; cnt <= sbh.sentServiceChainTxsLimit && blkNum <= latestBlkNum; cnt, blkNum = cnt+1, blkNum+1 {
-		if err := sbh.generateAndAddAnchoringTxIntoTxPool(sbh.subbridge.blockchain.GetBlockByNumber(blkNum)); err == nil {
+		block := sbh.subbridge.blockchain.GetBlockByNumber(blkNum)
+		if block == nil {
+			logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", blkNum)
+			break
+		}
+		if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
 			sbh.UpdateLastestAnchoredBlockNumber(blkNum)
 			successCnt++
 		} else {
-			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FaildBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
+			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FailedBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
 			break
 		}
 	}
