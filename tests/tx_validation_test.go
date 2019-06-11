@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+	"time"
 )
 
 type txValueMap map[types.TxValueKeyType]interface{}
@@ -635,6 +636,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	valueMap, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
 	valueMap[types.TxValueKeyTo] = acc1.Addr
 	valueMap[types.TxValueKeyAccountKey] = acc1.AccKey
+	valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(params.KLAY)
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, valueMap)
 	assert.Equal(t, nil, err)
@@ -1732,6 +1734,9 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait 1 second until txpool.reset() is called.
+	time.Sleep(1 * time.Second)
+
 	// check pending whether it contains zero tx
 	pendingLen, _ = txpool.Stats()
 	assert.Equal(t, 0, pendingLen)
@@ -1904,6 +1909,9 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 		t.Fatal(err)
 	}
+
+	// Wait 1 second until txpool.reset() is called.
+	time.Sleep(1 * time.Second)
 
 	// check pending whether it contains zero tx
 	pendingLen, _ = txpool.Stats()
