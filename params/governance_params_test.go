@@ -56,7 +56,7 @@ func TestIsProposerUpdateInterval(t *testing.T) {
 	for i := 0; i < len(testCase); i++ {
 		SetProposerUpdateInterval(testCase[i].interval)
 
-		result := IsProposerUpdateInterval(testCase[i].blockNu)
+		result, _ := IsProposerUpdateInterval(testCase[i].blockNu)
 
 		if result != testCase[i].result {
 			t.Errorf("The result is diffrent from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
