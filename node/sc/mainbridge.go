@@ -352,8 +352,6 @@ func (pm *MainBridge) handle(p BridgePeer) error {
 	}
 	defer pm.removePeer(p.GetID())
 
-	pm.handler.RegisterNewPeer(p)
-
 	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 
 	//pubKey, err := p.GetP2PPeerID().Pubkey()

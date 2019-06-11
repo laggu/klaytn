@@ -17,7 +17,6 @@
 package sc
 
 import (
-	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/datasync/downloader"
@@ -42,18 +41,6 @@ func NewMainBridgeHandler(scc *SCConfig, main *MainBridge) (*MainBridgeHandler, 
 		mainbridge:    main,
 		childChainIDs: make(map[common.Address]*big.Int),
 	}, nil
-}
-
-func (mbh *MainBridgeHandler) setChildChainID(addr common.Address, chainId *big.Int) {
-	mbh.childChainIDs[addr] = chainId
-}
-
-func (mbh *MainBridgeHandler) getChildChainID(addr common.Address) *big.Int {
-	childChainId, ok := mbh.childChainIDs[addr]
-	if !ok {
-		return nil
-	}
-	return childChainId
 }
 
 func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
@@ -163,15 +150,4 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 		return nil
 	}
 	return p.SendServiceChainReceiptResponse(receiptsForStorage)
-}
-
-func (mbh *MainBridgeHandler) RegisterNewPeer(p BridgePeer) error {
-	if mbh.getChildChainID(p.GetAddr()) == nil {
-		mbh.setChildChainID(p.GetAddr(), p.GetChainID())
-		return nil
-	}
-	if mbh.getChildChainID(p.GetAddr()).Cmp(p.GetChainID()) != 0 {
-		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", mbh.getChildChainID(p.GetAddr()), p.GetChainID())
-	}
-	return nil
 }
