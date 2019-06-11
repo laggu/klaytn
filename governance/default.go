@@ -510,7 +510,9 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, GovernanceSet, error) {
 		}
 	}
 	if g.db != nil {
-		return g.db.ReadGovernanceAtNumber(num, g.ChainConfig.Istanbul.Epoch)
+		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.ChainConfig.Istanbul.Epoch)
+		result = adjustDecodedSet(result)
+		return bn, result, err
 	} else {
 		// For CI tests which don't have a database
 		return 0, nil, nil
@@ -587,12 +589,6 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 		gov.currentSetMu.Unlock()
 		gov.triggerChange(newGovernanceSet)
 	}
-
-	if b, err := gov.toJSON(num); err != nil {
-		logger.Error("Check marshaling error", "err", err)
-	} else {
-		gov.UnmarshalJSON(b)
-	}
 }
 
 func (gov *Governance) triggerChange(set GovernanceSet) {
@@ -601,14 +597,21 @@ func (gov *Governance) triggerChange(set GovernanceSet) {
 	}
 }
 
-func adjustDecodedSet(set GovernanceSet) GovernanceSet {
-	for k, v := range set {
+func adjustDecodedSet(src GovernanceSet) GovernanceSet {
+	for k, v := range src {
 		x := reflect.ValueOf(v)
 		if x.Kind() == reflect.Float64 {
-			set[k] = uint64(v.(float64))
+			src[k] = uint64(v.(float64))
+		}
+		if GovernanceKeyMap[k] == params.GoverningNode {
+			if reflect.TypeOf(v) == stringT {
+				src[k] = common.HexToAddress(v.(string))
+			} else {
+				src[k] = v
+			}
 		}
 	}
-	return set
+	return src
 }
 
 func (gov *Governance) GetGovernanceValue(key string) interface{} {

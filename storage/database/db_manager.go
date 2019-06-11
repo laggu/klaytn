@@ -28,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 	"math/big"
 	"path/filepath"
-	"reflect"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -1538,12 +1537,6 @@ func (dbm *databaseManager) ReadGovernance(num uint64) (map[string]interface{}, 
 		result := make(map[string]interface{})
 		if e := json.Unmarshal(data, &result); e != nil {
 			return nil, e
-		}
-		for k, v := range result {
-			x := reflect.ValueOf(v)
-			if x.Kind() == reflect.Float64 {
-				result[k] = uint64(v.(float64))
-			}
 		}
 		return result, nil
 	}

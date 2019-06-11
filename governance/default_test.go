@@ -342,8 +342,9 @@ func TestGovernancePersistence(t *testing.T) {
 	for i := 1; i < length; i++ {
 		num := tstIdx[i]
 		compMap, _ := gov.db.ReadGovernance(num)
+
 		expected := testGovernanceMap["governance.unitprice"].(uint64) + uint64(i)*params.DefaultEpoch
-		if compMap["governance.unitprice"] != expected {
+		if uint64(compMap["governance.unitprice"].(float64)) != expected {
 			t.Errorf("Retrieved %v, Expected %v", compMap["governance.unitprice"], expected)
 		}
 	}

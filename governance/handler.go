@@ -76,7 +76,7 @@ func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {
 	case params.GovernanceMode:
 		g.ChainConfig.Governance.GovernanceMode = v.(string)
 	case params.GoverningNode:
-		g.ChainConfig.Governance.GoverningNode = common.HexToAddress(v.(string))
+		g.ChainConfig.Governance.GoverningNode = v.(common.Address)
 	case params.UnitPrice:
 		newPrice := v.(uint64)
 		g.TxPool.SetGasPrice(big.NewInt(0).SetUint64(newPrice))
