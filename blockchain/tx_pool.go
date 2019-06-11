@@ -546,32 +546,6 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return pending, nil
 }
 
-// PendingByCount retrieves number of currently processable transactions by requested count,
-// grouped by origin account and sorted by nonce.
-func (pool *TxPool) PendingByCount(count int64) (map[common.Address]types.Transactions, error) {
-	pool.txMu.Lock()
-	defer pool.txMu.Unlock()
-
-	if len(pool.pending) == 0 {
-		return nil, nil
-	}
-
-	txPerAddr := count / int64(len(pool.pending))
-	if txPerAddr == 0 {
-		txPerAddr = 1
-	}
-
-	pending := make(map[common.Address]types.Transactions)
-	for addr, list := range pool.pending {
-		pending[addr] = list.FlattenByCount(txPerAddr)
-		count -= int64(len(pending[addr]))
-		if count <= 0 {
-			break
-		}
-	}
-	return pending, nil
-}
-
 // CachedPendingTxByCount retrieves about number of currently processable transactions
 // by requested count, grouped by origin account and sorted by nonce.
 func (pool *TxPool) CachedPendingTxsByCount(count int) types.Transactions {
@@ -588,6 +562,8 @@ func (pool *TxPool) CachedPendingTxsByCount(count int) types.Transactions {
 
 	pending := make(types.Transactions, 0, count)
 
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
