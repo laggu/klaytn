@@ -41,7 +41,7 @@ import (
 type weightedValidator struct {
 	address common.Address
 
-	rewardAddress common.Address
+	rewardAddress atomic.Value
 	votingPower   uint64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
 	weight        int64
 }
@@ -63,7 +63,15 @@ func (val *weightedValidator) Hash() int64 {
 }
 
 func (val *weightedValidator) RewardAddress() common.Address {
-	return val.rewardAddress
+	rewardAddress := val.rewardAddress.Load()
+	if rewardAddress == nil {
+		return common.Address{}
+	}
+	return rewardAddress.(common.Address)
+}
+
+func (val *weightedValidator) SetRewardAddress(rewardAddress common.Address) {
+	val.rewardAddress.Store(rewardAddress)
 }
 
 func (val *weightedValidator) VotingPower() uint64 {
@@ -75,12 +83,13 @@ func (val *weightedValidator) Weight() int64 {
 }
 
 func newWeightedValidator(addr common.Address, reward common.Address, votingpower uint64, weight int64) istanbul.Validator {
-	return &weightedValidator{
-		address:       addr,
-		rewardAddress: reward,
-		votingPower:   votingpower,
-		weight:        weight,
+	weightedValidator := &weightedValidator{
+		address:     addr,
+		votingPower: votingpower,
+		weight:      weight,
 	}
+	weightedValidator.SetRewardAddress(reward)
+	return weightedValidator
 }
 
 type weightedCouncil struct {
@@ -220,7 +229,7 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.A
 		for i, val := range weightedCouncil.List() {
 			weightedVal := val.(*weightedValidator)
 			validators[i] = weightedVal.address
-			rewardAddrs[i] = weightedVal.rewardAddress
+			rewardAddrs[i] = weightedVal.RewardAddress()
 			votingPowers[i] = weightedVal.votingPower
 			weights[i] = atomic.LoadInt64(&weightedVal.weight)
 		}
@@ -605,7 +614,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 
 		i := newStakingInfo.GetIndexByNodeId(weightedVal.address)
 		if i != reward.AddrNotFoundInCouncilNodes {
-			weightedVal.rewardAddress = newStakingInfo.CouncilRewardAddrs[i]
+			weightedVal.SetRewardAddress(newStakingInfo.CouncilRewardAddrs[i])
 			tempStakingAmount := float64(newStakingInfo.CouncilStakingAmounts[i])
 			if newStakingInfo.UseGini {
 				tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+newStakingInfo.Gini)))
@@ -613,7 +622,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 			stakingAmounts[vIdx] = tempStakingAmount
 			totalStaking += tempStakingAmount
 		} else {
-			weightedVal.rewardAddress = common.Address{}
+			weightedVal.SetRewardAddress(common.Address{})
 		}
 	}
 
