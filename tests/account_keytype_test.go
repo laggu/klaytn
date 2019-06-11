@@ -2193,16 +2193,6 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	// reservoir account
 	reservoir := &TestAccountType{
 		Addr:  *bcdata.addrs[0],
@@ -2257,6 +2247,16 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 
 		reservoir.Nonce += 1
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// 1. try to update the account with a RoleTransaction key. (fail)
 	{
@@ -2374,16 +2374,6 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	// reservoir account
 	reservoir := &TestAccountType{
 		Addr:  *bcdata.addrs[0],
@@ -2440,6 +2430,16 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 
 		reservoir.Nonce += 1
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// 2. Update an accountKey with a nested RoleBasedKey.
 	{
@@ -2504,16 +2504,6 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -2626,6 +2616,16 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
 	// test fee delegation txs for each role of role-based key.
 	// only RoleFeePayer type can generate valid signature as a fee payer.
 	for keyType, key := range prvKeys {
@@ -2713,16 +2713,6 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 		t.Fatal(err)
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -2822,6 +2812,16 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 		}
 		reservoir.Nonce += 1
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// test fee delegation txs for each role of role-based key.
 	// only RoleFeePayer type can generate valid signature as a fee payer.
