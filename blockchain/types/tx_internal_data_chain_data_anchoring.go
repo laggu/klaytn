@@ -243,6 +243,10 @@ func (t *TxInternalDataChainDataAnchoring) GetHash() *common.Hash {
 	return t.Hash
 }
 
+func (t *TxInternalDataChainDataAnchoring) GetPayload() []byte {
+	return t.Payload
+}
+
 func (t *TxInternalDataChainDataAnchoring) SetHash(h *common.Hash) {
 	t.Hash = h
 }
