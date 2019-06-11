@@ -63,6 +63,10 @@ var (
 	usedAllTxsCounter       = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
 	checkedTxsGauge         = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
 	tCountGauge             = metrics.NewRegisteredGauge("miner/tcount", nil)
+	nonceTooLowTxsGauge     = metrics.NewRegisteredGauge("miner/nonce/low/txs", nil)
+	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
+	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
+	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
 )
 
 // Agent can register themself with the worker
@@ -637,6 +641,9 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *b
 	}
 
 	var numTxsChecked int64 = 0
+	var numTxsNonceTooLow int64 = 0
+	var numTxsNonceTooHigh int64 = 0
+	var numTxsGasLimitReached int64 = 0
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
@@ -673,16 +680,19 @@ CommitTransactionLoop:
 		case blockchain.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)
+			numTxsGasLimitReached++
 			txs.Pop()
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			numTxsNonceTooLow++
 			txs.Shift()
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			numTxsNonceTooHigh++
 			txs.Pop()
 
 		case vm.ErrTotalTimeLimitReached:
@@ -705,12 +715,16 @@ CommitTransactionLoop:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Error("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			strangeErrorTxsCounter.Inc(1)
 			txs.Shift()
 		}
 	}
 
-	// Update the number of transactions checked during ApplyTransactions.
+	// Update the number of transactions checked and dropped during ApplyTransactions.
 	checkedTxsGauge.Update(numTxsChecked)
+	nonceTooLowTxsGauge.Update(numTxsNonceTooLow)
+	nonceTooHighTxsGauge.Update(numTxsNonceTooHigh)
+	gasLimitReachedTxsGauge.Update(numTxsGasLimitReached)
 
 	// Stop the goroutine that has been handling the timer.
 	chDone <- true
