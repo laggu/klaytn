@@ -286,6 +286,9 @@ func (s *KademliaStorage) closest(target common.Hash, nresults int) *nodesByDist
 
 	for _, b := range &s.buckets {
 		for _, n := range b.entries {
+			if n.NType == NodeTypeBN {
+				continue
+			}
 			close.push(n, nresults)
 		}
 	}

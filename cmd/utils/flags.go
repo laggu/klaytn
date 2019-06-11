@@ -721,6 +721,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 			logger.Debug("setBootstrapNode: set nodetype as bn from unknown", "nodeid", node.ID)
 			node.NType = discover.NodeTypeBN
 		}
+		logger.Info("Bootnode - Add Seed", "Node", node)
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
 	}
 }
