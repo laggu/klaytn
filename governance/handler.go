@@ -324,7 +324,8 @@ func (gov *Governance) isGovernanceModeSingleOrNone(governanceMode int, governin
 }
 
 func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTally, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address) ([]GovernanceVote, []GovernanceTally) {
-	ret := []GovernanceVote{}
+	ret := make([]GovernanceVote, len(votes))
+	copy(ret, votes)
 
 	// Removing duplicated previous GovernanceVotes
 	for idx, vote := range votes {
@@ -356,17 +357,22 @@ func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []
 func (gov *Governance) changeGovernanceTally(tally []GovernanceTally, key string, value interface{}, vp uint64, isAdd bool) (uint64, []GovernanceTally) {
 	found := false
 	var currentVote uint64
-	ret := []GovernanceTally{}
+	ret := make([]GovernanceTally, len(tally))
+	copy(ret, tally)
 
 	for idx, v := range tally {
 		if v.Key == key && v.Value == value {
 			if isAdd {
-				tally[idx].Votes += vp
+				ret[idx].Votes += vp
 			} else {
-				tally[idx].Votes -= vp
+				if ret[idx].Votes > vp {
+					ret[idx].Votes -= vp
+				} else {
+					ret[idx].Votes = uint64(0)
+				}
 			}
 
-			currentVote = tally[idx].Votes
+			currentVote = ret[idx].Votes
 
 			if currentVote == 0 {
 				ret = append(tally[:idx], tally[idx+1:]...)
@@ -376,9 +382,9 @@ func (gov *Governance) changeGovernanceTally(tally []GovernanceTally, key string
 		}
 	}
 
-	if !found {
-		tally = append(tally, GovernanceTally{Key: key, Value: value, Votes: vp})
-		return vp, tally
+	if !found && isAdd {
+		ret = append(ret, GovernanceTally{Key: key, Value: value, Votes: vp})
+		return vp, ret
 	} else {
 		return currentVote, ret
 	}
