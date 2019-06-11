@@ -29,8 +29,18 @@ type partitionedDB struct {
 	partitions    []Database
 	numPartitions uint
 
-	batchJobsCh chan Batch
-	batchErrCh  chan error
+	pdbBatchTaskCh chan pdbBatchTask
+}
+
+type pdbBatchTask struct {
+	batch    Batch               // A batch that each worker executes.
+	index    int                 // Index of given batch.
+	resultCh chan pdbBatchResult // Batch result channel for each partitionedDBBatch.
+}
+
+type pdbBatchResult struct {
+	index int   // Index of the batch result.
+	err   error // Error from the batch write operation.
 }
 
 func newPartitionedDB(dbc *DBConfig, et DBEntryType, numPartitions uint) (*partitionedDB, error) {
@@ -49,9 +59,7 @@ func newPartitionedDB(dbc *DBConfig, et DBEntryType, numPartitions uint) (*parti
 	}
 
 	partitions := make([]Database, 0, numPartitions)
-
-	batchJobsCh := make(chan Batch, numPartitions)
-	batchErrCh := make(chan error, numPartitions)
+	pdbBatchTaskCh := make(chan pdbBatchTask, numPartitions*2)
 	for i := 0; i < int(numPartitions); i++ {
 		copiedDBC := *dbc
 		copiedDBC.Dir = path.Join(copiedDBC.Dir, strconv.Itoa(i))
@@ -62,18 +70,18 @@ func newPartitionedDB(dbc *DBConfig, et DBEntryType, numPartitions uint) (*parti
 			return nil, err
 		}
 		partitions = append(partitions, db)
-		go batchWriteWorker(batchJobsCh, batchErrCh)
+		go batchWriteWorker(pdbBatchTaskCh)
 	}
 
 	return &partitionedDB{
-		fn: dbc.Dir, partitions: partitions, numPartitions: numPartitions,
-		batchJobsCh: batchJobsCh, batchErrCh: batchErrCh}, nil
+		fn: dbc.Dir, partitions: partitions,
+		numPartitions: numPartitions, pdbBatchTaskCh: pdbBatchTaskCh}, nil
 }
 
-// batchWriteWorker executes passed batch jobs.
-func batchWriteWorker(batchJobs <-chan Batch, errCh chan<- error) {
-	for batch := range batchJobs {
-		errCh <- batch.Write()
+// batchWriteWorker executes passed batch tasks.
+func batchWriteWorker(batchTasks <-chan pdbBatchTask) {
+	for task := range batchTasks {
+		task.resultCh <- pdbBatchResult{task.index, task.batch.Write()}
 	}
 }
 
@@ -134,8 +142,7 @@ func (pdb *partitionedDB) Delete(key []byte) error {
 }
 
 func (pdb *partitionedDB) Close() {
-	close(pdb.batchJobsCh)
-	close(pdb.batchErrCh)
+	close(pdb.pdbBatchTaskCh)
 
 	for _, partition := range pdb.partitions {
 		partition.Close()
@@ -148,7 +155,8 @@ func (pdb *partitionedDB) NewBatch() Batch {
 		batches = append(batches, pdb.partitions[i].NewBatch())
 	}
 
-	return &partitionedDBBatch{batches: batches, numBatches: pdb.numPartitions, jobsCh: pdb.batchJobsCh, errCh: pdb.batchErrCh}
+	return &partitionedDBBatch{batches: batches, numBatches: pdb.numPartitions,
+		taskCh: pdb.pdbBatchTaskCh, resultCh: make(chan pdbBatchResult, pdb.numPartitions)}
 }
 
 func (pdb *partitionedDB) Type() DBType {
@@ -165,8 +173,8 @@ type partitionedDBBatch struct {
 	batches    []Batch
 	numBatches uint
 
-	jobsCh chan Batch
-	errCh  chan error
+	taskCh   chan pdbBatchTask
+	resultCh chan pdbBatchResult
 }
 
 func (pdbBatch *partitionedDBBatch) Put(key []byte, value []byte) error {
@@ -190,21 +198,21 @@ func (pdbBatch *partitionedDBBatch) ValueSize() int {
 	return maxSize
 }
 
-// Write passes the list of batches to jobsCh so batch can be processed
-// by underlying goroutines. Write waits until all workers return the result.
+// Write passes the list of batch tasks to taskCh so batch can be processed
+// by underlying workers. Write waits until all workers return the result.
 func (pdbBatch *partitionedDBBatch) Write() error {
-	for _, batch := range pdbBatch.batches {
-		pdbBatch.jobsCh <- batch
+	for index, batch := range pdbBatch.batches {
+		pdbBatch.taskCh <- pdbBatchTask{batch, index, pdbBatch.resultCh}
 	}
 
 	var err error
-	for index := range pdbBatch.batches {
-		if errFromBatch := <-pdbBatch.errCh; errFromBatch != nil {
-			logger.Error("Error while writing partitioned batch", "index", index, "err", errFromBatch)
-			err = errFromBatch
+	for range pdbBatch.batches {
+		if batchResult := <-pdbBatch.resultCh; batchResult.err != nil {
+			logger.Error("Error while writing partitioned batch", "index", batchResult.index, "err", batchResult.err)
+			err = batchResult.err
 		}
 	}
-	// Leave logs for each error but returned one if the last one.
+	// Leave logs for each error but only return the last one.
 	return err
 }
 
