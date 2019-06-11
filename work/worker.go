@@ -686,7 +686,7 @@ CommitTransactionLoop:
 			txs.Pop()
 
 		case vm.ErrTotalTimeLimitReached:
-			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash())
+			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
 			timeLimitReachedCounter.Inc(1)
 			if env.tcount == 0 {
 				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
