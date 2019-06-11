@@ -119,7 +119,7 @@ const (
 	DefaultPeriod         = 1
 )
 
-func IsStakingUpdatePossible(blockNum uint64) bool {
+func IsStakingUpdateInterval(blockNum uint64) bool {
 	return (blockNum % stakingUpdateInterval) == 0
 }
 
@@ -131,7 +131,7 @@ func CalcStakingBlockNumber(blockNum uint64) uint64 {
 	}
 
 	var number uint64
-	if IsStakingUpdatePossible(blockNum) {
+	if IsStakingUpdateInterval(blockNum) {
 		number = blockNum - 2*stakingUpdateInterval
 	} else {
 		number = blockNum - stakingUpdateInterval - (blockNum % stakingUpdateInterval)

@@ -93,7 +93,7 @@ func TestIsStakingUpdatePossible(t *testing.T) {
 	for i := 0; i < len(testCase); i++ {
 		SetStakingUpdateInterval(testCase[i].interval)
 
-		result := IsStakingUpdatePossible(testCase[i].blockNu)
+		result := IsStakingUpdateInterval(testCase[i].blockNu)
 
 		if result != testCase[i].result {
 			t.Errorf("The result is diffrent from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",

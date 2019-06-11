@@ -396,7 +396,7 @@ func waitHeadChain(bc *blockchain.BlockChain) {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-chainHeadCh:
-			if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && params.IsStakingUpdatePossible(ev.Block.NumberU64()) {
+			if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && params.IsStakingUpdateInterval(ev.Block.NumberU64()) {
 				blockNum := ev.Block.NumberU64()
 				logger.Debug("ChainHeadEvent arrived and try to update staking cache.", "Block number", blockNum)
 				if _, err := updateStakingCache(bc, blockNum); err != nil {
@@ -436,7 +436,7 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 		return cachedStakingInfo, nil
 	}
 
-	stakingInfo, err := getInitContractInfo(bc, blockNum)
+	stakingInfo, err := getStakingInfoFromAddressBook(bc, blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +596,7 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 	return blockRewardCache
 }
 
-func MakeGetAllAddressFromInitContractMsg() (*types.Transaction, error) {
+func makeMsgToAddressBook() (*types.Transaction, error) {
 	abiStr := contract.AddressBookABI
 	abii, err := abi.JSON(strings.NewReader(abiStr))
 	if err != nil {
@@ -636,7 +636,7 @@ var (
 	errAddressBookIncomplete  = errors.New("incomplete node information from AddressBook")
 )
 
-func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
+func getAllAddressFromAddressBook(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 
 	if result == nil {
 		return nil, nil, nil, common.Address{}, common.Address{}, errAddressBookIncomplete
@@ -709,9 +709,9 @@ func ParseGetAllAddressFromInitContract(result []byte) ([]common.Address, []comm
 	return nodeIds, stakingAddrs, rewardAddrs, pocAddr, kirAddr, nil
 }
 
-// getInitContractInfo returns staking info when calling AddressBook
+// getStakingInfoFromAddressBook returns staking info when calling AddressBook
 // succeeded. It returns an error otherwise.
-func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
+func getStakingInfoFromAddressBook(bc *blockchain.BlockChain, blockNum uint64) (*StakingInfo, error) {
 
 	var nodeIds []common.Address
 	var stakingAddrs []common.Address
@@ -720,12 +720,12 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 	var PoCAddr = common.Address{}
 	var err error
 
-	if !params.IsStakingUpdatePossible(blockNum) {
+	if !params.IsStakingUpdateInterval(blockNum) {
 		return nil, errors.New(fmt.Sprintf("not staking block number. blockNum: %d", blockNum))
 	}
 
 	// Prepare a message
-	msg, err := MakeGetAllAddressFromInitContractMsg()
+	msg, err := makeMsgToAddressBook()
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("failed to make message for AddressBook. root err: %s", err))
 	}
@@ -755,7 +755,7 @@ func getInitContractInfo(bc *blockchain.BlockChain, blockNum uint64) (*StakingIn
 		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
 
-	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = ParseGetAllAddressFromInitContract(res)
+	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = getAllAddressFromAddressBook(res)
 	if err != nil {
 		if err == errAddressBookIncomplete {
 			// This is expected behavior when smart contract is not setup yet.
