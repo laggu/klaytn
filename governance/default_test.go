@@ -522,6 +522,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 }
 
 func TestBaoBabGenesisHash(t *testing.T) {
+	// If baobab network reset, the hash below have to be updated
 	baobabHash := common.HexToHash("0x2c4e9c507f8481b02c60e1f7b4a018c6a0b0681c61da917cde2450490ac21205")
 	genesis := blockchain.DefaultBaobabGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
@@ -535,6 +536,7 @@ func TestBaoBabGenesisHash(t *testing.T) {
 }
 
 func TestCypressGenesisHash(t *testing.T) {
+	// If cypress network reset, the hash below have to be updated
 	cypressHash := common.HexToHash("0xeb4ee0bbd7221bc70f38bafd02572512d547f0c884b614b7aaa9ebdfbc35fed7")
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
