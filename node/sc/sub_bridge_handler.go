@@ -327,9 +327,9 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 			continue
 		}
 		peer.SendServiceChainTxs(txs)
-		logger.Debug("sent ServiceChainTxData", "peerID", peer.GetID())
+		logger.Trace("sent ServiceChainTxData", "peerID", peer.GetID())
 	}
-	logger.Info("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
+	logger.Debug("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
 }
 
 // writeServiceChainTxReceipt writes the received receipts of service chain transactions.
@@ -353,7 +353,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 
 			logger.Debug("received anchoring tx receipt", "blockNum", chainHashes.BlockNumber.String(), "blcokHash", chainHashes.BlockHash.String(), "txHash", txHash.String())
 		} else {
-			logger.Error("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
+			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
 
 		logger.Trace("received service chain transaction receipt", "txHash", txHash.String())
@@ -409,11 +409,13 @@ func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
 			sbh.UpdateLastestAnchoredBlockNumber(blkNum)
 			successCnt++
 		} else {
-			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FailedBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
+			logger.Trace("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FailedBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
 			break
 		}
 	}
-	logger.Info("blockAnchoringManager: Success to generate anchoring txs", "successCnt", successCnt, "startBlockNumber", startBlkNum, "latestBlockNum", block.NumberU64())
+	if successCnt > 0 {
+		logger.Info("Generate anchoring txs", "txCount", successCnt, "startBlockNumber", startBlkNum, "endBlockNumber", blkNum-1)
+	}
 }
 
 func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Block) error {
@@ -438,7 +440,7 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 	if err := sbh.subbridge.GetBridgeTxPool().AddLocal(signedTx); err == nil {
 		sbh.addMainChainAccountNonce(1)
 	} else {
-		logger.Error("failed to add signed tx into txpool", "err", err)
+		logger.Debug("failed to add tx into bridge txpool", "err", err)
 		return err
 	}
 

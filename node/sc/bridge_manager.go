@@ -393,6 +393,13 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 
 // LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
 func (bm *BridgeManager) LogBridgeStatus() {
+	if len(bm.bridges) == 0 {
+		return
+	}
+
+	m2sTotalRequestNonce, m2sTotalHandleNonce := uint64(0), uint64(0)
+	s2mTotalRequestNonce, s2mTotalHandleNonce := uint64(0), uint64(0)
+
 	for bAddr, b := range bm.bridges {
 		diffNonce := b.requestNonceFromCounterPart - b.handleNonce
 
@@ -400,12 +407,19 @@ func (bm *BridgeManager) LogBridgeStatus() {
 			var headStr string
 			if b.onServiceChain {
 				headStr = "Bridge(Main -> Service Chain)"
+				m2sTotalRequestNonce += b.requestNonceFromCounterPart
+				m2sTotalHandleNonce += b.handleNonce
 			} else {
 				headStr = "Bridge(Service -> Main Chain)"
+				s2mTotalRequestNonce += b.requestNonceFromCounterPart
+				s2mTotalHandleNonce += b.handleNonce
 			}
-			logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "handleNonce", b.handleNonce, "diffNonce", diffNonce)
+			logger.Debug(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "handleNonce", b.handleNonce, "pending", diffNonce)
 		}
 	}
+
+	logger.Info("VT : Main -> Service Chain", "request", m2sTotalRequestNonce, "handle", m2sTotalHandleNonce, "pending", m2sTotalRequestNonce-m2sTotalHandleNonce)
+	logger.Info("VT : Service -> Main Chain", "request", s2mTotalRequestNonce, "handle", s2mTotalHandleNonce, "pending", s2mTotalRequestNonce-s2mTotalHandleNonce)
 }
 
 // SubscribeTokenReceived registers a subscription of TokenReceivedEvent.
