@@ -113,7 +113,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
 	target := val.(string)
 
-	if common.HexToAddress(target) == api.governance.nodeAddress {
+	if common.HexToAddress(target) == api.governance.nodeAddress.Load().(common.Address) {
 		return true
 	} else {
 		return false
