@@ -696,7 +696,7 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
 	// ignore this error and pretend the operation was successful.
-	if suberr != nil && suberr != ErrCodeStoreOutOfGas {
+	if suberr != nil {
 		stack.push(evm.interpreter.intPool.getZero())
 	} else {
 		stack.push(evm.interpreter.intPool.get().SetBytes(addr.Bytes()))
