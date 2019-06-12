@@ -92,8 +92,15 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress {
 		return "", errPermissionDenied
 	}
-	if strings.ToLower(key) == "removevalidator" {
-		if !api.isRemovingSelf(val) {
+	if strings.ToLower(key) == "governance.removevalidator" {
+		if reflect.TypeOf(val).String() != "string" {
+			return "", errInvalidKeyValue
+		}
+		target := val.(string)
+		if !common.IsHexAddress(target) {
+			return "", errInvalidKeyValue
+		}
+		if api.isRemovingSelf(val) {
 			return "", errRemoveSelf
 		}
 	}
@@ -104,17 +111,12 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 }
 
 func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
-	if reflect.TypeOf(val).String() != "string" {
-		return false
-	}
 	target := val.(string)
-	if !common.IsHexAddress(target) {
-		return false
-	}
+
 	if common.HexToAddress(target) == api.governance.nodeAddress {
-		return false
-	} else {
 		return true
+	} else {
+		return false
 	}
 }
 
