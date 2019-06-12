@@ -145,7 +145,7 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (GovernanceSet, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.lastGovernanceStateBlock
+		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
