@@ -230,6 +230,9 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 							tab.delete(n)
 						}
 					}
+					if targetNT != NodeTypeBN {
+						r = removeBn(r)
+					}
 					reply <- tab.bondall(r)
 				}()
 			}
@@ -260,7 +263,9 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 			break
 		}
 	}
-	seeds.entries = removeBn(seeds.entries)
+	if targetNT != NodeTypeBN {
+		seeds.entries = removeBn(seeds.entries)
+	}
 	return seeds.entries
 }
 
@@ -482,6 +487,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 func (tab *Table) loadSeedNodes(bond bool) {
 	// TODO-Klaytn-Node Separate logic to storages.
 	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
+	seeds = removeBn(seeds)
 	seeds = append(seeds, tab.nursery...)
 	if bond {
 		seeds = tab.bondall(seeds)
@@ -536,6 +542,7 @@ func (tab *Table) closest(target common.Hash, nType NodeType, nresults int) *nod
 	return tab.storages[nType].closest(target, nresults)
 }
 
+// RetrieveNodes returns node list except bootnode. This method is used to make a result of FINDNODE request.
 func (tab *Table) RetrieveNodes(target common.Hash, nType NodeType, nresults int) []*Node {
 	tab.storagesMu.RLock()
 	defer tab.storagesMu.RUnlock()
@@ -544,7 +551,11 @@ func (tab *Table) RetrieveNodes(target common.Hash, nType NodeType, nresults int
 		logger.Warn("Table.RetrieveNodes: Not Supported NodeType", "NodeType", nType)
 		return []*Node{}
 	}
-	return tab.storages[nType].closest(target, nresults).entries
+	nodes := tab.storages[nType].closest(target, nresults).entries
+	if nType != NodeTypeBN {
+		nodes = removeBn(nodes)
+	}
+	return nodes
 }
 
 func (tab *Table) len() (n int) {

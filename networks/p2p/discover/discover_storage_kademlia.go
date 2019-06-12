@@ -90,7 +90,9 @@ func (s *KademliaStorage) getNodes(max int) []*Node {
 	nbd := s.closest(crypto.Keccak256Hash(s.tab.self.ID[:]), max)
 	var ret []*Node
 	for _, nd := range nbd.entries {
-		ret = append(ret, nd)
+		if nd.NType == s.targetType {
+			ret = append(ret, nd)
+		}
 	}
 	return ret
 }
@@ -286,9 +288,6 @@ func (s *KademliaStorage) closest(target common.Hash, nresults int) *nodesByDist
 
 	for _, b := range &s.buckets {
 		for _, n := range b.entries {
-			if n.NType == NodeTypeBN {
-				continue
-			}
 			close.push(n, nresults)
 		}
 	}

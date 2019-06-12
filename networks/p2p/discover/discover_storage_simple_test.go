@@ -195,7 +195,7 @@ func TestSimple_lookup(t *testing.T) {
 		}
 	}
 	bootnodes := tab.Lookup(NodeID{}, NodeTypeBN)
-	if len(bootnodes) != 0 {
+	if len(bootnodes) != 3 {
 		t.Errorf("the result of finding bootnode is wrong. expected: 0, actual: %v", len(bootnodes))
 	}
 }
