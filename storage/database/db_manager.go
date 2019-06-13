@@ -115,8 +115,7 @@ type DBManager interface {
 
 	NewSenderTxHashToTxHashBatch() Batch
 	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error
-	ReadTxBySenderTxHash(senderTxHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
-	ReadReceiptBySenderTxHash(senderTxHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
+	ReadTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash
 
 	ReadReceipt(hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
 
@@ -1180,28 +1179,8 @@ func (dbm *databaseManager) PutSenderTxHashToTxHashToBatch(batch Batch, senderTx
 	return nil
 }
 
-func (dbm *databaseManager) ReadTxBySenderTxHash(senderTxHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
-	txHash := dbm.readTxHashFromSenderTxHash(senderTxHash)
-	// If corresponding txHash does not exist, search transaction with given senderTxHash.
-	if common.EmptyHash(txHash) {
-		txHash = senderTxHash
-	}
-
-	return dbm.ReadTxAndLookupInfo(txHash)
-}
-
-func (dbm *databaseManager) ReadReceiptBySenderTxHash(senderTxHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64) {
-	txHash := dbm.readTxHashFromSenderTxHash(senderTxHash)
-	// If corresponding txHash does not exist, search receipt with given senderTxHash.
-	if common.EmptyHash(txHash) {
-		txHash = senderTxHash
-	}
-
-	return dbm.ReadReceipt(txHash)
-}
-
-// readTxHashFromSenderTxHash retrieves a txHash corresponding to the given senderTxHash.
-func (dbm *databaseManager) readTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash {
+// ReadTxHashFromSenderTxHash retrieves a txHash corresponding to the given senderTxHash.
+func (dbm *databaseManager) ReadTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash {
 	if txHash := dbm.cm.readSenderTxHashToTxHashCache(senderTxHash); !common.EmptyHash(txHash) {
 		return txHash
 	}

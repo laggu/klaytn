@@ -65,8 +65,6 @@ type Backend interface {
 	GetNonceInCache(address common.Address) (uint64, bool)
 
 	IsSenderTxHashIndexingEnabled() bool
-	GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction
-	GetTransactionReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt
 
 	// TxPool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error

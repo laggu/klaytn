@@ -126,6 +126,11 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 	return (*hexutil.Uint64)(&nonce), state.Error()
 }
 
+func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Context, senderTxHash common.Hash) map[string]interface{} {
+	txhash := s.b.ChainDB().ReadTxHashFromSenderTxHash(senderTxHash)
+	return s.GetTransactionByHash(ctx, txhash)
+}
+
 // GetTransactionByHash returns the transaction for the given hash
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// Try to return an already finalized transaction
@@ -192,6 +197,11 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 	delete(fields, "hash")
 
 	return fields
+}
+
+func (s *PublicTransactionPoolAPI) GetTransactionReceiptBySenderTxHash(ctx context.Context, senderTxHash common.Hash) (map[string]interface{}, error) {
+	txhash := s.b.ChainDB().ReadTxHashFromSenderTxHash(senderTxHash)
+	return s.GetTransactionReceipt(ctx, txhash)
 }
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.

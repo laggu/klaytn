@@ -266,13 +266,3 @@ func (b *ServiceChainAPIBackend) IsParallelDBWrite() bool {
 func (b *ServiceChainAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 	return b.sc.BlockChain().IsSenderTxHashIndexingEnabled()
 }
-
-func (b *ServiceChainAPIBackend) GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction {
-	tx, _, _, _ := b.sc.chainDB.ReadTxBySenderTxHash(senderTxHash)
-	return tx
-}
-
-func (b *ServiceChainAPIBackend) GetTransactionReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
-	receipt, _, _, _ := b.sc.chainDB.ReadReceiptBySenderTxHash(senderTxHash)
-	return receipt
-}

@@ -226,16 +226,6 @@ func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 	return s.b.IsSenderTxHashIndexingEnabled()
 }
 
-// GetTransactionBySenderTxHash returns a transaction matched with the given senderTxHash.
-func (s *PublicBlockChainAPI) GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction {
-	return s.b.GetTransactionBySenderTxHash(senderTxHash)
-}
-
-// GetTransactionReceiptBySenderTxHash returns a receipt of a transaction matched with the given senderTxHash.
-func (s *PublicBlockChainAPI) GetTransactionReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
-	return s.b.GetTransactionReceiptBySenderTxHash(senderTxHash)
-}
-
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From     common.Address  `json:"from"`

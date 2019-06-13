@@ -266,13 +266,3 @@ func (b *CNAPIBackend) IsParallelDBWrite() bool {
 func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 	return b.cn.BlockChain().IsSenderTxHashIndexingEnabled()
 }
-
-func (b *CNAPIBackend) GetTransactionBySenderTxHash(senderTxHash common.Hash) *types.Transaction {
-	tx, _, _, _ := b.cn.chainDB.ReadTxBySenderTxHash(senderTxHash)
-	return tx
-}
-
-func (b *CNAPIBackend) GetTransactionReceiptBySenderTxHash(senderTxHash common.Hash) *types.Receipt {
-	receipt, _, _, _ := b.cn.chainDB.ReadReceiptBySenderTxHash(senderTxHash)
-	return receipt
-}
