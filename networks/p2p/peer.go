@@ -605,9 +605,9 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 			// shutdown if the error is non-nil and unblock the next write
 			// otherwise. The calling protocol code should exit for errors
 			// as well but we don't want to rely on that.
-			rw.werr <- err
 		case <-rw.closed:
 			err = fmt.Errorf("shutting down")
+			return err
 		case <-timer.C:
 			err = fmt.Errorf("failed to write message for %v", rw.tc.WaitTime)
 		}
@@ -615,12 +615,15 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 		select {
 		case <-rw.wstart:
 			err = rw.w.WriteMsg(msg)
-			rw.werr <- err
 		case <-rw.closed:
 			err = fmt.Errorf("shutting down")
+			return err
 		}
 	}
-
+	select {
+	case rw.werr <- err:
+	default:
+	}
 	return err
 }
 
