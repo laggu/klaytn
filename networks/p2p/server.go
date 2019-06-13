@@ -1072,6 +1072,7 @@ func (srv *BaseServer) PeerCount() int {
 
 func (srv *BaseServer) PeerCountByType() map[string]uint {
 	pc := make(map[string]uint)
+	pc["total"] = 0
 	select {
 	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) {
 		for _, peer := range ps {
