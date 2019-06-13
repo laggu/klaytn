@@ -32,8 +32,9 @@ import (
 )
 
 const (
-	TokenEventChanSize = 10000
-	BridgeAddrJournal  = "bridge_addrs.rlp"
+	TokenEventChanSize  = 10000
+	BridgeAddrJournal   = "bridge_addrs.rlp"
+	maxPendingNonceDiff = 20000 // TODO-Klaytn-ServiceChain: update this limitation. Currently, 2 * 10000 TPS.
 )
 
 const (
@@ -169,12 +170,24 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 	}
 
 	for idx, ev := range pendingEvent {
+		if ev.RequestNonce < bi.handleNonce {
+			logger.Trace("past requests are ignored", "RequestNonce", ev.RequestNonce, "handleNonce", bi.handleNonce)
+			continue
+		}
+
+		if ev.RequestNonce > bi.handleNonce+maxPendingNonceDiff {
+			logger.Trace("nonce diff is too large", "limitation", maxPendingNonceDiff)
+			return errors.New("nonce diff is too large")
+		}
+
 		if err := bi.handleRequestValueTransferEvent(ev); err != nil {
 			bi.AddRequestValueTransferEvents(pendingEvent[idx:])
 			logger.Error("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(pendingEvent[idx:]))
 			return err
 		}
-		bi.nextHandleNonce++
+		if bi.nextHandleNonce <= ev.RequestNonce {
+			bi.nextHandleNonce = ev.RequestNonce + 1
+		}
 	}
 
 	return nil
