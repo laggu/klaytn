@@ -217,37 +217,33 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	}
 
 	// bridge service
-	if ctx.GlobalBool(utils.EnabledBridgeFlag.Name) {
-		cfg.EnabledBridge = true
-
-		cfg.BridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.BridgeListenPortFlag.Name))
-
-		if ctx.GlobalBool(utils.IsMainBridgeFlag.Name) {
-			cfg.IsMainBridge = true
-		} else {
-			cfg.IsMainBridge = false
-
-			if ctx.GlobalIsSet(utils.MainChainAccountAddrFlag.Name) {
-				tempStr := ctx.GlobalString(utils.MainChainAccountAddrFlag.Name)
-				if !common.IsHexAddress(tempStr) {
-					logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
-				}
-				tempAddr := common.StringToAddress(tempStr)
-				cfg.MainChainAccountAddr = &tempAddr
-				logger.Info("A chain address is registered.", "mainChainAccountAddr", *cfg.MainChainAccountAddr)
-			}
-			cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
-			cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
-			cfg.MainChainURL = ctx.GlobalString(utils.MainChainURLFlag.Name)
-			cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
-			cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
-			cfg.ServiceChainConsensus = ctx.GlobalString(utils.ServiceChainConsensusFlag.Name)
-			utils.ServiceChainConsensusFlag.Value = cfg.ServiceChainConsensus
-		}
-
-	} else {
-		cfg.EnabledBridge = false
+	if ctx.GlobalBool(utils.MainBridgeFlag.Name) {
+		cfg.EnabledMainBridge = true
+		cfg.MainBridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.MainBridgeListenPortFlag.Name))
 	}
+
+	if ctx.GlobalBool(utils.SubBridgeFlag.Name) {
+		cfg.EnabledSubBridge = true
+		cfg.SubBridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.SubBridgeListenPortFlag.Name))
+	}
+
+	if ctx.GlobalIsSet(utils.MainChainAccountAddrFlag.Name) {
+		tempStr := ctx.GlobalString(utils.MainChainAccountAddrFlag.Name)
+		if !common.IsHexAddress(tempStr) {
+			logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
+		}
+		tempAddr := common.StringToAddress(tempStr)
+		cfg.MainChainAccountAddr = &tempAddr
+		logger.Info("A chain address is registered.", "mainChainAccountAddr", *cfg.MainChainAccountAddr)
+	}
+
+	cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
+	cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
+	cfg.MainChainURL = ctx.GlobalString(utils.MainChainURLFlag.Name)
+	cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
+	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
+	cfg.ServiceChainConsensus = ctx.GlobalString(utils.ServiceChainConsensusFlag.Name)
+	utils.ServiceChainConsensusFlag.Value = cfg.ServiceChainConsensus
 
 	return cfg
 }
@@ -258,7 +254,7 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 	scfg.DataDir = cfg.Node.DataDir
 	scfg.Name = cfg.Node.Name
 
-	if utils.NetworkTypeFlag.Value == SCNNetworkType && ctx.GlobalBool(utils.EnabledBridgeFlag.Name) {
+	if utils.NetworkTypeFlag.Value == SCNNetworkType && scfg.EnabledSubBridge {
 		cfg.CN.NoAccountCreation = !ctx.GlobalBool(utils.ServiceChainNewAccountFlag.Name)
 		if !cfg.CN.NoAccountCreation {
 			logger.Warn("generated accounts can't be synced with the main chain since account creation is enabled")

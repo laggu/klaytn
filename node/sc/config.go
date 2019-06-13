@@ -66,9 +66,9 @@ type SCConfig struct {
 	Name string `toml:"-"`
 
 	// BridgeService
-	EnabledBridge bool
-	IsMainBridge  bool
-	DataDir       string
+	EnabledMainBridge bool
+	EnabledSubBridge  bool
+	DataDir           string
 
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
@@ -83,8 +83,9 @@ type SCConfig struct {
 	ChildChainIndexing bool
 
 	// Network
-	BridgePort string
-	MaxPeer    int
+	MainBridgePort string
+	SubBridgePort  string
+	MaxPeer        int
 
 	// ServiceChain
 	MainChainAccountAddr    *common.Address `toml:",omitempty"`

@@ -174,13 +174,13 @@ func (s *MainBridge) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return []rpc.API{
 		{
-			Namespace: "bridge",
+			Namespace: "mainbridge",
 			Version:   "1.0",
 			Service:   s.APIBackend,
 			Public:    true,
 		},
 		{
-			Namespace: "bridge",
+			Namespace: "mainbridge",
 			Version:   "1.0",
 			Service:   s.netRPCService,
 			Public:    true,
@@ -257,7 +257,7 @@ func (s *MainBridge) Start(srvr p2p.Server) error {
 	serverConfig.PrivateKey = s.ctx.NodeKey()
 	serverConfig.Name = s.ctx.NodeType().String()
 	serverConfig.Logger = logger
-	serverConfig.ListenAddr = s.config.BridgePort
+	serverConfig.ListenAddr = s.config.MainBridgePort
 	serverConfig.MaxPhysicalConnections = s.maxPeers
 	serverConfig.NoDiscovery = true
 	serverConfig.EnableMultiChannelServer = false

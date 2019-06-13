@@ -630,15 +630,22 @@ var flagsWithValues = []struct {
 	//	flagType:    FlagTypeBoolean,
 	//},
 	{
-		flag:     "--bridge",
-		flagType: FlagTypeBoolean,
-	},
-	{
 		flag:     "--mainbridge",
 		flagType: FlagTypeBoolean,
 	},
 	{
-		flag:        "--bridgeport",
+		flag:     "--subbridge",
+		flagType: FlagTypeBoolean,
+	},
+	{
+		flag:        "--mainbridgeport",
+		flagType:    FlagTypeArgument,
+		values:      []string{"50505", "23232"},
+		wrongValues: commonThreeErrors,
+		errors:      []int{ErrorInvalidValue, NonError, ErrorInvalidValue},
+	},
+	{
+		flag:        "--subbridgeport",
 		flagType:    FlagTypeArgument,
 		values:      []string{"50505", "23232"},
 		wrongValues: commonThreeErrors,

@@ -64,9 +64,8 @@ var enHelpFlagGroups = []utils.FlagGroup{
 		Name: "SERVICECHAIN",
 		Flags: []cli.Flag{
 			utils.ChildChainIndexingFlag,
-			utils.EnabledBridgeFlag,
-			utils.IsMainBridgeFlag,
-			utils.BridgeListenPortFlag,
+			utils.MainBridgeFlag,
+			utils.MainBridgeListenPortFlag,
 		},
 	},
 	{

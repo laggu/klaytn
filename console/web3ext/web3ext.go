@@ -30,7 +30,8 @@ var Modules = map[string]string{
 	"rpc":        RPC_JS,
 	"txpool":     TxPool_JS,
 	"istanbul":   Istanbul_JS,
-	"bridge":     Bridge_JS,
+	"mainbridge": MainBridge_JS,
+	"subbridge":  SubBridge_JS,
 	"clique":     CliqueJs,
 	"governance": Governance_JS,
 	"bootnode":   Bootnode_JS,
@@ -864,134 +865,152 @@ web3._extend({
 	]
 });
 `
-const Bridge_JS = `
+const MainBridge_JS = `
 web3._extend({
-	property: 'bridge',
+	property: 'mainbridge',
 	methods:
 	[
 		new web3._extend.Method({
-			name: 'addPeer',
-			call: 'bridge_addPeer',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'removePeer',
-			call: 'bridge_removePeer',
-			params: 1
-		}),
-		new web3._extend.Method({
 			name: 'getChildChainIndexingEnabled',
-			call: 'bridge_getChildChainIndexingEnabled'
+			call: 'mainbridge_getChildChainIndexingEnabled'
 		}),
 		new web3._extend.Method({
 			name: 'convertServiceChainBlockHashToMainChainTxHash',
-			call: 'bridge_convertServiceChainBlockHashToMainChainTxHash',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getReceiptFromParentChain',
-			call: 'bridge_getReceiptFromParentChain',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'deployBridge',
-			call: 'bridge_deployBridge',
-			params: 0
-		}),
-		new web3._extend.Method({
-			name: 'subscribeBridge',
-			call: 'bridge_subscribeBridge',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'unsubscribeBridge',
-			call: 'bridge_unsubscribeBridge',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'anchoring',
-			call: 'bridge_anchoring',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'registerBridge',
-			call: 'bridge_registerBridge',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'deregisterBridge',
-			call: 'bridge_deregisterBridge',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'registerToken',
-			call: 'bridge_registerToken',
-			params: 4
-		}),
-		new web3._extend.Method({
-			name: 'deregisterToken',
-			call: 'bridge_deregisterToken',
-			params: 4
-		}),
-		new web3._extend.Method({
-			name: 'convertRequestTxHashToHandleTxHash',
-			call: 'bridge_convertRequestTxHashToHandleTxHash',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getBridgeInformation',
-			call: 'bridge_getBridgeInformation',
+			call: 'mainbridge_convertServiceChainBlockHashToMainChainTxHash',
 			params: 1
 		}),
 	],
     properties: [
 		new web3._extend.Property({
 			name: 'nodeInfo',
-			getter: 'bridge_nodeInfo'
+			getter: 'mainbridge_nodeInfo'
 		}),
 		new web3._extend.Property({
 			name: 'peers',
-			getter: 'bridge_peers'
+			getter: 'mainbridge_peers'
+		}),
+	]
+});
+`
+const SubBridge_JS = `
+web3._extend({
+	property: 'subbridge',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'addPeer',
+			call: 'subbridge_addPeer',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'removePeer',
+			call: 'subbridge_removePeer',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getReceiptFromParentChain',
+			call: 'subbridge_getReceiptFromParentChain',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'deployBridge',
+			call: 'subbridge_deployBridge',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'subscribeBridge',
+			call: 'subbridge_subscribeBridge',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'unsubscribeBridge',
+			call: 'subbridge_unsubscribeBridge',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'anchoring',
+			call: 'subbridge_anchoring',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'registerBridge',
+			call: 'subbridge_registerBridge',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'deregisterBridge',
+			call: 'subbridge_deregisterBridge',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'registerToken',
+			call: 'subbridge_registerToken',
+			params: 4
+		}),
+		new web3._extend.Method({
+			name: 'deregisterToken',
+			call: 'subbridge_deregisterToken',
+			params: 4
+		}),
+		new web3._extend.Method({
+			name: 'convertRequestTxHashToHandleTxHash',
+			call: 'subbridge_convertRequestTxHashToHandleTxHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getBridgeInformation',
+			call: 'subbridge_getBridgeInformation',
+			params: 1
+		}),
+	],
+    properties: [
+		new web3._extend.Property({
+			name: 'nodeInfo',
+			getter: 'subbridge_nodeInfo'
+		}),
+		new web3._extend.Property({
+			name: 'peers',
+			getter: 'subbridge_peers'
 		}),
 		new web3._extend.Property({
 			name: 'mainChainAccount',
-			getter: 'bridge_getMainChainAccountAddr'
+			getter: 'subbridge_getMainChainAccountAddr'
 		}),
 			new web3._extend.Property({
 			name: 'serviceChainAccount',
-			getter: 'bridge_getServiceChainAccountAddr'
+			getter: 'subbridge_getServiceChainAccountAddr'
 		}),
 		new web3._extend.Property({
 			name: 'anchoringPeriod',
-			getter: 'bridge_getAnchoringPeriod'
+			getter: 'subbridge_getAnchoringPeriod'
 		}),
 		new web3._extend.Property({
 			name: 'sendChainTxslimit',
-			getter: 'bridge_getSentChainTxsLimit'
+			getter: 'subbridge_getSentChainTxsLimit'
 		}),
 		new web3._extend.Property({
 			name: 'mainChainAccountNonce',
-			getter: 'bridge_getMainChainAccountNonce'
+			getter: 'subbridge_getMainChainAccountNonce'
 		}),
 		new web3._extend.Property({
 			name: 'serviceChainAccountNonce',
-			getter: 'bridge_getServiceChainAccountNonce'
+			getter: 'subbridge_getServiceChainAccountNonce'
 		}),
 		new web3._extend.Property({
 			name: 'listBridge',
-			getter: 'bridge_listBridge'
+			getter: 'subbridge_listBridge'
 		}),
 		new web3._extend.Property({
 			name: 'txPendingCount',
-			getter: 'bridge_txPendingCount'
+			getter: 'subbridge_txPendingCount'
 		}),
 		new web3._extend.Property({
 			name: 'txPending',
-			getter: 'bridge_txPending'
+			getter: 'subbridge_txPending'
 		}),
 		new web3._extend.Property({
 			name: 'latestAnchoredBlockNumber',
-			getter: 'bridge_getLatestAnchoredBlockNumber'
+			getter: 'subbridge_getLatestAnchoredBlockNumber'
 		}),
 	]
 });

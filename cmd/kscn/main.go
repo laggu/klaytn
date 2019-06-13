@@ -64,8 +64,11 @@ var scnHelpFlagGroups = []utils.FlagGroup{
 		Name: "SERVICECHAIN",
 		Flags: []cli.Flag{
 			utils.ServiceChainSignerFlag,
-			utils.EnabledBridgeFlag,
-			utils.BridgeListenPortFlag,
+			utils.ChildChainIndexingFlag,
+			utils.MainBridgeFlag,
+			utils.MainBridgeListenPortFlag,
+			utils.SubBridgeFlag,
+			utils.SubBridgeListenPortFlag,
 			utils.AnchoringPeriodFlag,
 			utils.SentChainTxsLimit,
 			utils.MainChainURLFlag,
@@ -73,6 +76,7 @@ var scnHelpFlagGroups = []utils.FlagGroup{
 			utils.VTRecoveryIntervalFlag,
 			utils.ServiceChainNewAccountFlag,
 			utils.ServiceChainConsensusFlag,
+			utils.MainChainAccountAddrFlag,
 		},
 	},
 	{

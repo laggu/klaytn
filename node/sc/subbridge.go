@@ -232,13 +232,13 @@ func (s *SubBridge) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return []rpc.API{
 		{
-			Namespace: "bridge",
+			Namespace: "subbridge",
 			Version:   "1.0",
 			Service:   s.APIBackend,
 			Public:    true,
 		},
 		{
-			Namespace: "bridge",
+			Namespace: "subbridge",
 			Version:   "1.0",
 			Service:   s.netRPCService,
 			Public:    true,

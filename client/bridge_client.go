@@ -32,35 +32,49 @@ import (
 // BridgeAddPeerOnParentChain can add a static peer on bridge node for service chain.
 func (ec *Client) BridgeAddPeerOnBridge(ctx context.Context, url string) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_addPeer", url)
+	err := ec.c.CallContext(ctx, &result, "subbridge_addPeer", url)
 	return result, err
 }
 
 // BridgeRemovePeerOnParentChain can remove a static peer on bridge node.
 func (ec *Client) BridgeRemovePeerOnBridge(ctx context.Context, url string) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_removePeer", url)
+	err := ec.c.CallContext(ctx, &result, "subbridge_removePeer", url)
 	return result, err
 }
 
 // BridgePeersOnBridge returns the peer list of bridge node for service chain.
 func (ec *Client) BridgePeersOnBridge(ctx context.Context) ([]*p2p.PeerInfo, error) {
 	var result []*p2p.PeerInfo
-	err := ec.c.CallContext(ctx, &result, "bridge_peers")
+	err := ec.c.CallContext(ctx, &result, "subbridge_peers")
 	return result, err
 }
 
 // BridgeNodeInfo returns the node information
 func (ec *Client) BridgeNodeInfo(ctx context.Context) (*p2p.NodeInfo, error) {
 	var result p2p.NodeInfo
-	err := ec.c.CallContext(ctx, &result, "bridge_nodeInfo")
+	err := ec.c.CallContext(ctx, &result, "subbridge_nodeInfo")
+	return &result, err
+}
+
+// BridgePeersOnBridge returns the peer list of bridge node for service chain.
+func (ec *Client) MainBridgePeersOnBridge(ctx context.Context) ([]*p2p.PeerInfo, error) {
+	var result []*p2p.PeerInfo
+	err := ec.c.CallContext(ctx, &result, "mainbridge_peers")
+	return result, err
+}
+
+// BridgeNodeInfo returns the node information
+func (ec *Client) MainBridgeNodeInfo(ctx context.Context) (*p2p.NodeInfo, error) {
+	var result p2p.NodeInfo
+	err := ec.c.CallContext(ctx, &result, "mainbridge_nodeInfo")
 	return &result, err
 }
 
 // BridgeGetChildChainIndexingEnabled can get if child chain indexing is enabled or not.
 func (ec *Client) BridgeGetChildChainIndexingEnabled(ctx context.Context) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_getChildChainIndexingEnabled")
+	err := ec.c.CallContext(ctx, &result, "mainbridge_getChildChainIndexingEnabled")
 	return result, err
 }
 
@@ -68,7 +82,7 @@ func (ec *Client) BridgeGetChildChainIndexingEnabled(ctx context.Context) (bool,
 // anchoring tx hash which contains anchored data.
 func (ec *Client) BridgeConvertServiceChainBlockHashToMainChainTxHash(ctx context.Context, scBlockHash common.Hash) (common.Hash, error) {
 	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "bridge_convertServiceChainBlockHashToMainChainTxHash", scBlockHash)
+	err := ec.c.CallContext(ctx, &txHash, "mainbridge_convertServiceChainBlockHashToMainChainTxHash", scBlockHash)
 	return txHash, err
 }
 
@@ -76,14 +90,14 @@ func (ec *Client) BridgeConvertServiceChainBlockHashToMainChainTxHash(ctx contex
 // the corresponded handle value transfer tx hash.
 func (ec *Client) BridgeConvertRequestTxHashToHandleTxHash(ctx context.Context, requestTxHash common.Hash) (common.Hash, error) {
 	var handleTxHash common.Hash
-	err := ec.c.CallContext(ctx, &handleTxHash, "bridge_convertRequestTxHashToHandleTxHash", requestTxHash)
+	err := ec.c.CallContext(ctx, &handleTxHash, "subbridge_convertRequestTxHashToHandleTxHash", requestTxHash)
 	return handleTxHash, err
 }
 
 // BridgeGetReceiptFromParentChain can get the receipt of child chain tx from parent node.
 func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
 	var result *types.Receipt
-	err := ec.c.CallContext(ctx, &result, "bridge_getReceiptFromParentChain", hash)
+	err := ec.c.CallContext(ctx, &result, "subbridge_getReceiptFromParentChain", hash)
 	if err == nil && result == nil {
 		return nil, klaytn.NotFound
 	}
@@ -93,35 +107,35 @@ func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash comm
 // BridgeGetMainChainAccountAddr can get a main chain bridge account address.
 func (ec *Client) BridgeGetMainChainAccountAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "bridge_getMainChainAccountAddr")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getMainChainAccountAddr")
 	return result, err
 }
 
 // BridgeGetServiceChainAccountAddr can get a service chain bridge account address.
 func (ec *Client) BridgeGetServiceChainAccountAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "bridge_getServiceChainAccountAddr")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getServiceChainAccountAddr")
 	return result, err
 }
 
 // BridgeGetMainChainAccountNonce can get a main chain bridge account nonce.
 func (ec *Client) BridgeGetMainChainAccountNonce(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getMainChainAccountNonce")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getMainChainAccountNonce")
 	return result, err
 }
 
 // BridgeGetServiceChainAccountAddr can get a service chain bridge account nonce.
 func (ec *Client) BridgeGetServiceChainAccountNonce(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getServiceChainAccountNonce")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getServiceChainAccountNonce")
 	return result, err
 }
 
 // BridgeGetLatestAnchoredBlockNumber can return the latest anchored block number.
 func (ec *Client) BridgeGetLatestAnchoredBlockNumber(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getLatestAnchoredBlockNumber")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getLatestAnchoredBlockNumber")
 	return result, err
 }
 
@@ -138,21 +152,21 @@ func (ec *Client) BridgeDisableAnchoring(ctx context.Context) (bool, error) {
 // setAnchoring can set if anchoring is enabled or not.
 func (ec *Client) setAnchoring(ctx context.Context, enable bool) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_anchoring", enable)
+	err := ec.c.CallContext(ctx, &result, "subbridge_anchoring", enable)
 	return result, err
 }
 
 // BridgeGetAnchoringPeriod can get the block period to anchor chain data.
 func (ec *Client) BridgeGetAnchoringPeriod(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getAnchoringPeriod")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getAnchoringPeriod")
 	return result, err
 }
 
 // BridgeGetSentChainTxsLimit can get the maximum number of transaction which child peer can send to parent peer once.
 func (ec *Client) BridgeGetSentChainTxsLimit(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "bridge_getSentChainTxsLimit")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getSentChainTxsLimit")
 	return result, err
 }
 
@@ -160,7 +174,7 @@ func (ec *Client) BridgeGetSentChainTxsLimit(ctx context.Context) (uint64, error
 func (ec *Client) BridgeDeployBridge(ctx context.Context) (common.Address, common.Address, error) {
 	var result []common.Address
 
-	err := ec.c.CallContext(ctx, &result, "bridge_deployBridge")
+	err := ec.c.CallContext(ctx, &result, "subbridge_deployBridge")
 	if err != nil {
 		return common.Address{}, common.Address{}, err
 	}
@@ -175,14 +189,14 @@ func (ec *Client) BridgeDeployBridge(ctx context.Context) (common.Address, commo
 // BridgeRegisterBridge can register the given pair of deployed child/parent bridges.
 func (ec *Client) BridgeRegisterBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_registerBridge", scBridge, mcBridge)
+	err := ec.c.CallContext(ctx, &result, "subbridge_registerBridge", scBridge, mcBridge)
 	return result, err
 }
 
 // BridgeDeregisterBridge can deregister the given pair of deployed child/parent bridges.
 func (ec *Client) BridgeDeregisterBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "bridge_deregisterBridge", scBridge, mcBridge)
+	err := ec.c.CallContext(ctx, &result, "subbridge_deregisterBridge", scBridge, mcBridge)
 	return result, err
 }
 
@@ -196,44 +210,44 @@ type BridgeJournal struct {
 // BridgeListBridge can return the list of the bridge.
 func (ec *Client) BridgeListBridge(ctx context.Context) ([]*BridgeJournal, error) {
 	var result []*BridgeJournal
-	err := ec.c.CallContext(ctx, &result, "bridge_listBridge")
+	err := ec.c.CallContext(ctx, &result, "subbridge_listBridge")
 	return result, err
 }
 
 // BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given service/main chain bridges.
 // If the subscribing is failed, it returns an error.
 func (ec *Client) BridgeSubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_subscribeBridge", scBridge, mcBridge)
+	return ec.c.CallContext(ctx, nil, "subbridge_subscribeBridge", scBridge, mcBridge)
 }
 
 // BridgeUnsubscribeBridge disables the event subscription of the given service/main chain bridges.
 // If the unsubscribing is failed, it returns an error.
 func (ec *Client) BridgeUnsubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_unsubscribeBridge", scBridge, mcBridge)
+	return ec.c.CallContext(ctx, nil, "subbridge_unsubscribeBridge", scBridge, mcBridge)
 }
 
 // BridgeRegisterTokenContract can register the given pair of deployed service/main chain token contracts.
 // If the registering is failed, it returns an error.
 func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, scBridge, mcBridge, scToken, mcToken common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_registerToken", scBridge, mcBridge, scToken, mcToken)
+	return ec.c.CallContext(ctx, nil, "subbridge_registerToken", scBridge, mcBridge, scToken, mcToken)
 }
 
 // BridgeDeregisterTokenContract can deregister the given pair of deployed service/main chain token contracts.
 // If the registering is failed, it returns an error.
 func (ec *Client) BridgeDeregisterTokenContract(ctx context.Context, scBridge, mcBridge, scToken, mcToken common.Address) error {
-	return ec.c.CallContext(ctx, nil, "bridge_deregisterToken", scBridge, mcBridge, scToken, mcToken)
+	return ec.c.CallContext(ctx, nil, "subbridge_deregisterToken", scBridge, mcBridge, scToken, mcToken)
 }
 
 // BridgeTxPendingCount can return the count of the pend tx in bridge txpool.
 func (ec *Client) BridgeTxPendingCount(ctx context.Context) (int, error) {
 	var result int
-	err := ec.c.CallContext(ctx, &result, "bridge_txPendingCount")
+	err := ec.c.CallContext(ctx, &result, "subbridge_txPendingCount")
 	return result, err
 }
 
 // BridgeGetTxPending can return the pend tx list mapped by address.
 func (ec *Client) BridgeGetTxPending(ctx context.Context) (map[common.Address]types.Transactions, error) {
 	var result map[common.Address]types.Transactions
-	err := ec.c.CallContext(ctx, &result, "bridge_txPending")
+	err := ec.c.CallContext(ctx, &result, "subbridge_txPending")
 	return result, err
 }

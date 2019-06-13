@@ -12,8 +12,8 @@ import (
 func (s SCConfig) MarshalTOML() (interface{}, error) {
 	type SCConfig struct {
 		Name                    string `toml:"-"`
-		EnabledBridge           bool
-		IsMainBridge            bool
+		EnabledMainBridge       bool
+		EnabledSubBridge        bool
 		DataDir                 string
 		NetworkId               uint64
 		SkipBcVersionCheck      bool `toml:"-"`
@@ -23,7 +23,8 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
 		ChildChainIndexing      bool
-		BridgePort              string
+		MainBridgePort          string
+		SubBridgePort           string
 		MaxPeer                 int
 		MainChainAccountAddr    *common.Address `toml:",omitempty"`
 		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
@@ -35,8 +36,8 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	}
 	var enc SCConfig
 	enc.Name = s.Name
-	enc.EnabledBridge = s.EnabledBridge
-	enc.IsMainBridge = s.IsMainBridge
+	enc.EnabledMainBridge = s.EnabledMainBridge
+	enc.EnabledSubBridge = s.EnabledSubBridge
 	enc.DataDir = s.DataDir
 	enc.NetworkId = s.NetworkId
 	enc.SkipBcVersionCheck = s.SkipBcVersionCheck
@@ -46,7 +47,8 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.TrieTimeout = s.TrieTimeout
 	enc.TrieBlockInterval = s.TrieBlockInterval
 	enc.ChildChainIndexing = s.ChildChainIndexing
-	enc.BridgePort = s.BridgePort
+	enc.MainBridgePort = s.MainBridgePort
+	enc.SubBridgePort = s.SubBridgePort
 	enc.MaxPeer = s.MaxPeer
 	enc.MainChainAccountAddr = s.MainChainAccountAddr
 	enc.ServiceChainAccountAddr = s.ServiceChainAccountAddr
@@ -62,8 +64,8 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type SCConfig struct {
 		Name                    *string `toml:"-"`
-		EnabledBridge           *bool
-		IsMainBridge            *bool
+		EnabledMainBridge       *bool
+		EnabledSubBridge        *bool
 		DataDir                 *string
 		NetworkId               *uint64
 		SkipBcVersionCheck      *bool `toml:"-"`
@@ -73,7 +75,8 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
 		ChildChainIndexing      *bool
-		BridgePort              *string
+		MainBridgePort          *string
+		SubBridgePort           *string
 		MaxPeer                 *int
 		MainChainAccountAddr    *common.Address `toml:",omitempty"`
 		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
@@ -90,11 +93,11 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.Name != nil {
 		s.Name = *dec.Name
 	}
-	if dec.EnabledBridge != nil {
-		s.EnabledBridge = *dec.EnabledBridge
+	if dec.EnabledMainBridge != nil {
+		s.EnabledMainBridge = *dec.EnabledMainBridge
 	}
-	if dec.IsMainBridge != nil {
-		s.IsMainBridge = *dec.IsMainBridge
+	if dec.EnabledSubBridge != nil {
+		s.EnabledSubBridge = *dec.EnabledSubBridge
 	}
 	if dec.DataDir != nil {
 		s.DataDir = *dec.DataDir
@@ -123,8 +126,11 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.ChildChainIndexing != nil {
 		s.ChildChainIndexing = *dec.ChildChainIndexing
 	}
-	if dec.BridgePort != nil {
-		s.BridgePort = *dec.BridgePort
+	if dec.MainBridgePort != nil {
+		s.MainBridgePort = *dec.MainBridgePort
+	}
+	if dec.SubBridgePort != nil {
+		s.SubBridgePort = *dec.SubBridgePort
 	}
 	if dec.MaxPeer != nil {
 		s.MaxPeer = *dec.MaxPeer

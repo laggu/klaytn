@@ -528,18 +528,23 @@ var (
 		Usage: `write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"`,
 	}
 	// ServiceChain's settings
-	EnabledBridgeFlag = cli.BoolFlag{
-		Name:  "bridge",
-		Usage: "Enable bridge service for service chain",
-	}
-	IsMainBridgeFlag = cli.BoolFlag{
+	MainBridgeFlag = cli.BoolFlag{
 		Name:  "mainbridge",
-		Usage: "Enable bridge as main bridge",
+		Usage: "Enable main bridge service for service chain",
 	}
-	BridgeListenPortFlag = cli.IntFlag{
-		Name:  "bridgeport",
-		Usage: "bridge listen port",
+	SubBridgeFlag = cli.BoolFlag{
+		Name:  "subbridge",
+		Usage: "Enable sub bridge service for service chain",
+	}
+	MainBridgeListenPortFlag = cli.IntFlag{
+		Name:  "mainbridgeport",
+		Usage: "main bridge listen port",
 		Value: 50505,
+	}
+	SubBridgeListenPortFlag = cli.IntFlag{
+		Name:  "subbridgeport",
+		Usage: "sub bridge listen port",
+		Value: 50506,
 	}
 	MainChainURLFlag = cli.StringFlag{
 		Name:  "mainchainws",
@@ -1211,18 +1216,23 @@ func RegisterServiceChainService(stack *node.Node, cfg *cn.Config, scfg *sc.SCCo
 }
 
 func RegisterService(stack *node.Node, cfg *sc.SCConfig) {
-	if cfg.EnabledBridge {
+	if cfg.EnabledMainBridge {
 		err := stack.RegisterSubService(func(ctx *node.ServiceContext) (node.Service, error) {
-			if cfg.IsMainBridge {
-				mainBridge, err := sc.NewMainBridge(ctx, cfg)
-				return mainBridge, err
-			} else {
-				subBridge, err := sc.NewSubBridge(ctx, cfg)
-				return subBridge, err
-			}
+			mainBridge, err := sc.NewMainBridge(ctx, cfg)
+			return mainBridge, err
 		})
 		if err != nil {
-			log.Fatalf("Failed to register the service: %v", err)
+			log.Fatalf("Failed to register the main bridge service: %v", err)
+		}
+	}
+
+	if cfg.EnabledSubBridge {
+		err := stack.RegisterSubService(func(ctx *node.ServiceContext) (node.Service, error) {
+			subBridge, err := sc.NewSubBridge(ctx, cfg)
+			return subBridge, err
+		})
+		if err != nil {
+			log.Fatalf("Failed to register the sub bridge service: %v", err)
 		}
 	}
 }
