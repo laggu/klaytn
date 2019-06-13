@@ -3895,7 +3895,6 @@ var outputTransactionReceiptFormatter = function (receipt){
         receipt.blockNumber = utils.toDecimal(receipt.blockNumber);
     if(receipt.transactionIndex !== null)
         receipt.transactionIndex = utils.toDecimal(receipt.transactionIndex);
-    receipt.cumulativeGasUsed = utils.toDecimal(receipt.cumulativeGasUsed);
     receipt.gasUsed = utils.toDecimal(receipt.gasUsed);
 
 
