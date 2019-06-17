@@ -419,12 +419,12 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	for {
 		msg, err := p.GetRW().ReadMsg()
 		if err != nil {
-			p.GetP2PPeer().Log().Debug("ProtocolManager failed to read msg", "err", err)
+			p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
 			return err
 		}
 		if msg.Size > ProtocolMaxMsgSize {
 			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-			p.GetP2PPeer().Log().Debug("ProtocolManager over max msg size", "err", err)
+			p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 			return err
 		}
 
@@ -451,7 +451,7 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 		}
 		msg.Discard()
 	}
-	p.GetP2PPeer().Log().Debug("ProtocolManager.processMsg closed", "PeerName", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Info("ProtocolManager.processMsg closed", "PeerName", p.GetP2PPeer().Name())
 }
 
 // processConsensusMsg processes the consensus message.

@@ -17,8 +17,8 @@
 package cn
 
 import (
+	"fmt"
 	"github.com/ground-x/klaytn/networks/p2p"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -84,6 +84,6 @@ func (cm *ChannelManager) GetChannelWithMsgCode(idx int, msgCode uint64) (chan p
 	if channelID, ok := cm.msgCodes[msgCode]; ok {
 		return cm.msgChannels[idx][channelID], nil
 	} else {
-		return nil, errors.New("there is no channel")
+		return nil, fmt.Errorf("there is no channel for idx:%v, msgCode:%v", idx, msgCode)
 	}
 }

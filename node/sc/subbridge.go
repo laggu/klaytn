@@ -582,12 +582,12 @@ func (pm *SubBridge) handleMsg(p BridgePeer) error {
 	//Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.GetRW().ReadMsg()
 	if err != nil {
-		p.GetP2PPeer().Log().Debug("ProtocolManager failed to read msg", "err", err)
+		p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
 		return err
 	}
 	if msg.Size > ProtocolMaxMsgSize {
 		err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-		p.GetP2PPeer().Log().Debug("ProtocolManager over max msg size", "err", err)
+		p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 		return err
 	}
 	defer msg.Discard()
