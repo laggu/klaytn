@@ -164,6 +164,42 @@ jobs:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
+  packaging-linux-baobab:
+    machine: true
+    working_directory: ~/go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Install awscli"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+          name: "Build kcn, kpn, ken for linux-amd64"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make klay-linux-amd64
+
+      - run:
+          name: "Packaging baobab versions of kcn, kpn, ken for linux-amd64"
+          command: |
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-linux-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
+              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-linux-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
   packaging-darwin:
     machine: true
     working_directory: ~/go/src/github.com/ground-x/klaytn
@@ -200,6 +236,42 @@ jobs:
                 cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
               fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+  packaging-darwin-baobab:
+    machine: true
+    working_directory: ~/go/src/github.com/ground-x/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Install awscli"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+          name: "Build kcn, kpn, ken for macOS"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make klay-darwin-amd64
+
+      - run:
+          name: "Packaging baobab versions of kcn, kpn, ken for macOS"
+          command: |
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-darwin-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
+              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
@@ -419,7 +491,21 @@ workflows:
             branches:
               ignore: /.*/
 
+      - packaging-linux-baobab:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
       - packaging-darwin:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-darwin-baobab:
           filters:
             tags:
               only: /^v.*/
