@@ -47,6 +47,8 @@ var (
 
 	dialTryCounter  = metrics.NewRegisteredCounter("p2p/DialTryCounter", nil)
 	dialFailCounter = metrics.NewRegisteredCounter("p2p/DialFailCounter", nil)
+
+	writeMsgTimeOutCounter = metrics.NewRegisteredCounter("p2p/WriteMsgTimeOutCounter", nil)
 )
 
 // meteredConn is a wrapper around a network TCP connection that meters both the

@@ -609,6 +609,7 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 			err = fmt.Errorf("shutting down")
 			return err
 		case <-timer.C:
+			writeMsgTimeOutCounter.Inc(1)
 			err = fmt.Errorf("failed to write message for %v", rw.tc.WaitTime)
 		}
 	} else {
