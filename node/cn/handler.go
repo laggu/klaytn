@@ -997,17 +997,6 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	return err
 }
 
-// getPeersWithoutBlock returns a list of peers without given block.
-// If current node is CN, it returns all peers without block.
-// If not, it returns all peers without block except CNs.
-func (pm *ProtocolManager) getPeersWithoutBlock(hash common.Hash) []Peer {
-	if pm.nodetype == node.CONSENSUSNODE {
-		return pm.peers.PeersWithoutBlock(hash)
-	} else {
-		return pm.peers.PeersWithoutBlockExceptCN(hash)
-	}
-}
-
 // sampleSize calculates the number of peers to send block.
 // If calcSampleSize is smaller than minNumPeersToSendBlock, it returns minNumPeersToSendBlock.
 // Otherwise, it returns calcSampleSize.
@@ -1093,7 +1082,7 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 	}
 
 	// Otherwise if the block is indeed in out own chain, announce it
-	peersWithoutBlock := pm.getPeersWithoutBlock(block.Hash())
+	peersWithoutBlock := pm.peers.PeersWithoutBlock(block.Hash())
 	for _, peer := range peersWithoutBlock {
 		//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 		peer.AsyncSendNewBlockHash(block)
