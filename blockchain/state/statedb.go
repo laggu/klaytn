@@ -319,13 +319,13 @@ func (self *StateDB) IsContractAccount(addr common.Address) bool {
 	return false
 }
 
-func (self *StateDB) IsHumanReadable(addr common.Address) bool {
-	stateObject := self.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.HumanReadable()
-	}
-	return false
-}
+//func (self *StateDB) IsHumanReadable(addr common.Address) bool {
+//	stateObject := self.getStateObject(addr)
+//	if stateObject != nil {
+//		return stateObject.HumanReadable()
+//	}
+//	return false
+//}
 
 func (self *StateDB) GetCodeSize(addr common.Address) int {
 	stateObject := self.getStateObject(addr)

@@ -282,18 +282,13 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 		Nonce: uint64(0),
 	}
 
-	// decoupled account
-	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
-	assert.Equal(b, nil, err)
-
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	// anonymous account
+	anon, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 	assert.Equal(b, nil, err)
 
 	if testing.Verbose() {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
-		fmt.Println("colinAddr = ", colin.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
@@ -322,7 +317,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 
 	// Generate transactions.
 	for i := 0; i < b.N; i++ {
-		tx := genTx(signer, reservoir, colin)
+		tx := genTx(signer, reservoir, anon)
 
 		txs[i] = tx
 
@@ -385,9 +380,8 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 	}
 
-	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
-		"contract")
-	assert.Equal(b, nil, err)
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	contract.Addr = common.Address{}
 
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
@@ -404,11 +398,11 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            contract.Addr,
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
@@ -422,6 +416,10 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			b.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.Nonce += 1
 	}
 
@@ -507,13 +505,12 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 		Nonce: uint64(0),
 	}
 
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
-	assert.Equal(b, nil, err)
+	anon, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 
 	if testing.Verbose() {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 		fmt.Println("decoupledAddr = ", sender.Addr.String())
-		fmt.Println("colinAddr = ", colin.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
@@ -572,7 +569,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 
 	// Generate transactions.
 	for i := 0; i < b.N; i++ {
-		tx := genTx(signer, sender, colin)
+		tx := genTx(signer, sender, anon)
 
 		txs[i] = tx
 
@@ -660,7 +657,7 @@ func genNewSmartContractDeploy(signer types.Signer, from *TestAccountType, to *T
 		types.TxValueKeyAmount:        amount,
 		types.TxValueKeyGasLimit:      gasLimit,
 		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyHumanReadable: true,
+		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyTo:            to.Addr,
 		types.TxValueKeyFrom:          from.Addr,
 		// The binary below is a compiled binary of contracts/reward/contract/KlaytnReward.sol.

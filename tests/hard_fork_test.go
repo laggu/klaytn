@@ -55,8 +55,6 @@ func TestHardForkBlock(t *testing.T) {
 
 	// If you uncomment the below, you can find this test failed with an error "!!!!!HARD FORK DETECTED!!!!!"
 	//fork.UpdateHardForkConfig(&fork.HardForkConfig{
-	//	RoleBasedRLPFixBlockNumber:0,
-	//	GasFormulaFixBlockNumber:0,
 	//})
 
 	// If you print out b1.rlp and b2.rlp, uncomment below.
@@ -189,8 +187,7 @@ func genBlocks(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// For smart contract
-	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
-		"contract")
+	contract, err := createAnonymousAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab")
 	assert.Equal(t, nil, err)
 
 	// Preparing step
@@ -224,9 +221,6 @@ func genBlocks(t *testing.T) {
 				types.TxValueKeyHumanReadable: false,
 				types.TxValueKeyAccountKey:    accountTypes[i].account.GetAccKey(),
 			}
-			if common.IsHumanReadableAddress(accountTypes[i].account.GetAddr()) {
-				values[types.TxValueKeyHumanReadable] = true
-			}
 			tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 			assert.Equal(t, nil, err)
 
@@ -240,16 +234,15 @@ func genBlocks(t *testing.T) {
 
 		{
 			amount := new(big.Int).SetUint64(0)
-			contractAddr := contract.GetAddr()
 
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:         reservoir.GetNonce(),
 				types.TxValueKeyFrom:          reservoir.GetAddr(),
-				types.TxValueKeyTo:            &contractAddr,
+				types.TxValueKeyTo:            (*common.Address)(nil),
 				types.TxValueKeyAmount:        amount,
 				types.TxValueKeyGasLimit:      gasLimit,
 				types.TxValueKeyGasPrice:      gasPrice,
-				types.TxValueKeyHumanReadable: true,
+				types.TxValueKeyHumanReadable: false,
 				types.TxValueKeyData:          common.FromHex(code),
 				types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 			}
@@ -261,16 +254,18 @@ func genBlocks(t *testing.T) {
 
 			txs = append(txs, tx)
 
+			codeHash := crypto.Keccak256Hash(tx.Data())
+			contract.Addr = crypto.CreateAddress(reservoir.GetAddr(), reservoir.GetNonce(), codeHash)
+
 			reservoir.AddNonce()
 		}
 		{
 			amount := new(big.Int).SetUint64(0)
-			contractAddr := common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd4809ff")
 
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:         reservoir.GetNonce(),
 				types.TxValueKeyFrom:          reservoir.GetAddr(),
-				types.TxValueKeyTo:            &contractAddr,
+				types.TxValueKeyTo:            (*common.Address)(nil),
 				types.TxValueKeyAmount:        amount,
 				types.TxValueKeyGasLimit:      gasLimit,
 				types.TxValueKeyGasPrice:      gasPrice,
@@ -294,12 +289,11 @@ func genBlocks(t *testing.T) {
 		}
 		{
 			amount := new(big.Int).SetUint64(0)
-			contractAddr := common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd480900")
 
 			values := map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:              reservoir.GetNonce(),
 				types.TxValueKeyFrom:               reservoir.GetAddr(),
-				types.TxValueKeyTo:                 &contractAddr,
+				types.TxValueKeyTo:                 (*common.Address)(nil),
 				types.TxValueKeyAmount:             amount,
 				types.TxValueKeyGasLimit:           gasLimit,
 				types.TxValueKeyGasPrice:           gasPrice,

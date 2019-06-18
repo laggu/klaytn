@@ -447,17 +447,10 @@ func (t *TxInternalDataAccountCreation) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	to := t.Recipient
 	if t.HumanReadable {
-		if !common.IsHumanReadableAddress(to) {
-			return kerrors.ErrNotHumanReadableAddress
-		}
-	} else {
-		if common.IsReservedAddressForHumanReadable(to) {
-			return kerrors.ErrNotNonHumanReadableAddress
-		}
+		return kerrors.ErrHumanReadableNotSupported
 	}
-	if common.IsPrecompiledContractAddress(to) {
+	if common.IsPrecompiledContractAddress(t.Recipient) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
 	if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {

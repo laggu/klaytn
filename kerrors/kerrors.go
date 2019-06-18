@@ -21,8 +21,8 @@ import "errors"
 // TODO-Klaytn: Use integer for error codes.
 // TODO-Klaytn: Integrate all universally accessible errors into kerrors package.
 var (
-	ErrNotHumanReadableAddress    = errors.New("a human readable address should be alphanumeric starting with an alphabet, and ending with a suffix (default suffix: .klaytn)")
-	ErrNotNonHumanReadableAddress = errors.New("you cannot create an alphanumeric (with dot) address when humanReadable is false")
+	ErrNotHumanReadableAddress    = errors.New("Human-readable address is not supported now")
+	ErrHumanReadableNotSupported  = errors.New("Human-readable address is not supported now")
 	ErrOutOfGas                   = errors.New("out of gas")
 	ErrMaxKeysExceed              = errors.New("the number of keys exceeds the limit")
 	ErrMaxKeysExceedInValidation  = errors.New("the number of keys exceeds the limit in the validation check")

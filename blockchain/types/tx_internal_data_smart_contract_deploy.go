@@ -355,17 +355,11 @@ func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlo
 		codeHash := crypto.Keccak256Hash(t.Payload)
 		to = crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
 	}
-	if t.HumanReadable {
-		if !common.IsHumanReadableAddress(to) {
-			return kerrors.ErrNotHumanReadableAddress
-		}
-	} else {
-		if common.IsReservedAddressForHumanReadable(to) {
-			return kerrors.ErrNotNonHumanReadableAddress
-		}
-	}
 	if common.IsPrecompiledContractAddress(to) {
 		return kerrors.ErrPrecompiledContractAddress
+	}
+	if t.HumanReadable {
+		return kerrors.ErrHumanReadableNotSupported
 	}
 	// Fail if the codeFormat is invalid.
 	if !t.CodeFormat.Validate() {

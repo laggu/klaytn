@@ -3,12 +3,14 @@ package tests
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
@@ -37,14 +39,6 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 	if err != nil {
 		return nil, 0
 	}
-	contractAccount, err := createDefaultAccount(accountkey.AccountKeyTypeFail)
-	if err != nil {
-		return nil, 0
-	}
-	contractAccount.Addr, err = common.FromHumanReadableAddress("contract.klaytn")
-	if err != nil {
-		return nil, 0
-	}
 
 	// switch to basic tx type representation and generate a map
 	switch toBasicType(txType) {
@@ -61,7 +55,7 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 	case types.TxTypeSmartContractDeploy:
 		valueMap, gas = genMapForDeploy(from, nil, gasPrice, txType)
 	case types.TxTypeSmartContractExecution:
-		valueMap, gas = genMapForExecution(from, contractAccount, gasPrice, txType)
+		valueMap, gas = genMapForExecution(from, to, gasPrice, txType)
 	case types.TxTypeCancel:
 		valueMap, gas = genMapForCancel(from, gasPrice, txType)
 	case types.TxTypeChainDataAnchoring:
@@ -81,6 +75,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 
 // TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
 func TestValidationPoolInsert(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+
 	var testTxTypes = []testTxType{
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
@@ -107,14 +105,13 @@ func TestValidationPoolInsert(t *testing.T) {
 
 	var invalidCases = []struct {
 		Name string
-		fn   func(types.TxType, txValueMap) (txValueMap, error)
+		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
 		{"invalidNonce", decreaseNonce},
 		{"invalidGasLimit", decreaseGasLimit},
 		{"invalidTxSize", exceedSizeLimit},
 		{"invalidRecipientProgram", valueTransferToContract},
 		{"invalidRecipientNotProgram", executeToEOA},
-		{"invalidRecipientExisting", creationToExistingAddr},
 		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
@@ -143,17 +140,8 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
-
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
 
 	// deploy a contract for contract execution tx type
 	{
@@ -162,11 +150,11 @@ func TestValidationPoolInsert(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -182,8 +170,22 @@ func TestValidationPoolInsert(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -191,9 +193,14 @@ func TestValidationPoolInsert(t *testing.T) {
 
 		// generate invalid txs and check the return error
 		for _, invalidCase := range invalidCases {
+			to := reservoir
+			if toBasicType(testTxType.txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
+
 			// generate a new tx and mutate it
-			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
-			invalidMap, expectedErr := invalidCase.fn(txType, valueMap)
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
+			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, contract.Addr)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
 			assert.Equal(t, nil, err)
@@ -217,6 +224,10 @@ func TestValidationPoolInsert(t *testing.T) {
 
 // TestValidationBlockTx generates invalid txs which will be invalidated during block insert process.
 func TestValidationBlockTx(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+
 	var testTxTypes = []testTxType{
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
@@ -243,12 +254,11 @@ func TestValidationBlockTx(t *testing.T) {
 
 	var invalidCases = []struct {
 		Name string
-		fn   func(types.TxType, txValueMap) (txValueMap, error)
+		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
 		{"invalidNonce", decreaseNonce},
 		{"invalidRecipientProgram", valueTransferToContract},
 		{"invalidRecipientNotProgram", executeToEOA},
-		{"invalidRecipientExisting", creationToExistingAddr},
 		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
@@ -277,7 +287,8 @@ func TestValidationBlockTx(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
 
 	// deploy a contract for contract execution tx type
 	{
@@ -286,11 +297,11 @@ func TestValidationBlockTx(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -306,6 +317,10 @@ func TestValidationBlockTx(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -315,9 +330,13 @@ func TestValidationBlockTx(t *testing.T) {
 
 		// generate invalid txs and check the return error
 		for _, invalidCase := range invalidCases {
+			to := reservoir
+			if toBasicType(testTxType.txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
 			// generate a new tx and mutate it
-			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
-			invalidMap, expectedErr := invalidCase.fn(txType, valueMap)
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
+			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, contract.Addr)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
 			assert.Equal(t, nil, err)
@@ -340,21 +359,21 @@ func TestValidationBlockTx(t *testing.T) {
 }
 
 // decreaseNonce changes nonce to zero.
-func decreaseNonce(txType types.TxType, values txValueMap) (txValueMap, error) {
+func decreaseNonce(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	values[types.TxValueKeyNonce] = uint64(0)
 
 	return values, blockchain.ErrNonceTooLow
 }
 
 // decreaseGasLimit changes gasLimit to 12345678
-func decreaseGasLimit(txType types.TxType, values txValueMap) (txValueMap, error) {
+func decreaseGasLimit(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
 
 	return values, blockchain.ErrInvalidUnitPrice
 }
 
 // exceedSizeLimit assigns tx data bigger than MaxTxDataSize.
-func exceedSizeLimit(txType types.TxType, values txValueMap) (txValueMap, error) {
+func exceedSizeLimit(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	invalidData := make([]byte, blockchain.MaxTxDataSize+1)
 
 	if values[types.TxValueKeyData] != nil {
@@ -370,46 +389,19 @@ func exceedSizeLimit(txType types.TxType, values txValueMap) (txValueMap, error)
 	return values, nil
 }
 
-// valueTransferToContract changes recipient address of value transfer txs to the contract address, "contract.klaytn".
-func valueTransferToContract(txType types.TxType, values txValueMap) (txValueMap, error) {
-	programAddr, err := common.FromHumanReadableAddress("contract.klaytn")
-	if err != nil {
-		return nil, nil
-	}
-
+// valueTransferToContract changes recipient address of value transfer txs to the contract address.
+func valueTransferToContract(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	txType = toBasicType(txType)
 	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
-		values[types.TxValueKeyTo] = programAddr
+		values[types.TxValueKeyTo] = contract
 		return values, kerrors.ErrNotForProgramAccount
 	}
 
 	return values, nil
 }
 
-// creationToExistingAddr changes the recipient of account creating txs to the existing address, "contract.klaytn".
-func creationToExistingAddr(txType types.TxType, values txValueMap) (txValueMap, error) {
-	existingAddr, err := common.FromHumanReadableAddress("contract.klaytn")
-	if err != nil {
-		return nil, nil
-	}
-
-	if txType.IsAccountCreation() {
-		values[types.TxValueKeyTo] = existingAddr
-		values[types.TxValueKeyHumanReadable] = true
-		return values, kerrors.ErrAccountAlreadyExists
-	}
-
-	if txType.IsContractDeploy() {
-		values[types.TxValueKeyTo] = &existingAddr
-		values[types.TxValueKeyHumanReadable] = true
-		return values, kerrors.ErrAccountAlreadyExists
-	}
-
-	return values, nil
-}
-
 // executeToEOA changes the recipient of contract execution txs to an EOA address (the same with the sender).
-func executeToEOA(txType types.TxType, values txValueMap) (txValueMap, error) {
+func executeToEOA(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	if toBasicType(txType) == types.TxTypeSmartContractExecution {
 		values[types.TxValueKeyTo] = values[types.TxValueKeyFrom].(common.Address)
 		return values, kerrors.ErrNotProgramAccount
@@ -418,7 +410,7 @@ func executeToEOA(txType types.TxType, values txValueMap) (txValueMap, error) {
 	return values, nil
 }
 
-func invalidCodeFormat(txType types.TxType, values txValueMap) (txValueMap, error) {
+func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	if txType.IsContractDeploy() {
 		values[types.TxValueKeyCodeFormat] = params.CodeFormatLast
 		return values, kerrors.ErrInvalidCodeFormat
@@ -454,7 +446,7 @@ func TestValidationInvalidSig(t *testing.T) {
 
 	var invalidCases = []struct {
 		Name string
-		fn   func(*testing.T, types.TxType, *TestAccountType, types.EIP155Signer) (*types.Transaction, error)
+		fn   func(*testing.T, types.TxType, *TestAccountType, *TestAccountType, types.EIP155Signer) (*types.Transaction, error)
 	}{
 		{"invalidSender", testInvalidSenderSig},
 		{"invalidFeePayer", testInvalidFeePayerSig},
@@ -485,7 +477,8 @@ func TestValidationInvalidSig(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
 
 	// make TxPool to test validation in 'TxPool add' process
 	poolSlots := 1000
@@ -504,11 +497,11 @@ func TestValidationInvalidSig(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -524,6 +517,10 @@ func TestValidationInvalidSig(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -532,7 +529,7 @@ func TestValidationInvalidSig(t *testing.T) {
 		txType := testTxType.txType
 
 		for _, invalidCase := range invalidCases {
-			tx, expectedErr := invalidCase.fn(t, txType, reservoir, signer)
+			tx, expectedErr := invalidCase.fn(t, txType, reservoir, contract, signer)
 
 			if tx != nil {
 				// For tx pool validation test
@@ -552,12 +549,17 @@ func TestValidationInvalidSig(t *testing.T) {
 }
 
 // testInvalidSenderSig generates invalid txs signed by an invalid sender.
-func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
+func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
 	if !txType.IsLegacyTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
 
-		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+		to := reservoir
+		if toBasicType(txType) == types.TxTypeSmartContractExecution {
+			to = contract
+		}
+
+		valueMap, _ := genMapForTxTypes(reservoir, to, txType)
 		tx, err := types.NewTransactionWithMap(txType, valueMap)
 		assert.Equal(t, nil, err)
 
@@ -574,12 +576,17 @@ func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAcco
 }
 
 // testInvalidFeePayerSig generates invalid txs signed by an invalid fee payer.
-func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
+func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
 	if txType.IsFeeDelegatedTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
 
-		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+		to := reservoir
+		if toBasicType(txType) == types.TxTypeSmartContractExecution {
+			to = contract
+		}
+
+		valueMap, _ := genMapForTxTypes(reservoir, to, txType)
 		tx, err := types.NewTransactionWithMap(txType, valueMap)
 		assert.Equal(t, nil, err)
 
@@ -713,7 +720,8 @@ func TestInvalidBalance(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
 
 	// test account will be lack of KLAY
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
@@ -742,11 +750,11 @@ func TestInvalidBalance(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -762,6 +770,10 @@ func TestInvalidBalance(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -796,6 +808,9 @@ func TestInvalidBalance(t *testing.T) {
 			// tx with a specific amount or a gasLimit requiring more KLAY than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit + 1 // requires 1 more gas
@@ -816,6 +831,9 @@ func TestInvalidBalance(t *testing.T) {
 			// tx with a specific amount or a gasLimit requiring the exact KLAY the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit
@@ -841,6 +859,9 @@ func TestInvalidBalance(t *testing.T) {
 			// tx with a specific amount requiring more KLAY than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 					valueMap[types.TxValueKeyAmount] = new(big.Int).Add(cost, new(big.Int).SetUint64(1)) // requires 1 more amount
@@ -861,7 +882,10 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific gasLimit (or amount) requiring more KLAY than the feePayer has.
 			{
-				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64()) + 1 // requires 1 more gas
 
@@ -881,6 +905,9 @@ func TestInvalidBalance(t *testing.T) {
 			// tx with a specific amount requiring the exact KLAY the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 					valueMap[types.TxValueKeyAmount] = cost
@@ -904,7 +931,10 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific gasLimit (or amount) requiring the exact KLAY the feePayer has.
 			{
-				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64())
 
@@ -929,6 +959,9 @@ func TestInvalidBalance(t *testing.T) {
 			// tx with a specific amount and a gasLimit requiring more KLAY than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
 				if valueMap[types.TxValueKeyAmount] != nil {
@@ -957,7 +990,10 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific amount and a gasLimit requiring more KLAY than the feePayer has.
 			{
-				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
 				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio
@@ -980,6 +1016,9 @@ func TestInvalidBalance(t *testing.T) {
 			// tx with a specific amount and a gasLimit requiring the exact KLAY the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
 				if valueMap[types.TxValueKeyAmount] != nil {
@@ -1011,7 +1050,10 @@ func TestInvalidBalance(t *testing.T) {
 
 			// tx with a specific amount and a gasLimit requiring the exact KLAY the feePayer has.
 			{
-				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
 				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio
@@ -1039,6 +1081,10 @@ func TestInvalidBalance(t *testing.T) {
 
 // TestInvalidBalanceBlockTx generates invalid txs which don't have enough KLAY, and will be invalidated during block insert process.
 func TestInvalidBalanceBlockTx(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+
 	var testTxTypes = []testTxType{
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
@@ -1091,7 +1137,8 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
 
 	// test account will be lack of KLAY
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
@@ -1110,11 +1157,11 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -1130,6 +1177,10 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -1166,6 +1217,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				var expectedErr error
 
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit + 1 // requires 1 more gas
@@ -1191,6 +1245,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific amount or a gasLimit requiring the exact KLAY the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit
@@ -1219,6 +1276,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific amount requiring more KLAY than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 					valueMap[types.TxValueKeyAmount] = new(big.Int).Add(cost, new(big.Int).SetUint64(1)) // requires 1 more amount
@@ -1241,6 +1301,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific gasLimit (or amount) requiring more KLAY than the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64()) + 1 // requires 1 more gas
 
@@ -1261,6 +1324,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific amount requiring the exact KLAY the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				if valueMap[types.TxValueKeyAmount] != nil {
 					valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 					valueMap[types.TxValueKeyAmount] = cost
@@ -1288,6 +1354,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific gasLimit (or amount) requiring the exact KLAY the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64())
 
@@ -1311,6 +1380,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			{
 				var expectedErr error
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
 				if valueMap[types.TxValueKeyAmount] != nil {
@@ -1345,6 +1417,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific amount and a gasLimit requiring more KLAY than the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
 				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio
@@ -1368,6 +1443,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific amount and a gasLimit requiring the exact KLAY the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = reservoir.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(90)
 				if valueMap[types.TxValueKeyAmount] != nil {
@@ -1403,6 +1481,9 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			// tx with a specific amount and a gasLimit requiring the exact KLAY the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+				if toBasicType(txType) == types.TxTypeSmartContractExecution {
+					valueMap[types.TxValueKeyTo] = contract.Addr
+				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
 				valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(10)
 				// Gas testAcc will charge = tx gasLimit * fee-payer's feeRatio
@@ -1468,7 +1549,8 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
 
 	// make TxPool to test validation in 'TxPool add' process
 	poolSlots := 1000
@@ -1487,11 +1569,11 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -1507,6 +1589,10 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -1516,7 +1602,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		{
 			// generate invalid txs which size is around (32 * 1024) ~ (33 * 1024)
 			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
-			valueMap, _ = exceedSizeLimit(txType, valueMap)
+			valueMap, _ = exceedSizeLimit(txType, valueMap, contract.Addr)
 
 			tx, err := types.NewTransactionWithMap(txType, valueMap)
 			assert.Equal(t, nil, err)
@@ -1547,7 +1633,11 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		// test for valid tx size
 		{
 			// generate valid txs which size is around (31 * 1024) ~ (32 * 1024)
-			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+			to := reservoir
+			if toBasicType(txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
 			validData := make([]byte, blockchain.MaxTxDataSize-1024)
 
 			if valueMap[types.TxValueKeyData] != nil {
@@ -1643,7 +1733,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	assert.Equal(t, nil, err)
 
 	// make TxPool to test validation in 'TxPool add' process
@@ -1663,11 +1753,11 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyGasPrice:      big.NewInt(0),
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -1683,6 +1773,10 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -1706,9 +1800,11 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 
 	// generate valid txs with all tx types.
 	for _, txType := range txTypes {
-		txType := txType
-
-		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+		to := reservoir
+		if toBasicType(txType) == types.TxTypeSmartContractExecution {
+			to = contract
+		}
+		valueMap, _ := genMapForTxTypes(reservoir, to, txType)
 		tx, err := types.NewTransactionWithMap(txType, valueMap)
 		assert.Equal(t, nil, err)
 
@@ -1721,6 +1817,11 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 		}
 
 		err = txpool.AddRemote(tx)
+		if err != nil {
+			fmt.Println(tx)
+			statedb, _ := bcdata.bc.State()
+			fmt.Println(statedb.GetCode(tx.ValidatedSender()))
+		}
 		assert.Equal(t, nil, err)
 		reservoir.AddNonce()
 	}
@@ -1786,7 +1887,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	}
 
 	// for contract execution txs
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	assert.Equal(t, nil, err)
 
 	// fee payer account
@@ -1810,11 +1911,11 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &(contract.Addr),
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -1830,6 +1931,10 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -1882,9 +1987,12 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 
 	// generate valid txs with all tx fee delegation types.
 	for _, txType := range txTypes {
-		txType := txType
+		to := reservoir
+		if toBasicType(txType) == types.TxTypeSmartContractExecution {
+			to = contract
+		}
 
-		valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+		valueMap, _ := genMapForTxTypes(reservoir, to, txType)
 		valueMap[types.TxValueKeyFeePayer] = feePayer.Addr
 
 		tx, err := types.NewTransactionWithMap(txType, valueMap)

@@ -59,7 +59,6 @@ func TestGasCalculation(t *testing.T) {
 		{"AccountCreation", genAccountCreation},
 		{"AccountUpdate", genAccountUpdate},
 		{"SmartContractDeploy", genSmartContractDeploy},
-		{"SmartContractDeployWithNil", genSmartContractDeploy},
 		{"SmartContractExecution", genSmartContractExecution},
 		{"Cancel", genCancel},
 		{"ChainDataAnchoring", genChainDataAnchoring},
@@ -67,14 +66,12 @@ func TestGasCalculation(t *testing.T) {
 		{"FeeDelegatedValueTransferWithMemo", genFeeDelegatedValueTransferWithMemo},
 		{"FeeDelegatedAccountUpdate", genFeeDelegatedAccountUpdate},
 		{"FeeDelegatedSmartContractDeploy", genFeeDelegatedSmartContractDeploy},
-		{"FeeDelegatedSmartContractDeployWithNil", genFeeDelegatedSmartContractDeploy},
 		{"FeeDelegatedSmartContractExecution", genFeeDelegatedSmartContractExecution},
 		{"FeeDelegatedCancel", genFeeDelegatedCancel},
 		{"FeeDelegatedWithRatioValueTransfer", genFeeDelegatedWithRatioValueTransfer},
 		{"FeeDelegatedWithRatioValueTransferWithMemo", genFeeDelegatedWithRatioValueTransferWithMemo},
 		{"FeeDelegatedWithRatioAccountUpdate", genFeeDelegatedWithRatioAccountUpdate},
 		{"FeeDelegatedWithRatioSmartContractDeploy", genFeeDelegatedWithRatioSmartContractDeploy},
-		{"FeeDelegatedWithRatioSmartContractDeployWithNil", genFeeDelegatedWithRatioSmartContractDeploy},
 		{"FeeDelegatedWithRatioSmartContractExecution", genFeeDelegatedWithRatioSmartContractExecution},
 		{"FeeDelegatedWithRatioCancel", genFeeDelegatedWithRatioCancel},
 	}
@@ -137,9 +134,7 @@ func TestGasCalculation(t *testing.T) {
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    accountTypes[i].account.GetAccKey(),
 		}
-		if common.IsHumanReadableAddress(accountTypes[i].account.GetAddr()) {
-			values[types.TxValueKeyHumanReadable] = true
-		}
+
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
 		assert.Equal(t, nil, err)
 
@@ -154,23 +149,21 @@ func TestGasCalculation(t *testing.T) {
 	}
 
 	// For smart contract
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
-	assert.Equal(t, nil, err)
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	contract.Addr = common.Address{}
 
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(0)
-		to := contract.GetAddr()
-
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &to,
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -185,6 +178,10 @@ func TestGasCalculation(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contract.Addr = crypto.CreateAddress(reservoir.GetAddr(), reservoir.GetNonce(), codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -205,8 +202,6 @@ func TestGasCalculation(t *testing.T) {
 			// Set contract's address with SmartContractExecution
 			if strings.Contains(f.Name, "SmartContractExecution") {
 				toAccount = contract
-			} else if strings.Contains(f.Name, "WithNil") {
-				toAccount = nil
 			}
 
 			if !strings.Contains(f.Name, "FeeDelegated") {
@@ -697,26 +692,11 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 		types.TxValueKeyFrom:          from.GetAddr(),
 		types.TxValueKeyData:          common.FromHex(code),
 		types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
-	}
-
-	if to == nil {
-		values[types.TxValueKeyTo] = (*common.Address)(nil)
-	} else {
-		addr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
-		if err != nil {
-			return nil, 0
-		}
-
-		values[types.TxValueKeyTo] = &addr
-		values[types.TxValueKeyHumanReadable] = true
+		types.TxValueKeyTo:            (*common.Address)(nil),
 	}
 
 	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x175fd)
-
-	if values[types.TxValueKeyHumanReadable] == true {
-		intrinsicGas += params.TxGasHumanReadable
-	}
 
 	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code))
 	if err != nil {
@@ -798,8 +778,8 @@ func genKlaytnLegacyAccount(t *testing.T) TestAccount {
 
 func genPublicAccount(t *testing.T) TestAccount {
 	// For AccountKeyPublic
-	newAddress, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
-	assert.Equal(t, nil, err)
+	var newAddress common.Address
+	newAddress.SetBytesFromFront([]byte(getRandomPrivateKeyString(t)))
 
 	publicAccount, err := createDecoupledAccount(getRandomPrivateKeyString(t), newAddress)
 	assert.Equal(t, nil, err)
@@ -809,8 +789,8 @@ func genPublicAccount(t *testing.T) TestAccount {
 
 func genMultiSigAccount(t *testing.T) TestAccount {
 	// For AccountKeyWeightedMultiSig
-	newAddress, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
-	assert.Equal(t, nil, err)
+	var newAddress common.Address
+	newAddress.SetBytesFromFront([]byte(getRandomPrivateKeyString(t)))
 
 	multisigAccount, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
@@ -822,8 +802,8 @@ func genMultiSigAccount(t *testing.T) TestAccount {
 
 func genRoleBasedWithPublicAccount(t *testing.T) TestAccount {
 	// For AccountKeyRoleBased With AccountKeyPublic
-	roleBasedWithPublicAddr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
-	assert.Equal(t, nil, err)
+	var roleBasedWithPublicAddr common.Address
+	roleBasedWithPublicAddr.SetBytesFromFront([]byte(getRandomPrivateKeyString(t)))
 
 	roleBasedWithPublic, err := createRoleBasedAccountWithAccountKeyPublic(
 		[]string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)}, roleBasedWithPublicAddr)
@@ -836,8 +816,8 @@ func genRoleBasedWithMultiSigAccount(t *testing.T) TestAccount {
 	// For AccountKeyRoleBased With AccountKeyWeightedMultiSig
 	p := genMultiSigParamForRoleBased(t)
 
-	roleBasedWithMultiSigAddr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
-	assert.Equal(t, nil, err)
+	var roleBasedWithMultiSigAddr common.Address
+	roleBasedWithMultiSigAddr.SetBytesFromFront([]byte(getRandomPrivateKeyString(t)))
 
 	roleBasedWithMultiSig, err := createRoleBasedAccountWithAccountKeyWeightedMultiSig(
 		[]TestCreateMultisigAccountParam{p[0], p[1], p[2]}, roleBasedWithMultiSigAddr)
@@ -861,25 +841,20 @@ func genNewAccountWithGas(t *testing.T, testAccount TestAccount, txType types.Tx
 		return anon, gas + readableGas, readable
 	}
 
-	// humanReadableAddress for newAccount
-	newAccountAddress, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
+	// newAccount
+	newAccount, err := createAnonymousAccount(getRandomPrivateKeyString(t))
 	assert.Equal(t, nil, err)
-	readable = true
-
-	if txType == types.TxTypeAccountCreation {
-		readableGas += params.TxGasHumanReadable
-	}
 
 	switch testAccount.GetAccKey().Type() {
 	case accountkey.AccountKeyTypePublic:
-		publicAccount, err := createDecoupledAccount(getRandomPrivateKeyString(t), newAccountAddress)
+		publicAccount, err := createDecoupledAccount(getRandomPrivateKeyString(t), newAccount.GetAddr())
 		assert.Equal(t, nil, err)
 
 		newAccount = publicAccount
 		gas += uint64(len(newAccount.GetTxKeys())) * params.TxAccountCreationGasPerKey
 	case accountkey.AccountKeyTypeWeightedMultiSig:
 		multisigAccount, err := createMultisigAccount(uint(2), []uint{1, 1, 1},
-			[]string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)}, newAccountAddress)
+			[]string{getRandomPrivateKeyString(t), getRandomPrivateKeyString(t), getRandomPrivateKeyString(t)}, newAccount.GetAddr())
 		assert.Equal(t, nil, err)
 
 		newAccount = multisigAccount
@@ -888,7 +863,7 @@ func genNewAccountWithGas(t *testing.T, testAccount TestAccount, txType types.Tx
 		p := genMultiSigParamForRoleBased(t)
 
 		newRoleBasedWithMultiSig, err := createRoleBasedAccountWithAccountKeyWeightedMultiSig(
-			[]TestCreateMultisigAccountParam{p[0], p[1], p[2]}, newAccountAddress)
+			[]TestCreateMultisigAccountParam{p[0], p[1], p[2]}, newAccount.GetAddr())
 		assert.Equal(t, nil, err)
 
 		newAccount = newRoleBasedWithMultiSig
@@ -1139,22 +1114,21 @@ func TestGasCalculationOfFeeDelegationTxFromNonExistingSender(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// For smart contract
-	contract, err := createHumanReadableAccount(getRandomPrivateKeyString(t), "contract")
-	assert.Equal(t, nil, err)
+	contractAddr := common.Address{}
+
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(0)
-		to := contract.GetAddr()
 
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.GetNonce(),
 			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            &to,
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -1169,6 +1143,10 @@ func TestGasCalculationOfFeeDelegationTxFromNonExistingSender(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.AddNonce()
 	}
 
@@ -1191,6 +1169,10 @@ func TestGasCalculationOfFeeDelegationTxFromNonExistingSender(t *testing.T) {
 			if readable {
 				intrinsicGas += params.TxGasHumanReadable
 			}
+		}
+
+		if toBasicType(feeTxType) == types.TxTypeSmartContractExecution {
+			valueMap[types.TxValueKeyTo] = contractAddr
 		}
 
 		tx, err := types.NewTransactionWithMap(feeTxType, valueMap)

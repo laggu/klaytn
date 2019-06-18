@@ -71,10 +71,10 @@ func benchmarkTxHash(b *testing.B, genTx genTx) {
 		Nonce: uint64(0),
 	}
 
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	anon, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 	assert.Equal(b, nil, err)
 
-	tx := genTx(signer, reservoir, colin)
+	tx := genTx(signer, reservoir, anon)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

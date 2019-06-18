@@ -22,9 +22,6 @@ package common
 
 import (
 	"encoding/json"
-	"github.com/ground-x/klaytn/kerrors"
-	"github.com/stretchr/testify/assert"
-
 	"math/big"
 	"strings"
 	"testing"
@@ -148,53 +145,6 @@ func TestAddressHexChecksum(t *testing.T) {
 			t.Errorf("test #%d: failed to match when it should (%s != %s)", i, output, test.Output)
 		}
 	}
-}
-
-func TestHumanReadableAddress(t *testing.T) {
-	var err error
-
-	string19 := "123456789012" + ".klaytn"
-	_, err = FromHumanReadableAddress(string19)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	string20 := "1234567890123" + ".klaytn"
-	_, err = FromHumanReadableAddress(string20)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	string21 := "12345678901234" + ".klaytn"
-	_, err = FromHumanReadableAddress(string21)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	colin := "colin" + ".klaytn"
-	_, err = FromHumanReadableAddress(colin)
-	assert.Equal(t, nil, err)
-
-	colin2 := "COLIN" + ".klaytn"
-	_, err = FromHumanReadableAddress(colin2)
-	assert.Equal(t, nil, err)
-
-	firstNum := "1colin" + ".klaytn"
-	_, err = FromHumanReadableAddress(firstNum)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	imti := "( ͡° ͜ʖ ͡°)" + ".klaytn"
-	_, err = FromHumanReadableAddress(imti)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	korean := "김정현" + ".klaytn"
-	_, err = FromHumanReadableAddress(korean)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	specialChars := "!@#$%^&*()_" + ".klaytn"
-	_, err = FromHumanReadableAddress(specialChars)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	space := "co lin" + ".klaytn"
-	_, err = FromHumanReadableAddress(space)
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
-
-	_, err = FromHumanReadableAddress("" + ".klaytn")
-	assert.Equal(t, kerrors.ErrNotHumanReadableAddress, err)
 }
 
 func BenchmarkAddressHex(b *testing.B) {

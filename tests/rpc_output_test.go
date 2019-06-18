@@ -110,26 +110,8 @@ func BenchmarkRPCOutput(t *testing.B) {
 		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
 	assert.Equal(t, nil, err)
 
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
-	assert.Equal(t, nil, err)
-
-	colin2, err := createHumanReadableAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c", "colin2")
-	assert.Equal(t, nil, err)
-
-	colin3, err := createHumanReadableAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab", "colin3")
-	assert.Equal(t, nil, err)
-
-	contract, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
-		"contract")
-	assert.Equal(t, nil, err)
-
-	contract2, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
-		"contract2")
-	assert.Equal(t, nil, err)
-
-	contract3, err := createHumanReadableAccount("ed34b0cf47a0021e9897760f0a904a69260c2f638e0bcc805facb745ec3ff9ab",
-		"contract3")
-	assert.Equal(t, nil, err)
+	// contract address
+	contractAddr := common.Address{}
 
 	if testing.Verbose() {
 		fmt.Println("ChainID", (*hexutil.Big)(bcdata.bc.Config().ChainID))
@@ -141,15 +123,6 @@ func BenchmarkRPCOutput(t *testing.B) {
 		fmt.Println("anonPrvKey= ", (*hexutil.Big)(anon.Keys[0].D))
 		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
 		fmt.Println("decoupledPrvKey = ", (*hexutil.Big)(decoupled.Keys[0].D))
-		fmt.Println("colinAddr = ", colin.Addr.String())
-		fmt.Println("colinPrvKey = ", (*hexutil.Big)(colin.Keys[0].D))
-		fmt.Println("colin2Addr = ", colin2.Addr.String())
-		fmt.Println("colin2PrvKey = ", (*hexutil.Big)(colin2.Keys[0].D))
-		fmt.Println("colin3Addr = ", colin3.Addr.String())
-		fmt.Println("colin3PrvKey = ", (*hexutil.Big)(colin3.Keys[0].D))
-		fmt.Println("contractAddr = ", contract.Addr.String())
-		fmt.Println("contract2Addr = ", contract2.Addr.String())
-		fmt.Println("contract3Addr = ", contract3.Addr.String())
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
@@ -324,76 +297,6 @@ func BenchmarkRPCOutput(t *testing.B) {
 		reservoir.Nonce += 1
 	}
 
-	// TxTypeAccountCreation
-	{
-		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyAccountKey:    colin.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		reservoir.Nonce += 1
-	}
-
-	{
-		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin2.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyAccountKey:    colin2.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		reservoir.Nonce += 1
-	}
-
-	{
-		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin3.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
-			types.TxValueKeyAccountKey:    colin3.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		reservoir.Nonce += 1
-	}
-
 	// Generate the first block!
 	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 		t.Fatal(err)
@@ -410,8 +313,8 @@ func BenchmarkRPCOutput(t *testing.B) {
 		}
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      colin.Nonce,
-			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
 			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
@@ -419,14 +322,14 @@ func BenchmarkRPCOutput(t *testing.B) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, colin.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
 
-		colin.Nonce += 1
+		anon.Nonce += 1
 
-		colin.Keys = []*ecdsa.PrivateKey{newKey}
+		anon.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
 	// TxTypeFeeDelegatedAccountUpdate
@@ -437,8 +340,8 @@ func BenchmarkRPCOutput(t *testing.B) {
 		}
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      colin2.Nonce,
-			types.TxValueKeyFrom:       colin2.Addr,
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
 			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
@@ -447,7 +350,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, colin2.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
@@ -455,9 +358,9 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 		txs = append(txs, tx)
 
-		colin2.Nonce += 1
+		anon.Nonce += 1
 
-		colin2.Keys = []*ecdsa.PrivateKey{newKey}
+		anon.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
 	// TxTypeFeeDelegatedAccountUpdateWithRatio
@@ -468,8 +371,8 @@ func BenchmarkRPCOutput(t *testing.B) {
 		}
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:              colin3.Nonce,
-			types.TxValueKeyFrom:               colin3.Addr,
+			types.TxValueKeyNonce:              anon.Nonce,
+			types.TxValueKeyFrom:               anon.Addr,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
@@ -479,7 +382,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, colin3.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
@@ -487,9 +390,9 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 		txs = append(txs, tx)
 
-		colin3.Nonce += 1
+		anon.Nonce += 1
 
-		colin3.Keys = []*ecdsa.PrivateKey{newKey}
+		anon.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
 	code := "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
@@ -501,11 +404,11 @@ func BenchmarkRPCOutput(t *testing.B) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            &contract.Addr,
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      common.Big0,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		}
@@ -517,6 +420,9 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 		txs = append(txs, tx)
 
+		codeHash := crypto.Keccak256Hash(tx.Data())
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+
 		reservoir.Nonce += 1
 	}
 
@@ -526,11 +432,11 @@ func BenchmarkRPCOutput(t *testing.B) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            &contract2.Addr,
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      common.Big0,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyFeePayer:      reservoir2.Addr,
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -555,11 +461,11 @@ func BenchmarkRPCOutput(t *testing.B) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.Nonce,
 			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 &contract3.Addr,
+			types.TxValueKeyTo:                 (*common.Address)(nil),
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           common.Big0,
-			types.TxValueKeyHumanReadable:      true,
+			types.TxValueKeyHumanReadable:      false,
 			types.TxValueKeyData:               common.FromHex(code),
 			types.TxValueKeyFeePayer:           reservoir2.Addr,
 			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(33),
@@ -592,7 +498,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyTo:       contractAddr,
 			types.TxValueKeyAmount:   amountToSend,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: gasPrice,
@@ -622,7 +528,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       contract.Addr,
+			types.TxValueKeyTo:       contractAddr,
 			types.TxValueKeyAmount:   amountToSend,
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: common.Big0,
@@ -656,7 +562,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.Nonce,
 			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 contract.Addr,
+			types.TxValueKeyTo:                 contractAddr,
 			types.TxValueKeyAmount:             amountToSend,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           common.Big0,

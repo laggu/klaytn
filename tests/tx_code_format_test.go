@@ -156,16 +156,13 @@ func genFeeDelegatedWithRatioSmartContractDeployWithCodeFormat(t *testing.T, sig
 }
 
 func genMapForDeployWithCodeFormat(t *testing.T, from TestAccount, gasPrice *big.Int, codeFormat params.CodeFormat) map[types.TxValueKeyType]interface{} {
-	addr, err := common.FromHumanReadableAddress(getRandomString() + ".klaytn")
-	assert.Equal(t, nil, err)
-
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.GetNonce(),
 		types.TxValueKeyAmount:        new(big.Int).SetUint64(0),
 		types.TxValueKeyGasLimit:      gasLimit,
 		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyTo:            &addr,
-		types.TxValueKeyHumanReadable: true,
+		types.TxValueKeyTo:            (*common.Address)(nil),
+		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyFrom:          from.GetAddr(),
 		types.TxValueKeyData:          common.FromHex(code),
 		types.TxValueKeyCodeFormat:    codeFormat,

@@ -125,9 +125,6 @@ func genLegacyAccount() *LegacyAccount {
 
 func genEOA() *ExternallyOwnedAccount {
 	humanReadable := false
-	if rand.Int63n(10) >= 5 {
-		humanReadable = true
-	}
 
 	return newExternallyOwnedAccountWithMap(map[AccountValueKeyType]interface{}{
 		AccountValueKeyNonce:         rand.Uint64(),
@@ -139,9 +136,6 @@ func genEOA() *ExternallyOwnedAccount {
 
 func genEOAWithPublicKey() *ExternallyOwnedAccount {
 	humanReadable := false
-	if rand.Int63n(10) >= 5 {
-		humanReadable = true
-	}
 
 	k, _ := crypto.GenerateKey()
 
@@ -155,9 +149,7 @@ func genEOAWithPublicKey() *ExternallyOwnedAccount {
 
 func genSCA() *SmartContractAccount {
 	humanReadable := false
-	if rand.Int63n(10) >= 5 {
-		humanReadable = true
-	}
+
 	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{
 		AccountValueKeyNonce:         rand.Uint64(),
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
@@ -171,9 +163,7 @@ func genSCA() *SmartContractAccount {
 
 func genSCAWithPublicKey() *SmartContractAccount {
 	humanReadable := false
-	if rand.Int63n(10) >= 5 {
-		humanReadable = true
-	}
+
 	k, _ := crypto.GenerateKey()
 
 	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{

@@ -337,8 +337,8 @@ func TestValidateSenderContract(t *testing.T) {
 		copy(sigs[0:65], s1[0:65])
 		copy(sigs[65:130], s2[0:65])
 
-		addr, err := common.FromHumanReadableAddress("colin" + ".klaytn")
-		assert.Equal(t, nil, err)
+		var addr common.Address
+		addr.SetBytesFromFront([]byte(getRandomPrivateKeyString(t)))
 
 		data, err := abii.Pack("ValidateSender", addr, msg, sigs)
 		if err != nil {

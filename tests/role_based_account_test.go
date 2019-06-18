@@ -91,7 +91,9 @@ func TestRoleBasedAccount(t *testing.T) {
 	}
 
 	// Create an account having a role-based key
-	colinAddr, err := common.FromHumanReadableAddress("colin.klaytn")
+	var colinAddr common.Address
+	colinAddr.SetBytesFromFront([]byte(getRandomPrivateKeyString(t)))
+
 	keys := genTestKeys(3)
 	accKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
 		accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
@@ -122,7 +124,7 @@ func TestRoleBasedAccount(t *testing.T) {
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    colin.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
@@ -298,7 +300,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	colin, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 	assert.Equal(t, nil, err)
 
 	if testing.Verbose() {
@@ -321,7 +323,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    colin.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
@@ -428,7 +430,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	colin, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 	assert.Equal(t, nil, err)
 
 	if testing.Verbose() {
@@ -451,7 +453,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    colin.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
@@ -557,7 +559,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	colin, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 	assert.Equal(t, nil, err)
 
 	if testing.Verbose() {
@@ -580,7 +582,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    colin.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
@@ -745,7 +747,7 @@ func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	colin, err := createHumanReadableAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20", "colin")
+	colin, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 	assert.Equal(t, nil, err)
 
 	if testing.Verbose() {
@@ -768,7 +770,7 @@ func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: true,
+			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    colin.AccKey,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
