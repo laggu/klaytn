@@ -51,16 +51,16 @@ var (
 
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
-func (ethash *Gxhash) Author(header *types.Header) (common.Address, error) {
+func (gxhash *Gxhash) Author(header *types.Header) (common.Address, error) {
 	// Returns arbitrary address because gxhash is used just for testing
 	return params.AuthorAddressForTesting, nil
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
-// stock Ethereum ethash engine.
-func (ethash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
+// stock Ethereum gxhash engine.
+func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	// If we're running a full engine faking, accept any input as valid
-	if ethash.config.PowMode == ModeFullFake {
+	if gxhash.config.PowMode == ModeFullFake {
 		return nil
 	}
 	// Short circuit if the header is known, or it's parent not
@@ -73,15 +73,15 @@ func (ethash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.He
 		return consensus.ErrUnknownAncestor
 	}
 	// Sanity checks passed, do a proper verification
-	return ethash.verifyHeader(chain, header, parent, seal)
+	return gxhash.verifyHeader(chain, header, parent, seal)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
 // concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications.
-func (ethash *Gxhash) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (gxhash *Gxhash) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	// If we're running a full engine faking, accept any input as valid
-	if ethash.config.PowMode == ModeFullFake || len(headers) == 0 {
+	if gxhash.config.PowMode == ModeFullFake || len(headers) == 0 {
 		abort, results := make(chan struct{}), make(chan error, len(headers))
 		for i := 0; i < len(headers); i++ {
 			results <- nil
@@ -105,7 +105,7 @@ func (ethash *Gxhash) VerifyHeaders(chain consensus.ChainReader, headers []*type
 	for i := 0; i < workers; i++ {
 		go func() {
 			for index := range inputs {
-				errors[index] = ethash.verifyHeaderWorker(chain, headers, seals, index)
+				errors[index] = gxhash.verifyHeaderWorker(chain, headers, seals, index)
 				done <- index
 			}
 		}()
@@ -141,7 +141,7 @@ func (ethash *Gxhash) VerifyHeaders(chain consensus.ChainReader, headers []*type
 	return abort, errorsOut
 }
 
-func (ethash *Gxhash) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
+func (gxhash *Gxhash) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
 	var parent *types.Header
 	if index == 0 {
 		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
@@ -154,13 +154,13 @@ func (ethash *Gxhash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 	if chain.GetHeader(headers[index].Hash(), headers[index].Number.Uint64()) != nil {
 		return nil // known block
 	}
-	return ethash.verifyHeader(chain, headers[index], parent, seals[index])
+	return gxhash.verifyHeader(chain, headers[index], parent, seals[index])
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules of the
-// stock Ethereum ethash engine.
+// stock Ethereum gxhash engine.
 // See YP section 4.3.4. "Block Header Validity"
-func (ethash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
+func (gxhash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
 	// Ensure that the header's extra-data section is of a reasonable size
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
@@ -173,7 +173,7 @@ func (ethash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 		return errZeroBlockTime
 	}
 	// Verify the block's blockscore based in it's timestamp and parent's blockscore
-	expected := ethash.CalcBlockScore(chain, header.Time.Uint64(), parent)
+	expected := gxhash.CalcBlockScore(chain, header.Time.Uint64(), parent)
 
 	if expected.Cmp(header.BlockScore) != 0 {
 		return fmt.Errorf("invalid blockscore: have %v, want %v", header.BlockScore, expected)
@@ -184,7 +184,7 @@ func (ethash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 	}
 	// Verify the engine specific seal securing the block
 	if seal {
-		if err := ethash.VerifySeal(chain, header); err != nil {
+		if err := gxhash.VerifySeal(chain, header); err != nil {
 			return err
 		}
 	}
@@ -194,7 +194,7 @@ func (ethash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 // CalcBlockScore is the blockscore adjustment algorithm. It returns
 // the blockscore that a new block should have when created at time
 // given the parent block's time and blockscore.
-func (ethash *Gxhash) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+func (gxhash *Gxhash) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	return CalcBlockScore(chain.Config(), time, parent)
 }
 
@@ -323,18 +323,18 @@ func calcBlockScoreHomestead(time uint64, parent *types.Header) *big.Int {
 
 // VerifySeal implements consensus.Engine, checking whether the given block satisfies
 // the PoW blockscore requirements.
-func (ethash *Gxhash) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
+func (gxhash *Gxhash) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
 	// If we're running a fake PoW, accept any seal as valid
-	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
-		time.Sleep(ethash.fakeDelay)
-		if ethash.fakeFail == header.Number.Uint64() {
+	if gxhash.config.PowMode == ModeFake || gxhash.config.PowMode == ModeFullFake {
+		time.Sleep(gxhash.fakeDelay)
+		if gxhash.fakeFail == header.Number.Uint64() {
 			return errInvalidPoW
 		}
 		return nil
 	}
 	// If we're running a shared PoW, delegate verification to it
-	if ethash.shared != nil {
-		return ethash.shared.VerifySeal(chain, header)
+	if gxhash.shared != nil {
+		return gxhash.shared.VerifySeal(chain, header)
 	}
 	// Ensure that we have a valid blockscore for the block
 	if header.BlockScore.Sign() <= 0 {
@@ -343,9 +343,9 @@ func (ethash *Gxhash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	// Recompute the digest and PoW value and verify against the header
 	number := header.Number.Uint64()
 
-	cache := ethash.cache(number)
+	cache := gxhash.cache(number)
 	//size := datasetSize(number)
-	//if ethash.config.PowMode == ModeTest {
+	//if gxhash.config.PowMode == ModeTest {
 	//	size = 32 * 1024
 	//}
 	//digest, result := hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), 0)
@@ -361,19 +361,19 @@ func (ethash *Gxhash) VerifySeal(chain consensus.ChainReader, header *types.Head
 }
 
 // Prepare implements consensus.Engine, initializing the blockscore field of a
-// header to conform to the ethash protocol. The changes are done inline.
-func (ethash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header) error {
+// header to conform to the gxhash protocol. The changes are done inline.
+func (gxhash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.BlockScore = ethash.CalcBlockScore(chain, header.Time.Uint64(), parent)
+	header.BlockScore = gxhash.CalcBlockScore(chain, header.Time.Uint64(), parent)
 	return nil
 }
 
 // Finalize implements consensus.Engine, accumulating the block rewards,
 // setting the final state and assembling the block.
-func (ethash *Gxhash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
+func (gxhash *Gxhash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
 	header.Root = state.IntermediateRoot(true)

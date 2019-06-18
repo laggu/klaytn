@@ -31,13 +31,13 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 )
 
-// Tests that ethash works correctly in test mode.
+// Tests that gxhash works correctly in test mode.
 func TestTestMode(t *testing.T) {
 	head := &types.Header{Number: big.NewInt(1), BlockScore: big.NewInt(100)}
 
-	ethash := NewTester()
+	gxhash := NewTester()
 
-	if err := ethash.VerifySeal(nil, head); err != nil {
+	if err := gxhash.VerifySeal(nil, head); err != nil {
 		t.Fatalf("unexpected verification error: %v", err)
 	}
 }

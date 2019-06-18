@@ -50,8 +50,8 @@ var (
 	// maxUint256 is a big integer representing 2^256-1
 	maxUint256 = new(big.Int).Exp(common.Big2, common.Big256, common.Big0)
 
-	// sharedEthash is a full instance that can be shared between multiple users.
-	sharedEthash = New(Config{"", 3, 0, "", 1, 0, ModeNormal})
+	// sharedGxhash is a full instance that can be shared between multiple users.
+	sharedGxhash = New(Config{"", 3, 0, "", 1, 0, ModeNormal})
 
 	// algorithmRevision is the data structure version used for file naming.
 	algorithmRevision = 23
@@ -169,7 +169,7 @@ func newlru(what string, maxItems int, new func(epoch uint64) interface{}) *lru 
 		maxItems = 1
 	}
 	cache, _ := simplelru.NewLRU(maxItems, func(key, value interface{}) {
-		logger.Trace("Evicted ethash "+what, "epoch", key)
+		logger.Trace("Evicted gxhash "+what, "epoch", key)
 	})
 	return &lru{what: what, new: new, cache: cache}
 }
@@ -187,14 +187,14 @@ func (lru *lru) get(epoch uint64) (item, future interface{}) {
 		if lru.future > 0 && lru.future == epoch {
 			item = lru.futureItem
 		} else {
-			logger.Trace("Requiring new ethash "+lru.what, "epoch", epoch)
+			logger.Trace("Requiring new gxhash "+lru.what, "epoch", epoch)
 			item = lru.new(epoch)
 		}
 		lru.cache.Add(epoch, item)
 	}
 	// Update the 'future item' if epoch is larger than previously seen.
 	if epoch < maxEpoch-1 && lru.future < epoch+1 {
-		logger.Trace("Requiring new future ethash "+lru.what, "epoch", epoch+1)
+		logger.Trace("Requiring new future gxhash "+lru.what, "epoch", epoch+1)
 		future = lru.new(epoch + 1)
 		lru.future = epoch + 1
 		lru.futureItem = future
@@ -202,7 +202,7 @@ func (lru *lru) get(epoch uint64) (item, future interface{}) {
 	return item, future
 }
 
-// cache wraps an ethash cache with some metadata to allow easier concurrent use.
+// cache wraps an gxhash cache with some metadata to allow easier concurrent use.
 type cache struct {
 	epoch uint64    // Epoch for which this cache is relevant
 	dump  *os.File  // File descriptor of the memory mapped cache
@@ -211,7 +211,7 @@ type cache struct {
 	once  sync.Once // Ensures the cache is generated only once
 }
 
-// newCache creates a new ethash verification cache and returns it as a plain Go
+// newCache creates a new gxhash verification cache and returns it as a plain Go
 // interface to be usable in an LRU cache.
 func newCache(epoch uint64) interface{} {
 	return &cache{epoch: epoch}
@@ -247,15 +247,15 @@ func (c *cache) generate(dir string, limit int, test bool) {
 		var err error
 		c.dump, c.mmap, c.cache, err = memoryMap(path)
 		if err == nil {
-			locallogger.Debug("Loaded old ethash cache from disk")
+			locallogger.Debug("Loaded old gxhash cache from disk")
 			return
 		}
-		locallogger.Debug("Failed to load old ethash cache", "err", err)
+		locallogger.Debug("Failed to load old gxhash cache", "err", err)
 
 		// No previous cache available, create a new cache file to fill
 		c.dump, c.mmap, c.cache, err = memoryMapAndGenerate(path, size, func(buffer []uint32) { generateCache(buffer, c.epoch, seed) })
 		if err != nil {
-			locallogger.Error("Failed to generate mapped ethash cache", "err", err)
+			locallogger.Error("Failed to generate mapped gxhash cache", "err", err)
 
 			c.cache = make([]uint32, size/4)
 			generateCache(c.cache, c.epoch, seed)
@@ -278,7 +278,7 @@ func (c *cache) finalizer() {
 	}
 }
 
-// dataset wraps an ethash dataset with some metadata to allow easier concurrent use.
+// dataset wraps an gxhash dataset with some metadata to allow easier concurrent use.
 type dataset struct {
 	epoch   uint64    // Epoch for which this cache is relevant
 	dump    *os.File  // File descriptor of the memory mapped cache
@@ -287,7 +287,7 @@ type dataset struct {
 	once    sync.Once // Ensures the cache is generated only once
 }
 
-// newDataset creates a new ethash mining dataset and returns it as a plain Go
+// newDataset creates a new gxhash mining dataset and returns it as a plain Go
 // interface to be usable in an LRU cache.
 func newDataset(epoch uint64) interface{} {
 	return &dataset{epoch: epoch}
@@ -327,10 +327,10 @@ func (d *dataset) generate(dir string, limit int, test bool) {
 		var err error
 		d.dump, d.mmap, d.dataset, err = memoryMap(path)
 		if err == nil {
-			localLogger.Debug("Loaded old ethash dataset from disk")
+			localLogger.Debug("Loaded old gxhash dataset from disk")
 			return
 		}
-		localLogger.Debug("Failed to load old ethash dataset", "err", err)
+		localLogger.Debug("Failed to load old gxhash dataset", "err", err)
 
 		// No previous dataset available, create a new dataset file to fill
 		cache := make([]uint32, csize/4)
@@ -338,7 +338,7 @@ func (d *dataset) generate(dir string, limit int, test bool) {
 
 		d.dump, d.mmap, d.dataset, err = memoryMapAndGenerate(path, dsize, func(buffer []uint32) { generateDataset(buffer, d.epoch, cache) })
 		if err != nil {
-			localLogger.Error("Failed to generate mapped ethash dataset", "err", err)
+			localLogger.Error("Failed to generate mapped gxhash dataset", "err", err)
 
 			d.dataset = make([]uint32, dsize/2)
 			generateDataset(d.dataset, d.epoch, cache)
@@ -361,19 +361,19 @@ func (d *dataset) finalizer() {
 	}
 }
 
-// MakeCache generates a new ethash cache and optionally stores it to disk.
+// MakeCache generates a new gxhash cache and optionally stores it to disk.
 func MakeCache(block uint64, dir string) {
 	c := cache{epoch: block / epochLength}
 	c.generate(dir, math.MaxInt32, false)
 }
 
-// MakeDataset generates a new ethash dataset and optionally stores it to disk.
+// MakeDataset generates a new gxhash dataset and optionally stores it to disk.
 func MakeDataset(block uint64, dir string) {
 	d := dataset{epoch: block / epochLength}
 	d.generate(dir, math.MaxInt32, false)
 }
 
-// Mode defines the type and amount of PoW verification an ethash engine makes.
+// Mode defines the type and amount of PoW verification an gxhash engine makes.
 type Mode uint
 
 const (
@@ -384,7 +384,7 @@ const (
 	ModeFullFake
 )
 
-// Config are the configuration parameters of the ethash.
+// Config are the configuration parameters of the gxhash.
 type Config struct {
 	CacheDir       string
 	CachesInMem    int
@@ -395,7 +395,7 @@ type Config struct {
 	PowMode        Mode
 }
 
-// Gxhash is a consensus engine based on proot-of-work implementing the ethash
+// Gxhash is a consensus engine based on proot-of-work implementing the gxhash
 // algorithm.
 type Gxhash struct {
 	config Config
@@ -417,17 +417,17 @@ type Gxhash struct {
 	lock sync.Mutex // Ensures thread safety for the in-memory caches and mining fields
 }
 
-// New creates a full sized ethash PoW scheme.
+// New creates a full sized gxhash PoW scheme.
 func New(config Config) *Gxhash {
 	if config.CachesInMem <= 0 {
-		logger.Error("One ethash cache must always be in memory", "requested", config.CachesInMem)
+		logger.Error("One gxhash cache must always be in memory", "requested", config.CachesInMem)
 		config.CachesInMem = 1
 	}
 	if config.CacheDir != "" && config.CachesOnDisk > 0 {
-		logger.Debug("Disk storage enabled for ethash caches", "dir", config.CacheDir, "count", config.CachesOnDisk)
+		logger.Debug("Disk storage enabled for gxhash caches", "dir", config.CacheDir, "count", config.CachesOnDisk)
 	}
 	if config.DatasetDir != "" && config.DatasetsOnDisk > 0 {
-		logger.Debug("Disk storage enabled for ethash DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
+		logger.Debug("Disk storage enabled for gxhash DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
 	}
 	return &Gxhash{
 		config:   config,
@@ -438,13 +438,13 @@ func New(config Config) *Gxhash {
 	}
 }
 
-// NewTester creates a small sized ethash PoW scheme useful only for testing
+// NewTester creates a small sized gxhash PoW scheme useful only for testing
 // purposes.
 func NewTester() *Gxhash {
 	return New(Config{CachesInMem: 1, PowMode: ModeTest})
 }
 
-// NewFaker creates a ethash consensus engine with a fake PoW scheme that accepts
+// NewFaker creates a gxhash consensus engine with a fake PoW scheme that accepts
 // all blocks' seal as valid, though they still have to conform to the Ethereum
 // consensus rules.
 func NewFaker() *Gxhash {
@@ -455,7 +455,7 @@ func NewFaker() *Gxhash {
 	}
 }
 
-// NewFakeFailer creates a ethash consensus engine with a fake PoW scheme that
+// NewFakeFailer creates a gxhash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid apart from the single one specified, though they
 // still have to conform to the Ethereum consensus rules.
 func NewFakeFailer(fail uint64) *Gxhash {
@@ -467,7 +467,7 @@ func NewFakeFailer(fail uint64) *Gxhash {
 	}
 }
 
-// NewFakeDelayer creates a ethash consensus engine with a fake PoW scheme that
+// NewFakeDelayer creates a gxhash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid, but delays verifications by some time, though
 // they still have to conform to the Ethereum consensus rules.
 func NewFakeDelayer(delay time.Duration) *Gxhash {
@@ -479,7 +479,7 @@ func NewFakeDelayer(delay time.Duration) *Gxhash {
 	}
 }
 
-// NewFullFaker creates an ethash consensus engine with a full fake scheme that
+// NewFullFaker creates an gxhash consensus engine with a full fake scheme that
 // accepts all blocks as valid, without checking any consensus rules whatsoever.
 func NewFullFaker() *Gxhash {
 	return &Gxhash{
@@ -489,27 +489,27 @@ func NewFullFaker() *Gxhash {
 	}
 }
 
-// NewShared creates a full sized ethash PoW shared between all requesters running
+// NewShared creates a full sized gxhash PoW shared between all requesters running
 // in the same process.
 func NewShared() *Gxhash {
-	return &Gxhash{shared: sharedEthash}
+	return &Gxhash{shared: sharedGxhash}
 }
 
 // cache tries to retrieve a verification cache for the specified block number
 // by first checking against a list of in-memory caches, then against caches
 // stored on disk, and finally generating one if none can be found.
-func (ethash *Gxhash) cache(block uint64) *cache {
+func (gxhash *Gxhash) cache(block uint64) *cache {
 	epoch := block / epochLength
-	currentI, futureI := ethash.caches.get(epoch)
+	currentI, futureI := gxhash.caches.get(epoch)
 	current := currentI.(*cache)
 
 	// Wait for generation finish.
-	current.generate(ethash.config.CacheDir, ethash.config.CachesOnDisk, ethash.config.PowMode == ModeTest)
+	current.generate(gxhash.config.CacheDir, gxhash.config.CachesOnDisk, gxhash.config.PowMode == ModeTest)
 
 	// If we need a new future cache, now's a good time to regenerate it.
 	if futureI != nil {
 		future := futureI.(*cache)
-		go future.generate(ethash.config.CacheDir, ethash.config.CachesOnDisk, ethash.config.PowMode == ModeTest)
+		go future.generate(gxhash.config.CacheDir, gxhash.config.CachesOnDisk, gxhash.config.PowMode == ModeTest)
 	}
 	return current
 }
@@ -517,18 +517,18 @@ func (ethash *Gxhash) cache(block uint64) *cache {
 // dataset tries to retrieve a mining dataset for the specified block number
 // by first checking against a list of in-memory datasets, then against DAGs
 // stored on disk, and finally generating one if none can be found.
-func (ethash *Gxhash) dataset(block uint64) *dataset {
+func (gxhash *Gxhash) dataset(block uint64) *dataset {
 	epoch := block / epochLength
-	currentI, futureI := ethash.datasets.get(epoch)
+	currentI, futureI := gxhash.datasets.get(epoch)
 	current := currentI.(*dataset)
 
 	// Wait for generation finish.
-	current.generate(ethash.config.DatasetDir, ethash.config.DatasetsOnDisk, ethash.config.PowMode == ModeTest)
+	current.generate(gxhash.config.DatasetDir, gxhash.config.DatasetsOnDisk, gxhash.config.PowMode == ModeTest)
 
 	// If we need a new future dataset, now's a good time to regenerate it.
 	if futureI != nil {
 		future := futureI.(*dataset)
-		go future.generate(ethash.config.DatasetDir, ethash.config.DatasetsOnDisk, ethash.config.PowMode == ModeTest)
+		go future.generate(gxhash.config.DatasetDir, gxhash.config.DatasetsOnDisk, gxhash.config.PowMode == ModeTest)
 	}
 
 	return current
@@ -536,11 +536,11 @@ func (ethash *Gxhash) dataset(block uint64) *dataset {
 
 // Threads returns the number of mining threads currently enabled. This doesn't
 // necessarily mean that mining is running!
-func (ethash *Gxhash) Threads() int {
-	ethash.lock.Lock()
-	defer ethash.lock.Unlock()
+func (gxhash *Gxhash) Threads() int {
+	gxhash.lock.Lock()
+	defer gxhash.lock.Unlock()
 
-	return ethash.threads
+	return gxhash.threads
 }
 
 // SetThreads updates the number of mining threads currently enabled. Calling
@@ -548,32 +548,32 @@ func (ethash *Gxhash) Threads() int {
 // specified, the miner will use all cores of the machine. Setting a thread
 // count below zero is allowed and will cause the miner to idle, without any
 // work being done.
-func (ethash *Gxhash) SetThreads(threads int) {
-	ethash.lock.Lock()
-	defer ethash.lock.Unlock()
+func (gxhash *Gxhash) SetThreads(threads int) {
+	gxhash.lock.Lock()
+	defer gxhash.lock.Unlock()
 
 	// If we're running a shared PoW, set the thread count on that instead
-	if ethash.shared != nil {
-		ethash.shared.SetThreads(threads)
+	if gxhash.shared != nil {
+		gxhash.shared.SetThreads(threads)
 		return
 	}
 	// Update the threads and ping any running seal to pull in any changes
-	ethash.threads = threads
+	gxhash.threads = threads
 	select {
-	case ethash.update <- struct{}{}:
+	case gxhash.update <- struct{}{}:
 	default:
 	}
 }
 
 // Hashrate implements PoW, returning the measured rate of the search invocations
 // per second over the last minute.
-func (ethash *Gxhash) Hashrate() float64 {
-	return ethash.hashrate.Rate1()
+func (gxhash *Gxhash) Hashrate() float64 {
+	return gxhash.hashrate.Rate1()
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs. Currently
 // that is empty.
-func (ethash *Gxhash) APIs(chain consensus.ChainReader) []rpc.API {
+func (gxhash *Gxhash) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
 }
 
@@ -584,6 +584,6 @@ func SeedHash(block uint64) []byte {
 }
 
 // Protocol implements consensus.Engine.Protocol
-func (ethash *Gxhash) Protocol() consensus.Protocol {
+func (gxhash *Gxhash) Protocol() consensus.Protocol {
 	return consensus.KlayProtocol
 }
