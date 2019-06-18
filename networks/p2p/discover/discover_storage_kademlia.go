@@ -24,6 +24,7 @@ import (
 	"crypto/rand"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/p2p/netutil"
 	"net"
 	"sync"
@@ -43,15 +44,17 @@ const (
 )
 
 type KademliaStorage struct {
-	targetType NodeType
-	tab        *Table
-	buckets    [nBuckets]*bucket
-	bucketsMu  sync.Mutex
-	ips        netutil.DistinctNetSet
-	noDiscover bool // if noDiscover is true, doesn't lookup new node.
+	targetType  NodeType
+	tab         *Table
+	buckets     [nBuckets]*bucket
+	bucketsMu   sync.Mutex
+	ips         netutil.DistinctNetSet
+	noDiscover  bool // if noDiscover is true, doesn't lookup new node.
+	localLogger log.Logger
 }
 
 func (s *KademliaStorage) init() {
+	s.localLogger = logger.NewWith("Discover", "Kademlia")
 	s.ips = netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit}
 	s.bucketsMu.Lock()
 	defer s.bucketsMu.Unlock()
@@ -63,7 +66,7 @@ func (s *KademliaStorage) init() {
 }
 
 func (s *KademliaStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType NodeType) []*Node {
-	logger.Debug("Kademlia-lookup start", "name", s.name(), "targetID", targetID,
+	s.localLogger.Debug("lookup start", "nodeType", s.name(), "targetID", targetID,
 		"targetNodeType", targetType, "refreshIfEmpty", refreshIfEmpty)
 	var (
 		target = crypto.Keccak256Hash(targetID[:])
@@ -109,7 +112,7 @@ func (s *KademliaStorage) doRevalidate() {
 
 	holdingTime := s.tab.db.bondTime(last.ID).Add(10 * time.Second)
 	if time.Now().Before(holdingTime) {
-		logger.Debug("KademliaStorage skip revalidate", "name", s.name())
+		s.localLogger.Debug("skip revalidate", "nodeType", s.name())
 		return
 	}
 
@@ -118,16 +121,16 @@ func (s *KademliaStorage) doRevalidate() {
 	b := s.bucketByIdx(bi)
 	if err == nil {
 		// The node responded, move it to the front.
-		logger.Debug("Revalidated node", "b", bi, "id", last.ID)
+		s.localLogger.Debug("Revalidated node", "nodeType", s.name(), "bucketIdx", bi, "nodeId", last.ID)
 		b.bump(last)
 		return
 	}
 	// No reply received, pick a replacement or delete the node if there aren't
 	// any replacements.
 	if r := s.replace(b, last); r != nil {
-		logger.Debug("Replaced dead node", "b", bi, "id", last.ID, "ip", last.IP, "r", r.ID, "rip", r.IP)
+		s.localLogger.Debug("Replaced dead node", "nodeType", s.name(), "bucketIdx", bi, "nodeId", last.ID, "ip", last.IP, "r", r.ID, "rip", r.IP)
 	} else {
-		logger.Debug("Removed dead node", "b", bi, "id", last.ID, "ip", last.IP)
+		s.localLogger.Debug("Removed dead node", "nodeType", s.name(), "bucketIdx", bi, "nodeId", last.ID, "ip", last.IP)
 	}
 }
 
@@ -359,14 +362,14 @@ func (s *KademliaStorage) bucket(sha common.Hash) *bucket {
 // The caller must hold s.bucketMu
 func (s *KademliaStorage) bumpOrAdd(b *bucket, n *Node) bool {
 	if b.bump(n) {
-		logger.Debug("Add(Bumped)-Kademlia", "node", n)
+		s.localLogger.Trace("Add(Bumped)", "nodeType", s.name(), "node", n)
 		return true
 	}
 	if len(b.entries) >= bucketSize || !s.addIP(b, n.IP) {
-		logger.Debug("Add(New)-Kademlia -Exceed Max", "node", n)
+		s.localLogger.Debug("Add(New) -Exceed Max", "nodeType", s.name(), "node", n)
 		return false
 	}
-	logger.Debug("Add(New)-Kademlia", "node", n)
+	s.localLogger.Trace("Add(New)", "nodeType", s.name(), "node", n)
 	b.entries, _ = pushNode(b.entries, n, bucketSize)
 	b.replacements = deleteNode(b.replacements, n)
 	n.addedAt = time.Now()
@@ -398,11 +401,11 @@ func (s *KademliaStorage) addIP(b *bucket, ip net.IP) bool {
 		return true
 	}
 	if !s.ips.Add(ip) {
-		logger.Debug("IP exceeds table limit", "ip", ip)
+		s.localLogger.Debug("IP exceeds table limit", "nodeType", s.name(), "ip", ip)
 		return false
 	}
 	if !b.ips.Add(ip) {
-		logger.Debug("IP exceeds bucket limit", "ip", ip)
+		s.localLogger.Debug("IP exceeds bucket limit", "nodeType", s.name(), "ip", ip)
 		s.ips.Remove(ip)
 		return false
 	}

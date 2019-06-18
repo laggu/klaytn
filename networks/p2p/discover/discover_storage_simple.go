@@ -19,6 +19,7 @@ package discover
 import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/math"
+	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/networks/p2p/netutil"
 	"math/rand"
 	"sync"
@@ -26,17 +27,19 @@ import (
 )
 
 type simpleStorage struct {
-	tab        *Table
-	targetType NodeType
-	nodes      []*Node
-	noDiscover bool // if noDiscover is true, don't lookup new node.
-	nodesMutex sync.Mutex
-	max        int
-	rand       *rand.Rand
+	tab         *Table
+	targetType  NodeType
+	nodes       []*Node
+	noDiscover  bool // if noDiscover is true, don't lookup new node.
+	nodesMutex  sync.Mutex
+	max         int
+	rand        *rand.Rand
+	localLogger log.Logger
 }
 
 func (s *simpleStorage) init() {
 	// TODO
+	s.localLogger = logger.NewWith("Discover", "Simple")
 	now := time.Now().UnixNano()
 	s.rand = rand.New(rand.NewSource(now))
 }
@@ -59,7 +62,7 @@ func (s *simpleStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType 
 			s.add(n)
 		}
 	}
-	logger.Debug("Simple-lookup", "name", s.name(), "targetId", targetID, "targetType", targetType)
+	s.localLogger.Debug("lookup", "nodeType", s.name(), "targetId", targetID, "targetType", targetType)
 	return s.tab.findNewNode(&nodesByDistance{entries: seeds}, targetID, targetType, false, s.max)
 }
 
@@ -119,7 +122,7 @@ func (s *simpleStorage) doRevalidate() {
 	err := s.tab.ping(oldest.ID, oldest.addr())
 
 	if err != nil {
-		logger.Info("Removed dead node", "name", s.name(), "ID", oldest.ID, "NodeType", oldest.NType)
+		s.localLogger.Info("Removed dead node", "nodeType", s.name(), "ID", oldest.ID, "NodeType", oldest.NType)
 		s.deleteWithoutLock(oldest)
 		return
 	}
@@ -227,11 +230,11 @@ func (s *simpleStorage) add(n *Node) {
 // The caller must hold s.nodesMutex.
 func (s *simpleStorage) bumpOrAdd(n *Node) bool {
 	if s.bump(n) {
-		logger.Trace("SimpleStorage-Add(Bumped)", "name", s.name(), "node", n)
+		s.localLogger.Trace("Add(Bumped)", "nodeType", s.name(), "node", n)
 		return true
 	}
 
-	logger.Trace("SimpleStorage-Add(New)", "name", s.name(), "node", n)
+	s.localLogger.Trace("Add(New)", "nodeType", s.name(), "node", n)
 	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64) // TODO-Klaytn-Node Change Max value for more reasonable one.
 	n.addedAt = time.Now()
 	if s.tab.nodeAddedHook != nil {

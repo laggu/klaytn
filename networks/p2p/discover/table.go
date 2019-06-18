@@ -99,6 +99,8 @@ type Table struct {
 
 	storages   map[NodeType]discoverStorage
 	storagesMu sync.RWMutex
+
+	localLogger log.Logger
 }
 
 type bondproc struct {
@@ -125,17 +127,18 @@ func newTable(cfg *Config) (Discovery, error) {
 	}
 
 	tab := &Table{
-		net:        cfg.udp,
-		db:         db,
-		self:       NewNode(cfg.Id, cfg.Addr.IP, uint16(cfg.Addr.Port), uint16(cfg.Addr.Port), cfg.NodeType),
-		bonding:    make(map[NodeID]*bondproc),
-		bondslots:  make(chan struct{}, maxBondingPingPongs),
-		refreshReq: make(chan chan struct{}),
-		initDone:   make(chan struct{}),
-		closeReq:   make(chan struct{}),
-		closed:     make(chan struct{}),
-		rand:       mrand.New(mrand.NewSource(0)),
-		storages:   make(map[NodeType]discoverStorage),
+		net:         cfg.udp,
+		db:          db,
+		self:        NewNode(cfg.Id, cfg.Addr.IP, uint16(cfg.Addr.Port), uint16(cfg.Addr.Port), cfg.NodeType),
+		bonding:     make(map[NodeID]*bondproc),
+		bondslots:   make(chan struct{}, maxBondingPingPongs),
+		refreshReq:  make(chan chan struct{}),
+		initDone:    make(chan struct{}),
+		closeReq:    make(chan struct{}),
+		closed:      make(chan struct{}),
+		rand:        mrand.New(mrand.NewSource(0)),
+		storages:    make(map[NodeType]discoverStorage),
+		localLogger: logger.NewWith("Discover", "Table"),
 	}
 
 	switch cfg.NodeType {
@@ -170,7 +173,7 @@ func newTable(cfg *Config) (Discovery, error) {
 	// seed nodes also considers older nodes that would otherwise be removed by the
 	// expiration.
 	tab.db.ensureExpirer()
-	logger.Debug("new "+tab.Name()+" created", "err", nil)
+	tab.localLogger.Debug("new "+tab.Name()+" created", "err", nil)
 	return tab, nil
 }
 
@@ -223,10 +226,10 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 						// Bump the failure counter to detect and evacuate non-bonded entries
 						fails := tab.db.findFails(n.ID) + 1
 						tab.db.updateFindFails(n.ID, fails)
-						logger.Trace("Bumping findnode failure counter", "id", n.ID, "failcount", fails)
+						tab.localLogger.Trace("Bumping findnode failure counter", "id", n.ID, "failcount", fails)
 
 						if fails >= maxFindnodeFailures {
-							logger.Trace("Too many findnode failures, dropping", "id", n.ID, "failcount", fails)
+							tab.localLogger.Trace("Too many findnode failures, dropping", "id", n.ID, "failcount", fails)
 							tab.delete(n)
 						}
 					}
@@ -266,6 +269,7 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 	if targetNT != NodeTypeBN {
 		seeds.entries = removeBn(seeds.entries)
 	}
+	tab.localLogger.Debug("findNewNode: found nodes", "length", len(seeds.entries), "nodeType", targetNT)
 	return seeds.entries
 }
 
@@ -305,7 +309,7 @@ func (tab *Table) ReadRandomNodes(buf []*Node, nType NodeType) (n int) {
 	tab.storagesMu.RLock()
 	defer tab.storagesMu.RUnlock()
 	if tab.storages[nType] == nil {
-		logger.Warn("Table.ReadRandomNodes: Not Supported NodeType", "NodeType", nType)
+		tab.localLogger.Warn("ReadRandomNodes: Not Supported NodeType", "NodeType", nType)
 		return 0
 	}
 
@@ -366,7 +370,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool, targetNT NodeType
 	defer tab.storagesMu.RUnlock()
 
 	if tab.storages[targetNT] == nil {
-		logger.Warn("Table.lookup: Not Supported NodeType", "NodeType", targetNT)
+		tab.localLogger.Warn("lookup: Not Supported NodeType", "NodeType", targetNT)
 		return []*Node{}
 	}
 	return tab.storages[targetNT].lookup(targetID, refreshIfEmpty, targetNT)
@@ -377,7 +381,7 @@ func (tab *Table) GetNodes(targetNT NodeType, max int) []*Node {
 	defer tab.storagesMu.RUnlock()
 
 	if tab.storages[targetNT] == nil {
-		logger.Warn("Table.getNodes: Not Supported NodeType", "NodeType", targetNT)
+		tab.localLogger.Warn("getNodes: Not Supported NodeType", "NodeType", targetNT)
 		return []*Node{}
 	}
 	return tab.storages[targetNT].getNodes(max)
@@ -469,7 +473,7 @@ loop:
 // full. seed nodes are inserted if the table is empty (initial
 // bootstrap or discarded faulty peers).
 func (tab *Table) doRefresh(done chan struct{}) {
-	logger.Trace("Table.doRefresh()")
+	tab.localLogger.Trace("doRefresh()")
 	defer close(done)
 
 	// Load nodes from the database and insert
@@ -495,7 +499,7 @@ func (tab *Table) loadSeedNodes(bond bool) {
 	for i := range seeds {
 		seed := seeds[i]
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.bondTime(seed.ID)) }}
-		logger.Debug("Found seed node in database", "id", seed.ID, "addr", seed.addr(), "age", age)
+		tab.localLogger.Debug("Found seed node in database", "id", seed.ID, "addr", seed.addr(), "age", age)
 		tab.add(seed)
 	}
 }
@@ -536,7 +540,7 @@ func (tab *Table) closest(target common.Hash, nType NodeType, nresults int) *nod
 	defer tab.storagesMu.RUnlock()
 
 	if tab.storages[nType] == nil {
-		logger.Warn("Table.closest(): Not Supported NodeType", "NodeType", nType)
+		tab.localLogger.Warn("closest(): Not Supported NodeType", "NodeType", nType)
 		return &nodesByDistance{}
 	}
 	return tab.storages[nType].closest(target, nresults)
@@ -548,7 +552,7 @@ func (tab *Table) RetrieveNodes(target common.Hash, nType NodeType, nresults int
 	defer tab.storagesMu.RUnlock()
 
 	if tab.storages[nType] == nil {
-		logger.Warn("Table.RetrieveNodes: Not Supported NodeType", "NodeType", nType)
+		tab.localLogger.Warn("RetrieveNodes: Not Supported NodeType", "NodeType", nType)
 		return []*Node{}
 	}
 	nodes := tab.storages[nType].closest(target, nresults).entries
@@ -625,7 +629,7 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	var result error
 	// A Bootnode always add node(cn, pn, en) to table.
 	if fails > 0 || age > nodeDBNodeExpiration || (node == nil && tab.self.NType == NodeTypeBN) {
-		logger.Trace("[Table] Bond - Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
+		tab.localLogger.Trace("Bond - Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
 
 		tab.bondmu.Lock()
 		w := tab.bonding[id]
@@ -647,7 +651,7 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 		}
 		// Retrieve the bonding results
 		result = w.err
-		logger.Debug("[Table] Bond", "result", result)
+		tab.localLogger.Trace("Bond", "error", result)
 		if result == nil {
 			node = w.n
 		}
@@ -656,7 +660,7 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	// fails. It will be replaced quickly if it continues to be
 	// unresponsive.
 	if node != nil {
-		logger.Trace("[Table] Bond - Add", "id", node.ID, "type", node.NType, "sha", node.sha)
+		tab.localLogger.Trace("Bond - Add", "id", node.ID, "type", node.NType, "sha", node.sha)
 		tab.add(node)
 		tab.db.updateFindFails(id, 0)
 		lenEntries := len(tab.GetBucketEntries())
@@ -681,19 +685,19 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		// Give the remote node a chance to ping us before we start
 		// sending findnode requests. If they still remember us,
 		// waitping will simply time out.
-		logger.Trace("[Table] pingpong-waitping", "to", id)
+		tab.localLogger.Trace("pingpong-waitping", "to", id)
 		tab.net.waitping(id)
 	}
 	// Bonding succeeded, update the node database.
 	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nType)
-	logger.Trace("[Table] pingpong-success, make new node", "node", w.n)
+	tab.localLogger.Trace("pingpong-success, make new node", "node", w.n)
 	close(w.done)
 }
 
 // ping a remote endpoint and wait for a reply, also updating the node
 // database accordingly.
 func (tab *Table) ping(id NodeID, addr *net.UDPAddr) error {
-	logger.Trace("[Table] ping", "to", id)
+	tab.localLogger.Trace("ping", "to", id)
 	tab.db.updateLastPing(id, time.Now())
 	if err := tab.net.ping(id, addr); err != nil {
 		return err
@@ -709,11 +713,11 @@ func (tab *Table) bucket(sha common.Hash, nType NodeType) *bucket {
 	defer tab.storagesMu.RUnlock()
 
 	if tab.storages[nType] == nil {
-		logger.Warn("Table.bucket(): Not Supported NodeType", "NodeType", nType)
+		tab.localLogger.Warn("bucket(): Not Supported NodeType", "NodeType", nType)
 		return &bucket{}
 	}
 	if _, ok := tab.storages[nType].(*KademliaStorage); !ok {
-		logger.Warn("Table.bucket(): bucket() only allowed to use at KademliaStorage", "NodeType", nType)
+		tab.localLogger.Warn("bucket(): bucket() only allowed to use at KademliaStorage", "NodeType", nType)
 		return &bucket{}
 	}
 	ks := tab.storages[nType].(*KademliaStorage)
@@ -730,7 +734,7 @@ func (tab *Table) bucket(sha common.Hash, nType NodeType) *bucket {
 //
 // The caller must not hold tab.mutex.
 func (tab *Table) add(new *Node) {
-	logger.Trace("Table.add(node)", "NodeType", new.NType, "node", new, "sha", new.sha)
+	tab.localLogger.Trace("add(node)", "NodeType", new.NType, "node", new, "sha", new.sha)
 	tab.storagesMu.RLock()
 	defer tab.storagesMu.RUnlock()
 	if new.NType == NodeTypeBN {
@@ -739,7 +743,7 @@ func (tab *Table) add(new *Node) {
 		}
 	} else {
 		if tab.storages[new.NType] == nil {
-			logger.Warn("Table.add(): Not Supported NodeType", "NodeType", new.NType)
+			tab.localLogger.Warn("add(): Not Supported NodeType", "NodeType", new.NType)
 			return
 		}
 		tab.storages[new.NType].add(new)
@@ -752,7 +756,7 @@ func (tab *Table) stuff(nodes []*Node, nType NodeType) {
 	tab.storagesMu.RLock()
 	defer tab.storagesMu.RUnlock()
 	if tab.storages[nType] == nil {
-		logger.Warn("Table.stuff(): Not Supported NodeType", "NodeType", nType)
+		tab.localLogger.Warn("stuff(): Not Supported NodeType", "NodeType", nType)
 		return
 	}
 	tab.storages[nType].stuff(nodes)
