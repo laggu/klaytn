@@ -37,7 +37,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
 		SenderTxHashIndexing    bool
-		ChildChainIndexing      bool
 		ParallelDBWrite         bool
 		StateDBCaching          bool
 		TxPoolStateCache        bool
@@ -52,6 +51,10 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		Istanbul                istanbul.Config
 		DocRoot                 string `toml:"-"`
 		WsEndpoint              string `toml:",omitempty"`
+		TxResendInterval        uint64
+		TxResendCount           int
+		TxResendUseLegacy       bool
+		NoAccountCreation       bool
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -71,7 +74,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
 	enc.SenderTxHashIndexing = c.SenderTxHashIndexing
-	enc.ChildChainIndexing = c.ChildChainIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
 	enc.TxPoolStateCache = c.TxPoolStateCache
@@ -86,6 +88,10 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.Istanbul = c.Istanbul
 	enc.DocRoot = c.DocRoot
 	enc.WsEndpoint = c.WsEndpoint
+	enc.TxResendInterval = c.TxResendInterval
+	enc.TxResendCount = c.TxResendCount
+	enc.TxResendUseLegacy = c.TxResendUseLegacy
+	enc.NoAccountCreation = c.NoAccountCreation
 	return &enc, nil
 }
 
@@ -109,7 +115,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
 		SenderTxHashIndexing    *bool
-		ChildChainIndexing      *bool
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
 		TxPoolStateCache        *bool
@@ -124,6 +129,10 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		Istanbul                *istanbul.Config
 		DocRoot                 *string `toml:"-"`
 		WsEndpoint              *string `toml:",omitempty"`
+		TxResendInterval        *uint64
+		TxResendCount           *int
+		TxResendUseLegacy       *bool
+		NoAccountCreation       *bool
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -180,9 +189,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SenderTxHashIndexing != nil {
 		c.SenderTxHashIndexing = *dec.SenderTxHashIndexing
 	}
-	if dec.ChildChainIndexing != nil {
-		c.ChildChainIndexing = *dec.ChildChainIndexing
-	}
 	if dec.ParallelDBWrite != nil {
 		c.ParallelDBWrite = *dec.ParallelDBWrite
 	}
@@ -224,6 +230,18 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.WsEndpoint != nil {
 		c.WsEndpoint = *dec.WsEndpoint
+	}
+	if dec.TxResendInterval != nil {
+		c.TxResendInterval = *dec.TxResendInterval
+	}
+	if dec.TxResendCount != nil {
+		c.TxResendCount = *dec.TxResendCount
+	}
+	if dec.TxResendUseLegacy != nil {
+		c.TxResendUseLegacy = *dec.TxResendUseLegacy
+	}
+	if dec.NoAccountCreation != nil {
+		c.NoAccountCreation = *dec.NoAccountCreation
 	}
 	return nil
 }

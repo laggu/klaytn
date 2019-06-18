@@ -140,7 +140,6 @@ type DBManager interface {
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// below operations are used in main chain side, not service chain side.
-	ChildChainIndexingEnabled() bool
 	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
 	ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash
 
@@ -275,9 +274,6 @@ type DBConfig struct {
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
 	LevelDBCompression LevelDBCompressionType
 	LevelDBBufferPool  bool
-
-	// Service chain related configurations.
-	ChildChainIndexing bool
 }
 
 const dbMetricPrefix = "klay/db/chaindata/"
@@ -1322,11 +1318,6 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
-}
-
-// ChildChainIndexingEnabled returns the current child chain indexing configuration.
-func (dbm *databaseManager) ChildChainIndexingEnabled() bool {
-	return dbm.config.ChildChainIndexing
 }
 
 // WriteChildChainTxHash writes stores a transaction hash of a transaction which contains

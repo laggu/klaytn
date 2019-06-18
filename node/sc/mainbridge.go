@@ -109,7 +109,6 @@ type MainBridge struct {
 // New creates a new CN object (including the
 // initialisation of the common CN object)
 func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, error) {
-	config.ChildChainIndexing = true
 	chainDB := CreateDB(ctx, config, "scchaindata")
 
 	if config.chainkey != nil || config.MainChainAccountAddr != nil {
@@ -159,7 +158,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *SCConfig, name string) database.DBManager {
 	// OpenFilesLimit and LevelDBCacheSize are used by minimum value.
-	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ChildChainIndexing: config.ChildChainIndexing}
+	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB}
 	return ctx.OpenDatabase(dbc)
 }
 

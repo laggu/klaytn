@@ -1161,7 +1161,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(SenderTxHashIndexingFlag.Name)
-	cfg.ChildChainIndexing = ctx.GlobalIsSet(ChildChainIndexingFlag.Name)
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
 	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
@@ -1204,10 +1203,10 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 }
 
 // RegisterServiceChainService adds a ServiceChain node to the stack.
-func RegisterServiceChainService(stack *node.Node, cfg *cn.Config, scfg *sc.SCConfig) {
+func RegisterServiceChainService(stack *node.Node, cfg *cn.Config) {
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
-		fullNode, err := cn.NewServiceChain(ctx, cfg, scfg)
+		fullNode, err := cn.NewServiceChain(ctx, cfg)
 		return fullNode, err
 	})
 	if err != nil {

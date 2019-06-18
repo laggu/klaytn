@@ -373,7 +373,7 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	if dir == "" {
 		return database.NewMemoryDBManager()
 	} else {
-		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 16, OpenFilesLimit: 16, ChildChainIndexing: false}
+		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 16, OpenFilesLimit: 16}
 		return database.NewDBManager(dbc)
 	}
 }

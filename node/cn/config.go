@@ -99,7 +99,6 @@ type Config struct {
 	TrieTimeout            time.Duration
 	TrieBlockInterval      uint
 	SenderTxHashIndexing   bool
-	ChildChainIndexing     bool
 	ParallelDBWrite        bool
 	StateDBCaching         bool
 	TxPoolStateCache       bool

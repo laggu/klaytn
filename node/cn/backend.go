@@ -336,7 +336,7 @@ func makeExtraData(extra []byte) []byte {
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DBManager {
 	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: config.ParallelDBWrite, Partitioned: config.PartitionedDB, NumStateTriePartitions: config.NumStateTriePartitions,
 		LevelDBCacheSize: config.LevelDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(), LevelDBCompression: config.LevelDBCompression,
-		LevelDBBufferPool: config.LevelDBBufferPool, ChildChainIndexing: config.ChildChainIndexing}
+		LevelDBBufferPool: config.LevelDBBufferPool}
 	return ctx.OpenDatabase(dbc)
 }
 

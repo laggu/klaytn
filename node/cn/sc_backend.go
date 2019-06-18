@@ -39,7 +39,6 @@ import (
 	"github.com/ground-x/klaytn/node"
 	"github.com/ground-x/klaytn/node/cn/filters"
 	"github.com/ground-x/klaytn/node/cn/gasprice"
-	"github.com/ground-x/klaytn/node/sc"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
 	"github.com/ground-x/klaytn/work"
@@ -87,7 +86,7 @@ type ServiceChain struct {
 
 // New creates a new ServiceChain object (including the
 // initialisation of the common ServiceChain object)
-func NewServiceChain(ctx *node.ServiceContext, config *Config, scconfig *sc.SCConfig) (*ServiceChain, error) {
+func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}

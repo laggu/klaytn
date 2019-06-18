@@ -28,6 +28,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		MaxPeer                 int
 		MainChainAccountAddr    *common.Address `toml:",omitempty"`
 		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
+		ServiceChainConsensus   string
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		MainChainURL            string
@@ -52,6 +53,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.MaxPeer = s.MaxPeer
 	enc.MainChainAccountAddr = s.MainChainAccountAddr
 	enc.ServiceChainAccountAddr = s.ServiceChainAccountAddr
+	enc.ServiceChainConsensus = s.ServiceChainConsensus
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
 	enc.MainChainURL = s.MainChainURL
@@ -80,6 +82,7 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		MaxPeer                 *int
 		MainChainAccountAddr    *common.Address `toml:",omitempty"`
 		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
+		ServiceChainConsensus   *string
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		MainChainURL            *string
@@ -140,6 +143,9 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.ServiceChainAccountAddr != nil {
 		s.ServiceChainAccountAddr = dec.ServiceChainAccountAddr
+	}
+	if dec.ServiceChainConsensus != nil {
+		s.ServiceChainConsensus = *dec.ServiceChainConsensus
 	}
 	if dec.AnchoringPeriod != nil {
 		s.AnchoringPeriod = *dec.AnchoringPeriod

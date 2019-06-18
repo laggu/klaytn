@@ -60,7 +60,7 @@ func (mce *MainChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 
 // GetChildChainIndexingEnabled returns the current child chain indexing configuration.
 func (mce *MainChainEventHandler) GetChildChainIndexingEnabled() bool {
-	return mce.mainbridge.chainDB.ChildChainIndexingEnabled()
+	return mce.mainbridge.config.ChildChainIndexing
 }
 
 // GetLastIndexedBlockNumber returns the last child block number indexed to chain DB.

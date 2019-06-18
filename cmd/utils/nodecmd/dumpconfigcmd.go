@@ -237,6 +237,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		logger.Info("A chain address is registered.", "mainChainAccountAddr", *cfg.MainChainAccountAddr)
 	}
 
+	cfg.ChildChainIndexing = ctx.GlobalIsSet(utils.ChildChainIndexingFlag.Name)
 	cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
 	cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
 	cfg.MainChainURL = ctx.GlobalString(utils.MainChainURLFlag.Name)
@@ -264,7 +265,7 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 		case "istanbul":
 			utils.RegisterCNService(stack, &cfg.CN)
 		case "clique":
-			utils.RegisterServiceChainService(stack, &cfg.CN, &scfg)
+			utils.RegisterServiceChainService(stack, &cfg.CN)
 		default:
 			logger.Crit("unknown consensus type for the service chain", "consensus", scfg.ServiceChainConsensus)
 		}
