@@ -25,13 +25,11 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain/state"
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/storage/database"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -1774,69 +1772,6 @@ func TestTransactionStatusCheck(t *testing.T) {
 			t.Errorf("transaction %d: status mismatch: have %v, want %v", i, statuses[i], expect[i])
 		}
 	}
-}
-
-// TestErrorNoAccountCreationFromServiceChain tests that account creation is failed in the service chain.
-func TestErrorNoAccountCreationFromServiceChain(t *testing.T) {
-	t.Parallel()
-
-	// Create the pool to test the status retrievals with
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
-
-	testTxPoolConfig := testTxPoolConfig // prevent race condition
-	testTxPoolConfig.NoAccountCreation = true
-	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
-	defer pool.Stop()
-
-	// Prepare test variables.
-	amount := new(big.Int).SetUint64(1000000)
-	keys := make([]*ecdsa.PrivateKey, 1)
-	keys[0], _ = crypto.GenerateKey()
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
-
-	// Case 1: check default account creation.
-	txs := types.Transactions{}
-	values := map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:         uint64(1),
-		types.TxValueKeyFrom:          crypto.PubkeyToAddress(keys[0].PublicKey),
-		types.TxValueKeyTo:            crypto.PubkeyToAddress(keys[0].PublicKey),
-		types.TxValueKeyAmount:        amount,
-		types.TxValueKeyGasLimit:      uint64(1000000),
-		types.TxValueKeyGasPrice:      new(big.Int).SetUint64(25 * params.Ston),
-		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
-	}
-	tx, _ := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-	_ = tx.SignWithKeys(signer, keys)
-	txs = append(txs, tx)
-
-	// Import the transaction and ensure the transaction failure.
-	errs := pool.AddRemotes(txs)
-	assert.Equal(t, 1, len(errs))
-	assert.Equal(t, ErrAccountCreationPrevented, errs[0])
-
-	// Case 2: check human-readable account creation.
-	txs = types.Transactions{}
-	values = map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:         uint64(1),
-		types.TxValueKeyFrom:          crypto.PubkeyToAddress(keys[0].PublicKey),
-		types.TxValueKeyTo:            crypto.PubkeyToAddress(keys[0].PublicKey),
-		types.TxValueKeyAmount:        amount,
-		types.TxValueKeyGasLimit:      uint64(1000000),
-		types.TxValueKeyGasPrice:      new(big.Int).SetUint64(25 * params.Ston),
-		types.TxValueKeyHumanReadable: true,
-		types.TxValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&keys[0].PublicKey),
-	}
-	tx, _ = types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-
-	_ = tx.SignWithKeys(signer, keys)
-	txs = append(txs, tx)
-
-	// Import the transaction and ensure the transaction failure.
-	errs = pool.AddRemotes(txs)
-	assert.Equal(t, 1, len(errs))
-	assert.Equal(t, ErrAccountCreationPrevented, errs[0])
 }
 
 // Benchmarks the speed of validating the contents of the pending queue of the

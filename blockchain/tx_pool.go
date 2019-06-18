@@ -610,10 +610,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
 	gasFeePayerForAccCreation := uint64(0)
 
-	// TODO-Klaytn-ServiceChain: do not prevent new account creation after proper account sync.
-	if pool.config.NoAccountCreation && tx.Type().IsAccountCreation() {
-		return ErrAccountCreationPrevented
-	}
 	// Check chain Id first.
 	if tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
 		return ErrInvalidChainId

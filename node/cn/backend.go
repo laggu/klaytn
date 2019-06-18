@@ -242,6 +242,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
+	// TODO-Klaytn-ServiceChain: add account creation prevention in the TxPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 	governance.SetTxPool(cn.txPool)
