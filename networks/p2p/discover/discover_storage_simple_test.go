@@ -246,20 +246,44 @@ func TestSimple_getNodes(t *testing.T) {
 	}
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
+	nodeTypes := []NodeType{NodeTypeUnknown, NodeTypeCN, NodeTypePN, NodeTypeEN}
+	for _, nodeType := range nodeTypes {
+		results := tab.GetNodes(nodeType, 1)
+		if len(results) != 0 {
+			t.Errorf("Returns something although there is nothing. expected: 0, actual: %v", len(results))
+		}
+	}
 	tab.addStorage(NodeTypeUnknown, testStorages[NodeTypeUnknown])
 	tab.addStorage(NodeTypeCN, testStorages[NodeTypeCN])
 	tab.addStorage(NodeTypePN, testStorages[NodeTypePN])
 	tab.addStorage(NodeTypeEN, testStorages[NodeTypeEN])
 
-	size := len(testData[NodeTypeCN])
-	for i := 0; i <= size; i++ {
-		results := tab.GetNodes(NodeTypeCN, i)
-		if len(results) != i {
-			t.Fatalf("the length of getNodes is wrong. expected: %v, acutal: %v", i, len(results))
-		}
-		for _, node := range results {
-			if !isIn(node, testData[NodeTypeCN]) {
-				t.Fatalf("the result does not exist in the test data. wrong output: %v", node)
+	for _, nodeType := range nodeTypes {
+		size := len(testData[nodeType])
+		for i := 0; i <= 2*size; i++ {
+			results := tab.GetNodes(nodeType, i)
+			if i <= size {
+				if len(results) != i {
+					t.Errorf("the length of getNodes is wrong. expected: %v, acutal: %v", i, len(results))
+				}
+				for _, node := range results {
+					if !isIn(node, testData[nodeType]) {
+						t.Errorf("the result does not exist in the test data. wrong output: %v", node)
+					}
+				}
+			} else {
+				if len(results) != size {
+					t.Errorf("the length of getNodes is wrong. expected: %v, acutal: %v", i, len(results))
+				}
+				for _, node := range results {
+					if !isIn(node, testData[nodeType]) {
+						t.Errorf("the result does not exist in the test data. wrong output: %v", node)
+					}
+				}
+			}
+			// Post processing in order to bond each node again
+			for _, node := range results {
+				tab.db.deleteNode(node.ID)
 			}
 		}
 	}
