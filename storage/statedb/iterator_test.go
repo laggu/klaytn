@@ -34,7 +34,7 @@ func TestIterator(t *testing.T) {
 	trie := newEmptyTrie()
 	vals := []struct{ k, v string }{
 		{"do", "verb"},
-		{"ether", "wookiedoo"},
+		{"klaytn", "wookiedoo"},
 		{"horse", "stallion"},
 		{"shaman", "horse"},
 		{"doge", "coin"},

@@ -53,8 +53,8 @@ type testklay struct {
 	*utils.TestCmd
 
 	// template variables for expect
-	Datadir   string
-	Etherbase string
+	Datadir    string
+	Rewardbase string
 }
 
 var (
@@ -196,9 +196,9 @@ func runKlay(t *testing.T, name string, args ...string) *testklay {
 			if i < len(args)-1 {
 				tt.Datadir = args[i+1]
 			}
-		case arg == "-etherbase" || arg == "--etherbase":
+		case arg == "-rewardbase" || arg == "--rewardbase":
 			if i < len(args)-1 {
-				tt.Etherbase = args[i+1]
+				tt.Rewardbase = args[i+1]
 			}
 		}
 	}

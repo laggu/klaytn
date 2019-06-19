@@ -144,7 +144,7 @@ func TestPrintTrie(t *testing.T) {
 	trie := newEmptyTrie()
 	vals := []struct{ k, v string }{
 
-		//{"ether", "wookiedoo"},
+		//{"klaytn", "wookiedoo"},
 		//{"horse", "stallion"},
 		//{"shaman", "horse"},
 		//{"doge", "coin"},

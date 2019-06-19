@@ -27,7 +27,7 @@ import (
 
 type Homi struct {
 	IPPrefix          string
-	EthStats          *service.EthStats
+	EthStats          *service.KlayStats
 	Services          []*service.Validator
 	PrometheusService *service.PrometheusService
 	GrafanaService    *service.GrafanaService

@@ -22,24 +22,24 @@ import (
 	"text/template"
 )
 
-type EthStats struct {
+type KlayStats struct {
 	Secret string
 	IP     string
 }
 
-func NewEthStats(ip string, secret string) *EthStats {
-	return &EthStats{
+func NewEthStats(ip string, secret string) *KlayStats {
+	return &KlayStats{
 		IP:     ip,
 		Secret: secret,
 	}
 }
 
-func (c EthStats) Host() string {
+func (c KlayStats) Host() string {
 	return fmt.Sprintf("%v@%v:3000", c.Secret, c.IP)
 }
 
-func (c EthStats) String() string {
-	tmpl, err := template.New("eth_stats").Parse(ethStatsTemplate)
+func (c KlayStats) String() string {
+	tmpl, err := template.New("klay_stats").Parse(klayStatsTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template, %v", err)
 		return ""
@@ -55,8 +55,8 @@ func (c EthStats) String() string {
 	return result.String()
 }
 
-var ethStatsTemplate = `eth-stats:
-    image: quay.io/amis/ethstats:latest
+var klayStatsTemplate = `klay-stats:
+    image: quay.io/amis/klaystats:latest
     ports:
       - '3000:3000'
     environment:

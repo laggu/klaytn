@@ -127,7 +127,7 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 	attach.SetTemplateFunc("goarch", func() string { return runtime.GOARCH })
 	attach.SetTemplateFunc("gover", runtime.Version)
 	attach.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit(gitCommit) })
-	attach.SetTemplateFunc("etherbase", func() string { return klay.Etherbase })
+	attach.SetTemplateFunc("rewardbase", func() string { return klay.Rewardbase })
 	attach.SetTemplateFunc("niltime", func() string { return time.Unix(0, 0).Format(time.RFC1123) })
 	attach.SetTemplateFunc("ipc", func() bool { return strings.HasPrefix(endpoint, "ipc") })
 	attach.SetTemplateFunc("datadir", func() string { return klay.Datadir })

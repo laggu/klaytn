@@ -46,7 +46,7 @@ var (
 		executablePath("klay"),
 	}
 
-	// Files that end up in the geth-alltools*.zip archive.
+	// Files that end up in the klay-alltools*.zip archive.
 	allToolsArchiveFiles = []string{
 		"COPYING",
 		executablePath("klay"),
@@ -675,7 +675,7 @@ func doWindowsInstaller(cmdline []string) {
 			continue
 		}
 		allTools = append(allTools, filepath.Base(file))
-		if filepath.Base(file) == "geth.exe" {
+		if filepath.Base(file) == "klay.exe" {
 			klayTool = file
 		} else {
 			devTools = append(devTools, file)

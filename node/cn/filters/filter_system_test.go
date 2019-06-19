@@ -52,11 +52,11 @@ type testBackend struct {
 }
 
 /*
-head := rawdb.ReadCanonicalHash(eth.chainDb, (section+1)*params.BloomBitsBlocks-1)
-head := eth.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
+head := rawdb.ReadCanonicalHash(klay.chainDb, (section+1)*params.BloomBitsBlocks-1)
+head := klay.chainDB.ReadCanonicalHash((section+1)*params.BloomBitsBlocks-1)
 
-rawdb.ReadBloomBits(eth.chainDb, task.Bit, section, head)
-eth.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head))
+rawdb.ReadBloomBits(klay.chainDb, task.Bit, section, head)
+klay.chainDB.ReadBloomBits(database.BloomBitsKey(task.Bit, section, head))
 */
 
 func (b *testBackend) ChainDB() database.DBManager {
