@@ -73,3 +73,15 @@ func (api *BootnodeAPI) DeleteNodeFromDB(nodekni string) error {
 func (api *BootnodeAPI) DeleteNodeFromTable(nodekni string) error {
 	return api.bn.DeleteNodeFromTable(nodekni)
 }
+
+func (api *BootnodeAPI) GetAuthorizedNodes() []*discover.Node {
+	return api.bn.GetAuthorizedNodes()
+}
+
+func (api *BootnodeAPI) PutAuthorizedNodes(rawurl string) error {
+	return api.bn.PutAuthorizedNodes(rawurl)
+}
+
+func (api *BootnodeAPI) DeleteAuthorizedNodes(rawurl string) error {
+	return api.bn.DeleteAuthorizedNodes(rawurl)
+}

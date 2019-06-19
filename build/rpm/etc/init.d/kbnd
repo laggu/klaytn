@@ -57,6 +57,10 @@ start() {
             OPTIONS="$OPTIONS --datadir $DATA_DIR"
         fi
 
+        if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+            OPTIONS="$OPTIONS $ADDITIONAL"
+        fi
+
         $kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
         RETVAL=$?
         PIDNUM=$!

@@ -88,6 +88,7 @@ func bootnode(ctx *cli.Context) error {
 	setHTTP(ctx, &bcfg)
 	setWS(ctx, &bcfg)
 	setgRPC(ctx, &bcfg)
+	setAuthorizedNodes(ctx, &bcfg)
 
 	// Check exit condition
 	switch bcfg.checkCMDState() {
@@ -133,13 +134,14 @@ func bootnode(ctx *cli.Context) error {
 	}
 
 	cfg := discover.Config{
-		PrivateKey:   bcfg.nodeKey,
-		AnnounceAddr: realaddr,
-		NetRestrict:  bcfg.restrictList,
-		Conn:         conn,
-		Addr:         realaddr,
-		Id:           discover.PubkeyID(&bcfg.nodeKey.PublicKey),
-		NodeType:     p2p.ConvertNodeType(p2p.BOOTNODE),
+		PrivateKey:      bcfg.nodeKey,
+		AnnounceAddr:    realaddr,
+		NetRestrict:     bcfg.restrictList,
+		Conn:            conn,
+		Addr:            realaddr,
+		Id:              discover.PubkeyID(&bcfg.nodeKey.PublicKey),
+		NodeType:        p2p.ConvertNodeType(p2p.BOOTNODE),
+		AuthorizedNodes: bcfg.AuthorizedNodes,
 	}
 
 	tab, err := discover.ListenUDP(&cfg)
@@ -195,6 +197,7 @@ func main() {
 			utils.MetricsEnabledFlag,
 			utils.PrometheusExporterFlag,
 			utils.PrometheusExporterPortFlag,
+			utils.AuthorizedNodesFlag,
 		}
 	)
 	// TODO-Klaytn: remove `help` command

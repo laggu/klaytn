@@ -35,6 +35,21 @@ type simpleStorage struct {
 	max         int
 	rand        *rand.Rand
 	localLogger log.Logger
+
+	lock               sync.RWMutex
+	hasAuthorizedNodes bool
+	authorizedNodes    map[NodeID]*Node
+}
+
+func NewSimpleStorage(nodeType NodeType, noDiscover bool, max int, authorizedNodes []*Node) *simpleStorage {
+	storage := &simpleStorage{targetType: nodeType, noDiscover: noDiscover, max: max}
+	storage.authorizedNodes = make(map[NodeID]*Node)
+	for _, node := range authorizedNodes {
+		if node.NType == nodeType {
+			storage.putAuthorizedNode(node)
+		}
+	}
+	return storage
 }
 
 func (s *simpleStorage) init() {
@@ -258,4 +273,49 @@ func (s *simpleStorage) bump(n *Node) bool {
 
 func (s *simpleStorage) name() string {
 	return nodeTypeName(s.targetType)
+}
+
+func (s *simpleStorage) isAuthorized(id NodeID) bool {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	if !s.hasAuthorizedNodes {
+		return true
+	}
+	for _, n := range s.authorizedNodes {
+		if n.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *simpleStorage) getAuthorizedNodes() []*Node {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	var ret []*Node
+	for _, val := range s.authorizedNodes {
+		ret = append(ret, val)
+	}
+	return ret
+}
+
+func (s *simpleStorage) putAuthorizedNode(node *Node) {
+	if node.NType != s.targetType {
+		return
+	}
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.authorizedNodes[node.ID] = node
+	s.hasAuthorizedNodes = true
+}
+
+func (s *simpleStorage) deleteAuthorizedNode(id NodeID) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if _, ok := s.authorizedNodes[id]; ok {
+		delete(s.authorizedNodes, id)
+		s.hasAuthorizedNodes = len(s.authorizedNodes) != 0
+	} else {
+		logger.Debug("No node to be removed", "nodeid", id)
+	}
 }

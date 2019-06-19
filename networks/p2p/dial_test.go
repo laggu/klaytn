@@ -118,6 +118,13 @@ func (t fakeTable) HasBond(id discover.NodeID) bool                          { r
 func (t fakeTable) Bond(pinged bool, id discover.NodeID, addr *net.UDPAddr, tcpPort uint16, nType discover.NodeType) (*discover.Node, error) {
 	return nil, nil
 }
+func (t fakeTable) IsAuthorized(id discover.NodeID, ntype discover.NodeType) bool {
+	return true
+}
+
+func (t fakeTable) GetAuthorizedNodes() []*discover.Node         { return nil }
+func (t fakeTable) PutAuthorizedNodes(nodes []*discover.Node)    {}
+func (t fakeTable) DeleteAuthorizedNodes(nodes []*discover.Node) {}
 
 // This test checks that dynamic dials are launched from discovery results.
 func TestDialStateDynDial(t *testing.T) {
@@ -933,10 +940,26 @@ func (t *resolveMock) Resolve(target discover.NodeID, nType discover.NodeType) *
 	return t.answer
 }
 
-func (t *resolveMock) Self() *discover.Node       { return new(discover.Node) }
+func (t *resolveMock) Self() *discover.Node { return new(discover.Node) }
+
 func (t *resolveMock) Close()                     {}
 func (t *resolveMock) Bootstrap([]*discover.Node) {}
 func (t *resolveMock) Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node {
 	return nil
 }
 func (t *resolveMock) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int { return 0 }
+func (t *resolveMock) IsAuthorized(id discover.NodeID, ntype discover.NodeType) bool {
+	panic("implement me")
+}
+
+func (t *resolveMock) GetAuthorizedNodes() []*discover.Node {
+	panic("implement me")
+}
+
+func (t *resolveMock) PutAuthorizedNodes(nodes []*discover.Node) {
+	panic("implement me")
+}
+
+func (t *resolveMock) DeleteAuthorizedNodes(nodes []*discover.Node) {
+	panic("implement me")
+}

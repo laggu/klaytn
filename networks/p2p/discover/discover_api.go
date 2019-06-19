@@ -78,3 +78,33 @@ func (tab *Table) DeleteNodeFromTable(n *Node) error {
 	tab.storages[n.NType].delete(n)
 	return nil
 }
+
+func (tab *Table) GetAuthorizedNodes() []*Node {
+	tab.storagesMu.RLock()
+	defer tab.storagesMu.RUnlock()
+	var ret []*Node
+	for _, storage := range tab.storages {
+		ret = append(ret, storage.getAuthorizedNodes()...)
+	}
+	return ret
+}
+
+func (tab *Table) PutAuthorizedNodes(nodes []*Node) {
+	tab.storagesMu.RLock()
+	defer tab.storagesMu.RUnlock()
+	for _, node := range nodes {
+		if tab.storages[node.NType] != nil {
+			tab.storages[node.NType].putAuthorizedNode(node)
+		}
+	}
+}
+
+func (tab *Table) DeleteAuthorizedNodes(nodes []*Node) {
+	tab.storagesMu.RLock()
+	defer tab.storagesMu.RUnlock()
+	for _, node := range nodes {
+		if tab.storages[node.NType] != nil {
+			tab.storages[node.NType].deleteAuthorizedNode(node.ID)
+		}
+	}
+}

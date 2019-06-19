@@ -40,8 +40,13 @@ type discoverStorage interface {
 	doRevalidate()
 	doRefresh()
 
+	isAuthorized(id NodeID) bool
+
 	// API
 	getBucketEntries() []*Node
+	getAuthorizedNodes() []*Node
+	putAuthorizedNode(node *Node)
+	deleteAuthorizedNode(id NodeID)
 }
 
 // pushNode adds n to the front of list, keeping at most max items.

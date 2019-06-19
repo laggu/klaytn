@@ -17,8 +17,10 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/rpc"
+	"strings"
 )
 
 type BN struct {
@@ -87,6 +89,41 @@ func (b *BN) DeleteNodeFromTable(nodekni string) error {
 		return err
 	}
 	return b.ntab.DeleteNodeFromTable(node)
+}
+
+func (b *BN) GetAuthorizedNodes() []*discover.Node {
+	return b.ntab.GetAuthorizedNodes()
+}
+
+func parseNodeList(rawurl string) ([]*discover.Node, error) {
+	nodeStrings := strings.Split(rawurl, ",")
+	var nodes []*discover.Node
+	for _, url := range nodeStrings {
+		if node, err := discover.ParseNode(url); err != nil {
+			return nil, fmt.Errorf("node url is wrong. url: %v", url)
+		} else {
+			nodes = append(nodes, node)
+		}
+	}
+	return nodes, nil
+}
+
+func (b *BN) PutAuthorizedNodes(rawurl string) error {
+	nodes, err := parseNodeList(rawurl)
+	if err != nil {
+		return err
+	}
+	b.ntab.PutAuthorizedNodes(nodes)
+	return nil
+}
+
+func (b *BN) DeleteAuthorizedNodes(rawurl string) error {
+	nodes, err := parseNodeList(rawurl)
+	if err != nil {
+		return err
+	}
+	b.ntab.DeleteAuthorizedNodes(nodes)
+	return nil
 }
 
 func (b *BN) APIs() []rpc.API {

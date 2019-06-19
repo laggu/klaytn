@@ -513,6 +513,11 @@ var (
 		Usage: "Pre-configured Klaytn baobab network",
 	}
 	// Bootnode's settings
+	AuthorizedNodesFlag = cli.StringFlag{
+		Name:  "authorized-nodes",
+		Usage: "Comma separated kni URLs for authorized nodes list",
+		Value: "",
+	}
 	//TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = cli.StringFlag{
 		Name:  "bnaddr",

@@ -446,3 +446,8 @@ func (b *bucket) bump(n *Node) bool {
 	}
 	return false
 }
+
+func (s *KademliaStorage) isAuthorized(id NodeID) bool { return true }
+func (s *KademliaStorage) getAuthorizedNodes() []*Node { return nil }
+func (s *KademliaStorage) putAuthorizedNode(*Node)     {}
+func (s *KademliaStorage) deleteAuthorizedNode(NodeID) {}

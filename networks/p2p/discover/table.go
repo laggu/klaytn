@@ -66,6 +66,7 @@ type Discovery interface {
 
 	HasBond(id NodeID) bool
 	Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) (*Node, error)
+	IsAuthorized(fromID NodeID, nType NodeType) bool
 
 	// interfaces for API
 	Name() string
@@ -76,6 +77,10 @@ type Discovery interface {
 	DeleteNodeFromTable(n *Node) error
 	GetBucketEntries() []*Node
 	GetReplacements() []*Node
+
+	GetAuthorizedNodes() []*Node
+	PutAuthorizedNodes(nodes []*Node)
+	DeleteAuthorizedNodes(nodes []*Node)
 }
 
 type Table struct {
@@ -156,8 +161,8 @@ func newTable(cfg *Config) (Discovery, error) {
 		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
 	case NodeTypeBN:
-		tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: 100})
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 100})
+		tab.addStorage(NodeTypeCN, NewSimpleStorage(NodeTypeCN, true, 100, cfg.AuthorizedNodes))
+		tab.addStorage(NodeTypePN, NewSimpleStorage(NodeTypePN, true, 100, cfg.AuthorizedNodes))
 		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, max: 3})
 	}
@@ -177,6 +182,15 @@ func newTable(cfg *Config) (Discovery, error) {
 	tab.db.ensureExpirer()
 	tab.localLogger.Debug("new "+tab.Name()+" created", "err", nil)
 	return tab, nil
+}
+
+func (tab *Table) IsAuthorized(fromID NodeID, nType NodeType) bool {
+	tab.storagesMu.RLock()
+	defer tab.storagesMu.RUnlock()
+	if tab.storages[nType] != nil {
+		return tab.storages[nType].isAuthorized(fromID)
+	}
+	return true
 }
 
 // setFallbackNodes sets the initial points of contact. These nodes

@@ -18,6 +18,7 @@ package discover
 
 import (
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/log"
 	"testing"
 )
 
@@ -53,10 +54,15 @@ func (mds *mockDiscoveryStorage) copyBondedNodes()    {}
 func (mds *mockDiscoveryStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType NodeType) []*Node {
 	return nil
 }
-func (mds *mockDiscoveryStorage) getNodes(max int) []*Node  { return nil }
-func (mds *mockDiscoveryStorage) doRevalidate()             {}
-func (mds *mockDiscoveryStorage) doRefresh()                {}
-func (mds *mockDiscoveryStorage) getBucketEntries() []*Node { return mds.data }
+func (mds *mockDiscoveryStorage) getNodes(max int) []*Node { return nil }
+func (mds *mockDiscoveryStorage) doRevalidate()            {}
+func (mds *mockDiscoveryStorage) doRefresh()               {}
+
+func (mds *mockDiscoveryStorage) isAuthorized(id NodeID) bool    { return true }
+func (mds *mockDiscoveryStorage) getBucketEntries() []*Node      { return mds.data }
+func (mds *mockDiscoveryStorage) getAuthorizedNodes() []*Node    { return nil }
+func (mds *mockDiscoveryStorage) putAuthorizedNode(node *Node)   {}
+func (mds *mockDiscoveryStorage) deleteAuthorizedNode(id NodeID) {}
 
 func createTestData() *mockDiscoveryStorage {
 	var d []*Node
@@ -74,8 +80,9 @@ func createTestTable() (*Table, error) {
 	id := MustHexID("904afadc3587310adad21971c28a9213d03b04c4bd5ec73f7609861eb57b60b26809a52e72cbc6af9dfdd780a6d6629898ef197149f840e03f237660bc0dbb48")
 	tmpDB, _ := newNodeDB("", Version, id)
 	tab := &Table{
-		db:       tmpDB,
-		storages: make(map[NodeType]discoverStorage),
+		db:          tmpDB,
+		storages:    make(map[NodeType]discoverStorage),
+		localLogger: log.NewModuleLogger(log.NetworksP2PDiscover).NewWith("Discover", "Test"),
 	}
 	storage := createTestData()
 	tab.addStorage(NodeTypeUnknown, storage)

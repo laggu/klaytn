@@ -93,6 +93,21 @@ web3._extend({
 			name: 'readRandomNodes',
 			call: 'bootnode_readRandomNodes',
 			params: 0
+		}),
+        new web3._extend.Method({
+			name: 'getAuthorizedNodes',
+			call: 'bootnode_getAuthorizedNodes',
+			params: 0
+		}),
+        new web3._extend.Method({
+			name: 'putAuthorizedNodes',
+			call: 'bootnode_putAuthorizedNodes',
+			params: 1
+		}),
+        new web3._extend.Method({
+			name: 'deleteAuthorizedNodes',
+			call: 'bootnode_deleteAuthorizedNodes',
+			params: 1
 		})
 	],
 	properties: []

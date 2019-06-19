@@ -46,6 +46,7 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
+	errUnauthorized     = errors.New("unauthorized node")
 )
 
 // Timeouts
@@ -272,6 +273,7 @@ type Config struct {
 
 	// These settings are required for discovery packet control
 	MaxNeighborsNode uint
+	AuthorizedNodes  []*Node
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
@@ -670,6 +672,12 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	}
 
 	logger.Trace("udp: ping: send pong", "to", fromID)
+	if !t.Discovery.IsAuthorized(fromID, req.From.NType) {
+		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+		return errUnauthorized
+	} else {
+		logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+	}
 	t.send(from, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP, req.From.NType),
 		ReplyTok:   mac,
