@@ -142,8 +142,15 @@ if [[ ! -z $SCSIGNER_PASSWD_FILE ]] && [[ $SCSIGNER_PASSWD_FILE != "" ]]; then
     OPTIONS="$OPTIONS --password $SCSIGNER_PASSWD_FILE"
 fi
 
+if [[ ! -z $SC_MAIN_BRIDGE ]] && [[ $SC_MAIN_BRIDGE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --mainbridge --mainbridgeport $SC_MAIN_BRIDGE_PORT"
+    if [[ ! -z $SC_MAIN_BRIDGE_INDEXING ]] && [[ $SC_MAIN_BRIDGE_INDEXING -eq 1 ]]; then
+        OPTIONS="$OPTIONS --childchainindexing"
+    fi
+fi
+
 if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
-    OPTIONS="$OPTIONS --bridge --bridgeport $SC_BRIDGE_PORT --chaintxperiod $SC_TX_PERIOD --chaintxlimit $SC_TX_LIMIT "
+    OPTIONS="$OPTIONS --subbridge --subbridgeport $SC_SUB_BRIDGE_PORT --chaintxperiod $SC_TX_PERIOD --chaintxlimit $SC_TX_LIMIT "
     if [[ ! -z $SC_MAIN_CHAIN_WS ]] && [[ $SC_MAIN_CHAIN_WS != "" ]]; then
       OPTIONS="$OPTIONS --mainchainws $SC_MAIN_CHAIN_WS"
     fi

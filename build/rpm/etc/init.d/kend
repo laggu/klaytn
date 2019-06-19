@@ -134,9 +134,9 @@ if [ ! -z $LDBCACHESIZE ]; then
     OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
 fi
 
-if [[ ! -z $SC_BRIDGE ]] && [[ $SC_BRIDGE -eq 1 ]]; then
-    OPTIONS="$OPTIONS --bridge --mainbridge --bridgeport $SC_BRIDGE_PORT"
-    if [[ ! -z $SC_INDEXING ]] && [[ $SC_INDEXING -eq 1 ]]; then
+if [[ ! -z $SC_MAIN_BRIDGE ]] && [[ $SC_MAIN_BRIDGE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --mainbridge --mainbridgeport $SC_MAIN_BRIDGE_PORT"
+    if [[ ! -z $SC_MAIN_BRIDGE_INDEXING ]] && [[ $SC_MAIN_BRIDGE_INDEXING -eq 1 ]]; then
         OPTIONS="$OPTIONS --childchainindexing"
     fi
 fi
