@@ -55,7 +55,7 @@ func bootnode(ctx *cli.Context) error {
 		err  error
 		bcfg = bootnodeConfig{
 			// Config variables
-			networkID:    ctx.GlobalUint(utils.NetworkIdFlag.Name),
+			networkID:    ctx.GlobalUint64(utils.NetworkIdFlag.Name),
 			addr:         ctx.GlobalString(utils.BNAddrFlag.Name),
 			genKeyPath:   ctx.GlobalString(utils.GenKeyFlag.Name),
 			nodeKeyFile:  ctx.GlobalString(utils.NodeKeyFileFlag.Name),

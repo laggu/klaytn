@@ -172,7 +172,7 @@ type Config struct {
 	RWTimerConfig RWTimerConfig
 
 	// NetworkID to use for selecting peers to connect to
-	NetworkID uint
+	NetworkID uint64
 }
 
 // NewServer returns a new Server interface.

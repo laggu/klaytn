@@ -960,7 +960,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		cfg.NetRestrict = list
 	}
-	cfg.NetworkID = ctx.GlobalUint(NetworkIdFlag.Name)
+
+	cfg.NetworkID, _ = getNetworkId(ctx)
 }
 
 func convertNodeType(nodetype string) p2p.ConnType {
@@ -1107,31 +1108,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	}
 
-	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(CypressFlag.Name) {
-		log.Fatalf("--baobab and --cypress must not be set together")
-	}
-	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--baobab and --networkid must not be set together")
-	}
-	if ctx.GlobalIsSet(CypressFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--cypress and --networkid must not be set together")
-	}
-
-	switch {
-	case ctx.GlobalIsSet(CypressFlag.Name):
-		cfg.NetworkId = params.CypressNetworkId
-		logger.Info("Cypress network ID is set", "networkid", cfg.NetworkId)
-	case ctx.GlobalIsSet(BaobabFlag.Name):
-		cfg.NetworkId = params.BaobabNetworkId
-		logger.Info("Baobab network ID is set", "networkid", cfg.NetworkId)
-	case ctx.GlobalIsSet(NetworkIdFlag.Name):
-		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
-		logger.Info("A private network ID is set", "networkid", cfg.NetworkId)
-		cfg.IsPrivate = true
-	default:
-		cfg.NetworkId = params.CypressNetworkId
-		logger.Info("Cypress network ID is set", "networkid", cfg.NetworkId)
-	}
+	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
 	cfg.NumStateTriePartitions = ctx.GlobalUint(NumStateTriePartitionsFlag.Name)
@@ -1344,4 +1321,33 @@ func setTxResendConfig(ctx *cli.Context, cfg *cn.Config) {
 	}
 	cfg.TxResendUseLegacy = ctx.GlobalBool(TxResendUseLegacyFlag.Name)
 	logger.Debug("TxResend config", "Interval", cfg.TxResendInterval, "TxResendCount", cfg.TxResendCount, "UseLegacy", cfg.TxResendUseLegacy)
+}
+
+// getNetworkID returns the associated network ID with whether or not the network is private.
+func getNetworkId(ctx *cli.Context) (uint64, bool) {
+	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(CypressFlag.Name) {
+		log.Fatalf("--baobab and --cypress must not be set together")
+	}
+	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--baobab and --networkid must not be set together")
+	}
+	if ctx.GlobalIsSet(CypressFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--cypress and --networkid must not be set together")
+	}
+
+	switch {
+	case ctx.GlobalIsSet(CypressFlag.Name):
+		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
+		return params.CypressNetworkId, false
+	case ctx.GlobalIsSet(BaobabFlag.Name):
+		logger.Info("Baobab network ID is set", "networkid", params.BaobabNetworkId)
+		return params.BaobabNetworkId, false
+	case ctx.GlobalIsSet(NetworkIdFlag.Name):
+		networkId := ctx.GlobalUint64(NetworkIdFlag.Name)
+		logger.Info("A private network ID is set", "networkid", networkId)
+		return networkId, true
+	default:
+		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
+		return params.CypressNetworkId, false
+	}
 }

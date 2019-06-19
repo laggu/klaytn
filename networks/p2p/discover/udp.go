@@ -80,7 +80,7 @@ const (
 // RPC request structures
 type (
 	ping struct {
-		NetworkID  uint
+		NetworkID  uint64
 		Version    uint
 		From, To   rpcEndpoint
 		Expiration uint64
@@ -179,7 +179,7 @@ type conn interface {
 
 // udp implements the RPC protocol.
 type udp struct {
-	networkID   uint
+	networkID   uint64
 	conn        conn
 	netrestrict *netutil.Netlist
 	priv        *ecdsa.PrivateKey
@@ -257,7 +257,7 @@ type ReadPacket struct {
 
 // Config holds Table-related settings.
 type Config struct {
-	NetworkID uint
+	NetworkID uint64
 	// These settings are required and configure the UDP listener:
 	PrivateKey *ecdsa.PrivateKey
 

@@ -43,7 +43,7 @@ const (
 
 type bootnodeConfig struct {
 	// Parameter variables
-	networkID    uint
+	networkID    uint64
 	addr         string
 	genKeyPath   string
 	nodeKeyFile  string
