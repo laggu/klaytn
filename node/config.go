@@ -281,6 +281,14 @@ func (c *Config) name() string {
 	return c.Name
 }
 
+var isKlaytnResource = map[string]bool{
+	"chaindata":          true,
+	"nodes":              true,
+	"nodekey":            true,
+	"static-nodes.json":  true,
+	"trusted-nodes.json": true,
+}
+
 // ResolvePath resolves path in the instance directory.
 func (c *Config) ResolvePath(path string) string {
 	if filepath.IsAbs(path) {
@@ -288,6 +296,16 @@ func (c *Config) ResolvePath(path string) string {
 	}
 	if c.DataDir == "" {
 		return ""
+	}
+	if c.name() == "klay" && isKlaytnResource[path] {
+		oldpath := ""
+		if c.Name == "klay" {
+			oldpath = filepath.Join(c.DataDir, path)
+		}
+		if oldpath != "" && common.FileExist(oldpath) {
+			// TODO: print warning
+			return oldpath
+		}
 	}
 	return filepath.Join(c.instanceDir(), path)
 }
