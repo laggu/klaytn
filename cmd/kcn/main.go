@@ -139,6 +139,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 			utils.NodeKeyHexFlag,
 			utils.NetworkIdFlag,
 			utils.BaobabFlag,
+			utils.CypressFlag,
 		},
 	},
 	{

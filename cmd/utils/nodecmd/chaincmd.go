@@ -140,7 +140,7 @@ func initGenesis(ctx *cli.Context) error {
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis, params.UnusedNetworkId)
+		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis, params.UnusedNetworkId, false)
 		if err != nil {
 			log.Fatalf("Failed to write genesis block: %v", err)
 		}

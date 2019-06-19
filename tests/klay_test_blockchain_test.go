@@ -418,7 +418,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	genesis.Alloc = alloc
 
-	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
 		return nil, nil, err
 	}

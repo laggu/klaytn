@@ -506,7 +506,10 @@ var (
 		Usage: "JavaScript root path for `loadScript`",
 		Value: ".",
 	}
-
+	CypressFlag = cli.BoolFlag{
+		Name:  "cypress",
+		Usage: "Pre-configured Klaytn Cypress network",
+	}
 	// Baobab bootnodes setting
 	BaobabFlag = cli.BoolFlag{
 		Name:  "baobab",
@@ -709,15 +712,23 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 // setBootstrapNodes creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
-	urls := params.MainnetBootnodes[cfg.ConnectionType].Addrs
+	var urls []string
 	switch {
 	case ctx.GlobalIsSet(BootnodesFlag.Name):
+		logger.Info("Customized bootnodes are set")
 		urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
+	case ctx.GlobalIsSet(CypressFlag.Name):
+		logger.Info("Cypress bootnodes are set")
+		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
 	case ctx.GlobalIsSet(BaobabFlag.Name):
+		logger.Info("Baobab bootnodes are set")
 		// set pre-configured bootnodes when 'baobab' option was enabled
 		urls = params.BaobabBootnodes[cfg.ConnectionType].Addrs
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
+	case !ctx.GlobalIsSet(NetworkIdFlag.Name):
+		logger.Info("Cypress bootnodes are set")
+		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -1096,12 +1107,30 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	}
 
-	if ctx.GlobalIsSet(BaobabFlag.Name) {
-		cfg.NetworkId = params.BaobabNetworkId
+	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(CypressFlag.Name) {
+		log.Fatalf("--baobab and --cypress must not be set together")
+	}
+	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--baobab and --networkid must not be set together")
+	}
+	if ctx.GlobalIsSet(CypressFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--cypress and --networkid must not be set together")
 	}
 
-	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	switch {
+	case ctx.GlobalIsSet(CypressFlag.Name):
+		cfg.NetworkId = params.CypressNetworkId
+		logger.Info("Cypress network ID is set", "networkid", cfg.NetworkId)
+	case ctx.GlobalIsSet(BaobabFlag.Name):
+		cfg.NetworkId = params.BaobabNetworkId
+		logger.Info("Baobab network ID is set", "networkid", cfg.NetworkId)
+	case ctx.GlobalIsSet(NetworkIdFlag.Name):
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
+		logger.Info("A private network ID is set", "networkid", cfg.NetworkId)
+		cfg.IsPrivate = true
+	default:
+		cfg.NetworkId = params.CypressNetworkId
+		logger.Info("Cypress network ID is set", "networkid", cfg.NetworkId)
 	}
 
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)

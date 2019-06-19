@@ -41,7 +41,10 @@ import (
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
 //go:generate gencodec -type GenesisAccount -field-override genesisAccountMarshaling -out gen_genesis_account.go
 
-var errGenesisNoConfig = errors.New("genesis has no chain configuration")
+var (
+	errGenesisNoConfig = errors.New("genesis has no chain configuration")
+	errNoGenesis       = errors.New("genesis block is not provided")
+)
 
 // Genesis specifies the header fields, state of a genesis block. It also defines hard
 // fork switch-over blocks through the chain configuration.
@@ -146,7 +149,7 @@ func (e *GenesisMismatchError) Error() string {
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, isPrivate bool) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.AllGxhashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
@@ -155,10 +158,16 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	stored := db.ReadCanonicalHash(0)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
-			if networkId == params.BaobabNetworkId {
+			switch {
+			case isPrivate:
+				logger.Error("No genesis is provided. --networkid should be omitted if you want to use preconfigured network")
+				return params.AllGxhashProtocolChanges, common.Hash{}, errNoGenesis
+			case networkId == params.BaobabNetworkId:
 				logger.Info("Writing default baobab genesis block")
 				genesis = DefaultBaobabGenesisBlock()
-			} else {
+			case networkId == params.CypressNetworkId:
+				fallthrough
+			default:
 				logger.Info("Writing default main-net genesis block")
 				genesis = DefaultGenesisBlock()
 			}

@@ -135,6 +135,9 @@ type Config struct {
 
 	// Service Chain
 	NoAccountCreation bool
+
+	// use separate network different from baobab or cypress
+	IsPrivate bool
 }
 
 type configMarshaling struct {

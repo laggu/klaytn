@@ -68,7 +68,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "genesis without ChainConfig",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				return SetupGenesisBlock(db, new(Genesis), params.UnusedNetworkId)
+				return SetupGenesisBlock(db, new(Genesis), params.UnusedNetworkId, false)
 			},
 			wantErr:    errGenesisNoConfig,
 			wantConfig: params.AllGxhashProtocolChanges,

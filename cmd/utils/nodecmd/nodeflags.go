@@ -110,6 +110,7 @@ var CommonRPCFlags = []cli.Flag{
 
 var KCNFlags = []cli.Flag{
 	utils.RewardbaseFlag,
+	utils.CypressFlag,
 	utils.BaobabFlag,
 }
 
@@ -117,11 +118,13 @@ var KPNFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
+	utils.CypressFlag,
 	utils.BaobabFlag,
 }
 
 var KENFlags = []cli.Flag{
 	utils.ServiceChainSignerFlag,
+	utils.CypressFlag,
 	utils.BaobabFlag,
 	utils.ChildChainIndexingFlag,
 	utils.MainBridgeFlag,
