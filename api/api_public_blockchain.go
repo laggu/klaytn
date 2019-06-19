@@ -314,7 +314,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr r
 	return (hexutil.Bytes)(result), err
 }
 
-func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNr, number rpc.BlockNumber) (hexutil.Uint64, error) {
+func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Uint64, error) {
 	_, _, computationCost, _, err := s.doCall(ctx, args, blockNr, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime)
 	return (hexutil.Uint64)(computationCost), err
 }
