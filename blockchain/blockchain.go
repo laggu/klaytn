@@ -855,8 +855,7 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 		if transactions[j].To() == nil {
 			// Deriving the signer is expensive, only do if it's actually needed
 			from, _ := types.Sender(signer, transactions[j])
-			codeHash := crypto.Keccak256Hash(transactions[j].Data())
-			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce(), codeHash)
+			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce())
 		}
 		// The derived log fields can simply be set from the block and transaction
 		for k := 0; k < len(receipts[j].Logs); k++ {

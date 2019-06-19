@@ -220,8 +220,7 @@ func TestGasCalculation(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.GetAddr(), reservoir.GetNonce(), codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.GetAddr(), reservoir.GetNonce())
 
 		reservoir.AddNonce()
 	}

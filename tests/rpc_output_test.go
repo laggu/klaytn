@@ -420,8 +420,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 		txs = append(txs, tx)
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}

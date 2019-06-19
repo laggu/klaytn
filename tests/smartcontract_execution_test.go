@@ -60,9 +60,8 @@ func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 		}
 
 		header := bcdata.bc.CurrentHeader()
-		codeHash := crypto.Keccak256Hash(common.FromHex(contract.Code))
 
-		contractAddr := crypto.CreateAddress(*userAddr, nonce, codeHash)
+		contractAddr := crypto.CreateAddress(*userAddr, nonce)
 
 		signer := types.MakeSigner(bcdata.bc.Config(), header.Number)
 		tx := types.NewContractCreation(nonce,

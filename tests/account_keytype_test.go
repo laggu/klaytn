@@ -445,8 +445,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 		err = bcdata.GenABlockWithTransactions(accountMap, txs, prof)
 		assert.Equal(t, nil, err)
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}
@@ -1117,16 +1116,6 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	// reservoir account
 	reservoir := &TestAccountType{
 		Addr:  *bcdata.addrs[0],
@@ -1163,6 +1152,16 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 		}
 		reservoir.Nonce += 1
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 
 	// 2. update to a RoleBased key which contains 4 sub-keys.
 	{
@@ -1956,8 +1955,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 		reservoir.Nonce += 1
 	}
 
@@ -2170,8 +2168,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}

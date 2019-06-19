@@ -413,8 +413,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 			b.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}

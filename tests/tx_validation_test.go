@@ -184,8 +184,7 @@ func TestValidationPoolInsert(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}
@@ -330,8 +329,7 @@ func TestValidationBlockTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}
@@ -529,8 +527,7 @@ func TestValidationInvalidSig(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}
@@ -779,8 +776,7 @@ func TestInvalidBalance(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}
@@ -1183,8 +1179,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}
@@ -1593,8 +1588,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}
@@ -1776,8 +1770,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}
@@ -1934,8 +1927,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.AddNonce()
 	}

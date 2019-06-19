@@ -367,8 +367,7 @@ func TestSmartContractDeployAddress(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		// check receipt
 		receipt, _, err := applyTransaction(t, bcdata, tx)
@@ -464,8 +463,7 @@ func TestSmartContractScenario(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}
@@ -648,8 +646,7 @@ func TestSmartContractSign(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}
@@ -811,8 +808,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}
@@ -1005,8 +1001,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}

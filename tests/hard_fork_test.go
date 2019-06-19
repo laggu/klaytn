@@ -273,8 +273,7 @@ func genBlocks(t *testing.T) {
 
 			txs = append(txs, tx)
 
-			codeHash := crypto.Keccak256Hash(tx.Data())
-			contract.Addr = crypto.CreateAddress(reservoir.GetAddr(), reservoir.GetNonce(), codeHash)
+			contract.Addr = crypto.CreateAddress(reservoir.GetAddr(), reservoir.GetNonce())
 
 			reservoir.AddNonce()
 		}

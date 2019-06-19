@@ -260,8 +260,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
 	if t.Recipient != nil {
 		to = *t.Recipient
 	} else {
-		codeHash := crypto.Keccak256Hash(t.Payload)
-		to = crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
+		to = crypto.CreateAddress(t.From, t.AccountNonce)
 	}
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}
@@ -387,8 +386,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB
 	if t.Recipient != nil {
 		to = *t.Recipient
 	} else {
-		codeHash := crypto.Keccak256Hash(t.Payload)
-		to = crypto.CreateAddress(t.From, t.AccountNonce, codeHash)
+		to = crypto.CreateAddress(t.From, t.AccountNonce)
 	}
 	if common.IsPrecompiledContractAddress(to) {
 		return kerrors.ErrPrecompiledContractAddress
@@ -413,8 +411,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) ValidateMutableValue(sta
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) FillContractAddress(from common.Address, r *Receipt) {
 	if t.Recipient == nil {
-		codeHash := crypto.Keccak256Hash(t.Payload)
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce, codeHash)
+		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
 	} else {
 		r.ContractAddress = *t.Recipient
 	}

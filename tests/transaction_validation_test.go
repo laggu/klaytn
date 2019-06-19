@@ -103,8 +103,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 
@@ -128,8 +127,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 
 		txs = append(txs, tx2)
 
-		invalidCodeHash := crypto.Keccak256Hash([]byte{})
-		invalidContract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, invalidCodeHash)
+		invalidContract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 

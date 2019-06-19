@@ -370,8 +370,7 @@ func (t *TxInternalDataLegacy) ValidateMutableValue(stateDB StateDB, currentBloc
 
 func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {
 	if t.Recipient == nil {
-		codeHash := crypto.Keccak256Hash(t.Payload)
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce, codeHash)
+		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
 	}
 }
 

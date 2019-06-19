@@ -112,8 +112,7 @@ func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend Co
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	codeHash := crypto.Keccak256Hash(tx.Data())
-	c.address = crypto.CreateAddress(opts.From, tx.Nonce(), codeHash)
+	c.address = crypto.CreateAddress(opts.From, tx.Nonce())
 	return c.address, tx, c, nil
 }
 
