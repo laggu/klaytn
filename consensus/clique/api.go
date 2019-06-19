@@ -1,4 +1,4 @@
-// Copyright 2018 The klaytn Authors
+// Modifications Copyright 2019 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from go-ethereum/consensus/clique/api.go (2018/11/02).
+// This file is derived from go-ethereum/consensus/clique/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
 package clique

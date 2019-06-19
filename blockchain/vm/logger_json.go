@@ -1,4 +1,4 @@
-// Copyright 2018 The klaytn Authors
+// Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
@@ -16,7 +16,6 @@
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from cmd/evm/json_logger.go (2018/06/04).
-// This file is moved to core/vm/logger_json.go by go-ethereum/#17914.
 // Modified and improved for the klaytn development.
 
 package vm
