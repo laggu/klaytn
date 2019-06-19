@@ -18,5 +18,5 @@
 // This file is derived from internal/web3ext/web3ext.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package web3ext contains geth specific web3.js extensions.
+// Package web3ext contains the klaytn specific web3.js extensions.
 package web3ext
