@@ -62,7 +62,7 @@ func (s *simpleStorage) lookup(targetID NodeID, refreshIfEmpty bool, targetType 
 			s.add(n)
 		}
 	}
-	s.localLogger.Debug("lookup", "nodeType", s.name(), "targetId", targetID, "targetType", targetType)
+	s.localLogger.Debug("lookup", "StorageName", s.name(), "targetId", targetID, "targetType", nodeTypeName(targetType))
 	return s.tab.findNewNode(&nodesByDistance{entries: seeds}, targetID, targetType, false, s.max)
 }
 
@@ -122,7 +122,7 @@ func (s *simpleStorage) doRevalidate() {
 	err := s.tab.ping(oldest.ID, oldest.addr())
 
 	if err != nil {
-		s.localLogger.Info("Removed dead node", "nodeType", s.name(), "ID", oldest.ID, "NodeType", oldest.NType)
+		s.localLogger.Info("Removed the node without any response", "StorageName", s.name(), "NodeID", oldest.ID, "NodeType", nodeTypeName(oldest.NType))
 		s.deleteWithoutLock(oldest)
 		return
 	}
@@ -230,11 +230,11 @@ func (s *simpleStorage) add(n *Node) {
 // The caller must hold s.nodesMutex.
 func (s *simpleStorage) bumpOrAdd(n *Node) bool {
 	if s.bump(n) {
-		s.localLogger.Trace("Add(Bumped)", "nodeType", s.name(), "node", n)
+		s.localLogger.Trace("Add(Bumped)", "StorageName", s.name(), "node", n)
 		return true
 	}
 
-	s.localLogger.Trace("Add(New)", "nodeType", s.name(), "node", n)
+	s.localLogger.Trace("Add(New)", "StorageName", s.name(), "node", n)
 	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64) // TODO-Klaytn-Node Change Max value for more reasonable one.
 	n.addedAt = time.Now()
 	if s.tab.nodeAddedHook != nil {
