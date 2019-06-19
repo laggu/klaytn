@@ -67,8 +67,7 @@ var feePayerAddress = common.BytesToAddress([]byte{10})
 // validateSenderAddress is the address of precompiled contract ValidateSender.
 var validateSenderAddress = common.BytesToAddress([]byte{11})
 
-// PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
-// contracts used in the Byzantium release.
+// PrecompiledContractsByzantium contains the default set of pre-compiled contracts.
 var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}): &ecrecover{},
 	common.BytesToAddress([]byte{2}): &sha256hash{},

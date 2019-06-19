@@ -65,7 +65,7 @@ type View struct {
 	Sequence *big.Int
 }
 
-// EncodeRLP serializes b into the Ethereum RLP format.
+// EncodeRLP serializes a View into the Klaytn RLP format.
 func (v *View) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{v.Round, v.Sequence})
 }

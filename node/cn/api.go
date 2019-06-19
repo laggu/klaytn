@@ -298,14 +298,14 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 	return true, nil
 }
 
-// PublicDebugAPI is the collection of Ethereum full node APIs exposed
+// PublicDebugAPI is the collection of Klaytn full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
 	cn *CN
 }
 
 // NewPublicDebugAPI creates a new API definition for the full node-
-// related public debug methods of the Ethereum service.
+// related public debug methods of the Klaytn service.
 func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
 	return &PublicDebugAPI{cn: cn}
 }

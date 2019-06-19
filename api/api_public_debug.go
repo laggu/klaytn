@@ -29,7 +29,7 @@ import (
 	"github.com/ground-x/klaytn/ser/rlp"
 )
 
-// PublicDebugAPI is the collection of Ethereum APIs exposed over the public
+// PublicDebugAPI is the collection of Klaytn APIs exposed over the public
 // debugging endpoint.
 type PublicDebugAPI struct {
 	b Backend

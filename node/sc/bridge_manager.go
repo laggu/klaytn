@@ -345,7 +345,7 @@ func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// EncodeRLP serializes b into the Klaytn RLP BridgeJournal format.
+// EncodeRLP serializes a BridgeJournal into the Klaytn RLP BridgeJournal format.
 func (b *BridgeJournal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		b.LocalAddress,

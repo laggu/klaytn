@@ -48,7 +48,7 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 	}
 }
 
-// Process processes the state changes according to the Ethereum rules by running
+// Process processes the state changes according to the Klaytn rules by running
 // the transaction messages using the statedb and applying any rewards to the processor.
 //
 // Process returns the receipts and logs accumulated during the process and

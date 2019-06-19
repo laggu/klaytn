@@ -41,7 +41,7 @@ type IstanbulExtra struct {
 	CommittedSeal [][]byte
 }
 
-// EncodeRLP serializes ist into the Ethereum RLP format.
+// EncodeRLP serializes the istanbul fields into the Klaytn RLP format.
 func (ist *IstanbulExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,

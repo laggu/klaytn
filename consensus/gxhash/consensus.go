@@ -57,7 +57,7 @@ func (gxhash *Gxhash) Author(header *types.Header) (common.Address, error) {
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
-// stock Ethereum gxhash engine.
+// stock Klaytn gxhash engine.
 func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	// If we're running a full engine faking, accept any input as valid
 	if gxhash.config.PowMode == ModeFullFake {
@@ -158,7 +158,7 @@ func (gxhash *Gxhash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules of the
-// stock Ethereum gxhash engine.
+// stock Klaytn gxhash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (gxhash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
 	// Ensure that the header's extra-data section is of a reasonable size

@@ -37,7 +37,7 @@ import (
 
 // TODO-Klaytn Needs to separate APIs along with each namespaces.
 
-// Client defines typed wrappers for the Ethereum RPC API.
+// Client defines typed wrappers for the Klaytn RPC API.
 type Client struct {
 	c       *rpc.Client
 	chainID *big.Int
