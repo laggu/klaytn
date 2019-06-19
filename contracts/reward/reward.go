@@ -31,6 +31,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/event"
+	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math"
@@ -187,12 +188,31 @@ type BalanceAdder interface {
 	AddBalance(addr common.Address, v *big.Int)
 }
 
-// MintKLAY mints KLAY and deposits newly minted KLAY to three predefined accounts, i.e. Reward contract, KIR contract, PoC contract.
-func MintKLAY(b BalanceAdder) {
-	// TODO-Klaytn-Issue973 Developing Klaytn token economy
-	b.AddBalance(common.HexToAddress(contract.RewardContractAddress), params.RewardContractIncentive)
-	b.AddBalance(common.HexToAddress(contract.KIRContractAddress), params.KIRContractIncentive)
-	b.AddBalance(common.HexToAddress(contract.PoCContractAddress), params.PoCContractIncentive)
+// MintKLAY mints KLAY and gives the KLAY to the block proposer
+func MintKLAY(b BalanceAdder, header *types.Header, gov *governance.Governance) error {
+
+	unitPrice := big.NewInt(0)
+	if r, err := gov.GetGovernanceItemAtNumber(header.Number.Uint64(), governance.GovernanceKeyMapReverse[params.UnitPrice]); err == nil {
+		unitPrice.SetUint64(r.(uint64))
+	} else {
+		logger.Error("Couldn't get UnitPrice from governance", "err", err, "received", r)
+		return err
+	}
+
+	mintingAmount := big.NewInt(0)
+	if r, err := gov.GetGovernanceItemAtNumber(header.Number.Uint64(), governance.GovernanceKeyMapReverse[params.MintingAmount]); err == nil {
+		mintingAmount.SetString(r.(string), 10)
+	} else {
+		logger.Error("Couldn't get MintingAmount from governance", "err", err, "received", r)
+		return err
+	}
+
+	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
+	totalTxFee := big.NewInt(0).Mul(totalGasUsed, unitPrice)
+	blockReward := big.NewInt(0).Add(mintingAmount, totalTxFee)
+
+	b.AddBalance(header.Rewardbase, blockReward)
+	return nil
 }
 
 func isEmptyAddress(addr common.Address) bool {

@@ -178,7 +178,10 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		}
 
 		if b.engine != nil {
-			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.receipts)
+			block, err := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.receipts)
+			if err != nil {
+				panic(fmt.Sprintf("block finalize error: %v", err))
+			}
 			// Write state changes to db
 			root, err := statedb.Commit(true)
 			if err != nil {

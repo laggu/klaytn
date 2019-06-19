@@ -400,7 +400,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	return &BCData{bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis}, nil
+		validatorPrivKeys, engine, genesis, gov}, nil
 }
 
 // genAspenOptions returns database configurations of Aspen network.

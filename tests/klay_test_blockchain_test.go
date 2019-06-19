@@ -64,6 +64,7 @@ type BCData struct {
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
+	governance         *governance.Governance
 }
 
 var dir = "chaindata"
@@ -117,9 +118,11 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 		return nil, err
 	}
 
+	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
+
 	return &BCData{bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis}, nil
+		validatorPrivKeys, engine, genesis, gov}, nil
 }
 
 func (bcdata *BCData) Shutdown() {
@@ -300,7 +303,9 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Apply reward
 	start = time.Now()
-	reward.MintKLAY(accountMap)
+	if err := reward.MintKLAY(accountMap, header, bcdata.governance); err != nil {
+		return err
+	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -351,7 +356,9 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Apply reward
 	start = time.Now()
-	reward.MintKLAY(accountMap)
+	if err := reward.MintKLAY(accountMap, b.Header(), bcdata.governance); err != nil {
+		return err
+	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap

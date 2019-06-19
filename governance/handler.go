@@ -431,7 +431,15 @@ func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interf
 	if err != nil {
 		return nil, err
 	}
-	return data[key], nil
+
+	if item, ok := data[key]; ok {
+		if item == nil {
+			return nil, ErrItemNil
+		}
+		return item, nil
+	} else {
+		return nil, ErrItemNotFound
+	}
 }
 
 func (gov *Governance) GetLatestGovernanceItem(key string) interface{} {

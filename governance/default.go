@@ -40,6 +40,8 @@ var (
 	ErrUnmarshalGovChange = errors.New("Failed to unmarshal received governance changes")
 	ErrVoteValueMismatch  = errors.New("Received change mismatches with the value this node has!!")
 	ErrNotInitialized     = errors.New("Cache not initialized")
+	ErrItemNotFound       = errors.New("Failed to find governance item")
+	ErrItemNil            = errors.New("Governance Item is nil")
 )
 
 var (
@@ -821,4 +823,13 @@ func getGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 func writeFailLog(key int, err error) {
 	msg := "Failed to set " + GovernanceKeyMapReverse[key]
 	logger.Crit(msg, "err", err)
+}
+
+func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainConfig) {
+	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
+
+	data := getGovernanceItemsFromChainConfig(config)
+	cKey := getGovernanceCacheKey(num)
+	g.itemCache.Add(cKey, data)
+	g.addIdxCache(num)
 }

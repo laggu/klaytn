@@ -400,7 +400,10 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 		reward.DistributeBlockReward(state, header, pocAddr, kirAddr, sb.governance.ChainConfig)
 	} else {
-		reward.MintKLAY(state)
+		err := reward.MintKLAY(state, header, sb.governance)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	header.Root = state.IntermediateRoot(true)
