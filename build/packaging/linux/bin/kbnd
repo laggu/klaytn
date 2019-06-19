@@ -55,6 +55,9 @@ start() {
 
     set -f
     OPTIONS="--nodekey ${KEY_PATH}"
+    if [[ ! -z $NETWORK_ID ]] && [[ $NETWORK_ID != "" ]]; then
+        OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+    fi
 
     if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
         OPTIONS="$OPTIONS --metrics"
@@ -62,6 +65,10 @@ start() {
 
     if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
         OPTIONS="$OPTIONS --prometheus"
+    fi
+
+    if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
+        OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
     fi
 
     if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
