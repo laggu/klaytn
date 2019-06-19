@@ -55,6 +55,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		consensusTimestamp: time.Time{},
 
 		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
+		currentRoundGauge:  metrics.NewRegisteredGauge("consensus/istanbul/core/currentRound", nil),
 		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
 		consensusTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
 	}
@@ -94,6 +95,8 @@ type core struct {
 	consensusTimestamp time.Time
 	// the meter to record the round change rate
 	roundMeter metrics.Meter
+	// the gauge to record the current round
+	currentRoundGauge metrics.Gauge
 	// the meter to record the sequence update rate
 	sequenceMeter metrics.Meter
 	// the gauge to record consensus duration (from accepting a preprepare to final committed stage)
@@ -303,6 +306,7 @@ func (c *core) updateRoundState(view *istanbul.View, validatorSet istanbul.Valid
 	} else {
 		c.current = newRoundState(view, validatorSet, common.Hash{}, nil, nil, c.backend.HasBadProposal)
 	}
+	c.currentRoundGauge.Update(c.current.round.Int64())
 }
 
 func (c *core) setState(state State) {
