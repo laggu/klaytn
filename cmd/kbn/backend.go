@@ -19,7 +19,6 @@ package main
 import (
 	"github.com/ground-x/klaytn/networks/p2p/discover"
 	"github.com/ground-x/klaytn/networks/rpc"
-	"net"
 )
 
 type BN struct {
@@ -46,14 +45,24 @@ func (b *BN) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int 
 	return b.ntab.ReadRandomNodes(buf, nType)
 }
 
-func (b *BN) CreateUpdateNode(id discover.NodeID, ip net.IP, udpPort, tcpPort uint16, nType discover.NodeType) error {
-	// TODO-Klaytn Add method argument 'NodeType'
-	node := discover.NewNode(id, ip, udpPort, tcpPort, nType)
-	return b.ntab.CreateUpdateNode(node)
+func (b *BN) CreateUpdateNodeOnDB(nodekni string) error {
+	node, err := discover.ParseNode(nodekni)
+	if err != nil {
+		return err
+	}
+	return b.ntab.CreateUpdateNodeOnDB(node)
 }
 
-func (b *BN) GetNode(id discover.NodeID) (*discover.Node, error) {
-	return b.ntab.GetNode(id)
+func (b *BN) CreateUpdateNodeOnTable(nodekni string) error {
+	node, err := discover.ParseNode(nodekni)
+	if err != nil {
+		return nil
+	}
+	return b.ntab.CreateUpdateNodeOnTable(node)
+}
+
+func (b *BN) GetNodeFromDB(id discover.NodeID) (*discover.Node, error) {
+	return b.ntab.GetNodeFromDB(id)
 }
 
 func (b *BN) GetTableEntries() []*discover.Node {
@@ -64,8 +73,20 @@ func (b *BN) GetTableReplacements() []*discover.Node {
 	return b.ntab.GetReplacements()
 }
 
-func (b *BN) DeleteNode(id discover.NodeID) error {
-	return b.ntab.DeleteNode(id)
+func (b *BN) DeleteNodeFromDB(nodekni string) error {
+	node, err := discover.ParseNode(nodekni)
+	if err != nil {
+		return err
+	}
+	return b.ntab.DeleteNodeFromDB(node)
+}
+
+func (b *BN) DeleteNodeFromTable(nodekni string) error {
+	node, err := discover.ParseNode(nodekni)
+	if err != nil {
+		return err
+	}
+	return b.ntab.DeleteNodeFromTable(node)
 }
 
 func (b *BN) APIs() []rpc.API {

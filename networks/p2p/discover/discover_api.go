@@ -22,13 +22,19 @@ import (
 
 func (tab *Table) Name() string { return "TableDiscovery" }
 
-// CreateUpdateNode inserts - potentially overwriting - a node into the peer database.
-func (tab *Table) CreateUpdateNode(n *Node) error {
+// CreateUpdateNodeOnDB inserts - potentially overwriting - a node into the peer database.
+func (tab *Table) CreateUpdateNodeOnDB(n *Node) error {
 	return tab.db.updateNode(n)
 }
 
-// GetNode returns a node which has id in peer database.
-func (tab *Table) GetNode(id NodeID) (*Node, error) {
+// CreateUpdateNodeOnDB inserts - potentially overwriting - a node into the associated storage.
+func (tab *Table) CreateUpdateNodeOnTable(n *Node) error {
+	tab.add(n)
+	return nil
+}
+
+// GetNodeFromDB returns a node which has id in peer database.
+func (tab *Table) GetNodeFromDB(id NodeID) (*Node, error) {
 	node := tab.db.node(id)
 	if node == nil {
 		return nil, errors.New("failed to retrieve the node with the given id")
@@ -60,7 +66,15 @@ func (tab *Table) GetReplacements() []*Node {
 	return ret
 }
 
-// DeleteNode deletes node which has id in peer database.
-func (tab *Table) DeleteNode(id NodeID) error {
-	return tab.db.deleteNode(id)
+// DeleteNodeFromDB deletes node which has id in peer database.
+func (tab *Table) DeleteNodeFromDB(n *Node) error {
+	return tab.db.deleteNode(n.ID)
+}
+
+// DeleteNodeFromDB deletes node which has id in the associated table.
+func (tab *Table) DeleteNodeFromTable(n *Node) error {
+	tab.storagesMu.RLock()
+	defer tab.storagesMu.RUnlock()
+	tab.storages[n.NType].delete(n)
+	return nil
 }

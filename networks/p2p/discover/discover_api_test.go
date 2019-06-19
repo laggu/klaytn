@@ -40,8 +40,8 @@ func (mds *mockDiscoveryStorage) name() string                        { return "
 func (mds *mockDiscoveryStorage) setTable(t *Table)                   {}
 func (mds *mockDiscoveryStorage) setTargetNodeType(tType NodeType)    {}
 func (mds *mockDiscoveryStorage) init()                               {}
-func (mds *mockDiscoveryStorage) add(n *Node)                         {}
-func (mds *mockDiscoveryStorage) delete(n *Node)                      {}
+func (mds *mockDiscoveryStorage) add(n *Node)                         { mds.data = append(mds.data, n) }
+func (mds *mockDiscoveryStorage) delete(n *Node)                      { mds.data = deleteNode(mds.data, n) }
 func (mds *mockDiscoveryStorage) len() (n int)                        { return 0 }
 func (mds *mockDiscoveryStorage) nodeAll() []*Node                    { return mds.data }
 func (mds *mockDiscoveryStorage) readRandomNodes(buf []*Node) (n int) { return 0 }
@@ -88,12 +88,12 @@ func createTestTable() (*Table, error) {
 	return tab, nil
 }
 
-func TestTable_CreateUpdateNode(t *testing.T) {
+func TestTable_CreateUpdateNodeOnDB(t *testing.T) {
 	tab, _ := createTestTable()
 	n, _ := ParseNode("kni://31a03810a315b200053ea5905d4e0a32a50eafcf2613e90e17ee877652dbb2aba1c725016ebe44d48529c8755203046a927fb01b97d758c009d248c4d7dfdd8c@0.0.0.0:32323?discport=0")
-	err := tab.CreateUpdateNode(n)
+	err := tab.CreateUpdateNodeOnDB(n)
 	if err != nil {
-		t.Error("CreateUpdateNode is failed", "err", err)
+		t.Error("CreateUpdateNodeOnDB is failed", "err", err)
 	}
 	id, _ := HexID("31a03810a315b200053ea5905d4e0a32a50eafcf2613e90e17ee877652dbb2aba1c725016ebe44d48529c8755203046a927fb01b97d758c009d248c4d7dfdd8c")
 	n2 := tab.db.node(id)
@@ -102,7 +102,21 @@ func TestTable_CreateUpdateNode(t *testing.T) {
 	}
 }
 
-func TestTable_GetNode(t *testing.T) {
+func TestTable_CreateUpdateNodeOnTable(t *testing.T) {
+	tab, _ := createTestTable()
+	n, _ := ParseNode("kni://31a03810a315b200053ea5905d4e0a32a50eafcf2613e90e17ee877652dbb2aba1c725016ebe44d48529c8755203046a927fb01b97d758c009d248c4d7dfdd8c@0.0.0.0:32323?discport=0")
+	err := tab.CreateUpdateNodeOnTable(n)
+	if err != nil {
+		t.Error("CreateUpdateNodeOnTable is failed", "err", err)
+	}
+	entries := tab.GetBucketEntries()
+	replacements := tab.GetReplacements()
+	if !isIn(n, append(entries, replacements...)) {
+		t.Errorf("the node does not exist. nodeid: %v", n.ID)
+	}
+}
+
+func TestTable_GetNodeFromDB(t *testing.T) {
 	tab, _ := createTestTable()
 	id0 := MustHexID("a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02")
 	id1 := MustHexID("bf0d5b99945d5b94bc8430af9ec8019dd3535be586809d04422aa1bacf16b9161cc868c63d11423e30525d8ea41407c28854b1e12058297f8e0ef3c357c8d6c0")
@@ -112,7 +126,7 @@ func TestTable_GetNode(t *testing.T) {
 	id5 := MustHexID("01a63da798a08b6322ae59d398628addebd87eb582a801976d7d1b2a1143574a15adc4a8ae08d1286e8cb36ef6d904e25ae932d3cb4e695944b48afb58981550")
 	ids := []NodeID{id0, id1, id2, id3, id4, id5}
 	for idx, id := range ids {
-		node1, err := tab.GetNode(id)
+		node1, err := tab.GetNodeFromDB(id)
 		if err != nil {
 			t.Error("get node is failed.", "err:", err)
 		}
@@ -152,28 +166,49 @@ func TestTable_GetBucketEntries(t *testing.T) {
 
 }
 
-func TestTable_DeleteNode(t *testing.T) {
-	id0 := MustHexID("a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02")
-	id1 := MustHexID("bf0d5b99945d5b94bc8430af9ec8019dd3535be586809d04422aa1bacf16b9161cc868c63d11423e30525d8ea41407c28854b1e12058297f8e0ef3c357c8d6c0")
+func TestTable_DeleteNodeFromDB(t *testing.T) {
+	testData1 := MustParseNode(rawUrls[0])
+	testData2 := MustParseNode(rawUrls[1])
 	tab, _ := createTestTable()
-	if n := tab.db.node(id0); n == nil {
-		t.Error("node does not exist", "nodeid", id0)
+	if n := tab.db.node(testData1.ID); n == nil {
+		t.Error("node does not exist", "nodeid", testData1.ID)
 	}
-	if n := tab.db.node(id1); n == nil {
-		t.Error("node does not exist", "nodeid", id1)
+	if n := tab.db.node(testData2.ID); n == nil {
+		t.Error("node does not exist", "nodeid", testData2.ID)
 	}
-	err := tab.DeleteNode(id0)
+	err := tab.DeleteNodeFromDB(testData1)
 	if err != nil {
 		t.Error("delete node from table is failed", "err", err)
 	}
-	err = tab.DeleteNode(id1)
+	err = tab.DeleteNodeFromDB(testData2)
 	if err != nil {
 		t.Error("delete node from table is failed", "err", err)
 	}
-	if n := tab.db.node(id0); n != nil {
+	if n := tab.db.node(testData1.ID); n != nil {
 		t.Error("node is not removed", "nodeid", n.ID)
 	}
-	if n := tab.db.node(id1); n != nil {
+	if n := tab.db.node(testData2.ID); n != nil {
 		t.Error("node is not removed", "nodeid", n.ID)
+	}
+}
+
+func TestTable_DeleteNodeFromTable(t *testing.T) {
+	tab, _ := createTestTable()
+	storage, _ := tab.storages[NodeTypeUnknown].(*mockDiscoveryStorage)
+	node0 := storage.data[0]
+	node1 := storage.data[1]
+	err := tab.DeleteNodeFromTable(node0)
+	if err != nil {
+		t.Error("delete node from table is failed", "err", err)
+	}
+	err = tab.DeleteNodeFromTable(node1)
+	if err != nil {
+		t.Error("delete node from table is failed", "err", err)
+	}
+	if isIn(node0, storage.data) {
+		t.Error("the node is not removed", "nodeid", node0.ID)
+	}
+	if isIn(node1, storage.data) {
+		t.Error("the node is not removed", "nodeid", node1.ID)
 	}
 }

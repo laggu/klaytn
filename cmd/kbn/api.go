@@ -18,7 +18,6 @@ package main
 
 import (
 	"github.com/ground-x/klaytn/networks/p2p/discover"
-	"net"
 )
 
 type BootnodeAPI struct {
@@ -47,12 +46,16 @@ func (api *BootnodeAPI) ReadRandomNodes(nType discover.NodeType) []*discover.Nod
 	return buf
 }
 
-func (api *BootnodeAPI) CreateUpdateNode(id discover.NodeID, ip net.IP, udpPort, tcpPort uint16, nType discover.NodeType) error {
-	return api.bn.CreateUpdateNode(id, ip, udpPort, tcpPort, nType)
+func (api *BootnodeAPI) CreateUpdateNodeOnDB(nodekni string) error {
+	return api.bn.CreateUpdateNodeOnDB(nodekni)
 }
 
-func (api *BootnodeAPI) GetNode(id discover.NodeID) (*discover.Node, error) {
-	return api.bn.GetNode(id)
+func (api *BootnodeAPI) CreateUpdateNodeOnTable(nodekni string) error {
+	return api.bn.CreateUpdateNodeOnTable(nodekni)
+}
+
+func (api *BootnodeAPI) GetNodeFromDB(id discover.NodeID) (*discover.Node, error) {
+	return api.bn.GetNodeFromDB(id)
 }
 
 func (api *BootnodeAPI) GetTableEntries() []*discover.Node {
@@ -63,6 +66,10 @@ func (api *BootnodeAPI) GetTableReplacements() []*discover.Node {
 	return api.bn.GetTableReplacements()
 }
 
-func (api *BootnodeAPI) DeleteNode(id discover.NodeID) error {
-	return api.bn.DeleteNode(id)
+func (api *BootnodeAPI) DeleteNodeFromDB(nodekni string) error {
+	return api.bn.DeleteNodeFromDB(nodekni)
+}
+
+func (api *BootnodeAPI) DeleteNodeFromTable(nodekni string) error {
+	return api.bn.DeleteNodeFromTable(nodekni)
 }

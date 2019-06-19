@@ -42,13 +42,18 @@ web3._extend({
 	property: 'bootnode',
 	methods: [
 		new web3._extend.Method({
-			name: 'createUpdateNode',
-			call: 'bootnode_createUpdateNode',
-			params: 4
+			name: 'createUpdateNodeOnDB',
+			call: 'bootnode_createUpdateNodeOnDB',
+			params: 1
+		}),
+        new web3._extend.Method({
+			name: 'createUpdateNodeOnTable',
+			call: 'bootnode_createUpdateNodeOnTable',
+			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getNode',
-			call: 'bootnode_getNode',
+			name: 'getNodeFromDB',
+			call: 'bootnode_getNodeFromDB',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -60,8 +65,13 @@ web3._extend({
 			call: 'bootnode_getTableReplacements'
 		}),
 		new web3._extend.Method({
-			name: 'deleteNode',
-			call: 'bootnode_deleteNode',
+			name: 'deleteNodeFromDB',
+			call: 'bootnode_deleteNodeFromDB',
+			params: 1
+		}),
+        new web3._extend.Method({
+			name: 'deleteNodeFromTable',
+			call: 'bootnode_deleteNodeFromTable',
 			params: 1
 		}),
 		new web3._extend.Method({

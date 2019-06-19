@@ -69,9 +69,11 @@ type Discovery interface {
 
 	// interfaces for API
 	Name() string
-	CreateUpdateNode(n *Node) error
-	GetNode(id NodeID) (*Node, error)
-	DeleteNode(id NodeID) error
+	CreateUpdateNodeOnDB(n *Node) error
+	CreateUpdateNodeOnTable(n *Node) error
+	GetNodeFromDB(id NodeID) (*Node, error)
+	DeleteNodeFromDB(n *Node) error
+	DeleteNodeFromTable(n *Node) error
 	GetBucketEntries() []*Node
 	GetReplacements() []*Node
 }

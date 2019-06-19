@@ -107,12 +107,14 @@ func (t fakeTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType
 func (t fakeTable) RetrieveNodes(target common.Hash, nType discover.NodeType, nresults int) []*discover.Node {
 	return nil
 }
-func (t fakeTable) CreateUpdateNode(n *discover.Node) error            { return nil }
-func (t fakeTable) GetNode(id discover.NodeID) (*discover.Node, error) { return nil, nil }
-func (t fakeTable) DeleteNode(id discover.NodeID) error                { return nil }
-func (t fakeTable) GetBucketEntries() []*discover.Node                 { return nil }
-func (t fakeTable) GetReplacements() []*discover.Node                  { return nil }
-func (t fakeTable) HasBond(id discover.NodeID) bool                    { return true }
+func (t fakeTable) CreateUpdateNodeOnDB(n *discover.Node) error              { return nil }
+func (t fakeTable) CreateUpdateNodeOnTable(n *discover.Node) error           { return nil }
+func (t fakeTable) GetNodeFromDB(id discover.NodeID) (*discover.Node, error) { return nil, nil }
+func (t fakeTable) DeleteNodeFromDB(n *discover.Node) error                  { return nil }
+func (t fakeTable) DeleteNodeFromTable(n *discover.Node) error               { return nil }
+func (t fakeTable) GetBucketEntries() []*discover.Node                       { return nil }
+func (t fakeTable) GetReplacements() []*discover.Node                        { return nil }
+func (t fakeTable) HasBond(id discover.NodeID) bool                          { return true }
 func (t fakeTable) Bond(pinged bool, id discover.NodeID, addr *net.UDPAddr, tcpPort uint16, nType discover.NodeType) (*discover.Node, error) {
 	return nil, nil
 }
@@ -898,15 +900,23 @@ func (t *resolveMock) Bond(pinged bool, id discover.NodeID, addr *net.UDPAddr, t
 	panic("implement me")
 }
 
-func (t *resolveMock) CreateUpdateNode(n *discover.Node) error {
+func (t *resolveMock) CreateUpdateNodeOnDB(n *discover.Node) error {
 	panic("implement me")
 }
 
-func (t *resolveMock) GetNode(id discover.NodeID) (*discover.Node, error) {
+func (t *resolveMock) CreateUpdateNodeOnTable(n *discover.Node) error {
 	panic("implement me")
 }
 
-func (t *resolveMock) DeleteNode(id discover.NodeID) error {
+func (t *resolveMock) GetNodeFromDB(id discover.NodeID) (*discover.Node, error) {
+	panic("implement me")
+}
+
+func (t *resolveMock) DeleteNodeFromDB(n *discover.Node) error {
+	panic("implement me")
+}
+
+func (t *resolveMock) DeleteNodeFromTable(n *discover.Node) error {
 	panic("implement me")
 }
 
