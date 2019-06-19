@@ -414,10 +414,9 @@ func TestValueTransferRing(t *testing.T) {
 }
 
 // TestWronglyEncodedAccountKey checks if accountKey field is encoded in a wrong way.
-// case 1. AccountCreation
-// case 2. AccountUpdate
-// case 3. FeeDelegatedAccountUpdate
-// case 4. FeeDelegatedAccountUpdateWithRatio
+// case 1. AccountUpdate
+// case 2. FeeDelegatedAccountUpdate
+// case 3. FeeDelegatedAccountUpdateWithRatio
 func TestWronglyEncodedAccountKey(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -454,65 +453,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 	//var txs types.Transactions
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
-	// case 1. AccountCreation
-	{
-		tx := new(types.Transaction)
-		txtype := types.TxTypeAccountCreation
-
-		wrongEncodedKey := []byte{0x10}
-		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
-			txtype,
-			uint64(0),
-			new(big.Int).SetUint64(25 * params.Ston),
-			uint64(100000),
-			*bcdata.addrs[0],
-			big.NewInt(10),
-			*bcdata.addrs[0],
-			false,
-			wrongEncodedKey,
-		})
-		require.Equal(t, nil, err)
-
-		h := rlpHash(struct {
-			Byte    []byte
-			ChainId *big.Int
-			R       uint
-			S       uint
-		}{
-			serializedBytes,
-			bcdata.bc.Config().ChainID,
-			uint(0),
-			uint(0),
-		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
-		if err != nil {
-			panic(err)
-		}
-
-		buffer := new(bytes.Buffer)
-		err = rlp.Encode(buffer, txtype)
-		assert.Equal(t, nil, err)
-
-		err = rlp.Encode(buffer, []interface{}{
-			uint64(0),
-			new(big.Int).SetUint64(25 * params.Ston),
-			uint64(100000),
-			*bcdata.addrs[0],
-			big.NewInt(10),
-			*bcdata.addrs[0],
-			false,
-			wrongEncodedKey,
-			sig,
-		})
-		require.Equal(t, nil, err)
-
-		err = rlp.DecodeBytes(buffer.Bytes(), tx)
-		require.Equal(t, kerrors.ErrUnserializableKey, err)
-
-		//txs = append(txs, tx)
-	}
-
-	// case 2. AccountUpdate
+	// case 1. AccountUpdate
 	{
 		tx := new(types.Transaction)
 		txtype := types.TxTypeAccountUpdate
@@ -562,7 +503,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 		require.Equal(t, kerrors.ErrUnserializableKey, err)
 	}
 
-	// case 3. FeeDelegatedAccountUpdate
+	// case 2. FeeDelegatedAccountUpdate
 	{
 		tx := new(types.Transaction)
 		txtype := types.TxTypeFeeDelegatedAccountUpdate
@@ -614,7 +555,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 		require.Equal(t, kerrors.ErrUnserializableKey, err)
 	}
 
-	// case 4. FeeDelegatedAccountUpdateWithRatio
+	// case 3. FeeDelegatedAccountUpdateWithRatio
 	{
 		tx := new(types.Transaction)
 		txtype := types.TxTypeFeeDelegatedAccountUpdateWithRatio

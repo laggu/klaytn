@@ -48,8 +48,6 @@ func TestTxRLPEncode(t *testing.T) {
 		testTxRLPEncodeFeeDelegatedValueTransferMemo,
 		testTxRLPEncodeFeeDelegatedValueTransferMemoWithRatio,
 
-		testTxRLPEncodeAccountCreation,
-
 		testTxRLPEncodeAccountUpdate,
 		testTxRLPEncodeFeeDelegatedAccountUpdate,
 		testTxRLPEncodeFeeDelegatedAccountUpdateWithRatio,
@@ -245,46 +243,46 @@ func testTxRLPEncodeValueTransferMemo(t *testing.T) {
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
-func testTxRLPEncodeAccountCreation(t *testing.T) {
-	tx := genAccountCreationTransaction().(*TxInternalDataAccountCreation)
-
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
-	rawTx := &Transaction{data: tx}
-	rawTx.Sign(signer, key)
-
-	sigRLP := new(bytes.Buffer)
-
-	err := rlp.Encode(sigRLP, []interface{}{
-		tx.SerializeForSignToBytes(),
-		chainId,
-		uint(0),
-		uint(0),
-	})
-	assert.Equal(t, nil, err)
-
-	txHashRLP := new(bytes.Buffer)
-	err = rlp.Encode(txHashRLP, tx.Type())
-	assert.Equal(t, nil, err)
-
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(tx.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	err = rlp.Encode(txHashRLP, []interface{}{
-		tx.AccountNonce,
-		tx.Price,
-		tx.GasLimit,
-		tx.Recipient,
-		tx.Amount,
-		tx.From,
-		tx.HumanReadable,
-		keyEnc,
-		tx.TxSignatures,
-	})
-	assert.Equal(t, nil, err)
-
-	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
-}
+//func testTxRLPEncodeAccountCreation(t *testing.T) {
+//	tx := genAccountCreationTransaction().(*TxInternalDataAccountCreation)
+//
+//	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+//	chainId := params.BFTTestChainConfig.ChainID
+//	rawTx := &Transaction{data: tx}
+//	rawTx.Sign(signer, key)
+//
+//	sigRLP := new(bytes.Buffer)
+//
+//	err := rlp.Encode(sigRLP, []interface{}{
+//		tx.SerializeForSignToBytes(),
+//		chainId,
+//		uint(0),
+//		uint(0),
+//	})
+//	assert.Equal(t, nil, err)
+//
+//	txHashRLP := new(bytes.Buffer)
+//	err = rlp.Encode(txHashRLP, tx.Type())
+//	assert.Equal(t, nil, err)
+//
+//	serializer := accountkey.NewAccountKeySerializerWithAccountKey(tx.Key)
+//	keyEnc, _ := rlp.EncodeToBytes(serializer)
+//
+//	err = rlp.Encode(txHashRLP, []interface{}{
+//		tx.AccountNonce,
+//		tx.Price,
+//		tx.GasLimit,
+//		tx.Recipient,
+//		tx.Amount,
+//		tx.From,
+//		tx.HumanReadable,
+//		keyEnc,
+//		tx.TxSignatures,
+//	})
+//	assert.Equal(t, nil, err)
+//
+//	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
+//}
 
 func testTxRLPEncodeAccountUpdate(t *testing.T) {
 	tx := genAccountUpdateTransaction().(*TxInternalDataAccountUpdate)

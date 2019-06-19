@@ -53,7 +53,7 @@ func genTestKeys(len int) []*ecdsa.PrivateKey {
 
 // TestRoleBasedAccount executes transactions to test accounts having a role-based key.
 // The scenario is the following:
-// 1. Create an account `colin` with a role-key.
+// 1. Update an account `colin` with a role-key.
 // 2. Transfer value using colin.TxKeys.
 // 3. Pay tx fee using colin.FeeKeys.
 // 4. Update tx key using colin.UpdateKeys.
@@ -90,9 +90,9 @@ func TestRoleBasedAccount(t *testing.T) {
 		Nonce:      uint64(0),
 	}
 
-	// Create an account having a role-based key
-	var colinAddr common.Address
-	colinAddr.SetBytesFromFront([]byte(getRandomPrivateKeyString(t)))
+	// colinInitial has a initial key pair of colin before the account key update
+	colinInitial, err := createAnonymousAccount(getRandomPrivateKeyString(t))
+	assert.Equal(t, nil, err)
 
 	keys := genTestKeys(3)
 	accKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
@@ -101,7 +101,7 @@ func TestRoleBasedAccount(t *testing.T) {
 		accountkey.NewAccountKeyPublicWithValue(&keys[2].PublicKey),
 	})
 	colin := &TestRoleBasedAccountType{
-		Addr:       colinAddr,
+		Addr:       colinInitial.Addr,
 		TxKeys:     []*ecdsa.PrivateKey{keys[0]},
 		UpdateKeys: []*ecdsa.PrivateKey{keys[1]},
 		FeeKeys:    []*ecdsa.PrivateKey{keys[2]},
@@ -112,25 +112,39 @@ func TestRoleBasedAccount(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// 1. Create an account `colin` with a role-key.
+	// 0. Transfer (reservoir -> `colin`) using a legacy transaction.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    colin.AccKey,
+		tx := types.NewTransaction(reservoir.Nonce,
+			colin.Addr, amount, gasLimit, gasPrice, []byte{})
+
+		err := tx.SignWithKeys(signer, reservoir.TxKeys)
+		assert.Equal(t, nil, err)
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		reservoir.Nonce += 1
+	}
+
+	// 1. Update the account `colin` with a role-key.
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      colin.Nonce,
+			types.TxValueKeyFrom:       colin.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: colin.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, reservoir.TxKeys)
+		err = tx.SignWithKeys(signer, colinInitial.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -138,7 +152,7 @@ func TestRoleBasedAccount(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
-		reservoir.Nonce += 1
+		colin.Nonce += 1
 	}
 
 	// 2. Transfer value using colin.TxKeys.
@@ -267,7 +281,7 @@ func TestRoleBasedAccount(t *testing.T) {
 }
 
 // TestAccountUpdateRoleBasedNil tests TxInternalDataAccountUpdate with the following scenario:
-// 1. Create an account colin using TxTypeAccountCreation.
+// 1. Create an account colin using TxTypeValueTransfer.
 // 2. Update key to RoleBasedKey. If anyone is AccountKeyNil, it should fail. First nil key.
 // 3. Update key to RoleBasedKey. If anyone is AccountKeyNil, it should fail. Second nil key.
 func TestAccountUpdateRoleBasedNil(t *testing.T) {
@@ -311,22 +325,20 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// 1. Create an account colin using TxTypeAccountCreation.
+	// 1. Create an account colin using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    colin.AccKey,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       colin.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
@@ -397,7 +409,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 
 // TestAccountUpdateRoleBasedWrongLength tests if the role-based key having wrong length.
 // It tests the following scenario:
-// 1. Create an account colin using TxTypeAccountCreation.
+// 1. Create an account colin using TxTypeValueTransfer.
 // 2. Update key to RoleBasedKey with four roles. It should fail.
 // 3. Update key to RoleBasedKey with zero role. It should fail.
 func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
@@ -441,22 +453,20 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// 1. Create an account colin using TxTypeAccountCreation.
+	// 1. Create an account colin using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    colin.AccKey,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       colin.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
@@ -523,7 +533,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 
 // TestAccountUpdateRoleBasedTransition tests signature validation process of TxPool.
 // It performs the following scenario:
-// 1. Create an account colin using TxTypeAccountCreation.
+// 1. Create an account colin using TxTypeValueTransfer.
 // 2. Inserting a tx signed by old key into the pool. It should pass.
 // 3. Inserting a tx signed by new key into the pool. It should fail.
 // 4. Execute TxTypeAccountUpdate
@@ -570,22 +580,20 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// 1. Create an account colin using TxTypeAccountCreation.
+	// 1. Create an account colin using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    colin.AccKey,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       colin.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
@@ -714,7 +722,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 
 // TestAccountUpdateToRoleBasedToPub tests updating key (oldKey -> newKey -> oldKey).
 // It performs the following scenario:
-// 1. Create an account colin using TxTypeAccountCreation.
+// 1. Create an account colin using TxTypeValueTransfer.
 // 2. Update to newKey using TxTypeAccountUpdate
 // 3. Update back to oldKey using TxTypeAccountUpdate
 func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
@@ -758,22 +766,20 @@ func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// 1. Create an account colin using TxTypeAccountCreation.
+	// 1. Create an account colin using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            colin.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    colin.AccKey,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       colin.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)

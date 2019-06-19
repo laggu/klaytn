@@ -42,8 +42,6 @@ func TestGasOverflow(t *testing.T) {
 		{"FeeDelegatedValueTransferWithMemo", testGasOverflowFeeDelegatedValueTransferWithMemo},
 		{"FeeDelegatedWithRatioValueTransferWithMemo", testGasOverflowFeeDelegatedWithRatioValueTransferWithMemo},
 
-		{"AccountCreation", testGasOverflowAccountCreation},
-
 		{"AccountUpdate", testGasOverflowAccountUpdate},
 		{"FeeDelegatedAccountUpdate", testGasOverflowFeeDelegatedAccountUpdate},
 		{"FeeDelegatedWithRatioAccountUpdate", testGasOverflowFeeDelegatedWithRatioAccountUpdate},
@@ -137,17 +135,6 @@ func testGasOverflowFeeDelegatedWithRatioValueTransferWithMemo(t *testing.T) {
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, payerValidationGas)
 	gas = addUint64(t, gas, maxDataGas)
-}
-
-func testGasOverflowAccountCreation(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeAccountCreation)
-	senderValidationGas := getMaxValidationKeyGas(t)
-
-	maxCreationGas := getMaxCreationKeyGas(t)
-	maxCreationGas = addUint64(t, maxCreationGas, params.TxGasHumanReadable)
-
-	gas := addUint64(t, intrinsic, senderValidationGas)
-	gas = addUint64(t, gas, maxCreationGas)
 }
 
 func testGasOverflowAccountUpdate(t *testing.T) {

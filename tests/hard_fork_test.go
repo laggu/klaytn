@@ -58,6 +58,7 @@ func TestHardForkBlock(t *testing.T) {
 	//})
 
 	// If you print out b1.rlp and b2.rlp, uncomment below.
+	// `genBlocks` could be failed sometimes depends on the order of transaction in a block. Just try again.
 	//genBlocks(t)
 	//return
 
@@ -195,7 +196,6 @@ func genBlocks(t *testing.T) {
 		var txs types.Transactions
 		// Preparing step. Send KLAY to LegacyAccount.
 		{
-
 			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
 			tx := types.NewTransaction(reservoir.GetNonce(),
 				accountTypes[0].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
@@ -210,26 +210,43 @@ func genBlocks(t *testing.T) {
 
 		// Preparing step. Send KLAY to KlaytnAcounts.
 		for i := 1; i < len(accountTypes); i++ {
-			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-			values := map[types.TxValueKeyType]interface{}{
-				types.TxValueKeyNonce:         reservoir.GetNonce(),
-				types.TxValueKeyFrom:          reservoir.GetAddr(),
-				types.TxValueKeyTo:            accountTypes[i].account.GetAddr(),
-				types.TxValueKeyAmount:        amount,
-				types.TxValueKeyGasLimit:      gasLimit,
-				types.TxValueKeyGasPrice:      gasPrice,
-				types.TxValueKeyHumanReadable: false,
-				types.TxValueKeyAccountKey:    accountTypes[i].account.GetAccKey(),
+			// create an account which account key will be replaced to one of account key types.
+			anon, err := createAnonymousAccount(getRandomPrivateKeyString(t))
+			assert.Equal(t, nil, err)
+
+			accountTypes[i].account.SetAddr(anon.Addr)
+
+			{
+				amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+				tx := types.NewTransaction(reservoir.GetNonce(),
+					accountTypes[i].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
+
+				err := tx.SignWithKeys(signer, reservoir.GetTxKeys())
+				assert.Equal(t, nil, err)
+				txs = append(txs, tx)
+
+				reservoir.AddNonce()
 			}
-			tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-			assert.Equal(t, nil, err)
 
-			err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
-			assert.Equal(t, nil, err)
+			// update the account's key
+			{
+				values := map[types.TxValueKeyType]interface{}{
+					types.TxValueKeyNonce:      accountTypes[i].account.GetNonce(),
+					types.TxValueKeyFrom:       accountTypes[i].account.GetAddr(),
+					types.TxValueKeyGasLimit:   gasLimit,
+					types.TxValueKeyGasPrice:   gasPrice,
+					types.TxValueKeyAccountKey: accountTypes[i].account.GetAccKey(),
+				}
+				tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+				assert.Equal(t, nil, err)
 
-			txs = append(txs, tx)
+				err = tx.SignWithKeys(signer, anon.Keys)
+				assert.Equal(t, nil, err)
 
-			reservoir.AddNonce()
+				txs = append(txs, tx)
+
+				accountTypes[i].account.AddNonce()
+			}
 		}
 
 		{

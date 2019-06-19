@@ -64,8 +64,6 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap, gas = genMapForValueTransfer(from, to, gasPrice, txType)
 	case types.TxTypeValueTransferMemo:
 		valueMap, gas = genMapForValueTransferWithMemo(from, to, gasPrice, txType)
-	case types.TxTypeAccountCreation:
-		valueMap, gas = genMapForCreate(from, newAccount, gasPrice, txType)
 	case types.TxTypeAccountUpdate:
 		valueMap, gas = genMapForUpdate(from, to, gasPrice, newAccount.AccKey, txType)
 	case types.TxTypeSmartContractDeploy:
@@ -99,7 +97,6 @@ func TestValidationPoolInsert(t *testing.T) {
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
 		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountCreation", types.TxTypeAccountCreation},
 		{"AccountUpdate", types.TxTypeAccountUpdate},
 		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
 		{"SmartContractExecution", types.TxTypeSmartContractExecution},
@@ -248,7 +245,6 @@ func TestValidationBlockTx(t *testing.T) {
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
 		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountCreation", types.TxTypeAccountCreation},
 		{"AccountUpdate", types.TxTypeAccountUpdate},
 		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
 		{"SmartContractExecution", types.TxTypeSmartContractExecution},
@@ -440,7 +436,6 @@ func TestValidationInvalidSig(t *testing.T) {
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
 		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountCreation", types.TxTypeAccountCreation},
 		{"AccountUpdate", types.TxTypeAccountUpdate},
 		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
 		{"SmartContractExecution", types.TxTypeSmartContractExecution},
@@ -643,25 +638,13 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	var txs types.Transactions
 	acc1, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 
-	valueMap, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
-	valueMap[types.TxValueKeyTo] = acc1.Addr
+	valueMap, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountUpdate)
 	valueMap[types.TxValueKeyAccountKey] = acc1.AccKey
-	valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(params.KLAY)
 
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, valueMap)
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, valueMap)
 	assert.Equal(t, nil, err)
 
 	err = tx.SignWithKeys(signer, reservoir.Keys)
@@ -674,11 +657,21 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	}
 	reservoir.AddNonce()
 
-	valueMap, _ = genMapForTxTypes(acc1, reservoir, types.TxTypeLegacyTransaction)
+	// make TxPool to test validation in 'TxPool add' process
+	poolSlots := 1000
+	txpoolconfig := blockchain.DefaultTxPoolConfig
+	txpoolconfig.Journal = ""
+	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
+	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
+	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
+	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+
+	valueMap, _ = genMapForTxTypes(reservoir, reservoir, types.TxTypeLegacyTransaction)
 	tx, err = types.NewTransactionWithMap(types.TxTypeLegacyTransaction, valueMap)
 	assert.Equal(t, nil, err)
 
-	err = tx.SignWithKeys(signer, acc1.Keys)
+	err = tx.SignWithKeys(signer, reservoir.Keys)
 	assert.Equal(t, nil, err)
 
 	err = txpool.AddRemote(tx)
@@ -691,7 +684,6 @@ func TestInvalidBalance(t *testing.T) {
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
 		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountCreation", types.TxTypeAccountCreation},
 		{"AccountUpdate", types.TxTypeAccountUpdate},
 		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
 		{"SmartContractExecution", types.TxTypeSmartContractExecution},
@@ -797,12 +789,10 @@ func TestInvalidBalance(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		valueMapForCreation, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
-		valueMapForCreation[types.TxValueKeyTo] = testAcc.Addr
-		valueMapForCreation[types.TxValueKeyAccountKey] = testAcc.AccKey
+		valueMapForCreation, _ := genMapForTxTypes(reservoir, testAcc, types.TxTypeValueTransfer)
 		valueMapForCreation[types.TxValueKeyAmount] = cost
 
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, valueMapForCreation)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, valueMapForCreation)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
@@ -1105,7 +1095,6 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		{"LegacyTransaction", types.TxTypeLegacyTransaction},
 		{"ValueTransfer", types.TxTypeValueTransfer},
 		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountCreation", types.TxTypeAccountCreation},
 		{"AccountUpdate", types.TxTypeAccountUpdate},
 		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
 		{"SmartContractExecution", types.TxTypeSmartContractExecution},
@@ -1204,12 +1193,10 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		valueMapForCreation, _ := genMapForTxTypes(reservoir, reservoir, types.TxTypeAccountCreation)
-		valueMapForCreation[types.TxValueKeyTo] = testAcc.Addr
-		valueMapForCreation[types.TxValueKeyAccountKey] = testAcc.AccKey
+		valueMapForCreation, _ := genMapForTxTypes(reservoir, testAcc, types.TxTypeValueTransfer)
 		valueMapForCreation[types.TxValueKeyAmount] = cost
 
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, valueMapForCreation)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, valueMapForCreation)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
@@ -1703,7 +1690,6 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 		types.TxTypeValueTransferMemo,
 		types.TxTypeSmartContractDeploy,
 		types.TxTypeSmartContractExecution,
-		types.TxTypeAccountCreation,
 		types.TxTypeAccountUpdate,
 		types.TxTypeCancel,
 
@@ -1907,7 +1893,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// fee payer account
-	feePayer, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
+	feePayer, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
 	// make TxPool to test validation in 'TxPool add' process
@@ -1954,22 +1940,20 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
-	// deploy a contract for contract execution tx type
+	// transfer KLAY to fee payer
 	{
 		var txs types.Transactions
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.GetNonce(),
-			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            feePayer.Addr,
-			types.TxValueKeyAmount:        new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(100000)),
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    feePayer.AccKey,
+			types.TxValueKeyNonce:    reservoir.GetNonce(),
+			types.TxValueKeyFrom:     reservoir.GetAddr(),
+			types.TxValueKeyTo:       feePayer.Addr,
+			types.TxValueKeyAmount:   new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(100000)),
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: big.NewInt(25 * params.Ston),
 		}
 
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)

@@ -186,7 +186,6 @@ func TestValidateTransaction(t *testing.T) {
 		testValidateValueTransferMemo,
 		testValidateFeeDelegatedValueTransferMemo,
 		testValidateFeeDelegatedValueTransferMemoWithRatio,
-		testValidateAccountCreation,
 		testValidateAccountUpdate,
 		testValidateFeeDelegatedAccountUpdate,
 		testValidateFeeDelegatedAccountUpdateWithRatio,
@@ -667,58 +666,58 @@ func testValidateFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 	assert.Equal(t, feePayer, tx.ValidatedFeePayer())
 }
 
-func testValidateAccountCreation(t *testing.T) {
-	// Transaction generation
-	internalTx := genAccountCreationTransaction().(*TxInternalDataAccountCreation)
-	tx := &Transaction{data: internalTx}
-
-	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
-
-	prv, from := defaultTestKey()
-	internalTx.From = from
-
-	// Sign
-	// encode([ encode([type, nonce, gasPrice, gas, to, value, from, humanReadable, encodedKey]), chainid, 0, 0 ])
-	encodedKey, err := rlp.EncodeToBytes(accountkey.NewAccountKeySerializerWithAccountKey(internalTx.Key))
-	assert.Equal(t, nil, err)
-	b, err := rlp.EncodeToBytes([]interface{}{
-		internalTx.Type(),
-		internalTx.AccountNonce,
-		internalTx.Price,
-		internalTx.GasLimit,
-		internalTx.Recipient,
-		internalTx.Amount,
-		internalTx.From,
-		internalTx.HumanReadable,
-		encodedKey,
-	})
-	assert.Equal(t, nil, err)
-
-	h := rlpHash([]interface{}{
-		b,
-		chainid,
-		uint(0),
-		uint(0),
-	})
-
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
-	assert.Equal(t, nil, err)
-
-	tx.SetSignature(sig)
-
-	// AccountKeyPicker initialization
-	p := &AccountKeyPickerForTest{
-		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
-	}
-	key := accountkey.NewAccountKeyPublicWithValue(&prv.PublicKey)
-	p.SetKey(from, key)
-
-	// Validate
-	_, err = tx.ValidateSender(signer, p, 0)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, from, tx.ValidatedSender())
-}
+//func testValidateAccountCreation(t *testing.T) {
+//	// Transaction generation
+//	internalTx := genAccountCreationTransaction().(*TxInternalDataAccountCreation)
+//	tx := &Transaction{data: internalTx}
+//
+//	chainid := big.NewInt(1)
+//	signer := NewEIP155Signer(chainid)
+//
+//	prv, from := defaultTestKey()
+//	internalTx.From = from
+//
+//	// Sign
+//	// encode([ encode([type, nonce, gasPrice, gas, to, value, from, humanReadable, encodedKey]), chainid, 0, 0 ])
+//	encodedKey, err := rlp.EncodeToBytes(accountkey.NewAccountKeySerializerWithAccountKey(internalTx.Key))
+//	assert.Equal(t, nil, err)
+//	b, err := rlp.EncodeToBytes([]interface{}{
+//		internalTx.Type(),
+//		internalTx.AccountNonce,
+//		internalTx.Price,
+//		internalTx.GasLimit,
+//		internalTx.Recipient,
+//		internalTx.Amount,
+//		internalTx.From,
+//		internalTx.HumanReadable,
+//		encodedKey,
+//	})
+//	assert.Equal(t, nil, err)
+//
+//	h := rlpHash([]interface{}{
+//		b,
+//		chainid,
+//		uint(0),
+//		uint(0),
+//	})
+//
+//	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+//	assert.Equal(t, nil, err)
+//
+//	tx.SetSignature(sig)
+//
+//	// AccountKeyPicker initialization
+//	p := &AccountKeyPickerForTest{
+//		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
+//	}
+//	key := accountkey.NewAccountKeyPublicWithValue(&prv.PublicKey)
+//	p.SetKey(from, key)
+//
+//	// Validate
+//	_, err = tx.ValidateSender(signer, p, 0)
+//	assert.Equal(t, nil, err)
+//	assert.Equal(t, from, tx.ValidatedSender())
+//}
 
 func testValidateAccountUpdate(t *testing.T) {
 	// Transaction generation

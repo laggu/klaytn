@@ -157,24 +157,6 @@ func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) b
 	return a.getDefaultKey().Validate(r, pubkeys)
 }
 
-// ValidateAccountCreation validates keys when creating an account with this key.
-func (a *AccountKeyRoleBased) ValidateAccountCreation() error {
-	// 1. RoleTransaction should exist at least.
-	if len(*a) < 1 {
-		return errKeyLengthZero
-	}
-
-	// 2. Prohibited key types are: Nil and RoleBased.
-	for _, k := range *a {
-		if k.Type() == AccountKeyTypeNil ||
-			k.IsCompositeType() {
-			return errKeyShouldNotBeNilOrCompositeType
-		}
-	}
-
-	return nil
-}
-
 func (a *AccountKeyRoleBased) getDefaultKey() AccountKey {
 	return (*a)[RoleTransaction]
 }

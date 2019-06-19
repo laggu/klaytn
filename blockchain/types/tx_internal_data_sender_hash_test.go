@@ -42,7 +42,6 @@ func TestTransactionSenderTxHash(t *testing.T) {
 		{"FeeDelegatedValueTransferMemo", genFeeDelegatedValueTransferMemoTransaction()},
 		{"FeeDelegatedValueTransferMemoWithRatio", genFeeDelegatedValueTransferMemoWithRatioTransaction()},
 		{"ChainDataTx", genChainDataTransaction()},
-		{"AccountCreation", genAccountCreationTransaction()},
 		{"AccountUpdate", genAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdate", genFeeDelegatedAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdateWithRatio", genFeeDelegatedAccountUpdateWithRatioTransaction()},
@@ -77,6 +76,10 @@ func TestTransactionSenderTxHash(t *testing.T) {
 	// Below code checks whether serialization for all tx implementations is done or not.
 	// If no serialization, make test failed.
 	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
+		// TxTypeAccountCreation is not supported now
+		if i == TxTypeAccountCreation {
+			continue
+		}
 		tx, err := NewTxInternalData(i)
 		if err == nil {
 			if _, ok := txMap[tx.Type()]; !ok {
@@ -188,9 +191,9 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 		assert.Equal(t, h, senderTxHash)
 
-	case *TxInternalDataAccountCreation:
-		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
-		assert.Equal(t, rawTx.Hash(), senderTxHash)
+	//case *TxInternalDataAccountCreation:
+	//	senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+	//	assert.Equal(t, rawTx.Hash(), senderTxHash)
 
 	case *TxInternalDataAccountUpdate:
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()

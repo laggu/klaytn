@@ -32,7 +32,6 @@ func BenchmarkTxEncode(b *testing.B) {
 		{"ValueTransfer", genValueTransferTransaction()},
 		{"FeeDelegatedValueTransfer", genFeeDelegatedValueTransferTransaction()},
 		{"FeeDelegatedValueTransferWithRatio", genFeeDelegatedValueTransferWithRatioTransaction()},
-		{"AccountCreation", genAccountCreationTransaction()},
 		{"AccountUpdate", genAccountUpdateTransaction()},
 		{"SmartContractDeploy", genSmartContractDeployTransaction()},
 		{"SmartContractExecution", genSmartContractExecutionTransaction()},

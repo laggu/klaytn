@@ -33,7 +33,6 @@ func TestTxRLPDecode(t *testing.T) {
 		testTxRLPDecodeLegacy,
 		testTxRLPDecodeValueTransfer,
 		testTxRLPDecodeValueTransferMemo,
-		testTxRLPDecodeAccountCreation,
 		testTxRLPDecodeAccountUpdate,
 		testTxRLPDecodeSmartContractDeploy,
 		testTxRLPDecodeSmartContractExecution,
@@ -152,39 +151,39 @@ func testTxRLPDecodeValueTransferMemo(t *testing.T) {
 	}
 }
 
-func testTxRLPDecodeAccountCreation(t *testing.T) {
-	tx := genAccountCreationTransaction().(*TxInternalDataAccountCreation)
-
-	buffer := new(bytes.Buffer)
-	err := rlp.Encode(buffer, tx.Type())
-	assert.Equal(t, nil, err)
-
-	encodedKey, err := rlp.EncodeToBytes(accountkey.NewAccountKeySerializerWithAccountKey(tx.Key))
-	assert.Equal(t, nil, err)
-
-	err = rlp.Encode(buffer, []interface{}{
-		tx.AccountNonce,
-		tx.Price,
-		tx.GasLimit,
-		tx.Recipient,
-		tx.Amount,
-		tx.From,
-		tx.HumanReadable, // bool only allows 0 or 1.
-		encodedKey,
-		tx.TxSignatures,
-	})
-	assert.Equal(t, nil, err)
-
-	dec := newTxInternalDataSerializer()
-
-	if err := rlp.DecodeBytes(buffer.Bytes(), &dec); err != nil {
-		panic(err)
-	}
-
-	if !tx.Equal(dec.tx) {
-		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
-	}
-}
+//func testTxRLPDecodeAccountCreation(t *testing.T) {
+//	tx := genAccountCreationTransaction().(*TxInternalDataAccountCreation)
+//
+//	buffer := new(bytes.Buffer)
+//	err := rlp.Encode(buffer, tx.Type())
+//	assert.Equal(t, nil, err)
+//
+//	encodedKey, err := rlp.EncodeToBytes(accountkey.NewAccountKeySerializerWithAccountKey(tx.Key))
+//	assert.Equal(t, nil, err)
+//
+//	err = rlp.Encode(buffer, []interface{}{
+//		tx.AccountNonce,
+//		tx.Price,
+//		tx.GasLimit,
+//		tx.Recipient,
+//		tx.Amount,
+//		tx.From,
+//		tx.HumanReadable, // bool only allows 0 or 1.
+//		encodedKey,
+//		tx.TxSignatures,
+//	})
+//	assert.Equal(t, nil, err)
+//
+//	dec := newTxInternalDataSerializer()
+//
+//	if err := rlp.DecodeBytes(buffer.Bytes(), &dec); err != nil {
+//		panic(err)
+//	}
+//
+//	if !tx.Equal(dec.tx) {
+//		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
+//	}
+//}
 
 func testTxRLPDecodeAccountUpdate(t *testing.T) {
 	tx := genAccountUpdateTransaction().(*TxInternalDataAccountUpdate)

@@ -71,6 +71,10 @@ func BenchmarkEvmOp(t *testing.B) {
 		Nonce: uint64(0),
 	}
 
+	// multisig10Initial has a initial key pair of multisig10 before the account key update
+	multisig10Initial, err := createAnonymousAccount("bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c3200")
+	require.Equal(t, nil, err)
+
 	multisig10, err := createMultisigAccount(uint(1),
 		[]uint{1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
@@ -83,7 +87,7 @@ func BenchmarkEvmOp(t *testing.B) {
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e98F",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e999",
 			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
-		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
+		multisig10Initial.Addr)
 
 	if testing.Verbose() {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
@@ -145,19 +149,19 @@ func BenchmarkEvmOp(t *testing.B) {
 
 		{
 			values := map[types.TxValueKeyType]interface{}{
-				types.TxValueKeyNonce:         reservoir.Nonce,
-				types.TxValueKeyFrom:          reservoir.Addr,
-				types.TxValueKeyTo:            multisig10.Addr,
+				types.TxValueKeyNonce:         multisig10.Nonce,
+				types.TxValueKeyFrom:          multisig10.Addr,
 				types.TxValueKeyAmount:        amount,
 				types.TxValueKeyGasLimit:      gasLimit,
 				types.TxValueKeyGasPrice:      gasPrice,
 				types.TxValueKeyHumanReadable: false,
 				types.TxValueKeyAccountKey:    multisig10.AccKey,
+				types.TxValueKeyFeePayer:      reservoir.Addr,
 			}
-			tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+			tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
 			assert.Equal(t, nil, err)
 
-			err = tx.SignWithKeys(signer, reservoir.Keys)
+			err = tx.SignWithKeys(signer, multisig10Initial.Keys)
 			assert.Equal(t, nil, err)
 
 			txs = append(txs, tx)

@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
+	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strings"
@@ -31,6 +32,8 @@ import (
 	"time"
 )
 
+// TestValidateSenderContract tests a precompiled contract "ValidateSender" whose address is 0xb.
+// This contract validates the signature that is signed by the sender with the msgHash.
 func TestValidateSenderContract(t *testing.T) {
 	prof := profile.NewProfiler()
 
@@ -69,44 +72,41 @@ func TestValidateSenderContract(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
+	// multisigInitial has a initial key pair of multisig before the account key update
+	multisigInitial, err := createAnonymousAccount("aa113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e")
+	assert.Equal(t, nil, err)
+
+	// multisig2Initial has a initial key pair of multisig2 before the account key update
+	multisig2Initial, err := createAnonymousAccount("cc113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e")
+	assert.Equal(t, nil, err)
+
 	multisig, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
 		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
 			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
-		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
+		multisigInitial.Addr)
 
 	multisig2, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
 		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322f",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e98a",
 			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ed"},
-		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ec"))
+		multisig2Initial.Addr)
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// 1. Create an account multisig using TxTypeAccountCreation.
+	// Transfer (reservoir -> multisig) using a legacy transaction.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            multisig.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    multisig.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		tx := types.NewTransaction(reservoir.Nonce,
+			multisig.Addr, amount, gasLimit, gasPrice, []byte{})
 
-		err = tx.SignWithKeys(signer, reservoir.Keys)
+		err := tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
-
 		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
@@ -115,27 +115,41 @@ func TestValidateSenderContract(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Create an account multisig2 using TxTypeAccountCreation.
+	// Update multisig account's key to a multisig key
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            multisig2.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    multisig2.AccKey,
+			types.TxValueKeyNonce:      multisig.Nonce,
+			types.TxValueKeyFrom:       multisig.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: multisig.AccKey,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, reservoir.Keys)
+		err = tx.SignWithKeys(signer, multisigInitial.Keys)
 		assert.Equal(t, nil, err)
 
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		multisig.Nonce += 1
+	}
+
+	// Transfer (reservoir -> multisig2) using a legacy transaction.
+	{
+		var txs types.Transactions
+
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		tx := types.NewTransaction(reservoir.Nonce,
+			multisig2.Addr, amount, gasLimit, gasPrice, []byte{})
+
+		err := tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
 		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
@@ -144,7 +158,32 @@ func TestValidateSenderContract(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 3. Deploy the contract `ValidateSender`.
+	// Update multisig2 account's key to a multisig key
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      multisig2.Nonce,
+			types.TxValueKeyFrom:       multisig2.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: multisig2.AccKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, multisig2Initial.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		multisig.Nonce += 1
+	}
+
+	// Deploy the contract `ValidateSender`.
 	start = time.Now()
 	filepath := "../contracts/validatesender/validate_sender.sol"
 	contracts, err := deployContract(filepath, bcdata, accountMap, prof)
@@ -159,7 +198,7 @@ func TestValidateSenderContract(t *testing.T) {
 
 	n := accountMap.GetNonce(*bcdata.addrs[0])
 
-	// 4. Check if the validation is successful with valid parameters of multisig.
+	// Check if the validation is successful with valid parameters of multisig.
 	{
 		msg := crypto.Keccak256Hash([]byte{0x1})
 		sigs := make([]byte, 65*2)
@@ -202,7 +241,7 @@ func TestValidateSenderContract(t *testing.T) {
 		assert.Equal(t, true, validated)
 	}
 
-	// 5. Check if the validation is successful with valid parameters of reservoir.
+	// Check if the validation is successful with valid parameters of reservoir.
 	{
 		msg := crypto.Keccak256Hash([]byte{0x1})
 		sigs := make([]byte, 65)
@@ -242,7 +281,7 @@ func TestValidateSenderContract(t *testing.T) {
 		assert.Equal(t, true, validated)
 	}
 
-	// 5. Check if the validation is failed with wrong signature.
+	// Check if the validation is failed with wrong signature.
 	{
 		msg := crypto.Keccak256Hash([]byte{0x1})
 		sigs := make([]byte, 65)
@@ -282,7 +321,7 @@ func TestValidateSenderContract(t *testing.T) {
 		assert.Equal(t, false, validated)
 	}
 
-	// 6. Check if the validation is failed with signed by multisig but the address was set to mulsig2.
+	// Check if the validation is failed with signed by multisig but the address was set to mulsig2.
 	{
 		msg := crypto.Keccak256Hash([]byte{0x1})
 		sigs := make([]byte, 65*2)
@@ -325,7 +364,7 @@ func TestValidateSenderContract(t *testing.T) {
 		assert.Equal(t, false, validated)
 	}
 
-	// 7. Check if the validation is failed with an unknown address.
+	// Check if the validation is failed with an unknown address.
 	{
 		msg := crypto.Keccak256Hash([]byte{0x1})
 		sigs := make([]byte, 65*2)

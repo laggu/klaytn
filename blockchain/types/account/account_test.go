@@ -114,15 +114,6 @@ func genRandomHash() (h common.Hash) {
 	return h
 }
 
-func genLegacyAccount() *LegacyAccount {
-	return newLegacyAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:       rand.Uint64(),
-		AccountValueKeyBalance:     big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyStorageRoot: genRandomHash(),
-		AccountValueKeyCodeHash:    genRandomHash().Bytes(),
-	})
-}
-
 func genEOA() *ExternallyOwnedAccount {
 	humanReadable := false
 

@@ -96,10 +96,9 @@ func BenchmarkTxPerformanceSmartContractExecution(b *testing.B) {
 // This requires one more step "account creation of a Klaytn account" compared to BenchmarkTxPerformanceCompatible.
 func BenchmarkTxPerformanceNew(b *testing.B) {
 	testfns := []genTx{
-		genNewAccountCreation,
-		genNewAccountCreationMultisig3,
-		genNewAccountCreationRoleBasedSingle,
-		genNewAccountCreationRoleBasedMultisig3,
+		genNewAccountUpdateMultisig3,
+		genNewAccountUpdateRoleBasedSingle,
+		genNewAccountUpdateRoleBasedMultisig3,
 		genNewAccountUpdateAccountKeyPublic,
 		genNewFeeDelegatedValueTransfer,
 		genNewFeeDelegatedValueTransferWithRatio,
@@ -128,10 +127,9 @@ func BenchmarkTxPerformanceNew(b *testing.B) {
 
 func BenchmarkTxPerformanceNewMultisig(b *testing.B) {
 	testfns := []genTx{
-		genNewAccountCreation,
-		genNewAccountCreationMultisig3,
-		genNewAccountCreationRoleBasedSingle,
-		genNewAccountCreationRoleBasedMultisig3,
+		genNewAccountUpdateMultisig3,
+		genNewAccountUpdateRoleBasedSingle,
+		genNewAccountUpdateRoleBasedMultisig3,
 		genNewAccountUpdateAccountKeyPublic,
 		genNewFeeDelegatedValueTransfer,
 		genNewFeeDelegatedValueTransferWithRatio,
@@ -164,10 +162,9 @@ func BenchmarkTxPerformanceNewMultisig(b *testing.B) {
 
 func BenchmarkTxPerformanceNewRoleBasedSingle(b *testing.B) {
 	testfns := []genTx{
-		genNewAccountCreation,
-		genNewAccountCreationMultisig3,
-		genNewAccountCreationRoleBasedSingle,
-		genNewAccountCreationRoleBasedMultisig3,
+		genNewAccountUpdateMultisig3,
+		genNewAccountUpdateRoleBasedSingle,
+		genNewAccountUpdateRoleBasedMultisig3,
 		genNewAccountUpdateAccountKeyPublic,
 		genNewFeeDelegatedValueTransfer,
 		genNewFeeDelegatedValueTransferWithRatio,
@@ -204,10 +201,9 @@ func BenchmarkTxPerformanceNewRoleBasedSingle(b *testing.B) {
 
 func BenchmarkTxPerformanceNewRoleBasedMultisig3(b *testing.B) {
 	testfns := []genTx{
-		genNewAccountCreation,
-		genNewAccountCreationMultisig3,
-		genNewAccountCreationRoleBasedSingle,
-		genNewAccountCreationRoleBasedMultisig3,
+		genNewAccountUpdateMultisig3,
+		genNewAccountUpdateRoleBasedSingle,
+		genNewAccountUpdateRoleBasedMultisig3,
 		genNewAccountUpdateAccountKeyPublic,
 		genNewFeeDelegatedValueTransfer,
 		genNewFeeDelegatedValueTransferWithRatio,
@@ -516,22 +512,20 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// Create an account sender using TxTypeAccountCreation.
+	// Create an account sender using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(1000000000000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            sender.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    sender.AccKey,
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       sender.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(b, nil, err)
 
 		err = tx.SignWithKeys(signer, reservoir.Keys)
@@ -676,60 +670,30 @@ func genNewSmartContractDeploy(signer types.Signer, from *TestAccountType, to *T
 	return tx
 }
 
-func genNewAccountCreation(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	amount := big.NewInt(100)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
-	k, _ := crypto.GenerateKey()
-	addr := common.BytesToAddress(genRandomHash().Bytes())
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:         from.Nonce,
-		types.TxValueKeyTo:            addr,
-		types.TxValueKeyAmount:        amount,
-		types.TxValueKeyGasLimit:      gasLimit,
-		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyFrom:          from.Addr,
-		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
-	})
-
-	if err != nil {
-		panic(err)
-	}
-
-	err = tx.SignWithKeys(signer, from.Keys)
-	if err != nil {
-		panic(err)
-	}
-
-	return tx
-}
-
-func genAccountKeyWeightedMultisig() accountkey.AccountKey {
+func genAccountKeyWeightedMultisig() (accountkey.AccountKey, []*ecdsa.PrivateKey) {
 	threshold := uint(2)
 	numKeys := 3
 	keys := make(accountkey.WeightedPublicKeys, numKeys)
+	prvKeys := make([]*ecdsa.PrivateKey, numKeys)
 
 	for i := 0; i < numKeys; i++ {
-		k, _ := crypto.GenerateKey()
-		keys[i] = accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k.PublicKey))
+		prvKeys[i], _ = crypto.GenerateKey()
+		keys[i] = accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&prvKeys[i].PublicKey))
 	}
 
-	return accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
+	return accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys), prvKeys
 }
 
-func genNewAccountCreationMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	amount := big.NewInt(100)
+func genNewAccountUpdateMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
-	addr := common.BytesToAddress(genRandomHash().Bytes())
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+	keys, prvKeys := genAccountKeyWeightedMultisig()
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.Nonce,
-		types.TxValueKeyTo:            addr,
-		types.TxValueKeyAmount:        amount,
 		types.TxValueKeyGasLimit:      gasLimit,
 		types.TxValueKeyGasPrice:      gasPrice,
 		types.TxValueKeyFrom:          from.Addr,
 		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyAccountKey:    genAccountKeyWeightedMultisig(),
+		types.TxValueKeyAccountKey:    keys,
 	})
 
 	if err != nil {
@@ -741,32 +705,31 @@ func genNewAccountCreationMultisig3(signer types.Signer, from *TestAccountType, 
 		panic(err)
 	}
 
+	from.Keys = prvKeys
+	from.AccKey = keys
 	return tx
 }
 
-func genAccountKeyRoleBasedSingle() accountkey.AccountKey {
+func genAccountKeyRoleBasedSingle() (accountkey.AccountKey, []*ecdsa.PrivateKey) {
 	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	if err != nil {
 		panic(err)
 	}
 	txKey := accountkey.NewAccountKeyPublicWithValue(&k1.PublicKey)
 
-	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, txKey, txKey})
+	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, txKey, txKey}), []*ecdsa.PrivateKey{k1}
 }
 
-func genNewAccountCreationRoleBasedSingle(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	amount := big.NewInt(100)
+func genNewAccountUpdateRoleBasedSingle(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
-	addr := common.BytesToAddress(genRandomHash().Bytes())
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+	keys, prvKeys := genAccountKeyRoleBasedSingle()
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.Nonce,
-		types.TxValueKeyTo:            addr,
-		types.TxValueKeyAmount:        amount,
 		types.TxValueKeyGasLimit:      gasLimit,
 		types.TxValueKeyGasPrice:      gasPrice,
 		types.TxValueKeyFrom:          from.Addr,
 		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyAccountKey:    genAccountKeyRoleBasedSingle(),
+		types.TxValueKeyAccountKey:    keys,
 	})
 
 	if err != nil {
@@ -778,10 +741,12 @@ func genNewAccountCreationRoleBasedSingle(signer types.Signer, from *TestAccount
 		panic(err)
 	}
 
+	from.Keys = prvKeys
+	from.AccKey = keys
 	return tx
 }
 
-func genAccountKeyRoleBasedMultisig3() accountkey.AccountKey {
+func genAccountKeyRoleBasedMultisig3() (accountkey.AccountKey, []*ecdsa.PrivateKey) {
 	threshold := uint(2)
 
 	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
@@ -804,22 +769,19 @@ func genAccountKeyRoleBasedMultisig3() accountkey.AccountKey {
 	}
 	txKey := accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
 
-	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, txKey, txKey})
+	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, txKey, txKey}), []*ecdsa.PrivateKey{k1, k2, k3}
 }
 
-func genNewAccountCreationRoleBasedMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	amount := big.NewInt(100)
+func genNewAccountUpdateRoleBasedMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
-	addr := common.BytesToAddress(genRandomHash().Bytes())
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
+	keys, prvKeys := genAccountKeyRoleBasedMultisig3()
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.Nonce,
-		types.TxValueKeyTo:            addr,
-		types.TxValueKeyAmount:        amount,
 		types.TxValueKeyGasLimit:      gasLimit,
 		types.TxValueKeyGasPrice:      gasPrice,
 		types.TxValueKeyFrom:          from.Addr,
 		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyAccountKey:    genAccountKeyRoleBasedMultisig3(),
+		types.TxValueKeyAccountKey:    keys,
 	})
 
 	if err != nil {
@@ -831,8 +793,11 @@ func genNewAccountCreationRoleBasedMultisig3(signer types.Signer, from *TestAcco
 		panic(err)
 	}
 
+	from.Keys = prvKeys
+	from.AccKey = keys
 	return tx
 }
+
 func genNewFeeDelegatedValueTransfer(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(100)
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)

@@ -33,7 +33,6 @@ func BenchmarkTxHash(b *testing.B) {
 		genNewSmartContractDeploy,
 		genLegacySmartContractExecution,
 		genNewSmartContractExecution,
-		genNewAccountCreation,
 		genNewAccountUpdateAccountKeyPublic,
 		genNewFeeDelegatedValueTransfer,
 		genNewFeeDelegatedValueTransferWithRatio,

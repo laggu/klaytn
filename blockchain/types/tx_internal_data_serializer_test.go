@@ -52,7 +52,6 @@ func TestTransactionSerialization(t *testing.T) {
 		{"FeeDelegatedValueTransferMemo", genFeeDelegatedValueTransferMemoTransaction()},
 		{"FeeDelegatedValueTransferMemoWithRatio", genFeeDelegatedValueTransferMemoWithRatioTransaction()},
 		{"ChainDataTx", genChainDataTransaction()},
-		{"AccountCreation", genAccountCreationTransaction()},
 		{"AccountUpdate", genAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdate", genFeeDelegatedAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdateWithRatio", genFeeDelegatedAccountUpdateWithRatioTransaction()},
@@ -90,6 +89,10 @@ func TestTransactionSerialization(t *testing.T) {
 	// If no serialization, make test failed.
 	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
 		tx, err := NewTxInternalData(i)
+		// TxTypeAccountCreation is not supported now
+		if i == TxTypeAccountCreation {
+			continue
+		}
 		if err == nil {
 			if _, ok := txMap[tx.Type()]; !ok {
 				t.Errorf("No serialization test for tx %s", tx.Type().String())
@@ -399,25 +402,25 @@ func genChainDataTransaction() TxInternalData {
 	return txdata
 }
 
-func genAccountCreationTransaction() TxInternalData {
-	d, err := NewTxInternalDataWithMap(TxTypeAccountCreation, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce:         nonce,
-		TxValueKeyTo:            to,
-		TxValueKeyAmount:        amount,
-		TxValueKeyGasLimit:      gasLimit,
-		TxValueKeyGasPrice:      gasPrice,
-		TxValueKeyFrom:          from,
-		TxValueKeyHumanReadable: false,
-		TxValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
-	})
-
-	if err != nil {
-		// Since we do not have testing.T here, call panic() instead of t.Fatal().
-		panic(err)
-	}
-
-	return d
-}
+//func genAccountCreationTransaction() TxInternalData {
+//	d, err := NewTxInternalDataWithMap(TxTypeAccountCreation, map[TxValueKeyType]interface{}{
+//		TxValueKeyNonce:         nonce,
+//		TxValueKeyTo:            to,
+//		TxValueKeyAmount:        amount,
+//		TxValueKeyGasLimit:      gasLimit,
+//		TxValueKeyGasPrice:      gasPrice,
+//		TxValueKeyFrom:          from,
+//		TxValueKeyHumanReadable: false,
+//		TxValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
+//	})
+//
+//	if err != nil {
+//		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+//		panic(err)
+//	}
+//
+//	return d
+//}
 
 func genFeeDelegatedValueTransferTransaction() TxInternalData {
 	d, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedValueTransfer, map[TxValueKeyType]interface{}{

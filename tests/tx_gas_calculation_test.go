@@ -27,7 +27,6 @@ import (
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
-	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -44,6 +43,8 @@ type TestAccount interface {
 	GetAccKey() accountkey.AccountKey
 	GetValidationGas(r accountkey.RoleType) uint64
 	AddNonce()
+	SetNonce(uint64)
+	SetAddr(common.Address)
 }
 
 type genTransaction func(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64)
@@ -56,7 +57,6 @@ func TestGasCalculation(t *testing.T) {
 		{"LegacyTransaction", genLegacyTransaction},
 		{"ValueTransfer", genValueTransfer},
 		{"ValueTransferWithMemo", genValueTransferWithMemo},
-		{"AccountCreation", genAccountCreation},
 		{"AccountUpdate", genAccountUpdate},
 		{"SmartContractDeploy", genSmartContractDeploy},
 		{"SmartContractExecution", genSmartContractExecution},
@@ -119,33 +119,74 @@ func TestGasCalculation(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// Preparing step. Send KLAY to KlaytnAcounts.
-	for i := 0; i < len(accountTypes); i++ {
+	// Preparing step. Send KLAY to a KlaytnAcount.
+	{
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.GetNonce(),
-			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            accountTypes[i].account.GetAddr(),
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    accountTypes[i].account.GetAccKey(),
-		}
+		tx := types.NewTransaction(reservoir.GetNonce(),
+			accountTypes[0].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
+		err := tx.SignWithKeys(signer, reservoir.GetTxKeys())
 		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
-		assert.Equal(t, nil, err)
-
 		txs = append(txs, tx)
+
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
 		reservoir.AddNonce()
+	}
+
+	// Preparing step. Send KLAY to KlaytnAcounts.
+	for i := 1; i < len(accountTypes); i++ {
+		// create an account which account key will be replaced to one of account key types.
+		anon, err := createAnonymousAccount(getRandomPrivateKeyString(t))
+		assert.Equal(t, nil, err)
+
+		{
+			var txs types.Transactions
+
+			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+			tx := types.NewTransaction(reservoir.GetNonce(),
+				anon.Addr, amount, gasLimit, gasPrice, []byte{})
+
+			err := tx.SignWithKeys(signer, reservoir.GetTxKeys())
+			assert.Equal(t, nil, err)
+			txs = append(txs, tx)
+
+			if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+				t.Fatal(err)
+			}
+			reservoir.AddNonce()
+		}
+
+		// update the account's key
+		{
+			var txs types.Transactions
+
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:      anon.Nonce,
+				types.TxValueKeyFrom:       anon.Addr,
+				types.TxValueKeyGasLimit:   gasLimit,
+				types.TxValueKeyGasPrice:   gasPrice,
+				types.TxValueKeyAccountKey: accountTypes[i].account.GetAccKey(),
+			}
+			tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, anon.Keys)
+			assert.Equal(t, nil, err)
+
+			txs = append(txs, tx)
+
+			if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+				t.Fatal(err)
+			}
+			anon.AddNonce()
+		}
+
+		accountTypes[i].account.SetAddr(anon.Addr)
+		accountTypes[i].account.SetNonce(anon.Nonce)
 	}
 
 	// For smart contract
@@ -337,32 +378,8 @@ func genFeeDelegatedWithRatioValueTransferWithMemo(t *testing.T, signer types.Si
 	return tx, gasPayloadWithGas
 }
 
-func genAccountCreation(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, readable := genNewAccountWithGas(t, from, types.TxTypeAccountCreation)
-
-	amount := big.NewInt(100000)
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:         from.GetNonce(),
-		types.TxValueKeyFrom:          from.GetAddr(),
-		types.TxValueKeyTo:            newAccount.GetAddr(),
-		types.TxValueKeyAmount:        amount,
-		types.TxValueKeyGasLimit:      gasLimit,
-		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyHumanReadable: readable,
-		types.TxValueKeyAccountKey:    newAccount.GetAccKey(),
-	})
-	assert.Equal(t, nil, err)
-
-	err = tx.SignWithKeys(signer, from.GetTxKeys())
-	assert.Equal(t, nil, err)
-
-	intrinsic := getIntrinsicGas(types.TxTypeAccountCreation)
-
-	return tx, intrinsic + gasKey
-}
-
 func genAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, _ := genNewAccountWithGas(t, from, types.TxTypeAccountUpdate)
+	newAccount, gasKey, _ := genNewAccountWithGas(t, from)
 
 	values, intrinsic := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey(), types.TxTypeAccountUpdate)
 
@@ -376,7 +393,7 @@ func genAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to Te
 }
 
 func genFeeDelegatedAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, _ := genNewAccountWithGas(t, from, types.TxTypeFeeDelegatedAccountUpdate)
+	newAccount, gasKey, _ := genNewAccountWithGas(t, from)
 
 	values, intrinsic := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey(), types.TxTypeFeeDelegatedAccountUpdate)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
@@ -394,7 +411,7 @@ func genFeeDelegatedAccountUpdate(t *testing.T, signer types.Signer, from TestAc
 }
 
 func genFeeDelegatedWithRatioAccountUpdate(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	newAccount, gasKey, _ := genNewAccountWithGas(t, from, types.TxTypeFeeDelegatedAccountUpdateWithRatio)
+	newAccount, gasKey, _ := genNewAccountWithGas(t, from)
 
 	values, intrinsic := genMapForUpdate(from, to, gasPrice, newAccount.GetAccKey(), types.TxTypeFeeDelegatedAccountUpdateWithRatio)
 	values[types.TxValueKeyFeePayer] = payer.GetAddr()
@@ -826,8 +843,8 @@ func genRoleBasedWithMultiSigAccount(t *testing.T) TestAccount {
 	return roleBasedWithMultiSig
 }
 
-// Generate new Account functions for testing AccountCreation and AccountUpdate
-func genNewAccountWithGas(t *testing.T, testAccount TestAccount, txType types.TxType) (TestAccount, uint64, bool) {
+// Generate new Account functions for testing AccountUpdate
+func genNewAccountWithGas(t *testing.T, testAccount TestAccount) (TestAccount, uint64, bool) {
 	var newAccount TestAccount
 	gas := uint64(0)
 	readableGas := uint64(0)
@@ -873,17 +890,6 @@ func genNewAccountWithGas(t *testing.T, testAccount TestAccount, txType types.Tx
 	}
 
 	return newAccount, gas + readableGas, readable
-}
-
-func getRandomString() string {
-	n := 10
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
 }
 
 func getRandomPrivateKeyString(t *testing.T) string {
@@ -939,8 +945,6 @@ func getIntrinsicGas(txType types.TxType) uint64 {
 		intrinsic = params.TxGasValueTransfer + params.TxGasFeeDelegated
 	case types.TxTypeFeeDelegatedValueTransferMemoWithRatio:
 		intrinsic = params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio
-	case types.TxTypeAccountCreation:
-		intrinsic = params.TxGasAccountCreation
 	case types.TxTypeAccountUpdate:
 		intrinsic = params.TxGasAccountUpdate
 	case types.TxTypeFeeDelegatedAccountUpdate:
@@ -997,6 +1001,14 @@ func (t *TestAccountType) GetAccKey() accountkey.AccountKey {
 	return t.AccKey
 }
 
+func (t *TestAccountType) SetNonce(nonce uint64) {
+	t.Nonce = nonce
+}
+
+func (t *TestAccountType) SetAddr(addr common.Address) {
+	t.Addr = addr
+}
+
 // Return SigValidationGas depends on AccountType
 func (t *TestAccountType) GetValidationGas(r accountkey.RoleType) uint64 {
 	if t.GetAccKey() == nil {
@@ -1046,6 +1058,14 @@ func (t *TestRoleBasedAccountType) GetAccKey() accountkey.AccountKey {
 	return t.AccKey
 }
 
+func (t *TestRoleBasedAccountType) SetNonce(nonce uint64) {
+	t.Nonce = nonce
+}
+
+func (t *TestRoleBasedAccountType) SetAddr(addr common.Address) {
+	t.Addr = addr
+}
+
 // Return SigValidationGas depends on AccountType
 func (t *TestRoleBasedAccountType) GetValidationGas(r accountkey.RoleType) uint64 {
 	if t.GetAccKey() == nil {
@@ -1068,150 +1088,4 @@ func (t *TestRoleBasedAccountType) GetValidationGas(r accountkey.RoleType) uint6
 
 func (t *TestRoleBasedAccountType) AddNonce() {
 	t.Nonce += 1
-}
-
-// TestGasCalculationOfFeeDelegationTxFromNonExistingSender tests gas calculation of fee delegation txs having non-existing sender.
-// In the case, the fee payer should pay additional fee for creating an account.
-func TestGasCalculationOfFeeDelegationTxFromNonExistingSender(t *testing.T) {
-	var feeTxTypes = []types.TxType{
-		types.TxTypeFeeDelegatedValueTransfer,
-		types.TxTypeFeeDelegatedValueTransferMemo,
-		types.TxTypeFeeDelegatedAccountUpdate,
-		types.TxTypeFeeDelegatedSmartContractDeploy,
-		types.TxTypeFeeDelegatedSmartContractExecution,
-		types.TxTypeFeeDelegatedCancel,
-	}
-
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	assert.Equal(t, nil, err)
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// For smart contract
-	contractAddr := common.Address{}
-
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(0)
-
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.GetNonce(),
-			types.TxValueKeyFrom:          reservoir.GetAddr(),
-			types.TxValueKeyTo:            (*common.Address)(nil),
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyData:          common.FromHex(code),
-			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.GetTxKeys())
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-
-		codeHash := crypto.Keccak256Hash(tx.Data())
-		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce, codeHash)
-
-		reservoir.AddNonce()
-	}
-
-	for _, feeTxType := range feeTxTypes {
-		sender := genKlaytnLegacyAccount(t)
-
-		valueMap, intrinsicGas := genMapForTxTypes(sender, reservoir, feeTxType)
-		valueMap[types.TxValueKeyFeePayer] = reservoir.GetAddr()
-		if valueMap[types.TxValueKeyAmount] != nil {
-			valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(0)
-			// Adjust intrinsicGas because the contract execution fee is depend on the amount of tx
-			if feeTxType == types.TxTypeFeeDelegatedSmartContractExecution {
-				intrinsicGas -= 30000
-			}
-		}
-		if valueMap[types.TxValueKeyAccountKey] != nil {
-			newAccount, gasKey, readable := genNewAccountWithGas(t, sender, types.TxTypeAccountCreation)
-			valueMap[types.TxValueKeyAccountKey] = newAccount.GetAccKey()
-			intrinsicGas += gasKey
-			if readable {
-				intrinsicGas += params.TxGasHumanReadable
-			}
-		}
-
-		if toBasicType(feeTxType) == types.TxTypeSmartContractExecution {
-			valueMap[types.TxValueKeyTo] = contractAddr
-		}
-
-		tx, err := types.NewTransactionWithMap(feeTxType, valueMap)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, sender.GetTxKeys())
-		assert.Equal(t, nil, err)
-
-		tx.SignFeePayerWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		// Fee delegation tx having non-existing sender will be charged additional creation fee
-		intrinsicGas += params.TxGasAccountCreation
-
-		// Gas calculation check
-		{
-			receipt, gas, err := applyTransaction(t, bcdata, tx)
-			assert.Equal(t, nil, err)
-			assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
-			assert.Equal(t, intrinsicGas, gas)
-		}
-
-		// Sender object creation check
-		{
-			state, err := bcdata.bc.State()
-			assert.Equal(t, nil, err)
-
-			assert.Equal(t, false, state.Exist(sender.GetAddr()))
-
-			if err := bcdata.GenABlockWithTransactions(accountMap, types.Transactions{tx}, prof); err != nil {
-				t.Fatal(err)
-			}
-			sender.AddNonce()
-
-			state, err = bcdata.bc.State()
-			assert.Equal(t, nil, err)
-
-			assert.Equal(t, true, state.Exist(sender.GetAddr()))
-			assert.Equal(t, sender.GetNonce(), state.GetNonce(sender.GetAddr()))
-		}
-	}
 }

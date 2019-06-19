@@ -608,7 +608,6 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
-	gasFeePayerForAccCreation := uint64(0)
 
 	// Check chain Id first.
 	if tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
@@ -674,9 +673,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 				return ErrInsufficientFundsFeePayer
 			}
 		} else {
-			if !pool.currentState.Exist(from) {
-				gasFeePayerForAccCreation = params.TxGasAccountCreation
-			}
 			if senderBalance.Cmp(tx.Value()) < 0 {
 				logger.Trace("[tx_pool] insufficient funds for cost(value)", "from", from, "balance", senderBalance, "value", tx.Value())
 				return ErrInsufficientFundsFrom
@@ -696,7 +692,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
-	intrGas += gasFrom + gasFeePayer + gasFeePayerForAccCreation
+	intrGas += gasFrom + gasFeePayer
 	if err != nil {
 		return err
 	}

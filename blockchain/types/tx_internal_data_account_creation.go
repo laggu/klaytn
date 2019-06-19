@@ -447,25 +447,27 @@ func (t *TxInternalDataAccountCreation) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.HumanReadable {
-		return kerrors.ErrHumanReadableNotSupported
-	}
-	if common.IsPrecompiledContractAddress(t.Recipient) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
-	if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {
-		return err
-	}
-
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+	return errUndefinedTxType
+	//if t.HumanReadable {
+	//	return kerrors.ErrHumanReadableNotSupported
+	//}
+	//if common.IsPrecompiledContractAddress(t.Recipient) {
+	//	return kerrors.ErrPrecompiledContractAddress
+	//}
+	//if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {
+	//	return err
+	//}
+	//
+	//return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
 func (t *TxInternalDataAccountCreation) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	// Fail if the address is already created.
-	if stateDB.Exist(t.Recipient) {
-		return kerrors.ErrAccountAlreadyExists
-	}
-	return nil
+	return errUndefinedTxType
+	//// Fail if the address is already created.
+	//if stateDB.Exist(t.Recipient) {
+	//	return kerrors.ErrAccountAlreadyExists
+	//}
+	//return nil
 }
 
 func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

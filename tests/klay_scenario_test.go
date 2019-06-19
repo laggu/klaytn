@@ -31,8 +31,6 @@ import (
 	"github.com/ground-x/klaytn/common/compiler"
 	"github.com/ground-x/klaytn/common/profile"
 	"github.com/ground-x/klaytn/crypto"
-	"github.com/ground-x/klaytn/crypto/sha3"
-	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/ground-x/klaytn/ser/rlp"
 	"github.com/ground-x/klaytn/storage/database"
@@ -62,16 +60,6 @@ type TestCreateMultisigAccountParam struct {
 	Threshold uint
 	Weights   []uint
 	PrvKeys   []string
-}
-
-func genRandomHash() (h common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	r := rand.Uint64()
-	rlp.Encode(hasher, r)
-	hasher.Sum(h[:0])
-
-	return h
 }
 
 // createAnonymousAccount creates an account whose address is derived from the private key.
@@ -202,170 +190,6 @@ func createRoleBasedAccountWithAccountKeyWeightedMultiSig(multisigs []TestCreate
 	}, nil
 }
 
-// TestAccountUpdatedWithExistingKey creates two different accounts which have the same PubKey.
-// A user can sign two different accounts with a private key.
-// Step 1. Create an EOA account
-// Step 2. Create a decoupled EOA account
-// Step 3. Update a pubKey of the decoupled account to the same key with the eoa account
-// Step 4. Sign value transfer transactions of two accounts with the same key
-// Expected result: PASS
-func TestAccountUpdatedWithExistingKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	var txs types.Transactions
-	amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	// set an eoa account and an decoupled account
-	prvKeyHex := "98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab"
-	key, err := crypto.HexToECDSA(prvKeyHex)
-	assert.Equal(t, nil, err)
-	eoaAddr := crypto.PubkeyToAddress(key.PublicKey)
-	eoa, err := createDecoupledAccount(prvKeyHex, eoaAddr)
-	assert.Equal(t, nil, err)
-
-	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
-	assert.Equal(t, nil, err)
-
-	if testing.Verbose() {
-		fmt.Println("reservoir Addr = ", reservoir.Addr.String())
-		fmt.Println("EOA decoupled Addr = ", decoupled.Addr.String())
-		fmt.Println("EOA Addr = ", eoa.Addr.String())
-	}
-
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// Step 1. Create an EOA account
-	values := map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:         reservoir.Nonce,
-		types.TxValueKeyFrom:          reservoir.Addr,
-		types.TxValueKeyTo:            eoa.Addr,
-		types.TxValueKeyAmount:        amount,
-		types.TxValueKeyGasLimit:      gasLimit,
-		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyAccountKey:    eoa.AccKey,
-	}
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-	assert.Equal(t, nil, err)
-	err = tx.SignWithKeys(signer, reservoir.Keys)
-	assert.Equal(t, nil, err)
-	txs = append(txs, tx)
-	reservoir.Nonce += 1
-
-	// Step 2. Create a decoupled EOA account
-	values = map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:         reservoir.Nonce,
-		types.TxValueKeyFrom:          reservoir.Addr,
-		types.TxValueKeyTo:            decoupled.Addr,
-		types.TxValueKeyAmount:        amount,
-		types.TxValueKeyGasLimit:      gasLimit,
-		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyHumanReadable: false,
-		types.TxValueKeyAccountKey:    decoupled.AccKey,
-	}
-	tx, err = types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-	assert.Equal(t, nil, err)
-	err = tx.SignWithKeys(signer, reservoir.Keys)
-	assert.Equal(t, nil, err)
-	txs = append(txs, tx)
-	reservoir.Nonce += 1
-
-	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-		t.Fatal(err)
-	}
-
-	// Step 3. Update a pubKey of the decoupled account to the same key with the eoa account
-	txs = txs[:0]
-	values = map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:      decoupled.Nonce,
-		types.TxValueKeyFrom:       decoupled.Addr,
-		types.TxValueKeyGasLimit:   gasLimit,
-		types.TxValueKeyGasPrice:   gasPrice,
-		types.TxValueKeyAccountKey: eoa.AccKey,
-	}
-	tx, err = types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
-	assert.Equal(t, nil, err)
-	err = tx.SignWithKeys(signer, decoupled.Keys)
-	assert.Equal(t, nil, err)
-	txs = append(txs, tx)
-	decoupled.Nonce += 1
-	decoupled.Keys = eoa.Keys
-	decoupled.AccKey = eoa.AccKey
-
-	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-		t.Fatal(err)
-	}
-
-	// Step 4. Deployed transactions signed by two different accounts which have the same key
-	txs = txs[:0]
-	values = map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:    eoa.Nonce,
-		types.TxValueKeyFrom:     eoa.Addr,
-		types.TxValueKeyTo:       reservoir.Addr,
-		types.TxValueKeyAmount:   big.NewInt(100000), // smaller than total amount
-		types.TxValueKeyGasLimit: gasLimit,
-		types.TxValueKeyGasPrice: gasPrice,
-	}
-	tx, err = types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-	assert.Equal(t, nil, err)
-	err = tx.SignWithKeys(signer, eoa.Keys)
-	assert.Equal(t, nil, err)
-	txs = append(txs, tx)
-	eoa.Nonce += 1
-
-	values = map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:    decoupled.Nonce,
-		types.TxValueKeyFrom:     decoupled.Addr,
-		types.TxValueKeyTo:       reservoir.Addr,
-		types.TxValueKeyAmount:   big.NewInt(100000), // smaller than total amount
-		types.TxValueKeyGasLimit: gasLimit,
-		types.TxValueKeyGasPrice: gasPrice,
-	}
-	tx, err = types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-	assert.Equal(t, nil, err)
-	err = tx.SignWithKeys(signer, eoa.Keys) // eoa.Keys == decoupled.Keys
-	assert.Equal(t, nil, err)
-	txs = append(txs, tx)
-	decoupled.Nonce += 1
-
-	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-		t.Fatal(err)
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
 // TestFeeDelegatedWithSmallBalance tests the case that an account having a small amount of tokens transfers
 // all the tokens to another account with a fee payer.
 // This kinds of transactions were discarded in TxPool.promoteExecutable() because the total cost of
@@ -468,397 +292,6 @@ func TestFeeDelegatedWithSmallBalance(t *testing.T) {
 	assert.Equal(t, uint64(0), state.GetBalance(anon.Addr).Uint64())
 }
 
-// TestTransactionScenario tests a following scenario:
-// 1. Transfer (reservoir -> anon) using a legacy transaction.
-// 2. Create an account decoupled using TxTypeAccountCreation.
-// 3. Transfer (reservoir -> decoupled) using TxTypeValueTransfer.
-// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
-// 5. ChainDataAnchoring (reservoir -> reservoir) using TxTypeChainDataAnchoring.
-// 6. Transfer (decoupled-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir).
-// 7. Transfer (decoupled-> reservoir) using TxTypeFeeDelegatedValueTransferWithRatio with a fee payer (reservoir) and a ratio of 30.
-// 8. Transfer (reservoir -> decoupled) using TxTypeValueTransferMemo.
-// 9. Transfer (reservoir -> decoupled) using TxTypeFeeDelegatedValueTransferMemo.
-// 10. Transfer (reservoir -> decoupled) using TxTypeFeeDelegatedValueTransferMemoWithRatio.
-func TestTransactionScenario(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	// anonymous account
-	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
-	assert.Equal(t, nil, err)
-
-	// decoupled account
-	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
-	assert.Equal(t, nil, err)
-
-	if testing.Verbose() {
-		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-		fmt.Println("anonAddr = ", anon.Addr.String())
-		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
-	}
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-	amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-
-	// 1. Transfer (reservoir -> anon) using a legacy transaction.
-	{
-		var txs types.Transactions
-
-		tx := types.NewTransaction(reservoir.Nonce,
-			anon.Addr, amount, gasLimit, gasPrice, []byte{})
-
-		err := tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 2. Create an account decoupled using TxTypeAccountCreation.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            decoupled.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    decoupled.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// Create the same account decoupled. This should be failed.
-	{
-		amount := new(big.Int).SetUint64(100000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            decoupled.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    decoupled.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrAccountAlreadyExists, err)
-	}
-
-	// 3. Transfer (reservoir -> decoupled) using TxTypeValueTransfer.
-	{
-		var txs types.Transactions
-
-		//amount := new(big.Int).SetUint64(params.KLAY)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    reservoir.Nonce,
-			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       decoupled.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(1000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    decoupled.Nonce,
-			types.TxValueKeyFrom:     decoupled.Addr,
-			types.TxValueKeyTo:       reservoir.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, decoupled.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		decoupled.Nonce += 1
-	}
-
-	// 5. ChainDataAnchoring (reservoir -> reservoir) using TxTypeChainDataAnchoring.
-	{
-		scData := types.NewChainHashes(bcdata.bc.CurrentBlock())
-		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
-
-		var txs types.Transactions
-
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:        reservoir.Nonce,
-			types.TxValueKeyFrom:         reservoir.Addr,
-			types.TxValueKeyGasLimit:     gasLimit,
-			types.TxValueKeyGasPrice:     gasPrice,
-			types.TxValueKeyAnchoredData: dataAnchoredRLP,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 6. Transfer (decoupled-> reservoir) using TxTypeFeeDelegatedValueTransfer with a fee payer (reservoir).
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(10000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    decoupled.Nonce,
-			types.TxValueKeyFrom:     decoupled.Addr,
-			types.TxValueKeyFeePayer: reservoir.Addr,
-			types.TxValueKeyTo:       reservoir.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, decoupled.Keys)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		decoupled.Nonce += 1
-	}
-
-	// 7. Transfer (decoupled-> reservoir) using TxTypeFeeDelegatedValueTransferWithRatio with a fee payer (reservoir) and a ratio of 30.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(10000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:              decoupled.Nonce,
-			types.TxValueKeyFrom:               decoupled.Addr,
-			types.TxValueKeyFeePayer:           reservoir.Addr,
-			types.TxValueKeyTo:                 reservoir.Addr,
-			types.TxValueKeyAmount:             amount,
-			types.TxValueKeyGasLimit:           gasLimit,
-			types.TxValueKeyGasPrice:           gasPrice,
-			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, decoupled.Keys)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		decoupled.Nonce += 1
-	}
-
-	// 8. Transfer (reservoir -> decoupled) using TxTypeValueTransferMemo.
-	{
-		var txs types.Transactions
-		data := []byte("hello")
-
-		amount := new(big.Int).SetUint64(10000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    reservoir.Nonce,
-			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       decoupled.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyData:     data,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransferMemo, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-
-		blkTxs := bcdata.bc.CurrentBlock().Transactions()
-		assert.Equal(t, 1, blkTxs.Len())
-		assert.Equal(t, types.TxTypeValueTransferMemo, blkTxs[0].Type())
-		assert.Equal(t, data, blkTxs[0].Data())
-	}
-
-	// 9. Transfer (reservoir -> decoupled) using TxTypeFeeDelegatedValueTransferMemo.
-	{
-		var txs types.Transactions
-		data := []byte("hello")
-
-		amount := new(big.Int).SetUint64(10000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    reservoir.Nonce,
-			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       decoupled.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyData:     data,
-			types.TxValueKeyFeePayer: decoupled.Addr,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemo, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignFeePayerWithKeys(signer, decoupled.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-
-		blkTxs := bcdata.bc.CurrentBlock().Transactions()
-		assert.Equal(t, 1, blkTxs.Len())
-		assert.Equal(t, types.TxTypeFeeDelegatedValueTransferMemo, blkTxs[0].Type())
-		assert.Equal(t, data, blkTxs[0].Data())
-	}
-
-	// 10. Transfer (reservoir -> decoupled) using TxTypeFeeDelegatedValueTransferMemoWithRatio.
-	{
-		var txs types.Transactions
-		data := []byte("hello")
-
-		amount := new(big.Int).SetUint64(10000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:              reservoir.Nonce,
-			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 decoupled.Addr,
-			types.TxValueKeyAmount:             amount,
-			types.TxValueKeyGasLimit:           gasLimit,
-			types.TxValueKeyGasPrice:           gasPrice,
-			types.TxValueKeyData:               data,
-			types.TxValueKeyFeePayer:           decoupled.Addr,
-			types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferMemoWithRatio, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignFeePayerWithKeys(signer, decoupled.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-
-		blkTxs := bcdata.bc.CurrentBlock().Transactions()
-		assert.Equal(t, 1, blkTxs.Len())
-		assert.Equal(t, types.TxTypeFeeDelegatedValueTransferMemoWithRatio, blkTxs[0].Type())
-		assert.Equal(t, data, blkTxs[0].Data())
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
 // TestSmartContractDeployAddress checks that the smart contract is deployed to the given address or not by
 // checking receipt.ContractAddress.
 func TestSmartContractDeployAddress(t *testing.T) {
@@ -944,190 +377,6 @@ func TestSmartContractDeployAddress(t *testing.T) {
 	}
 }
 
-// TestSmartContractMalicious tests the following scenario:
-// 1. Deploy smart contract (reservoir -> contract)
-// 2. Send balance to anon.
-// 3. Send balance to decoupled.
-// 4. Withdraw balance from the contract using legacy transaction with anon.Key. It should fail.
-// 5. Withdraw balance from the decoupled using legacy transaction with anon2.Key. It should fail.
-func TestSmartContractMalicious(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	if testing.Verbose() {
-		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
-	}
-
-	// anonymous account
-	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
-	assert.Equal(t, nil, err)
-
-	anon2, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dac")
-	assert.Equal(t, nil, err)
-
-	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		anon2.Addr)
-	assert.Equal(t, nil, err)
-
-	gasPrice := new(big.Int).SetUint64(0)
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-
-	var code string
-
-	if isCompilerAvailable() {
-		filename := string("../contracts/reward/contract/KlaytnReward.sol")
-		codes, _ := compileSolidity(filename)
-		code = codes[0]
-	} else {
-		// Falling back to use compiled code.
-		code = "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
-	}
-
-	// 1. Deploy smart contract (reservoir -> contract)
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(0)
-
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            &anon.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyData:          common.FromHex(code),
-			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 2. Send balance to anon.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(params.KLAY)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    reservoir.Nonce,
-			types.TxValueKeyFrom:     reservoir.Addr,
-			types.TxValueKeyTo:       anon.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-			types.TxValueKeyData:     []byte{},
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 3. Send balance to decoupled.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).SetUint64(1000000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            decoupled.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    decoupled.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 4. Withdraw balance from the contract using legacy transaction with anon.Key. It should fail.
-	{
-		amount := new(big.Int).SetUint64(1000000)
-
-		tx := types.NewTransaction(anon.Nonce,
-			reservoir.Addr, amount, gasLimit, gasPrice, []byte{})
-
-		err := tx.SignWithKeys(signer, anon.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrLegacyTransactionMustBeWithLegacyKey, err)
-	}
-
-	// 5. Withdraw balance from the decoupled using legacy transaction with anon2.Key. It should fail.
-	{
-		amount := new(big.Int).SetUint64(1000000)
-
-		tx := types.NewTransaction(decoupled.Nonce,
-			reservoir.Addr, amount, gasLimit, gasPrice, []byte{})
-
-		err := tx.SignWithKeys(signer, anon2.Keys)
-		assert.Equal(t, nil, err)
-
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, kerrors.ErrLegacyTransactionMustBeWithLegacyKey, err)
-	}
-}
-
 // TestSmartContractScenario tests the following scenario:
 // 1. Deploy smart contract (reservoir -> contract)
 // 2. Check the smart contract is deployed well.
@@ -1170,8 +419,6 @@ func TestSmartContractScenario(t *testing.T) {
 	contractAddr := common.Address{}
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(100000000000)
-
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 
 	var abiStr string
@@ -1853,244 +1100,6 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 	}
 }
 
-// TestAccountCreationWithFailKey creates an account with an AccountKeyFail key.
-// AccountKeyFail type is for smart contract accounts, so all txs signed by the account should be failed.
-// Expected result: PASS for account creation
-//                  FAIL for value transfer (commented out now)
-func TestAccountCreationWithFailKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	prvKeyHex := "c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"
-	key, err := crypto.HexToECDSA(prvKeyHex)
-	assert.Equal(t, nil, err)
-	addr := crypto.PubkeyToAddress(key.PublicKey)
-
-	// anon has an AccountKeyFail key
-	anon, err := &TestAccountType{
-		Addr:   addr,
-		Keys:   []*ecdsa.PrivateKey{key},
-		Nonce:  uint64(0),
-		AccKey: accountkey.NewAccountKeyFail(),
-	}, nil
-	assert.Equal(t, nil, err)
-
-	if testing.Verbose() {
-		fmt.Println("anon.AccKey = ", anon.AccKey)
-		fmt.Println("anonAddr = ", anon.Addr.String())
-	}
-
-	// Create anon with a fail-type key
-	{
-		var txs types.Transactions
-		amount := new(big.Int).SetUint64(200000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            anon.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    anon.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-		txs = append(txs, tx)
-		reservoir.Nonce += 1
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// Transfer (anon -> reservoir) should be failed
-	{
-		amount := new(big.Int).SetUint64(100000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    anon.Nonce,
-			types.TxValueKeyFrom:     anon.Addr,
-			types.TxValueKeyTo:       reservoir.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-		assert.Equal(t, nil, err)
-		err = tx.SignWithKeys(signer, anon.Keys)
-		assert.Equal(t, nil, err)
-
-		_, _, err = applyTransaction(t, bcdata, tx)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
-	}
-
-	// Updating from AccountKeyFail to RoleBasedKey should fail.
-	{
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      anon.Nonce,
-			types.TxValueKeyFrom:       anon.Addr,
-			types.TxValueKeyGasLimit:   gasLimit,
-			types.TxValueKeyGasPrice:   gasPrice,
-			types.TxValueKeyAccountKey: genAccountKeyRoleBased(),
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, anon.Keys)
-		assert.Equal(t, nil, err)
-
-		r, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
-		assert.Equal(t, (*types.Receipt)(nil), r)
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
-// TestAccountCreationWithLegacyKey creates accounts with a legacy type of key and an address derived from a PubKey
-// The test creates an EOA, however the value of AccKey field is not related with a PubKey
-// The PubKey of the account is regenerated from the signature like legacy accounts
-// Expected result: PASS
-func TestAccountCreationWithLegacyKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
-	prof := profile.NewProfiler()
-
-	// Initialize blockchain
-	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_blockchain", time.Now().Sub(start))
-	defer bcdata.Shutdown()
-
-	// Initialize address-balance map for verification
-	start = time.Now()
-	accountMap := NewAccountMap()
-	if err := accountMap.Initialize(bcdata); err != nil {
-		t.Fatal(err)
-	}
-	prof.Profile("main_init_accountMap", time.Now().Sub(start))
-
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
-	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
-
-	// reservoir account
-	reservoir := &TestAccountType{
-		Addr:  *bcdata.addrs[0],
-		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
-		Nonce: uint64(0),
-	}
-
-	// an account with Legacy Key
-	prvKeyHex := "c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c"
-	key, err := crypto.HexToECDSA(prvKeyHex)
-	assert.Equal(t, nil, err)
-	addr := crypto.PubkeyToAddress(key.PublicKey)
-
-	anon, err := &TestAccountType{
-		Addr:   addr,
-		Keys:   []*ecdsa.PrivateKey{key},
-		Nonce:  uint64(0),
-		AccKey: accountkey.NewAccountKeyLegacy(),
-	}, nil
-	assert.Equal(t, nil, err)
-
-	if testing.Verbose() {
-		fmt.Println("anon.AccKey = ", anon.AccKey)
-		fmt.Println("Addr = ", anon.Addr.String())
-	}
-
-	// Create anon with a legacy key
-	{
-		var txs types.Transactions
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            anon.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    anon.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-		txs = append(txs, tx)
-		reservoir.Nonce += 1
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// Transfer (anon -> reservoir) to check whether a PubKey is regenerated from the signature
-	{
-		var txs types.Transactions
-		amount := new(big.Int).SetUint64(100000000000)
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    anon.Nonce,
-			types.TxValueKeyFrom:     anon.Addr,
-			types.TxValueKeyTo:       reservoir.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
-		assert.Equal(t, nil, err)
-		err = tx.SignWithKeys(signer, anon.Keys)
-		assert.Equal(t, nil, err)
-		txs = append(txs, tx)
-		anon.Nonce += 1
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if testing.Verbose() {
-		prof.PrintProfileInfo()
-	}
-}
-
 // TestAccountUpdate tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
 // 2. Key update of decoupled using AccountUpdate
@@ -2294,9 +1303,8 @@ func TestAccountUpdate(t *testing.T) {
 
 // TestFeeDelegatedAccountUpdate tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
-// 2. Create an account decoupled using TxTypeAccountCreation.
-// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
-// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+// 2. Key update of anon using TxTypeFeeDelegatedAccountUpdate
+// 3. Transfer (anon -> reservoir) using TxTypeValueTransfer.
 func TestFeeDelegatedAccountUpdate(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -2331,15 +1339,9 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	assert.Equal(t, nil, err)
 
-	// decoupled account
-	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
-	assert.Equal(t, nil, err)
-
 	if testing.Verbose() {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 		fmt.Println("anonAddr = ", anon.Addr.String())
-		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
@@ -2363,36 +1365,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Create an account decoupled using TxTypeAccountCreation.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            decoupled.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    decoupled.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdate
+	// 2. Key update of anon using TxTypeFeeDelegatedAccountUpdate
 	{
 		var txs types.Transactions
 
@@ -2402,8 +1375,8 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		}
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      decoupled.Nonce,
-			types.TxValueKeyFrom:       decoupled.Addr,
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
 			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
@@ -2412,7 +1385,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, decoupled.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
@@ -2423,19 +1396,19 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
-		decoupled.Nonce += 1
+		anon.Nonce += 1
 
-		decoupled.Keys = []*ecdsa.PrivateKey{newKey}
+		anon.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
-	// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+	// 3. Transfer (anon -> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    decoupled.Nonce,
-			types.TxValueKeyFrom:     decoupled.Addr,
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
 			types.TxValueKeyTo:       reservoir.Addr,
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
@@ -2444,7 +1417,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, decoupled.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -2452,7 +1425,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
-		decoupled.Nonce += 1
+		anon.Nonce += 1
 	}
 
 	if testing.Verbose() {
@@ -2462,9 +1435,8 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 
 // TestFeeDelegatedAccountUpdateWithRatio tests a following scenario:
 // 1. Transfer (reservoir -> anon) using a legacy transaction.
-// 2. Create an account decoupled using TxTypeAccountCreation.
-// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdateWithRatio.
-// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+// 2. Key update of anon using TxTypeFeeDelegatedAccountUpdateWithRatio.
+// 3. Transfer (anon -> reservoir) using TxTypeValueTransfer.
 func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -2499,15 +1471,9 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	assert.Equal(t, nil, err)
 
-	// decoupled account
-	decoupled, err := createDecoupledAccount("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c",
-		common.HexToAddress("0x75c3098be5e4b63fbac05838daaee378dd48098d"))
-	assert.Equal(t, nil, err)
-
 	if testing.Verbose() {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 		fmt.Println("anonAddr = ", anon.Addr.String())
-		fmt.Println("decoupledAddr = ", decoupled.Addr.String())
 	}
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
@@ -2531,36 +1497,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Create an account decoupled using TxTypeAccountCreation.
-	{
-		var txs types.Transactions
-
-		amount := new(big.Int).Mul(big.NewInt(5000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            decoupled.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    decoupled.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
-
-		err = tx.SignWithKeys(signer, reservoir.Keys)
-		assert.Equal(t, nil, err)
-
-		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
-		reservoir.Nonce += 1
-	}
-
-	// 3. Key update of decoupled using TxTypeFeeDelegatedAccountUpdateWithRatio.
+	// 2. Key update of decoupled using TxTypeFeeDelegatedAccountUpdateWithRatio.
 	{
 		var txs types.Transactions
 
@@ -2570,8 +1507,8 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		}
 
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:              decoupled.Nonce,
-			types.TxValueKeyFrom:               decoupled.Addr,
+			types.TxValueKeyNonce:              anon.Nonce,
+			types.TxValueKeyFrom:               anon.Addr,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,
 			types.TxValueKeyAccountKey:         accountkey.NewAccountKeyPublicWithValue(&newKey.PublicKey),
@@ -2581,7 +1518,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdateWithRatio, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, decoupled.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
@@ -2592,19 +1529,19 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
-		decoupled.Nonce += 1
+		anon.Nonce += 1
 
-		decoupled.Keys = []*ecdsa.PrivateKey{newKey}
+		anon.Keys = []*ecdsa.PrivateKey{newKey}
 	}
 
-	// 4. Transfer (decoupled -> reservoir) using TxTypeValueTransfer.
+	// 3. Transfer (anon -> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    decoupled.Nonce,
-			types.TxValueKeyFrom:     decoupled.Addr,
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
 			types.TxValueKeyTo:       reservoir.Addr,
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
@@ -2613,7 +1550,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, decoupled.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -2621,7 +1558,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
-		decoupled.Nonce += 1
+		anon.Nonce += 1
 	}
 
 	if testing.Verbose() {
@@ -2630,10 +1567,11 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 }
 
 // TestMultisigScenario tests a test case for a multi-sig accounts.
-// 1. Create an account multisig using TxTypeAccountCreation.
-// 2. Transfer (multisig -> reservoir) using TxTypeValueTransfer.
-// 3. Transfer (multisig -> reservoir) using TxTypeValueTransfer with only two keys.
-// 4. FAILED-CASE: Transfer (multisig -> reservoir) using TxTypeValueTransfer with only one key.
+// 1. Create an account anon using LegacyTransaction.
+// 2. Update the account with multisig key.
+// 2. Transfer (anon -> reservoir) using TxTypeValueTransfer.
+// 3. Transfer (anon -> reservoir) using TxTypeValueTransfer with only two keys.
+// 4. FAILED-CASE: Transfer (anon -> reservoir) using TxTypeValueTransfer with only one key.
 func TestMultisigScenario(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -2664,6 +1602,10 @@ func TestMultisigScenario(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
+	// anonymous account
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
 	// multi-sig account
 	multisig, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
@@ -2680,27 +1622,16 @@ func TestMultisigScenario(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// 1. Create an account multisig using TxTypeAccountCreation.
+	// 1. Create an account anon using LegacyTransaction.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
-		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:         reservoir.Nonce,
-			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            multisig.Addr,
-			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      gasPrice,
-			types.TxValueKeyHumanReadable: false,
-			types.TxValueKeyAccountKey:    multisig.AccKey,
-		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeAccountCreation, values)
-		assert.Equal(t, nil, err)
+		tx := types.NewTransaction(reservoir.Nonce,
+			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
-		err = tx.SignWithKeys(signer, reservoir.Keys)
+		err := tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
-
 		txs = append(txs, tx)
 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
@@ -2709,23 +1640,21 @@ func TestMultisigScenario(t *testing.T) {
 		reservoir.Nonce += 1
 	}
 
-	// 2. Transfer (multisig -> reservoir) using TxTypeValueTransfer.
+	// 2. Update the account with multisig key.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    multisig.Nonce,
-			types.TxValueKeyFrom:     multisig.Addr,
-			types.TxValueKeyTo:       reservoir.Addr,
-			types.TxValueKeyAmount:   amount,
-			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyNonce:      anon.Nonce,
+			types.TxValueKeyFrom:       anon.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: multisig.AccKey,
 		}
-		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, multisig.Keys)
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -2733,17 +1662,20 @@ func TestMultisigScenario(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
-		multisig.Nonce += 1
+		anon.Nonce += 1
+
+		anon.AccKey = multisig.AccKey
+		anon.Keys = multisig.Keys
 	}
 
-	// 3. Transfer (multisig -> reservoir) using TxTypeValueTransfer with only two keys.
+	// 2. Transfer (anon -> reservoir) using TxTypeValueTransfer.
 	{
 		var txs types.Transactions
 
 		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    multisig.Nonce,
-			types.TxValueKeyFrom:     multisig.Addr,
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
 			types.TxValueKeyTo:       reservoir.Addr,
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
@@ -2752,7 +1684,7 @@ func TestMultisigScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, multisig.Keys[0:2])
+		err = tx.SignWithKeys(signer, anon.Keys)
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
@@ -2760,15 +1692,17 @@ func TestMultisigScenario(t *testing.T) {
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
-		multisig.Nonce += 1
+		anon.Nonce += 1
 	}
 
-	// 4. FAILED-CASE: Transfer (multisig -> reservoir) using TxTypeValueTransfer with only one key.
+	// 3. Transfer (anon -> reservoir) using TxTypeValueTransfer with only two keys.
 	{
+		var txs types.Transactions
+
 		amount := new(big.Int).SetUint64(1000)
 		values := map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:    multisig.Nonce,
-			types.TxValueKeyFrom:     multisig.Addr,
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
 			types.TxValueKeyTo:       reservoir.Addr,
 			types.TxValueKeyAmount:   amount,
 			types.TxValueKeyGasLimit: gasLimit,
@@ -2777,7 +1711,32 @@ func TestMultisigScenario(t *testing.T) {
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
 		assert.Equal(t, nil, err)
 
-		err = tx.SignWithKeys(signer, multisig.Keys[:1])
+		err = tx.SignWithKeys(signer, anon.Keys[0:2])
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		anon.Nonce += 1
+	}
+
+	// 4. FAILED-CASE: Transfer (anon -> reservoir) using TxTypeValueTransfer with only one key.
+	{
+		amount := new(big.Int).SetUint64(1000)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys[:1])
 		assert.Equal(t, nil, err)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
@@ -3060,31 +2019,4 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 	}
 	usedGas := uint64(0)
 	return blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, tx, &usedGas, vmConfig)
-}
-
-func genAccountKeyRoleBased() accountkey.AccountKey {
-	k1, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
-	if err != nil {
-		panic(err)
-	}
-	txKey := accountkey.NewAccountKeyPublicWithValue(&k1.PublicKey)
-
-	k2, err := crypto.HexToECDSA("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c")
-	if err != nil {
-		panic(err)
-	}
-	threshold := uint(2)
-	keys := accountkey.WeightedPublicKeys{
-		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k1.PublicKey)),
-		accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&k2.PublicKey)),
-	}
-	updateKey := accountkey.NewAccountKeyWeightedMultiSigWithValues(threshold, keys)
-
-	k3, err := crypto.HexToECDSA("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
-	if err != nil {
-		panic(err)
-	}
-	feeKey := accountkey.NewAccountKeyPublicWithValue(&k3.PublicKey)
-
-	return accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{txKey, updateKey, feeKey})
 }
