@@ -40,7 +40,7 @@ func TestState(t *testing.T) {
 	st.skipLoad(`^stTransactionTest/zeroSigTransa[^/]*\.json`) // EIP-86 is not supported yet
 	// Expected failures:
 	st.fails(`^stRevertTest/RevertPrecompiledTouch\.json/Byzantium`, "bug in test")
-	st.skipLoad(`^stZeroKnowledge2/ecmul_0-3_5616_28000_96\.json`) // fails with geth
+	st.skipLoad(`^stZeroKnowledge2/ecmul_0-3_5616_28000_96\.json`)
 
 	// Skip since the tests transfer values to precompiled contracts
 	st.skipLoad(`^stPreCompiledContracts2/CallSha256_1_nonzeroValue.json`)
