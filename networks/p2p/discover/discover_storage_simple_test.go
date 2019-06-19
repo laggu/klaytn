@@ -17,8 +17,11 @@
 package discover
 
 import (
+	"crypto/rand"
 	"github.com/ground-x/klaytn/common"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/pkg/errors"
+	rand2 "math/rand"
 	"net"
 	"testing"
 )
@@ -175,16 +178,17 @@ func TestSimple_lookup(t *testing.T) {
 	}
 	discv, _ := newTable(&conf)
 	tab := discv.(*Table)
-	tab.addStorage(NodeTypeUnknown, testStorages[NodeTypeUnknown])
-	tab.addStorage(NodeTypeCN, testStorages[NodeTypeCN])
-	tab.addStorage(NodeTypePN, testStorages[NodeTypePN])
-	tab.addStorage(NodeTypeEN, testStorages[NodeTypeEN])
-	tab.addStorage(NodeTypeBN, testStorages[NodeTypeBN])
 
 	// lookup on empty table returns no nodes
-	typeList := []NodeType{NodeTypeUnknown, NodeTypeCN, NodeTypePN, NodeTypeEN}
+	typeList := []NodeType{NodeTypeUnknown, NodeTypeCN, NodeTypePN, NodeTypeEN, NodeTypeBN}
+	for _, ntype := range typeList {
+		storage := &simpleStorage{targetType: ntype, noDiscover: true, max: 100, nodes: testData[ntype]}
+		tab.addStorage(ntype, storage)
+	}
+
 	for _, nType := range typeList {
-		results := tab.Lookup(NodeID{}, nType)
+		storage := tab.storages[nType]
+		results := storage.lookup(NodeID{}, true, nType) // second parameter is not used
 		if len(results) != len(testData[nType]) {
 			t.Errorf("the size of lookup result is wrong. expected: %v, actual: %v\n", len(testData[nType]), len(results))
 		}
@@ -193,10 +197,6 @@ func TestSimple_lookup(t *testing.T) {
 				t.Errorf("the node does not exist in the lookup result. expected: %v", actual)
 			}
 		}
-	}
-	bootnodes := tab.Lookup(NodeID{}, NodeTypeBN)
-	if len(bootnodes) != 3 {
-		t.Errorf("the result of finding bootnode is wrong. expected: 0, actual: %v", len(bootnodes))
 	}
 }
 
@@ -253,10 +253,10 @@ func TestSimple_getNodes(t *testing.T) {
 			t.Errorf("Returns something although there is nothing. expected: 0, actual: %v", len(results))
 		}
 	}
-	tab.addStorage(NodeTypeUnknown, testStorages[NodeTypeUnknown])
-	tab.addStorage(NodeTypeCN, testStorages[NodeTypeCN])
-	tab.addStorage(NodeTypePN, testStorages[NodeTypePN])
-	tab.addStorage(NodeTypeEN, testStorages[NodeTypeEN])
+	for _, ntype := range nodeTypes {
+		storage := &simpleStorage{targetType: ntype, noDiscover: true, max: 100, nodes: testData[ntype]}
+		tab.addStorage(ntype, storage)
+	}
 
 	for _, nodeType := range nodeTypes {
 		size := len(testData[nodeType])
@@ -284,6 +284,37 @@ func TestSimple_getNodes(t *testing.T) {
 			// Post processing in order to bond each node again
 			for _, node := range results {
 				tab.db.deleteNode(node.ID)
+			}
+		}
+	}
+}
+
+func TestSimple_closest(t *testing.T) {
+	typeList := []NodeType{NodeTypeUnknown, NodeTypeCN, NodeTypePN, NodeTypeEN}
+	for _, ntype := range typeList {
+		var target NodeID
+		rand.Read(target[:])
+		hash := crypto.Keccak256Hash(target[:]) // randome target hash
+		storage := testStorages[ntype]
+		storage.init()
+		storage.max = 5
+		results := storage.closest(hash, rand2.Int()) // second parameter is not used
+		if len(results.entries) != 5 {
+			t.Errorf("the length of the results.entries is wrong. expected: %v, actual: %v", 5, len(results.entries))
+		}
+		for _, node := range results.entries {
+			if !isIn(node, storage.nodes) {
+				t.Errorf("node does not exist in the storage. unknown node: %v", node)
+			}
+		}
+		storage.max = 50
+		results = storage.closest(hash, rand2.Int())
+		if len(results.entries) != 10 {
+			t.Errorf("the length of the results.entries is wrong. expected: %v, actual: %v", 10, len(results.entries))
+		}
+		for _, node := range results.entries {
+			if !isIn(node, storage.nodes) {
+				t.Errorf("node does not exist in the storage. unknown node: %v", node)
 			}
 		}
 	}
