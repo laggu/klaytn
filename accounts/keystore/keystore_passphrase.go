@@ -171,6 +171,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	var (
 		keyBytes, keyId []byte
 		err             error
+		address         common.Address
 	)
 	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)
@@ -178,12 +179,14 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 			return nil, err
 		}
 		keyBytes, keyId, err = decryptKeyV1(k, auth)
+		address = common.HexToAddress(k.Address)
 	} else {
 		k := new(encryptedKeyJSONV3)
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
 		keyBytes, keyId, err = decryptKeyV3(k, auth)
+		address = common.HexToAddress(k.Address)
 	}
 	// Handle any decryption errors and return the key
 	if err != nil {
@@ -193,7 +196,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 
 	return &Key{
 		Id:         uuid.UUID(keyId),
-		Address:    crypto.PubkeyToAddress(key.PublicKey),
+		Address:    address,
 		PrivateKey: key,
 	}, nil
 }

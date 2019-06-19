@@ -130,6 +130,16 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	return nil
 }
 
+func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address common.Address) *Key {
+	id := uuid.NewRandom()
+	key := &Key{
+		Id:         id,
+		Address:    address,
+		PrivateKey: privateKeyECDSA,
+	}
+	return key
+}
+
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
 	key := &Key{

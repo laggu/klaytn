@@ -139,14 +139,48 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-// ImportRawKey stores the given hex encoded ECDSA key into the key directory,
+func parseKlaytnWalletKey(k string) (string, string, *common.Address, error) {
+	// if key length is not 110, just return.
+	if len(k) != 110 {
+		return k, "", nil, nil
+	}
+
+	walletKeyType := k[66:68]
+	if walletKeyType != "00" {
+		return "", "", nil, fmt.Errorf("Klaytn wallet key type must be 00.")
+	}
+	a := common.HexToAddress(k[70:110])
+
+	return k[0:64], walletKeyType, &a, nil
+}
+
+// ReplaceRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
+func (s *PrivateAccountAPI) ReplaceRawKey(privkey string, passphrase string, newPassphrase string) (common.Address, error) {
+	privkey, _, address, err := parseKlaytnWalletKey(privkey)
+	if err != nil {
+		return common.Address{}, err
+	}
 	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
 		return common.Address{}, err
 	}
-	acc, err := fetchKeystore(s.am).ImportECDSA(key, password)
+	acc, err := fetchKeystore(s.am).ReplaceECDSAWithAddress(key, passphrase, newPassphrase, address)
+	return acc.Address, err
+}
+
+// ImportRawKey stores the given hex encoded ECDSA key into the key directory,
+// encrypting it with the passphrase.
+func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
+	privkey, _, address, err := parseKlaytnWalletKey(privkey)
+	if err != nil {
+		return common.Address{}, err
+	}
+	key, err := crypto.HexToECDSA(privkey)
+	if err != nil {
+		return common.Address{}, err
+	}
+	acc, err := fetchKeystore(s.am).ImportECDSAWithAddress(key, password, address)
 	return acc.Address, err
 }
 
@@ -193,7 +227,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 }
 
 // SendTransaction will create a transaction from the given arguments and
-// tries to sign it with the key associated with args.To. If the given passwd isn't
+// tries to sign it with the key associated with args.From. If the given passwd isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
@@ -209,8 +243,71 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	return submitTransaction(ctx, s.b, signed)
 }
 
+func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxArgs, passwd string) (*types.Transaction, error) {
+	account := accounts.Account{Address: args.from()}
+	wallet, err := s.am.Find(account)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return nil, err
+	}
+
+	tx, err := args.toTransaction()
+	if err != nil {
+		return nil, err
+	}
+
+	signed, err := wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
+	if err != nil {
+		return nil, err
+	}
+
+	return signed, nil
+}
+
+// SendAccountUpdate will create a TxTypeAccountUpdate transaction from the given arguments and
+// tries to sign it with the key associated with args.From. If the given passwd isn't
+// able to decrypt the key it fails.
+func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountUpdateTxArgs, passwd string) (common.Hash, error) {
+	if args.Nonce == nil {
+		// Hold the addresse's mutex around signing to prevent concurrent assignment of
+		// the same nonce to multiple accounts.
+		s.nonceLock.LockAddr(args.From)
+		defer s.nonceLock.UnlockAddr(args.From)
+	}
+
+	signed, err := s.signNewTransaction(ctx, &args, passwd)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return submitTransaction(ctx, s.b, signed)
+}
+
+// SendValueTransfer will create a TxTypeValueTransfer transaction from the given arguments and
+// tries to sign it with the key associated with args.From. If the given passwd isn't
+// able to decrypt the key it fails.
+func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTransferTxArgs, passwd string) (common.Hash, error) {
+	if args.Nonce == nil {
+		// Hold the addresse's mutex around signing to prevent concurrent assignment of
+		// the same nonce to multiple accounts.
+		s.nonceLock.LockAddr(args.From)
+		defer s.nonceLock.UnlockAddr(args.From)
+	}
+
+	signed, err := s.signNewTransaction(ctx, &args, passwd)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return submitTransaction(ctx, s.b, signed)
+}
+
 // SignTransaction will create a transaction from the given arguments and
-// tries to sign it with the key associated with args.To. If the given passwd isn't
+// tries to sign it with the key associated with args.From. If the given passwd isn't
 // able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
 // to other nodes
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {

@@ -759,6 +759,11 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'replaceRawKey',
+			call: 'personal_replaceRawKey',
+			params: 3
+		}),
+		new web3._extend.Method({
 			name: 'sign',
 			call: 'personal_sign',
 			params: 3,
@@ -778,6 +783,18 @@ web3._extend({
 			name: 'deriveAccount',
 			call: 'personal_deriveAccount',
 			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'sendValueTransfer',
+			call: 'personal_sendValueTransfer',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, null]
+		}),
+		new web3._extend.Method({
+			name: 'sendAccountUpdate',
+			call: 'personal_sendAccountUpdate',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'signTransaction',

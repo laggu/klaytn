@@ -444,6 +444,47 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 	return ks.importKey(key, newPassphrase)
 }
 
+// ReplaceECDSAWithAddress stores the given key and address into the key directory, encrypting it with the newPassphrase.
+// This first checks that the target address exists and it can be unlocked with passphrase.
+func (ks *KeyStore) ReplaceECDSAWithAddress(priv *ecdsa.PrivateKey, passphrase string, newPassphrase string, address *common.Address) (accounts.Account, error) {
+	var key *Key
+	if address != nil {
+		key = newKeyFromECDSAWithAddress(priv, *address)
+	} else {
+		key = newKeyFromECDSA(priv)
+	}
+
+	// Before replacing, lock the account first.
+	if err := ks.Lock(key.Address); err != nil {
+		return accounts.Account{}, err
+	}
+
+	acc, err := ks.cache.find(accounts.Account{Address: key.Address})
+	if err != nil {
+		return accounts.Account{}, err
+	}
+	if err := ks.UpdateKey(acc, key, passphrase, newPassphrase); err != nil {
+		return accounts.Account{}, err
+	}
+	ks.refreshWallets()
+
+	return acc, nil
+}
+
+// ImportECDSAWithAddress stores the given key and address into the key directory, encrypting it with the passphrase.
+func (ks *KeyStore) ImportECDSAWithAddress(priv *ecdsa.PrivateKey, passphrase string, address *common.Address) (accounts.Account, error) {
+	var key *Key
+	if address != nil {
+		key = newKeyFromECDSAWithAddress(priv, *address)
+	} else {
+		key = newKeyFromECDSA(priv)
+	}
+	if ks.cache.hasAddress(key.Address) {
+		return accounts.Account{}, fmt.Errorf("account already exists")
+	}
+	return ks.importKey(key, passphrase)
+}
+
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
 	key := newKeyFromECDSA(priv)
@@ -461,6 +502,15 @@ func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, er
 	ks.cache.add(a)
 	ks.refreshWallets()
 	return a, nil
+}
+
+// UpdateKey changes the key and passphrase of an existing account.
+func (ks *KeyStore) UpdateKey(a accounts.Account, newKey *Key, passphrase, newPassphrase string) error {
+	a, _, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return err
+	}
+	return ks.storage.StoreKey(a.URL.Path, newKey, newPassphrase)
 }
 
 // Update changes the passphrase of an existing account.

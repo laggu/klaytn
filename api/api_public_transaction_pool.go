@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/accounts"
 	"github.com/ground-x/klaytn/blockchain/types"
+	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/hexutil"
 	"github.com/ground-x/klaytn/networks/rpc"
@@ -225,6 +226,115 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	}
 	// Request the wallet to sign the transaction
 	return wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
+}
+
+type NewTxArgs interface {
+	setDefaults(context.Context, Backend) error
+	toTransaction() (*types.Transaction, error)
+	from() common.Address
+}
+
+type ValueTransferTxArgs struct {
+	From     common.Address  `json:"from"`
+	Gas      *hexutil.Uint64 `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	Nonce    *hexutil.Uint64 `json:"nonce"`
+	To       common.Address  `json:"to"`
+	Value    *hexutil.Big    `json:"value"`
+}
+
+func (args *ValueTransferTxArgs) from() common.Address {
+	return args.From
+}
+
+// setDefaults is a helper function that fills in default values for unspecified tx fields.
+func (args *ValueTransferTxArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Gas == nil {
+		args.Gas = new(hexutil.Uint64)
+		*(*uint64)(args.Gas) = 90000
+	}
+	if args.GasPrice == nil {
+		price, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		args.GasPrice = (*hexutil.Big)(price)
+	}
+	if args.Nonce == nil {
+		nonce := b.GetPoolNonce(ctx, args.From)
+		args.Nonce = (*hexutil.Uint64)(&nonce)
+	}
+	return nil
+}
+
+func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
+	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    (uint64)(*args.Nonce),
+		types.TxValueKeyGasLimit: (uint64)(*args.Gas),
+		types.TxValueKeyGasPrice: (*big.Int)(args.GasPrice),
+		types.TxValueKeyFrom:     args.From,
+		types.TxValueKeyTo:       args.To,
+		types.TxValueKeyAmount:   (*big.Int)(args.Value),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+type AccountUpdateTxArgs struct {
+	From     common.Address  `json:"from"`
+	Gas      *hexutil.Uint64 `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	Nonce    *hexutil.Uint64 `json:"nonce"`
+	Key      *hexutil.Bytes  `json:"key"`
+}
+
+func (args *AccountUpdateTxArgs) from() common.Address {
+	return args.From
+}
+
+// setDefaults is a helper function that fills in default values for unspecified tx fields.
+func (args *AccountUpdateTxArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Gas == nil {
+		args.Gas = new(hexutil.Uint64)
+		*(*uint64)(args.Gas) = 90000
+	}
+	if args.GasPrice == nil {
+		price, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		args.GasPrice = (*hexutil.Big)(price)
+	}
+	if args.Nonce == nil {
+		nonce := b.GetPoolNonce(ctx, args.From)
+		args.Nonce = (*hexutil.Uint64)(&nonce)
+	}
+	return nil
+}
+
+func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
+	serializer := accountkey.NewAccountKeySerializer()
+
+	if err := rlp.DecodeBytes(*args.Key, &serializer); err != nil {
+		return nil, err
+	}
+	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      (uint64)(*args.Nonce),
+		types.TxValueKeyGasLimit:   (uint64)(*args.Gas),
+		types.TxValueKeyGasPrice:   (*big.Int)(args.GasPrice),
+		types.TxValueKeyFrom:       args.From,
+		types.TxValueKeyAccountKey: serializer.GetKey(),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
