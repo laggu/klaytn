@@ -109,8 +109,27 @@ start() {
         fi
     fi
 
-    if [ ! -z $NETWORK_ID ]; then
+    # Cypress network => NETWORK_ID is null && NETWORK = "cypress"
+    # Baobab network => NETWORK_ID is null && NETWORK = "baobab"
+    # Else => private network
+    if [[ -z $NETWORK_ID ]]; then
+        if [[ $NETWORK == "baobab" ]]; then
+            OPTIONS="$OPTIONS --baobab"
+        elif [[ $NETWORK == "cypress" ]]; then
+            OPTIONS="$OPTIONS --cypress"
+        else
+            echo
+            echo "[ERROR] network id is not specified and network is not available."
+            echo "Available network: baobab, cypress"
+            exit 1
+        fi
+    else
         OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+        echo "[INFO] creating a private network: $NETWORK_ID"
+        if [[ ! -z $NETWORK ]]; then
+            echo
+            echo "[WARN] ignoring the specified network: $NETWORK"
+        fi
     fi
 
     if [ ! -z $DATA_DIR ]; then
