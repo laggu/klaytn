@@ -28,4 +28,5 @@ var (
 	findNodesMeter          = metrics.NewRegisteredMeter("discover/findnodes", nil)          // sending findnode packet meter
 	pendingNeighborsCounter = metrics.NewRegisteredCounter("discover/pendingNeighbors", nil) // pending neighbors counter at the moment
 	neighborsMeter          = metrics.NewRegisteredMeter("discover/neighbors", nil)          // received neighbors packet meter
+	mismatchNetworkCounter  = metrics.NewRegisteredMeter("discover/mismatchNetwork", nil)    // mismatch network ping packet counter
 )

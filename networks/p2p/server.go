@@ -170,6 +170,9 @@ type Config struct {
 	// RWTimerConfig is a configuration for interval based timer for rw.
 	// It checks if a rw successfully writes its task in given time.
 	RWTimerConfig RWTimerConfig
+
+	// NetworkID to use for selecting peers to connect to
+	NetworkID uint
 }
 
 // NewServer returns a new Server interface.
@@ -372,6 +375,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 			Addr:         realaddr,
 			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
 			NodeType:     ConvertNodeType(srv.ConnectionType),
+			NetworkID:    srv.NetworkID,
 		}
 
 		ntab, err := discover.ListenUDP(&cfg)
@@ -1291,6 +1295,7 @@ func (srv *BaseServer) Start() (err error) {
 			Addr:         realaddr,
 			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
 			NodeType:     ConvertNodeType(srv.ConnectionType),
+			NetworkID:    srv.NetworkID,
 		}
 
 		logger.Info("Create udp", "config", cfg)

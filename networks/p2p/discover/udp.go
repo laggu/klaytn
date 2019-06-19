@@ -47,6 +47,7 @@ var (
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
 	errUnauthorized     = errors.New("unauthorized node")
+	errMismatchNetwork  = errors.New("mismatch network id")
 )
 
 // Timeouts
@@ -79,6 +80,7 @@ const (
 // RPC request structures
 type (
 	ping struct {
+		NetworkID  uint
 		Version    uint
 		From, To   rpcEndpoint
 		Expiration uint64
@@ -177,6 +179,7 @@ type conn interface {
 
 // udp implements the RPC protocol.
 type udp struct {
+	networkID   uint
 	conn        conn
 	netrestrict *netutil.Netlist
 	priv        *ecdsa.PrivateKey
@@ -254,6 +257,7 @@ type ReadPacket struct {
 
 // Config holds Table-related settings.
 type Config struct {
+	NetworkID uint
 	// These settings are required and configure the UDP listener:
 	PrivateKey *ecdsa.PrivateKey
 
@@ -289,6 +293,7 @@ func ListenUDP(cfg *Config) (Discovery, error) {
 
 func newUDP(cfg *Config) (Discovery, *udp, error) {
 	udp := &udp{
+		networkID:   cfg.NetworkID,
 		conn:        cfg.Conn,
 		priv:        cfg.PrivateKey,
 		netrestrict: cfg.NetRestrict,
@@ -324,6 +329,7 @@ func (t *udp) close() {
 // ping sends a ping message to the given node and waits for a reply.
 func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	req := &ping{
+		NetworkID:  t.networkID,
 		Version:    Version,
 		From:       t.ourEndpoint,
 		To:         makeEndpoint(toaddr, 0, NodeTypeUnknown), // TODO: maybe use known TCP port from DB
@@ -665,11 +671,8 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 }
 
 func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	logger.Trace("udp: ping: received", "from", fromID)
-	if expired(req.Expiration) {
-		logger.Trace("udp: ping: expired", "from", fromID)
-		return errExpired
-	}
+	logger.Trace("udp: ping: received", "from", fromID, "req.NetworkId", req.NetworkID,
+		"myNetworkId", t.networkID)
 
 	logger.Trace("udp: ping: send pong", "to", fromID)
 	if !t.Discovery.IsAuthorized(fromID, req.From.NType) {
@@ -678,6 +681,18 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	} else {
 		logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 	}
+
+	if req.NetworkID != t.networkID {
+		logger.Debug("udp: ping: mismatch networkid", "local", t.networkID, "remote", req.NetworkID)
+		mismatchNetworkCounter.Mark(1)
+		return errMismatchNetwork
+	}
+
+	if expired(req.Expiration) {
+		logger.Trace("udp: ping: expired", "from", fromID)
+		return errExpired
+	}
+
 	t.send(from, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP, req.From.NType),
 		ReplyTok:   mac,

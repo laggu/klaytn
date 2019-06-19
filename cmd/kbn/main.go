@@ -55,6 +55,7 @@ func bootnode(ctx *cli.Context) error {
 		err  error
 		bcfg = bootnodeConfig{
 			// Config variables
+			networkID:    ctx.GlobalUint(utils.NetworkIdFlag.Name),
 			addr:         ctx.GlobalString(utils.BNAddrFlag.Name),
 			genKeyPath:   ctx.GlobalString(utils.GenKeyFlag.Name),
 			nodeKeyFile:  ctx.GlobalString(utils.NodeKeyFileFlag.Name),
@@ -134,6 +135,7 @@ func bootnode(ctx *cli.Context) error {
 	}
 
 	cfg := discover.Config{
+		NetworkID:       bcfg.networkID,
 		PrivateKey:      bcfg.nodeKey,
 		AnnounceAddr:    realaddr,
 		NetRestrict:     bcfg.restrictList,
@@ -198,6 +200,7 @@ func main() {
 			utils.PrometheusExporterFlag,
 			utils.PrometheusExporterPortFlag,
 			utils.AuthorizedNodesFlag,
+			utils.NetworkIdFlag,
 		}
 	)
 	// TODO-Klaytn: remove `help` command

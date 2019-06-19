@@ -949,6 +949,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		cfg.NetRestrict = list
 	}
+	cfg.NetworkID = ctx.GlobalUint(NetworkIdFlag.Name)
 }
 
 func convertNodeType(nodetype string) p2p.ConnType {
