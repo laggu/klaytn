@@ -1027,7 +1027,7 @@ func (f connFlag) String() string {
 }
 
 func (c ConnType) String() string {
-	s := fmt.Sprintf("-%d", int(c))
+	s := fmt.Sprintf("%d", int(c))
 	return s
 }
 
