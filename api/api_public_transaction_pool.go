@@ -129,6 +129,9 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 
 func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Context, senderTxHash common.Hash) map[string]interface{} {
 	txhash := s.b.ChainDB().ReadTxHashFromSenderTxHash(senderTxHash)
+	if common.EmptyHash(txhash) {
+		txhash = senderTxHash
+	}
 	return s.GetTransactionByHash(ctx, txhash)
 }
 
@@ -202,6 +205,9 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 
 func (s *PublicTransactionPoolAPI) GetTransactionReceiptBySenderTxHash(ctx context.Context, senderTxHash common.Hash) (map[string]interface{}, error) {
 	txhash := s.b.ChainDB().ReadTxHashFromSenderTxHash(senderTxHash)
+	if common.EmptyHash(txhash) {
+		txhash = senderTxHash
+	}
 	return s.GetTransactionReceipt(ctx, txhash)
 }
 
