@@ -194,6 +194,9 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 }
 
 func setAuthorizedNodes(ctx *cli.Context, cfg *bootnodeConfig) {
+	if !ctx.GlobalIsSet(utils.AuthorizedNodesFlag.Name) {
+		return
+	}
 	urls := ctx.GlobalString(utils.AuthorizedNodesFlag.Name)
 	splitedUrls := strings.Split(urls, ",")
 	cfg.AuthorizedNodes = make([]*discover.Node, 0, len(splitedUrls))
