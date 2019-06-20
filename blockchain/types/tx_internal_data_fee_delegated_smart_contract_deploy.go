@@ -384,7 +384,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SenderTxHash() common.Ha
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	var to common.Address
 	if t.Recipient != nil {
-		to = *t.Recipient
+		return kerrors.ErrInvalidContractAddress
 	} else {
 		to = crypto.CreateAddress(t.From, t.AccountNonce)
 	}

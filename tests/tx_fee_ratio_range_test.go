@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types/accountkey"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/kerrors"
 	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
@@ -112,7 +113,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:         reservoir.Nonce,
 			types.TxValueKeyFrom:          reservoir.Addr,
-			types.TxValueKeyTo:            &contract.Addr,
+			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
@@ -131,6 +132,8 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 			t.Fatal(err)
 		}
+
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		reservoir.Nonce += 1
 	}
@@ -234,7 +237,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:              reservoir.Nonce,
 			types.TxValueKeyFrom:               reservoir.Addr,
-			types.TxValueKeyTo:                 &to,
+			types.TxValueKeyTo:                 (*common.Address)(nil),
 			types.TxValueKeyAmount:             amount,
 			types.TxValueKeyGasLimit:           gasLimit,
 			types.TxValueKeyGasPrice:           gasPrice,

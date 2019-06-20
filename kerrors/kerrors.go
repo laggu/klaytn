@@ -23,6 +23,7 @@ import "errors"
 var (
 	ErrNotHumanReadableAddress    = errors.New("Human-readable address is not supported now")
 	ErrHumanReadableNotSupported  = errors.New("Human-readable address is not supported now")
+	ErrInvalidContractAddress     = errors.New("contract deploy transaction can't have a recipient address")
 	ErrOutOfGas                   = errors.New("out of gas")
 	ErrMaxKeysExceed              = errors.New("the number of keys exceeds the limit")
 	ErrMaxKeysExceedInValidation  = errors.New("the number of keys exceeds the limit in the validation check")

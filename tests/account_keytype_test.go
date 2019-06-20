@@ -227,7 +227,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeSmartContractDeploy:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = &newAcc.Addr
+		values[types.TxValueKeyTo] = (*common.Address)(nil)
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -237,7 +237,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeFeeDelegatedSmartContractDeploy:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = &newAcc.Addr
+		values[types.TxValueKeyTo] = (*common.Address)(nil)
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
@@ -248,7 +248,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	case types.TxTypeFeeDelegatedSmartContractDeployWithRatio:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyFrom] = sender.Addr
-		values[types.TxValueKeyTo] = &newAcc.Addr
+		values[types.TxValueKeyTo] = (*common.Address)(nil)
 		values[types.TxValueKeyAmount] = amountZero
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = amountZero
