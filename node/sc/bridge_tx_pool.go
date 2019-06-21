@@ -110,6 +110,8 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 		closed: make(chan struct{}),
 	}
 
+	pool.SetEIP155Signer(config.ParentChainID)
+
 	// load from disk
 	pool.journal = newBridgeTxJournal(config.Journal)
 
@@ -119,8 +121,6 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 	if err := pool.journal.rotate(pool.Pending()); err != nil {
 		logger.Error("Failed to rotate chain transaction journal", "err", err)
 	}
-
-	pool.SetEIP155Signer(config.ParentChainID)
 
 	// Start the event loop and return
 	pool.wg.Add(1)

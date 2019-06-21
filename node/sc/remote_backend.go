@@ -132,7 +132,8 @@ func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transact
 	if !rb.checkConnection() {
 		return ConnectionFailErr
 	}
-	return rb.klayClient.SendTransaction(ctx, tx)
+	return rb.subBrige.bridgeTxPool.AddLocal(tx)
+	// return rb.klayClient.SendTransaction(ctx, tx)
 }
 
 func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {

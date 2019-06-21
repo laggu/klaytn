@@ -241,6 +241,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
 	cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
 	cfg.MainChainURL = ctx.GlobalString(utils.MainChainURLFlag.Name)
+	cfg.ParentChainID = ctx.GlobalUint64(utils.ParentChainIDFlag.Name)
 	cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
 	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
 	cfg.ServiceChainConsensus = ctx.GlobalString(utils.ServiceChainConsensusFlag.Name)

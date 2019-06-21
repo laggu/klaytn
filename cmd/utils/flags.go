@@ -554,6 +554,11 @@ var (
 		Usage: "sub bridge listen port",
 		Value: 50506,
 	}
+	ParentChainIDFlag = cli.IntFlag{
+		Name:  "parentchainid",
+		Usage: "parent chain ID",
+		Value: 8217, // Klaytn mainnet chain ID
+	}
 	MainChainURLFlag = cli.StringFlag{
 		Name:  "mainchainws",
 		Usage: "mainchain ws url",

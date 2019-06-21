@@ -71,6 +71,7 @@ var scnHelpFlagGroups = []utils.FlagGroup{
 			utils.SubBridgeListenPortFlag,
 			utils.AnchoringPeriodFlag,
 			utils.SentChainTxsLimit,
+			utils.ParentChainIDFlag,
 			utils.MainChainURLFlag,
 			utils.VTRecoveryFlag,
 			utils.VTRecoveryIntervalFlag,

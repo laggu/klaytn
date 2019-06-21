@@ -94,10 +94,6 @@ func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.
 			err = errResp(ErrDecode, "tx %d is nil", i)
 			continue
 		}
-		if tx.Type() != types.TxTypeChainDataAnchoring {
-			err = errResp(ErrUnexpectedTxType, "tx %d should be TxTypeChainDataAnchoring, but %s", i, tx.Type())
-			continue
-		}
 		validTxs = append(validTxs, tx)
 	}
 	mbh.mainbridge.txPool.AddRemotes(validTxs)

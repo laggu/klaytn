@@ -169,9 +169,10 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	}
 	// TODO-Klaytn change static config to user define config
 	bridgetxConfig := BridgeTxPoolConfig{
-		Journal:     path.Join(config.DataDir, "bridge_transactions.rlp"),
-		Rejournal:   time.Hour,
-		GlobalQueue: 8192,
+		ParentChainID: new(big.Int).SetUint64(config.ParentChainID),
+		Journal:       path.Join(config.DataDir, "bridge_transactions.rlp"),
+		Rejournal:     time.Hour,
+		GlobalQueue:   8192,
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
@@ -204,6 +205,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	if err != nil {
 		return nil, err
 	}
+	sc.bridgeAccountManager.mcAccount.SetChainID(new(big.Int).SetUint64(config.ParentChainID))
 
 	return sc, nil
 }

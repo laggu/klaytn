@@ -613,14 +613,15 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 // The deployed contract address, transaction are returned. An error is also returned if any.
 func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBackend) (common.Address, *bridgecontract.Bridge, error) {
 	acc.Lock()
-	defer acc.UnLock()
 	auth := acc.GetTransactOpts()
 	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend)
 	if err != nil {
 		logger.Error("Failed to deploy contract.", "err", err)
+		acc.UnLock()
 		return common.Address{}, nil, err
 	}
 	acc.IncNonce()
+	acc.UnLock()
 
 	logger.Info("Bridge is deploying...", "addr", addr, "txHash", tx.Hash().String())
 
@@ -630,7 +631,7 @@ func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBac
 		return addr, contract, nil
 	}
 
-	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
+	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelTimeout()
 
 	addr, err = bind.WaitDeployed(timeoutContext, back, tx)

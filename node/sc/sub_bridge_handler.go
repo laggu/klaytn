@@ -88,6 +88,7 @@ func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, err
 	}
 	return &SubBridgeHandler{
 		subbridge:                 main,
+		parentChainID:             new(big.Int).SetUint64(scc.ParentChainID),
 		MainChainAccountAddr:      mainChainAccountAddr,
 		chainKey:                  scc.chainkey,
 		remoteGasPrice:            uint64(0),
@@ -337,21 +338,23 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
-			chainHashes := new(types.ChainHashes)
-			data, err := tx.AnchoredData()
-			if err != nil {
-				logger.Error("failed to get anchoring tx type from the tx", "txHash", txHash.String())
-				return
+			if tx.Type() == types.TxTypeChainDataAnchoring {
+				chainHashes := new(types.ChainHashes)
+				data, err := tx.AnchoredData()
+				if err != nil {
+					logger.Error("failed to get anchoring tx type from the tx", "txHash", txHash.String())
+					return
+				}
+				if err := rlp.DecodeBytes(data, chainHashes); err != nil {
+					logger.Error("failed to RLP decode ChainHashes", "txHash", txHash.String())
+					return
+				}
+				sbh.WriteReceiptFromParentChain(chainHashes.BlockHash, (*types.Receipt)(receipt))
+				sbh.WriteAnchoredBlockNumber(chainHashes.BlockNumber.Uint64())
+				logger.Debug("received anchoring tx receipt", "blockNum", chainHashes.BlockNumber.String(), "blcokHash", chainHashes.BlockHash.String(), "txHash", txHash.String())
 			}
-			if err := rlp.DecodeBytes(data, chainHashes); err != nil {
-				logger.Error("failed to RLP decode ChainHashes", "txHash", txHash.String())
-				return
-			}
-			sbh.WriteReceiptFromParentChain(chainHashes.BlockHash, (*types.Receipt)(receipt))
-			sbh.WriteAnchoredBlockNumber(chainHashes.BlockNumber.Uint64())
-			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
 
-			logger.Debug("received anchoring tx receipt", "blockNum", chainHashes.BlockNumber.String(), "blcokHash", chainHashes.BlockHash.String(), "txHash", txHash.String())
+			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
 		} else {
 			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
@@ -361,12 +364,6 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 }
 
 func (sbh *SubBridgeHandler) RegisterNewPeer(p BridgePeer) error {
-	if sbh.getParentChainID() == nil {
-		sbh.setParentChainID(p.GetChainID())
-		// sync nonce and gasprice with peer
-		sbh.SyncNonceAndGasPrice()
-		return nil
-	}
 	if sbh.getParentChainID().Cmp(p.GetChainID()) != 0 {
 		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", sbh.getParentChainID(), p.GetChainID())
 	}

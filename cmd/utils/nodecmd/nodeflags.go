@@ -162,6 +162,7 @@ var KSCNFlags = []cli.Flag{
 	utils.ChildChainIndexingFlag,
 	utils.SubBridgeFlag,
 	utils.SubBridgeListenPortFlag,
+	utils.ParentChainIDFlag,
 	utils.MainChainURLFlag,
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
