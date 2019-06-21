@@ -58,6 +58,8 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		currentRoundGauge:  metrics.NewRegisteredGauge("consensus/istanbul/core/currentRound", nil),
 		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
 		consensusTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
+		councilSizeGauge:   metrics.NewRegisteredGauge("consensus/istanbul/core/councilSize", nil),
+		committeeSizeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/committeeSize", nil),
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -101,6 +103,9 @@ type core struct {
 	sequenceMeter metrics.Meter
 	// the gauge to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimeGauge metrics.Gauge
+
+	councilSizeGauge   metrics.Gauge
+	committeeSizeGauge metrics.Gauge
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -247,6 +252,14 @@ func (c *core) startNewRound(round *big.Int) {
 			Round:    new(big.Int),
 		}
 		c.valSet = c.backend.Validators(lastProposal)
+
+		councilSize := int64(c.valSet.Size())
+		committeeSize := int64(c.valSet.SubGroupSize())
+		if committeeSize > councilSize {
+			committeeSize = councilSize
+		}
+		c.councilSizeGauge.Update(councilSize)
+		c.committeeSizeGauge.Update(committeeSize)
 	}
 	c.backend.SetCurrentView(newView)
 
