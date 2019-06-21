@@ -82,6 +82,12 @@ var (
 		Value: 0,
 	}
 
+	chainIDFlag = cli.Uint64Flag{
+		Name:  "chainID",
+		Usage: "ChainID",
+		Value: 1000,
+	}
+
 	unitPriceFlag = cli.Uint64Flag{
 		Name:  "unitPrice",
 		Usage: "Price of unit",

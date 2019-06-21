@@ -131,6 +131,12 @@ func AllocWithBaobabContract(addrs []common.Address, balance *big.Int) Option {
 	}
 }
 
+func ChainID(chainID *big.Int) Option {
+	return func(genesis *blockchain.Genesis) {
+		genesis.Config.ChainID = chainID
+	}
+}
+
 func UnitPrice(price uint64) Option {
 	return func(genesis *blockchain.Genesis) {
 		genesis.Config.UnitPrice = price

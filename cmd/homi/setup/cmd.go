@@ -83,6 +83,7 @@ Args :
 			numOfPNsFlag,
 			numOfENsFlag,
 			numOfTestKeyFlag,
+			chainIDFlag,
 			unitPriceFlag,
 			deriveShaImplFlag,
 			fundingAddrFlag,
@@ -222,6 +223,8 @@ func genCliqueConfig(ctx *cli.Context) *params.CliqueConfig {
 
 func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
+	cID := ctx.Uint64(chainIDFlag.Name)
+	chainID := new(big.Int).SetUint64(cID)
 	deriveShaImpl := ctx.Int(deriveShaImplFlag.Name)
 
 	config := genGovernanceConfig(ctx)
@@ -234,6 +237,7 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address)
 		genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 		genesis.DeriveShaImpl(deriveShaImpl),
 		genesis.UnitPrice(unitPrice),
+		genesis.ChainID(chainID),
 	}
 
 	if ok := ctx.Bool(governanceFlag.Name); ok {
@@ -247,6 +251,9 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address)
 func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, privKeys []*ecdsa.PrivateKey) *blockchain.Genesis {
 	config := genCliqueConfig(ctx)
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
+	cID := ctx.Uint64(chainIDFlag.Name)
+	chainID := new(big.Int).SetUint64(cID)
+
 	if ok := ctx.Bool(governanceFlag.Name); ok {
 		log.Fatalf("Currently, governance is not supported for clique consensus", "--governance", ok)
 	}
@@ -255,6 +262,7 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, p
 		genesis.ValidatorsOfClique(nodeAddrs...),
 		genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
 		genesis.UnitPrice(unitPrice),
+		genesis.ChainID(chainID),
 		genesis.Clique(config),
 	)
 
