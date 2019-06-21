@@ -82,14 +82,27 @@ func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *typ
 }
 
 func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
-	cBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
+	cBridge, cBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
 	if err != nil {
 		logger.Error("Failed to deploy service chain bridge.", "err", err)
 		return nil, err
 	}
-	pBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
+	pBridge, pBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
 	if err != nil {
 		logger.Error("Failed to deploy main chain bridge.", "err", err)
+		return nil, err
+	}
+
+	pAcc := sbapi.sc.bridgeManager.subBridge.bridgeAccountManager.mcAccount
+	cAcc := sbapi.sc.bridgeManager.subBridge.bridgeAccountManager.scAccount
+
+	err = sbapi.sc.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, cAcc, true, false)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sbapi.sc.bridgeManager.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, pAcc, false, false)
+	if err != nil {
 		return nil, err
 	}
 
@@ -221,11 +234,11 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 	}
 
 	bm := sbapi.sc.bridgeManager
-	err = bm.SetBridgeInfo(cBridgeAddr, cBridge, sbapi.sc.bridgeAccountManager.scAccount, true, false)
+	err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, sbapi.sc.bridgeAccountManager.scAccount, true, false)
 	if err != nil {
 		return err
 	}
-	err = bm.SetBridgeInfo(pBridgeAddr, pBridge, sbapi.sc.bridgeAccountManager.mcAccount, false, false)
+	err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, sbapi.sc.bridgeAccountManager.mcAccount, false, false)
 	if err != nil {
 		bm.DeleteBridgeInfo(cBridgeAddr)
 		return err

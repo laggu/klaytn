@@ -792,7 +792,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 
 	// Try to call duplicated SetBridgeInfo
-	err = bm.SetBridgeInfo(addr, bridgeInfo.bridge, sc.bridgeAccountManager.mcAccount, false, false)
+	err = bm.SetBridgeInfo(addr, bridgeInfo.bridge, common.Address{}, nil, sc.bridgeAccountManager.mcAccount, false, false)
 	assert.NotEqual(t, nil, err)
 	bm.Stop()
 }
@@ -962,6 +962,7 @@ func TestErrorDupSubscription(t *testing.T) {
 		common.Address{},
 		nil,
 		bridge,
+		nil,
 		true,
 		true,
 		newEventSortedMap(),
@@ -987,7 +988,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 	if local {
 		acc := bm.subBridge.bridgeAccountManager.scAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend)
-		err = bm.SetBridgeInfo(addr, bridge, acc, local, false)
+		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
 		if err != nil {
 			return common.Address{}, err
 		}
@@ -995,7 +996,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 	} else {
 		acc := bm.subBridge.bridgeAccountManager.mcAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend)
-		err = bm.SetBridgeInfo(addr, bridge, acc, local, false)
+		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
 		if err != nil {
 			return common.Address{}, err
 		}
@@ -1034,7 +1035,7 @@ func (bm *BridgeManager) DeployBridgeNonceTest(backend bind.ContractBackend) (co
 	key := bm.subBridge.bridgeAccountManager.mcAccount.key
 	nonce := bm.subBridge.bridgeAccountManager.mcAccount.GetNonce()
 	bm.subBridge.bridgeAccountManager.mcAccount.key = nil
-	addr, _ := bm.DeployBridge(backend, false)
+	_, addr, _ := bm.DeployBridge(backend, false)
 	bm.subBridge.bridgeAccountManager.mcAccount.key = key
 
 	if nonce != bm.subBridge.bridgeAccountManager.mcAccount.GetNonce() {

@@ -89,6 +89,7 @@ type BridgeInfo struct {
 	counterpartAddress common.Address // TODO-Klaytn need to set counterpart
 	account            *accountInfo
 	bridge             *bridgecontract.Bridge
+	counterpartBridge  *bridgecontract.Bridge
 	onServiceChain     bool
 	subscribed         bool
 
@@ -104,13 +105,14 @@ type BridgeInfo struct {
 	closed   chan struct{}
 }
 
-func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) *BridgeInfo {
+func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) *BridgeInfo {
 	bi := &BridgeInfo{
 		subBridge,
 		addr,
-		common.Address{},
+		cpAddr,
 		account,
 		bridge,
+		cpBridge,
 		local,
 		subscribed,
 		newEventSortedMap(),
@@ -156,12 +158,12 @@ func (bi *BridgeInfo) loop() {
 
 // processingPendingRequestEvents handles pending request value transfer events of the bridge.
 func (bi *BridgeInfo) processingPendingRequestEvents() error {
-	pendingEvent := bi.GetReadyRequestValueTransferEvents()
-	if pendingEvent == nil {
+	ReadyEvent := bi.GetReadyRequestValueTransferEvents()
+	if ReadyEvent == nil {
 		return nil
 	}
 
-	logger.Debug("Get Pending request value transfer event", "len(pendingEvent)", len(pendingEvent))
+	logger.Debug("Get Pending request value transfer event", "len(readyEvent)", len(ReadyEvent), "nextHandleNonce", bi.nextHandleNonce, "len(pendingEvent)", bi.pendingRequestEvent.Len())
 
 	diff := bi.requestNonceFromCounterPart - bi.handleNonce
 	if diff > errorDiffRequestHandleNonce {
@@ -169,7 +171,7 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 		// TODO-Klaytn need to consider starting value transfer recovery.
 	}
 
-	for idx, ev := range pendingEvent {
+	for idx, ev := range ReadyEvent {
 		if ev.RequestNonce < bi.handleNonce {
 			logger.Trace("past requests are ignored", "RequestNonce", ev.RequestNonce, "handleNonce", bi.handleNonce)
 			continue
@@ -181,8 +183,8 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 		}
 
 		if err := bi.handleRequestValueTransferEvent(ev); err != nil {
-			bi.AddRequestValueTransferEvents(pendingEvent[idx:])
-			logger.Error("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(pendingEvent[idx:]))
+			bi.AddRequestValueTransferEvents(ReadyEvent[idx:])
+			logger.Error("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(ReadyEvent[idx:]))
 			return err
 		}
 		if bi.nextHandleNonce <= ev.RequestNonce {
@@ -231,14 +233,20 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 	tokenType := ev.TokenType
 	tokenAddr := bi.subBridge.AddressManager().GetCounterPartToken(ev.TokenAddr)
 	if tokenType != KLAY && tokenAddr == (common.Address{}) {
-		logger.Error("Unregisterd counter part token address.", "addr", tokenAddr.Hex())
-		// TODO-Klaytn consider the invalid token address
-		// - prevent the invalid token address in the bridge contract.
-		// - ignore and keep the request with the invalid token address during handling transaction.
+		logger.Warn("Unregistered counter part token address.", "addr", tokenAddr.Hex())
+		ctTokenAddr, err := bi.counterpartBridge.AllowedTokens(nil, ev.TokenAddr)
+		if err != nil {
+			return err
+		}
+		if ctTokenAddr == (common.Address{}) {
+			return errors.New("can't get counterpart token from bridge")
+		}
 
-		// Increase only handle nonce of bridge contract.
-		ev.TokenType = KLAY
-		ev.Amount = big.NewInt(0)
+		if err := bi.subBridge.AddressManager().AddToken(ev.TokenAddr, ctTokenAddr); err != nil {
+			return err
+		}
+		tokenAddr = ctTokenAddr
+		logger.Info("Register counter part token address.", "addr", tokenAddr.Hex(), "cpAddr", ctTokenAddr.Hex())
 	}
 
 	to := ev.To
@@ -475,11 +483,11 @@ func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
 }
 
 // SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
-func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) error {
+func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) error {
 	if bm.bridges[addr] != nil {
 		return errDuplicatedBridgeInfo
 	}
-	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, account, local, subscribed)
+	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, cpAddr, cpBridge, account, local, subscribed)
 	return nil
 }
 
@@ -488,45 +496,45 @@ func (bm *BridgeManager) RestoreBridges() error {
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
-		localAddr := journal.LocalAddress
-		remoteAddr := journal.RemoteAddress
-		localBridge, err := bridgecontract.NewBridge(localAddr, bm.subBridge.localBackend)
+		cBridgeAddr := journal.LocalAddress
+		pBridgeAddr := journal.RemoteAddress
+		cBridge, err := bridgecontract.NewBridge(cBridgeAddr, bm.subBridge.localBackend)
 		if err != nil {
 			logger.Error("local bridge creation is failed", err)
 			continue
 		}
-		remoteBridge, err := bridgecontract.NewBridge(remoteAddr, bm.subBridge.remoteBackend)
+		pBridge, err := bridgecontract.NewBridge(pBridgeAddr, bm.subBridge.remoteBackend)
 		if err != nil {
 			logger.Error("remote bridge creation is failed", err)
 			continue
 		}
 		bam := bm.subBridge.bridgeAccountManager
-		err = bm.SetBridgeInfo(localAddr, localBridge, bam.scAccount, true, false)
+		err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bam.scAccount, true, false)
 		if err != nil {
 			logger.Error("setting local bridge info is failed", err)
 			continue
 		}
-		err = bm.SetBridgeInfo(remoteAddr, remoteBridge, bam.mcAccount, false, false)
+		err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, bam.mcAccount, false, false)
 		if err != nil {
 			logger.Error("setting remote bridge info is failed", err)
 			continue
 		}
-		bm.subBridge.AddressManager().AddBridge(localAddr, remoteAddr)
+		bm.subBridge.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
 
 		if journal.Subscribed {
-			logger.Info("automatic bridge subscription", "local", localAddr, "remote", remoteAddr)
-			if err := bm.subscribeEvent(localAddr, localBridge); err != nil {
+			logger.Info("automatic bridge subscription", "local", cBridgeAddr, "remote", pBridgeAddr)
+			if err := bm.subscribeEvent(cBridgeAddr, cBridge); err != nil {
 				logger.Error("local bridge subscription is failed", err)
 				continue
 			}
-			if err := bm.subscribeEvent(remoteAddr, remoteBridge); err != nil {
+			if err := bm.subscribeEvent(pBridgeAddr, pBridge); err != nil {
 				// TODO-Klaytn need to consider how to retry.
-				bm.subBridge.AddressManager().DeleteBridge(localAddr)
-				bm.UnsubscribeEvent(localAddr)
+				bm.subBridge.AddressManager().DeleteBridge(cBridgeAddr)
+				bm.UnsubscribeEvent(cBridgeAddr)
 				logger.Error("local bridge subscription is failed", err)
 				continue
 			}
-			bm.AddRecovery(localAddr, remoteAddr)
+			bm.AddRecovery(cBridgeAddr, pBridgeAddr)
 		}
 	}
 	return nil
@@ -584,7 +592,7 @@ func (bm *BridgeManager) stopAllRecoveries() {
 }
 
 // Deploy Bridge SmartContract on same node or remote node
-func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) (common.Address, error) {
+func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) (*bridgecontract.Bridge, common.Address, error) {
 	var acc *accountInfo
 	if local {
 		acc = bm.subBridge.bridgeAccountManager.scAccount
@@ -594,15 +602,10 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 
 	addr, bridge, err := bm.deployBridge(acc, backend)
 	if err != nil {
-		return common.Address{}, err
+		return nil, common.Address{}, err
 	}
 
-	err = bm.SetBridgeInfo(addr, bridge, acc, local, false)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	return addr, err
+	return bridge, addr, err
 }
 
 // DeployBridge handles actual smart contract deployment.
