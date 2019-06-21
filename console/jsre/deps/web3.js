@@ -2662,6 +2662,23 @@ function Web3 (provider) {
     this._extend({
         properties: properties()
     });
+    this.klay.BigNumber = BigNumber;
+    this.klay.toHex = utils.toHex;
+    this.klay.toAscii = utils.toAscii;
+    this.klay.toUtf8 = utils.toUtf8;
+    this.klay.fromAscii = utils.fromAscii;
+    this.klay.fromUtf8 = utils.fromUtf8;
+    this.klay.toDecimal = utils.toDecimal;
+    this.klay.fromDecimal = utils.fromDecimal;
+    this.klay.toBigNumber = utils.toBigNumber;
+    this.klay.toPeb = utils.toPeb;
+    this.klay.fromPeb = utils.fromPeb;
+    this.klay.isAddress = utils.isAddress;
+    this.klay.isChecksumAddress = utils.isChecksumAddress;
+    this.klay.toChecksumAddress = utils.toChecksumAddress;
+    this.klay.isIBAN = utils.isIBAN;
+    this.klay.padLeft = utils.padLeft;
+    this.klay.padRight = utils.padRight;
 }
 
 // expose providers on the class
