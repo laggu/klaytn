@@ -535,3 +535,13 @@ func equalRecipient(a, b *common.Address) bool {
 
 	return false
 }
+
+// NewAccountCreationTransactionWithMap is a test only function since the accountCreation tx is disabled.
+// The function generates an accountCreation function like 'NewTxInternalDataWithMap()'.
+func NewAccountCreationTransactionWithMap(values map[TxValueKeyType]interface{}) (*Transaction, error) {
+	txdata, err := newTxInternalDataAccountCreationWithMap(values)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{data: txdata}, nil
+}
