@@ -40,9 +40,15 @@ const (
 	// OptionMethodInvocation is an indication that the codec supports RPC method calls
 	OptionMethodInvocation CodecOption = 1 << iota
 
-	// OptionSubscriptions is an indication that the codec suports RPC notifications
+	// OptionSubscriptions is an indication that the codec supports RPC notifications
 	OptionSubscriptions = 1 << iota // support pub sub
+
+	// pendingRequestLimit is a limit for concurrent RPC method calls
+	pendingRequestLimit = 200000
 )
+
+// pendingRequestCount is a total number of concurrent RPC method calls
+var pendingRequestCount int64 = 0
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
@@ -176,6 +182,15 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 			return nil
 		}
 
+		if atomic.LoadInt64(&pendingRequestCount) > pendingRequestLimit {
+			err := &invalidRequestError{"server requests exceed the limit"}
+			logger.Debug(fmt.Sprintf("request error %v\n", err))
+			codec.Write(codec.CreateErrorResponse(nil, err))
+			// Error or end of stream, wait for requests and tear down
+			pend.Wait()
+			return nil
+		}
+
 		// check if server is ordered to shutdown and return an error
 		// telling the client that his request failed.
 		if atomic.LoadInt32(&s.run) != 1 {
@@ -208,9 +223,10 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		}
 		// For multi-shot connections, start a goroutine to serve and loop back
 		pend.Add(1)
-
+		atomic.AddInt64(&pendingRequestCount, 1)
 		go func(reqs []*serverRequest, batch bool) {
 			defer func() {
+				atomic.AddInt64(&pendingRequestCount, -1)
 				if err := recover(); err != nil {
 					const size = 64 << 10
 					buf := make([]byte, size)
