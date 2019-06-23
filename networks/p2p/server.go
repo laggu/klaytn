@@ -1298,7 +1298,10 @@ func (srv *BaseServer) Start() (err error) {
 			NetworkID:    srv.NetworkID,
 		}
 
-		logger.Info("Create udp", "config", cfg)
+		cfgForLog := cfg
+		cfgForLog.PrivateKey = nil
+
+		logger.Info("Create udp", "config", cfgForLog)
 
 		ntab, err := discover.ListenUDP(&cfg)
 		if err != nil {
