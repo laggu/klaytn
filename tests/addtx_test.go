@@ -24,6 +24,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/common/profile"
+	"github.com/ground-x/klaytn/params"
 	"math/big"
 	"math/rand"
 	"os"
@@ -211,7 +212,7 @@ func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privK
 		}
 
 		var gasLimit uint64 = 1000000
-		gasPrice := new(big.Int).SetInt64(0)
+		gasPrice := new(big.Int).SetInt64(25 * params.Ston)
 		data := []byte{}
 
 		tx := types.NewTransaction(nonce, *toAddrs[i], txamount, gasLimit, gasPrice, data)
