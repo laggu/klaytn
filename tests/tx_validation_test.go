@@ -190,14 +190,7 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -489,16 +482,6 @@ func TestValidationInvalidSig(t *testing.T) {
 	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	assert.Equal(t, nil, err)
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	// deploy a contract for contract execution tx type
 	{
 		var txs types.Transactions
@@ -531,6 +514,9 @@ func TestValidationInvalidSig(t *testing.T) {
 
 		reservoir.AddNonce()
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -655,14 +641,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	reservoir.AddNonce()
 
 	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	valueMap, _ = genMapForTxTypes(reservoir, reservoir, types.TxTypeLegacyTransaction)
 	tx, err = types.NewTransactionWithMap(types.TxTypeLegacyTransaction, valueMap)
@@ -732,16 +711,6 @@ func TestInvalidBalance(t *testing.T) {
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	gasLimit := uint64(100000000000)
 	gasPrice := big.NewInt(25 * params.Ston)
 	amount := uint64(25 * params.Ston)
@@ -801,6 +770,9 @@ func TestInvalidBalance(t *testing.T) {
 		}
 		reservoir.AddNonce()
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -1550,16 +1522,6 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	assert.Equal(t, nil, err)
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	// deploy a contract for contract execution tx type
 	{
 		var txs types.Transactions
@@ -1592,6 +1554,9 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 
 		reservoir.AddNonce()
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// test for all tx types
 	for _, txType := range testTxTypes {
@@ -1732,16 +1697,6 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	assert.Equal(t, nil, err)
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	// deploy a contract for contract execution tx type
 	{
 		var txs types.Transactions
@@ -1774,6 +1729,9 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 
 		reservoir.AddNonce()
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// state changing tx which will invalidate other txs when it is contained in a block.
 	var txs types.Transactions
@@ -1889,16 +1847,6 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	feePayer, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
-	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
-
 	// deploy a contract for contract execution tx type
 	{
 		var txs types.Transactions
@@ -1931,6 +1879,9 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 
 		reservoir.AddNonce()
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// transfer KLAY to fee payer
 	{

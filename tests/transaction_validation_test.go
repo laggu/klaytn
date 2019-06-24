@@ -145,17 +145,9 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	time.Sleep(time.Second)
 
 	// make TxPool to test validation in 'TxPool add' process
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// 1. contract execution transaction to the contract account.
 	{

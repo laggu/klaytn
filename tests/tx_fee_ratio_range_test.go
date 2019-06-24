@@ -138,15 +138,8 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		reservoir.Nonce += 1
 	}
 
-	// make txpool
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// 1. TxTypeFeeDelegatedValueTransferWithRatio
 	{

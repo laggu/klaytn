@@ -56,15 +56,8 @@ func TestTxCancel(t *testing.T) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	// make txpool
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -216,15 +209,8 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	// make txpool
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -384,15 +370,9 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	// make txpool
-	poolSlots := 1000
-	txpoolconfig := blockchain.DefaultTxPoolConfig
-	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAccount = uint64(poolSlots)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(poolSlots)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(poolSlots)
-	txpool := blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
