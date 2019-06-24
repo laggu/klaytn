@@ -407,7 +407,7 @@ var validateSenderTest = []precompiledTest{
 }
 
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
-	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
+	p := PrecompiledContractsCypress[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 	contract := NewContract(AccountRef(common.HexToAddress("1337")),
@@ -425,7 +425,7 @@ func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 	if test.noBenchmark {
 		return
 	}
-	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
+	p := PrecompiledContractsCypress[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 	contract := NewContract(AccountRef(common.HexToAddress("1337")),
@@ -554,7 +554,7 @@ func BenchmarkPrecompiledVmLog(b *testing.B) {
 	// Only stdout logging is tested to avoid file handling.
 	params.VMLogTarget = params.VMLogToStdout
 
-	p := PrecompiledContractsByzantium[common.HexToAddress("09")]
+	p := PrecompiledContractsCypress[common.HexToAddress("09")]
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	statedb.Prepare(txhash, common.Hash{}, 0)
@@ -593,7 +593,7 @@ func BenchmarkPrecompiledVmLog(b *testing.B) {
 }
 
 func BenchmarkPrecompiledFeePayer(b *testing.B) {
-	p := PrecompiledContractsByzantium[common.HexToAddress("0A")]
+	p := PrecompiledContractsCypress[common.HexToAddress("0A")]
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	statedb.Prepare(txhash, common.Hash{}, 0)
@@ -631,7 +631,7 @@ func BenchmarkPrecompiledFeePayer(b *testing.B) {
 }
 
 func BenchmarkPrecompiledValidateSender(b *testing.B) {
-	p := PrecompiledContractsByzantium[common.HexToAddress("0B")]
+	p := PrecompiledContractsCypress[common.HexToAddress("0B")]
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	k, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	require.NoError(b, err)
@@ -683,7 +683,7 @@ func TestRunVMLogContract(t *testing.T) {
 	// Only stdout logging is tested to avoid file handling.
 	params.VMLogTarget = params.VMLogToStdout
 
-	p := PrecompiledContractsByzantium[common.HexToAddress("09")]
+	p := PrecompiledContractsCypress[common.HexToAddress("09")]
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	statedb.Prepare(txhash, common.Hash{}, 0)
@@ -705,7 +705,7 @@ func TestRunVMLogContract(t *testing.T) {
 }
 
 func TestRunFeePayerContract(t *testing.T) {
-	p := PrecompiledContractsByzantium[common.HexToAddress("0A")]
+	p := PrecompiledContractsCypress[common.HexToAddress("0A")]
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	statedb.Prepare(txhash, common.Hash{}, 0)
@@ -726,7 +726,7 @@ func TestRunFeePayerContract(t *testing.T) {
 }
 
 func TestRunValidateSenderContract(t *testing.T) {
-	p := PrecompiledContractsByzantium[common.HexToAddress("0B")]
+	p := PrecompiledContractsCypress[common.HexToAddress("0B")]
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	k, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
 	require.NoError(t, err)
