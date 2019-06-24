@@ -138,12 +138,12 @@ func TestWeightedCouncil_List(t *testing.T) {
 	validators_in_valset := valSet.List()
 
 	if len(validators_in_valset) != len(validators) {
-		t.Errorf("len of validators in valSet is diffrent from len of given test set %v, validators %v", len(validators_in_valset), len(validators))
+		t.Errorf("len of validators in valSet is different from len of given test set %v, validators %v", len(validators_in_valset), len(validators))
 	}
 
 	for i := 0; i < len(validators); i++ {
 		if validators[i].String() != validators_in_valset[i].String() {
-			t.Errorf("The element in validators in valset is diffrent from given test set%v, validators %v", validators_in_valset[i], validators[i])
+			t.Errorf("The element in validators in valset is different from given test set%v, validators %v", validators_in_valset[i], validators[i])
 		}
 	}
 }
@@ -156,7 +156,7 @@ func TestWeightedCouncil_GetByIndex(t *testing.T) {
 		validatorToCheck := valSet.GetByIndex(uint64(i))
 
 		if validators[i].Address() != validatorToCheck.Address() {
-			t.Errorf("The validator with given index is diffrent. index=%v, expected validator=%v, gotten validator %v", i, validators[i], valSet.GetByIndex(uint64(i)))
+			t.Errorf("The validator with given index is different. index=%v, expected validator=%v, gotten validator %v", i, validators[i], valSet.GetByIndex(uint64(i)))
 		}
 	}
 
@@ -185,7 +185,7 @@ func TestWeightedCouncil_GetByAddress(t *testing.T) {
 		index, validatorToCheck := valSet.getByAddress(validators[i].Address())
 
 		if validators[index].Address() != validatorToCheck.Address() {
-			t.Errorf("The validator with given address is diffrent index=%v, expected validator=%v, gotten validator %v", i, validators[i], valSet.GetByIndex(uint64(i)))
+			t.Errorf("The validator with given address is different index=%v, expected validator=%v, gotten validator %v", i, validators[i], valSet.GetByIndex(uint64(i)))
 		}
 	}
 
@@ -236,7 +236,7 @@ func TestDefaultSet_IsProposer(t *testing.T) {
 		result := valSet.IsProposer(validatorToTest.Address())
 
 		if result != expectedResult {
-			t.Errorf("The result is diffrent from the expected result. Expected Result : %v, Gotten Result : %v, CurrentProposer Address : %v, TestValidator Address : %v", expectedResult, result, currentProposer.Address(), validatorToTest.Address())
+			t.Errorf("The result is different from the expected result. Expected Result : %v, Gotten Result : %v, CurrentProposer Address : %v, TestValidator Address : %v", expectedResult, result, currentProposer.Address(), validatorToTest.Address())
 		}
 	}
 }
@@ -489,7 +489,7 @@ func TestWeightedCouncil_Copy(t *testing.T) {
 		!reflect.DeepEqual(valSet.validators, copiedValSet.validators) ||
 		!reflect.DeepEqual(valSet.proposers, copiedValSet.proposers) ||
 		!reflect.DeepEqual(valSet.stakingInfo, copiedValSet.stakingInfo) {
-		t.Errorf("copied weightedCouncil is diffrent from original.")
+		t.Errorf("copied weightedCouncil is different from original.")
 		t.Errorf("block number. original : %v, Copied : %v", valSet.blockNum, copiedValSet.blockNum)
 		t.Errorf("proposer. original : %v, Copied : %v", valSet.GetProposer(), copiedValSet.GetProposer())
 		t.Errorf("subSize. original : %v, Copied : %v", valSet.subSize, copiedValSet.subSize)

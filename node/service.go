@@ -103,7 +103,7 @@ type Service interface {
 	// are all terminated.
 	Stop() error
 
-	// retreive components (blockchain, txpool, ..) from core service
+	// retrieve components (blockchain, txpool, ..) from core service
 	Components() []interface{}
 
 	// set components (blockchain, txpool, ..) in core service

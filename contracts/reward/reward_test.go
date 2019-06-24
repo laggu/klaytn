@@ -93,7 +93,7 @@ func TestParseRewardRatio(t *testing.T) {
 		// check if the error is nil. It should be same as testCase.success. If not, the test fail
 		if (error == nil) != testCases[i].success || cn != testCases[i].cn ||
 			poc != testCases[i].poc || kir != testCases[i].kir {
-			t.Errorf("test case %v fail. The result is diffrent", testCases[i].s)
+			t.Errorf("test case %v fail. The result is different", testCases[i].s)
 			t.Errorf("The parsed cn. Result : %v, Expected : %v", cn, testCases[i].cn)
 			t.Errorf("The parsed poc. Result : %v, Expected : %v", poc, testCases[i].poc)
 			t.Errorf("The parsed kir. Result : %v, Expected : %v", kir, testCases[i].kir)
@@ -135,7 +135,7 @@ func TestGetRewardGovernanceParameter(t *testing.T) {
 
 		if governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 || governanceParameter.pocRatio.Cmp(pocRatio) != 0 ||
 			governanceParameter.kirRatio.Cmp(kirRatio) != 0 || governanceParameter.totalRatio.Cmp(totalRatio) != 0 {
-			t.Errorf("The reward ratio in governance parameter is diffrent ")
+			t.Errorf("The reward ratio in governance parameter is different ")
 			t.Errorf("The cn reward ratio. Result : %v, Expected : %v", governanceParameter.cnRewardRatio, cnRatio)
 			t.Errorf("The poc reward ratio. Result : %v, Expected : %v", governanceParameter.pocRatio, pocRatio)
 			t.Errorf("The kir reward ratio. Result : %v, Expected : %v", governanceParameter.kirRatio, kirRatio)
@@ -172,7 +172,7 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 
 	if governanceParameter.blockNum != 1 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
-		t.Errorf("GovernanceParameter is diffrent")
+		t.Errorf("GovernanceParameter is different")
 	}
 
 	// 2. update governance parameter with block number before epoch(30 in this test), it should not be updated
@@ -183,7 +183,7 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 
 	if governanceParameter.blockNum != 1 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
-		t.Errorf("GovernanceParameter is diffrent %v", governanceParameter.cnRewardRatio)
+		t.Errorf("GovernanceParameter is different %v", governanceParameter.cnRewardRatio)
 	}
 
 	// 3. update governance parameter with block number after epoch(31 in this test), it should be updated
@@ -201,7 +201,7 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 
 	if governanceParameter.blockNum != 31 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
-		t.Errorf("GovernanceParameter is diffrent")
+		t.Errorf("GovernanceParameter is different")
 	}
 }
 
@@ -352,7 +352,7 @@ func TestPocKirRewardDistribute(t *testing.T) {
 	totalBalance = big.NewInt(0).Add(totalBalance, kirBalance)
 
 	if mintingAmount.Cmp(totalBalance) != 0 {
-		t.Errorf("The sum of balance is diffrent from mintingAmount. totalBalance : %v, mintingAmount : %v", totalBalance, mintingAmount)
+		t.Errorf("The sum of balance is different from mintingAmount. totalBalance : %v, mintingAmount : %v", totalBalance, mintingAmount)
 	}
 }
 
@@ -424,13 +424,13 @@ func TestStakingInfoCache_Add(t *testing.T) {
 	testStakingInfo, _ := newEmptyStakingInfo(nil, uint64(5))
 	stakingCache.add(testStakingInfo) // blockNum 1 should be deleted
 	if stakingCache.minBlockNum != 2 {
-		t.Errorf("minBlockNum of staking cache is diffrent from expected blocknum. result : %v, expected : %v", stakingCache.minBlockNum, 2)
+		t.Errorf("minBlockNum of staking cache is different from expected blocknum. result : %v, expected : %v", stakingCache.minBlockNum, 2)
 	}
 
 	testStakingInfo, _ = newEmptyStakingInfo(nil, uint64(6))
 	stakingCache.add(testStakingInfo) // blockNum 2 should be deleted
 	if stakingCache.minBlockNum != 3 {
-		t.Errorf("minBlockNum of staking cache is diffrent from expected blocknum. result : %v, expected : %v", stakingCache.minBlockNum, 3)
+		t.Errorf("minBlockNum of staking cache is different from expected blocknum. result : %v, expected : %v", stakingCache.minBlockNum, 3)
 	}
 }
 
@@ -447,7 +447,7 @@ func TestStakingInfoCache_Get(t *testing.T) {
 		testStakingInfo := stakingCache.get(i)
 
 		if testStakingInfo.BlockNum != i {
-			t.Errorf("The block number of gotten staking info is diffrent. result : %v, expected : %v", testStakingInfo.BlockNum, i)
+			t.Errorf("The block number of gotten staking info is different. result : %v, expected : %v", testStakingInfo.BlockNum, i)
 		}
 	}
 
@@ -475,7 +475,7 @@ func TestCalcGiniCoefficient(t *testing.T) {
 		result := calcGiniCoefficient(testCase[i].testdata)
 
 		if result != testCase[i].result {
-			t.Errorf("The result is diffrent from the expected result. result : %v, expected : %v", result, testCase[i].result)
+			t.Errorf("The result is different from the expected result. result : %v, expected : %v", result, testCase[i].result)
 		}
 	}
 }
@@ -540,14 +540,14 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 
 		for j := 0; j < len(testCase[i].ccoToken); j++ {
 			if stakingAmountsGiniReflected[j] != testCase[i].adjustment[j] {
-				t.Errorf("staking amount reflected gini is diffrent. result : %v expected : %v", stakingAmountsGiniReflected[j], testCase[i].adjustment[j])
+				t.Errorf("staking amount reflected gini is different. result : %v expected : %v", stakingAmountsGiniReflected[j], testCase[i].adjustment[j])
 			}
 		}
 
 		for j := 0; j < len(testCase[i].ccoToken); j++ {
 			stakingAmountsGiniReflected[j] = math.Round(stakingAmountsGiniReflected[j] * 100 / totalAmountGiniReflected)
 			if stakingAmountsGiniReflected[j] != testCase[i].afterReflected[j] {
-				t.Errorf("weight reflected gini is diffrent. result : %v expected : %v", stakingAmountsGiniReflected[j], testCase[i].afterReflected[j])
+				t.Errorf("weight reflected gini is different. result : %v expected : %v", stakingAmountsGiniReflected[j], testCase[i].afterReflected[j])
 			}
 		}
 	}

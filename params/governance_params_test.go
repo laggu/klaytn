@@ -27,7 +27,7 @@ func TestSetProposerUpdateInterval(t *testing.T) {
 		SetProposerUpdateInterval(testData[i])
 
 		if ProposerUpdateInterval() != testData[i] {
-			t.Errorf("ProposerUadateInterval is diffrent from the given testData. Result : %v, Expected : %v", ProposerUpdateInterval(), testData[i])
+			t.Errorf("ProposerUadateInterval is different from the given testData. Result : %v, Expected : %v", ProposerUpdateInterval(), testData[i])
 		}
 	}
 }
@@ -39,7 +39,7 @@ func TestSetStakingUpdateInterval(t *testing.T) {
 		SetStakingUpdateInterval(testData[i])
 
 		if StakingUpdateInterval() != testData[i] {
-			t.Errorf("StakingUpdateInterval is diffrent from the given testData. Result : %v, Expected : %v", StakingUpdateInterval(), testData[i])
+			t.Errorf("StakingUpdateInterval is different from the given testData. Result : %v, Expected : %v", StakingUpdateInterval(), testData[i])
 		}
 	}
 }
@@ -75,7 +75,7 @@ func TestIsProposerUpdateInterval(t *testing.T) {
 		result, _ := IsProposerUpdateInterval(testCase[i].blockNu)
 
 		if result != testCase[i].result {
-			t.Errorf("The result is diffrent from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
+			t.Errorf("The result is different from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
 				result, testCase[i].result, testCase[i].blockNu, testCase[i].interval)
 		}
 	}
@@ -112,7 +112,7 @@ func TestIsStakingUpdatePossible(t *testing.T) {
 		result := IsStakingUpdateInterval(testCase[i].blockNu)
 
 		if result != testCase[i].result {
-			t.Errorf("The result is diffrent from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
+			t.Errorf("The result is different from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
 				result, testCase[i].result, testCase[i].blockNu, testCase[i].interval)
 		}
 	}
@@ -143,7 +143,7 @@ func TestCalcProposerBlockNumber(t *testing.T) {
 		result := CalcProposerBlockNumber(testCase[i].blockNu)
 
 		if result != testCase[i].result {
-			t.Errorf("The result is diffrent from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
+			t.Errorf("The result is different from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
 				result, testCase[i].result, testCase[i].blockNu, testCase[i].interval)
 		}
 	}
@@ -184,7 +184,7 @@ func TestCalcStakingBlockNumber(t *testing.T) {
 		result := CalcStakingBlockNumber(testCase[i].blockNu)
 
 		if result != testCase[i].result {
-			t.Errorf("The result is diffrent from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
+			t.Errorf("The result is different from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
 				result, testCase[i].result, testCase[i].blockNu, testCase[i].interval)
 		}
 	}
