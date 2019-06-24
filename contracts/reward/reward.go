@@ -296,8 +296,6 @@ func parseRewardRatio(ratio string) (int, int, int, error) {
 
 // Cache for parsed reward parameters from governance
 type blockRewardParameters struct {
-	lock sync.Mutex
-
 	blockNum uint64
 
 	mintingAmount *big.Int
@@ -308,6 +306,7 @@ type blockRewardParameters struct {
 }
 
 var blockRewardCache *blockRewardParameters
+var blockRewardCacheLock sync.Mutex
 
 // StakingCache
 const (
@@ -560,8 +559,8 @@ func calcGiniCoefficient(stakingAmount uint64Slice) float64 {
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
 func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Header) *blockRewardParameters {
-	blockRewardCache.lock.Lock()
-	defer blockRewardCache.lock.Unlock()
+	blockRewardCacheLock.Lock()
+	defer blockRewardCacheLock.Unlock()
 
 	blockNum := header.Number.Uint64()
 

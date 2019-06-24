@@ -59,10 +59,6 @@ func newTestAccounts() *testAccounts {
 	}
 }
 
-func blockRewardCacheReset() {
-	blockRewardCache = new(blockRewardParameters)
-}
-
 var (
 	addr1 = common.HexToAddress("0xac5e047d39692be8c81d0724543d5de721d0dd54")
 )
@@ -152,7 +148,7 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 	// 1. update governanceParameter with block number 1 and check if it is updated well
 	// 2. update governance parameter with block number before epoch(30 in this test), it should not be updated
 	// 3. update governance parameter with block number after epoch(31 in this test), it should be updated
-	blockRewardCacheReset()
+	allocBlockRewardCache()
 	blockNumber := int64(1)
 	epoch := uint64(30)
 	cnRatio := new(big.Int).SetUint64(34)
