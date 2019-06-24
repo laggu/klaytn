@@ -18,6 +18,7 @@ package blockchain
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/blockchain/vm"
 	"testing"
@@ -67,5 +68,16 @@ func TestGetReceiptStatusFromVMerr(t *testing.T) {
 	expectedStatus = types.ReceiptStatusErrDefault
 	if status != expectedStatus {
 		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)
+	}
+}
+
+// TestPrintErrorCodeTable prints the error code table in a format of a markdown table.
+func TestPrintErrorCodeTable(t *testing.T) {
+	if testing.Verbose() {
+		fmt.Println("| ErrorCode | Description |")
+		fmt.Println("|---|---|")
+		for i := uint(types.ReceiptStatusErrDefault); i < types.ReceiptStatusLast; i++ {
+			fmt.Printf("|0x%02x|%s|\n", i, receiptstatus2errTxFailed[i])
+		}
 	}
 }
