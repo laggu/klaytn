@@ -528,7 +528,7 @@ func TestBaoBabGenesisHash(t *testing.T) {
 
 func TestCypressGenesisHash(t *testing.T) {
 	// If cypress network reset, the hash below have to be updated
-	cypressHash := common.HexToHash("0xeb4ee0bbd7221bc70f38bafd02572512d547f0c884b614b7aaa9ebdfbc35fed7")
+	cypressHash := common.HexToHash("0xc72e5293c3c3ba38ed8ae910f780e4caaa9fb95e79784f7ab74c3c262ea7137e")
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
