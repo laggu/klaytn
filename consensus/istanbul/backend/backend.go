@@ -29,6 +29,7 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	istanbulCore "github.com/ground-x/klaytn/consensus/istanbul/core"
 	"github.com/ground-x/klaytn/consensus/istanbul/validator"
+	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto"
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/governance"
@@ -121,6 +122,7 @@ type backend struct {
 	// Last Block Number which has current Governance Config
 	lastGovernanceBlock uint64
 
+	rewardManager *reward.RewardManager
 	// Node type
 	nodetype p2p.ConnType
 }
@@ -154,6 +156,14 @@ func (sb *backend) Address() common.Address {
 // Validators implements istanbul.Backend.Validators
 func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
 	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
+}
+
+func (sb *backend) SetRewardManager(manager *reward.RewardManager) {
+	sb.rewardManager = manager
+}
+
+func (sb *backend) GetRewardManager() *reward.RewardManager {
+	return sb.rewardManager
 }
 
 // Broadcast implements istanbul.Backend.Broadcast
