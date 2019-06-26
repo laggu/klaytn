@@ -61,6 +61,11 @@ type LesServer interface {
 	SetBloomBitsIndexer(bbIndexer *blockchain.ChainIndexer)
 }
 
+type RewardHandler interface {
+	SetRewardManager(manager *reward.RewardManager)
+	GetRewardManager() *reward.RewardManager
+}
+
 // CN implements the Klaytn consensus node service.
 type CN struct {
 	config      *Config
@@ -99,7 +104,8 @@ type CN struct {
 
 	components []interface{}
 
-	governance *governance.Governance
+	governance    *governance.Governance
+	rewardManager *reward.RewardManager
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -277,8 +283,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		cn.protocolManager.SetRewardbase(cn.rewardbase)
 	}
 
-	if chainConfig.Istanbul != nil && cn.chainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
-		reward.Subscribe(cn.blockchain)
+	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+		cn.rewardManager = reward.NewRewardManager(cn.blockchain)
+		if handler, ok := cn.engine.(RewardHandler); ok {
+			handler.SetRewardManager(cn.rewardManager)
+		}
 	}
 
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
@@ -527,12 +536,21 @@ func (s *CN) Start(srvr p2p.Server) error {
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
+
+	if s.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+		s.rewardManager.Start()
+	}
+
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (s *CN) Stop() error {
+	if s.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+		s.rewardManager.Stop()
+	}
+
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
