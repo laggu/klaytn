@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
+	"github.com/ground-x/klaytn/contracts/reward"
 	"math"
 	"math/rand"
 	"reflect"
@@ -395,7 +396,7 @@ func (valSet *defaultSet) F() int {
 
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, chainId uint64) error {
+func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, chainId uint64, rewardManager *reward.RewardManager) error {
 	return nil
 }
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)     { /* Do nothing */ }

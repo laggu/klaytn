@@ -32,7 +32,6 @@ import (
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	istanbulCore "github.com/ground-x/klaytn/consensus/istanbul/core"
 	"github.com/ground-x/klaytn/consensus/istanbul/validator"
-	"github.com/ground-x/klaytn/contracts/reward"
 	"github.com/ground-x/klaytn/crypto/sha3"
 	"github.com/ground-x/klaytn/networks/rpc"
 	"github.com/ground-x/klaytn/params"
@@ -346,6 +345,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	receipts []*types.Receipt) (*types.Block, error) {
+	rewardManager := sb.GetRewardManager()
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
@@ -391,16 +391,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 
 		if proposer.Weight() != 0 {
-			stakingInfo := reward.GetStakingInfoFromStakingCache(header.Number.Uint64())
+			stakingInfo := rewardManager.GetStakingInfo(header.Number.Uint64())
 			if stakingInfo != nil {
 				kirAddr = stakingInfo.KIRAddr
 				pocAddr = stakingInfo.PoCAddr
 			}
 		}
 
-		reward.DistributeBlockReward(state, header, pocAddr, kirAddr, sb.governance)
+		rewardManager.DistributeBlockReward(state, header, pocAddr, kirAddr, sb.governance)
 	} else {
-		err := reward.MintKLAY(state, header, sb.governance)
+		err := rewardManager.MintKLAY(state, header, sb.governance)
 		if err != nil {
 			return nil, err
 		}
@@ -656,7 +656,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
 		pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(snap.Number + 1))
 		if pHeader != nil {
-			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.governance.ChainId()); err != nil {
+			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.governance.ChainId(), sb.GetRewardManager()); err != nil {
 				// There are three error cases and they just don't refresh proposers
 				// (1) no validator at all
 				// (2) invalid formatted hash
