@@ -153,7 +153,7 @@ func (abm *AddressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*
 	}
 
 	// Prepare a message
-	msg, err := makeMsgToAddressBook()
+	msg, err := abm.makeMsgToAddressBook()
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("failed to make message for AddressBook. root err: %s", err))
 	}
@@ -178,7 +178,7 @@ func (abm *AddressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*
 		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
 
-	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = getAllAddressFromAddressBook(res)
+	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = abm.getAllAddressFromAddressBook(res)
 	if err != nil {
 		if err == errAddressBookIncomplete {
 			// This is expected behavior when smart contract is not setup yet.
