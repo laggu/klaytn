@@ -374,20 +374,6 @@ func makeMsgToAddressBook() (*types.Transaction, error) {
 	return msg, nil
 }
 
-// addressType defined in AddressBook
-const (
-	addressTypeNodeID = iota
-	addressTypeStakingAddr
-	addressTypeRewardAddr
-	addressTypePoCAddr
-	addressTypeKIRAddr
-)
-
-var (
-	errAddressBookEmptyResult = errors.New("got empty result, nothing to parse")
-	errAddressBookIncomplete  = errors.New("incomplete node information from AddressBook")
-)
-
 func getAllAddressFromAddressBook(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 
 	if result == nil {
