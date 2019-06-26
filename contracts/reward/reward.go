@@ -558,7 +558,7 @@ func calcGiniCoefficient(stakingAmount uint64Slice) float64 {
 }
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
-func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Header) *blockRewardParameters {
+func getRewardGovernanceParameters(gov *governance.Governance, header *types.Header) *blockRewardParameters {
 	blockRewardCacheLock.Lock()
 	defer blockRewardCacheLock.Unlock()
 

@@ -151,7 +151,7 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 	// 2. update governance parameter with block number before epoch(30 in this test), it should not be updated
 	// 3. update governance parameter with block number after epoch(31 in this test), it should be updated
 	allocBlockRewardCache()
-	blockNumber := int64(1)
+	blockNumber := uint64(1)
 	epoch := uint64(30)
 	cnRatio := new(big.Int).SetUint64(34)
 	pocRatio := new(big.Int).SetUint64(54)
