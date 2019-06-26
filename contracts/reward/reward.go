@@ -31,15 +31,12 @@ import (
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/event"
 	"github.com/ground-x/klaytn/governance"
-	"github.com/ground-x/klaytn/log"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
 	"strconv"
 	"strings"
 	"sync"
 )
-
-var logger = log.NewModuleLogger(log.Reward)
 
 type Reward struct {
 	*contract.KlaytnRewardSession
@@ -76,10 +73,6 @@ func DeployReward(transactOpts *bind.TransactOpts, contractBackend bind.Contract
 	return rewardAddr, reward, nil
 }
 
-type BalanceAdder interface {
-	AddBalance(addr common.Address, v *big.Int)
-}
-
 // MintKLAY mints KLAY and gives the KLAY to the block proposer
 func MintKLAY(b BalanceAdder, header *types.Header, gov *governance.Governance) error {
 
@@ -105,10 +98,6 @@ func MintKLAY(b BalanceAdder, header *types.Header, gov *governance.Governance) 
 
 	b.AddBalance(header.Rewardbase, blockReward)
 	return nil
-}
-
-func isEmptyAddress(addr common.Address) bool {
-	return addr == common.Address{}
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
