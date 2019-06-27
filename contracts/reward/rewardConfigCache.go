@@ -3,7 +3,6 @@ package reward
 import (
 	"errors"
 	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
 	"strconv"
@@ -13,6 +12,10 @@ import (
 
 var rewardConfigCache *rewardConfig
 var rewardConfigCacheLock sync.Mutex
+
+func init() {
+	rewardConfigCache = NewRewardConfig()
+}
 
 // Cache for parsed reward parameters from governance
 type rewardConfig struct {
@@ -51,7 +54,7 @@ func (config *rewardConfig) parseRewardRatio(ratio string) (int, int, int, error
 }
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
-func (configCache *rewardConfig) getRewardConfigCache(gov *governance.Governance, header *types.Header) *rewardConfig {
+func (configCache *rewardConfig) getRewardConfigCache(configManager ConfigManager, header *types.Header) *rewardConfig {
 	rewardConfigCacheLock.Lock()
 	defer rewardConfigCacheLock.Unlock()
 
@@ -65,10 +68,10 @@ func (configCache *rewardConfig) getRewardConfigCache(gov *governance.Governance
 	// cache refresh should be done after snapshot calculating vote.
 	// so cache refresh for block header number should be 1 + epoch number
 	// blockNumber cannot be 0 because this function is called by finalize() and finalize for genesis block isn't called
-	epoch := gov.Epoch()
+	epoch := configManager.Epoch()
 	if (blockNum-1)%epoch == 0 || rewardConfigCache.blockNum+epoch < blockNum || rewardConfigCache.mintingAmount == nil {
 		// Cache missed or not initialized yet. Let's parse governance parameters and update cache
-		cn, poc, kir, err := rewardConfigCache.parseRewardRatio(gov.Ratio())
+		cn, poc, kir, err := rewardConfigCache.parseRewardRatio(configManager.Ratio())
 		if err != nil {
 			logger.Error("Error while parsing reward ratio of governance. Using default ratio", "err", err)
 
@@ -81,11 +84,11 @@ func (configCache *rewardConfig) getRewardConfigCache(gov *governance.Governance
 		newRewardCache := NewRewardConfig()
 
 		// update new cache entry
-		if gov.MintingAmount() == "" {
+		if configManager.MintingAmount() == "" {
 			logger.Error("No minting amount defined in governance. Use default value.", "Default minting amount", params.DefaultMintedKLAY)
 			newRewardCache.mintingAmount = params.DefaultMintedKLAY
 		} else {
-			newRewardCache.mintingAmount, _ = big.NewInt(0).SetString(gov.MintingAmount(), 10)
+			newRewardCache.mintingAmount, _ = big.NewInt(0).SetString(configManager.MintingAmount(), 10)
 		}
 
 		newRewardCache.blockNum = blockNum

@@ -30,7 +30,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/contracts/reward/contract"
 	"github.com/ground-x/klaytn/event"
-	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/params"
 	"math/big"
 	"strconv"
@@ -74,10 +73,11 @@ func DeployReward(transactOpts *bind.TransactOpts, contractBackend bind.Contract
 }
 
 // MintKLAY mints KLAY and gives the KLAY to the block proposer
-func MintKLAY(b BalanceAdder, header *types.Header, gov *governance.Governance) error {
+func MintKLAY(b BalanceAdder, header *types.Header, configManager ConfigManager) error {
 
 	unitPrice := big.NewInt(0)
-	if r, err := gov.GetGovernanceItemAtNumber(header.Number.Uint64(), governance.GovernanceKeyMapReverse[params.UnitPrice]); err == nil {
+	// use key only for temporary it should be removed after changing the way of getting configure
+	if r, err := configManager.GetGovernanceItemAtNumber(header.Number.Uint64(), "governance.unitprice"); err == nil {
 		unitPrice.SetUint64(r.(uint64))
 	} else {
 		logger.Error("Couldn't get UnitPrice from governance", "err", err, "received", r)
@@ -85,7 +85,8 @@ func MintKLAY(b BalanceAdder, header *types.Header, gov *governance.Governance) 
 	}
 
 	mintingAmount := big.NewInt(0)
-	if r, err := gov.GetGovernanceItemAtNumber(header.Number.Uint64(), governance.GovernanceKeyMapReverse[params.MintingAmount]); err == nil {
+	// use key only for temporary it should be removed after changing the way of getting configure
+	if r, err := configManager.GetGovernanceItemAtNumber(header.Number.Uint64(), "reward.mintingamount"); err == nil {
 		mintingAmount.SetString(r.(string), 10)
 	} else {
 		logger.Error("Couldn't get MintingAmount from governance", "err", err, "received", r)
@@ -101,23 +102,23 @@ func MintKLAY(b BalanceAdder, header *types.Header, gov *governance.Governance) 
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, gov *governance.Governance) {
+func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, configManager ConfigManager) {
 
 	// Calculate total tx fee
 	totalTxFee := common.Big0
-	if gov.DeferredTxFee() {
+	if configManager.DeferredTxFee() {
 		totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-		unitPrice := big.NewInt(0).SetUint64(gov.UnitPrice())
+		unitPrice := big.NewInt(0).SetUint64(configManager.UnitPrice())
 		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
 	}
 
-	distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr, gov)
+	distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr, configManager)
 }
 
 // distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
-func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address, gov *governance.Governance) {
+func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address, configManager ConfigManager) {
 	proposer := header.Rewardbase
-	rewardParams := getRewardGovernanceParameters(gov, header)
+	rewardParams := getRewardGovernanceParameters(configManager, header)
 
 	// Block reward
 	blockReward := big.NewInt(0).Add(rewardParams.mintingAmount, totalTxFee)
@@ -279,7 +280,7 @@ func updateStakingCache(bc *blockchain.BlockChain, blockNum uint64) (*StakingInf
 }
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
-func getRewardGovernanceParameters(gov *governance.Governance, header *types.Header) *blockRewardParameters {
+func getRewardGovernanceParameters(configManager ConfigManager, header *types.Header) *blockRewardParameters {
 	blockRewardCacheLock.Lock()
 	defer blockRewardCacheLock.Unlock()
 
@@ -293,10 +294,10 @@ func getRewardGovernanceParameters(gov *governance.Governance, header *types.Hea
 	// cache refresh should be done after snapshot calculating vote.
 	// so cache refresh for block header number should be 1 + epoch number
 	// blockNumber cannot be 0 because this function is called by finalize() and finalize for genesis block isn't called
-	epoch := gov.Epoch()
+	epoch := configManager.Epoch()
 	if (blockNum-1)%epoch == 0 || blockRewardCache.blockNum+epoch < blockNum || blockRewardCache.mintingAmount == nil {
 		// Cache missed or not initialized yet. Let's parse governance parameters and update cache
-		cn, poc, kir, err := parseRewardRatio(gov.Ratio())
+		cn, poc, kir, err := parseRewardRatio(configManager.Ratio())
 		if err != nil {
 			logger.Error("Error while parsing reward ratio of governance. Using default ratio", "err", err)
 
@@ -313,11 +314,11 @@ func getRewardGovernanceParameters(gov *governance.Governance, header *types.Hea
 		newBlockRewardCache.totalRatio = new(big.Int)
 
 		// update new cache entry
-		if gov.MintingAmount() == "" {
+		if configManager.MintingAmount() == "" {
 			logger.Error("No minting amount defined in governance. Use default value.", "Default minting amount", params.DefaultMintedKLAY)
 			newBlockRewardCache.mintingAmount = params.DefaultMintedKLAY
 		} else {
-			newBlockRewardCache.mintingAmount, _ = big.NewInt(0).SetString(gov.MintingAmount(), 10)
+			newBlockRewardCache.mintingAmount, _ = big.NewInt(0).SetString(configManager.MintingAmount(), 10)
 		}
 
 		newBlockRewardCache.blockNum = blockNum

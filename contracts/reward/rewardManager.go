@@ -7,9 +7,7 @@ import (
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/blockchain/types"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/governance"
 	"github.com/ground-x/klaytn/log"
-	"github.com/ground-x/klaytn/params"
 	"math/big"
 )
 
@@ -19,6 +17,18 @@ type BalanceAdder interface {
 	AddBalance(addr common.Address, v *big.Int)
 }
 
+type ConfigManager interface {
+	UnitPrice() uint64
+	Epoch() uint64
+	ProposerPolicy() uint64
+	MintingAmount() string
+	Ratio() string
+	UseGiniCoeff() bool
+	ChainId() uint64
+	GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error)
+	DeferredTxFee() bool
+}
+
 func isEmptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
@@ -26,22 +36,25 @@ func isEmptyAddress(addr common.Address) bool {
 type RewardManager struct {
 	stakingManager    *StakingManager
 	rewardConfigCache *rewardConfig
+	configManager     ConfigManager
 }
 
-func NewRewardManager(bc *blockchain.BlockChain) *RewardManager {
+func NewRewardManager(bc *blockchain.BlockChain, configManager ConfigManager) *RewardManager {
 	stakingManager := NewStakingManager(bc)
 	rewardConfig := NewRewardConfig()
 	return &RewardManager{
 		stakingManager:    stakingManager,
 		rewardConfigCache: rewardConfig,
+		configManager:     configManager,
 	}
 }
 
 // MintKLAY mints KLAY and gives the KLAY to the block proposer
-func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header, gov *governance.Governance) error {
+func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
 
 	unitPrice := big.NewInt(0)
-	if r, err := gov.GetGovernanceItemAtNumber(header.Number.Uint64(), governance.GovernanceKeyMapReverse[params.UnitPrice]); err == nil {
+	// use key only for temporary it should be removed after changing the way of getting configure
+	if r, err := rm.configManager.GetGovernanceItemAtNumber(header.Number.Uint64(), "governance.unitprice"); err == nil {
 		unitPrice.SetUint64(r.(uint64))
 	} else {
 		logger.Error("Couldn't get UnitPrice from governance", "err", err, "received", r)
@@ -49,7 +62,8 @@ func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header, gov *gov
 	}
 
 	mintingAmount := big.NewInt(0)
-	if r, err := gov.GetGovernanceItemAtNumber(header.Number.Uint64(), governance.GovernanceKeyMapReverse[params.MintingAmount]); err == nil {
+	// use key only for temporary it should be removed after changing the way of getting configure
+	if r, err := rm.configManager.GetGovernanceItemAtNumber(header.Number.Uint64(), "reward.mintingamount"); err == nil {
 		mintingAmount.SetString(r.(string), 10)
 	} else {
 		logger.Error("Couldn't get MintingAmount from governance", "err", err, "received", r)
@@ -65,23 +79,23 @@ func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header, gov *gov
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, gov *governance.Governance) {
+func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) {
 
 	// Calculate total tx fee
 	totalTxFee := common.Big0
-	if gov.DeferredTxFee() {
+	if rm.configManager.DeferredTxFee() {
 		totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-		unitPrice := big.NewInt(0).SetUint64(gov.UnitPrice())
+		unitPrice := big.NewInt(0).SetUint64(rm.configManager.UnitPrice())
 		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
 	}
 
-	rm.distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr, gov)
+	rm.distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr)
 }
 
 // distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
-func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address, gov *governance.Governance) {
+func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address) {
 	proposer := header.Rewardbase
-	rewardParams := getRewardGovernanceParameters(gov, header)
+	rewardParams := rm.rewardConfigCache.getRewardConfigCache(rm.configManager, header)
 
 	// Block reward
 	blockReward := big.NewInt(0).Add(rewardParams.mintingAmount, totalTxFee)
