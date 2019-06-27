@@ -398,9 +398,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			}
 		}
 
-		rewardManager.DistributeBlockReward(state, header, pocAddr, kirAddr, sb.governance)
+		rewardManager.DistributeBlockReward(state, header, pocAddr, kirAddr)
 	} else {
-		err := rewardManager.MintKLAY(state, header, sb.governance)
+		err := rewardManager.MintKLAY(state, header)
 		if err != nil {
 			return nil, err
 		}
