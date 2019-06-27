@@ -1,7 +1,6 @@
 package reward
 
 import (
-	"github.com/ground-x/klaytn/blockchain"
 	"sync"
 )
 
@@ -10,15 +9,6 @@ const (
 	maxStakingCache   = 4 // TODO-Klaytn If you increase this value, please also improve add operation of stakingInfoCache
 	chainHeadChanSize = 10
 )
-
-// remove after using refactoring code
-var stakingCache *stakingInfoCache
-
-func initStakingCache() {
-	stakingCache = new(stakingInfoCache)
-	stakingCache.cells = make(map[uint64]*StakingInfo)
-	chainHeadCh = make(chan blockchain.ChainHeadEvent, chainHeadChanSize)
-}
 
 type stakingInfoCache struct {
 	cells       map[uint64]*StakingInfo

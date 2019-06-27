@@ -199,6 +199,15 @@ func init() {
 	allocBlockRewardCache()
 }
 
+// remove after using refactoring code
+var stakingCache *stakingInfoCache
+
+func initStakingCache() {
+	stakingCache = new(stakingInfoCache)
+	stakingCache.cells = make(map[uint64]*StakingInfo)
+	chainHeadCh = make(chan blockchain.ChainHeadEvent, chainHeadChanSize)
+}
+
 func allocBlockRewardCache() {
 	blockRewardCache = new(blockRewardParameters)
 
