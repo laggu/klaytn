@@ -597,7 +597,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 	//   2. Gini coefficient has not yet been calculated
 	//   3. stakingInfo has node info from address book (address book has been activated)
 	if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeIds) != 0 {
-		newStakingInfo.CalcGiniCoefficientOfValidators(valSet.validators)
+		calcGiniCoefficientOfValidators(valSet.validators, newStakingInfo)
 	}
 
 	// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
@@ -703,4 +703,15 @@ func (valSet *weightedCouncil) TotalVotingPower() uint64 {
 		sum += v.VotingPower()
 	}
 	return sum
+}
+
+func calcGiniCoefficientOfValidators(validators []istanbul.Validator, stakingInfo *reward.StakingInfo) {
+	var stakingAmounts []uint64
+	for _, val := range validators {
+		i := stakingInfo.GetIndexByNodeId(val.Address())
+		if i != reward.AddrNotFoundInCouncilNodes {
+			stakingAmounts = append(stakingAmounts, stakingInfo.CouncilStakingAmounts[i])
+		}
+	}
+	stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
 }

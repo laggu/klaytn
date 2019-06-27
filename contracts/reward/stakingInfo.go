@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/params"
 	"math"
 	"math/big"
@@ -112,17 +111,6 @@ func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) uint64 {
 	return 0
 }
 
-func (s *StakingInfo) CalcGiniCoefficientOfValidators(validators []istanbul.Validator) {
-	var stakingAmounts []uint64
-	for _, val := range validators {
-		i := s.GetIndexByNodeId(val.Address())
-		if i != AddrNotFoundInCouncilNodes {
-			stakingAmounts = append(stakingAmounts, s.CouncilStakingAmounts[i])
-		}
-	}
-	s.Gini = calcGiniCoefficient(stakingAmounts)
-}
-
 func (s *StakingInfo) String() string {
 	str := make([]string, 0)
 
@@ -184,7 +172,7 @@ func (p uint64Slice) Len() int           { return len(p) }
 func (p uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
 func (p uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-func calcGiniCoefficient(stakingAmount uint64Slice) float64 {
+func CalcGiniCoefficient(stakingAmount uint64Slice) float64 {
 	sort.Sort(stakingAmount)
 
 	// calculate gini coefficient

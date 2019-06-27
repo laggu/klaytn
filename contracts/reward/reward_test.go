@@ -498,7 +498,7 @@ func TestCalcGiniCoefficient(t *testing.T) {
 	}
 
 	for i := 0; i < len(testCase); i++ {
-		result := calcGiniCoefficient(testCase[i].testdata)
+		result := CalcGiniCoefficient(testCase[i].testdata)
 
 		if result != testCase[i].result {
 			t.Errorf("The result is different from the expected result. result : %v, expected : %v", result, testCase[i].result)
@@ -557,7 +557,7 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 
 		stakingAmountsGiniReflected := make([]float64, len(testCase[i].ccoToken))
 		totalAmountGiniReflected := 0.0
-		stakingInfo.Gini = calcGiniCoefficient(tokenListToCalcGini)
+		stakingInfo.Gini = CalcGiniCoefficient(tokenListToCalcGini)
 
 		for j := 0; j < len(stakingAmountsGiniReflected); j++ {
 			stakingAmountsGiniReflected[j] = math.Round(math.Pow(float64(testCase[i].ccoToken[j]), 1.0/(1+stakingInfo.Gini)))
