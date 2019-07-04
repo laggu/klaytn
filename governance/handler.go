@@ -428,3 +428,7 @@ func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interf
 		return nil, ErrItemNotFound
 	}
 }
+
+func (gov *Governance) GetItemAtNumberByKey(num uint64, key int) (interface{}, error) {
+	return gov.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[key])
+}

@@ -26,6 +26,7 @@ type ConfigManager interface {
 	UseGiniCoeff() bool
 	ChainId() uint64
 	GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error)
+	GetItemAtNumberByKey(num uint64, key int) (interface{}, error)
 	DeferredTxFee() bool
 }
 
@@ -35,81 +36,69 @@ func isEmptyAddress(addr common.Address) bool {
 
 type RewardManager struct {
 	stakingManager    *StakingManager
-	rewardConfigCache *rewardConfig
+	rewardConfigCache *rewardConfigCache
 	configManager     ConfigManager
 }
 
 func NewRewardManager(bc *blockchain.BlockChain, configManager ConfigManager) *RewardManager {
 	stakingManager := NewStakingManager(bc)
-	rewardConfig := NewRewardConfig()
+	rewardConfigCache := NewRewardConfigCache(configManager)
 	return &RewardManager{
 		stakingManager:    stakingManager,
-		rewardConfigCache: rewardConfig,
+		rewardConfigCache: rewardConfigCache,
 		configManager:     configManager,
 	}
 }
 
 // MintKLAY mints KLAY and gives the KLAY to the block proposer
 func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
-
-	unitPrice := big.NewInt(0)
-	// use key only for temporary it should be removed after changing the way of getting configure
-	if r, err := rm.configManager.GetGovernanceItemAtNumber(header.Number.Uint64(), "governance.unitprice"); err == nil {
-		unitPrice.SetUint64(r.(uint64))
-	} else {
-		logger.Error("Couldn't get UnitPrice from governance", "err", err, "received", r)
-		return err
-	}
-
-	mintingAmount := big.NewInt(0)
-	// use key only for temporary it should be removed after changing the way of getting configure
-	if r, err := rm.configManager.GetGovernanceItemAtNumber(header.Number.Uint64(), "reward.mintingamount"); err == nil {
-		mintingAmount.SetString(r.(string), 10)
-	} else {
-		logger.Error("Couldn't get MintingAmount from governance", "err", err, "received", r)
+	config, err := rm.rewardConfigCache.get(header.Number.Uint64())
+	if err != nil {
 		return err
 	}
 
 	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-	totalTxFee := big.NewInt(0).Mul(totalGasUsed, unitPrice)
-	blockReward := big.NewInt(0).Add(mintingAmount, totalTxFee)
+	totalTxFee := big.NewInt(0).Mul(totalGasUsed, config.unitPrice)
+	blockReward := big.NewInt(0).Add(config.mintingAmount, totalTxFee)
 
 	b.AddBalance(header.Rewardbase, blockReward)
 	return nil
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) {
-
-	// Calculate total tx fee
-	totalTxFee := common.Big0
-	if rm.configManager.DeferredTxFee() {
-		totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-		unitPrice := big.NewInt(0).SetUint64(rm.configManager.UnitPrice())
-		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
+func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
+	config, err := rm.rewardConfigCache.get(header.Number.Uint64())
+	if err != nil {
+		return err
 	}
 
-	rm.distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr)
+	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
+	totalTxFee := big.NewInt(0).Mul(totalGasUsed, config.unitPrice)
+
+	return rm.distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr)
 }
 
 // distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
-func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address) {
+func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address) error {
 	proposer := header.Rewardbase
-	rewardParams := rm.rewardConfigCache.getRewardConfigCache(rm.configManager, header)
+	config, err := rm.rewardConfigCache.get(header.Number.Uint64())
+	if err != nil {
+		return err
+	}
 
 	// Block reward
-	blockReward := big.NewInt(0).Add(rewardParams.mintingAmount, totalTxFee)
+	blockReward := big.NewInt(0).Add(config.mintingAmount, totalTxFee)
 
 	tmpInt := big.NewInt(0)
 
-	tmpInt = tmpInt.Mul(blockReward, rewardParams.cnRewardRatio)
-	cnReward := big.NewInt(0).Div(tmpInt, rewardParams.totalRatio)
+	tmpInt = tmpInt.Mul(blockReward, config.cnRatio)
+	cnReward := big.NewInt(0).Div(tmpInt, config.totalRatio)
 
-	tmpInt = tmpInt.Mul(blockReward, rewardParams.pocRatio)
-	pocIncentive := big.NewInt(0).Div(tmpInt, rewardParams.totalRatio)
+	tmpInt = tmpInt.Mul(blockReward, config.pocRatio)
+	pocIncentive := big.NewInt(0).Div(tmpInt, config.totalRatio)
 
-	tmpInt = tmpInt.Mul(blockReward, rewardParams.kirRatio)
-	kirIncentive := big.NewInt(0).Div(tmpInt, rewardParams.totalRatio)
+	tmpInt = tmpInt.Mul(blockReward, config.kirRatio)
+	kirIncentive := big.NewInt(0).Div(tmpInt, config.totalRatio)
 
 	remaining := tmpInt.Sub(blockReward, cnReward)
 	remaining = tmpInt.Sub(remaining, pocIncentive)
@@ -136,6 +125,7 @@ func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Hea
 		"Reward address of a proposer", proposer, "CN reward amount", cnReward,
 		"PoC address", pocAddr, "Poc incentive", pocIncentive,
 		"KIR address", kirAddr, "KIR incentive", kirIncentive)
+	return nil
 }
 
 func (rm *RewardManager) GetStakingInfo(blockNum uint64) *StakingInfo {
