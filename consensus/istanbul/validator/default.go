@@ -58,6 +58,12 @@ func (val *defaultValidator) Hash() int64 {
 	return val.address.Hash().Big().Int64()
 }
 
+func (val *defaultValidator) Copy() istanbul.Validator {
+	return &defaultValidator{
+		address: val.address,
+	}
+}
+
 func (val *defaultValidator) RewardAddress() common.Address { return common.Address{} }
 func (val *defaultValidator) VotingPower() uint64           { return 1000 }
 func (val *defaultValidator) Weight() int64                 { return 0 }
