@@ -530,8 +530,8 @@ func (valSet *weightedCouncil) GetValidators() []istanbul.Validator {
 }
 
 func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
-	valSet.validatorMu.RLock()
-	defer valSet.validatorMu.RUnlock()
+	valSet.validatorMu.Lock()
+	defer valSet.validatorMu.Unlock()
 
 	var newWeightedCouncil = weightedCouncil{
 		subSize:           valSet.subSize,
