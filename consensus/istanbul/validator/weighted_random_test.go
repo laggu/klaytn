@@ -20,8 +20,6 @@ import (
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/consensus/istanbul"
 	"github.com/ground-x/klaytn/crypto"
-	"github.com/ground-x/klaytn/governance"
-	"github.com/ground-x/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
@@ -342,83 +340,83 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 	}
 }
 
-func TestWeightedCouncil_RemoveValidator(t *testing.T) {
-	validators := makeTestValidators(testNonZeroWeights)
-	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
-	config.ChainID = big.NewInt(1)
-	config.Governance.Reward.UseGiniCoeff = false
-	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
-
-	for _, val := range validators {
-
-		_, removedVal := valSet.GetByAddress(val.Address())
-		if removedVal == nil {
-			t.Errorf("Fail to find validator with address %v", removedVal.Address().String())
-		}
-
-		if !valSet.RemoveValidator(removedVal.Address()) {
-			t.Errorf("Fail to remove validator %v", removedVal.String())
-		}
-
-		// check whether removedVal is really removed from validators
-		for _, v := range valSet.validators {
-			if removedVal.Address() == v.Address() {
-				t.Errorf("Validator(%v) does not removed from validators", removedVal.Address().String())
-			}
-		}
-
-		// check whether removedVal is also removed from proposers immediately
-		for _, p := range valSet.proposers {
-			if removedVal.Address() == p.Address() {
-				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
-			}
-		}
-	}
-
-	assert.Equal(t, uint64(0), valSet.Size())
-	assert.Equal(t, 0, len(valSet.Proposers()))
-}
-
-func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
-	validators := makeTestValidators(testNonZeroWeights)
-	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
-	config.Governance.Reward.UseGiniCoeff = false
-	config.ChainID = big.NewInt(1)
-	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
-
-	for _, val := range validators {
-
-		_, removedVal := valSet.GetByAddress(val.Address())
-		if removedVal == nil {
-			t.Errorf("Fail to find validator with address %v", removedVal.Address().String())
-		}
-
-		if !valSet.RemoveValidator(removedVal.Address()) {
-			t.Errorf("Fail to remove validator %v", removedVal.String())
-		}
-
-		// check whether removedVal is really removed from validators
-		for _, v := range valSet.validators {
-			if removedVal.Address() == v.Address() {
-				t.Errorf("Validator(%v) does not removed from validators", removedVal.Address().String())
-			}
-		}
-
-		valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
-
-		// check whether removedVal is excluded as expected when refreshing proposers
-		for _, p := range valSet.proposers {
-			if removedVal.Address() == p.Address() {
-				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
-			}
-		}
-	}
-
-	assert.Equal(t, uint64(0), valSet.Size())
-	assert.Equal(t, 0, len(valSet.Proposers()))
-}
+//func TestWeightedCouncil_RemoveValidator(t *testing.T) {
+//	validators := makeTestValidators(testNonZeroWeights)
+//	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+//	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
+//	config.ChainID = big.NewInt(1)
+//	config.Governance.Reward.UseGiniCoeff = false
+//	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
+//
+//	for _, val := range validators {
+//
+//		_, removedVal := valSet.GetByAddress(val.Address())
+//		if removedVal == nil {
+//			t.Errorf("Fail to find validator with address %v", removedVal.Address().String())
+//		}
+//
+//		if !valSet.RemoveValidator(removedVal.Address()) {
+//			t.Errorf("Fail to remove validator %v", removedVal.String())
+//		}
+//
+//		// check whether removedVal is really removed from validators
+//		for _, v := range valSet.validators {
+//			if removedVal.Address() == v.Address() {
+//				t.Errorf("Validator(%v) does not removed from validators", removedVal.Address().String())
+//			}
+//		}
+//
+//		// check whether removedVal is also removed from proposers immediately
+//		for _, p := range valSet.proposers {
+//			if removedVal.Address() == p.Address() {
+//				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
+//			}
+//		}
+//	}
+//
+//	assert.Equal(t, uint64(0), valSet.Size())
+//	assert.Equal(t, 0, len(valSet.Proposers()))
+//}
+//
+//func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
+//	validators := makeTestValidators(testNonZeroWeights)
+//	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+//	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
+//	config.Governance.Reward.UseGiniCoeff = false
+//	config.ChainID = big.NewInt(1)
+//	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
+//
+//	for _, val := range validators {
+//
+//		_, removedVal := valSet.GetByAddress(val.Address())
+//		if removedVal == nil {
+//			t.Errorf("Fail to find validator with address %v", removedVal.Address().String())
+//		}
+//
+//		if !valSet.RemoveValidator(removedVal.Address()) {
+//			t.Errorf("Fail to remove validator %v", removedVal.String())
+//		}
+//
+//		// check whether removedVal is really removed from validators
+//		for _, v := range valSet.validators {
+//			if removedVal.Address() == v.Address() {
+//				t.Errorf("Validator(%v) does not removed from validators", removedVal.Address().String())
+//			}
+//		}
+//
+//		valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
+//
+//		// check whether removedVal is excluded as expected when refreshing proposers
+//		for _, p := range valSet.proposers {
+//			if removedVal.Address() == p.Address() {
+//				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
+//			}
+//		}
+//	}
+//
+//	assert.Equal(t, uint64(0), valSet.Size())
+//	assert.Equal(t, 0, len(valSet.Proposers()))
+//}
 
 func runRefreshForTest(valSet *weightedCouncil) {
 	hashString := strings.TrimPrefix(testPrevHash.Hex(), "0x")
@@ -499,4 +497,13 @@ func TestWeightedCouncil_Copy(t *testing.T) {
 		t.Errorf("proposers. original : %v, Copied : %v", valSet.proposers, copiedValSet.proposers)
 		t.Errorf("staking. original : %v, Copied : %v", valSet.stakingInfo, copiedValSet.stakingInfo)
 	}
+}
+
+func TestWeightedValidator_Copy(t *testing.T) {
+	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+	copiedValSet := valSet.Copy().(*weightedCouncil)
+
+	t.Logf("valSet.weight : %v copiedValSet.weight : %v", valSet.validators[0].Weight(), copiedValSet.validators[0].Weight())
+	copiedValSet.validators[0].(*weightedValidator).SetWeight(30)
+	t.Logf("valSet.weight : %v copiedValSet.weight : %v", valSet.validators[0].Weight(), copiedValSet.validators[0].Weight())
 }
