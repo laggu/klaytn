@@ -543,11 +543,11 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 		blockNum:          valSet.blockNum,
 	}
 	newWeightedCouncil.validators = make([]istanbul.Validator, len(valSet.validators))
-	//copy(newWeightedCouncil.validators, valSet.validators)
+	copy(newWeightedCouncil.validators, valSet.validators)
 	//reflect.Copy(newWeightedCouncil.validators, valSet.validators)
-	for i := 0; i < len(valSet.validators); i++ {
-		newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
-	}
+	//for i := 0; i < len(valSet.validators); i++ {
+	//	newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
+	//}
 
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
@@ -617,6 +617,12 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 	if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeIds) != 0 {
 		calcGiniCoefficientOfValidators(valSet.validators, newStakingInfo)
 	}
+
+	validators := make([]istanbul.Validator, len(valSet.validators))
+	for i := 0; i < len(valSet.validators); i++ {
+		validators[i] = valSet.validators[i].Copy()
+	}
+	valSet.validators = validators
 
 	// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
 	// Also calculate the total staking amount by summing up the staking amount of each validator.
