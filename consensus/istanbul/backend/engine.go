@@ -390,12 +390,10 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "beneficiary", beneficiaryAddress, "rewardbase", header.Rewardbase)
 		}
 
-		if proposer.Weight() != 0 {
-			stakingInfo := rewardManager.GetStakingInfo(header.Number.Uint64())
-			if stakingInfo != nil {
-				kirAddr = stakingInfo.KIRAddr
-				pocAddr = stakingInfo.PoCAddr
-			}
+		stakingInfo := rewardManager.GetStakingInfo(header.Number.Uint64())
+		if stakingInfo != nil {
+			kirAddr = stakingInfo.KIRAddr
+			pocAddr = stakingInfo.PoCAddr
 		}
 
 		err := rewardManager.DistributeBlockReward(state, header, pocAddr, kirAddr)
