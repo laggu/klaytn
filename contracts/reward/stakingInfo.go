@@ -1,14 +1,12 @@
 package reward
 
 import (
-	"fmt"
 	"github.com/ground-x/klaytn/blockchain"
 	"github.com/ground-x/klaytn/common"
 	"github.com/ground-x/klaytn/params"
 	"math"
 	"math/big"
 	"sort"
-	"strings"
 )
 
 const (
@@ -109,61 +107,6 @@ func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) uint64 {
 		return s.CouncilStakingAmounts[i]
 	}
 	return 0
-}
-
-func (s *StakingInfo) String() string {
-	str := make([]string, 0)
-
-	header := fmt.Sprintf("StakingInfo:{BlockNum:%v", s.BlockNum)
-	str = append(str, header)
-
-	// nodeIds
-	nodeIdsHeader := fmt.Sprintf(" CouncilNodeIds:[")
-	str = append(str, nodeIdsHeader)
-	nodeIds := make([]string, 0)
-	for _, nodeId := range s.CouncilNodeIds {
-		nodeIds = append(nodeIds, nodeId.String())
-	}
-	str = append(str, strings.Join(nodeIds, " "))
-	str = append(str, "]")
-
-	// stakingAddrs
-	stakingAddrsHeader := fmt.Sprintf(", CouncilStakingAddrs:[")
-	str = append(str, stakingAddrsHeader)
-	stakingAddrs := make([]string, 0)
-	for _, stakingAddr := range s.CouncilStakingdAddrs {
-		stakingAddrs = append(stakingAddrs, stakingAddr.String())
-	}
-	str = append(str, strings.Join(stakingAddrs, " "))
-	str = append(str, "]")
-
-	// rewardAddrs
-	rewardAddrsHeader := fmt.Sprintf(", CouncilRewardAddrs:[")
-	str = append(str, rewardAddrsHeader)
-	rewardAddrs := make([]string, 0)
-	for _, rewardAddr := range s.CouncilRewardAddrs {
-		rewardAddrs = append(rewardAddrs, rewardAddr.String())
-	}
-	str = append(str, strings.Join(rewardAddrs, " "))
-	str = append(str, "]")
-
-	// pocAddr and kirAddr
-	pocAddr := fmt.Sprintf(", PoCAddr:%v", s.PoCAddr.String())
-	str = append(str, pocAddr)
-	kirAddr := fmt.Sprintf(", KIRAddr:%v", s.KIRAddr.String())
-	str = append(str, kirAddr)
-
-	// stakingAmounts
-	stakingAmounts := fmt.Sprintf(", CouncilStakingAmounts:%v", s.CouncilStakingAmounts)
-	str = append(str, stakingAmounts)
-
-	gini := fmt.Sprintf(", Gini:%v", s.Gini)
-	str = append(str, gini)
-
-	useGini := fmt.Sprintf(", UseGini:%v }", s.UseGini)
-	str = append(str, useGini)
-
-	return strings.Join(str, " ")
 }
 
 type uint64Slice []uint64
