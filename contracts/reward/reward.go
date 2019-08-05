@@ -144,14 +144,14 @@ func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) uint64 {
 }
 
 func (s *StakingInfo) CalcGiniCoefficientOfValidators(validators []istanbul.Validator) {
-	var stakingAmounts []uint64
+	var stakingAmounts []float64
 	for _, val := range validators {
 		i := s.GetIndexByNodeId(val.Address())
 		if i != AddrNotFoundInCouncilNodes {
-			stakingAmounts = append(stakingAmounts, s.CouncilStakingAmounts[i])
+			stakingAmounts = append(stakingAmounts, float64(s.CouncilStakingAmounts[i]))
 		}
 	}
-	s.Gini = calcGiniCoefficient(stakingAmounts)
+	s.Gini = CalcGiniCoefficient(stakingAmounts)
 }
 
 func NewReward(transactOpts *bind.TransactOpts, contractAddr common.Address, contractBackend bind.ContractBackend) (*Reward, error) {
@@ -531,27 +531,27 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 	return stakingInfo, nil
 }
 
-type uint64Slice []uint64
+type float64Slice []float64
 
-func (p uint64Slice) Len() int           { return len(p) }
-func (p uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
-func (p uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p float64Slice) Len() int           { return len(p) }
+func (p float64Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p float64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-func calcGiniCoefficient(stakingAmount uint64Slice) float64 {
+func CalcGiniCoefficient(stakingAmount float64Slice) float64 {
 	sort.Sort(stakingAmount)
 
 	// calculate gini coefficient
-	sumOfAbsoluteDifferences := uint64(0)
-	subSum := uint64(0)
+	sumOfAbsoluteDifferences := float64(0)
+	subSum := float64(0)
 
 	for i, x := range stakingAmount {
-		temp := x*uint64(i) - subSum
+		temp := x*float64(i) - subSum
 
 		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences + temp
 		subSum = subSum + x
 	}
 
-	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(stakingAmount))
+	result := sumOfAbsoluteDifferences / subSum / float64(len(stakingAmount))
 	result = math.Round(result*100) / 100
 
 	return result

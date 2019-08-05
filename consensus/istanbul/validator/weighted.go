@@ -586,19 +586,13 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
 
-	// Calculate the Gini coefficient when the following conditions meet.
-	//   1. Need to use the Gini coefficient
-	//   2. Gini coefficient has not yet been calculated
-	//   3. stakingInfo has node info from address book (address book has been activated)
-	if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeIds) != 0 {
-		newStakingInfo.CalcGiniCoefficientOfValidators(valSet.validators)
+	stakingAmountsMap := make(map[common.Address]uint64)
+	for sIdx, rewardAddr := range newStakingInfo.CouncilRewardAddrs {
+		stakingAmountsMap[rewardAddr] += newStakingInfo.CouncilStakingAmounts[sIdx]
 	}
 
-	// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
-	// Also calculate the total staking amount by summing up the staking amount of each validator.
 	weightedValidators := make([]*weightedValidator, numValidators)
 	stakingAmounts := make([]float64, numValidators)
-	totalStaking := float64(0)
 	for vIdx, val := range valSet.validators {
 		weightedVal, ok := val.(*weightedValidator)
 		if !ok {
@@ -606,19 +600,65 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 		}
 		weightedValidators[vIdx] = weightedVal
 
-		i := newStakingInfo.GetIndexByNodeId(weightedVal.address)
-		if i != reward.AddrNotFoundInCouncilNodes {
-			weightedVal.SetRewardAddress(newStakingInfo.CouncilRewardAddrs[i])
-			tempStakingAmount := float64(newStakingInfo.CouncilStakingAmounts[i])
-			if newStakingInfo.UseGini {
-				tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+newStakingInfo.Gini)))
-			}
-			stakingAmounts[vIdx] = tempStakingAmount
-			totalStaking += tempStakingAmount
+		sIdx := newStakingInfo.GetIndexByNodeId(weightedVal.address)
+		if sIdx != reward.AddrNotFoundInCouncilNodes {
+			rewardAddr := newStakingInfo.CouncilRewardAddrs[sIdx]
+			weightedVal.SetRewardAddress(rewardAddr)
+			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr])
 		} else {
 			weightedVal.SetRewardAddress(common.Address{})
 		}
 	}
+
+	totalStaking := float64(0)
+	if newStakingInfo.UseGini && len(newStakingInfo.CouncilNodeIds) != 0 {
+		if newStakingInfo.Gini == reward.DefaultGiniCoefficient {
+			newStakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
+		}
+
+		for vIdx, _ := range weightedValidators {
+			stakingAmounts[vIdx] = math.Round(math.Pow(stakingAmounts[vIdx], 1.0/(1+newStakingInfo.Gini)))
+			totalStaking += stakingAmounts[vIdx]
+		}
+	} else {
+		for _, stakingAmount := range stakingAmounts {
+			totalStaking += stakingAmount
+		}
+	}
+
+	//// Calculate the Gini coefficient when the following conditions meet.
+	////   1. Need to use the Gini coefficient
+	////   2. Gini coefficient has not yet been calculated
+	////   3. stakingInfo has node info from address book (address book has been activated)
+	//if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeIds) != 0 {
+	//	newStakingInfo.CalcGiniCoefficientOfValidators(valSet.validators)
+	//}
+	//
+	//// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
+	//// Also calculate the total staking amount by summing up the staking amount of each validator.
+	//weightedValidators := make([]*weightedValidator, numValidators)
+	//stakingAmounts := make([]float64, numValidators)
+	//totalStaking := float64(0)
+	//for vIdx, val := range valSet.validators {
+	//	weightedVal, ok := val.(*weightedValidator)
+	//	if !ok {
+	//		return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
+	//	}
+	//	weightedValidators[vIdx] = weightedVal
+	//
+	//	i := newStakingInfo.GetIndexByNodeId(weightedVal.address)
+	//	if i != reward.AddrNotFoundInCouncilNodes {
+	//		weightedVal.SetRewardAddress(newStakingInfo.CouncilRewardAddrs[i])
+	//		tempStakingAmount := float64(newStakingInfo.CouncilStakingAmounts[i])
+	//		if newStakingInfo.UseGini {
+	//			tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+newStakingInfo.Gini)))
+	//		}
+	//		stakingAmounts[vIdx] = tempStakingAmount
+	//		totalStaking += tempStakingAmount
+	//	} else {
+	//		weightedVal.SetRewardAddress(common.Address{})
+	//	}
+	//}
 
 	// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
 	if totalStaking > 0 {
