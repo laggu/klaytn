@@ -586,28 +586,9 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
 
-	stakingAmountsMap := make(map[common.Address]uint64)
-	for sIdx, rewardAddr := range newStakingInfo.CouncilRewardAddrs {
-		stakingAmountsMap[rewardAddr] += newStakingInfo.CouncilStakingAmounts[sIdx]
-	}
-
-	weightedValidators := make([]*weightedValidator, numValidators)
-	stakingAmounts := make([]float64, numValidators)
-	for vIdx, val := range valSet.validators {
-		weightedVal, ok := val.(*weightedValidator)
-		if !ok {
-			return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
-		}
-		weightedValidators[vIdx] = weightedVal
-
-		sIdx := newStakingInfo.GetIndexByNodeId(weightedVal.address)
-		if sIdx != reward.AddrNotFoundInCouncilNodes {
-			rewardAddr := newStakingInfo.CouncilRewardAddrs[sIdx]
-			weightedVal.SetRewardAddress(rewardAddr)
-			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr])
-		} else {
-			weightedVal.SetRewardAddress(common.Address{})
-		}
+	weightedValidators, stakingAmounts, err := valSet.getStakingAmountsOfValidators(newStakingInfo)
+	if err != nil {
+		return err
 	}
 
 	totalStaking := float64(0)
@@ -682,6 +663,35 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
 
 	return nil
+}
+
+func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
+	stakingAmountsMap := make(map[common.Address]uint64)
+	for sIdx, rewardAddr := range stakingInfo.CouncilRewardAddrs {
+		stakingAmountsMap[rewardAddr] += stakingInfo.CouncilStakingAmounts[sIdx]
+	}
+
+	numValidators := len(valSet.validators)
+	weightedValidators := make([]*weightedValidator, numValidators)
+	stakingAmounts := make([]float64, numValidators)
+	for vIdx, val := range valSet.validators {
+		weightedVal, ok := val.(*weightedValidator)
+		if !ok {
+			return nil, nil, errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
+		}
+		weightedValidators[vIdx] = weightedVal
+
+		sIdx := stakingInfo.GetIndexByNodeId(weightedVal.address)
+		if sIdx != reward.AddrNotFoundInCouncilNodes {
+			rewardAddr := stakingInfo.CouncilRewardAddrs[sIdx]
+			weightedVal.SetRewardAddress(rewardAddr)
+			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr])
+		} else {
+			weightedVal.SetRewardAddress(common.Address{})
+		}
+	}
+
+	return weightedValidators, stakingAmounts, nil
 }
 
 func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
