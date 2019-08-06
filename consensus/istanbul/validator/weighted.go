@@ -591,21 +591,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 		return err
 	}
 
-	totalStaking := float64(0)
-	if newStakingInfo.UseGini && len(newStakingInfo.CouncilNodeIds) != 0 {
-		if newStakingInfo.Gini == reward.DefaultGiniCoefficient {
-			newStakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
-		}
-
-		for vIdx, _ := range weightedValidators {
-			stakingAmounts[vIdx] = math.Round(math.Pow(stakingAmounts[vIdx], 1.0/(1+newStakingInfo.Gini)))
-			totalStaking += stakingAmounts[vIdx]
-		}
-	} else {
-		for _, stakingAmount := range stakingAmounts {
-			totalStaking += stakingAmount
-		}
-	}
+	totalStaking := valSet.calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 
 	//// Calculate the Gini coefficient when the following conditions meet.
 	////   1. Need to use the Gini coefficient
@@ -692,6 +678,26 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 	}
 
 	return weightedValidators, stakingAmounts, nil
+}
+
+func (valSet *weightedCouncil) calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
+	totalStaking := float64(0)
+	if stakingInfo.UseGini && len(stakingInfo.CouncilNodeIds) != 0 {
+		if stakingInfo.Gini == reward.DefaultGiniCoefficient {
+			stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
+		}
+
+		for vIdx, _ := range weightedValidators {
+			stakingAmounts[vIdx] = math.Round(math.Pow(stakingAmounts[vIdx], 1.0/(1+stakingInfo.Gini)))
+			totalStaking += stakingAmounts[vIdx]
+		}
+	} else {
+		for _, stakingAmount := range stakingAmounts {
+			totalStaking += stakingAmount
+		}
+	}
+
+	return totalStaking
 }
 
 func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
