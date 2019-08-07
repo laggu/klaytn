@@ -677,6 +677,7 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 		}
 	}
 
+	logger.Error("sebastian getStakingAmountsOfValidators", "stakingAmountsMap", stakingAmountsMap, "stakingAmounts", stakingAmounts, "weightedValidators", weightedValidators)
 	return weightedValidators, stakingAmounts, nil
 }
 
@@ -697,11 +698,13 @@ func (valSet *weightedCouncil) calcTotalAmount(weightedValidators []*weightedVal
 		}
 	}
 
+	logger.Error("sebastian calcTotalAmount", "Gini", stakingInfo.Gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
 	return totalStaking
 }
 
 // Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
 func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
+	testWeightMap := make(map[common.Address]int64)
 	if totalStaking > 0 {
 		for i, weightedVal := range weightedValidators {
 			weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
@@ -710,12 +713,15 @@ func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidato
 				weight = 1
 			}
 			atomic.StoreInt64(&weightedVal.weight, weight)
+			testWeightMap[weightedVal.address] = weight
 		}
 	} else {
 		for _, weightedVal := range weightedValidators {
 			atomic.StoreInt64(&weightedVal.weight, 0)
+			testWeightMap[weightedVal.address] = 0
 		}
 	}
+	logger.Error("sebastian calcWeight", "testWeightMap", testWeightMap, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
 }
 
 func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
