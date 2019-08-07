@@ -590,8 +590,8 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 	if err != nil {
 		return err
 	}
-
 	totalStaking := valSet.calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
+	valSet.calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 	//// Calculate the Gini coefficient when the following conditions meet.
 	////   1. Need to use the Gini coefficient
@@ -627,21 +627,21 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 	//	}
 	//}
 
-	// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-	if totalStaking > 0 {
-		for i, weightedVal := range weightedValidators {
-			weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
-			if weight <= 0 {
-				// A validator, who holds zero or small stake, has minimum weight, 1.
-				weight = 1
-			}
-			atomic.StoreInt64(&weightedVal.weight, weight)
-		}
-	} else {
-		for _, weightedVal := range weightedValidators {
-			atomic.StoreInt64(&weightedVal.weight, 0)
-		}
-	}
+	//// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
+	//if totalStaking > 0 {
+	//	for i, weightedVal := range weightedValidators {
+	//		weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
+	//		if weight <= 0 {
+	//			// A validator, who holds zero or small stake, has minimum weight, 1.
+	//			weight = 1
+	//		}
+	//		atomic.StoreInt64(&weightedVal.weight, weight)
+	//	}
+	//} else {
+	//	for _, weightedVal := range weightedValidators {
+	//		atomic.StoreInt64(&weightedVal.weight, 0)
+	//	}
+	//}
 
 	valSet.refreshProposers(seed, blockNum)
 
@@ -698,6 +698,24 @@ func (valSet *weightedCouncil) calcTotalAmount(weightedValidators []*weightedVal
 	}
 
 	return totalStaking
+}
+
+// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
+func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
+	if totalStaking > 0 {
+		for i, weightedVal := range weightedValidators {
+			weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
+			if weight <= 0 {
+				// A validator, who holds zero or small stake, has minimum weight, 1.
+				weight = 1
+			}
+			atomic.StoreInt64(&weightedVal.weight, weight)
+		}
+	} else {
+		for _, weightedVal := range weightedValidators {
+			atomic.StoreInt64(&weightedVal.weight, 0)
+		}
+	}
 }
 
 func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
