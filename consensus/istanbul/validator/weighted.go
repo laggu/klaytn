@@ -652,9 +652,9 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 }
 
 func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
-	stakingAmountsMap := make(map[common.Address]uint64)
+	stakingAmountsMap := make(map[string]uint64)
 	for sIdx, rewardAddr := range stakingInfo.CouncilRewardAddrs {
-		stakingAmountsMap[rewardAddr] += stakingInfo.CouncilStakingAmounts[sIdx]
+		stakingAmountsMap[rewardAddr.String()[:8]] += stakingInfo.CouncilStakingAmounts[sIdx]
 	}
 
 	numValidators := len(valSet.validators)
@@ -671,13 +671,13 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 		if sIdx != reward.AddrNotFoundInCouncilNodes {
 			rewardAddr := stakingInfo.CouncilRewardAddrs[sIdx]
 			weightedVal.SetRewardAddress(rewardAddr)
-			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr])
+			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr.String()[:8]])
 		} else {
 			weightedVal.SetRewardAddress(common.Address{})
 		}
 	}
 
-	logger.Error("sebastian getStakingAmountsOfValidators", "stakingAmountsMap", stakingAmountsMap, "stakingAmounts", stakingAmounts, "weightedValidators", weightedValidators)
+	logger.Error("sebastian getStakingAmountsOfValidators", "stakingAmountsMap", stakingAmountsMap, "stakingAmounts", stakingAmounts)
 	return weightedValidators, stakingAmounts, nil
 }
 
@@ -704,7 +704,7 @@ func (valSet *weightedCouncil) calcTotalAmount(weightedValidators []*weightedVal
 
 // Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
 func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
-	testWeightMap := make(map[common.Address]int64)
+	testWeightMap := make(map[string]int64)
 	if totalStaking > 0 {
 		for i, weightedVal := range weightedValidators {
 			weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
@@ -713,12 +713,12 @@ func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidato
 				weight = 1
 			}
 			atomic.StoreInt64(&weightedVal.weight, weight)
-			testWeightMap[weightedVal.address] = weight
+			testWeightMap[weightedVal.address.String()[:8]] = weight
 		}
 	} else {
 		for _, weightedVal := range weightedValidators {
 			atomic.StoreInt64(&weightedVal.weight, 0)
-			testWeightMap[weightedVal.address] = 0
+			testWeightMap[weightedVal.address.String()[:8]] = 0
 		}
 	}
 	logger.Error("sebastian calcWeight", "testWeightMap", testWeightMap, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
