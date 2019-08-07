@@ -538,20 +538,22 @@ func (p float64Slice) Less(i, j int) bool { return p[i] < p[j] }
 func (p float64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func CalcGiniCoefficient(stakingAmount float64Slice) float64 {
-	sort.Sort(stakingAmount)
+	tempStakingAmount := make(float64Slice, len(stakingAmount))
+	copy(tempStakingAmount, stakingAmount)
+	sort.Sort(tempStakingAmount)
 
 	// calculate gini coefficient
 	sumOfAbsoluteDifferences := float64(0)
 	subSum := float64(0)
 
-	for i, x := range stakingAmount {
+	for i, x := range tempStakingAmount {
 		temp := x*float64(i) - subSum
 
 		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences + temp
 		subSum = subSum + x
 	}
 
-	result := sumOfAbsoluteDifferences / subSum / float64(len(stakingAmount))
+	result := sumOfAbsoluteDifferences / subSum / float64(len(tempStakingAmount))
 	result = math.Round(result*100) / 100
 
 	return result
