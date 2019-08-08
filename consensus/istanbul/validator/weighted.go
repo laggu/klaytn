@@ -593,56 +593,6 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 	totalStaking := valSet.calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 	valSet.calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
-	//// Calculate the Gini coefficient when the following conditions meet.
-	////   1. Need to use the Gini coefficient
-	////   2. Gini coefficient has not yet been calculated
-	////   3. stakingInfo has node info from address book (address book has been activated)
-	//if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeIds) != 0 {
-	//	newStakingInfo.CalcGiniCoefficientOfValidators(valSet.validators)
-	//}
-	//
-	//// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
-	//// Also calculate the total staking amount by summing up the staking amount of each validator.
-	//weightedValidators := make([]*weightedValidator, numValidators)
-	//stakingAmounts := make([]float64, numValidators)
-	//totalStaking := float64(0)
-	//for vIdx, val := range valSet.validators {
-	//	weightedVal, ok := val.(*weightedValidator)
-	//	if !ok {
-	//		return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
-	//	}
-	//	weightedValidators[vIdx] = weightedVal
-	//
-	//	i := newStakingInfo.GetIndexByNodeId(weightedVal.address)
-	//	if i != reward.AddrNotFoundInCouncilNodes {
-	//		weightedVal.SetRewardAddress(newStakingInfo.CouncilRewardAddrs[i])
-	//		tempStakingAmount := float64(newStakingInfo.CouncilStakingAmounts[i])
-	//		if newStakingInfo.UseGini {
-	//			tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+newStakingInfo.Gini)))
-	//		}
-	//		stakingAmounts[vIdx] = tempStakingAmount
-	//		totalStaking += tempStakingAmount
-	//	} else {
-	//		weightedVal.SetRewardAddress(common.Address{})
-	//	}
-	//}
-
-	//// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-	//if totalStaking > 0 {
-	//	for i, weightedVal := range weightedValidators {
-	//		weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
-	//		if weight <= 0 {
-	//			// A validator, who holds zero or small stake, has minimum weight, 1.
-	//			weight = 1
-	//		}
-	//		atomic.StoreInt64(&weightedVal.weight, weight)
-	//	}
-	//} else {
-	//	for _, weightedVal := range weightedValidators {
-	//		atomic.StoreInt64(&weightedVal.weight, 0)
-	//	}
-	//}
-
 	valSet.refreshProposers(seed, blockNum)
 
 	logger.Info("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
@@ -654,7 +604,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
 	stakingAmountsMap := make(map[string]uint64)
 	for sIdx, rewardAddr := range stakingInfo.CouncilRewardAddrs {
-		stakingAmountsMap[rewardAddr.String()[:8]] += stakingInfo.CouncilStakingAmounts[sIdx]
+		stakingAmountsMap[rewardAddr.String()] += stakingInfo.CouncilStakingAmounts[sIdx]
 	}
 
 	numValidators := len(valSet.validators)
@@ -671,13 +621,13 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 		if sIdx != reward.AddrNotFoundInCouncilNodes {
 			rewardAddr := stakingInfo.CouncilRewardAddrs[sIdx]
 			weightedVal.SetRewardAddress(rewardAddr)
-			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr.String()[:8]])
+			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr.String()])
 		} else {
 			weightedVal.SetRewardAddress(common.Address{})
 		}
 	}
 
-	logger.Error("sebastian getStakingAmountsOfValidators", "stakingAmountsMap", stakingAmountsMap, "stakingAmounts", stakingAmounts)
+	logger.Debug("stakingAmounts of validators", "stakingAmountsMap", stakingAmountsMap, "validators", weightedValidators, "stakingAmounts", stakingAmounts)
 	return weightedValidators, stakingAmounts, nil
 }
 
@@ -698,13 +648,12 @@ func (valSet *weightedCouncil) calcTotalAmount(weightedValidators []*weightedVal
 		}
 	}
 
-	logger.Error("sebastian calcTotalAmount", "Gini", stakingInfo.Gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
+	logger.Debug("calculate totalStaking", "UseGini", stakingInfo.UseGini, "Gini", stakingInfo.Gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
 	return totalStaking
 }
 
 // Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
 func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
-	testWeightMap := make(map[string]int64)
 	if totalStaking > 0 {
 		for i, weightedVal := range weightedValidators {
 			weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
@@ -713,15 +662,14 @@ func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidato
 				weight = 1
 			}
 			atomic.StoreInt64(&weightedVal.weight, weight)
-			testWeightMap[weightedVal.address.String()[:8]] = weight
+			logger.NewWith(weightedVal.String()+" : ", weight)
 		}
 	} else {
 		for _, weightedVal := range weightedValidators {
 			atomic.StoreInt64(&weightedVal.weight, 0)
-			testWeightMap[weightedVal.address.String()[:8]] = 0
 		}
 	}
-	logger.Error("sebastian calcWeight", "testWeightMap", testWeightMap, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
+	logger.Debug("calculation weight finished")
 }
 
 func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
