@@ -57,6 +57,7 @@ type StakingInfo struct {
 	CouncilStakingAmounts []uint64 // Staking amounts of Council
 }
 
+// newEmptyStakingInfo makes an emptyStakingInfo and returns it
 func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
@@ -72,6 +73,7 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
+// newStakingInfo makes a StakingInfo with given information and returns it
 func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
 	intervalBlock := bc.GetBlockByNumber(blockNum)
 	if intervalBlock == nil {
@@ -117,6 +119,7 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 	return stakingInfo, nil
 }
 
+// GetIndexByNodeId returns an index of given nodeId in stakingInfo
 func (s *StakingInfo) GetIndexByNodeAddress(nodeAddress common.Address) (int, error) {
 	for i, addr := range s.CouncilNodeAddrs {
 		if addr == nodeAddress {
@@ -126,6 +129,7 @@ func (s *StakingInfo) GetIndexByNodeAddress(nodeAddress common.Address) (int, er
 	return AddrNotFoundInCouncilNodes, ErrAddrNotInStakingInfo
 }
 
+// GetStakingAmountByNodeId returns a stakingAmount of nodeId
 func (s *StakingInfo) GetStakingAmountByNodeId(nodeAddress common.Address) (uint64, error) {
 	i, err := s.GetIndexByNodeAddress(nodeAddress)
 	if err != nil {
@@ -134,6 +138,7 @@ func (s *StakingInfo) GetStakingAmountByNodeId(nodeAddress common.Address) (uint
 	return s.CouncilStakingAmounts[i], nil
 }
 
+// String returns a string of a json marshaled object
 func (s *StakingInfo) String() string {
 	j, err := json.Marshal(s)
 	if err != nil {
@@ -148,6 +153,7 @@ func (p float64Slice) Len() int           { return len(p) }
 func (p float64Slice) Less(i, j int) bool { return p[i] < p[j] }
 func (p float64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
+// CalcGiniCoefficient calculates Gini coefficient of given slice
 func CalcGiniCoefficient(stakingAmount float64Slice) float64 {
 	sort.Sort(stakingAmount)
 

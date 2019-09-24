@@ -26,6 +26,7 @@ func newTestBlockChain() *blockchain.BlockChain {
 	return &blockchain.BlockChain{}
 }
 
+// TestAddressBookManager_makeMsgToAddressBook checks if the destination of a massage is the addressBook(0x400)
 func TestAddressBookManager_makeMsgToAddressBook(t *testing.T) {
 	targetAddress := "0x0000000000000000000000000000000000000400" // address of addressBook which the message has to be sent to
 	ac := newAddressBookConnector(newTestBlockChain(), nil)

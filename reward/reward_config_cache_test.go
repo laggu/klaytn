@@ -35,6 +35,7 @@ type testGovernance struct {
 	deferredTxFee   bool
 }
 
+// newDefaultTestGovernance makes a testGovernance with default configures and returns it
 func newDefaultTestGovernance() *testGovernance {
 	return &testGovernance{
 		epoch:           604800,
@@ -48,6 +49,7 @@ func newDefaultTestGovernance() *testGovernance {
 	}
 }
 
+// newTestGovernance makes a testGovernance with the given configures and returns it
 func newTestGovernance(epoch uint64, mintingAmount string, ratio string, unitPrice uint64, useGiniCoeff bool, stakingInterval uint64, deferredTxFee bool) *testGovernance {
 	return &testGovernance{
 		epoch:           epoch,
@@ -60,10 +62,12 @@ func newTestGovernance(epoch uint64, mintingAmount string, ratio string, unitPri
 	}
 }
 
+// return epoch of testGovernance
 func (governance *testGovernance) Epoch() uint64 {
 	return governance.epoch
 }
 
+// return an item of the given key at blockNumber
 func (governance *testGovernance) GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error) {
 	switch key {
 	case params.MintingAmount:
@@ -79,18 +83,22 @@ func (governance *testGovernance) GetItemAtNumberByIntKey(num uint64, key int) (
 	}
 }
 
+// return policy of testGovernance
 func (governance *testGovernance) ProposerPolicy() uint64 {
 	return governance.policy
 }
 
+// return deferredTxFee of testGovernance
 func (governance *testGovernance) DeferredTxFee() bool {
 	return governance.deferredTxFee
 }
 
+// return stakingInterval of testGovernance
 func (governance *testGovernance) StakingUpdateInterval() uint64 {
 	return governance.stakingInterval
 }
 
+// set given configures to testGovernance
 func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount string, ratio string, unitprice uint64, useGiniCoeff bool, deferredTxFee bool) {
 	governance.epoch = epoch
 	governance.mintingAmount = mintingAmount
@@ -100,6 +108,7 @@ func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount 
 	governance.deferredTxFee = deferredTxFee
 }
 
+// TestRewardConfigCache_parseRewardRatio checks if it can parse the given string exactly
 func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	testCases := []struct {
 		s   string
@@ -133,6 +142,7 @@ func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	}
 }
 
+// TestRewardConfigCache_newRewardConfig checks if it can make a rewardConfig exactly with given governance configures.
 func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 	testCases := []struct {
 		testGovernance testGovernance

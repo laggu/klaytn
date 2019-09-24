@@ -51,6 +51,7 @@ type rewardConfigCache struct {
 	governanceHelper governanceHelper
 }
 
+// newRewardConfigCache returns a new rewardConfigCache object.
 func newRewardConfigCache(governanceHelper governanceHelper) *rewardConfigCache {
 	cache, _ := lru.NewARC(maxRewardConfigCache)
 	return &rewardConfigCache{
@@ -59,6 +60,7 @@ func newRewardConfigCache(governanceHelper governanceHelper) *rewardConfigCache 
 	}
 }
 
+// get returns a rewardConfig with the given blockNumber
 func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConfig, error) {
 	var epoch uint64
 	result, err := rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.Epoch)
@@ -89,6 +91,7 @@ func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConf
 	return newConfig, nil
 }
 
+// newRewardConfig makes a rewardConfig of the given blockNumber and returns it.
 func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) (*rewardConfig, error) {
 	mintingAmount := big.NewInt(0)
 
@@ -138,10 +141,12 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 	return rewardConfig, nil
 }
 
+// add a rewardConfig to a rewardConfigCache
 func (rewardConfigCache *rewardConfigCache) add(blockNumber uint64, config *rewardConfig) {
 	rewardConfigCache.cache.Add(blockNumber, config)
 }
 
+// parseRewardRatio parses a given string to cn, PoC, KIR ratio
 func (rewardConfigCache *rewardConfigCache) parseRewardRatio(ratio string) (int, int, int, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != 3 {

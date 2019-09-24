@@ -50,7 +50,7 @@ type addressBookConnector struct {
 	contractAddress common.Address
 }
 
-// create and return addressBookConnector
+// newAddressBookConnector creates and returns an addressBookConnector
 func newAddressBookConnector(bc blockChain, gh governanceHelper) *addressBookConnector {
 	return &addressBookConnector{
 		bc:              bc,
@@ -60,7 +60,7 @@ func newAddressBookConnector(bc blockChain, gh governanceHelper) *addressBookCon
 	}
 }
 
-// make a message to the addressBook contract for executing getAllAddress function of the addressBook contract
+// makeMsgToAddressBook makes a message to the addressBook contract for executing getAllAddress function of the addressBook contract
 func (ac *addressBookConnector) makeMsgToAddressBook() (*types.Transaction, error) {
 	abiInstance, err := abi.JSON(strings.NewReader(ac.abi))
 	if err != nil {
@@ -84,7 +84,7 @@ func (ac *addressBookConnector) makeMsgToAddressBook() (*types.Transaction, erro
 	return msg, nil
 }
 
-// It parses the result bytes of calling addressBook to addresses.
+// parseAllAddresses parses the result bytes of calling addressBook to addresses.
 func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, pocAddr common.Address, kirAddr common.Address, err error) {
 	nodeIds = []common.Address{}
 	stakingAddrs = []common.Address{}
@@ -154,8 +154,8 @@ func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []comm
 }
 
 // getStakingInfoFromAddressBook returns stakingInfo when calling AddressBook succeeded.
-// If addressBook is not activated, emptyStakingInfo is returned.
-// After addressBook is activated, it returns stakingInfo with addresses and stakingAmount.
+// If the addressBook is not activated, an emptyStakingInfo is returned.
+// After the addressBook is activated, it returns a stakingInfo with addresses and stakingAmounts.
 // Otherwise, it returns an error.
 func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 	if !params.IsStakingUpdateInterval(blockNum) {

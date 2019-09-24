@@ -48,6 +48,7 @@ type StakingManager struct {
 	chainHeadSub event.Subscription
 }
 
+// NewStakingManager creates and returns a StakingManager
 func NewStakingManager(bc blockChain, gh governanceHelper) *StakingManager {
 	return &StakingManager{
 		ac:          newAddressBookConnector(bc, gh),
@@ -97,6 +98,8 @@ func (sm *StakingManager) Subscribe() {
 	go sm.handleChainHeadEvent()
 }
 
+// handleChainHeadEvent listens chain head event
+// it updates stakingInfo when the blockNumber is stakingInterval
 func (sm *StakingManager) handleChainHeadEvent() {
 	defer sm.Unsubscribe()
 

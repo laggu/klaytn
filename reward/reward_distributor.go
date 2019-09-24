@@ -46,6 +46,7 @@ type RewardDistributor struct {
 	gh  governanceHelper
 }
 
+// NewRewardDistributor creates and returns a RewardDistributor
 func NewRewardDistributor(gh governanceHelper) *RewardDistributor {
 	return &RewardDistributor{
 		rcc: newRewardConfigCache(gh),
