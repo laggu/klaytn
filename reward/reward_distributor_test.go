@@ -24,16 +24,19 @@ import (
 	"testing"
 )
 
+// testBalanceAdder is a structure which implements BalanceAdder interface
 type testBalanceAdder struct {
 	accounts map[common.Address]*big.Int
 }
 
+// newTestBalanceAdder creates and returns a testBalanceAdder
 func newTestBalanceAdder() *testBalanceAdder {
 	balanceAdder := &testBalanceAdder{}
 	balanceAdder.accounts = make(map[common.Address]*big.Int)
 	return balanceAdder
 }
 
+// AddBalance adds a given value to a given address
 func (balanceAdder *testBalanceAdder) AddBalance(addr common.Address, v *big.Int) {
 	balance, ok := balanceAdder.accounts[addr]
 	if ok {
@@ -43,6 +46,7 @@ func (balanceAdder *testBalanceAdder) AddBalance(addr common.Address, v *big.Int
 	}
 }
 
+// GetBalance returns the balance of a given address
 func (balanceAdder *testBalanceAdder) GetBalance(addr common.Address) *big.Int {
 	balance, ok := balanceAdder.accounts[addr]
 	if ok {
@@ -52,6 +56,7 @@ func (balanceAdder *testBalanceAdder) GetBalance(addr common.Address) *big.Int {
 	}
 }
 
+// Test_isEmptyAddress checks results of isEmptyAddress() functions
 func Test_isEmptyAddress(t *testing.T) {
 	testCases := []struct {
 		address common.Address

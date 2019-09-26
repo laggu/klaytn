@@ -22,6 +22,7 @@ import (
 	"testing"
 )
 
+// newTestBlockChain makes a empty BlockChain for test
 func newTestBlockChain() *blockchain.BlockChain {
 	return &blockchain.BlockChain{}
 }

@@ -25,10 +25,12 @@ import (
 
 var logger = log.NewModuleLogger(log.Reward)
 
+// BalanceAdder is an interface to add balance of stateDB
 type BalanceAdder interface {
 	AddBalance(addr common.Address, v *big.Int)
 }
 
+// governanceHelper is an interface to get configure from governance
 type governanceHelper interface {
 	Epoch() uint64
 	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
@@ -37,10 +39,12 @@ type governanceHelper interface {
 	StakingUpdateInterval() uint64
 }
 
+// isEmptyAddress checks if a given address is empty or not
 func isEmptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
 
+// RewardDistributor
 type RewardDistributor struct {
 	rcc *rewardConfigCache
 	gh  governanceHelper

@@ -62,12 +62,12 @@ func newTestGovernance(epoch uint64, mintingAmount string, ratio string, unitPri
 	}
 }
 
-// return epoch of testGovernance
+// Epoch returns epoch of testGovernance
 func (governance *testGovernance) Epoch() uint64 {
 	return governance.epoch
 }
 
-// return an item of the given key at blockNumber
+// GetItemAtNumberByIntKey returns an item of the given key at blockNumber
 func (governance *testGovernance) GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error) {
 	switch key {
 	case params.MintingAmount:
@@ -83,22 +83,22 @@ func (governance *testGovernance) GetItemAtNumberByIntKey(num uint64, key int) (
 	}
 }
 
-// return policy of testGovernance
+// ProposerPolicy returns policy of testGovernance
 func (governance *testGovernance) ProposerPolicy() uint64 {
 	return governance.policy
 }
 
-// return deferredTxFee of testGovernance
+// DeferredTxFee returns deferredTxFee of testGovernance
 func (governance *testGovernance) DeferredTxFee() bool {
 	return governance.deferredTxFee
 }
 
-// return stakingInterval of testGovernance
+// StakingUpdateInterval returns stakingInterval of testGovernance
 func (governance *testGovernance) StakingUpdateInterval() uint64 {
 	return governance.stakingInterval
 }
 
-// set given configures to testGovernance
+// setTestGovernance sets given configures to testGovernance
 func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount string, ratio string, unitprice uint64, useGiniCoeff bool, deferredTxFee bool) {
 	governance.epoch = epoch
 	governance.mintingAmount = mintingAmount
