@@ -111,7 +111,7 @@ type weightedCouncil struct {
 	validatorMu sync.RWMutex
 	selector    istanbul.ProposalSelector
 
-	proposers         []istanbul.Validator
+	proposers         []common.Address
 	proposersBlockNum uint64 // block number when proposers is determined
 
 	stakingInfo *reward.StakingInfo
@@ -126,14 +126,14 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 		return
 	}
 
-	proposers := []istanbul.Validator{}
+	proposers := make([]common.Address, len(proposerAddrs))
 
 	for i, proposerAddr := range proposerAddrs {
 		_, val := weightedCouncil.GetByAddress(proposerAddr)
 		if val == nil {
 			logger.Error("Proposer is not available now.", "proposer address", proposerAddr)
 		}
-		proposers = append(proposers, val)
+		proposers = append(proposers, val.Address())
 
 		// TODO-Klaytn-Issue1166 Disable Trace log later
 		logger.Trace("RecoverWeightedCouncilProposer() proposers", "i", i, "address", val.Address().String())
@@ -213,8 +213,10 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	valSet.selector = weightedRandomProposer
 
 	valSet.blockNum = blockNum
-	valSet.proposers = make([]istanbul.Validator, len(addrs))
-	copy(valSet.proposers, valSet.validators)
+	valSet.proposers = make([]common.Address, len(addrs))
+	for i := 0; i < len(addrs); i++ {
+		valSet.proposers[i] = valSet.validators[i].Address()
+	}
 	valSet.proposersBlockNum = proposersBlockNum
 
 	logger.Trace("Allocate new weightedCouncil", "weightedCouncil", valSet)
@@ -246,7 +248,7 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.A
 
 		proposers = make([]common.Address, len(weightedCouncil.proposers))
 		for i, proposer := range weightedCouncil.proposers {
-			proposers[i] = proposer.Address()
+			proposers[i] = proposer
 		}
 		proposersBlockNum = weightedCouncil.proposersBlockNum
 	} else {
@@ -272,7 +274,9 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
 	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum+1)) % uint64(numProposers)
-	proposer := weightedCouncil.proposers[picker]
+	proposerAddress := weightedCouncil.proposers[picker]
+
+	_, proposer := valSet.GetByAddress(proposerAddress)
 
 	// Enable below more detailed log when debugging
 	// logger.Trace("Select a proposer using weighted random", "proposer", proposer.String(), "picker", picker, "blockNum of council", blockNum, "round", round, "blockNum of proposers updated", weightedCouncil.proposersBlockNum, "number of proposers", numProposers, "all proposers", weightedCouncil.proposers)
@@ -487,10 +491,10 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 
 // removeValidatorFromProposers makes new candidate proposers by removing a validator with given address from existing proposers.
 func (valSet *weightedCouncil) removeValidatorFromProposers(address common.Address) {
-	newProposers := make([]istanbul.Validator, 0, len(valSet.proposers))
+	newProposers := make([]common.Address, 0, len(valSet.proposers))
 
 	for _, v := range valSet.proposers {
-		if v.Address() != address {
+		if v != address {
 			newProposers = append(newProposers, v)
 		}
 	}
@@ -542,7 +546,7 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 		newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
 	}
 
-	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
+	newWeightedCouncil.proposers = make([]common.Address, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
 
 	_, proposer := newWeightedCouncil.getByAddress(valSet.GetProposer().Address())
@@ -730,7 +734,7 @@ func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
 		logger.Trace("Refresh uses all validators as candidate proposers, because all weight is zero.", "candidateValsIdx", candidateValsIdx)
 	}
 
-	proposers := make([]istanbul.Validator, len(candidateValsIdx))
+	proposers := make([]common.Address, len(candidateValsIdx))
 
 	limit := len(candidateValsIdx)
 	picker := rand.New(rand.NewSource(seed))
@@ -742,7 +746,7 @@ func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
 	}
 
 	for i := 0; i < limit; i++ {
-		proposers[i] = valSet.validators[candidateValsIdx[i]]
+		proposers[i] = valSet.validators[candidateValsIdx[i]].Address()
 		// Below log is too verbose. Use is only when debugging.
 		// logger.Trace("Refresh calculates new proposers", "i", i, "proposers[i]", proposers[i].String())
 	}
@@ -755,7 +759,7 @@ func (valSet *weightedCouncil) SetBlockNum(blockNum uint64) {
 	valSet.blockNum = blockNum
 }
 
-func (valSet *weightedCouncil) Proposers() []istanbul.Validator {
+func (valSet *weightedCouncil) Proposers() []common.Address {
 	return valSet.proposers
 }
 

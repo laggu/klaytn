@@ -415,8 +415,8 @@ func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.polic
 func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, stakingManager *reward.StakingManager) error {
 	return nil
 }
-func (valSet *defaultSet) SetBlockNum(blockNum uint64)     { /* Do nothing */ }
-func (valSet *defaultSet) Proposers() []istanbul.Validator { return nil }
+func (valSet *defaultSet) SetBlockNum(blockNum uint64) { /* Do nothing */ }
+func (valSet *defaultSet) Proposers() []common.Address { return nil }
 func (valSet *defaultSet) TotalVotingPower() uint64 {
 	sum := uint64(0)
 	for _, v := range valSet.List() {

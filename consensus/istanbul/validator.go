@@ -98,7 +98,7 @@ type ValidatorSet interface {
 
 	SetBlockNum(blockNum uint64)
 
-	Proposers() []Validator // TODO-Klaytn-Issue1166 For debugging
+	Proposers() []common.Address // TODO-Klaytn-Issue1166 For debugging
 
 	TotalVotingPower() uint64
 }

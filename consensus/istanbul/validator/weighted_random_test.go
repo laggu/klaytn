@@ -278,8 +278,7 @@ func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 	// Run tests
 
 	// 1. check all validators are chosen for proposers
-	var sortedProposers istanbul.Validators
-	sortedProposers = make([]istanbul.Validator, len(testAddrs))
+	sortedProposers := make([]common.Address, len(testAddrs))
 	copy(sortedProposers, valSet.proposers)
 	sort.Sort(sortedProposers)
 	if !reflect.DeepEqual(sortedProposers, validators) {
@@ -288,8 +287,8 @@ func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 
 	// 2. check proposers
 	for i, val := range valSet.proposers {
-		if !reflect.DeepEqual(val.Address(), testExpectedProposers[i]) {
-			t.Errorf("proposer mismatch: have %v, want %v", val.Address().String(), testExpectedProposers[i].String())
+		if !reflect.DeepEqual(val, testExpectedProposers[i]) {
+			t.Errorf("proposer mismatch: have %v, want %v", val.String(), testExpectedProposers[i].String())
 		}
 	}
 
@@ -361,7 +360,7 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 		weight := v.Weight()
 		appearance := uint64(0)
 		for _, p := range valSet.proposers {
-			if v.Address() == p.Address() {
+			if v.Address() == p {
 				appearance++
 			}
 		}
@@ -394,7 +393,7 @@ func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 
 		// check whether removedVal is also removed from proposers immediately
 		for _, p := range valSet.proposers {
-			if removedVal.Address() == p.Address() {
+			if removedVal.Address() == p {
 				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
 			}
 		}
@@ -431,7 +430,7 @@ func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 
 		// check whether removedVal is excluded as expected when refreshing proposers
 		for _, p := range valSet.proposers {
-			if removedVal.Address() == p.Address() {
+			if removedVal.Address() == p {
 				t.Errorf("Validator(%v) does not removed from proposers", removedVal.Address().String())
 			}
 		}
