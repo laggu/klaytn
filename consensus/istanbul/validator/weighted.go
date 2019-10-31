@@ -272,7 +272,8 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
 	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum+1)) % uint64(numProposers)
-	proposer := weightedCouncil.proposers[picker]
+	proposerAddress := weightedCouncil.proposers[picker].Address()
+	_, proposer := valSet.GetByAddress(proposerAddress)
 
 	// Enable below more detailed log when debugging
 	// logger.Trace("Select a proposer using weighted random", "proposer", proposer.String(), "picker", picker, "blockNum of council", blockNum, "round", round, "blockNum of proposers updated", weightedCouncil.proposersBlockNum, "number of proposers", numProposers, "all proposers", weightedCouncil.proposers)
