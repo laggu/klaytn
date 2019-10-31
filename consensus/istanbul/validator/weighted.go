@@ -538,15 +538,16 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 		blockNum:          valSet.blockNum,
 	}
 	newWeightedCouncil.validators = make([]istanbul.Validator, len(valSet.validators))
-	for i := 0; i < len(valSet.validators); i++ {
-		newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
-	}
+	copy(newWeightedCouncil.validators, valSet.validators)
+	//for i := 0; i < len(valSet.validators); i++ {
+	//	newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
+	//}
 
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
 
-	_, proposer := newWeightedCouncil.getByAddress(valSet.GetProposer().Address())
-	newWeightedCouncil.proposer.Store(proposer)
+	//_, proposer := newWeightedCouncil.getByAddress(valSet.GetProposer().Address())
+	//newWeightedCouncil.proposer.Store(proposer)
 
 	return &newWeightedCouncil
 }
@@ -606,6 +607,9 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 	}
 	totalStaking := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 	calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	for i := 0; i < len(weightedValidators); i++ {
+		valSet.validators[i] = weightedValidators[i]
+	}
 
 	valSet.refreshProposers(seed, blockNum)
 
@@ -626,7 +630,7 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 	addedStaking := make([]bool, len(stakingInfo.CouncilNodeAddrs))
 
 	for vIdx, val := range valSet.validators {
-		weightedVal, ok := val.(*weightedValidator)
+		weightedVal, ok := val.Copy().(*weightedValidator)
 		if !ok {
 			return nil, nil, errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
 		}
