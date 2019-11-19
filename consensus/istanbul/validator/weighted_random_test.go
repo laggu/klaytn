@@ -112,6 +112,20 @@ var (
 	}
 )
 
+type testAddresses []common.Address
+
+func (slice testAddresses) Len() int {
+	return len(slice)
+}
+
+func (slice testAddresses) Less(i, j int) bool {
+	return strings.Compare(slice[i].String(), slice[j].String()) < 0
+}
+
+func (slice testAddresses) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
+
 func makeTestValidators(weights []uint64) (validators istanbul.Validators) {
 	validators = make([]istanbul.Validator, len(testAddrs))
 	for i := range testAddrs {
@@ -278,11 +292,12 @@ func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
 	// Run tests
 
 	// 1. check all validators are chosen for proposers
-	sortedProposers := make([]common.Address, len(testAddrs))
+	sortedProposers := make(testAddresses, len(testAddrs))
 	copy(sortedProposers, valSet.proposers)
 	sort.Sort(sortedProposers)
-	if !reflect.DeepEqual(sortedProposers, validators) {
-		t.Errorf("All validators are not in proposers: sorted proposers %v, validators %v", sortedProposers, validators)
+
+	for i := 0; i < len(sortedProposers); i++ {
+		assert.Equal(t, sortedProposers[i], validators[i].Address())
 	}
 
 	// 2. check proposers
